@@ -10,15 +10,23 @@ Using `python nose <http://somethingaboutorange.com/mrl/projects/nose>`_ for the
 Configuring
 -----------
 
-Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages::
+Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages
+
+.. code-block:: bash
+
+  sudo easy_install nose coverage
+
+**Optional** For entire testing harness:
+
+.. code-block:: bash
 
   sudo apt-get install graphviz python-svn gnu-pgagent
-  sudo easy_install nose coverage
+
 
 Jenkins
 ~~~~~~~
 
-The following Jenkins plugins should be installed:
+If using Jenkins to run tests, the following Jenkins plugins should be installed:
 	
 * CMake plugin
 * Measurement Plots
