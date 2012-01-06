@@ -26,7 +26,8 @@ class TestMoving(EnvironmentSetup):
             goal[0] = -0.556
             goal[3] = -1.86
             basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=2,execute=False)
-            
+
+
     def test_ikplanning(self):
         env = self.env
         env.Load('data/lab1.env.xml')
@@ -41,10 +42,22 @@ class TestMoving(EnvironmentSetup):
             solutions = ikmodel.manip.FindIKSolutions(Tee,IkFilterOptions.CheckEnvCollisions)
             assert(len(solutions)>1)
             basemanip = interfaces.BaseManipulation(robot)
-            trajdata=basemanip.MoveManipulator(goals=solutions,execute=True)
+            with robot:
+                for sol in solutions:
+                    robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
+                    assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+            traj=basemanip.MoveManipulator(goals=solutions[97:98],execute=True,outputtrajobj=True)
+            # check that last point is accurate
+            lastvalues = traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1), robot, ikmodel.manip.GetArmIndices(), 0)
+            with robot:
+                robot.SetDOFValues(lastvalues,ikmodel.manip.GetArmIndices())
+                assert(min([sum(abs(s-lastvalues)) for s in solutions]) <= g_epsilon)
+                assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+            
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
+            print transdist(Tee,ikmodel.manip.GetEndEffectorTransform())
             assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):

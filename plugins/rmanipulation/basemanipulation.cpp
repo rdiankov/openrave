@@ -449,6 +449,7 @@ protected:
         for(size_t i = 0; i < params->vgoalconfig.size(); i += robot->GetActiveDOF()) {
             std::copy(params->vgoalconfig.begin()+i,params->vgoalconfig.begin()+i+robot->GetActiveDOF(),vonegoal.begin());
             robot->SetActiveDOFValues(vonegoal, true);
+            robot->GetActiveDOFValues(vonegoal);
             if( planningutils::JitterActiveDOF(robot) == 0 ) {
                 RAVELOG_WARN(str(boost::format("jitter failed %d\n")%i));
             }

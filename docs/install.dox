@@ -208,10 +208,7 @@ sudo apt-get install g++ libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavfor
 wget https://downloads.sourceforge.net/project/opende/ODE/0.11.1/ode-0.11.1.tar.bz2
 tar xjf ode-0.11.1.tar.bz2
 cd ode-0.11.1
-./configure --with-libccd=cyl-cyl --with-trimesh=opcode
---enable-new-trimesh --disable-demos --enable-shared
---with-arch=nocona --enable-release --enable-malloc --enable-ou
---disable-asserts --with-pic --enable-double-precision
+./configure --with-libccd=cyl-cyl --with-trimesh=opcode --enable-new-trimesh --disable-demos --enable-shared --with-arch=nocona --enable-release --enable-malloc --enable-ou --disable-asserts --with-pic --enable-double-precision
 make -j4
 sudo make install
 \endverbatim

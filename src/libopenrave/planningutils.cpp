@@ -65,6 +65,8 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
     }
 
     if( !bCollision || fRand <= 0 ) {
+        // have to restore to initial non-perturbed configuration!
+        robot->SetActiveDOFValues(curdof);
         return -1;
     }
 
@@ -97,6 +99,11 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
         }
         if( !bCollision ) {
+            // have to restore to non-perturbed configuration!
+            for(size_t j = 0; j < deltadof.size(); ++j) {
+                newdof[j] = curdof[j] + deltadof[j];
+            }
+            robot->SetActiveDOFValues(newdof);
             return 1;
         }
     }

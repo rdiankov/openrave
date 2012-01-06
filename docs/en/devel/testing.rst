@@ -55,7 +55,15 @@ Can build entire ubuntu environments using `debootstrap <https://wiki.ubuntu.com
 Tests
 -----
 
-Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
+To run, first install OpenRAVE into your path, then:
+
+.. code-block:: bash
+
+  python test/run_tests.py
+
+If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
+
+For future: Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. 
 
 Basic Tests
 ~~~~~~~~~~~

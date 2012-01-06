@@ -82,6 +82,8 @@ from `Kris Hauser's group at Indiana University <http://www.iu.edu/~motion/softw
 
 * added jittering of goals to ManipulatorIKGoalSampler
 
+* fixed :meth:`.planningutils.JitterActiveDOF` accidentally returning perturbed values
+
 Trajectories
 ------------
 
