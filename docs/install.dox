@@ -307,7 +307,7 @@ Both <a href="http://www.gnu.org/software/octave/">Octave</a> and Matlab are sup
 
 Octave users:
 - Make sure \c mkoctfile is in your path. If installing octave from the package managers, also install the <b>octave headers</b> package.
-- Add \c $OPENRAVE_INSTALL/share/openrave/octave to OCTAVE_PATH (default is \c /usr/local/share/openrave/octave).
+- Add \c $OPENRAVE_INSTALL/share/openrave-x.y/octave to OCTAVE_PATH (default is \c /usr/local/share/openrave-x.y/octave).
 
 Matlab users:
 - make sure \c mex is in the system path
@@ -319,11 +319,11 @@ Matlab users:
 
 Octave ユーザー:
 - \c mkoctfile があなたの環境パスにあることを確認してください．Octaveをパッケージマネージャからインストールする場合は，<b>octave headers</b>パッケージもインストールしてください．
-- OCTAVE_PATH （デフォルトは \c /usr/local/share/openrave/octave）に\c $OPENRAVE_INSTALL/share/openrave/octave を追加してください．
+- OCTAVE_PATH （デフォルトは \c /usr/local/share/openrave-x.y/octave）に\c $OPENRAVE_INSTALL/share/openrave-x.y/octave を追加してください．
 
 Matlab ユーザー:
 - \c mex がシステムパスにあることを確認してください．
-- Matlabのパス（デフォルトは\c /usr/local/share/openrave/matlab）に\c $OPENRAVE_INSTALL/share/openrave/matlab を追加してください．
+- Matlabのパス（デフォルトは\c /usr/local/share/openrave-x.y/matlab）に\c $OPENRAVE_INSTALL/share/openrave-x.y/matlab を追加してください．
 
 \en \section ilinux_building Building OpenRAVE
 
@@ -395,7 +395,7 @@ Can enable automatic completion of several openrave programs like \c openrave.py
 
 \~
 \verbatim
-source `openrave-config --prefix`/share/openrave/openravebash
+source `openrave-config --share-dir`/openravebash
 \endverbatim
 
 */

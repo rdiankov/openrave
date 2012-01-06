@@ -282,9 +282,9 @@ helper functions are offered in \ref openrave/plugin.h, which all plugin authors
 
 \section cpp_examples_build Building
 
-All C++ examples are stored in \c $OPENRAVE_INSTALL/share/openrave/cppexamples. Use the \c CMakeLists.txt file to build the examples by:
+All C++ examples are stored in \c $OPENRAVE_SHARE_DIR/cppexamples. Use the \c CMakeLists.txt file to build the examples by:
 \verbatim
-cd `openrave-config --prefix`/share/openrave/cppexamples
+cd `openrave-config --share-dir`/cppexamples
 mkdir build
 cd build
 cmake ..
