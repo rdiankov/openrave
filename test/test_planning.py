@@ -46,7 +46,7 @@ class TestMoving(EnvironmentSetup):
                 for sol in solutions:
                     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
                     assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
-            traj=basemanip.MoveManipulator(goals=solutions[97:98],execute=True,outputtrajobj=True)
+            traj=basemanip.MoveManipulator(goals=solutions,execute=True,outputtrajobj=True)
             # check that last point is accurate
             lastvalues = traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1), robot, ikmodel.manip.GetArmIndices(), 0)
             with robot:
