@@ -183,7 +183,7 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable 
 
 %OpenRAVEはいくつかの標準パッケージを使用して開発されています．あなたのPC環境に合わせてパッケージマネージャから必要なパッケージをインストールしてください．
 
-\~ \subsection ilinux_ubuntu Ubuntu
+\~ \subsection ilinux_ubuntu Ubuntu 10.04 or later
 
 \verbatim
 sudo add-apt-repository ppa:openrave/release
@@ -201,6 +201,20 @@ sudo apt-get install g++ libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavfor
 \endverbatim
 
 - CMake - need to use version >=2.6.0, default cmake in ubuntu 8.04 is 2.47, which will not work.
+
+- ODE - Will need to install ODE from sources (do not use the one in the package manager):
+
+\verbatim
+wget https://downloads.sourceforge.net/project/opende/ODE/0.11.1/ode-0.11.1.tar.bz2
+tar xjf ode-0.11.1.tar.bz2
+cd ode-0.11.1
+./configure --with-libccd=cyl-cyl --with-trimesh=opcode
+--enable-new-trimesh --disable-demos --enable-shared
+--with-arch=nocona --enable-release --enable-malloc --enable-ou
+--disable-asserts --with-pic --enable-double-precision
+make -j4
+sudo make install
+\endverbatim
 
 \en \subsection ilinux_fedora Fedora Core Users
 
