@@ -1105,6 +1105,7 @@ void QtCoinViewer::_SetCamera(const RaveTransform<float>& _t, float focalDistanc
     if( focalDistance > 0 ) {
         GetCamera()->focalDistance = focalDistance;
     }
+    _UpdateCameraTransform();
 }
 
 void QtCoinViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -1142,16 +1143,17 @@ void QtCoinViewer::_SetGraphShow(SoSwitch* handle, bool bshow)
 
 void QtCoinViewer::PrintCamera()
 {
-    SbVec3f pos = GetCamera()->position.getValue();
-    SbVec3f axis;
-    float fangle;
-    GetCamera()->orientation.getValue(axis, fangle);
-
-    RAVELOG_INFOA("Camera Transformation:\n"
-                  "<camtrans>%f %f %f</camtrans>\n"
-                  "<camrotationaxis>%f %f %f %f</camrotationaxis>\n"
-                  "height angle: %f, focal dist: %f\n", pos[0], pos[1], pos[2],
-                  axis[0], axis[1], axis[2], fangle*180.0f/PI, GetCamera()->heightAngle.getValue(), GetCamera()->focalDistance.getValue());
+    _UpdateCameraTransform();
+    // have to flip Z axis
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> T = _Tcamera*trot;
+    Vector vaxis = axisAngleFromQuat(T.rot);
+    dReal fangle = RaveSqrt(vaxis.lengthsqr3());
+    vaxis *= (1/fangle);
+    RAVELOG_INFO(str(boost::format("Camera Transformation:\n"
+                                   "<camtrans>%f %f %f</camtrans>\n"
+                                   "<camrotationaxis>%f %f %f %f</camrotationaxis>\n"
+                                   "height angle: %f, focal dist: %f\n")%T.trans[0]%T.trans[1]%T.trans[2]%vaxis[0]%vaxis[1]%vaxis[2]%(fangle*180.0f/PI)%GetCamera()->heightAngle.getValue()%GetCamera()->focalDistance.getValue()));
 }
 
 RaveTransform<float> QtCoinViewer::GetCameraTransform() const
@@ -1159,7 +1161,7 @@ RaveTransform<float> QtCoinViewer::GetCameraTransform() const
     boost::mutex::scoped_lock lock(_mutexMessages);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return Tcam*trot;
+    return _Tcamera*trot;
 }
 
 geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
@@ -2703,12 +2705,12 @@ void QtCoinViewer::_UpdateCameraTransform()
     boost::mutex::scoped_lock lock(_mutexMessages);
     SbVec3f pos = GetCamera()->position.getValue();
 
-    Tcam.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
+    _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
 
     SbVec3f axis;
     float fangle;
     GetCamera()->orientation.getValue(axis, fangle);
-    Tcam.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();

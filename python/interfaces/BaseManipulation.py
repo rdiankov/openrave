@@ -13,7 +13,7 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .'
-from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization
 from ..openravepy_ext import planning_error
     
 import numpy

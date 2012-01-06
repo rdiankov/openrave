@@ -390,7 +390,7 @@ public:
     int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;           ///< initial tarnsformation of selected item
-    RaveTransform<float> Tcam;
+    RaveTransform<float> _Tcamera;
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     unsigned int _fb;
