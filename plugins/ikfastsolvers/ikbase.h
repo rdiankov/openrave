@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -37,6 +37,8 @@ public:
         _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IKReal,Solution>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
+        RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IKReal,Solution>::_GetSolutionIndicesCommand,this,_1,_2),
+                        "gets the indices of the current solution being considered");
     }
     virtual ~IkFastSolver() {
     }
@@ -55,6 +57,15 @@ public:
     {
         sinput >> _ikthreshold;
         return !!sinput;
+    }
+
+    bool _GetSolutionIndicesCommand(ostream& sout, istream& sinput)
+    {
+        sout << _vsolutionindices.size() << " ";
+        FOREACHC(it,_vsolutionindices) {
+            sout << *it << " ";
+        }
+        return true;
     }
 
     virtual void SetJointLimits()
@@ -590,6 +601,7 @@ private:
             // sort the solutions from closest to farthest
             vector<pair<int,dReal> > vdists; vdists.reserve(vsolutions.size());
             FOREACH(itsol, vsolutions) {
+                BOOST_ASSERT(itsol->Validate());
                 vsolfree.resize(itsol->GetFree().size());
                 for(size_t ifree = 0; ifree < itsol->GetFree().size(); ++ifree) {
                     vsolfree[ifree] = q0.at(itsol->GetFree()[ifree]);
@@ -655,6 +667,8 @@ private:
         for(int i = 0; i < (int)sol.size(); ++i) {
             vravesol[i] = dReal(sol[i]);
         }
+
+        iksol.GetSolutionIndices(_vsolutionindices);
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
@@ -748,6 +762,7 @@ private:
             vector<dReal> vravesol(pmanip->GetArmIndices().size());
             std::vector<IKReal> sol(pmanip->GetArmIndices().size());
             FOREACH(itsol, vsolutions) {
+                BOOST_ASSERT(itsol->Validate());
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
@@ -777,6 +792,8 @@ private:
                 return SR_Continue;
             }
         }
+
+        iksol.GetSolutionIndices(_vsolutionindices);
 
         // check for self collisions
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -869,6 +886,7 @@ private:
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
     dReal _ikthreshold;
+    std::vector<unsigned int> _vsolutionindices; // holds the indices of the current solution, this is not multi-thread safe
 };
 
 #endif

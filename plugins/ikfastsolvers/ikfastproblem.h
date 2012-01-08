@@ -45,11 +45,9 @@ class IKFastProblem : public ModuleBase
     typedef int* DECLFNPTR (getFreeParametersFn, ());
     typedef int DECLFNPTR (getNumJointsFn, ());
     typedef const char* DECLFNPTR (getKinematicsHashFn, ());
+    typedef const char* DECLFNPTR (getIKFastVersionFn, ());
     typedef int DECLFNPTR (getIKRealSizeFn, ());
     typedef int DECLFNPTR (getIKTypeFn, ());
-    static int getDefaultIKType() {
-        return IKP_Transform6D;
-    }
 
     class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
     {
@@ -92,12 +90,19 @@ public:
                 RAVELOG_WARN("failed to find getIKRealSize in %s\n", _libraryname.c_str());
                 return false;
             }
+
+            getIKFastVersion = (getIKFastVersionFn)SysLoadSym(plib, "getIKFastVersion");
+            if( getIKFastVersion == NULL ) {
+                RAVELOG_WARN("failed to find getIKFastVersion in %s\n", _libraryname.c_str());
+                return false;
+            }
+
             getIKType = (getIKTypeFn)SysLoadSym(plib, "getIKType");
             if( getIKType == NULL ) {
                 RAVELOG_WARN("failed to find getIKType in %s, setting to 6D transform\n", _libraryname.c_str());
-                getIKType = getDefaultIKType;
-                //return false;
+                return false;
             }
+
             getKinematicsHash = (getKinematicsHashFn)SysLoadSym(plib, "getKinematicsHash");
             if( getKinematicsHash == NULL ) {
                 RAVELOG_WARN("failed to find getKinematicsHash in %s, will not be able to validate inverse kinematics structure\n", _libraryname.c_str());
@@ -121,7 +126,11 @@ public:
         {
             string kinematicshash;
             if( getKinematicsHash != NULL ) {
-                kinematicshash =getKinematicsHash();
+                kinematicshash = getKinematicsHash();
+            }
+            int ikfastversion = boost::lexical_cast<int>(getIKFastVersion());
+            if( ikfastversion < 51 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("ikfast version %d not supported", ikfastversion, ORE_InvalidArguments);
             }
             if( getIKRealSize() == 4 ) {
                 return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
@@ -129,7 +138,7 @@ public:
             else if( getIKRealSize() == 8 ) {
                 return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
             }
-            throw openrave_exception("bad real size");
+            throw OPENRAVE_EXCEPTION_FORMAT("bad real size %d",getIKRealSize(),ORE_InvalidArguments);
         }
 
         const vector<string>& GetIKNames() const {
@@ -149,6 +158,7 @@ public:
         getFreeParametersFn getFreeParameters;
         getNumJointsFn getNumJoints;
         getKinematicsHashFn getKinematicsHash;
+        getIKFastVersionFn getIKFastVersion;
         getIKRealSizeFn getIKRealSize;
         getIKTypeFn getIKType;
         void* ikfn, *fkfn;

@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """updates the cached ikfast files in the plugins/ikfastsolvers directory
+
+To update openrave cached ik files run:
+
+.. code-block:: bash
+ 
+  python updateikfiles.py --forcegenerate --destdir=../plugins/ikfastsolvers --testnum=100
+  
 """
 
 from numpy import *
@@ -27,7 +34,7 @@ from openravepy import ikfast
 
 databases.inversekinematics.log.setLevel(logging.ERROR)
 
-def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,results=None, do_test=True, testnum='5000', delta='0.01'):
+def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,results=None, do_test=True, forcegenerate=False, testnum=5000, delta='0.01'):
     print robotfilename, manipname, iktype, destfilename
     RaveInitialize()
     env=Environment()
@@ -40,11 +47,12 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=iktype,freeindices=freeindices)
             ikmodel.manip.SetIKSolver(None)
             ikmodel.ikfast.log.setLevel(logging.ERROR)
-            if not ikmodel.load():
+            if forcegenerate or not ikmodel.load():
                 ikmodel.autogenerate()
-            ikmodel.setrobot([float(delta)]*len(freeindices))
-            if do_test:
-                successrate, wrongrate = ikmodel.testik(testnum)
+            if freeindices is not None:
+                ikmodel.setrobot([float(delta)]*len(freeindices))
+            if do_test and testnum > 0:
+                successrate, wrongrate = ikmodel.testik(str(testnum))
                 if results is not None:
                     results[0].value = successrate
                     results[1].value = wrongrate
@@ -108,9 +116,9 @@ if __name__ == "__main__":
     parser.add_option("-r", "--robot", dest="robot", default=None, help='Robot file path')
     parser.add_option("-m", "--manip", dest="manip", default=None, help='Manipulator')
     parser.add_option("-t", "--type", dest="type", default=IkParameterization.Type.Transform6D, help='Ik type')
-    parser.add_option("", "--testnum", dest="testnum", default='5000', help='the number of ik test sets')
+    parser.add_option("--testnum", dest="testnum", type='int', default=5000, help='the number of ik test sets')
+    parser.add_option('--forcegenerate', dest='forcegenerate',action='store_true',default=False,help='if true will always force generation of ik')
     parser.add_option("-e", "--delta", dest="delta", default='0.01', help='the step of free indies angle')
-
     (options, args) = parser.parse_args()
 
     numthreads=options.numthreads
@@ -121,34 +129,37 @@ if __name__ == "__main__":
         sys.exit (0)
     elif not options.robot is None and not options.manip is None:
         fout = os.path.splitext(os.path.basename(options.robot))[0]+'.cpp'
-        robot_manip_type_fouts = [[options.robot, options.manip, options.type, fout]]
+        robot_manip_type_fouts = [[options.robot, options.manip, options.type, True, fout]]
 
     # default files
     if robot_manip_type_fouts is None:
-        robot_manip_type_fouts=[['robots/puma.robot.xml', None, IkParameterization.Type.Transform6D, 'ik_puma.cpp'],
-                                ['robots/barrettwam.robot.xml', None, IkParameterization.Type.Transform6D, 'ik_barrettwam.cpp'],
-                                ['robots/pa10schunk.robot.xml','arm',IkParameterization.Type.Transform6D, 'ik_pa10.cpp'],
-                                ['robots/pr2-beta-static.zae','head',IkParameterization.Type.Lookat3D, 'ik_pr2_head.cpp'],
-                                ['robots/pr2-beta-static.zae','head_torso',IkParameterization.Type.Lookat3D,'ik_pr2_head_torso.cpp'],
-                                ['robots/pr2-beta-static.zae','leftarm',IkParameterization.Type.Transform6D,'ik_pr2_leftarm.cpp'],
-                                ['robots/pr2-beta-static.zae','rightarm',IkParameterization.Type.Transform6D,'ik_pr2_rightarm.cpp'],
-                                ['robots/pr2-beta-static.zae','leftarm_torso',IkParameterization.Type.Transform6D,'ik_pr2_leftarm_torso.cpp'],
-                                ['robots/pr2-beta-static.zae','rightarm_torso',IkParameterization.Type.Transform6D,'ik_pr2_rightarm_torso.cpp'],
-                                ['robots/schunk-lwa3.zae',None,IkParameterization.Type.Transform6D,'ik_schunk_lwa3.cpp'],
-                                ['robots/neuronics-katana.zae','arm',IkParameterization.Type.TranslationDirection5D,'ik_katana5d.cpp'],
-                                ['robots/neuronics-katana.zae','armgrasp',IkParameterization.Type.Translation3D,'ik_katana5d_trans.cpp']]
+        robot_manip_type_fouts=[['robots/puma.robot.xml', None, IkParameterization.Type.Transform6D, False, 'ik_puma.cpp'],
+                                ['robots/barrettwam.robot.xml', None, IkParameterization.Type.Transform6D, False, 'ik_barrettwam.cpp'],
+                                ['robots/pa10schunk.robot.xml','arm',IkParameterization.Type.Transform6D, False, 'ik_pa10.cpp'],
+                                ['robots/pr2-beta-static.zae','head',IkParameterization.Type.Lookat3D, False, 'ik_pr2_head.cpp'],
+                                ['robots/pr2-beta-static.zae','head_torso',IkParameterization.Type.Lookat3D,False,'ik_pr2_head_torso.cpp'],
+                                ['robots/pr2-beta-static.zae','leftarm',IkParameterization.Type.Transform6D,False,'ik_pr2_leftarm.cpp'],
+                                ['robots/pr2-beta-static.zae','rightarm',IkParameterization.Type.Transform6D,False,'ik_pr2_rightarm.cpp'],
+                                ['robots/pr2-beta-static.zae','leftarm_torso',IkParameterization.Type.Transform6D,False,'ik_pr2_leftarm_torso.cpp'],
+                                ['robots/pr2-beta-static.zae','rightarm_torso',IkParameterization.Type.Transform6D,False,'ik_pr2_rightarm_torso.cpp'],
+                                ['robots/schunk-lwa3.zae',None,IkParameterization.Type.Transform6D,False,'ik_schunk_lwa3.cpp'],
+                                ['robots/neuronics-katana.zae','arm',IkParameterization.Type.TranslationDirection5D,False,'ik_katana5d.cpp'],
+                                ['robots/neuronics-katana.zae','armgrasp',IkParameterization.Type.Translation3D,False,'ik_katana5d_trans.cpp']]
 
 
     # create all jobs/args
     args = []
     robotmanip_offsets = []
     offset = 0
-    for robotfilename,manipname,iktype,destfilename in robot_manip_type_fouts:
-        freeindices_combs = get_freeindies_combinations(robotfilename,manipname)
+    for robotfilename,manipname,iktype,testallindices,destfilename in robot_manip_type_fouts:
+        if testallindices:
+            freeindices_combs = get_freeindies_combinations(robotfilename,manipname)
+        else:
+            freeindices_combs = [None] # take best one
         robotmanip_offsets.append([offset,len(freeindices_combs)])
         offset += len(freeindices_combs)
         for freeindices in freeindices_combs:
-            a={'robotfilename':robotfilename, 'manipname':manipname, 'iktype':iktype, 'freeindices':freeindices, 'testnum':options.testnum, 'delta':options.delta}
+            a={'robotfilename':robotfilename, 'manipname':manipname, 'iktype':iktype, 'freeindices':freeindices, 'testnum':options.testnum, 'delta':options.delta, 'forcegenerate':options.forcegenerate}
             if destfilename is not None and options.destdir is not None:
                 a['destfilename'] = os.path.join(options.destdir, destfilename)
             args.append(a)

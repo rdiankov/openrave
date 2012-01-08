@@ -741,6 +741,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
             cmd = 'DebugIK robot %s '%self.robot.GetName()
             if iktests.isdigit():
+                assert(int(iktests) > 0)
                 cmd += 'numtests %d '%int(iktests)
             else:
                 cmd += 'readfile %s '%iktests

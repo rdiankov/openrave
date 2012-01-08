@@ -228,7 +228,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '50'
+__version__ = '51'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -290,7 +290,7 @@ except ImportError:
 
 
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger('ikfast')
 
 CodeGenerators = {}
 # try:

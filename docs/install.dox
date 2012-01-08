@@ -278,13 +278,13 @@ Although %OpenRAVE is not tied to any particular collision checker, it requires 
 
 \en \subsection ilinux_python Python
 
-In order to use the python bindings through the \openravepy{openravepy} module, you'll need to install python, boost python, python numpy, and python sympy. .
+In order to use the python bindings through the \openravepy{openravepy} module, you'll need to install python, boost python, python numpy, and python sympy.
 
 \ja \subsection ilinux_python Python
 
 \openravepy{openravepy}を利用するために%OpenRAVEをコンパイルする前に以下のパッケージをインストールしてください．
 
-\verbatim
+\~ \verbatim
 sudo apt-get install libboost-python-dev python python-dev python-numpy ipython
 \endverbatim
 

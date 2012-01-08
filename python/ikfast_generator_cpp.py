@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
-# Copyright (C) 2009-2010 Rosen Diankov
+# Copyright (C) 2009-2012 Rosen Diankov
 #
 # ikfast is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -49,6 +49,7 @@ except:
         TranslationXAxisAngleZNorm4D=0x4400000e
         TranslationYAxisAngleXNorm4D=0x4400000f
         TranslationZAxisAngleYNorm4D=0x44000010
+
 from sympy import *
 
 try:
@@ -65,6 +66,9 @@ except ImportError:
             for  i in xrange(len(items)):
                 for cc in combinations(items[i+1:],n-1):
                     yield [items[i]]+cc
+
+import logging
+log = logging.getLogger('ikfast')
 
 from sympy.core import function # for sympy 0.7.1+
 class fmod(core.function.Function):
@@ -279,14 +283,57 @@ public:
 
     struct VARIABLE
     {
-        VARIABLE() : freeind(-1), fmul(0), foffset(0) {}
-        VARIABLE(int freeind, IKReal fmul, IKReal foffset) : freeind(freeind), fmul(fmul), foffset(foffset) {}
-        int freeind;
+        VARIABLE() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
+            indices[0] = indices[1] = -1;
+        }
         IKReal fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
+        signed char freeind; ///< if >= 0, mimics another joint
+        unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
+        unsigned char indices[2]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
     };
 
     std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
     std::vector<int> vfree;
+
+    bool Validate() const {
+        for(size_t i = 0; i < basesol.size(); ++i) {
+            if( basesol[i].maxsolutions == (unsigned char)-1) {
+                return false;
+            }
+            if( basesol[i].maxsolutions > 0 ) {
+                if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
+                    return false;
+                }
+                if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void GetSolutionIndices(std::vector<unsigned int>& v) const {
+        v.resize(0);
+        v.push_back(0);
+        for(int i = (int)basesol.size()-1; i >= 0; --i) {
+            if( basesol[i].maxsolutions != (unsigned char)-1 && basesol[i].maxsolutions > 1 ) {
+                for(size_t j = 0; j < v.size(); ++j) {
+                    v[j] *= basesol[i].maxsolutions;
+                }
+                size_t orgsize=v.size();
+                if( basesol[i].indices[1] != (unsigned char)-1 ) {
+                    for(size_t j = 0; j < orgsize; ++j) {
+                        v.push_back(v[j]+basesol[i].indices[1]);
+                    }
+                }
+                if( basesol[i].indices[0] != (unsigned char)-1 ) {
+                    for(size_t j = 0; j < orgsize; ++j) {
+                        v[j] += basesol[i].indices[0];
+                    }
+                }
+            }
+        }
+    }
 };
 
 inline float IKabs(float f) { return fabsf(f); }
@@ -295,12 +342,19 @@ inline double IKabs(double f) { return fabs(f); }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
+// allows asin and acos to exceed 1
 #ifndef IKFAST_SINCOS_THRESH
 #define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
 #endif
 
+// used to check input to atan2 for degenerate cases
 #ifndef IKFAST_ATAN2_MAGTHRESH
 #define IKFAST_ATAN2_MAGTHRESH ((IKReal)2e-6)
+#endif
+
+// minimum distance of separate solutions
+#ifndef IKFAST_SOLUTION_THRESH
+#define IKFAST_SOLUTION_THRESH ((IKReal)1e-6)
 #endif
 
 inline float IKasin(float f)
@@ -414,10 +468,12 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "%s"; }
 
+IKFAST_API const char* getIKFastVersion() { return "%s"; }
+
 #ifdef IKFAST_NAMESPACE
 } // end namespace
 #endif
-"""%(self.kinematicshash)
+"""%(self.kinematicshash, self.version)
 
         code += """
 #ifndef IKFAST_NO_MAIN
@@ -503,9 +559,27 @@ int main(int argc, char** argv)
             usedvars += ['new_pz', 'pz', 'npz']
         if usetranslation ==7:
             usedvars.append('pp')
-        code += 'IKReal ' + ','.join(usedvars) + ';\n\n'
+        code += 'IKReal ' + ','.join(usedvars) + ';\n'
+        code += 'unsigned char ' + ','.join('_i%s[2], _n%s'%(var[0].name,var[0].name) for var in node.solvejointvars+node.freejointvars) + ';\n\n'
         return code
 
+    def getIKFunctionPreamble(self, node):
+        code = "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        for var in node.solvejointvars:
+            code += '%s=numeric_limits<IKReal>::quiet_NaN(); _i%s[0] = -1; _i%s[1] = -1; _n%s = -1; '%(var[0].name,var[0].name,var[0].name,var[0].name)
+        for i in range(len(node.freejointvars)):
+            name = node.freejointvars[i][0].name
+            code += ' _i%s[0] = -1; _i%s[1] = -1; _n%s = 0; '%(name,name,name)
+        code += "\nfor(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
+        code += "    vsolutions.resize(0); vsolutions.reserve(8);\n"
+        return code
+
+    def getFKFunctionPreamble(self):
+        code = "/// solves the forward kinematics equations.\n"
+        code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
+        code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+        return code
+    
     def generateChain(self, node):
         self.freevars = []
         self.freevardependencies = []
@@ -514,9 +588,7 @@ int main(int argc, char** argv)
 
         code = ''
         if node.Tfk:
-            code += "/// solves the forward kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             subexprs,reduced_exprs=customcse (node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eetrans[0]','eerot[3]','eerot[4]','eerot[5]','eetrans[1]','eerot[6]','eerot[7]','eerot[8]','eetrans[2]']
@@ -531,9 +603,8 @@ int main(int argc, char** argv)
             code += self.indentCode(fcode,4)
             code += '}\n\n'
         code += self.getClassInit(node,IkType.Transform6D)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -572,9 +643,7 @@ int main(int argc, char** argv)
 
         code = ''
         if node.Rfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             subexprs,reduced_exprs=customcse (node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eerot[3]','eerot[4]','eerot[5]','eerot[6]','eerot[7]','eerot[8]']
@@ -590,9 +659,8 @@ int main(int argc, char** argv)
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Rotation3D,usetranslation=0)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -628,9 +696,7 @@ int main(int argc, char** argv)
 
         code = ''
         if node.Pfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
             eqs = []
@@ -660,9 +726,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += self.getClassInit(node,IkType.TranslationLocalGlobal6D,userotation=7)
         else:
             code += self.getClassInit(node,IkType.Translation3D,userotation=0)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -696,9 +761,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
         code = ''
         if node.Pfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
             eqs = []
@@ -718,9 +781,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationXY2D,userotation=0,usetranslation=3)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -751,9 +813,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         
         code = ''
         if node.Dfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
             eqs = []
@@ -773,9 +833,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Direction3D,userotation=1,usetranslation=0)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -808,9 +867,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         
         code = ''
         if node.Dfk and node.Pfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
             eqs = []
@@ -832,10 +889,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D,userotation=1)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -876,9 +931,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
         code = ''
         if node.Dfk and node.Pfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
             eqs = []
@@ -900,10 +953,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Lookat3D,userotation=0)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -933,9 +984,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         
         code = ''
         if node.anglefk and node.Pfk:
-            code += "/// solves the inverse kinematics equations.\n"
-            code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-            code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+            code += self.getFKFunctionPreamble()
             code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
             allvars = node.solvejointvars + node.freejointvars
             allsubs = [(v[0],Symbol('j[%d]'%v[1])) for v in allvars]
@@ -958,10 +1007,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += 'return;\n}\nIKFAST_ASSERT(0);\n}\n\n'
 
         code += self.getClassInit(node,node.iktype,userotation=1)
-        code += "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
-        code += "for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        fcode = "vsolutions.resize(0); vsolutions.reserve(8);\n"
-        fcode += "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
+        code += self.getIKFunctionPreamble(node)
+        fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
@@ -990,6 +1037,9 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
 
     def generateSolution(self, node,declarearray=True,acceptfreevars=True):
+        """writes the solution of one variable
+        :param declarearray: if False, will return the equations to be written without evaluating them. Used for conditioned solutions.
+        """
         code = ''
         numsolutions = 0
         eqcode = ''
@@ -1021,7 +1071,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                                 node.HasFreeVar = True
                                 return code
                             else:
-                                print 'failed to extract free variable %s for %s from'%(freevar,node.jointname), expr
+                                log.error('failed to extract free variable %s for %s from: eq=%s', freevar,node.jointname, expr)
     #                             m = dict()
     #                             m[a] = Real(-1,30)
     #                             m[b] = Real(0,30)
@@ -1090,12 +1140,18 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
         code += '{\nIKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
+        code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += eqcode
         if allnumsolutions > 1:
-            for i,j in combinations(range(allnumsolutions),2):
-                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n{\n    %svalid[%d]=false;\n}\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+            if allnumsolutions >= 256:
+                log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
         code += 'for(int i%s = 0; i%s < %d; ++i%s)\n{\n'%(name,name,allnumsolutions,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,name,name)
+        # check for a similar solution
+        code += 'for(int ii%s = i%s+1; ii%s < %d; ++ii%s)\n{\n'%(name,name,name,allnumsolutions,name)
+        code += 'if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name)
+        code += '}\n'
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
@@ -1114,12 +1170,15 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         origequations = self.copyequations()
         maxchecks = max([len(s.checkforzeros) for s in node.solversolutions])
         allnumsolutions = 0
+        AddHalfTanValue = False
         checkcode = ''
         for var,value in node.dictequations:
             checkcode += 'IKReal %s;\n'%var
             checkcode += self.writeEquations(lambda k: var,value)
         for solversolution in node.solversolutions:
             assert len(solversolution.checkforzeros) > 0
+            if solversolution.AddHalfTanValue:
+                AddHalfTanValue = True
             self.dictequations = self.copyequations(origequations)
             checkcode += '{\n'
             checkcode += self.writeEquations(lambda i: 'evalcond[%d]'%(i),solversolution.checkforzeros)
@@ -1141,13 +1200,21 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code = '{\nIKReal evalcond[%d]; int numsolutions%s = 0;\n'%(maxchecks,name)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
+        code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += self.indentCode(checkcode,4)
         if allnumsolutions > 1:
-            for i,j in combinations(range(allnumsolutions),2):
-                code += 'if( %svalid[%d] && %svalid[%d] && IKabs(c%sarray[%d]-c%sarray[%d]) < 0.0001 && IKabs(s%sarray[%d]-s%sarray[%d]) < 0.0001 )\n    %svalid[%d]=false;\n'%(name,i,name,j,name,i,name,j,name,i,name,j,name,j)
+            if allnumsolutions >= 256:
+                log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
         code += 'for(int i%s = 0; i%s < numsolutions%s; ++i%s)\n{\n'%(name,name,name,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,name,name)
+        # check for a similar solution
+        code += 'for(int ii%s = i%s+1; ii%s < numsolutions%s; ++ii%s)\n{\n'%(name,name,name,name,name)
+        code += 'if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name)
+        code += '}\n'
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
+        if AddHalfTanValue:
+            code += 'ht%s = IKtan(%s/2);\n'%(name,name)
         self.dictequations = origequations
         return code
 
@@ -1187,16 +1254,18 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode += 'if( %sarray[numsolutions] > IKPI )\n{\n    %sarray[numsolutions]-=IK2PI;\n}\nelse if( %sarray[numsolutions] < -IKPI )\n{\n    %sarray[numsolutions]+=IK2PI;\n}\n'%(name,name,name,name)
         fcode += 's%sarray[numsolutions] = IKsin(%sarray[numsolutions]);\n'%(name,name)
         fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
-        fcode += 'bool valid = true;\n'
-        # test all the solutions up to now for validity
-        fcode += 'for( int k%s = 0; k%s < numsolutions; ++k%s)\n{\n'%(name,name,name)
-        fcode += '    if( IKabs(c%sarray[k%s]-c%sarray[numsolutions]) < 0.0001 && IKabs(s%sarray[k%s]-s%sarray[numsolutions]) < 0.0001 )\n    {\n        valid=false; break;\n    }\n'%(name,name,name,name,name,name)
-        fcode += '}\n'
-        fcode += 'if( valid ) { numsolutions++; }\n'
+        fcode += 'numsolutions++;\n'
         fcode += '}\n'
         code += self.indentCode(fcode,4)
         code += '}\n'
+
+        allnumsolutions = D*len(node.jointeval)
+        if allnumsolutions >= 256:
+            log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
+        code += 'bool %svalid[%d]={true};\n'%(name,allnumsolutions)
+        code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(name,name,name)
+        code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
         code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
@@ -1229,6 +1298,13 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode += ' )\n{\n    continue;\n}\n'
             code += self.indentCode(fcode,4)
 
+        # passed all tests
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,name,name)
+        # check for a similar solution
+        code += 'for(int ii%s = i%s+1; ii%s < %d; ++ii%s)\n{\n'%(name,name,name,allnumsolutions,name)
+        code += 'if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name)
+        code += '}\n'
+        
         return code
     def endPolynomialRoots(self, node):
         return '    }\n'
@@ -1272,21 +1348,45 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         for i in range(len(node.jointnames)):
             if node.isHinges[i]:
                 fcode += 'if( %sarray[numsolutions] > IKPI )\n{\n    %sarray[numsolutions]-=IK2PI;\n}\nelse if( %sarray[numsolutions] < -IKPI )\n{\n    %sarray[numsolutions]+=IK2PI;\n}\n'%(node.jointnames[i],node.jointnames[i],node.jointnames[i],node.jointnames[i])
-        fcode += 'bool valid = true;\n'
-        # test all the solutions up to now for validity
-        fcode += 'for( int k%s = 0; k%s < numsolutions; ++k%s)\n{\n'%(firstname,firstname,firstname)
-        fcode += '    if( '
-        for name in node.jointnames:
-            fcode += 'IKabs(c%sarray[k%s]-c%sarray[numsolutions]) < 0.00001 && IKabs(s%sarray[k%s]-s%sarray[numsolutions]) < 0.00001 &&'%(name,firstname,name,name, firstname,name)
-        fcode += ' 1 )\n    {\n        valid=false; break;\n    }\n'
-        fcode += '}\n'
-        fcode += 'if( valid ) { numsolutions++; }\n'
+        fcode += 'numsolutions++;\n'
+#         fcode += 'bool valid = true;\n'
+#         # test all the solutions up to now for validity
+#         fcode += 'for( int k%s = 0; k%s < numsolutions; ++k%s)\n{\n'%(firstname,firstname,firstname)
+#         fcode += '    if( '
+#         for name in node.jointnames:
+#             fcode += 'IKabs(c%sarray[k%s]-c%sarray[numsolutions]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[k%s]-s%sarray[numsolutions]) < IKFAST_SOLUTION_THRESH &&'%(name,firstname,name,name, firstname,name)
+#         fcode += ' 1 )\n    {\n        valid=false; break;\n    }\n'
+#         fcode += '}\n'
+#         fcode += 'if( valid ) { numsolutions++; }\n'
         fcode += '}\n'
         code += self.indentCode(fcode,4)
+
+        code += 'bool %svalid[%d]={true};\n'%(firstname,rootmaxdim)
+        code += '_n%s = %d;\n'%(firstname,rootmaxdim)
+        if rootmaxdim >= 256:
+            log.error('num solutions is %d>=256, which exceeds unsigned char',rootmaxdim)
+        
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(firstname,firstname,firstname)
+        code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(firstname,firstname)
+        for name in node.jointnames:
+            code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
+            
+        # check for a similar solution
+        code += 'for(int ii%s = i%s+1; ii%s < %d; ++ii%s)\n{\n'%(firstname,firstname,firstname,rootmaxdim,firstname)
+        code += 'if( !%svalid[ii%s] ) { continue; }\n'
+        code += 'if( '
+        for name in node.jointnames:
+            code += 'IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && '%(name,firstname,name,firstname,name,firstname,name,firstname)
+        code += ' 1 )\n{\n    %svalid[ii%s]=false; '%(firstname,firstname)
+        for name in node.jointnames:
+            code += '_i%s[1] = ii%s; '%(name,firstname)
+        code += ' break; \n}\n'
+        code += '}\n'
+        
         for name in node.jointnames:
             code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,firstname,name,name,firstname,name,name,firstname)
         return code
+    
     def endCoeffFunction(self, node):
         return '    }\n'
 
@@ -1457,6 +1557,11 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
                 code += 'solution.basesol[%d].fmul = %smul;\n'%(i,var.name)
                 code += 'solution.basesol[%d].freeind = %d;\n'%(i,ifreevar[0])
+                code += 'solution.basesol[%d].maxsolutions = 0;\n'%(i)
+            else:
+                code += 'solution.basesol[%d].indices[0] = _i%s[0];\n'%(i,var)
+                code += 'solution.basesol[%d].indices[1] = _i%s[1];\n'%(i,var)
+                code += 'solution.basesol[%d].maxsolutions = _n%s;\n'%(i,var)
         code += 'solution.vfree.resize(%d);\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
