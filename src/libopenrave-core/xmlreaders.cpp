@@ -537,7 +537,11 @@ boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::strin
     }
 
 #ifdef HAVE_BOOST_FILESYSTEM
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
     fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename)).string();
+#else
+    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename, boost::filesystem::native)).string();
+#endif
 #endif
     return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
 }
@@ -826,6 +830,9 @@ public:
                 }
             }
             if( extension == "stl" || extension == "x") {
+                if( extension == "stl" ) {
+                    RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
+                }
                 return false;
             }
         }
@@ -2399,7 +2406,7 @@ public:
                 _pchain->_vForcedAdjacentLinks.push_back(entry);
             }
             else if( xmlname == "modelsdir" ) {
-                getline(_ss,_strModelsDir);
+                _strModelsDir = _ss.str();
                 boost::trim(_strModelsDir);
                 _strModelsDir += "/";
             }
@@ -3540,7 +3547,17 @@ public:
         if( xmlname == "bkgndcolor" ) {
             _ss >> vBkgndColor.x >> vBkgndColor.y >> vBkgndColor.z;
         }
-        else if((xmlname == "camrotaxis")||(xmlname == "camrotationaxis")) {
+        else if( xmlname == "camrotaxis" ) {
+            RAVELOG_INFO("<camrotaxis> is deprecated, use <camrotationaxis> by rotating 180 around Z axis\n");
+            Vector vaxis; dReal fangle=0;
+            _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
+            tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
+            // have to rotate due to old bug
+            RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+            tCamera = tCamera*trot;
+            bTransSpecified = true;
+        }
+        else if( xmlname == "camrotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);

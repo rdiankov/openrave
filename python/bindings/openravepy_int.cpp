@@ -207,7 +207,7 @@ public:
         if( !!plink ) {
             return _penv->CheckCollision(plink);
         }
-        KinBodyPtr pbody = openravepy::GetKinBody(o1);
+        KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             return _penv->CheckCollision(pbody);
         }
@@ -223,7 +223,7 @@ public:
             bCollision = _penv->CheckCollision(plink,openravepy::GetCollisionReport(pReport));
         }
         else {
-            KinBodyPtr pbody = openravepy::GetKinBody(o1);
+            KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
             if( !!pbody ) {
                 bCollision = _penv->CheckCollision(pbody,openravepy::GetCollisionReport(pReport));
             }
@@ -245,7 +245,7 @@ public:
             if( !!plink2 ) {
                 return _penv->CheckCollision(plink,plink2);
             }
-            KinBodyPtr pbody2 = openravepy::GetKinBody(o2);
+            KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
             if( !!pbody2 ) {
                 return _penv->CheckCollision(plink,pbody2);
             }
@@ -257,13 +257,13 @@ public:
             }
             throw OPENRAVE_EXCEPTION_FORMAT0("invalid argument 2",ORE_InvalidArguments);
         }
-        KinBodyPtr pbody = openravepy::GetKinBody(o1);
+        KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
             if( !!plink2 ) {
                 return _penv->CheckCollision(plink2,pbody);
             }
-            KinBodyPtr pbody2 = openravepy::GetKinBody(o2);
+            KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
             if( !!pbody2 ) {
                 return _penv->CheckCollision(pbody,pbody2);
             }
@@ -289,7 +289,7 @@ public:
                 bCollision = _penv->CheckCollision(plink,plink2, openravepy::GetCollisionReport(pReport));
             }
             else {
-                KinBodyPtr pbody2 = openravepy::GetKinBody(o2);
+                KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
                 if( !!pbody2 ) {
                     bCollision = _penv->CheckCollision(plink,pbody2, openravepy::GetCollisionReport(pReport));
                 }
@@ -299,14 +299,14 @@ public:
             }
         }
         {
-            KinBodyPtr pbody = openravepy::GetKinBody(o1);
+            KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
             if( !!pbody ) {
                 KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
                 if( !!plink2 ) {
                     bCollision = _penv->CheckCollision(plink2,pbody, openravepy::GetCollisionReport(pReport));
                 }
                 else {
-                    KinBodyPtr pbody2 = openravepy::GetKinBody(o2);
+                    KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
                     if( !!pbody2 ) {
                         bCollision = _penv->CheckCollision(pbody,pbody2, openravepy::GetCollisionReport(pReport));
                     }
@@ -332,7 +332,7 @@ public:
         if( !!plink ) {
             return _penv->CheckCollision(plink,pbody2);
         }
-        KinBodyPtr pbody1 = openravepy::GetKinBody(o1);
+        KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
         if( !!pbody1 ) {
             return _penv->CheckCollision(pbody1,pbody2);
         }
@@ -350,7 +350,7 @@ public:
             bCollision = _penv->CheckCollision(plink,pbody2,openravepy::GetCollisionReport(pReport));
         }
         else {
-            KinBodyPtr pbody1 = openravepy::GetKinBody(o1);
+            KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
             if( !!pbody1 ) {
                 bCollision = _penv->CheckCollision(pbody1,pbody2,openravepy::GetCollisionReport(pReport));
             }
@@ -1128,6 +1128,16 @@ public:
     }
 };
 
+PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
+{
+#if BOOST_VERSION >= 103500
+    return _pyenv;
+#else
+    // if raw shared_ptr is returned, then python will throw RuntimeError: tr1::bad_weak_ptr when env is used
+    return PyEnvironmentBasePtr(new PyEnvironmentBase(_pyenv->GetEnv()));
+#endif
+}
+
 namespace openravepy
 {
 
@@ -1160,6 +1170,7 @@ int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv)
 {
     return OpenRAVE::RaveGetEnvironmentId(pyenv->GetEnv());
 }
+
 PyEnvironmentBasePtr RaveGetEnvironment(int id)
 {
     EnvironmentBasePtr penv = OpenRAVE::RaveGetEnvironment(id);

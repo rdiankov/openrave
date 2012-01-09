@@ -733,6 +733,12 @@ public:
             daeElementRef frame_tip = ptec->add("frame_tip");
             frame_tip->setAttribute("link",(kmodelid+kmout->vlinksids.at((*itmanip)->GetEndEffector()->GetIndex())).c_str());
             _WriteTransformation(frame_tip,(*itmanip)->GetLocalToolTransform());
+            {
+                daeElementRef direction = frame_tip->add("direction");
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << (*itmanip)->GetLocalToolDirection().x << " " << (*itmanip)->GetLocalToolDirection().y << " " << (*itmanip)->GetLocalToolDirection().z;
+                direction->setCharData(ss.str());
+            }
             int i = 0;
             map<KinBody::JointPtr, daeElementRef> mapgripper_joints;
             FOREACHC(itindex,(*itmanip)->GetGripperIndices()) {

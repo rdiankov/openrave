@@ -39,7 +39,10 @@ if not __openravepy_build_doc__:
 else:
     from numpy import eye
 
-import multiprocessing
+try:
+    from multiprocessing import cpu_count
+except:
+    def cpu_count(): return 1
 
 from openravepy.examples import graspplanning
 
@@ -97,7 +100,7 @@ class CubeAssembly(object):
                 if generategrasps:
                     if not gmodel.load():
                         approachrays = gmodel.computeBoxApproachRays(delta=0.01,normalanglerange=0,directiondelta=0)
-                        gmodel.numthreads = multiprocessing.cpu_count()
+                        gmodel.numthreads = cpu_count()
                         gmodel.generate(standoffs=array([0,0.04,0.08]),approachrays=approachrays, friction=0.1)
                         gmodel.save()
                 self.gmodels.append(gmodel)

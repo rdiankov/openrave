@@ -68,8 +68,12 @@ public:
             return ST_Laser;
         }
 
-        std::vector<RaveVector<dReal> > positions;         ///< world coordinates of the origins of each of the laser points.
-        ///< if positions is empty, assume the origin is t.trans for all points
+        /** \brief World coordinates of the origins of each of the photon (laser) rays.
+
+           Each of the photons start from some 3D position and go a particular direction. For most common 2D lasers and the kinect, the starting point from each of the photons is the same, it is also called the focal point.
+           If positions is empty, assume the origin is t.trans for all rays.
+         */
+        std::vector<RaveVector<dReal> > positions;
         std::vector<RaveVector<dReal> > ranges;         ///< Range and direction readings in the form of direction*distance. The direction is in world coordinates. The values should be returned in the order laser detected them in.
         std::vector<dReal> intensity;         ///< Intensity readings.
 
@@ -343,6 +347,8 @@ public:
     /// Sensors attached to the robot have their transforms automatically set every time the robot is moved
     /// \param trans - The transform defining the frame of the sensor.
     virtual void SetTransform(const Transform& trans) = 0;
+
+    /// \brief the position of the sensor in the world coordinate system
     virtual Transform GetTransform() = 0;
 
     /// \brief Register a callback whenever new sensor data comes in.

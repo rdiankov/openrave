@@ -328,6 +328,7 @@ public:
     virtual void _UpdateEnvironment();
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
+    bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);
@@ -389,7 +390,7 @@ public:
     int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;           ///< initial tarnsformation of selected item
-    RaveTransform<float> Tcam;
+    RaveTransform<float> _Tcamera;
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     unsigned int _fb;

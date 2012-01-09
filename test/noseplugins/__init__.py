@@ -1,4 +1,9 @@
 import capture
-import multiprocess
 import nosexcover
-import xunitmultiprocess
+
+try:
+    import multiprocess
+    import xunitmultiprocess
+except ImportError:
+    # fails for python 2.5
+    pass

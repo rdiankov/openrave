@@ -336,6 +336,11 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationXYOrientation3D] = "TranslationXYOrientation3D";
         _mapikparameterization[IKP_TranslationLocalGlobal6D] = "TranslationLocalGlobal6D";
         _mapikparameterization[IKP_TranslationXAxisAngle4D] = "TranslationXAxisAngle4D";
+        _mapikparameterization[IKP_TranslationYAxisAngle4D] = "TranslationYAxisAngle4D";
+        _mapikparameterization[IKP_TranslationZAxisAngle4D] = "TranslationZAxisAngle4D";
+        _mapikparameterization[IKP_TranslationXAxisAngleZNorm4D] = "TranslationXAxisAngleZNorm4D";
+        _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
+        _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
     }
 public:
@@ -880,6 +885,31 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
         break;
     }
+    case IKP_TranslationYAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationYAxisAngle4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationZAxisAngle4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationXAxisAngleZNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationYAxisAngleXNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        std::pair<Vector,dReal> p = ikparam.GetTranslationZAxisAngleYNorm4D();
+        O << p.second << " " << p.first.x << " " << p.first.y << " " << p.first.z << " ";
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -902,7 +932,42 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
-    case IKP_TranslationXAxisAngle4D: { Vector trans; dReal angle=0; I >> angle >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationXAxisAngle4D(trans,angle); break; }
+    case IKP_TranslationXAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationXAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationYAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationZAxisAngle4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationXAxisAngleZNorm4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationYAxisAngleXNorm4D(trans,angle);
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        Vector trans; dReal angle=0;
+        I >> angle >> trans.x >> trans.y >> trans.z;
+        ikparam.SetTranslationZAxisAngleYNorm4D(trans,angle);
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -2247,6 +2312,11 @@ ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _
 
 BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(const std::string& name, const AttributesList &atts)
 {
+    if( !!_preader ) {
+        if( _preader->startElement(name, atts) == PE_Support )
+            return PE_Support;
+        return PE_Ignore;
+    }
     _ss.str(""); // have to clear the string
     if( name == "group" ) {
         _spec._vgroups.resize(_spec._vgroups.size()+1);
@@ -2267,11 +2337,21 @@ BaseXMLReader::ProcessElement ConfigurationSpecification::Reader::startElement(c
         }
         return PE_Support;
     }
+    else if( name == "configuration" ) {
+        _preader.reset(new ConfigurationSpecification::Reader(_spec));
+        return PE_Support;
+    }
     return PE_Pass;
 }
 
 bool ConfigurationSpecification::Reader::endElement(const std::string& name)
 {
+    if( !!_preader ) {
+        if( _preader->endElement(name) ) {
+            _preader.reset();
+        }
+        return false;
+    }
     if( name == "configuration" ) {
         return true;
     }
@@ -2280,8 +2360,13 @@ bool ConfigurationSpecification::Reader::endElement(const std::string& name)
 
 void ConfigurationSpecification::Reader::characters(const std::string& ch)
 {
-    _ss.clear();
-    _ss << ch;
+    if( !_preader ) {
+        _ss.clear();
+        _ss << ch;
+    }
+    else {
+        _preader->characters(ch);
+    }
 }
 
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)

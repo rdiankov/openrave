@@ -16,10 +16,16 @@ import sys
 from optparse import OptionParser
 import nose
 from nose.plugins import failuredetail
-from noseplugins import xunitmultiprocess, capture, callableclass, multiprocess
+from noseplugins import capture, callableclass
 
-import multiprocessing
-
+usemultiprocess = False
+try:
+    from multiprocessing import cpu_count
+    from noseplugins import xunitmultiprocess, multiprocess
+    usemultiprocess = True
+except ImportError:
+    def cpu_count(): return 1
+    
 if __name__ == "__main__":
     import test_kinematics
     parser = OptionParser(description='OpenRAVE unit tests')
@@ -33,12 +39,18 @@ if __name__ == "__main__":
                       help='set to run only tests that test program execution to make sure things run on the current OS')
     (options, args) = parser.parse_args()
 
-    multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
-    numprocesses = options.numprocesses if options.numprocesses is not None else multiprocessing.cpu_count()
-    argv=['nosetests','-v','--with-xunitmp','--xunit-file=results.xml','--processes=%d'%numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','-d','--with-callableclass','-s']
+    numprocesses = options.numprocesses if options.numprocesses is not None else cpu_count()
+    if usemultiprocess:
+        multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
+    argv=['nosetests','-v','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
     if options.with_coverage:
         argv += ['--with-coverage', '--cover-package=openravepy','--cover-html']
-    plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),failuredetail.FailureDetail(),callableclass.CallableClass()]
+
+    plugins=[capture.Capture(),failuredetail.FailureDetail(),callableclass.CallableClass()]
+    if usemultiprocess:
+        plugins+=[multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp()]
+        argv += ['--with-xunitmp','--xunit-file=results.xml','--processes=%d'%numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker']
+        
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)

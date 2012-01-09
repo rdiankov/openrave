@@ -56,7 +56,7 @@ if( MSVC )
 else()
   install(TARGETS libopenrave-core DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
-install(FILES openrave-core.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
+install(FILES openrave-core.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( OPT_STATIC )
   # visual studio needs static built

@@ -391,3 +391,12 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(J0b.GetValues()[0]-5*value) <= g_epsilon )
         assert(J0a.GetMimicDOFIndices() == [0])
         assert(J0b.GetMimicDOFIndices() == [0])
+
+    def test_specification(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        spec=robot.GetConfigurationSpecification()
+        s=pickle.dumps(spec)
+        newspec=pickle.loads(s)
+        assert(newspec==spec)

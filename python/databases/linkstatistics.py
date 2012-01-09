@@ -136,12 +136,19 @@ class LinkStatisticsModel(DatabaseGenerator):
                         accumvolume = sum(linkvolumes)
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
-                    return (volumeinfo['volumedelta']*accumvolume)**weightexp
+                    weight=(volumeinfo['volumedelta']*accumvolume)**weightexp
+                    if weight <= 0:
+                        print 'joint %d has weight=%e, setting to 1e-6'%(ijoint,weight)
+                        weight = 1e-6
+                    return weight
+                
                 jweights = array([getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)])
                 # this is a weird factor.... but at least it is consistent when composing robots
                 jweights *= weightmult
+                dofweights = []
                 for w,j in izip(jweights,self.robot.GetJoints()):
-                    j.SetWeights(tile(w,j.GetDOF()))
+                    dofweights += [w]*j.GetDOF()
+                self.robot.SetDOFWeights(dofweights)
                 self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
                 self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:

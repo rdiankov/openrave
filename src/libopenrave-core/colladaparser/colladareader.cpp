@@ -1906,6 +1906,14 @@ public:
                             continue;
                         }
                         pmanip->_tLocalTool = _ExtractFullTransformFromChildren(pframe_tip);
+                        daeElement* pdirection = pframe_tip->getChild("direction");
+                        if( !!pdirection ) {
+                            stringstream ss(pdirection->getCharData());
+                            ss >> pmanip->_vdirection.x >> pmanip->_vdirection.y >> pmanip->_vdirection.z;
+                            if( !ss ) {
+                                RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
+                            }
+                        }
                     }
 
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {

@@ -532,12 +532,12 @@ public:
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {    //
-            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            //RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
         if( !plink->IsEnabled() ) {
-            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            //RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -563,7 +563,7 @@ public:
             return CheckCollision(pbody, report);
 
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            //RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -576,7 +576,7 @@ public:
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( !plink->IsEnabled() ) {
-            RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
+            //RAVELOG_VERBOSE(str(boost::format("calling collision on disabled link %s\n")%plink->GetName()));
             return false;
         }
 
@@ -637,7 +637,7 @@ public:
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            //RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 
@@ -771,7 +771,7 @@ public:
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
-            RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
+            //RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
             return false;
         }
 

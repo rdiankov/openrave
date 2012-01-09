@@ -98,8 +98,9 @@ if( OPT_PYTHON )
       OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _python_failed1)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from os.path import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
+      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
       OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       RESULT_VARIABLE _python_failed2)
 
     if( ${_python_failed0} EQUAL 0 AND ${_python_failed1} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
@@ -125,7 +126,7 @@ if( OPT_PYTHON )
         message(STATUS "failed to get python version")
       endif()
     else()
-      message(STATUS "failed to get python site-package directories via get_pytho_lib")
+      message(STATUS "failed to get python site-package directories via get_python_lib")
       set(PYTHON_EXECUTABLE)
     endif()
   endif()
@@ -138,13 +139,14 @@ else()
   set(OPENRAVE_BIN_SUFFIX ${OPENRAVE_SOVERSION} CACHE STRING "Add the MAJOR.MINOR openrave version suffixes to all executable installed files")
 endif()
 
-set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_SOVERSION}")
+set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_SOVERSION}" CACHE PATH "Relative path for shared OpenRAVE data")
 set(OPENRAVE_DATA_INSTALL_DIR "${OPENRAVE_SHARE_DIR}" CACHE PATH "Scene and robot files installation directory")
 set(OPENRAVE_PLUGINS_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/plugins" CACHE PATH "OpenRAVE plugins installation directory")
 set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
-
+set(OPENRAVE_CMAKE_INSTALL_DIR "openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "Directory to install the cmake config files.")
+set(OPENRAVE_INCLUDE_INSTALL_DIR "openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "Directory name for header files")
 if( UNIX OR CYGWIN)
   # cache has to be STRING instead of PATH for path to remain relative
   set(BASH_COMPLETION_DIR CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
@@ -200,8 +202,8 @@ if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
 endif()
 
-set(OPENRAVE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(OPENRAVE_CORE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
+set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
 if( MSVC )
@@ -250,7 +252,7 @@ if( MSVC )
   else()
     set(MSVC_PREFIX "vc100")
   endif()
-  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}-${MSVC_PREFIX}-mt")
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}-${MSVC_PREFIX}-mt" CACHE STRING "Suffix to append to library names")
   
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
@@ -258,7 +260,7 @@ if( MSVC )
   set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_CFLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
 else()
-  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}")
+  set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}" CACHE STRING "Suffix to append to library names")
 endif()
 
 # only look for installed boost if not an old version of msvc
@@ -406,8 +408,16 @@ add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTR
 # math libraries
 find_package(GMP)
 find_package(GMPXX)
-find_package(MPFR)
+find_package(MPFR 2.4)
+if( MPFR_FOUND )
+  check_library_exists(${MPFR_LIBRARIES} mpfr_div_d "${MPFR_LIBRARIES_DIR}" MPFR_DIV_D_FOUND)
+  if( NOT MPFR_DIV_D_FOUND )
+    message(WARNING "MPFR verison too old, does not support mpfr_div_d function")
+    set(MPFR_FOUND 0)
+  endif()
+endif()
 find_package(MPFI)
+
 
 if( OPT_ACCURATEMATH AND NOT MSVC )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
@@ -731,15 +741,18 @@ endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" IMMEDIATE @ONLY)
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" COMPONENT ${COMPONENT_PREFIX}dev)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/${OPENRAVE_CMAKE_INSTALL_DIR}" COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base )
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" @ONLY IMMEDIATE)
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}.pc" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-core.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" @ONLY IMMEDIATE)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-core.pc openrave-core.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
     if( BASH_COMPLETION_DIR )
       install(CODE "get_filename_component(BASH_COMPLETION_ABSOLUTE_DIR \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR} ABSOLUTE)" COMPONENT openrave)
       install(CODE "get_filename_component(BASH_COMPLETION_SHARE_DIR \${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR} ABSOLUTE)" COMPONENT openrave)
@@ -750,8 +763,8 @@ if( UNIX OR CYGWIN)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
-install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
-install(FILES rave/rave.h rave/plugin.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
+install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+install(FILES rave/rave.h rave/plugin.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
 install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 
 #install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -776,7 +789,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_VERSION_MAJOR ${OPENRAVE_VERSION_MAJOR})
   set(CPACK_PACKAGE_VERSION_MINOR ${OPENRAVE_VERSION_MINOR})
   set(CPACK_PACKAGE_VERSION_PATCH ${OPENRAVE_VERSION_PATCH})
-  set(CPACK_PACKAGE_INSTALL_DIRECTORY "openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}")
+  set(CPACK_PACKAGE_INSTALL_DIRECTORY "openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "CPack install directory")
   set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/en/description.rst)
   set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/COPYING)
 

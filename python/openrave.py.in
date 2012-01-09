@@ -62,9 +62,9 @@ if __name__ == "__main__":
                           usage='%prog [options] [loadable openrave xml/robot files...]')
     OpenRAVEGlobalArguments.addOptions(parser,testmode=False)
     parser.add_option('--database', action="callback",callback=vararg_callback, dest='database',default=None,
-                      help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example:     %s --database grasping --robot=robots/pr2-beta-sim.robot.xml'%(sys.argv[0]))
+                      help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example: openrave@OPENRAVE_SOVERSION@.py --database grasping --robot=robots/pr2-beta-sim.robot.xml')
     parser.add_option('--example', action="callback",callback=vararg_callback, dest='example',default=None,
-                      help='If specified, the next arguments will be used to call an example from the openravepy.examples module. The first argument is used to find the example moduel. For example:     %s --example graspplanning --scene=data/lab1.env.xml'%(sys.argv[0]))
+                      help='If specified, the next arguments will be used to call an example from the openravepy.examples module. The first argument is used to find the example moduel. For example: openrave@OPENRAVE_SOVERSION@.py --example graspplanning --scene=data/lab1.env.xml')
     parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                       help='if true will drop into the ipython interpreter rather than spin')
     parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
@@ -86,8 +86,8 @@ if __name__ == "__main__":
                         m=__import__('openravepy.databases.'+name)
                         if type(m) is ModuleType:
                             print name
-                    except ImportError:
-                        pass
+                    except ImportError, e:
+                        print e
             
             RaveDestroy()        
             sys.exit(0)
@@ -99,8 +99,8 @@ if __name__ == "__main__":
                         m=__import__('openravepy.examples.'+name)
                         if type(m) is ModuleType:
                             print name
-                    except ImportError:
-                        pass
+                    except ImportError, e:
+                        print e
             
             RaveDestroy()        
             sys.exit(0)

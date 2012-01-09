@@ -139,12 +139,12 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..openravepy_ext import openrave_exception
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys
@@ -154,6 +154,11 @@ import distutils
 import logging
 from distutils import ccompiler
 from optparse import OptionParser
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 log = logging.getLogger(__name__)
 format = logging.Formatter('%(name)s: %(message)s')
@@ -581,8 +586,57 @@ class InverseKinematicsModel(DatabaseGenerator):
             def solveFullIK_TranslationXAxisAngle4D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
-                return self.ikfast.IKFastSolver.solveFullIK_TranslationXAxisAngle4D(*args,**kwargs)
+                kwargs['rawglobaldir'] = [1.0,0.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngle4D
+        elif self.iktype == IkParameterization.Type.TranslationYAxisAngle4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationYAxisAngle4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,1.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationYAxisAngle4D
+        elif self.iktype == IkParameterization.Type.TranslationZAxisAngle4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationZAxisAngle4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,0.0,1.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationZAxisAngle4D
+        elif self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [1.0,0.0,0.0]
+                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
+        elif self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationYAxisAngleXNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,1.0,0.0]
+                kwargs['rawnormaldir'] = [1.0,0.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationYAxisAngleXNorm4D
+        elif self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationZAxisAngleYNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
+                kwargs['rawbasepos'] = rawbasepos
+                kwargs['rawglobaldir'] = [0.0,0.0,1.0]
+                kwargs['rawnormaldir'] = [0.0,1.0,0.0]
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
             raise ValueError('bad type')
 
@@ -614,7 +668,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('creating ik file %s',sourcefilename)
             mkdir_recursive(os.path.split(sourcefilename)[0])
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
-            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D:
+            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D or self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
@@ -661,6 +715,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                     except distutils.errors.LinkError,e:
                         print e
                         log.info('linking again... (MSVC bug?)')
+                        if 'lapack' in libraries:
+                            libraries.remove('lapack')
                         compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
                         
                     if not self.setrobot():
@@ -692,6 +748,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
             cmd = 'DebugIK robot %s '%self.robot.GetName()
             if iktests.isdigit():
+                assert(int(iktests) > 0)
                 cmd += 'numtests %d '%int(iktests)
             else:
                 cmd += 'readfile %s '%iktests

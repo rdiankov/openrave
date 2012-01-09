@@ -223,8 +223,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 }
             }
 
-            vector<dReal> vdofvalues(_dofindices.size());
+            vector<dReal> vdofvalues;
             if( _bTrajHasJoints && _dofindices.size() > 0 ) {
+                vdofvalues.resize(_dofindices.size());
                 _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
             }
 

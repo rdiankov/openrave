@@ -18,7 +18,7 @@ Loads up an environment, attaches a viewer, loads a scene, and requests informat
   robot = env.GetRobots()[0] # get the first robot
 
   with env: # lock the environment since robot will be used
-      print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetJointValues()
+      print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetDOFValues()
       robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
       T = robot.GetLinks()[1].GetTransform() # get the transform of link 1
       print "The transformation of link 1 is:\n",T

@@ -12,10 +12,13 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
-from ..openravepy_ext import *
-from ..openravepy_int import *
+# python 2.5 raises 'import *' not allowed with 'from .'
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization
+from ..openravepy_ext import planning_error
+    
 import numpy
 from copy import copy as shallowcopy
+
 class BaseManipulation:
     """Interface wrapper for :ref:`module-basemanipulation`
     """
@@ -104,12 +107,12 @@ class BaseManipulation:
         """
         cmd += ' '
         if goal is not None:
-            cmd += 'goal ' + ' '.join(str(f) for f in goal) + ' '
+            cmd += 'goal ' + ' '.join('%.15e'%f for f in goal) + ' '
         if goals is not None:
             cmd += 'goals %d '%len(goals)
             for g in goals:
                 for f in g:
-                    cmd += str(f) + ' '
+                    cmd += '%.15e '%f
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
         if execute is not None:
@@ -127,7 +130,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -161,6 +164,8 @@ class BaseManipulation:
             cmd += 'jitter %.15e '%jitter
         if steplength is not None:
             cmd += 'steplength %.15e '%steplength
+        if jittergoal is not None:
+            cmd += 'jittergoal %.15e '%jittergoal
         if ikparam is not None:
             cmd += 'ikparam ' + str(ikparam) + ' '
         if ikparams is not None:
@@ -183,7 +188,7 @@ class BaseManipulation:
         """See :ref:`module-basemanipulation-moveunsyncjoints`
         """
         assert(len(jointinds)==len(jointvalues) and len(jointinds)>0)
-        cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join(str(f) for f in jointvalues), ' '.join(str(f) for f in jointinds))
+        cmd = 'MoveUnsyncJoints handjoints %d %s %s '%(len(jointinds),' '.join('%.15e'%f for f in jointvalues), ' '.join(str(f) for f in jointinds))
         if planner is not None:
             cmd += 'planner %s '%planner
         if execute is not None:
@@ -235,7 +240,7 @@ class BaseManipulation:
         """
         cmd = 'FindIKWithFilters ikparam %s '%str(ikparam)
         if cone is not None:
-            cmd += 'cone %s '%(' '.join(str(f) for f in cone))
+            cmd += 'cone %s '%(' '.join('%.15e'%f for f in cone))
         if solveall is not None and solveall:
             cmd += 'solveall '
         if filteroptions is not None:

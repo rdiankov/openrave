@@ -367,9 +367,19 @@ protected:
                 RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
             }
         }
+#if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
+        // TODO, boost 1.40 doesnot take boost::filesystem::native as argument
+        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
+#else
         boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
+#endif
         FOREACH(itname, vplugindirs) {
-            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) ) {
+#if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
+            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)))
+#else
+            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
+#endif
+            {
                 bExists = true;
                 break;
             }
@@ -753,14 +763,20 @@ protected:
         }
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
         // try matching partial base names without path and extension
-        boost::filesystem::path pluginpath(pluginname);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        boost::filesystem::path pluginpath(pluginname);
         string stem = pluginpath.stem().string();
 #else
+        boost::filesystem::path pluginpath(pluginname, boost::filesystem::native);
         string stem = pluginpath.stem();
 #endif
         FOREACH(it, _listplugins) {
-            if( stem == boost::filesystem::path((*it)->ppluginname).stem() ) {
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+            if( stem == boost::filesystem::path((*it)->ppluginname).stem() )
+#else
+            if( stem == boost::filesystem::path((*it)->ppluginname, boost::filesystem::native).stem() )
+#endif
+            {
                 return it;
             }
         }
@@ -783,11 +799,13 @@ protected:
         if( plibrary == NULL ) {
             // unix libraries are prefixed with 'lib', first have to split
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
             boost::filesystem::path _librarypath(libraryname);
             string librarypath = _librarypath.parent_path().string();
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
             string libraryfilename = _librarypath.filename().string();
 #else
+            boost::filesystem::path _librarypath(libraryname, boost::filesystem::native);
+            string librarypath = _librarypath.parent_path().string();
             string libraryfilename = _librarypath.filename();
 #endif
             if(( libraryfilename.size() > 3) &&( libraryfilename.substr(0,3) != string("lib")) ) {

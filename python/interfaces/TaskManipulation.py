@@ -12,8 +12,10 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
-from ..openravepy_ext import *
-from ..openravepy_int import *
+# python 2.5 raises 'import *' not allowed with 'from .'
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization, IkParameterization
+from ..openravepy_ext import planning_error
+
 from numpy import *
 from copy import copy as shallowcopy
 class TaskManipulation:

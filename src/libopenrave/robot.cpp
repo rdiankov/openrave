@@ -182,7 +182,38 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
     }
     case IKP_TranslationXAxisAngle4D: {
         Transform t = GetTransform();
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        break;
+    }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
         break;
     }
     default:
@@ -233,7 +264,38 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     }
     case IKP_TranslationXAxisAngle4D: {
         Transform t = GetTransform();
-        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(t.rotate(_vdirection).x));
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
+        break;
+    }
+    case IKP_TranslationYAxisAngle4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
+        break;
+    }
+    case IKP_TranslationZAxisAngle4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
+        break;
+    }
+    case IKP_TranslationXAxisAngleZNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+        break;
+    }
+    case IKP_TranslationYAxisAngleXNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+        break;
+    }
+    case IKP_TranslationZAxisAngleYNorm4D: {
+        Transform t = GetTransform();
+        Vector vglobaldirection = t.rotate(_vdirection);
+        ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
         break;
     }
     default:
@@ -1904,7 +1966,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -1955,7 +2017,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2017,7 +2079,7 @@ void RobotBase::RegrabAll()
                 KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
                 if( pgrabbedbody != pbody ) {
                     FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), pbody) ) {
+		        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                             itbody->vCollidingLinks.push_back(*itlink);
                         }
                     }

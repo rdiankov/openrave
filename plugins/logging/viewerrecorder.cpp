@@ -87,7 +87,8 @@ class ViewerRecorder : public ModuleBase
         bool _bProcessed;
     };
 
-    boost::mutex _mutex;
+    boost::mutex _mutex; // for video data passing
+    boost::mutex _mutexlibrary; // for video encoding library resources
     boost::condition _condnewframe;
     bool _bContinueThread;
     boost::shared_ptr<boost::thread> _threadrecord;
@@ -378,18 +379,23 @@ protected:
 
     void _Reset()
     {
-        boost::mutex::scoped_lock lock(_mutex);
-        _nFrameCount = 0;
-        _nVideoWidth = _nVideoHeight = 0;
-        _framerate = 30000.0f/1001.0;
-        _starttime = 0;
-        _callback.reset();
-        _bUseSimulationTime = true;
-        _listAddFrames.clear();
-        _listFinishedFrames.clear();
-        _frameLastAdded.reset();
-        _filename = "";
-        _ResetLibrary();
+        {
+            boost::mutex::scoped_lock lock(_mutex);
+            _nFrameCount = 0;
+            _nVideoWidth = _nVideoHeight = 0;
+            _framerate = 30000.0f/1001.0;
+            _starttime = 0;
+            _callback.reset();
+            _bUseSimulationTime = true;
+            _listAddFrames.clear();
+            _listFinishedFrames.clear();
+            _frameLastAdded.reset();
+            _filename = "";
+        }
+        {
+            boost::mutex::scoped_lock lock(_mutexlibrary);
+            _ResetLibrary();
+        }
     }
 
 #ifdef _WIN32
@@ -539,6 +545,7 @@ protected:
 
     void _AddFrame(void* pdata)
     {
+        boost::mutex::scoped_lock lock(_mutexlibrary);
         HRESULT hr = AVIStreamWrite(_psCompressed /*stream pointer*/, _nFrameCount /*time of this frame*/, 1 /*number to write*/, pdata, _biSizeImage /*size of this frame*/, AVIIF_KEYFRAME /*flags....*/, NULL, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
         _nFrameCount++;
@@ -600,7 +607,11 @@ protected:
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
         lcodecs.clear();
-        AVOutputFormat *fmt = av_oformat_next(NULL);//first_oformat;
+#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+        AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
+#else
+        AVOutputFormat *fmt = first_oformat;
+#endif
         while (fmt != NULL) {
             lcodecs.push_back(make_pair((int)fmt->video_codec,fmt->long_name));
             fmt = fmt->next;
@@ -617,7 +628,11 @@ protected:
         AVCodec *codec;
 
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
-        AVOutputFormat *fmt = av_oformat_next(NULL);//first_oformat;
+#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+        AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
+#else
+        AVOutputFormat *fmt = first_oformat;
+#endif
         while (fmt != NULL) {
             if (fmt->video_codec == video_codec) {
                 break;
@@ -694,7 +709,11 @@ protected:
 
     void _AddFrame(void* pdata)
     {
-        BOOST_ASSERT( !!_output );
+        boost::mutex::scoped_lock lock(_mutexlibrary);
+        if( !_output ) {
+            RAVELOG_DEBUG("video resources destroyed\n");
+            return;
+        }
         int size;
 
         // flip vertically

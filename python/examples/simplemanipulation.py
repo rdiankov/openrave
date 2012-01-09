@@ -61,9 +61,8 @@ def main(env,options):
     with env:
         jointnames = ['l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','r_shoulder_lift_joint','r_elbow_flex_joint','r_wrist_flex_joint']
         robot.SetActiveDOFs([robot.GetJoint(name).GetDOFIndex() for name in jointnames])
-        robot.SetActiveDOFValues([1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996])
-        #basemanip.MoveActiveJoints(goal=[1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996])
-#    waitrobot(robot)
+        basemanip.MoveActiveJoints(goal=[1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996])
+    waitrobot(robot)
 
     print 'move robot base to target'
     with env:

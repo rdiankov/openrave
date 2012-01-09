@@ -26,7 +26,8 @@ class TestMoving(EnvironmentSetup):
             goal[0] = -0.556
             goal[3] = -1.86
             basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=2,execute=False)
-            
+
+
     def test_ikplanning(self):
         env = self.env
         env.Load('data/lab1.env.xml')
@@ -41,11 +42,23 @@ class TestMoving(EnvironmentSetup):
             solutions = ikmodel.manip.FindIKSolutions(Tee,IkFilterOptions.CheckEnvCollisions)
             assert(len(solutions)>1)
             basemanip = interfaces.BaseManipulation(robot)
-            trajdata=basemanip.MoveManipulator(goals=solutions,execute=True)
+            with robot:
+                for sol in solutions:
+                    robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
+                    assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+            traj=basemanip.MoveManipulator(goals=solutions,execute=True,outputtrajobj=True)
+            # check that last point is accurate
+            lastvalues = traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1), robot, ikmodel.manip.GetArmIndices(), 0)
+            with robot:
+                robot.SetDOFValues(lastvalues,ikmodel.manip.GetArmIndices())
+                assert(min([sum(abs(s-lastvalues)) for s in solutions]) <= g_epsilon)
+                assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
+            
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
-            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
+            print transdist(Tee,ikmodel.manip.GetEndEffectorTransform())
+            assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):
         env = self.env
@@ -128,8 +141,13 @@ class TestMoving(EnvironmentSetup):
         with env:
             targetcollision = env.CheckCollision(target)
             jointnames = ['l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','r_shoulder_lift_joint','r_elbow_flex_joint','r_wrist_flex_joint']
-            jointvalues = [1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996]
-            robot.SetDOFValues(jointvalues,[robot.GetJoint(name).GetDOFIndex() for name in jointnames])
+            armindices = [robot.GetJoint(name).GetDOFIndex() for name in jointnames]
+            armgoal = [1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996]
+            robot.SetActiveDOFs(armindices)
+            basemanip.MoveActiveJoints(goal=armgoal)
+        robot.WaitForController(100)
+        
+        with env:
             robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
             basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=5000,steplength=0.15,maxtries=2)
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
@@ -137,6 +155,7 @@ class TestMoving(EnvironmentSetup):
 
         taskprob.ReleaseFingers()
         with env:
+            assert( transdist(robot.GetDOFValues(armindices),armgoal) <= g_epsilon )
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
         robot.WaitForController(100)
 
@@ -256,3 +275,30 @@ class TestMoving(EnvironmentSetup):
         planningutils.SmoothAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
         planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
         robot.GetController().SetPath(traj2)
+
+    def test_releasefingers(self):
+        env=self.env
+        env.Load('data/katanatable.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            m=robot.SetActiveManipulator('arm')
+            body=env.GetKinBody('mug2')
+            T = eye(4)
+            T[0:3,3] = [-0.053,0.39,1.58643]
+            body.SetTransform(T)
+            initialvalues = tile(-0.43,len(m.GetGripperIndices()))
+            robot.SetDOFValues(initialvalues,m.GetGripperIndices())
+        taskmanip=interfaces.TaskManipulation(robot)
+        trajdata=taskmanip.ReleaseFingers(execute=False,outputtraj=True)[1]
+        traj=RaveCreateTrajectory(env,'').deserialize(trajdata)
+        assert(traj.GetDuration()>0)
+        newvalues=traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1),robot,m.GetGripperIndices(),0)
+        assert(transdist(initialvalues,newvalues) > 0.1 )
+        
+    def test_handgoal_collision(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        robot.SetDOFValues(array([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00]))
+        assert(env.CheckCollision(robot))
+        

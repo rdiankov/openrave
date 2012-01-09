@@ -39,7 +39,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     {
         _goalindex = -1;
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-
+        _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         _robot = pbase;
 
         RobotBase::RobotStateSaver savestate(_robot);
@@ -137,6 +137,7 @@ protected:
     RobotBasePtr _robot;
     std::vector<dReal>         _sampleConfig;
     int _goalindex;
+    SpaceSamplerBasePtr _uniformsampler;
 
     SpatialTree< RrtPlanner<Node>, Node > _treeForward;
 
@@ -169,6 +170,7 @@ public:
             return false;
         }
 
+        _fGoalBiasProb = 0.01;
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -177,7 +179,6 @@ public:
         _treeBackward._distmetricfn = _parameters->_distmetricfn;
 
         //read in all goals
-        _numgoals = 0;
         if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
             RAVELOG_ERROR("BirrtPlanner::InitPlan - Error: goals are improperly specified:\n");
             _parameters.reset();
@@ -185,18 +186,19 @@ public:
         }
 
         vector<dReal> vgoal(_parameters->GetDOF());
+        _vecGoals.resize(0);
         for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
             if( _parameters->_checkpathconstraintsfn(vgoal,vgoal,IT_OpenStart,ConfigurationListPtr()) ) {
-                _treeBackward.AddNode(-_numgoals-1, vgoal);
-                _numgoals++;
+                _treeBackward.AddNode(-(int)_vecGoals.size()-1, vgoal);
+                _vecGoals.push_back(vgoal);
             }
             else {
                 RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
             }
         }
 
-        if(( _numgoals == 0) && !_parameters->_samplegoalfn ) {
+        if( _vecGoals.size() == 0 && !_parameters->_samplegoalfn ) {
             RAVELOG_WARN("no goals specified\n");
             _parameters.reset();
             return false;
@@ -240,7 +242,7 @@ public:
         int iter = 0;
 
         list<GOALPATH> listgoalpaths;
-
+        bool bSampleGoal = true;
         while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
             RAVELOG_VERBOSE("iter: %d\n", iter);
             ++iter;
@@ -249,8 +251,8 @@ public:
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSE("found goal\n");
-                    _treeBackward.AddNode(-_numgoals-1,vgoal);
-                    _numgoals += 1;
+                    _treeBackward.AddNode(-(int)_vecGoals.size()-1,vgoal);
+                    _vecGoals.push_back(vgoal);
                 }
             }
             if( !!_parameters->_sampleinitialfn ) {
@@ -261,9 +263,30 @@ public:
                 }
             }
 
-            if(( iter == 1) &&( _parameters->GetDOF() <= (int)_parameters->vgoalconfig.size()) ) {
+            std::vector<dReal> sample(1);
+            _uniformsampler->SampleSequence(sample,1);
+            if( (bSampleGoal || sample[0] < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
+                bSampleGoal = false;
+                // sample goal as early as possible
+                std::vector<uint32_t> sampleindex(1);
                 _sampleConfig.resize(_parameters->GetDOF());
-                std::copy(_parameters->vgoalconfig.begin(),_parameters->vgoalconfig.begin()+_parameters->GetDOF(),_sampleConfig.begin());
+                uint32_t goalindex = 0;
+                for(int testiter = 0; testiter < 10; ++testiter) {
+                    _uniformsampler->SampleSequence(sampleindex,1);
+                    goalindex = sampleindex[0]%_vecGoals.size();
+                    // make sure goal is not already found
+                    bool bfound = false;
+                    FOREACHC(itgoalpath,listgoalpaths) {
+                        if( goalindex == (uint32_t)itgoalpath->goalindex ) {
+                            bfound = true;
+                            break;
+                        }
+                    }
+                    if( !bfound) {
+                        break;
+                    }
+                }
+                std::copy(_vecGoals.at(goalindex).begin(), _vecGoals.at(goalindex).end(), _sampleConfig.begin());
             }
             else if( !_parameters->_samplefn(_sampleConfig) ) {
                 continue;
@@ -289,10 +312,19 @@ public:
                 listgoalpaths.push_back(GOALPATH());
                 _ExtractPath(listgoalpaths.back(),TreeA == &_treeForward ? iConnectedA : iConnectedB,TreeA == &_treeBackward ? iConnectedA : iConnectedB);
                 int goalindex = listgoalpaths.back().goalindex;
-                RAVELOG_DEBUG(str(boost::format("found a goal, goal index=%d, path length=%f")%goalindex%listgoalpaths.back().length));
-                if( listgoalpaths.size() >= _parameters->_minimumgoalpaths || (int)listgoalpaths.size() >= _numgoals ) {
+                if( IS_DEBUGLEVEL(Level_Debug) ) {
+                    stringstream ss;
+                    ss << "found a goal, goal index=" << goalindex << ", path length=" << listgoalpaths.back().length << ", values=[";
+                    for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                        ss << listgoalpaths.back().qall.at(listgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
+                    }
+                    ss << "]";
+                    RAVELOG_DEBUG(ss.str());
+                }
+                if( listgoalpaths.size() >= _parameters->_minimumgoalpaths || listgoalpaths.size() >= _vecGoals.size() ) {
                     break;
                 }
+                bSampleGoal = true;
                 // more goal requested, make sure to remove all the nodes pointing to the current found goal
                 _treeBackward.DeleteNodesWithParent(-goalindex-1);
             }
@@ -352,7 +384,7 @@ public:
             pbackward = _treeBackward._nodes.at(pbackward->parent);
         }
 
-        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < _numgoals );
+        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoals.size() );
         _SimpleOptimizePath(vecnodes,10);
         int dof = _parameters->GetDOF();
         goalpath.qall.resize(vecnodes.size()*dof);
@@ -388,7 +420,8 @@ public:
 protected:
     RRTParametersPtr _parameters;
     SpatialTree< RrtPlanner<SimpleNode>, SimpleNode > _treeBackward;
-    int _numgoals;
+    float _fGoalBiasProb;
+    std::vector< std::vector<dReal> > _vecGoals;
 };
 
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>
@@ -492,7 +525,7 @@ public:
                 }
             }
 
-            if( (( iter == 1) ||( RaveRandomFloat() < _fGoalBiasProb) ) &&( _vecGoals.size() > 0) ) {
+            if( (iter == 1 || RaveRandomFloat() < _fGoalBiasProb ) && _vecGoals.size() > 0 ) {
                 _sampleConfig = _vecGoals[RaveRandomInt()%_vecGoals.size()];
             }
             else if( !_parameters->_samplefn(_sampleConfig) ) {

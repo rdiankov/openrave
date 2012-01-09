@@ -416,7 +416,7 @@ void init_openravepy_sensor()
                        .def("__repr__",&PySensorBase::__repr__)
         ;
 
-        class_<PySensorBase::PyCameraIntrinsics, boost::shared_ptr<PySensorBase::PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(SensorBase::CameraIntrinsics))
+        class_<PySensorBase::PyCameraIntrinsics, boost::shared_ptr<PySensorBase::PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
         .def_readonly("K",&PySensorBase::PyCameraIntrinsics::K)
         .def_readonly("distortion_model",&PySensorBase::PyCameraIntrinsics::distortion_model)
         .def_readonly("distortion_coeffs",&PySensorBase::PyCameraIntrinsics::distortion_coeffs)

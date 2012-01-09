@@ -10,15 +10,23 @@ Using `python nose <http://somethingaboutorange.com/mrl/projects/nose>`_ for the
 Configuring
 -----------
 
-Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages::
+Because it is not necessary to cater to the lowest common denominator, use easy_install to get latest test packages
+
+.. code-block:: bash
+
+  sudo easy_install nose coverage
+
+**Optional** For entire testing harness:
+
+.. code-block:: bash
 
   sudo apt-get install graphviz python-svn gnu-pgagent
-  sudo easy_install nose coverage
+
 
 Jenkins
 ~~~~~~~
 
-The following Jenkins plugins should be installed:
+If using Jenkins to run tests, the following Jenkins plugins should be installed:
 	
 * CMake plugin
 * Measurement Plots
@@ -55,7 +63,13 @@ Can build entire ubuntu environments using `debootstrap <https://wiki.ubuntu.com
 Tests
 -----
 
-Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. If the PARALLEL_JOBS environment variable is set to "-jX", then will distribute the computation onto X processes.
+To run, first install OpenRAVE into your path, then:
+
+.. code-block:: bash
+
+  python test/run_tests.py
+
+For future: Running 'make test' in the root directory should setup the OpenRAVE environment from local **build** folder and run all tests. 
 
 Basic Tests
 ~~~~~~~~~~~

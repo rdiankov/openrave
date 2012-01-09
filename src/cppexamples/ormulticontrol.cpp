@@ -104,7 +104,7 @@ int main(int argc, char ** argv)
                 TrajectoryBasePtr traj = RaveCreateTrajectory(penv,"");
                 probot->SetActiveDOFs(restindices);
                 ConfigurationSpecification spec = probot->GetActiveConfigurationSpecification();
-                int timeoffset = spec.AddDeltaTime();
+                int timeoffset = spec.AddDeltaTimeGroup();
                 traj->Init(spec);
                 probot->GetActiveDOFValues(q); // get current values
                 vector<dReal> vdata(spec.GetDOF(),0);

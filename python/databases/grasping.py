@@ -158,12 +158,13 @@ from traceback import print_exc
 import time
 import os.path
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import inf, array
 
+import numpy
+from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
 from .. import interfaces
@@ -1048,7 +1049,8 @@ class GraspingModel(DatabaseGenerator):
                 return GraspingModel(robot=robot,target=target)
             
             Model = CreateModel
-        return DatabaseGenerator.InitializeFromParser(Model,parser,*margs,args=args,defaultviewer=True,**kwargs)
+        kwargs.update({ 'args':args, 'defaultviewer':True })
+        return DatabaseGenerator.InitializeFromParser(Model,parser,*margs,**kwargs)
 
 def run(args,*margs,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.

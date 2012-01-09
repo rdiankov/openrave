@@ -447,9 +447,7 @@ public:
     void SetDescription(const std::string& s) {
         _pbase->SetDescription(s);
     }
-    PyEnvironmentBasePtr GetEnv() const {
-        return _pyenv;
-    }
+    PyEnvironmentBasePtr GetEnv() const;
 
     void Clone(PyInterfaceBasePtr preference, int cloningoptions) {
         CHECK_POINTER(preference);
@@ -521,6 +519,8 @@ namespace openravepy
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
 void LockEnvironment(PyEnvironmentBasePtr);
 void UnlockEnvironment(PyEnvironmentBasePtr);
+int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
+PyEnvironmentBasePtr RaveGetEnvironment(int id);
 
 void init_openravepy_collisionchecker();
 CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);

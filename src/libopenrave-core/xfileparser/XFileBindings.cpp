@@ -103,6 +103,10 @@ public:
             pmanip->_pEndEffector = itmanip->first;
             pmanip->_pBase = probot->GetLinks().at(0);
             pmanip->_tLocalTool = itmanip->second;
+            //if( probot->GetDOF() == 4 ) {
+            //RAVELOG_INFO("specify x-axis for planar IK\n");
+            pmanip->_vdirection=Vector(1,0,0);
+            //}
             probot->_vecManipulators.push_back(pmanip);
         }
     }
@@ -150,6 +154,10 @@ protected:
             t = parent->GetTransform();
         }
         _Read(pbody, parent, scene->mRootNode, t, 0);
+        // remove any mimic properties from the main joints
+        FOREACH(itjoint,pbody->_vecjoints) {
+            (*itjoint)->_vmimic[0].reset();
+        }
     }
 
     void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform& transparent, int level)
@@ -167,6 +175,7 @@ protected:
         if( !!node->mFramePivot ) {
             Transform tpivot = tnode*ExtractTransform(node->mFramePivot->mPivotMatrix);
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
+            // support mimic joints, so have to look at mJointIndex!
             if( node->mFramePivot->mType == 1 ) {
                 pjoint->_type = KinBody::Joint::JointRevolute;
                 pjoint->_vlowerlimit[0] = -PI;
@@ -174,12 +183,19 @@ protected:
             }
             else if( node->mFramePivot->mType == 2 ) {
                 pjoint->_type = KinBody::Joint::JointPrismatic;
-                pjoint->_vlowerlimit[0] = -10;
-                pjoint->_vupperlimit[0] = 10;
+                pjoint->_vlowerlimit[0] = -10000*_vScaleGeometry.x;
+                pjoint->_vupperlimit[0] = 10000*_vScaleGeometry.x;
+            }
+            else if( node->mFramePivot->mType == 5 ) {
+                RAVELOG_WARN(str(boost::format("frame %s is some type of geometry scaling joint?\n")%node->mName));
+                pjoint.reset();
+                //pjoint->_type = KinBody::Joint::JointPrismatic;
+                //pjoint->_vlowerlimit[0] = -10000;
+                //pjoint->_vupperlimit[0] = 10000;
             }
             else {
                 if( node->mFramePivot->mType != 0 ) {
-                    RAVELOG_WARN(str(boost::format("unknown joint type %d")%node->mFramePivot->mType));
+                    RAVELOG_WARN(str(boost::format("unknown joint %s type %d")%node->mName%node->mFramePivot->mType));
                 }
                 pjoint.reset();
             }
@@ -208,15 +224,48 @@ protected:
                 pjoint->_bIsCircular[0] = false;
                 std::vector<Vector> vaxes(1);
                 Transform t = plink->_t.inverse()*tflipyz*tpivot;
-                vaxes[0] = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
-                vaxes[0] = t.rotate(vaxes[0]);
+                Vector vmotiondirection = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
+                vaxes[0] = t.rotate(vmotiondirection);
                 if( _bFlipYZ ) {
                     // flip z here makes things right....
-                    vaxes[0].z *= -1;
+                    if( node->mFramePivot->mType == 1 ) {
+                        vaxes[0].z *= -1;
+                    }
                 }
                 std::vector<dReal> vcurrentvalues;
                 pjoint->_ComputeInternalInformation(plink,pchildlink,t.trans,vaxes,vcurrentvalues);
-                pbody->_vecjoints.push_back(pjoint);
+                if( node->mFramePivot->mJointIndex > pbody->_vecjoints.size() ) {
+                    pbody->_vecjoints.resize(node->mFramePivot->mJointIndex);
+                }
+
+                string orgjointname = str(boost::format("%sj%d")%_prefix%node->mFramePivot->mJointIndex);
+                // prioritize joints with orgjointname when putting into _vecjoints. The only reason to do this is to maintain consistency between expected joint values.
+
+                if( orgjointname != pjoint->_name ) {
+                    //KinBody::JointPtr porgjoint = pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1);
+                    // joint already exists, so must be mimic?
+                    dReal fmult = RaveSqrt(vmotiondirection.lengthsqr3());
+                    pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f")%orgjointname%fmult);
+                    pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%orgjointname%fmult);
+                }
+                else {
+                    // add the joint (make sure motion direction is unit)
+                    if( RaveFabs(vaxes[0].lengthsqr3()-1) > 0.0001 ) {
+                        RAVELOG_WARN(str(boost::format("joint %s motion axis is not unit: %f %f %f\n")%pjoint->_name%vmotiondirection.x%vmotiondirection.y%vmotiondirection.z));
+                    }
+                }
+
+                if( !pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1) ) {
+                    pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1) = pjoint;
+                }
+                else {
+                    pbody->_vPassiveJoints.push_back(pjoint);
+                    if( orgjointname == pjoint->_name ) {
+                        // swap with official joint (can come later in the hierarchy)
+                        swap(pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1), pbody->_vPassiveJoints.back());
+                    }
+                }
             }
 
             if( !!pchildlink ) {

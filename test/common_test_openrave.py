@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import with_statement # for python 2.5
+
 from openravepy import *
 from openravepy import misc
 import numpy
@@ -22,7 +24,7 @@ from nose.tools import assert_raises
 import fnmatch
 import time
 import os
-
+import cPickle as pickle
 _multiprocess_can_split_ = True
 
 g_epsilon = 1e-7

@@ -25,7 +25,7 @@ Core
 
 * Now properly handling inter-grabbed-body collisions: if two grabbed bodies are initially colliding when grabbed, then their self-colision should be ignored. Also fixed a bug with :meth:`.Robot.Manipulator.CheckEndEffectorCollision`
 
-* Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories. The specification can hold joint values, transformation values, etc.
+* **Major**: Added a new class :class:`.ConfigurationSpecification` to manage configuration spaces, it is shared by both planners and trajectories. The specification can hold joint values, transformation values, etc.
 
 * Separated the affine DOF spece configuration from robot class into the global openrave space. See :class:`.DOFAffine`, :meth:`.RaveGetIndexFromAffineDOF`, :meth:`.RaveGetAffineDOFFromIndex`, :meth:`.RaveGetAffineDOF`, and :meth:`.RaveGetAffineDOFValuesFromTransform`
 
@@ -33,7 +33,8 @@ Core
 
 * Added parsing of kinematics for DirextX files (\*.x).
 
-* Collada reading/writing now preserve the body DOF indices order by storing actuator information.
+* COLLADA: reading/writing now preserve the body DOF indices order by storing actuator information, now supports manipulator <direction> tag.
+
 
 Inverse Kinematics
 ------------------
@@ -48,7 +49,7 @@ Inverse Kinematics
 
 * fixed ikfast bug when prismatic joints are present, ikfast version is now **49**.
 
-* Added new IK type :meth:`.TranslationXAxisAngle4D`
+* Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`.TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`, :meth:`.TranslationXAxisAngleZNorm4D`, :meth:`.TranslationYAxisAngleXNorm4D`, :meth:`.TranslationZAxisAngleYNorm4D`
 
 Grasping
 --------
@@ -59,7 +60,7 @@ Grasping
 
 * added new :mod:`.examples.fastgraspingthreaded` example to show how to use multithreaded functions to compute good grasps in real-time.
 
-* added **--numthreads** option to **openrave.py --database grasping** to allow users to set number of threads.
+* added ``--numthreads`` option to ``openrave.py --database graspin`` to allow users to set number of threads.
 
 * now storing translationstepmult and finestep parameters in the database since they affect success rates
 
@@ -76,10 +77,17 @@ Planning
 
 * Added **minimumgoalpaths** to RRT planner to continue searching for different goals after initial path is found.
 
+* **Major**: Added :ref:`parabolic smoothing <planner-parabolicsmoother>` as defualt smoother. The parabolic smoothing library is
+from `Kris Hauser's group at Indiana University <http://www.iu.edu/~motion/software.html>`_.
+
+* added jittering of goals to ManipulatorIKGoalSampler
+
+* fixed :meth:`.planningutils.JitterActiveDOF` accidentally returning perturbed values
+
 Trajectories
 ------------
 
-* Completely redesigned the :class:`.Trajectory` class, see :ref:`arch_trajectory` for usage.
+* **Major**: Completely redesigned the :class:`.Trajectory` class, see :ref:`arch_trajectory` for usage.
 
 * Added :meth:`.Trajectory.Clone`
 
@@ -87,7 +95,9 @@ Trajectories
 
 * Added trajectory API to openravepy.
 
-* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`.
+* Trajectory retiming/smoothing performed now in planners.
+
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`.
 
 Python
 ------
@@ -101,7 +111,7 @@ Python
 Misc
 ----
 
-* "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the **openrave.py inversekinematics database --getfilename** option.
+* "skipgeometry" now being acknowledged in :meth:`.Environment.Load`, fixes the ``openrave.py inversekinematics database --getfilename`` option.
 
 * <render> tag for non-trimesh objects works now
 
@@ -120,6 +130,8 @@ Misc
 * fixed qtcoin interface memory leak with QAction menus.
 
 * fixed qtcoin :meth:`.Viewer.GetCameraTransform` function. now compatible with :meth:`.Viewer.GetCameraImage`
+
+* everything compiles with Ubuntu 8.04/Python 2.5.
 
 Version 0.4.2
 =============

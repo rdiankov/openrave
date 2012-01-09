@@ -21,7 +21,7 @@ if [ "$revision" != "$prevrevision" ]; then
     ssh openravetesting,openrave@shell.sourceforge.net create # always create
     scp latest_stable.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/project/o/op/openrave/
     # remove files 7 or more days old
-    ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_stable.tgz; chmod -R g+w latest_stable; rm -f latest_stable.tgz; find latest_stable -mtime +7 -type f -exec rm -rf {} \;"
+    ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_stable.tgz; chmod -R g+w latest_stable; rm -f latest_stable.tgz; find latest_stable -mtime +30 -type f -exec rm -rf {} \;"
     rm -f latest_stable.tgz
 
     svn rm --non-interactive --username openravetesting -m "Delete Latest Stable Tab (Tagged by Jenkins)." $latest_stable
