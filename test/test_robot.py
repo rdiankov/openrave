@@ -136,7 +136,7 @@ class TestRobot(EnvironmentSetup):
             assert(not manip.CheckEndEffectorCollision(manip.GetTransform()))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
             
-            robot.SetActiveDOFValues([  0.678,   0.00000000e+00,   1.75604762e+00, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
+            robot.SetActiveDOFValues([0.678, 0, 1.75604762, -1.74228108, 0, 0, 0])
             assert(not robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))

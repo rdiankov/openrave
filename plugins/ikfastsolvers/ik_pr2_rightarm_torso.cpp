@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 51 generated on 2012-01-08 14:24:32.306325
+/// ikfast version 52 generated on 2012-01-09 16:08:33.955607
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -542,7 +542,7 @@ cj27array[numsolutions] = IKcos(j27array[numsolutions]);
 numsolutions++;
 }
 }
-bool j27valid[8]={true};
+bool j27valid[8]={true,true,true,true,true,true,true,true};
 _nj27 = 8;
 for(int ij27 = 0; ij27 < numsolutions; ++ij27)
     {
@@ -554,7 +554,7 @@ if( !j27valid[ij27] )
 htj27 = IKtan(j27/2);
 
 _ij27[0] = ij27; _ij27[1] = -1;
-for(int iij27 = ij27+1; iij27 < 8; ++iij27)
+for(int iij27 = ij27+1; iij27 < numsolutions; ++iij27)
 {
 if( j27valid[iij27] && IKabs(cj27array[ij27]-cj27array[iij27]) < IKFAST_SOLUTION_THRESH && IKabs(sj27array[ij27]-sj27array[iij27]) < IKFAST_SOLUTION_THRESH )
 {
@@ -3171,7 +3171,7 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "c363859a2d7a151a22dc1e251d6d8669"; }
 
-IKFAST_API const char* getIKFastVersion() { return "51"; }
+IKFAST_API const char* getIKFastVersion() { return "52"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

@@ -1262,7 +1262,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         allnumsolutions = D*len(node.jointeval)
         if allnumsolutions >= 256:
             log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
-        code += 'bool %svalid[%d]={true};\n'%(name,allnumsolutions)
+        code += 'bool %svalid[%d]={%s};\n'%(name,allnumsolutions,','.join(['true']*allnumsolutions))
         code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(name,name,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
@@ -1301,7 +1301,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         # passed all tests
         code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,name,name)
         # check for a similar solution
-        code += 'for(int ii%s = i%s+1; ii%s < %d; ++ii%s)\n{\n'%(name,name,name,allnumsolutions,name)
+        code += 'for(int ii%s = i%s+1; ii%s < numsolutions; ++ii%s)\n{\n'%(name,name,name,name)
         code += 'if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name)
         code += '}\n'
         
@@ -1361,7 +1361,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         fcode += '}\n'
         code += self.indentCode(fcode,4)
 
-        code += 'bool %svalid[%d]={true};\n'%(firstname,rootmaxdim)
+        code += 'bool %svalid[%d]={%s};\n'%(firstname,rootmaxdim,','.join(['true']*rootmaxdim))
         code += '_n%s = %d;\n'%(firstname,rootmaxdim)
         if rootmaxdim >= 256:
             log.error('num solutions is %d>=256, which exceeds unsigned char',rootmaxdim)
@@ -1372,7 +1372,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
             
         # check for a similar solution
-        code += 'for(int ii%s = i%s+1; ii%s < %d; ++ii%s)\n{\n'%(firstname,firstname,firstname,rootmaxdim,firstname)
+        code += 'for(int ii%s = i%s+1; ii%s < numsolutions; ++ii%s)\n{\n'%(firstname,firstname,firstname,firstname)
         code += 'if( !%svalid[ii%s] ) { continue; }\n'
         code += 'if( '
         for name in node.jointnames:

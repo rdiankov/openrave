@@ -1034,6 +1034,16 @@ public:
                 }
 
                 if( bsuccess ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        s.str("");
+                        s << "raw ik command: ";
+                        GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                        FOREACH(itfree,vfreeparameters_real) {
+                            s << *itfree << " ";
+                        }
+                        s << endl << endl;
+                        RAVELOG_VERBOSE(s.str());
+                    }
                     success++;
                 }
                 i++;
