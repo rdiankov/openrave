@@ -141,8 +141,13 @@ class TestMoving(EnvironmentSetup):
         with env:
             targetcollision = env.CheckCollision(target)
             jointnames = ['l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','r_shoulder_lift_joint','r_elbow_flex_joint','r_wrist_flex_joint']
-            jointvalues = [1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996]
-            robot.SetDOFValues(jointvalues,[robot.GetJoint(name).GetDOFIndex() for name in jointnames])
+            armindices = [robot.GetJoint(name).GetDOFIndex() for name in jointnames]
+            armgoal = [1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996]
+            robot.SetActiveDOFs(armindices)
+            basemanip.MoveActiveJoints(goal=armgoal)
+        robot.WaitForController(100)
+        
+        with env:
             robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
             basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=5000,steplength=0.15,maxtries=2)
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
@@ -150,6 +155,7 @@ class TestMoving(EnvironmentSetup):
 
         taskprob.ReleaseFingers()
         with env:
+            assert( transdist(robot.GetDOFValues(armindices),armgoal) <= g_epsilon )
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
         robot.WaitForController(100)
 
