@@ -26,8 +26,9 @@ if(bullet_FOUND)
   set_target_properties(bulletrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${openrave_bullet_CFLAGS_OTHER}" LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${openrave_bullet_LDFLAGS_OTHER}")
 
   install(TARGETS bulletrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-bulletrave)
-  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-BULLETRAVE_DISPLAY_NAME "Plugin for Bullet Collision/Physics" PARENT_SCOPE)
-  set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-bulletrave PARENT_SCOPE)
 else()
   message(STATUS "Could not find Bullet Physics/Collision engine. Please install ver 2.74+ from http://www.bulletphysics.com")
 endif()
+
+set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-BULLETRAVE_DISPLAY_NAME "Plugin for Bullet Collision/Physics" PARENT_SCOPE)
+set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-bulletrave PARENT_SCOPE)
