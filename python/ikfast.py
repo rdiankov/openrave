@@ -251,6 +251,14 @@ try:
 except ImportError:
     pass
 
+try:
+    from math import isinf, isnan
+except ImportError:
+    # python 2.5 
+    from numpy import isinf as _isinf
+    from numpy import isnan as _isnan
+    def isinf(x): return _isinf(float(x))
+    def isnan(x): return _isnan(float(x))
 
 from itertools import izip
 try:
@@ -259,9 +267,10 @@ except ImportError:
     def combinations(items,n):
         if n == 0: yield[]
         else:
-            for  i in xrange(len(items)):
-                for cc in combinations(items[i+1:],n-1):
-                    yield [items[i]]+cc
+            _internal_items=list(items)
+            for  i in xrange(len(_internal_items)):
+                for cc in combinations(_internal_items[i+1:],n-1):
+                    yield [_internal_items[i]]+cc
                     
     def permutations(iterable, r=None):
         # permutations('ABCD', 2) --> AB AC AD BA BC BD CA CB CD DA DB DC
@@ -4960,7 +4969,7 @@ class IKFastSolver(AutoReloader):
             arr = [S.Zero]*5
             for c,m in reduceeqns[i].iter_terms():
                 if __builtin__.sum(m) == 1:
-                    arr[m.index(1)] = c
+                    arr[list(m).index(1)] = c
                 else:
                     arr[4] = c
             systemofequations.append(arr)
@@ -5270,7 +5279,7 @@ class IKFastSolver(AutoReloader):
         """return true if solution does not contain any nan or inf terms"""
         if expr.is_number:
             e=expr.evalf()
-            if e.has(I) or math.isinf(e) or math.isnan(e):
+            if e.has(I) or isinf(e) or isnan(e):
                 return False
             return True
         if expr.is_Mul:

@@ -139,12 +139,12 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..openravepy_ext import openrave_exception
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys
@@ -154,6 +154,11 @@ import distutils
 import logging
 from distutils import ccompiler
 from optparse import OptionParser
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 log = logging.getLogger(__name__)
 format = logging.Formatter('%(name)s: %(message)s')
@@ -710,6 +715,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                     except distutils.errors.LinkError,e:
                         print e
                         log.info('linking again... (MSVC bug?)')
+                        if 'lapack' in libraries:
+                            libraries.remove('lapack')
                         compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
                         
                     if not self.setrobot():

@@ -1128,6 +1128,16 @@ public:
     }
 };
 
+PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
+{
+#if BOOST_VERSION >= 103500
+    return _pyenv;
+#else
+    // if raw shared_ptr is returned, then python will throw RuntimeError: tr1::bad_weak_ptr when env is used
+    return PyEnvironmentBasePtr(new PyEnvironmentBase(_pyenv->GetEnv()));
+#endif
+}
+
 namespace openravepy
 {
 
@@ -1160,6 +1170,7 @@ int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv)
 {
     return OpenRAVE::RaveGetEnvironmentId(pyenv->GetEnv());
 }
+
 PyEnvironmentBasePtr RaveGetEnvironment(int id)
 {
     EnvironmentBasePtr penv = OpenRAVE::RaveGetEnvironment(id);
