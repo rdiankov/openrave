@@ -17,7 +17,7 @@ class TestCollision(EnvironmentSetup):
     def setup(self):
         EnvironmentSetup.setup(self)
         # select collision engine here
-        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,'bullet'))
+        #self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,'bullet'))
 
     def test_basic(self):
         env=self.env

@@ -108,6 +108,8 @@ Python
 
 * split openravepy into smaller files for faster compilation
 
+* Support passing in unicode strings
+
 Misc
 ----
 

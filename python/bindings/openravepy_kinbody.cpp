@@ -572,7 +572,7 @@ public:
 //        }
 //    }
 
-    void SetName(const string& name) {
+    void SetName(const std::string& name) {
         _pbody->SetName(name);
     }
     string GetName() const {
