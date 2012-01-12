@@ -52,7 +52,10 @@ public:
                 return toPyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh());
             }
             void SetDraw(bool bDraw) {
-                _plink->GetGeometry(_geomindex).SetDraw(bDraw);
+                _plink->GetGeometry(_geomindex).SetVisible(bDraw);
+            }
+            bool SetVisible(bool visible) {
+                return _plink->GetGeometry(_geomindex).SetVisible(visible);
             }
             void SetTransparency(float f) {
                 _plink->GetGeometry(_geomindex).SetTransparency(f);
@@ -67,7 +70,10 @@ public:
                 _plink->GetGeometry(_geomindex).SetRenderFilename(filename);
             }
             bool IsDraw() {
-                return _plink->GetGeometry(_geomindex).IsDraw();
+                return _plink->GetGeometry(_geomindex).IsVisible();
+            }
+            bool IsVisible() {
+                return _plink->GetGeometry(_geomindex).IsVisible();
             }
             bool IsModifiable() {
                 return _plink->GetGeometry(_geomindex).IsModifiable();
@@ -125,6 +131,12 @@ public:
         }
         bool IsEnabled() const {
             return _plink->IsEnabled();
+        }
+        bool SetVisible(bool visible) {
+            return _plink->SetVisible(visible);
+        }
+        bool IsVisible() const {
+            return _plink->IsVisible();
         }
         bool IsStatic() const {
             return _plink->IsStatic();
@@ -1025,7 +1037,12 @@ public:
     bool IsEnabled() const {
         return _pbody->IsEnabled();
     }
-
+    bool SetVisible(bool visible) {
+        return _pbody->SetVisible(visible);
+    }
+    bool IsVisible() const {
+        return _pbody->IsVisible();
+    }
     void SetTransform(object transform) {
         _pbody->SetTransform(ExtractTransform(transform));
     }
@@ -2379,6 +2396,8 @@ void init_openravepy_kinbody()
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(KinBody,ComputeAABB))
                         .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
+                        .def("SetVisible",&PyKinBody::SetVisible,args("visible"), DOXY_FN(KinBody,SetVisible))
+                        .def("IsVisible",&PyKinBody::IsVisible, DOXY_FN(KinBody,IsVisible))
                         .def("SetTransform",&PyKinBody::SetTransform,args("transform"), DOXY_FN(KinBody,SetTransform))
                         .def("SetJointValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
                         .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; bool"))
@@ -2440,9 +2459,11 @@ void init_openravepy_kinbody()
             scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyKinBody::PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                          .def("GetIndex",&PyKinBody::PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
+                         .def("Enable",&PyKinBody::PyLink::Enable,args("enable"), DOXY_FN(KinBody::Link,Enable))
                          .def("IsEnabled",&PyKinBody::PyLink::IsEnabled, DOXY_FN(KinBody::Link,IsEnabled))
                          .def("IsStatic",&PyKinBody::PyLink::IsStatic, DOXY_FN(KinBody::Link,IsStatic))
-                         .def("Enable",&PyKinBody::PyLink::Enable,args("enable"), DOXY_FN(KinBody::Link,Enable))
+                         .def("SetVisible",&PyKinBody::PyLink::SetVisible,args("visible"), DOXY_FN(KinBody::Link,SetVisible))
+                         .def("IsVisible",&PyKinBody::PyLink::IsVisible, DOXY_FN(KinBody::Link,IsVisible))
                          .def("GetParent",&PyKinBody::PyLink::GetParent, DOXY_FN(KinBody::Link,GetParent))
                          .def("GetParentLinks",&PyKinBody::PyLink::GetParentLinks, DOXY_FN(KinBody::Link,GetParentLinks))
                          .def("IsParentLink",&PyKinBody::PyLink::IsParentLink, DOXY_FN(KinBody::Link,IsParentLink))
