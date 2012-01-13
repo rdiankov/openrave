@@ -162,6 +162,12 @@ if not __openravepy_build_doc__:
 else:
     from numpy import inf, array
 
+try:
+    import cPickle as pickle
+except:
+    import pickle
+
+
 import numpy
 from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat

@@ -1361,10 +1361,10 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         fcode += '}\n'
         code += self.indentCode(fcode,4)
 
-        code += 'bool %svalid[%d]={%s};\n'%(firstname,rootmaxdim,','.join(['true']*rootmaxdim))
-        code += '_n%s = %d;\n'%(firstname,rootmaxdim)
-        if rootmaxdim >= 256:
-            log.error('num solutions is %d>=256, which exceeds unsigned char',rootmaxdim)
+        code += 'bool %svalid[%d]={%s};\n'%(firstname,node.rootmaxdim,','.join(['true']*node.rootmaxdim))
+        code += '_n%s = %d;\n'%(firstname,node.rootmaxdim)
+        if node.rootmaxdim >= 256:
+            log.error('num solutions is %d>=256, which exceeds unsigned char',node.rootmaxdim)
         
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(firstname,firstname,firstname)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(firstname,firstname)
