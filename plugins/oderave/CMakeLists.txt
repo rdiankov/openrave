@@ -42,8 +42,6 @@ if(ODE_LIBRARY_FOUND)
   target_link_libraries(oderave libopenrave ${ODE_LIBRARY})
   set_target_properties(oderave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${ODE_CXXFLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
   install(TARGETS oderave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-oderave)
-  set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-ODERAVE_DISPLAY_NAME "Plugin for Open Dyanmics Engine (ode) Physics/Collision" PARENT_SCOPE)
-  set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-oderave PARENT_SCOPE)
   
   if( MSVC )
     # have to install the DLLs
@@ -52,6 +50,9 @@ if(ODE_LIBRARY_FOUND)
 else()
   message(STATUS "Could not find ODE. Please install ODE (http://www.ode.org)")
 endif()
+
+set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-ODERAVE_DISPLAY_NAME "Plugin for Open Dyanmics Engine (ode) Physics/Collision" PARENT_SCOPE)
+set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-oderave PARENT_SCOPE)
 
 # restore the link dirs
 link_directories(${OPENRAVE_LINK_DIRS})

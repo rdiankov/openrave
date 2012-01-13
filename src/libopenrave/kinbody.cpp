@@ -180,7 +180,7 @@ KinBody::Link::GEOMPROPERTIES::GEOMPROPERTIES(KinBody::LinkPtr parent) : _parent
     _type = GeomNone;
     ftransparency = 0;
     vRenderScale = Vector(1,1,1);
-    _bDraw = true;
+    _bVisible = true;
     _bModifiable = true;
 }
 
@@ -461,13 +461,15 @@ void KinBody::Link::GEOMPROPERTIES::SetCollisionMesh(const TRIMESH& mesh)
     parent->_Update();
 }
 
-void KinBody::Link::GEOMPROPERTIES::SetDraw(bool bDraw)
+bool KinBody::Link::GEOMPROPERTIES::SetVisible(bool visible)
 {
-    if( _bDraw != bDraw ) {
+    if( _bVisible != visible ) {
+        _bVisible = visible;
         LinkPtr parent(_parent);
-        _bDraw = bDraw;
         parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+        return true;
     }
+    return false;
 }
 
 void KinBody::Link::GEOMPROPERTIES::SetTransparency(float f)
@@ -616,10 +618,6 @@ KinBody::Link::~Link()
 {
 }
 
-bool KinBody::Link::IsEnabled() const
-{
-    return _bIsEnabled;
-}
 
 void KinBody::Link::Enable(bool bEnable)
 {
@@ -631,6 +629,37 @@ void KinBody::Link::Enable(bool bEnable)
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _bIsEnabled = bEnable;
     }
+}
+
+bool KinBody::Link::IsEnabled() const
+{
+    return _bIsEnabled;
+}
+
+bool KinBody::Link::SetVisible(bool visible)
+{
+    bool bchanged = false;
+    FOREACH(itgeom,_listGeomProperties) {
+        if( itgeom->_bVisible != visible ) {
+            itgeom->_bVisible = visible;
+            bchanged = true;
+        }
+    }
+    if( bchanged ) {
+        GetParent()->_ParametersChanged(Prop_LinkDraw);
+        return true;
+    }
+    return false;
+}
+
+bool KinBody::Link::IsVisible() const
+{
+    FOREACHC(itgeom,_listGeomProperties) {
+        if( itgeom->IsVisible() ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const
@@ -1953,7 +1982,7 @@ bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
     return true;
 }
 
-bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
+bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
 {
     if( GetEnvironmentId() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -1969,7 +1998,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         geom._type = Link::GEOMPROPERTIES::GeomBox;
         geom._t.trans = itab->pos;
-        geom._bDraw = bDraw;
+        geom._bVisible = visible;
         geom.vGeomData = itab->extents;
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
@@ -1990,7 +2019,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool bDraw)
     return true;
 }
 
-bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
+bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
 {
     if( GetEnvironmentId() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -2011,7 +2040,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
         tm.m[4] = itobb->right.y; tm.m[5] = itobb->up.y; tm.m[6] = itobb->dir.y;
         tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
         geom._t = tm;
-        geom._bDraw = bDraw;
+        geom._bVisible = visible;
         geom.vGeomData = itobb->extents;
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
@@ -2033,7 +2062,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool bDraw)
     return true;
 }
 
-bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
+bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
 {
     if( GetEnvironmentId() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -2049,7 +2078,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
         Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
         geom._type = Link::GEOMPROPERTIES::GeomSphere;
         geom._t.trans.x = itv->x; geom._t.trans.y = itv->y; geom._t.trans.z = itv->z;
-        geom._bDraw = bDraw;
+        geom._bVisible = visible;
         geom.vGeomData.x = itv->w;
         geom.InitCollisionMesh();
         geom.diffuseColor=Vector(1,0.5f,0.5f,1);
@@ -2063,7 +2092,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool bDraw)
     return true;
 }
 
-bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
+bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool visible)
 {
     if( GetEnvironmentId() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("%s, cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -2078,7 +2107,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
     Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
     geom._type = Link::GEOMPROPERTIES::GeomTrimesh;
-    geom._bDraw = draw;
+    geom._bVisible = visible;
     geom.collisionmesh = trimesh;
     geom.diffuseColor=Vector(1,0.5f,0.5f,1);
     geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
@@ -2086,7 +2115,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool draw)
     return true;
 }
 
-bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, bool draw)
+bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, bool visible)
 {
     if( GetEnvironmentId() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("%s, cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -2099,7 +2128,7 @@ bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listG
     plink->_bStatic = true;
     plink->_listGeomProperties.splice(plink->_listGeomProperties.end(),listGeometries);
     FOREACH(itgeom,plink->_listGeomProperties) {
-        itgeom->_bDraw = draw;
+        itgeom->_bVisible = visible;
         itgeom->_parent = plink;
         plink->collision.Append(itgeom->GetCollisionMesh(),itgeom->_t);
     }
@@ -4222,9 +4251,36 @@ void KinBody::Enable(bool bEnable)
 
 bool KinBody::IsEnabled() const
 {
-    // enable/disable everything
     FOREACHC(it, _veclinks) {
         if((*it)->IsEnabled()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool KinBody::SetVisible(bool visible)
+{
+    bool bchanged = false;
+    FOREACH(it, _veclinks) {
+        FOREACH(itgeom,(*it)->_listGeomProperties) {
+            if( itgeom->_bVisible != visible ) {
+                itgeom->_bVisible = visible;
+                bchanged = true;
+            }
+        }
+    }
+    if( bchanged ) {
+        _ParametersChanged(Prop_LinkDraw);
+        return true;
+    }
+    return false;
+}
+
+bool KinBody::IsVisible() const
+{
+    FOREACHC(it, _veclinks) {
+        if((*it)->IsVisible()) {
             return true;
         }
     }

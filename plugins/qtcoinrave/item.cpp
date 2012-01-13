@@ -141,7 +141,7 @@ void KinBodyItem::Load()
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
-            if( !itgeom->IsDraw() &&(_viewmode == VG_RenderOnly)) {
+            if( !itgeom->IsVisible() &&(_viewmode == VG_RenderOnly)) {
                 continue;
             }
             SoSeparator* psep = NULL;
@@ -211,7 +211,7 @@ void KinBodyItem::Load()
                 mtrl->ambientColor = SbColor(itgeom->GetAmbientColor());
                 mtrl->setOverride(true);
                 mtrl->transparency = itgeom->GetTransparency();
-                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !itgeom->IsDraw()) ) {
+                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !itgeom->IsVisible()) ) {
                     mtrl->transparency = 0.5f;
                     mtrl->diffuseColor = SbColor(0.6f,0.6f,1.0f);
                     mtrl->ambientColor = SbColor(0.4f,0.4f,1.0f);

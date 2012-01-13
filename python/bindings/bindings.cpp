@@ -101,8 +101,9 @@ struct numpy_multi_array_converter
         index i( a->num_dimensions(), 0 );
         do {
             boost::python::list numpy_index;
-            for( unsigned dim = 0; a->num_dimensions() != dim; ++dim )
+            for( unsigned dim = 0; a->num_dimensions() != dim; ++dim ) {
                 numpy_index.append( i[ dim ] );
+            }
             (*a)(i) = extract<typename multi_array_t::element>(py_obj[ boost::python::tuple( numpy_index ) ]);
         }
         while( increment_index( i, *a ) );
@@ -113,23 +114,28 @@ struct numpy_multi_array_converter
     static PyObject* convert( const multi_array_t & c_array )
     {
         object numpy = object( handle<>(::PyImport_Import(object("numpy").ptr())));
-        if( !numpy  ) throw std::logic_error( "Could not import numpy" );
+        if( !numpy  ) {
+            throw std::logic_error( "Could not import numpy" );
+        }
         object array_function = numpy.attr("empty");
-        if( !array_function  ) throw std::logic_error( "Could not find array function" );
+        if( !array_function  ) {
+            throw std::logic_error( "Could not find array function" );
+        }
 
         //create a numpy array to put it in
         boost::python::list extents;
-        for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim )
+        for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim ) {
             extents.append( c_array.shape()[ dim ] );
-
+        }
         object result(array_function( extents,numpy.attr( "dtype" ) ( mydetail::get_dtype<typename multi_array_t::element>::name())));
 
         //copy the elements
         index i( c_array.num_dimensions(), 0 );
         do {
             boost::python::list numpy_index;
-            for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim )
+            for( unsigned dim = 0; c_array.num_dimensions() != dim; ++dim ) {
                 numpy_index.append(i[dim]);
+            }
             result[ tuple( numpy_index ) ] = c_array( i );
         } while( increment_index( i, c_array ) );
 
@@ -163,6 +169,46 @@ protected:
     }
 };
 
+
+/// conversion from unicode objects: http://wiki.python.org/moin/boost.python/EmbeddingPython
+/// eventually we should use an object that holds the encoding
+struct stdstring_from_python_str
+{
+    stdstring_from_python_str()
+    {
+        boost::python::converter::registry::push_back(&convertible, &construct, boost::python::type_id<std::string>());
+    }
+
+    static void* convertible(PyObject* obj)
+    {
+        return (PyString_Check(obj) || PyUnicode_Check(obj)) ? obj : 0;
+    }
+
+    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data)
+    {
+        namespace py = boost::python;
+        if(PyString_Check(obj)) {
+            const char* value = PyString_AsString(obj);
+            //MY_CHECK(value,translate("Received null string pointer from Python"));
+            void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            new (storage) std::string(value);
+            data->convertible = storage;
+        }
+        else if(PyUnicode_Check(obj)) {
+            py::handle<> utf8(py::allow_null(PyUnicode_AsUTF8String(obj)));
+            //MY_CHECK(utf8,translate("Could not convert Python unicode object to UTF8 string"));
+            void* storage = ((py::converter::rvalue_from_python_storage<std::string>*)data)->storage.bytes;
+            const char* utf8v = PyString_AsString(utf8.get());
+            //MY_CHECK(utf8v,translate("Received null string from utf8 string"));
+            new (storage) std::string(utf8v);
+            data->convertible = storage;
+        }
+        else {
+            throw std::logic_error("Unexpected type for string conversion");
+        }
+    }
+};
+
 void init_python_bindings()
 {
     numpy_multi_array_converter< boost::multi_array<float,1> >::register_to_and_from_python();
@@ -173,6 +219,8 @@ void init_python_bindings()
     numpy_multi_array_converter< boost::multi_array<double,3> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<int,1> >::register_to_and_from_python();
     numpy_multi_array_converter< boost::multi_array<int,2> >::register_to_and_from_python();
+
+    stdstring_from_python_str();
 
     class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
     .def("close",&PyVoidHandle::close)

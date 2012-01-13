@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+from subprocess import Popen, PIPE
+import shutil
 
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
@@ -161,4 +163,39 @@ class TestEnvironment(EnvironmentSetup):
             robot1=env.GetRobot(oldname)
             assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= 1e-4 ) # for now have to use this precision until collada-dom can store doubles
 
-            
+    def test_unicode(self):
+        env=self.env
+        name = 'テスト名前'.decode('utf-8')
+        body=RaveCreateKinBody(env,'')
+        body.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
+        body.SetName(name)
+        env.AddKinBody(body)
+        assert(body.GetName().decode('utf-8')==name)
+
+        openrave_config = Popen(['openrave-config','--share-dir'],stdout=PIPE)
+        share_dir = openrave_config.communicate()[0].strip()
+        srcfile = os.path.join(share_dir,'models','WAM','wam0.iv')
+        destfile = '新しいファイル.iv'
+        shutil.copyfile(srcfile,destfile)
+        robotxml = """<?xml version="1.0" encoding="utf-8"?>
+<robot name="ロボット名">
+  <kinbody>
+    <body name="テスト">
+      <geom type="trimesh">
+        <data>%s</data>
+      </geom>
+    </body>
+  </kinbody>
+</robot>
+"""%destfile
+        urobotxml = robotxml.decode('utf-8')
+        robot=env.ReadRobotXMLData(urobotxml)
+        env.AddRobot(robot)
+        assert(robot.GetName() == 'ロボット名')
+        assert(robot.GetLinks()[0].GetName() == 'テスト')
+        env.Remove(robot)
+
+        robot=env.ReadRobotXMLData(robotxml)
+        env.AddRobot(robot)
+        assert(robot.GetName() == 'ロボット名')
+        assert(robot.GetLinks()[0].GetName() == 'テスト')

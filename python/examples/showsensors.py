@@ -20,7 +20,7 @@
 Description
 -----------
 
-See `Sensor Concepts`_ for detailed infromation on sensors.
+See `Sensor Concepts`_ for detailed infromation on sensors. When requesting data from the sensor right after it is powered on, the sensor might not return valid data. Therefore have to make sure the data is good by checking that the time stamps changed.
 
 Camera
 ~~~~~~
@@ -124,7 +124,16 @@ def main(env,options):
             else:
                 sensor.Configure(Sensor.ConfigureCommand.PowerOff)
                 sensor.Configure(Sensor.ConfigureCommand.RenderDataOff)
-        print 'showing sensor %s, try moving obstacles'%sensors[ienablesensor].GetName()
+        print 'showing sensor %s, try moving obstacles'%(sensors[ienablesensor].GetName())
+        if sensors[ienablesensor].Supports(Sensor.Type.Laser):
+            # if laser, wait for the sensor data to be updated and then print it
+            olddata = sensors[ienablesensor].GetSensorData(Sensor.Type.Laser)
+            while True:
+                data = sensors[ienablesensor].GetSensorData(Sensor.Type.Laser)
+                if data.stamp != olddata.stamp:
+                    break
+                time.sleep(0.1)
+            print 'sensor data: ',data.ranges                        
         time.sleep(5)
         ienablesensor = (ienablesensor+1)%len(sensors)
 

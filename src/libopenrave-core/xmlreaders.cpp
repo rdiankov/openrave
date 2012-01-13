@@ -1010,14 +1010,14 @@ public:
             }
 
             string type;
-            bool bDraw = true, bModifiable = true;
+            bool bVisible = true, bModifiable = true;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "type") {
                     type = itatt->second;
                 }
                 else if( itatt->first == "render" ) {
                     // set draw to false only if atts[i]==false
-                    bDraw = stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
+                    bVisible = stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
                 }
                 else if( itatt->first == "modifiable" ) {
                     bModifiable = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
@@ -1047,7 +1047,7 @@ public:
             }
             _renderfilename.first.resize(0);
             _collisionfilename.first.resize(0);
-            _itgeomprop->_bDraw = bDraw;
+            _itgeomprop->_bVisible = bVisible;
             _itgeomprop->_bModifiable = bModifiable;
             return PE_Support;
         }
@@ -1183,7 +1183,7 @@ public:
                         }
                         FOREACH(itnewgeom,listGeometries) {
                             itnewgeom->_parent = _plink;
-                            itnewgeom->_bDraw = _itgeomprop->_bDraw;
+                            itnewgeom->_bVisible = _itgeomprop->_bVisible;
                             itnewgeom->_bModifiable = _itgeomprop->_bModifiable;
                             itnewgeom->_t = _itgeomprop->_t;
                             itnewgeom->_parent = _itgeomprop->_parent;
@@ -1197,7 +1197,7 @@ public:
                         }
                         listGeometries.front().vRenderScale = _renderfilename.second*geomspacescale;
                         listGeometries.front()._renderfilename = _renderfilename.first;
-                        listGeometries.front()._bDraw = _itgeomprop->_bDraw;
+                        listGeometries.front()._bVisible = _itgeomprop->_bVisible;
                         _plink->_listGeomProperties.erase(_itgeomprop);
                         _plink->_listGeomProperties.splice(_plink->_listGeomProperties.end(),listGeometries);
                     }

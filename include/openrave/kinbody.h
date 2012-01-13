@@ -121,8 +121,12 @@ public:
             inline float GetTransparency() const {
                 return ftransparency;
             }
-            inline bool IsDraw() const {
-                return _bDraw;
+            /// \deprecated (12/1/12)
+            inline bool IsDraw() const RAVE_DEPRECATED {
+                return _bVisible;
+            }
+            inline bool IsVisible() const {
+                return _bVisible;
             }
             inline bool IsModifiable() const {
                 return _bModifiable;
@@ -161,8 +165,14 @@ public:
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TRIMESH& mesh);
-            /// \brief sets a drawing and notifies every registered callback about it
-            virtual void SetDraw(bool bDraw);
+            /// \brief sets visible flag. if changed, notifies every registered callback about it.
+            ///
+            /// \return true if changed
+            virtual bool SetVisible(bool visible);
+            /// \deprecated (12/1/12)
+            inline void SetDraw(bool bDraw) RAVE_DEPRECATED {
+                SetVisible(bDraw);
+            }
             /// \brief set transparency level (0 is opaque)
             virtual void SetTransparency(float f);
             /// \brief override diffuse color of geometry material
@@ -186,20 +196,20 @@ protected:
             bool InitCollisionMesh(float fTessellation=1);
 
             boost::weak_ptr<Link> _parent;
-            Transform _t;             ///< see \ref GetTransform
-            Vector vGeomData;             ///< for boxes, first 3 values are extents
+            Transform _t; ///< see \ref GetTransform
+            Vector vGeomData; ///< for boxes, first 3 values are extents
             ///< for sphere it is radius
             ///< for cylinder, first 2 values are radius and height
             ///< for trimesh, none
-            RaveVector<float> diffuseColor, ambientColor;             ///< hints for how to color the meshes
-            TRIMESH collisionmesh;             ///< see \ref GetCollisionMesh
-            GeomType _type;                     ///< the type of geometry primitive
-            std::string _renderfilename;              ///< \see ref GetRenderFilename
-            Vector vRenderScale;             ///< render scale of the object (x,y,z)
-            float ftransparency;             ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+            RaveVector<float> diffuseColor, ambientColor; ///< hints for how to color the meshes
+            TRIMESH collisionmesh; ///< see \ref GetCollisionMesh
+            GeomType _type; ///< the type of geometry primitive
+            std::string _renderfilename; ///< \see ref GetRenderFilename
+            Vector vRenderScale; ///< render scale of the object (x,y,z)
+            float ftransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
 
-            bool _bDraw;                     ///< if true, object is drawn as part of the 3d model (default is true)
-            bool _bModifiable;             ///< if true, object geometry can be dynamically modified (default is true)
+            bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
+            bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -230,11 +240,19 @@ protected:
             return _bStatic;
         }
 
+        /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
+        virtual void Enable(bool enable);
+
         /// \brief returns true if the link is enabled. \see Enable
         virtual bool IsEnabled() const;
 
-        /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
-        virtual void Enable(bool enable);
+        /// \brief Sets all the geometries of the link as visible or non visible.
+        ///
+        /// \return true if changed
+        virtual bool SetVisible(bool visible);
+
+        /// \return true if any geometry of the link is visible.
+        virtual bool IsVisible() const;
 
         /// \brief parent body that link belong to.
         inline KinBodyPtr GetParent() const {
@@ -884,31 +902,32 @@ private:
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///
     /// \param boxes the array of aligned bounding boxes that will comprise of the body
-    /// \param draw if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool draw);
+    /// \param visible if true, the boxes will be rendered in the scene
+    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool visible);
 
     /// \brief Create a kinbody with one link composed of an array of oriented bounding boxes.
     ///
     /// \param boxes the array of oriented bounding boxes that will comprise of the body
-    /// \param draw if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool draw);
+    /// \param visible if true, the boxes will be rendered in the scene
+    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool visible);
 
     /// \brief Create a kinbody with one link composed of an array of spheres
     ///
     /// \param spheres the XYZ position of the spheres with the W coordinate representing the individual radius
-    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool draw);
+    /// \param visible if true, the boxes will be rendered in the scene
+    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool visible);
 
     /// \brief Create a kinbody with one link composed of a triangle mesh surface
     ///
     /// \param trimesh the triangle mesh
-    /// \param draw if true, will be rendered in the scene
-    virtual bool InitFromTrimesh(const Link::TRIMESH& trimesh, bool draw);
+    /// \param visible if true, will be rendered in the scene
+    virtual bool InitFromTrimesh(const Link::TRIMESH& trimesh, bool visible);
 
     /// \brief Create a kinbody with one link composed of a list of geometries
     ///
     /// \param geometries In order to save memory, the geometries in this list are transferred to the link. After function completes, the size should be 0.
-    /// \param draw if true, will be rendered in the scene
-    bool InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& geometries, bool draw);
+    /// \param visible if true, will be rendered in the scene
+    bool InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& geometries, bool visible);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
@@ -1125,7 +1144,7 @@ private:
     /// \brief Return the center of mass of entire robot in the world coordinate system.
     virtual Vector GetCenterOfMass() const;
 
-    /// \brief Enables or disables the bodies.
+    /// \brief Enables or disables all the links.
     virtual void Enable(bool enable);
 
     /// \deprecated (10/09/08)
@@ -1135,6 +1154,14 @@ private:
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
+
+    /// \brief Sets all the links as visible or not visible.
+    ///
+    /// \return true if changed
+    virtual bool SetVisible(bool visible);
+
+    /// \return true if any link of the KinBody is visible.
+    virtual bool IsVisible() const;
 
     /// \brief Sets the joint values of the robot.
     ///

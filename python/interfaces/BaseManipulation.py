@@ -51,9 +51,10 @@ class BaseManipulation:
     def VerifyTrajectory(self,data,resettrans=False,resettiming=False,samplingstep=None):
         """See :ref:`module-basemanipulation-verifytrajectory`
         """
-        cmd = 'VerifyTrajectory stream ' + data + ' resettiming %d resettiming %d '%(resettrans,resettiming)
+        cmd = 'VerifyTrajectory stream ' + data + ' resettrans %d resettiming %d '%(resettrans,resettiming)
         if samplingstep is not None:
             cmd += 'samplingstep %.15e '%samplingstep
+        print cmd
         return self.prob.SendCommand(cmd)
 
     def MoveHandStraight(self,direction,minsteps=None,maxsteps=None,stepsize=None,ignorefirstcollision=None,starteematrix=None,greedysearch=None,execute=None,outputtraj=None,maxdeviationangle=None,steplength=None,planner=None,outputtrajobj=None):

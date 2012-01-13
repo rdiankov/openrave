@@ -152,6 +152,15 @@ if( UNIX OR CYGWIN)
   set(BASH_COMPLETION_DIR CACHE STRING "Directory where bash completion files will be installed in, on linux it is /etc/bash_completion.d")# Additional CMake modules for 3rd party library checks reside here
 endif()
 
+set(OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PLUGINS_INSTALL_DIR}" CACHE PATH "Absolute dir for plugins on target OS path, used to write to header file")
+set(OPENRAVE_DATA_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_DATA_INSTALL_DIR}" CACHE PATH "Absolute dir for data on target OS path, used to write to header file")
+set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYTHON_INSTALL_DIR}" CACHE PATH "Absolute dir for python on target OS path, used to write to header file")
+
+#define OPENRAVE_PLUGINS_INSTALL_DIR 
+#define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
+#define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
+
+
 message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
@@ -799,10 +808,10 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DISPLAY_NAME "development files and examples")
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}DEV_DEPENDS ${COMPONENT_PREFIX}base libboost-thread-dev libboost-date-time-dev)
 
-  # add a circular dependency to ${CPACK_DEBIAN_PACKAGE_NAME}
+  # necessary to add a circular dependency to ${CPACK_DEBIAN_PACKAGE_NAME}?
   foreach(OPENRAVE_COMPONENT ${CPACK_COMPONENTS_ALL})
     string(TOUPPER ${OPENRAVE_COMPONENT} UPPER_COMPONENT)
-    set( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS} ${CPACK_DEBIAN_PACKAGE_NAME} openrave-minimal)
+    set( CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS ${CPACK_COMPONENT_${UPPER_COMPONENT}_DEPENDS} openrave-minimal)
   endforeach()
 
   # base
