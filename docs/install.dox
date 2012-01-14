@@ -279,9 +279,11 @@ Optional:
 sudo apt-get install python-scipy
 \endverbatim
 
-Pythonパスを設定するために，bashファイルに以下の行を追加してください．
+\en Make sure to set the Python path correctly in the ~/.bashrc file with:
 
-\verbatim
+\ja Pythonパスを設定するために，bashファイルに以下の行を追加してください．
+
+\~ \verbatim
 export PYTHONPATH=$PYTHONPATH:`openrave-config --python-dir`
 \endverbatim
 
