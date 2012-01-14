@@ -136,6 +136,9 @@ bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
 
 void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
 {
+    if( !parameters ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("need planner parameters to verify trajectory",ORE_InvalidArguments);
+    }
     BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());

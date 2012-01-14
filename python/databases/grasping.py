@@ -157,16 +157,15 @@ __license__ = 'Apache License, Version 2.0'
 from traceback import print_exc
 import time
 import os.path
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import inf, array
-
 try:
     import cPickle as pickle
 except:
     import pickle
 
+if not __openravepy_build_doc__:
+    from numpy import *
+else:
+    from numpy import inf, array
 
 import numpy
 from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints

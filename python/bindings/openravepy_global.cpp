@@ -924,6 +924,11 @@ void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyro
     OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername);
 }
 
+void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
+{
+    OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
+}
+
 void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="")
 {
     OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername);
@@ -1205,6 +1210,8 @@ void init_openravepy_global()
                   .staticmethod("ConvertTrajectorySpecification")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
+                  .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))
+                  .staticmethod("VerifyTrajectory")
                   .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername"),DOXY_FN1(SmoothActiveDOFTrajectory)))
                   .staticmethod("SmoothActiveDOFTrajectory")
                   .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername"),DOXY_FN1(SmoothAffineTrajectory)))

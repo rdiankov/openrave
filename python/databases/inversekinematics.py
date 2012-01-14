@@ -143,22 +143,23 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
+import os.path
+from os import getcwd, remove
+try:
+    import cPickle as pickle
+except:
+    import pickle
+    
 from ..openravepy_ext import openrave_exception
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys
-import os.path
-from os import getcwd, remove
+
 import distutils
 import logging
 from distutils import ccompiler
 from optparse import OptionParser
-
-try:
-    import cPickle as pickle
-except:
-    import pickle
 
 log = logging.getLogger(__name__)
 format = logging.Formatter('%(name)s: %(message)s')

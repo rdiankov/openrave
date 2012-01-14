@@ -25,9 +25,11 @@ class TestMoving(EnvironmentSetup):
             goal = robot.GetActiveDOFValues()
             goal[0] = -0.556
             goal[3] = -1.86
-            basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=2,execute=False)
-
-
+            traj = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=2,execute=False,outputtrajobj=True)
+            parameters = Planner.PlannerParameters()
+            parameters.SetRobotActiveJoints(robot)
+            planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
+            
     def test_ikplanning(self):
         env = self.env
         env.Load('data/lab1.env.xml')

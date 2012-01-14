@@ -27,6 +27,17 @@ public:
         PlannerBase::PlannerParametersPtr _paramswrite;
         PlannerBase::PlannerParametersConstPtr _paramsread;
 public:
+        PyPlannerParameters() {
+            _paramswrite.reset(new PlannerBase::PlannerParameters());
+            _paramsread = _paramswrite;
+        }
+        PyPlannerParameters(boost::shared_ptr<PyPlannerParameters> pyparameters) {
+            _paramswrite.reset(new PlannerBase::PlannerParameters());
+            if( !!pyparameters ) {
+                _paramswrite->copy(pyparameters->GetParameters());
+            }
+            _paramsread = _paramswrite;
+        }
         PyPlannerParameters(PlannerBase::PlannerParametersPtr params) : _paramswrite(params), _paramsread(params) {
         }
         PyPlannerParameters(PlannerBase::PlannerParametersConstPtr params) : _paramsread(params) {
@@ -36,6 +47,14 @@ public:
 
         PlannerBase::PlannerParametersConstPtr GetParameters() const {
             return _paramsread;
+        }
+
+        void SetRobotActiveJoints(PyRobotBasePtr robot)
+        {
+            if( !_paramswrite ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("PlannerParameters needs to be non-const",ORE_Failed);
+            }
+            _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
         }
 
         string __repr__() {
@@ -55,12 +74,15 @@ public:
         }
     };
 
+    typedef boost::shared_ptr<PyPlannerParameters> PyPlannerParametersPtr;
+    typedef boost::shared_ptr<PyPlannerParameters const> PyPlannerParametersConstPtr;
+
     PyPlannerBase(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pplanner, pyenv), _pplanner(pplanner) {
     }
     virtual ~PyPlannerBase() {
     }
 
-    bool InitPlan(PyRobotBasePtr pbase, boost::shared_ptr<PyPlannerParameters> pparams)
+    bool InitPlan(PyRobotBasePtr pbase, PyPlannerParametersPtr pparams)
     {
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),pparams->GetParameters());
     }
@@ -76,13 +98,13 @@ public:
         return _pplanner->PlanPath(openravepy::GetTrajectory(pytraj));
     }
 
-    boost::shared_ptr<PyPlannerParameters> GetParameters() const
+    PyPlannerParametersPtr GetParameters() const
     {
         PlannerBase::PlannerParametersConstPtr params = _pplanner->GetParameters();
         if( !params ) {
-            return boost::shared_ptr<PyPlannerParameters>();
+            return PyPlannerParametersPtr();
         }
-        return boost::shared_ptr<PyPlannerParameters>(new PyPlannerParameters(params));
+        return PyPlannerParametersPtr(new PyPlannerParameters(params));
     }
 
     PlannerBasePtr GetPlanner()
@@ -103,6 +125,15 @@ PyInterfaceBasePtr toPyPlanner(PlannerBasePtr pplanner, PyEnvironmentBasePtr pye
     return !pplanner ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPlannerBase(pplanner,pyenv));
 }
 
+PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
+{
+    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
+    if( pyparams.check() ) {
+        return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
+    }
+    return PlannerBase::PlannerParametersPtr();
+}
+
 PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name)
 {
     PlannerBasePtr p = OpenRAVE::RaveCreatePlanner(GetEnvironment(pyenv), name);
@@ -115,7 +146,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 void init_openravepy_planner()
 {
     {
-        bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, boost::shared_ptr<PyPlannerBase::PyPlannerParameters>) = &PyPlannerBase::InitPlan;
+        bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
         scope planner = class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
                         .def("InitPlan",InitPlan1,args("robot","params"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr"))
@@ -124,7 +155,10 @@ void init_openravepy_planner()
                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
         ;
 
-        class_<PyPlannerBase::PyPlannerParameters, boost::shared_ptr<PyPlannerBase::PyPlannerParameters> >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters),no_init)
+        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
+        .def(init<>())
+        .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
+        .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
         .def("__eq__",&PyPlannerBase::PyPlannerParameters::__eq__)
