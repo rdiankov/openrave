@@ -1359,6 +1359,10 @@ public:
         virtual ~PyManipulator() {
         }
 
+        RobotBase::ManipulatorPtr GetManipulator() const {
+            return _pmanip;
+        }
+
         object GetTransform() const {
             return ReturnTransform(_pmanip->GetTransform());
         }
@@ -2265,6 +2269,15 @@ RobotBasePtr GetRobot(PyRobotBasePtr pyrobot)
 PyInterfaceBasePtr toPyRobot(RobotBasePtr probot, PyEnvironmentBasePtr pyenv)
 {
     return !probot ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyRobotBase(probot,pyenv));
+}
+
+RobotBase::ManipulatorPtr GetRobotManipulator(object o)
+{
+    extract<PyRobotBase::PyManipulatorPtr> pymanipulator(o);
+    if( pymanipulator.check() ) {
+        return ((PyRobotBase::PyManipulatorPtr)pymanipulator)->GetManipulator();
+    }
+    return RobotBase::ManipulatorPtr();
 }
 
 object toPyRobotManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv)

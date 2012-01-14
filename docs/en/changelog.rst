@@ -80,7 +80,7 @@ Planning
 * **Major**: Added :ref:`parabolic smoothing <planner-parabolicsmoother>` as defualt smoother. The parabolic smoothing library is
 from `Kris Hauser's group at Indiana University <http://www.iu.edu/~motion/software.html>`_.
 
-* added jittering of goals to ManipulatorIKGoalSampler
+* added jittering of goals and openravepy bindings to :class:`.planningutils.ManipulatorIKGoalSampler`
 
 * fixed :meth:`.planningutils.JitterActiveDOF` accidentally returning perturbed values
 
