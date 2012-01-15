@@ -1370,6 +1370,11 @@ public:
         string GetName() const {
             return _pmanip->GetName();
         }
+
+        void SetName(const std::string& s) {
+            _pmanip->SetName(s);
+        }
+
         PyRobotBasePtr GetRobot() {
             return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv));
         }
@@ -2742,6 +2747,7 @@ void init_openravepy_kinbody()
         .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(RobotBase::Manipulator,GetName))
+        .def("SetName",&PyRobotBase::PyManipulator::SetName, args("name"), DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
         .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetIkSolver",&PyRobotBase::PyManipulator::GetIkSolver, DOXY_FN(RobotBase::Manipulator,GetIkSolver))

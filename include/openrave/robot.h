@@ -92,6 +92,11 @@ public:
         /// Because this call will change manipulator hash, it resets the loaded IK and sets the Prop_RobotManipulatorTool message.
         virtual void SetLocalToolTransform(const Transform& t);
 
+        /// \brief new name for manipulator
+        ///
+        /// \throw openrave_exception if name is already used in another manipulator
+        virtual void SetName(const std::string& name);
+
         /// \deprecated (11/10/15) use GetLocalToolTransform
         virtual Transform GetGraspTransform() const RAVE_DEPRECATED {
             return GetLocalToolTransform();

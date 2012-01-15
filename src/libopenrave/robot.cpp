@@ -65,6 +65,18 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     __hashstructure.resize(0);
 }
 
+void RobotBase::Manipulator::SetName(const std::string& name)
+{
+    RobotBasePtr probot=GetRobot();
+    FOREACHC(itmanip,probot->GetManipulators()) {
+        if( *itmanip != shared_from_this() && name == (*itmanip)->GetName() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name change '%s'->'%s' is colliding with other manipulator", _name%name, ORE_InvalidArguments);
+        }
+    }
+    _name=name;
+    probot->_ParametersChanged(Prop_RobotManipulatorName);
+}
+
 Transform RobotBase::Manipulator::GetTransform() const
 {
     return _pEndEffector->GetTransform() * _tLocalTool;
@@ -1966,7 +1978,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2017,7 +2029,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-		    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                         g.vCollidingLinks.push_back(*itlink);
                     }
                 }
@@ -2079,7 +2091,7 @@ void RobotBase::RegrabAll()
                 KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
                 if( pgrabbedbody != pbody ) {
                     FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-		        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
                             itbody->vCollidingLinks.push_back(*itlink);
                         }
                     }
