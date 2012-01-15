@@ -3429,8 +3429,9 @@ public:
                 _penv->Load(filedata->second);
             }
         }
-        tCamera.trans = Vector(0, 1.5f, 0.8f);
-        tCamera.rot = quatFromAxisAngle(Vector(1, 0, 0), (dReal)-0.5);
+        _tCamera.trans = Vector(0, 1.5f, 0.8f);
+        _tCamera.rot = quatFromAxisAngle(Vector(1, 0, 0), (dReal)-0.5);
+        _fCameraFocalDistance = 0;
         vBkgndColor = Vector(1,1,1);
         bTransSpecified = false;
     }
@@ -3465,7 +3466,7 @@ public:
             return PE_Support;
         }
 
-        static boost::array<string, 7> tags = { { "bkgndcolor", "camrotaxis", "camrotationaxis", "camrotmat", "camtrans", "bkgndcolor", "plugin"}};
+        static boost::array<string, 8> tags = { { "bkgndcolor", "camrotaxis", "camrotationaxis", "camrotmat", "camtrans", "camfocal", "bkgndcolor", "plugin"}};
         if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
             _processingtag = xmlname;
             return PE_Support;
@@ -3537,7 +3538,7 @@ public:
             // only move the camera if trans is specified
             if( !!_penv->GetViewer() ) {
                 if( bTransSpecified ) {
-                    _penv->GetViewer()->SetCamera(tCamera);
+                    _penv->GetViewer()->SetCamera(_tCamera, _fCameraFocalDistance);
                 }
                 _penv->GetViewer()->SetBkgndColor(vBkgndColor);
             }
@@ -3551,26 +3552,30 @@ public:
             RAVELOG_INFO("<camrotaxis> is deprecated, use <camrotationaxis> by rotating 180 around Z axis\n");
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-            tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
+            _tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
             // have to rotate due to old bug
             RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-            tCamera = tCamera*trot;
+            _tCamera = _tCamera*trot;
             bTransSpecified = true;
         }
         else if( xmlname == "camrotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-            tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
+            _tCamera.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
             bTransSpecified = true;
         }
         else if( xmlname == "camrotmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            tCamera.rot = Transform(tnew).rot;
+            _tCamera.rot = Transform(tnew).rot;
             bTransSpecified = true;
         }
         else if( xmlname == "camtrans" ) {
-            _ss >> tCamera.trans.x >> tCamera.trans.y >> tCamera.trans.z;
+            _ss >> _tCamera.trans.x >> _tCamera.trans.y >> _tCamera.trans.z;
+            bTransSpecified = true;
+        }
+        else if( xmlname == "camfocal" ) {
+            _ss >> _fCameraFocalDistance;
             bTransSpecified = true;
         }
         else if( xmlname == "plugin" ) {
@@ -3590,7 +3595,8 @@ protected:
     EnvironmentBasePtr _penv;
     InterfaceBasePtr _pinterface;         // current processed interface
     Vector vBkgndColor;
-    Transform tCamera;         ///< default camera transformationn
+    Transform _tCamera;         ///< default camera transformationn
+    float _fCameraFocalDistance;
     string _processingtag;
     bool bTransSpecified;
     bool _bInEnvironment;
