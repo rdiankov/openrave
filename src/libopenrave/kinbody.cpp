@@ -861,6 +861,9 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     FOREACH(it,_vmaxtorque) {
         *it = 1e5f;
     }
+    FOREACH(it,_vweights) {
+        *it = 1;
+    }
     jointindex=-1;
     dofindex = -1; // invalid index
     FOREACH(it,_bIsCircular) {
@@ -1503,6 +1506,7 @@ void KinBody::Joint::SetResolution(dReal resolution)
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
 {
     for(int i = 0; i < GetDOF(); ++i) {
+        BOOST_ASSERT(vweights.at(i)>0);
         _vweights[i] = vweights.at(i);
     }
     GetParent()->_ParametersChanged(Prop_JointProperties);
@@ -2295,6 +2299,12 @@ void KinBody::GetDOFWeights(std::vector<dReal>& v) const
 
 void KinBody::SetDOFWeights(const std::vector<dReal>& v)
 {
+    BOOST_ASSERT((int)v.size()>=GetDOF());
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( v[i] <= 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("dof %d weight %f has to be >= 0", i%v[i], ORE_InvalidArguments);
+        }
+    }
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vweights.begin());
