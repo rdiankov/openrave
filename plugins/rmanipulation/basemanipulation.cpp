@@ -532,7 +532,7 @@ protected:
         int goalsamples = 40;
         string cmd;
         dReal jitter = 0.03;
-        dReal jittergoal = 0;
+        dReal jitterikparam = 0;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -653,8 +653,8 @@ protected:
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
             }
-            else if( cmd == "jittergoal" ) {
-                sinput >> jittergoal;
+            else if( cmd == "jitterikparam" || cmd == "jittergoal" ) {
+                sinput >> jitterikparam;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -687,7 +687,7 @@ protected:
 
         vector<dReal> vgoal;
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples);
-        goalsampler.SetJitter(jittergoal);
+        goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
@@ -756,7 +756,7 @@ protected:
             planningutils::VerifyTrajectory(params, ptraj);
         }
 
-        if( jittergoal > 0 ) {
+        if( jitterikparam > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
                 stringstream soutput, sinput;

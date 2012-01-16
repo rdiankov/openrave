@@ -696,11 +696,13 @@ private:
 
         // check for self collisions
         probot->SetActiveDOFValues(vravesol,false);
-        switch(_CallFilters(vravesol, pmanip, param)) {
-        case IKFR_Reject: return SR_Continue;
-        case IKFR_Quit: return SR_Quit;
-        case IKFR_Success:
-            break;
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+            switch(_CallFilters(vravesol, pmanip, param)) {
+            case IKFR_Reject: return SR_Continue;
+            case IKFR_Quit: return SR_Quit;
+            case IKFR_Success:
+                break;
+            }
         }
 
         CollisionReport report;
