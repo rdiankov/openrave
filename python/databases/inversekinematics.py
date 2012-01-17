@@ -143,23 +143,22 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
-import os.path
-from os import getcwd, remove
-try:
-    import cPickle as pickle
-except:
-    import pickle
-    
 from ..openravepy_ext import openrave_exception
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys
-
+import os.path
+from os import getcwd, remove
 import distutils
 import logging
 from distutils import ccompiler
 from optparse import OptionParser
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 log = logging.getLogger(__name__)
 format = logging.Formatter('%(name)s: %(message)s')
@@ -269,7 +268,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
                 
         except Exception,e:
-            print e
+            log.warn(e)
             return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
             
         if self.ikfeasibility is not None:
@@ -692,7 +691,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 open(sourcefilename,'w').write(code)
             except self.ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
-                print e
+                log.warn(e)
 
         if self.ikfeasibility is None:
             if outputlang == 'cpp':
@@ -705,20 +704,25 @@ class InverseKinematicsModel(DatabaseGenerator):
 
                 platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
                 shutil.copyfile(sourcefilename, platformsourcefilename)
+                objectfiles=[]
                 try:
                     objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
                     # because some parts of ikfast require lapack, always try to link with it
                     try:
-                        libraries = []
-                        if self.statistics.get('usinglapack',True):
-                            libraries.append('lapack')
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                        libraries = None
+                        print 'stats',self.statistics
+                        if self.statistics.get('usinglapack',False):
+                            libraries = ['lapack']
+                        print 'libraries', libraries
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename, libraries=libraries)
                     except distutils.errors.LinkError,e:
-                        print e
-                        log.info('linking again... (MSVC bug?)')
-                        if 'lapack' in libraries:
+                        log.warn(e)
+                        if libraries is not None and 'lapack' in libraries:
                             libraries.remove('lapack')
-                        compiler.link_shared_object(objectfiles,output_filename=output_filename,libraries=libraries)
+                            if len(libraries) == 0:
+                                libraries = None
+                        log.info('linking again with %r... (MSVC bug?)',libraries)
+                        compiler.link_shared_object(objectfiles,output_filename=output_filename, libraries=libraries)
                         
                     if not self.setrobot():
                         return ValueError('failed to generate ik solver')
@@ -783,7 +787,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         ikparam = self.manip.GetIkParameterization(self.iktype)
                         sols = self.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
                         weights = self.robot.GetDOFWeights(self.manip.GetArmIndices())
-                        print 'found %d solutions'%len(sols)
+                        log.info('found %d solutions'%len(sols))
                         sols = TSP(sols,lambda x,y: sum(weights*(x-y)**2))
                         # find shortest route
                         for sol in sols:
@@ -804,13 +808,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                     majorVersion = int(cver)/100-6
                     minorVersion = mod(int(cver),100)/10.0
                     if abs(compiler._MSVCCompiler__version - majorVersion+minorVersion) > 0.001:
-                        # not the same version, look for a different compiler
+                        log.warn('default compiler v %s the same version as openrave compiler v %f, look for a different compiler',compiler._MSVCCompiler__version, majorVersion+minorVersion);
                         distutils.msvc9compiler.VERSION = majorVersion + minorVersion
                         newcompiler = ccompiler.new_compiler()
                         if newcompiler is not None:
                             compiler = newcompiler
-            except:
-                pass
+            except Exception, e:
+                log.warn(e)
         else:
             compiler.add_library('stdc++')
             if compiler.compiler_type == 'unix':
