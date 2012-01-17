@@ -541,10 +541,12 @@ public:
     }
 };
 
+typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
+
 bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
-    extract<boost::shared_ptr<PyIkParameterization> > pyikparam(o);
+    extract<PyIkParameterizationPtr > pyikparam(o);
     if( pyikparam.check() ) {
-        ikparam = ((boost::shared_ptr<PyIkParameterization>)pyikparam)->_param;
+        ikparam = ((PyIkParameterizationPtr)pyikparam)->_param;
         return true;
     }
     return false;
@@ -553,7 +555,7 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
 
 object toPyIkParameterization(const IkParameterization &ikparam)
 {
-    return object(boost::shared_ptr<PyIkParameterization>(new PyIkParameterization(ikparam)));
+    return object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite
@@ -924,6 +926,11 @@ void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyro
     OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername);
 }
 
+void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
+{
+    OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
+}
+
 void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="")
 {
     OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername);
@@ -946,6 +953,36 @@ object pyMergeTrajectories(object pytrajectories)
     }
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
 }
+
+class PyManipulatorIKGoalSampler
+{
+public:
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0) {
+        std::list<IkParameterization> listparameterizations;
+        size_t num = len(oparameterizations);
+        for(size_t i = 0; i < num; ++i) {
+            PyIkParameterizationPtr pyikparam = extract<PyIkParameterizationPtr >(oparameterizations[i]);
+            listparameterizations.push_back(pyikparam->_param);
+        }
+        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizations, nummaxsamples, nummaxtries));
+        _sampler->SetJitter(jitter);
+    }
+    virtual ~PyManipulatorIKGoalSampler() {
+    }
+
+    object Sample()
+    {
+        std::vector<dReal> vgoal;
+        if( _sampler->Sample(vgoal) ) {
+            return toPyArray(vgoal);
+        }
+        return object();
+    }
+
+    OpenRAVE::planningutils::ManipulatorIKGoalSamplerPtr _sampler;
+};
+
+typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSamplerPtr;
 
 }
 
@@ -1134,7 +1171,7 @@ void init_openravepy_global()
     {
         int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;
         int (*getnumberofvalues1)(IkParameterizationType) = &IkParameterization::GetNumberOfValues;
-        scope ikparameterization = class_<PyIkParameterization, boost::shared_ptr<PyIkParameterization> >("IkParameterization", DOXY_CLASS(IkParameterization))
+        scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
@@ -1205,12 +1242,19 @@ void init_openravepy_global()
                   .staticmethod("ConvertTrajectorySpecification")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
+                  .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))
+                  .staticmethod("VerifyTrajectory")
                   .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername"),DOXY_FN1(SmoothActiveDOFTrajectory)))
                   .staticmethod("SmoothActiveDOFTrajectory")
                   .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername"),DOXY_FN1(SmoothAffineTrajectory)))
                   .staticmethod("SmoothAffineTrajectory")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
+        ;
+
+        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(ManipulatorIKGoalSampler), no_init)
+        .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
+        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample))
         ;
     }
 

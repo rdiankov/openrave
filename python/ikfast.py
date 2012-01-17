@@ -2717,6 +2717,7 @@ class IKFastSolver(AutoReloader):
             if det == S.Zero:
                 continue
             solution = AST.SolverMatrixInverse(A=A,Asymbols=Asymbols)
+            self.usinglapack = True
             solution.checkforzeros = [self.removecommonexprs(det,onlygcd=False,onlynumbers=True)]
             Aadj=A.adjugate() # too big to be useful for now, but can be used to see if any symbols are always 0
             break

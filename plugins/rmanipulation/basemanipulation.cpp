@@ -26,8 +26,6 @@ public:
                         "Set the active manipulator");
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("VerifyTrajectory",boost::bind(&BaseManipulation::_VerifyTrajectoryCommand,this,_1,_2),
-                        "Verifies the robot trajectory by checking collisions with the environment and other user-specified constraints.");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
         RegisterCommand("ReleaseAll",boost::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
@@ -534,7 +532,7 @@ protected:
         int goalsamples = 40;
         string cmd;
         dReal jitter = 0.03;
-        dReal jittergoal = 0;
+        dReal jitterikparam = 0;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -655,8 +653,8 @@ protected:
             else if( cmd == "jitter" ) {
                 sinput >> jitter;
             }
-            else if( cmd == "jittergoal" ) {
-                sinput >> jittergoal;
+            else if( cmd == "jitterikparam" || cmd == "jittergoal" ) {
+                sinput >> jitterikparam;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -689,7 +687,7 @@ protected:
 
         vector<dReal> vgoal;
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples);
-        goalsampler.SetJitter(jittergoal);
+        goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
@@ -758,7 +756,7 @@ protected:
             planningutils::VerifyTrajectory(params, ptraj);
         }
 
-        if( jittergoal > 0 ) {
+        if( jitterikparam > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
                 stringstream soutput, sinput;
@@ -1005,68 +1003,6 @@ protected:
             }
         }
         return true;
-    }
-
-    bool _VerifyTrajectoryCommand(ostream& sout, istream& sinput)
-    {
-        TrajectoryBasePtr ptraj;
-        dReal samplingstep = 0.001;
-        bool bRecomputeTiming = false;
-        string cmd;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "stream" ) {
-                ptraj = RaveCreateTrajectory(GetEnv(),"");
-                ptraj->deserialize(sinput);
-            }
-            else if( cmd == "resettiming" ) {
-                sinput >> bRecomputeTiming;
-            }
-            else if( cmd == "resettrans" ) {
-                bool bReset = false;
-                sinput >> bReset;
-                if( bReset ) {
-                    RAVELOG_WARN("resettiming not supported\n");
-                }
-            }
-            else if( cmd == "samplingstep" ) {
-                sinput >> samplingstep;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if( !ptraj ) {
-            return false;
-        }
-
-        if( bRecomputeTiming || ptraj->GetDuration() == 0 ) {
-            planningutils::SmoothActiveDOFTrajectory(ptraj,robot);
-        }
-
-        RobotBase::RobotStateSaver saver(robot);
-        RRTParametersPtr params(new RRTParameters());
-        params->_minimumgoalpaths = _minimumgoalpaths;
-        params->SetRobotActiveJoints(robot);
-        try{
-            planningutils::VerifyTrajectory(params,ptraj,samplingstep);
-            return true;
-        }
-        catch(const openrave_exception& ex) {
-            RAVELOG_WARN("%s\n",ex.what());
-        }
-        return false;
     }
 
     bool GrabBody(ostream& sout, istream& sinput)

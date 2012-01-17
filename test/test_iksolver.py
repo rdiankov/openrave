@@ -63,3 +63,23 @@ class TestIkSolver(EnvironmentSetup):
             handle2.close()
             sols = ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions)
             assert(len(sols)>0 and any([sol[index] > 0.2 for sol in sols]) and any([sol[index] < -0.2 for sol in sols]) and any([sol[index] > -0.2 and sol[index] < 0.2 for sol in sols]))
+
+    def test_iksolutionjitter(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            # set robot in collision
+            robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
+            manip = robot.GetActiveManipulator()
+            ikparam=manip.GetIkParameterization(IkParameterizationType.Transform6D)
+            assert(manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(manip.FindIKSolution(ikparam,0) is not None)
+            sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0)
+            assert(sampler.Sample() is None)
+            sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0.03)
+            assert(sampler.Sample() is not None)

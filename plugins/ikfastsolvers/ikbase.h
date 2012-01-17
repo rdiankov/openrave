@@ -695,12 +695,14 @@ private:
         }
 
         // check for self collisions
-        probot->SetActiveDOFValues(vravesol);
-        switch(_CallFilters(vravesol, pmanip, param)) {
-        case IKFR_Reject: return SR_Continue;
-        case IKFR_Quit: return SR_Quit;
-        case IKFR_Success:
-            break;
+        probot->SetActiveDOFValues(vravesol,false);
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+            switch(_CallFilters(vravesol, pmanip, param)) {
+            case IKFR_Reject: return SR_Continue;
+            case IKFR_Quit: return SR_Quit;
+            case IKFR_Success:
+                break;
+            }
         }
 
         CollisionReport report;
@@ -798,7 +800,7 @@ private:
         // check for self collisions
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
-        probot->SetActiveDOFValues(vravesol);
+        probot->SetActiveDOFValues(vravesol,false);
 
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
             switch(_CallFilters(vravesol, pmanip, param)) {
