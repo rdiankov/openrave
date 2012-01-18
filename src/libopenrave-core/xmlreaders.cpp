@@ -870,6 +870,7 @@ public:
         _massCustom = MASS::GetSphericalMass(1,Vector(0,0,0),1);
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
+        _bGeomOverwriteDiffuse = _bGeomOverwriteAmbient = _bGeomOverwriteTransparency = false;
         bool bStaticSet = false;
         bool bStatic = false;
         string linkname, linkfilename;
@@ -1132,13 +1133,16 @@ public:
                 }
             }
             else if( xmlname == "diffusecolor" ) {
-                _ss >> _itgeomprop->diffuseColor.x >> _itgeomprop->diffuseColor.y >> _itgeomprop->diffuseColor.z;
+                _bGeomOverwriteDiffuse = true;
+                _ss >> _geomdiffusecol.x >> _geomdiffusecol.y >> _geomdiffusecol.z;
             }
             else if( xmlname == "ambientcolor" ) {
-                _ss >> _itgeomprop->ambientColor.x >> _itgeomprop->ambientColor.y >> _itgeomprop->ambientColor.z;
+                _bGeomOverwriteAmbient = true;
+                _ss >> _geomambientcol.x >> _geomambientcol.y >> _geomambientcol.z;
             }
             else if( xmlname == "transparency" ) {
-                _ss >> _itgeomprop->ftransparency;
+                _bGeomOverwriteTransparency = true;
+                _ss >> _geomtransparency;
             }
             else if( xmlname == _processingtag ) {
                 TransformMatrix tminv(_itgeomprop->_t.inverse());
@@ -1174,7 +1178,6 @@ public:
                             }
                         }
                     }
-
                     if( listGeometries.size() > 0 ) {
                         // append all the geometries to the link. make sure the render filename is specified in only one geometry.
                         string extension;
@@ -1192,6 +1195,15 @@ public:
                             FOREACH(it,itnewgeom->collisionmesh.vertices) {
                                 *it = tmres * *it;
                             }
+                            if( _bGeomOverwriteDiffuse ) {
+                                itnewgeom->diffuseColor = _geomdiffusecol;
+                            }
+                            if( _bGeomOverwriteAmbient ) {
+                                itnewgeom->ambientColor = _geomambientcol;
+                            }
+                            if( _bGeomOverwriteTransparency ) {
+                                itnewgeom->ftransparency = _geomtransparency;
+                            }
                             _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
                             itnewgeom->_t.trans *= _vScaleGeometry;
                         }
@@ -1202,6 +1214,15 @@ public:
                         _plink->_listGeomProperties.splice(_plink->_listGeomProperties.end(),listGeometries);
                     }
                     else {
+                        if( _bGeomOverwriteDiffuse ) {
+                            _itgeomprop->diffuseColor = _geomdiffusecol;
+                        }
+                        if( _bGeomOverwriteAmbient ) {
+                            _itgeomprop->ambientColor = _geomambientcol;
+                        }
+                        if( _bGeomOverwriteTransparency ) {
+                            _itgeomprop->ftransparency = _geomtransparency;
+                        }
                         _itgeomprop->vRenderScale = _renderfilename.second*geomspacescale;
                         _itgeomprop->_renderfilename = _renderfilename.first;
                         FOREACH(it,_itgeomprop->collisionmesh.vertices) {
@@ -1214,6 +1235,15 @@ public:
                 else {
                     _itgeomprop->vRenderScale = _renderfilename.second*_vScaleGeometry;
                     _itgeomprop->_renderfilename = _renderfilename.first;
+                    if( _bGeomOverwriteDiffuse ) {
+                        _itgeomprop->diffuseColor = _geomdiffusecol;
+                    }
+                    if( _bGeomOverwriteAmbient ) {
+                        _itgeomprop->ambientColor = _geomambientcol;
+                    }
+                    if( _bGeomOverwriteTransparency ) {
+                        _itgeomprop->ftransparency = _geomtransparency;
+                    }
 
                     if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) {         // axis has to point on y
                         // rotate on x axis by pi/2
@@ -1476,6 +1506,11 @@ private:
     bool _bSkipGeometry;
     Vector _vScaleGeometry;
     Transform tOrigTrans;
+
+    RaveVector<float> _geomdiffusecol, _geomambientcol;
+    float _geomtransparency;
+    bool _bGeomOverwriteDiffuse, _bGeomOverwriteAmbient, _bGeomOverwriteTransparency;
+
     // Mass
     MassType _masstype;                   ///< if true, mass is craeted so that it mimics the geometry
     string _processingtag;         /// if not empty, currently processing
