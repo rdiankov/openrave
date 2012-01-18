@@ -34,6 +34,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
+        _probot = pbase;
         return _InitPlan();
     }
 
@@ -42,6 +43,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
+        _probot = pbase;
         return _InitPlan();
     }
 
@@ -63,6 +65,11 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
+        }
+
+        RobotBase::RobotStateSaverPtr statesaver;
+        if( !!_probot ) {
+            statesaver.reset(new RobotBase::RobotStateSaver(_probot));
         }
 
         uint32_t basetime = GetMilliTime();
@@ -213,6 +220,7 @@ public:
 protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
+    RobotBasePtr _probot;
 };
 
 

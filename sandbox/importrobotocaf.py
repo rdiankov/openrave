@@ -181,7 +181,10 @@ class RobotImporter(metaclass.AutoReloader):
 
     def __init__(self,filename):
         self.reader = STEPCAFControl_Reader()
-        self.reader.ReadFile(filename)
+        ret=self.reader.ReadFile(filename)
+        if ret != 1:
+            raise ValueError('failed to read file')
+        
         #
         # Create the TDocStd document
         #
@@ -324,7 +327,7 @@ class RobotImporter(metaclass.AutoReloader):
             handles.append(self.orenv.drawtrimesh(t.vertices,t.indices,colors=t.color))
         return handles
 
-    def WriteOpenRAVEXML(self,triangulated_links, linkindiceslist,savedir='',jointlimitsdeg=None):
+    def WriteOpenRAVEXML(self,triangulated_links, linkindiceslist,savedir='',jointlimitsdeg=None, vellimitsdeg=None, Trobot=numpy.eye(4), Tee=numpy.eye(4)):
         mkdir_recursive(savedir)
         for ilink,t in enumerate(triangulated_links):
             buffersize = S = 80 + 4 + 50*len(t.indices)
@@ -348,32 +351,52 @@ class RobotImporter(metaclass.AutoReloader):
                 offset += sattr.size
             open(os.path.join(savedir,'geom%d.stl'%ilink),'w').write(b.raw)
 
-        kinbodyxml = '<kinbody name="body">\n'
+        robotxml = '<robot name="body">\n<kinbody>\n'
         for ilink,linkindices in enumerate(linkindiceslist):
+            T = triangulated_links[linkindices[0]].trans
+            if len(T) == 3:
+                T = numpy.r_[T,[[0,0,0,1]]]
+            Tinv = numpy.linalg.inv(T)
+            quat = quatFromRotationMatrix(T[0:3,0:3])
+            quatinv = quatFromRotationMatrix(Tinv[0:3,0:3])
             geomxml = ''
             for index in linkindices:
                 t = triangulated_links[index]
                 filename = 'geom%d.stl'%index
-                geomxml += '<geom type="trimesh">\n<diffusecolor>%f %f %f</diffusecolor>\n<data>%s</data>\n<render>%s</render>\n</geom>\n'%(t.color[0],t.color[1],t.color[2],filename,filename)
-            kinbodyxml += '<body name="link%d">\n'%ilink + geomxml + '</body>\n'
+                geomxml += '<geom type="trimesh">\n'
+                geomxml += '<diffusecolor>%f %f %f</diffusecolor>\n<data>%s</data>\n'%(t.color[0],t.color[1],t.color[2],filename)
+                geomxml += '<quat>%f %f %f %f</quat>\n<translation>%f %f %f</translation>'%(quatinv[0],quatinv[1],quatinv[2],quatinv[3],Tinv[0,3],Tinv[1,3],Tinv[2,3])
+                geomxml += '</geom>\n'
+            robotxml += '<body name="link%d">\n'%ilink
+            Tnewlink = numpy.dot(Trobot,T)
+            newquat = quatFromRotationMatrix(Tnewlink[0:3,0:3])
+            robotxml += '<quat>%f %f %f %f</quat>\n<translation>%f %f %f</translation>'%(newquat[0],newquat[1],newquat[2],newquat[3],Tnewlink[0,3],Tnewlink[1,3],Tnewlink[2,3])
+            robotxml += geomxml + '</body>\n'
             if ilink > 0:
-                T = triangulated_links[linkindices[0]].trans
                 jointxml = '<joint name="j%d" type="hinge">\n'%(ilink-1)
                 jointxml += '<body>link%d</body>\n'%(ilink-1)
                 jointxml += '<body>link%d</body>\n'%ilink
                 if jointlimitsdeg is not None:
                     jointxml += '<limitsdeg>%f %f</limitsdeg>\n'%(jointlimitsdeg[ilink-1][0],jointlimitsdeg[ilink-1][1])
-                jointxml += '<anchor>%f %f %f</anchor>\n'%(T[0,3],T[1,3],T[2,3])
+                if vellimitsdeg is not None:
+                    jointxml += '<maxveldeg>%f</maxveldeg>\n'%(vellimitsdeg[ilink-1])
+                jointxml += '<anchor>%f %f %f</anchor>\n'%(Tnewlink[0,3],Tnewlink[1,3],Tnewlink[2,3])
                 if linkindices[0] == 15:
                     # temp exception
-                    jointxml += '<axis>%f %f %f</axis>\n'%(T[0,1],T[1,1],T[2,1])
+                    jointxml += '<axis>%f %f %f</axis>\n'%(Tnewlink[0,1],Tnewlink[1,1],Tnewlink[2,1])
                 else:
-                    jointxml += '<axis>%f %f %f</axis>\n'%(T[0,0],T[1,0],T[2,0])
+                    jointxml += '<axis>%f %f %f</axis>\n'%(Tnewlink[0,0],Tnewlink[1,0],Tnewlink[2,0])
                 jointxml += '</joint>\n'
-                kinbodyxml += jointxml
-        kinbodyxml += '</kinbody>'
-        filename = os.path.join(savedir,'body.kinbody.xml')
-        open(filename,'w').write(kinbodyxml)
+                robotxml += jointxml
+        robotxml += '</kinbody>'
+        robotxml += '<manipulator name="arm">\n'
+        robotxml += '<base>link0</base>\n<effector>link%d</effector>\n'%(len(linkindiceslist)-1)
+        eequat = quatFromRotationMatrix(Tee[0:3,0:3])
+        robotxml += '<quat>%f %f %f %f</quat>\n<translation>%f %f %f</translation>'%(eequat[0],eequat[1],eequat[2],eequat[3],Tee[0,3],Tee[1,3],Tee[2,3])
+        robotxml += '</manipulator>\n'
+        robotxml += '</robot>\n'
+        filename = os.path.join(savedir,'ur6.robot.xml')
+        open(filename,'w').write(robotxml)
         return filename
 
     def DrawAxes(self,T,dist=0.1):
@@ -396,7 +419,7 @@ if __name__ == "__main__":
     
 def test():
     import importrobotocaf
-    filename = '/home/rdiankov/openravetests/URSplitted/Robot_Simpel_r01.STEP'
+    filename = '/home/rdiankov/openravetests/ur6/Robot_Simpel_r01.STEP'
     self=importrobotocaf.RobotImporter(filename)
     triangulated_links = self.GetTriangulatedShapes()
     handles = self.DrawLinks(triangulated_links)
@@ -408,23 +431,28 @@ def test():
              'Size 1 rør_r01_Simple,Size 3_Joint lid_r06_Simple',
              'Size 1_Joint lid_r07_Simple,Size 1_House_r13_Simple',
              'Size 1_House_r13_Simple,Size 1_Joint lid_r07_Simple',
-             'Size 1_House_r13_Simple,Size 1_Joint lid_r07_Simple,Size 1_Tool flange_r03_Simple']
+             'Size 1_House_r13_Simple,Size 1_Joint lid_r07_Simple,Size 1_Tool flange_r03_Simple']    
     linknames = [n.decode('utf-8') for n in linknames]
     trinames = [tri[0] for tri in triangulated_links]
     linkindiceslist = []
     for linkname in linknames:
         names = [n.strip() for n in linkname.split(',')]
         linkindiceslist.append([trinames.index(name) for name in names])
-    linkindiceslist = [[2],
-                       [10,16],
-                       [6,3,8,9,12],
-                       [15,4],
-                       [5,7],
-                       [0,14],
-                       [1,11,13]]
 
-    jointlimitsdeg = [[-360.0,360.0]]*7
-    geomxml = self.WriteOpenRAVEXML(triangulated_links, linkindiceslist,savedir='test',jointlimitsdeg=jointlimitsdeg)
+    def ur6robot():
+        linkindiceslist = [[2],
+                           [10,16],
+                           [6,3,8,9,12],
+                           [15,4,7,5],
+                           [0,14],
+                           [1,11],
+                           [13]]
+
+        jointlimitsdeg = [[-360.0,360.0]]*7
+        vellimitsdeg = [180.0]*7
+        Tee=matrixFromAxisAngle([0,numpy.pi/2,0])
+        Tee[0,3] = 0.0345
+        bodyxmlfilename = self.WriteOpenRAVEXML(triangulated_links, linkindiceslist,savedir='test',jointlimitsdeg=jointlimitsdeg,vellimitsdeg=vellimitsdeg,Trobot=matrixFromAxisAngle([0,numpy.pi/2,0]),Tee=Tee)
 
     trans = [triangulated_links[indices[0]].trans for indices in linkindiceslist]
     handles2 = [self.DrawAxes(T) for T in trans]

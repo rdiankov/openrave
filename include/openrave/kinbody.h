@@ -886,6 +886,8 @@ private:
         virtual void _RestoreKinBody();
     };
 
+    typedef boost::shared_ptr<KinBodyStateSaver> KinBodyStateSaverPtr;
+
     virtual ~KinBody();
 
     /// return the static interface type this class points to (used for safe casting)

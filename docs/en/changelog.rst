@@ -97,7 +97,7 @@ Trajectories
 
 * Trajectory retiming/smoothing performed now in planners.
 
-* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`.
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`
 
 Python
 ------

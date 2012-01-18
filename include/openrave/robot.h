@@ -364,6 +364,8 @@ private:
         virtual void _RestoreRobot();
     };
 
+    typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
+
     virtual ~RobotBase();
 
     /// \brief Return the static interface type this class points to (used for safe casting).

@@ -35,7 +35,7 @@ OPENRAVE_API int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dRea
 /// \brief Jitters the transform of a body until it escapes collision.
 OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000);
 
-/** \brief validates a trajectory with respect to the planning constraints.
+/** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
 
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
     \param trajectory trajectory of points to be checked
@@ -45,24 +45,48 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
 
-/** \brief Smooth the trajectory points consisting of active dofs of the robot
+/** \brief Smooth the trajectory points consisting of active dofs of the robot while avoiding collisions. <b>[multi-thread safe]</b>
 
-   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-   \param robot use the robot's active dofs to initialize the trajectory space
-   \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
-   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    Only initial and goal configurations are preserved.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param robot use the robot's active dofs to initialize the trajectory space
+    \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
 OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
 
-/** \brief Smooth the trajectory points consisting of affine dofs
+/** \brief Smooth the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
 
-   \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-   \param maxvelocities the max velocities of each dof
-   \param maxaccelerations the max acceleration of each dof
-   \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
-   \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    Only initial and goal configurations are preserved.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param maxvelocities the max velocities of each dof
+    \param maxaccelerations the max acceleration of each dof
+    \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
  */
 OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
+
+/** \brief Retime the trajectory points consisting of active dofs. <b>[multi-thread safe]</b>
+
+    Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param robot use the robot's active dofs to initialize the trajectory space
+    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
+ */
+OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
+
+/** \brief Retime the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
+
+    Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param maxvelocities the max velocities of each dof
+    \param maxaccelerations the max acceleration of each dof
+    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
+ */
+OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
+
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
