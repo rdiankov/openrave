@@ -1363,6 +1363,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
         code += 'bool %svalid[%d]={%s};\n'%(firstname,node.rootmaxdim,','.join(['true']*node.rootmaxdim))
         code += '_n%s = %d;\n'%(firstname,node.rootmaxdim)
+        for name in node.jointnames[1:]:
+            code += '_n%s = 1;\n'%firstname
         if node.rootmaxdim >= 256:
             log.error('num solutions is %d>=256, which exceeds unsigned char',node.rootmaxdim)
         
