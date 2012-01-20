@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 Version 0.5.0
 =============
 
-Subversion Revision: r2973
+Subversion Revision: r2982
 
 Initial Release: 2012/01/20
 
@@ -55,7 +55,7 @@ Inverse Kinematics
 
 * Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this disables the end effector links and their attached bodies from environment collision considerations.
 
-* fixed ikfast bug when prismatic joints are present, ikfast version is now **49**.
+* fixed ikfast bugs: prismatic joints, precision issues. ikfast version is now **52**.
 
 * Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`.TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`, :meth:`.TranslationXAxisAngleZNorm4D`, :meth:`.TranslationYAxisAngleXNorm4D`, :meth:`.TranslationZAxisAngleYNorm4D`
 
@@ -85,8 +85,7 @@ Planning
 
 * Added **minimumgoalpaths** to RRT planner to continue searching for different goals after initial path is found.
 
-* **Major**: Added :ref:`parabolic smoothing <planner-parabolicsmoother>` as defualt smoother. The parabolic smoothing library is
-from `Kris Hauser's group at Indiana University <http://www.iu.edu/~motion/software.html>`_.
+* **Major**: Added :ref:`parabolic smoothing <planner-parabolicsmoother>` as defualt smoother. The parabolic smoothing library is from `Kris Hauser's group at Indiana University <http://www.iu.edu/~motion/software.html>`_.
 
 * added jittering of goals and openravepy bindings to :class:`.planningutils.ManipulatorIKGoalSampler`
 

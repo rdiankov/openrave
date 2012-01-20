@@ -248,14 +248,14 @@ public:
     bool Validate() const {
         for(size_t i = 0; i < basesol.size(); ++i) {
             if( basesol[i].maxsolutions == (unsigned char)-1) {
-                return false;
+                throw OPENRAVE_EXCEPTION_FORMAT("max solutions for joint %d not initialized\n",i,ORE_Assert);
             }
             if( basesol[i].maxsolutions > 0 ) {
                 if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
-                    return false;
+                    throw OPENRAVE_EXCEPTION_FORMAT("index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
                 }
                 if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
-                    return false;
+                    throw OPENRAVE_EXCEPTION_FORMAT("2nd index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
                 }
             }
         }

@@ -242,8 +242,9 @@ private:
                 btVector3 localInertia((*itlink)->GetPrincipalMomentsOfInertia()[0],(*itlink)->GetPrincipalMomentsOfInertia()[1],(*itlink)->GetPrincipalMomentsOfInertia()[2]);
                 dReal mass = (*itlink)->GetMass();
                 if( mass <= 0 ) {
-                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f")%pbody->GetName()%(*itlink)->GetName()%mass));
+                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass));
                     mass = 1e-7;
+                    localInertia = btVector3(1,1,1);
                 }
                 btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,/*link.get()*/ NULL,pshapeparent,localInertia);
                 link->tlocal = (*itlink)->GetLocalMassFrame();

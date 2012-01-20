@@ -1363,23 +1363,27 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 
         code += 'bool %svalid[%d]={%s};\n'%(firstname,node.rootmaxdim,','.join(['true']*node.rootmaxdim))
         code += '_n%s = %d;\n'%(firstname,node.rootmaxdim)
+        for name in node.jointnames[1:]:
+            code += '_n%s = 1;\n'%name
         if node.rootmaxdim >= 256:
             log.error('num solutions is %d>=256, which exceeds unsigned char',node.rootmaxdim)
         
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(firstname,firstname,firstname)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(firstname,firstname)
-        for name in node.jointnames:
-            code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(firstname,firstname,firstname)
+        for name in node.jointnames[1:]:
+            code += '_i%s[0] = 0; _i%s[1] = -1;\n'%(name,name)
             
         # check for a similar solution
         code += 'for(int ii%s = i%s+1; ii%s < numsolutions; ++ii%s)\n{\n'%(firstname,firstname,firstname,firstname)
-        code += 'if( !%svalid[ii%s] ) { continue; }\n'
+        code += 'if( !%svalid[ii%s] ) { continue; }\n'%(firstname,firstname)
         code += 'if( '
         for name in node.jointnames:
             code += 'IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && '%(name,firstname,name,firstname,name,firstname,name,firstname)
         code += ' 1 )\n{\n    %svalid[ii%s]=false; '%(firstname,firstname)
-        for name in node.jointnames:
-            code += '_i%s[1] = ii%s; '%(name,firstname)
+        code += '_i%s[1] = ii%s; '%(firstname,firstname)
+        for name in node.jointnames[1:]:
+            code += '_i%s[1] = 0; '%name
         code += ' break; \n}\n'
         code += '}\n'
         
