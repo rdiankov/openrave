@@ -896,14 +896,16 @@ public:
                     itlinkbinding->_link = plink;
                     if( !!itlinkbinding->_nodephysicsoffset ) {
                         // set the rigid offset to the transform of the link that the node points to
-                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
-                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) ) {
-                                if( !!itlinkbinding2->_link ) {
-                                    trigidoffset = itlinkbinding2->_link->_t;
-                                }
-                                break;
-                            }
-                        }
+                        // ...actually this might not be mentioned anywhere in the collada spec...
+                        // the target specification exists for rigid_objects to override the target.
+//                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
+//                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) == 0 ) {
+//                                if( !!itlinkbinding2->_link ) {
+//                                    trigidoffset = itlinkbinding2->_link->_t;
+//                                }
+//                                break;
+//                            }
+//                        }
                     }
                     break;
                 }
@@ -931,6 +933,11 @@ public:
                 plink->_vinertiamoments[2] = rigiddata->getInertia()->getValue()[2];
             }
             plink->_tMassFrame = plink->_t.inverse() * tmassframe;
+            if( linkname == "Finger0-2") {
+                stringstream ss;
+                ss << plink->_tMassFrame << endl << plink->_t << endl;
+                RAVELOG_INFO(ss.str());
+            }
             if( !!rigiddata->getDynamic() ) {
                 plink->_bStatic = !rigiddata->getDynamic()->getValue();
             }

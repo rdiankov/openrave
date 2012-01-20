@@ -1094,15 +1094,16 @@ public:
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             domTargetable_floatRef mass = daeSafeCast<domTargetable_float>(ptec->add(COLLADA_ELEMENT_MASS));
             mass->setValue((*itlink)->GetMass());
+            Transform tlink0 = _GetLinkTransformZero(*itlink);
             _SetVector3(daeSafeCast<domTargetable_float3>(ptec->add(COLLADA_ELEMENT_INERTIA))->getValue(),(*itlink)->GetPrincipalMomentsOfInertia());
-            _WriteTransformation(ptec->add(COLLADA_ELEMENT_MASS_FRAME), tbaseinv*(*itlink)->GetTransform()*(*itlink)->GetLocalMassFrame());
+            _WriteTransformation(ptec->add(COLLADA_ELEMENT_MASS_FRAME), tbaseinv*tlink0*(*itlink)->GetLocalMassFrame());
             daeSafeCast<domRigid_body::domTechnique_common::domDynamic>(ptec->add(COLLADA_ELEMENT_DYNAMIC))->setValue(xsBoolean(!(*itlink)->IsStatic()));
             // create a shape for every geometry
             int igeom = 0;
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 domRigid_body::domTechnique_common::domShapeRef pdomshape = daeSafeCast<domRigid_body::domTechnique_common::domShape>(ptec->add(COLLADA_ELEMENT_SHAPE));
                 // there is a weird bug here where _WriteTranformation will fail to create rotate/translate elements in instance_geometry is created first... (is this part of the spec?)
-                _WriteTransformation(pdomshape,tbaseinv*(*itlink)->GetTransform()*itgeom->GetTransform());
+                _WriteTransformation(pdomshape,tbaseinv*tlink0*itgeom->GetTransform());
                 domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pdomshape->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
                 pinstgeom->setUrl(xsAnyURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
                 ++igeom;
@@ -1496,6 +1497,20 @@ private:
             }
         }
         return str(boost::format("node_joint%d_axis%d")%index%iaxis);
+    }
+
+    /// \brief compute the link transform when all joints are zero (regardless of mimic joints). This is the state
+    /// that the entire robot is stored in
+    virtual Transform _GetLinkTransformZero(KinBody::LinkConstPtr plink)
+    {
+        KinBodyConstPtr pbody = plink->GetParent();
+        std::vector<KinBody::JointPtr> vjoints;
+        pbody->GetChain(0,plink->GetIndex(),vjoints);
+        Transform t = pbody->GetTransform();
+        FOREACHC(itjoint,vjoints) {
+            t *= (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+        }
+        return t;
     }
 
     virtual void handleError( daeString msg )

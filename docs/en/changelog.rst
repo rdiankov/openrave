@@ -42,7 +42,7 @@ Core
 
 * COLLADA: reading/writing now preserve the body DOF indices order by storing actuator information, now supports manipulator <direction> tag.
 
-* Fixed computation of mass frames in XML parsing. :class:`.KinBody.Link` now holds a mass frame with inertia along the principal axes.
+* Fixed computation of mass frames in XML/COLLADA parsing. :class:`.KinBody.Link` now holds a mass frame with inertia along the principal axes.
 
 Inverse Kinematics
 ------------------
