@@ -1370,8 +1370,9 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(firstname,firstname,firstname)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(firstname,firstname)
-        for name in node.jointnames:
-            code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
+        for name in node.jointnames[1:]:
+            code += '_i%s[0] = 0; _i%s[1] = -1;\n'%(name,name)
             
         # check for a similar solution
         code += 'for(int ii%s = i%s+1; ii%s < numsolutions; ++ii%s)\n{\n'%(firstname,firstname,firstname,firstname)
