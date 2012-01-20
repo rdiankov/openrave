@@ -1088,14 +1088,7 @@ void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, 
         *itvalues++ = t.trans.z;
     }
     if( affinedofs & DOF_RotationAxis ) {
-        // assume that rot.yzw ~= vActvAffineRotationAxis
-        dReal fsin = RaveSqrt(t.rot.y * t.rot.y + t.rot.z * t.rot.z + t.rot.w * t.rot.w);
-
-        // figure out correct sign
-        if( (t.rot.y > 0) != (vActvAffineRotationAxis.x>0) || (t.rot.z > 0) != (vActvAffineRotationAxis.y>0) || (t.rot.w > 0) != (vActvAffineRotationAxis.z>0) ) {
-            fsin = -fsin;
-        }
-        *itvalues++ = 2 * RaveAtan2(fsin, t.rot.x);
+        *itvalues++ = -normalizeAxisRotation(vActvAffineRotationAxis, t.rot).first;
     }
     else if( affinedofs & DOF_Rotation3D ) {
         dReal fsin = RaveSqrt(t.rot.y * t.rot.y + t.rot.z * t.rot.z + t.rot.w * t.rot.w);
