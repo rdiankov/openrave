@@ -3,12 +3,19 @@
 ChangeLog
 #########
 
-Version 0.5.0 Unstable
+Version 0.5.1 Unstable
 ======================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.5.0
+=============
+
+Subversion Revision: r2970
+
+Initial Release: 2012/01/20
 
 Core
 ----
@@ -35,6 +42,7 @@ Core
 
 * COLLADA: reading/writing now preserve the body DOF indices order by storing actuator information, now supports manipulator <direction> tag.
 
+* Fixed computation of mass frames in XML parsing. :class:`.KinBody.Link` now holds a mass frame with inertia along the principal axes.
 
 Inverse Kinematics
 ------------------
