@@ -2443,7 +2443,7 @@ void RobotBase::_ComputeInternalInformation()
             try {
                 (*itmanip)->_pIkSolver->Init(*itmanip);
             }
-            catch(const openrave_exception& e) {
+            catch(const std::exception& e) {
                 RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
                 (*itmanip)->SetIkSolver(IkSolverBasePtr());
             }

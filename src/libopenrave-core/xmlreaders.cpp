@@ -567,7 +567,7 @@ bool ParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
             RAVELOG_WARN(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%GetFullFilename()%ret));
         }
     }
-    catch(const openrave_exception &ex) {
+    catch(const std::exception& ex) {
         RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s: %s\n")%GetFullFilename()%ex.what()));
         ret = -1;
     }
@@ -1854,6 +1854,10 @@ public:
                         }
 
                     }
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to process %s: %s\n")%itatt->second%ex.what()));
+                    _pinterface.reset();
                 }
                 catch(...) {
                     RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));

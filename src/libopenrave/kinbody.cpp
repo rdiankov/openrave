@@ -3580,7 +3580,7 @@ void KinBody::_ComputeInternalInformation()
             }
         }
     }
-    catch(const openrave_exception& ex) {
+    catch(const std::exception& ex) {
         RAVELOG_ERROR(str(boost::format("failed to set mimic equations on kinematics body %s: %s\n")%GetName()%ex.what()));
         for(int ijoints = 0; ijoints < 2; ++ijoints) {
             vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;

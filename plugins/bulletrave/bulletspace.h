@@ -240,7 +240,12 @@ private:
             if( _bPhysics ) {
                 // set the mass and inertia and extract the eigenvectors of the tensor
                 btVector3 localInertia((*itlink)->GetPrincipalMomentsOfInertia()[0],(*itlink)->GetPrincipalMomentsOfInertia()[1],(*itlink)->GetPrincipalMomentsOfInertia()[2]);
-                btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),/*link.get()*/ NULL,pshapeparent,localInertia);
+                dReal mass = (*itlink)->GetMass();
+                if( mass <= 0 ) {
+                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f")%pbody->GetName()%(*itlink)->GetName()%mass));
+                    mass = 1e-7;
+                }
+                btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,/*link.get()*/ NULL,pshapeparent,localInertia);
                 link->tlocal = (*itlink)->GetLocalMassFrame();
                 rbInfo.m_startWorldTransform = GetBtTransform((*itlink)->GetTransform()*link->tlocal);
                 link->_rigidbody.reset(new btRigidBody(rbInfo));

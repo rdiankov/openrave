@@ -780,8 +780,8 @@ public:
                                 RAVELOG_WARN(str(boost::format("unknown equation type %s")%equationtype));
                             }
                         }
-                        catch(const openrave_exception &ex) {
-                            RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s")%equationtype%pjoint->GetName()));
+                        catch(const std::exception &ex) {
+                            RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s: %s")%equationtype%pjoint->GetName()%ex.what()));
                         }
                     }
                 }
@@ -800,7 +800,7 @@ public:
                         }
                     }
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_WARN(str(boost::format("failed to parse formula for target %s: %s")%pjoint->GetName()%ex.what()));
                 }
             }
@@ -933,11 +933,6 @@ public:
                 plink->_vinertiamoments[2] = rigiddata->getInertia()->getValue()[2];
             }
             plink->_tMassFrame = plink->_t.inverse() * tmassframe;
-            if( linkname == "Finger0-2") {
-                stringstream ss;
-                ss << plink->_tMassFrame << endl << plink->_t << endl;
-                RAVELOG_INFO(ss.str());
-            }
             if( !!rigiddata->getDynamic() ) {
                 plink->_bStatic = !rigiddata->getDynamic()->getValue();
             }

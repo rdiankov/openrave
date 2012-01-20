@@ -256,6 +256,7 @@ private:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+            pinfo->vlinks.push_back(link);
             link->body = dBodyCreate(GetWorld());
 
             if( (*itlink)->IsStatic() ) {
@@ -326,6 +327,10 @@ private:
                 mass.I[8] = I.m[8]; mass.I[9] = I.m[9]; mass.I[10] = I.m[10];
                 // ignore center of mass for now (ode doesn't like it when it is non-zero)
                 //mass.c = I.trans;
+                if( mass.mass <= 0 ) {
+                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f")%pbody->GetName()%(*itlink)->GetName()%mass.mass));
+                    mass.mass = 1e-7;
+                }
                 dBodySetMass(link->body, &mass);
             }
 
@@ -336,8 +341,6 @@ private:
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,t.rot);
             dBodySetData(link->body, &link->plink);     // so that the link can be retreived from the body
-
-            pinfo->vlinks.push_back(link);
         }
 
         if( _bUsingPhysics ) {

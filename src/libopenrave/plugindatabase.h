@@ -247,6 +247,9 @@ public:
                     _setBadInterfaces.insert(p);
                 }
             }
+            catch(const std::exception& ex) {
+                RAVELOG_ERROR(str(boost::format("Create Interface: unknown exception, plugin %s: %s\n")%ppluginname%ex.what()));
+            }
             catch(...) {
                 RAVELOG_ERROR(str(boost::format("Create Interface: unknown exception, plugin %s\n")%ppluginname));
             }
@@ -863,7 +866,7 @@ protected:
                 }
             }
         }
-        catch(const openrave_exception& ex) {
+        catch(const std::exception& ex) {
             if( OPENRAVE_LAZY_LOADING ) {
                 p->plibrary = NULL;     // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
             }
