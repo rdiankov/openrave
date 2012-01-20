@@ -1183,7 +1183,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
     if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
         t.rot = quatMultiply(quatInverse(_vRotationQuatLimitStart), t.rot);
     }
-    RaveGetAffineDOFValuesFromTransform(itvalues,GetTransform(),_nAffineDOFs,vActvAffineRotationAxis);
+    RaveGetAffineDOFValuesFromTransform(itvalues,t,_nAffineDOFs,vActvAffineRotationAxis);
 }
 
 void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits)
