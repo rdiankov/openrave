@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 Version 0.5.0
 =============
 
-Subversion Revision: r2976
+Subversion Revision: r2978
 
 Initial Release: 2012/01/20
 
