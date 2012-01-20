@@ -1138,6 +1138,23 @@ class IKFastSolver(AutoReloader):
         return IKFastSolver.rodrigues2(axis,cos(angle),sin(angle))
 
     @staticmethod
+    def matrixFromQuat(quat):
+        M = eye(3)
+        qq1 = 2*quat[1]*quat[1]
+        qq2 = 2*quat[2]*quat[2]
+        qq3 = 2*quat[3]*quat[3]
+        M[0,0] = 1 - qq2 - qq3
+        M[0,1] = 2*(quat[1]*quat[2] - quat[0]*quat[3])
+        M[0,2] = 2*(quat[1]*quat[3] + quat[0]*quat[2])
+        M[1,0] = 2*(quat[1]*quat[2] + quat[0]*quat[3])
+        M[1,1]= 1 - qq1 - qq3
+        M[1,2]= 2*(quat[2]*quat[3] - quat[0]*quat[1])
+        M[2,0] = 2*(quat[1]*quat[3] - quat[0]*quat[2])
+        M[2,1] = 2*(quat[2]*quat[3] + quat[0]*quat[1])
+        M[2,2] = 1 - qq1 - qq2
+        return M
+
+    @staticmethod
     def rodrigues2(axis, cosangle, sinangle):
         skewsymmetric = Matrix(3, 3, [S.Zero,-axis[2],axis[1],axis[2],S.Zero,-axis[0],-axis[1],axis[0],S.Zero])
         return eye(3) + sinangle * skewsymmetric + (S.One-cosangle)*skewsymmetric*skewsymmetric

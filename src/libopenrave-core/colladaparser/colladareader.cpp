@@ -925,15 +925,12 @@ public:
             if( !!rigiddata->getMass_frame() ) {
                 tmassframe *= _ExtractFullTransform(rigiddata->getMass_frame());
             }
-            TransformMatrix minertia;
             if( !!rigiddata->getInertia() ) {
-                minertia.m[0] = rigiddata->getInertia()->getValue()[0];
-                minertia.m[5] = rigiddata->getInertia()->getValue()[1];
-                minertia.m[10] = rigiddata->getInertia()->getValue()[2];
+                plink->_vinertiamoments[0] = rigiddata->getInertia()->getValue()[0];
+                plink->_vinertiamoments[1] = rigiddata->getInertia()->getValue()[1];
+                plink->_vinertiamoments[2] = rigiddata->getInertia()->getValue()[2];
             }
-            TransformMatrix transMass = plink->_t.inverse() * tmassframe;
-            plink->_transMass = transMass*minertia*transMass.inverse();
-            plink->_transMass.trans = transMass.trans;
+            plink->_tMassFrame = plink->_t.inverse() * tmassframe;
             if( !!rigiddata->getDynamic() ) {
                 plink->_bStatic = !rigiddata->getDynamic()->getValue();
             }

@@ -676,6 +676,45 @@ bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
     return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
 }
 
+/** _tMassFrame * PrincipalInertia * _tMassFrame.inverse()
+
+    from openravepy.ikfast import *
+    quat = [Symbol('q0'),Symbol('q1'),Symbol('q2'),Symbol('q3')]
+    IKFastSolver.matrixFromQuat(quat)
+    Inertia = eye(3)
+    Inertia[0,0] = Symbol('i0'); Inertia[1,1] = Symbol('i1'); Inertia[2,2] = Symbol('i2')
+    MM = M * Inertia * M.transpose()
+ */
+static TransformMatrix ComputeInertia(const Transform& tMassFrame, const Vector& vinertiamoments)
+{
+    TransformMatrix minertia;
+    dReal i0 = vinertiamoments[0], i1 = vinertiamoments[1], i2 = vinertiamoments[2];
+    dReal q0=tMassFrame.rot[0], q1=tMassFrame.rot[1], q2=tMassFrame.rot[2], q3=tMassFrame.rot[3];
+    dReal q1_2 = q1*q1, q2_2 = q2*q2, q3_2 = q3*q3;
+    minertia.m[0] = i0*Sqr(1 - 2*q2_2 - 2*q3_2) + i1*Sqr(-2*q0*q3 + 2*q1*q2) + i2*Sqr(2*q0*q2 + 2*q1*q3);
+    minertia.m[1] = i0*(2*q0*q3 + 2*q1*q2)*(1 - 2*q2_2 - 2*q3_2) + i1*(-2*q0*q3 + 2*q1*q2)*(1 - 2*q1_2 - 2*q3_2) + i2*(-2*q0*q1 + 2*q2*q3)*(2*q0*q2 + 2*q1*q3);
+    minertia.m[2] = i0*(-2*q0*q2 + 2*q1*q3)*(1 - 2*q2_2 - 2*q3_2) + i1*(-2*q0*q3 + 2*q1*q2)*(2*q0*q1 + 2*q2*q3) + i2*(2*q0*q2 + 2*q1*q3)*(1 - 2*q1_2 - 2*q2_2);
+    minertia.m[3] = 0;
+    minertia.m[4] = minertia.m[1];
+    minertia.m[5] = i0*Sqr(2*q0*q3 + 2*q1*q2) + i1*Sqr(1 - 2*q1_2 - 2*q3_2) + i2*Sqr(-2*q0*q1 + 2*q2*q3);
+    minertia.m[6] = i0*(-2*q0*q2 + 2*q1*q3)*(2*q0*q3 + 2*q1*q2) + i1*(2*q0*q1 + 2*q2*q3)*(1 - 2*q1_2 - 2*q3_2) + i2*(-2*q0*q1 + 2*q2*q3)*(1 - 2*q1_2 - 2*q2_2);
+    minertia.m[7] = 0;
+    minertia.m[8] = minertia.m[2];
+    minertia.m[9] = minertia.m[6];
+    minertia.m[10] = i0*Sqr(-2*q0*q2 + 2*q1*q3) + i1*Sqr(2*q0*q1 + 2*q2*q3) + i2*Sqr(1 - 2*q1_2 - 2*q2_2);
+    minertia.m[11] = 0;
+    return minertia;
+}
+TransformMatrix KinBody::Link::GetLocalInertia() const
+{
+    return ComputeInertia(_tMassFrame, _vinertiamoments);
+}
+
+TransformMatrix KinBody::Link::GetGlobalInertia() const
+{
+    return ComputeInertia(_t*_tMassFrame, _vinertiamoments);
+}
+
 AABB KinBody::Link::ComputeAABB() const
 {
     if( _listGeomProperties.size() == 1) {
@@ -742,8 +781,9 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
         }
     }
     if( options & SO_Dynamics ) {
-        SerializeRound(o,_transMass);
+        SerializeRound(o,_tMassFrame);
         SerializeRound(o,_mass);
+        SerializeRound3(o,_vinertiamoments);
     }
 }
 
@@ -863,6 +903,9 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     }
     FOREACH(it,_vweights) {
         *it = 1;
+    }
+    FOREACH(it,_dofbranches) {
+        *it = 0;
     }
     jointindex=-1;
     dofindex = -1; // invalid index
@@ -1871,7 +1914,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->GetLinkTransformations(_vLinkTransforms);
+        _pbody->GetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }
     if( _options & Save_LinkEnable ) {
         _vEnabledLinks.resize(_pbody->GetLinks().size());
@@ -1897,7 +1940,7 @@ void KinBody::KinBodyStateSaver::Restore()
 void KinBody::KinBodyStateSaver::_RestoreKinBody()
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->SetLinkTransformations(_vLinkTransforms);
+        _pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }
     if( _options & Save_LinkEnable ) {
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
@@ -2570,11 +2613,39 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
 
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
+    RAVELOG_VERBOSE("GetLinkTransformations should be called with dofbranches\n");
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
     vector<LinkPtr>::const_iterator itlink;
     for(it = vtrans.begin(), itlink = _veclinks.begin(); it != vtrans.end(); ++it, ++itlink) {
         *it = (*itlink)->GetTransform();
+    }
+}
+
+void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
+{
+    vtrans.resize(_veclinks.size());
+    vector<Transform>::iterator it;
+    vector<LinkPtr>::const_iterator itlink;
+    for(it = vtrans.begin(), itlink = _veclinks.begin(); it != vtrans.end(); ++it, ++itlink) {
+        *it = (*itlink)->GetTransform();
+    }
+
+    dofbranches.resize(0);
+    if( (int)dofbranches.capacity() < GetDOF() ) {
+        dofbranches.reserve(GetDOF());
+    }
+    FOREACHC(it, _vDOFOrderedJoints) {
+        int toadd = (*it)->GetDOFIndex()-(int)dofbranches.size();
+        if( toadd > 0 ) {
+            dofbranches.insert(dofbranches.end(),toadd,0);
+        }
+        else if( toadd < 0 ) {
+            BOOST_ASSERT(0);
+        }
+        for(int i = 0; i < (*it)->GetDOF(); ++i) {
+            dofbranches.push_back((*it)->_dofbranches[i]);
+        }
     }
 }
 
@@ -2651,6 +2722,7 @@ Vector KinBody::GetCenterOfMass() const
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
+    RAVELOG_VERBOSE("SetLinkTransformations should be called with dofbranches\n");
     if( vbodies.size() < _veclinks.size() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("not enough links %d<%d", vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     }
@@ -2659,6 +2731,26 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink) {
         (*itlink)->SetTransform(*it);
     }
+    _nUpdateStampId++;
+}
+
+void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
+{
+    if( transforms.size() < _veclinks.size() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("not enough links %d<%d", transforms.size()%_veclinks.size(),ORE_InvalidArguments);
+    }
+    vector<Transform>::const_iterator it;
+    vector<LinkPtr>::iterator itlink;
+    for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
+        (*itlink)->SetTransform(*it);
+    }
+
+    FOREACH(itjoint,_vecjoints) {
+        for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
+            (*itjoint)->_dofbranches[i] = dofbranches.at((*itjoint)->GetDOFIndex()+i);
+        }
+    }
+
     _nUpdateStampId++;
 }
 
@@ -4129,14 +4221,20 @@ void KinBody::_ComputeInternalInformation()
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
         vector<Transform> vprevtrans, vnewtrans;
-        GetLinkTransformations(vprevtrans);
+        vector<int> vprevdofbranches, vnewdofbranches;
+        GetLinkTransformations(vprevtrans, vprevdofbranches);
         vector<dReal> vcurrentvalues;
         GetDOFValues(vcurrentvalues);
         SetDOFValues(vcurrentvalues,true);
-        GetLinkTransformations(vnewtrans);
+        GetLinkTransformations(vnewtrans, vnewdofbranches);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
+            }
+        }
+        for(int i = 0; i < GetDOF(); ++i) {
+            if( vprevdofbranches.at(i) != vnewdofbranches.at(i) ) {
+                RAVELOG_VERBOSE(str(boost::format("dof %d has different branches after SetDOFValues %d!=%d, this could be due to mimic joint equations kicking into effect.")%i%vprevdofbranches.at(i)%vnewdofbranches.at(i)));
             }
         }
         _vInitialLinkTransformations = vnewtrans;
@@ -4324,16 +4422,22 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     {
 public:
         TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) {
-            _pbody->GetLinkTransformations(vcurtrans);
+            _pbody->GetLinkTransformations(vcurtrans, _vdofbranches);
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
                 boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_t = vcurtrans.at(i);
             }
+            for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
+                for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
+                    _pbody->_vecjoints[i]->_dofbranches[j] = _vdofbranches.at(_pbody->_vecjoints[i]->GetDOFIndex()+j);
+                }
+            }
         }
 private:
         KinBodyConstPtr _pbody;
         std::vector<Transform> vcurtrans;
+        std::vector<int> _vdofbranches;
     };
 
     CHECK_INTERNAL_COMPUTATION;

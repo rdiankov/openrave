@@ -1094,19 +1094,8 @@ public:
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             domTargetable_floatRef mass = daeSafeCast<domTargetable_float>(ptec->add(COLLADA_ELEMENT_MASS));
             mass->setValue((*itlink)->GetMass());
-            TransformMatrix inertiatensor = (*itlink)->GetInertia();
-            double fCovariance[9] = { inertiatensor.m[0],inertiatensor.m[1],inertiatensor.m[2],inertiatensor.m[4],inertiatensor.m[5],inertiatensor.m[6],inertiatensor.m[8],inertiatensor.m[9],inertiatensor.m[10]};
-            double eigenvalues[3], eigenvectors[9];
-            mathextra::EigenSymmetric3(fCovariance,eigenvalues,eigenvectors);
-            TransformMatrix tinertiaframe;
-            tinertiaframe.trans = inertiatensor.trans;
-            for(int j = 0; j < 3; ++j) {
-                tinertiaframe.m[4*0+j] = eigenvectors[3*j];
-                tinertiaframe.m[4*1+j] = eigenvectors[3*j+1];
-                tinertiaframe.m[4*2+j] = eigenvectors[3*j+2];
-            }
-            _SetVector3(daeSafeCast<domTargetable_float3>(ptec->add(COLLADA_ELEMENT_INERTIA))->getValue(),Vector(eigenvalues[0],eigenvalues[1],eigenvalues[2]));
-            _WriteTransformation(ptec->add(COLLADA_ELEMENT_MASS_FRAME), tbaseinv*(*itlink)->GetTransform()*tinertiaframe);
+            _SetVector3(daeSafeCast<domTargetable_float3>(ptec->add(COLLADA_ELEMENT_INERTIA))->getValue(),(*itlink)->GetPrincipalMomentsOfInertia());
+            _WriteTransformation(ptec->add(COLLADA_ELEMENT_MASS_FRAME), tbaseinv*(*itlink)->GetTransform()*(*itlink)->GetLocalMassFrame());
             daeSafeCast<domRigid_body::domTechnique_common::domDynamic>(ptec->add(COLLADA_ELEMENT_DYNAMIC))->setValue(xsBoolean(!(*itlink)->IsStatic()));
             // create a shape for every geometry
             int igeom = 0;

@@ -239,20 +239,9 @@ private:
 
             if( _bPhysics ) {
                 // set the mass and inertia and extract the eigenvectors of the tensor
-                TransformMatrix inertiatensor = (*itlink)->GetInertia();
-                double fCovariance[9] = { inertiatensor.m[0],inertiatensor.m[1],inertiatensor.m[2],inertiatensor.m[4],inertiatensor.m[5],inertiatensor.m[6],inertiatensor.m[8],inertiatensor.m[9],inertiatensor.m[10]};
-                double eigenvalues[3], eigenvectors[9];
-                mathextra::EigenSymmetric3(fCovariance,eigenvalues,eigenvectors);
-                TransformMatrix tinertiaframe;
-                tinertiaframe.trans = inertiatensor.trans;
-                for(int j = 0; j < 3; ++j) {
-                    tinertiaframe.m[4*0+j] = eigenvectors[3*j];
-                    tinertiaframe.m[4*1+j] = eigenvectors[3*j+1];
-                    tinertiaframe.m[4*2+j] = eigenvectors[3*j+2];
-                }
-                btVector3 localInertia(eigenvalues[0],eigenvalues[1],eigenvalues[2]);
+                btVector3 localInertia((*itlink)->GetPrincipalMomentsOfInertia()[0],(*itlink)->GetPrincipalMomentsOfInertia()[1],(*itlink)->GetPrincipalMomentsOfInertia()[2]);
                 btRigidBody::btRigidBodyConstructionInfo rbInfo((*itlink)->GetMass(),/*link.get()*/ NULL,pshapeparent,localInertia);
-                link->tlocal = tinertiaframe;
+                link->tlocal = (*itlink)->GetLocalMassFrame();
                 rbInfo.m_startWorldTransform = GetBtTransform((*itlink)->GetTransform()*link->tlocal);
                 link->_rigidbody.reset(new btRigidBody(rbInfo));
                 link->obj = link->_rigidbody;

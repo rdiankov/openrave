@@ -400,3 +400,62 @@ class TestKinematics(EnvironmentSetup):
         s=pickle.dumps(spec)
         newspec=pickle.loads(s)
         assert(newspec==spec)
+
+    def test_inertia(self):
+        env=self.env
+        massdensity=2.5
+        massxml = """<mass type="mimicgeom">
+          <density>%f</density>
+        </mass>
+        """%massdensity
+        xmldata = """<kinbody name="test">
+        %(mass)s
+        <body name="box">
+          <geom type="box">
+            <extents>1 2 3</extents>
+          </geom>
+        </body>
+        <body name="rbox">
+          <rotationaxis>0 1 0 45</rotationaxis>
+          <translation>1 2 3</translation>
+          <geom type="box">
+            <rotationaxis>1 0 0 45</rotationaxis>
+            <translation>0.5 1.5 2.5</translation>
+            <extents>1 2 3</extents>
+          </geom>
+        </body>
+        <body name="sphere">
+          <geom type="sphere">
+            <radius>0.5</radius>
+          </geom>
+        </body>
+        <body name="cylinder">
+          <geom type="cylinder">
+            <height>2</height>
+            <radius>0.2</radius>
+          </geom>
+        </body>
+        </kinbody>"""%{'mass':massxml}
+        body = env.ReadKinBodyXMLData(xmldata)
+        env.AddKinBody(body)
+        m = body.GetLink('box').GetMass()
+        assert(abs(m-48*massdensity) <= g_epsilon)
+        assert(transdist(body.GetLink('box').GetLocalMassFrame(),eye(4)) <= g_epsilon)
+        inertia = m/12*array([4+9,1+9,1+4])
+        assert(transdist(body.GetLink('box').GetPrincipalMomentsOfInertia(),inertia) <= g_epsilon)
+
+        m = body.GetLink('rbox').GetMass()
+        assert(abs(m-48*massdensity) <= g_epsilon)
+        R = rotationMatrixFromAxisAngle([pi/4,0,0])
+        I=dot(R,dot(diag(inertia),transpose(R)))
+        assert(transdist(body.GetLink('rbox').GetLocalInertia(),I) <= g_epsilon)
+        assert(transdist(body.GetLink('rbox').GetLocalCOM(),[0.5, 1.5, 2.5]) <= g_epsilon)
+        
+        m = body.GetLink('sphere').GetMass()
+        assert(abs(m-4.0/3*pi*0.5**3*massdensity) <= g_epsilon)
+        assert(transdist(body.GetLink('sphere').GetLocalMassFrame(),eye(4)) <= g_epsilon)
+        assert(transdist(body.GetLink('sphere').GetPrincipalMomentsOfInertia(),0.4*m*0.5**2*ones(3)) <= g_epsilon)
+        m = body.GetLink('cylinder').GetMass()
+        assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
+        assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
+        assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)

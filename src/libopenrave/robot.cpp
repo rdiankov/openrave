@@ -912,9 +912,16 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Trans
     KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
 }
 
-void RobotBase::SetLinkTransformations(const std::vector<Transform>& vbodies)
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms)
 {
-    KinBody::SetLinkTransformations(vbodies);
+    KinBody::SetLinkTransformations(transforms);
+    _UpdateGrabbedBodies();
+    _UpdateAttachedSensors();
+}
+
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
+{
+    KinBody::SetLinkTransformations(transforms,dofbranches);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }

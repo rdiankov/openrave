@@ -596,110 +596,6 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
 }
 
-/// mass of objects
-struct MASS
-{
-    MASS() : fTotalMass(0) {
-        for(int i = 0; i < 12; ++i) t.m[i] = 0;
-    }
-    static MASS GetBoxMass(Vector extents, Vector pos, dReal totalmass)
-    {
-        MASS m;
-        m.fTotalMass = totalmass;
-        m.t = TransformMatrix();
-        m.t.m[0] = totalmass/(dReal)12.0 * (extents.y*extents.y + extents.z*extents.z);
-        m.t.m[4*1+1]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.z*extents.z);
-        m.t.m[4*2+2]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.y*extents.y);
-        m.t.trans = pos;
-        return m;
-    }
-    static MASS GetBoxMassD(Vector extents, Vector pos, dReal density)
-    {
-        return GetBoxMass(extents, pos, 8.0f*extents.x*extents.y*extents.z*density);
-    }
-    static MASS GetSphericalMass(dReal radius, Vector pos, dReal totalmass)
-    {
-        MASS m;
-        m.fTotalMass = totalmass;
-        m.t = TransformMatrix();
-        m.t.m[0] = m.t.m[4*1+1] = m.t.m[4*2+2]= (dReal)0.4 * totalmass * radius*radius;
-        m.t.trans = pos;
-        return m;
-    }
-    static MASS GetSphericalMassD(dReal radius, Vector pos, dReal density)
-    {
-        return GetSphericalMass(radius, pos, dReal(4.0)/dReal(3.0) * PI * radius * radius * radius * density);
-    }
-    static MASS GetCylinderMass(dReal radius, dReal height, Vector pos, dReal totalmass)
-    {
-        MASS m;
-        m.fTotalMass = totalmass;
-        m.t = TransformMatrix();
-        dReal r2 = radius*radius;
-        // axis pointed toward z
-        m.t.m[0] = m.t.m[4*1+1] = totalmass*(dReal(0.25)*r2 + (dReal(1.0)/dReal(12.0))*height*height);
-        m.t.m[4*2+2] = totalmass*dReal(0.5)*r2;
-        return m;
-    }
-    static MASS GetCylinderMassD(dReal radius, dReal height, Vector pos, dReal density)
-    {
-        return GetCylinderMass(radius, height, pos, PI*radius*radius*height*density);
-    }
-
-    /// adds two masses together
-    MASS operator+(const MASS &r) const
-    {
-        MASS mnew;
-        if( fTotalMass+r.fTotalMass == 0 )
-            MASS();
-        mnew.t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/(fTotalMass+r.fTotalMass));
-        mnew.fTotalMass = fTotalMass + r.fTotalMass;
-        mnew.t.m[0] = t.m[0] + r.t.m[0]; mnew.t.m[1] = t.m[1] + r.t.m[1]; mnew.t.m[2] = t.m[2] + r.t.m[2];
-        mnew.t.m[4] = t.m[4] + r.t.m[4]; mnew.t.m[5] = t.m[5] + r.t.m[5]; mnew.t.m[6] = t.m[6] + r.t.m[6];
-        mnew.t.m[8] = t.m[8] + r.t.m[8]; mnew.t.m[9] = t.m[9] + r.t.m[9]; mnew.t.m[10] = t.m[10] + r.t.m[10];
-        return mnew;
-    }
-
-    /// adds a mass to the current mass
-    MASS& operator+=(const MASS &r)
-    {
-        if( fTotalMass+r.fTotalMass == 0 )
-            *this = MASS();
-        else {
-            t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/(fTotalMass+r.fTotalMass));
-            fTotalMass += r.fTotalMass;
-            t.m[0] += r.t.m[0]; t.m[1] += r.t.m[1]; t.m[2] += r.t.m[2];
-            t.m[4] += r.t.m[4]; t.m[5] += r.t.m[5]; t.m[6] += r.t.m[6];
-            t.m[8] += r.t.m[8]; t.m[9] += r.t.m[9]; t.m[10] += r.t.m[10];
-        }
-        return *this;
-    }
-
-    /// transform the center of mass and inertia matrix by trans
-    MASS& transform(const TransformMatrix& trans)
-    {
-        dReal x = trans.trans.x, y = trans.trans.y, z = trans.trans.z;
-        TransformMatrix trot;
-        trot = trans; trot.trans = Vector();
-        t = trot * t * trot.inverse();     // rotate mass about rotation
-
-        // translate the inertia tensor
-        dReal x2 = x*x, y2 = y*y, z2 = z*z;
-        t.m[0] += fTotalMass * (y2+z2); t.m[1] -= fTotalMass * x*y; t.m[2] -= fTotalMass * x * z;
-        t.m[4] -= fTotalMass * y * z; t.m[5] += fTotalMass * (x2+z2); t.m[6] -= fTotalMass * y * z;
-        t.m[8] -= fTotalMass * z * x; t.m[9] -= fTotalMass * z * y; t.m[10] += fTotalMass * (x2+y2);
-
-        // ensure perfect symmetry
-        t.m[5] = 0.5*(t.m[1]+t.m[5]);
-        t.m[8] = 0.5*(t.m[2]+t.m[8]);
-        t.m[9] = 0.5*(t.m[6]+t.m[9]);
-        return *this;
-    }
-
-    TransformMatrix t;
-    dReal fTotalMass;
-};
-
 class KinBodyXMLReader;
 typedef boost::shared_ptr<KinBodyXMLReader> KinBodyXMLReaderPtr;
 typedef boost::shared_ptr<KinBodyXMLReader const> KinBodyXMLReaderConstPtr;
@@ -849,17 +745,6 @@ public:
         }
         return true;
     }
-
-    enum MassType
-    {
-        MT_None = 0,
-        MT_MimicGeom,
-        MT_Box,
-        MT_BoxMass,         // use total mass instead of density
-        MT_Sphere,
-        MT_SphereMass,
-        MT_Custom,         // manually specify center of mass and inertia matrix
-    };
 
     LinkXMLReader(KinBody::LinkPtr& plink, KinBodyPtr pparent, const AttributesList &atts) : _plink(plink) {
         _pparent = pparent;
@@ -1358,8 +1243,8 @@ public:
             }
             else if( _masstype == MT_Custom ) {
                 if( xmlname == "com" ) {
-                    _ss >> _plink->_transMass.trans.x >> _plink->_transMass.trans.y >> _plink->_transMass.trans.z;
-                    _massCustom.t.trans = _plink->_transMass.trans*_vScaleGeometry;
+                    _ss >> _massCustom.t.trans.x >> _massCustom.t.trans.y >> _massCustom.t.trans.z;
+                    _massCustom.t.trans = _massCustom.t.trans*_vScaleGeometry;
                 }
                 else if( xmlname == "inertia" ) {
                     _ss >> _massCustom.t.m[0] >> _massCustom.t.m[1] >> _massCustom.t.m[2] >> _massCustom.t.m[4] >> _massCustom.t.m[5] >> _massCustom.t.m[6] >> _massCustom.t.m[8] >> _massCustom.t.m[9] >> _massCustom.t.m[10];
@@ -1391,7 +1276,7 @@ public:
                         break;
                     }
 
-                    totalmass += mass.transform(itgeom->GetTransform());
+                    totalmass += mass.ChangeCoordinateSystem(itgeom->GetTransform());
                 }
             }
             else if( _masstype == MT_Box ) {
@@ -1409,8 +1294,9 @@ public:
             else {
                 totalmass = MASS::GetSphericalMass(_vMassExtents.x, Vector(), _fTotalMass);
             }
-            _plink->_transMass = totalmass.t;
-            _plink->_mass = totalmass.fTotalMass;
+
+            totalmass.GetMassFrame(_plink->_tMassFrame, _plink->_vinertiamoments);
+            _plink->_mass =totalmass.fTotalMass;
             tOrigTrans = _plink->GetTransform();
 
             Transform cur;
@@ -2154,7 +2040,7 @@ public:
     KinBodyXMLReader(EnvironmentBasePtr penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
-        _masstype = LinkXMLReader::MT_None;
+        _masstype = MT_None;
         _fMassValue = 1;
         _vMassExtents = Vector(1,1,1);
         _bOverwriteDiffuse = false;
@@ -2268,7 +2154,7 @@ public:
             }
 
             if( _processingtag == "mass" ) {
-                return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || (_masstype == LinkXMLReader::MT_Box && xmlname == "extents") || (_masstype == LinkXMLReader::MT_Custom && (xmlname == "com"||xmlname == "inertia"))) ? PE_Support : PE_Ignore;
+                return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || (_masstype == MT_Box && xmlname == "extents") || (_masstype == MT_Custom && (xmlname == "com"||xmlname == "inertia"))) ? PE_Support : PE_Ignore;
             }
             return PE_Ignore;
         }
@@ -2313,17 +2199,17 @@ public:
 
         if( xmlname == "mass" ) {
             // find the type of mass and create
-            _masstype = LinkXMLReader::MT_Sphere;
+            _masstype = MT_Sphere;
             FOREACHC(itatt, atts) {
                 if( itatt->first == "type" ) {
                     if( stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
-                        _masstype = LinkXMLReader::MT_MimicGeom;
+                        _masstype = MT_MimicGeom;
                     }
                     else if( stricmp(itatt->second.c_str(), "box") == 0 ) {
-                        _masstype = LinkXMLReader::MT_Box;
+                        _masstype = MT_Box;
                     }
                     else if( stricmp(itatt->second.c_str(), "sphere") == 0 ) {
-                        _masstype = LinkXMLReader::MT_Sphere;
+                        _masstype = MT_Sphere;
                     }
 
                     break;
@@ -2392,23 +2278,25 @@ public:
                 _processingtag = "";
             }
             else if( xmlname == "density" ) {
-                if( _masstype == LinkXMLReader::MT_BoxMass )
-                    _masstype = LinkXMLReader::MT_Box;
-                else if( _masstype == LinkXMLReader::MT_SphereMass)
-                    _masstype = LinkXMLReader::MT_Sphere;
+                if( _masstype == MT_BoxMass )
+                    _masstype = MT_Box;
+                else if( _masstype == MT_SphereMass)
+                    _masstype = MT_Sphere;
                 _ss >> _fMassValue;
             }
             else if( xmlname == "total" ) {
-                if( _masstype == LinkXMLReader::MT_Box )
-                    _masstype = LinkXMLReader::MT_BoxMass;
-                else if( _masstype == LinkXMLReader::MT_Sphere)
-                    _masstype = LinkXMLReader::MT_SphereMass;
+                if( _masstype == MT_Box ) {
+                    _masstype = MT_BoxMass;
+                }
+                else if( _masstype == MT_Sphere) {
+                    _masstype = MT_SphereMass;
+                }
                 _ss >> _fMassValue;
             }
             else if( xmlname == "radius" ) {
                 _ss >> _vMassExtents.x;
             }
-            else if((_masstype == LinkXMLReader::MT_Box)&&(xmlname == "extents")) {
+            else if( _masstype == MT_Box && xmlname == "extents" ) {
                 _ss >> _vMassExtents.x >> _vMassExtents.y >> _vMassExtents.z;
             }
         }
@@ -2551,7 +2439,7 @@ protected:
 
     // default mass type passed to every LinkXMLReader
     int rootoffset, rootjoffset, rootjpoffset, roottransoffset;                         ///< the initial number of links when KinBody is created (so that global translations and rotations only affect the new links)
-    LinkXMLReader::MassType _masstype;                     ///< if true, mass is craeted so that it mimics the geometry
+    MassType _masstype;                     ///< if true, mass is craeted so that it mimics the geometry
     float _fMassValue;                       ///< density or total mass
     Vector _vMassExtents;
 

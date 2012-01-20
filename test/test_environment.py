@@ -139,6 +139,8 @@ class TestEnvironment(EnvironmentSetup):
                     ab1=link1.ComputeAABB()
                     assert(transdist(ab0.pos(),ab1.pos()) <= epsilon)
                     assert(transdist(ab0.extents(),ab1.extents()) <= epsilon)
+                    assert(transdist(link0.GetMassFrame(),link1.GetMassFrame()) <= epsilon)
+                    assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)
                     # todo: compare geometry, collada still does not support writing boxes
 #                     for ig in range(len(link0.GetGeometries())):
 #                         g0=link0.GetGeometries()[ig]

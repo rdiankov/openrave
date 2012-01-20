@@ -392,7 +392,8 @@ private:
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
-    virtual void SetLinkTransformations(const std::vector<Transform>& vbodies);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);

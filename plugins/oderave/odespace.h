@@ -317,7 +317,7 @@ private:
 
             if( !(*itlink)->IsStatic() && _bUsingPhysics ) {
                 // set the mass
-                RaveTransformMatrix<dReal> I = (*itlink)->GetInertia();
+                RaveTransformMatrix<dReal> I = (*itlink)->GetLocalInertia();
                 dMass mass;
                 dMassSetZero(&mass);
                 mass.mass = (*itlink)->GetMass();
