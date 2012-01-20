@@ -1,3 +1,4 @@
+
 // -*- coding: utf-8 -*-
 // Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
@@ -328,8 +329,11 @@ private:
                 // ignore center of mass for now (ode doesn't like it when it is non-zero)
                 //mass.c = I.trans;
                 if( mass.mass <= 0 ) {
-                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f")%pbody->GetName()%(*itlink)->GetName()%mass.mass));
+                    RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass.mass));
                     mass.mass = 1e-7;
+                    mass.I[0] = 1; mass.I[1] = 0; mass.I[2] = 0;
+                    mass.I[4] = 0; mass.I[5] = 1; mass.I[6] = 0;
+                    mass.I[8] = 0; mass.I[9] = 0; mass.I[10] = 1;
                 }
                 dBodySetMass(link->body, &mass);
             }
