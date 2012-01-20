@@ -1373,7 +1373,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             
         # check for a similar solution
         code += 'for(int ii%s = i%s+1; ii%s < numsolutions; ++ii%s)\n{\n'%(firstname,firstname,firstname,firstname)
-        code += 'if( !%svalid[ii%s] ) { continue; }\n'
+        code += 'if( !%svalid[ii%s] ) { continue; }\n'(firstname,firstname)
         code += 'if( '
         for name in node.jointnames:
             code += 'IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && '%(name,firstname,name,firstname,name,firstname,name,firstname)
