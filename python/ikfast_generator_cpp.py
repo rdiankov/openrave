@@ -1370,7 +1370,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(firstname,firstname,firstname)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(firstname,firstname)
-        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,firstname,name)
+        code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(firstname,firstname,firstname)
         for name in node.jointnames[1:]:
             code += '_i%s[0] = 0; _i%s[1] = -1;\n'%(name,name)
             
@@ -1381,8 +1381,9 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         for name in node.jointnames:
             code += 'IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && '%(name,firstname,name,firstname,name,firstname,name,firstname)
         code += ' 1 )\n{\n    %svalid[ii%s]=false; '%(firstname,firstname)
-        for name in node.jointnames:
-            code += '_i%s[1] = ii%s; '%(name,firstname)
+        code += '_i%s[1] = ii%s; '%(firstname,firstname)
+        for name in node.jointnames[1:]:
+            code += '_i%s[1] = 0; '%name
         code += ' break; \n}\n'
         code += '}\n'
         

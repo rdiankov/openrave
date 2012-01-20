@@ -253,7 +253,6 @@ public:
             if( basesol[i].maxsolutions > 0 ) {
                 if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
-                    return false;
                 }
                 if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("2nd index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
