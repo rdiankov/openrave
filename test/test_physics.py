@@ -102,3 +102,46 @@ class TestPhysics(EnvironmentSetup):
             if 1e-6*env.GetSimulationTime() > simtime2+1:
                 break
         env.StopSimulation()
+
+    def test_rotationaxis(self):
+        env=self.env
+        xmldata = """<environment>
+          <Robot file="robots/diffdrive_caster.robot.xml">
+            <Translation>4 6 0.1</Translation>
+            <RotationAxis>0 0 1 270</RotationAxis>
+          </Robot>
+
+          <KinBody name="floor">
+            <Body type="static">
+              <Translation>0 0 -0.015</Translation>
+              <Geom type="box">
+                <extents>10 10 0.005</extents>
+                <diffuseColor>.3 1 .3</diffuseColor>
+                <ambientColor>0.3 1 0.3</ambientColor>
+              </Geom>
+            </Body>
+          </KinBody>
+
+
+          <physicsengine type="ode">
+            <odeproperties>
+              <friction>3.5</friction>
+              <gravity>0 0 -9.8</gravity>
+              <selfcollision>1</selfcollision>
+              <erp>0.6</erp>
+              <cfm>0.00000001</cfm>
+            </odeproperties>
+          </physicsengine>
+        </environment>
+
+        """
+        env.LoadData(xmldata)
+        robot = env.GetRobots()[0]
+        with env:
+            robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis,[0,0,1])
+            orgvalues = robot.GetActiveDOFValues()
+            for i in range(100):
+                env.StepSimulation(0.01)
+                values = robot.GetActiveDOFValues()
+                assert(sum(abs(values-orgvalues))<1)
+
