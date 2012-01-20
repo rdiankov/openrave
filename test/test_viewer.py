@@ -64,14 +64,15 @@ class TestViewer(EnvironmentSetup):
         # select collision engine here
         self.env.SetViewer('qtcoin',False)
 
-    def test_memory(self):
-        env=self.env
-        env.StartSimulation(0.1,False)
-        env.Load('data/pr2test2.env.xml')
-        memusage = []
-        for i in range(10):
-            memusage.append(memory())
-            time.sleep(1)
-        # check if memory is growing
-        #assert(memusage[-1] < memusage[1]*2)
-        
+#     def test_memory(self):
+#         env=self.env
+#         env.StartSimulation(0.1,False)
+#         env.Load('data/pr2test2.env.xml')
+#         memusage = []
+#         for i in range(10):
+#             memusage.append(memory())
+#             time.sleep(1)
+#         env.Destroy()
+#         # check if memory is growing
+#         assert(memusage[-1] < memusage[1]*2)
+#         

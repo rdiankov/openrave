@@ -177,7 +177,9 @@ svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable 
 
 もし通常の手順にしたがってコンパイルしたのにエラーが発生した場合，それはgccのバージョンが旧い為かもしれません．gccのバージョンはver. 4.1もしくはそれ以上のものを使用してください．あなたのPC環境でのgccのバージョンは<tt>gcc --version</tt>で確認することができます．
 
-\en  \section ilinux_package Installing from Package Manager
+\en  \section ilinux_package Installing Dependencies from Package Manager
+
+This is for the dependencies to OpenRAVE, make sure to run them regardless of the OpenRAVE version being installed from sources.
 
 \ja \section ilinux_package 必要なパッケージのインストール
 

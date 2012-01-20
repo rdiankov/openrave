@@ -289,12 +289,45 @@ protected:
         /// \param link The link to test if it is one of the parents of this link.
         virtual bool IsParentLink(boost::shared_ptr<Link const> plink) const;
 
-        /// \return center of mass offset in the link's local coordinate frame
-        inline Vector GetCOMOffset() const {
-            return _transMass.trans;
+        /// \brief return center of mass offset in the link's local coordinate frame
+        inline Vector GetLocalCOM() const {
+            return _tMassFrame.trans;
         }
-        inline const TransformMatrix& GetInertia() const {
-            return _transMass;
+
+        /// \brief return center of mass of the link in the global coordinate system
+        inline Vector GetGlobalCOM() const {
+            return _t*_tMassFrame.trans;
+        }
+
+        inline Vector GetCOMOffset() const {
+            return _tMassFrame.trans;
+        }
+
+        /// \brief return inertia in link's local coordinate frame. The COM is GetLocalCOM()
+        virtual TransformMatrix GetLocalInertia() const;
+
+        // \brief return inertia in the global coordinate frame. The COM is GetCOM()
+        virtual TransformMatrix GetGlobalInertia() const;
+
+        /// \deprecated (12/1/20)
+        inline TransformMatrix GetInertia() const RAVE_DEPRECATED {
+            RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetGlobalInertia\n");
+            return GetLocalInertia();
+        }
+
+        /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
+        inline const Transform& GetLocalMassFrame() const {
+            return _tMassFrame;
+        }
+
+        /// \brief return the mass frame in the global coordinate system that holds the center of mass and principal axes for inertia.
+        inline Transform GetGlobalMassFrame() const {
+            return _t*_tMassFrame;
+        }
+
+        /// \brief return the principal moments of inertia inside the mass frame
+        inline const Vector& GetPrincipalMomentsOfInertia() const {
+            return _vinertiamoments;
         }
         inline dReal GetMass() const {
             return _mass;
@@ -365,8 +398,9 @@ protected:
         virtual void _Update();
 
         Transform _t;                   ///< \see GetTransform
-        TransformMatrix _transMass;         ///< the 3x3 inertia and center of mass of the link in the link's coordinate system
-        dReal _mass;
+        Transform _tMassFrame; ///< the frame for inertia and center of mass of the link in the link's coordinate system
+        dReal _mass; ///< mass of link
+        Vector _vinertiamoments; ///< inertia along the axes of _tMassFrame
         TRIMESH collision;         ///< triangles for collision checking, triangles are always the triangulation
                                    ///< of the body when it is at the identity transformation
 
@@ -753,6 +787,8 @@ protected:
 
         std::string _name;         ///< \see GetName
         boost::array<bool,3> _bIsCircular;            ///< \see IsCircular
+        boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
+
 private:
         /// Sensitive variables that should not be modified.
         /// @name Private Joint Variables
@@ -881,10 +917,13 @@ protected:
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
+        std::vector<int> _vdofbranches;
         KinBodyPtr _pbody;
 private:
         virtual void _RestoreKinBody();
     };
+
+    typedef boost::shared_ptr<KinBodyStateSaver> KinBodyStateSaverPtr;
 
     virtual ~KinBody();
 
@@ -1094,6 +1133,11 @@ private:
     /// \brief get the transformations of all the links at once
     virtual void GetLinkTransformations(std::vector<Transform>& transforms) const;
 
+    /// \brief get the transformations of all the links and the dof branches at once.
+    ///
+    /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
+    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const;
+
     /// \deprecated (11/05/26)
     virtual void GetBodyTransformations(std::vector<Transform>& transforms) const RAVE_DEPRECATED {
         GetLinkTransformations(transforms);
@@ -1188,6 +1232,11 @@ private:
 
     /// \brief sets the transformations of all the links at once
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
+
+    /// \brief sets the transformations of all the links and dof branches at once.
+    ///
+    /// Using dof branches allows the full joint state to be recovered
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
 
     /// \deprecated (11/05/26)
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED {

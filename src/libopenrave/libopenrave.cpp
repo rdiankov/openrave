@@ -1482,7 +1482,6 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToVelocitySpecific
 ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecification(int timederivative) const
 {
     ConfigurationSpecification vspec;
-    vspec._vgroups = _vgroups;
     const boost::array<string,3> posgroups = {{"joint_values","affine_transform","ikparam_values"}};
     const boost::array<string,3> velgroups = {{"joint_velocities","affine_velocities","ikparam_velocities"}};
     const boost::array<string,3> accgroups = {{"joint_accelerations","affine_accelerations","ikparam_accelerations"}};
@@ -1500,7 +1499,7 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
         throw OPENRAVE_EXCEPTION_FORMAT0("invalid timederivative",ORE_InvalidArguments);
     }
 
-    FOREACH(itgroup,vspec._vgroups) {
+    FOREACHC(itgroup,_vgroups) {
         for(size_t i = 0; i < pgroup->size(); ++i) {
             const string& name = pgroup->at(i);
             if( itgroup->name.size() >= name.size() && itgroup->name.substr(0,name.size()) == name ) {

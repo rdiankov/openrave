@@ -35,6 +35,7 @@ public:
         _maporder["affine_transform"] = 6;
         _maporder["joint_torques"] = 7;
         _bInit = false;
+        _bSamplingVerified = false;
     }
 
     bool SortGroups(const ConfigurationSpecification::Group& g1, const ConfigurationSpecification::Group& g2)
@@ -67,6 +68,7 @@ public:
             BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid());
             _bInit = false;
             _vgroupinterpolators.resize(0);
+            _vderivoffsets.resize(0);
             _spec = spec;
             // order the groups based on computation order
             stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),boost::bind(&GenericTrajectory::SortGroups,this,_1,_2));
@@ -77,7 +79,7 @@ public:
                 }
             }
             _vgroupinterpolators.resize(_spec._vgroups.size());
-            _vderivoffsets.resize(0); _vderivoffsets.resize(_spec.GetDOF(),-1);
+            _vderivoffsets.resize(_spec.GetDOF(),-1);
             for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
                 const string& interpolation = _spec._vgroups[i].interpolation;
                 const string& name = _spec._vgroups[i].name;
@@ -111,17 +113,20 @@ public:
                     RAVELOG_DEBUG(str(boost::format("unknown interpolation method '%s' for group '%s'")%interpolation%name));
                 }
 
-
                 if( bNeedDerivatives ) {
                     std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
                     if( itderiv == _spec._vgroups.end() ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("%s interpolation group '%s' needs derivatives",interpolation%name,ORE_InvalidArguments);
+                        // don't throw an error here since it is unknown if the trajectory will be sampled
+                        for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                            _vderivoffsets[_spec._vgroups[i].offset+j] = -2;
+                        }
                     }
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
                         _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
                     }
                 }
             }
+            _bSamplingVerified = false;
         }
         _vtrajdata.resize(0);
         _vaccumtime.resize(0);
@@ -206,6 +211,7 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= 0);
         _ComputeInternal();
+        _VerifySampling();
         data.resize(0);
         data.resize(_spec.GetDOF(),0);
         if( time >= GetDuration() ) {
@@ -234,6 +240,7 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= 0);
         _ComputeInternal();
+        _VerifySampling();
         data.resize(0);
         data.resize(spec.GetDOF(),0);
         if( time >= GetDuration() ) {
@@ -374,6 +381,19 @@ protected:
         _bChanged = false;
     }
 
+    void _VerifySampling() const
+    {
+        for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
+            const string& interpolation = _spec._vgroups[i].interpolation;
+            const string& name = _spec._vgroups[i].name;
+            for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                if( _vderivoffsets[_spec._vgroups[i].offset+j] < -1 ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("%s interpolation group '%s' needs derivatives for sampling",interpolation%name,ORE_InvalidArguments);
+                }
+            }
+        }
+    }
+
     void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
         size_t offset= ipoint*_spec.GetDOF()+g.offset;
@@ -427,9 +447,9 @@ protected:
 
     ConfigurationSpecification _spec;
     std::vector< boost::function<void(size_t,dReal,std::vector<dReal>&)> > _vgroupinterpolators;
-    std::vector<int> _vderivoffsets; ///< for every group that relies on derivatives, this will point to the offset (-1 if invalid)
+    std::vector<int> _vderivoffsets; ///< for every group that relies on derivatives, this will point to the offset (-1 if invalid and not needed, -2 if invalid and needed)
     int _timeoffset;
-    bool _bInit;
+    bool _bInit, _bSamplingVerified;
 
     std::vector<dReal> _vtrajdata;
     mutable std::vector<dReal> _vaccumtime, _vdeltainvtime;

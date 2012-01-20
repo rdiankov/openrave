@@ -3,12 +3,19 @@
 ChangeLog
 #########
 
-Version 0.5.0 Unstable
+Version 0.5.1 Unstable
 ======================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.5.0
+=============
+
+Subversion Revision: r2973
+
+Initial Release: 2012/01/20
 
 Core
 ----
@@ -35,6 +42,7 @@ Core
 
 * COLLADA: reading/writing now preserve the body DOF indices order by storing actuator information, now supports manipulator <direction> tag.
 
+* Fixed computation of mass frames in XML/COLLADA parsing. :class:`.KinBody.Link` now holds a mass frame with inertia along the principal axes.
 
 Inverse Kinematics
 ------------------
@@ -97,7 +105,7 @@ Trajectories
 
 * Trajectory retiming/smoothing performed now in planners.
 
-* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`.
+* Added many useful trajectory routines in the :class:`.planningutils` namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.ConvertTrajectorySpecification`, :meth:`.planningutils.ReverseTrajectory`, :meth:`.planningutils.MergeTrajectories`, :meth:`.planningutils.SmoothActiveDOFTrajectory`, :meth:`.planningutils.SmoothAffineTrajectory`, :meth:`.planningutils.RetimeActiveDOFTrajectory`, :meth:`.planningutils.RetimeAffineTrajectory`
 
 Python
 ------

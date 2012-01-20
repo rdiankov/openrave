@@ -189,6 +189,153 @@ RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
 CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
+
+enum MassType
+{
+    MT_None = 0,
+    MT_MimicGeom,
+    MT_Box,
+    MT_BoxMass,         // use total mass instead of density
+    MT_Sphere,
+    MT_SphereMass,
+    MT_Custom,         // manually specify center of mass and inertia matrix
+};
+
+/// \brief mass of objects
+class MASS
+{
+public:
+    MASS(const MASS& m) {
+        t = m.t;
+        fTotalMass = m.fTotalMass;
+    }
+    MASS() : fTotalMass(0) {
+        for(int i = 0; i < 12; ++i) {
+            t.m[i] = 0;
+        }
+    }
+    static MASS GetBoxMass(Vector extents, Vector pos, dReal totalmass)
+    {
+        MASS m;
+        m.fTotalMass = totalmass;
+        m.t = TransformMatrix();
+        m.t.m[0] = totalmass/(dReal)12.0 * (extents.y*extents.y + extents.z*extents.z);
+        m.t.m[4*1+1]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.z*extents.z);
+        m.t.m[4*2+2]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.y*extents.y);
+        m.t.trans = pos;
+        return m;
+    }
+    static MASS GetBoxMassD(Vector extents, Vector pos, dReal density)
+    {
+        return GetBoxMass(extents, pos, 8.0f*extents.x*extents.y*extents.z*density);
+    }
+    static MASS GetSphericalMass(dReal radius, Vector pos, dReal totalmass)
+    {
+        MASS m;
+        m.fTotalMass = totalmass;
+        m.t = TransformMatrix();
+        m.t.m[0] = m.t.m[4*1+1] = m.t.m[4*2+2]= (dReal)0.4 * totalmass * radius*radius;
+        m.t.trans = pos;
+        return m;
+    }
+    static MASS GetSphericalMassD(dReal radius, Vector pos, dReal density)
+    {
+        return GetSphericalMass(radius, pos, dReal(4.0)/dReal(3.0) * PI * radius * radius * radius * density);
+    }
+    static MASS GetCylinderMass(dReal radius, dReal height, Vector pos, dReal totalmass)
+    {
+        MASS m;
+        m.fTotalMass = totalmass;
+        m.t = TransformMatrix();
+        dReal r2 = radius*radius;
+        // axis pointed toward z
+        m.t.m[0] = m.t.m[4*1+1] = totalmass*(dReal(0.25)*r2 + (dReal(1.0)/dReal(12.0))*height*height);
+        m.t.m[4*2+2] = totalmass*dReal(0.5)*r2;
+        return m;
+    }
+    static MASS GetCylinderMassD(dReal radius, dReal height, Vector pos, dReal density)
+    {
+        return GetCylinderMass(radius, height, pos, PI*radius*radius*height*density);
+    }
+
+    /// \brief adds two masses together
+    MASS operator+(const MASS &r) const
+    {
+        MASS mnew;
+        if( fTotalMass+r.fTotalMass == 0 ) {
+            return mnew;
+        }
+        mnew.fTotalMass = fTotalMass + r.fTotalMass;
+        mnew.t.trans = (fTotalMass*t.trans+r.fTotalMass*r.t.trans)*((dReal)1.0/mnew.fTotalMass);
+        MASS m0=MASS(*this);
+        m0.ChangeCenterOfRotation(mnew.t.trans);
+        MASS m1=MASS(r);
+        m1.ChangeCenterOfRotation(mnew.t.trans);
+        for(int i = 0; i < 3; ++i) {
+            for(int j = 0; j < 3; ++j) {
+                mnew.t.m[4*i+j] = m0.t.m[4*i+j] + m1.t.m[4*i+j];
+            }
+        }
+        return mnew;
+    }
+
+    /// \brief adds a mass to the current mass
+    MASS& operator+=(const MASS &r)
+    {
+        MASS mnew = operator+(r);
+        t = mnew.t;
+        fTotalMass = mnew.fTotalMass;
+        return *this;
+    }
+
+    const Vector& GetCOM() const {
+        return t.trans;
+    }
+
+    /// \brief transform the center of mass and inertia matrix by trans
+    MASS& ChangeCoordinateSystem(const Transform& trans)
+    {
+        Vector oldcom = t.trans;
+        TransformMatrix trot = matrixFromQuat(trans.rot);
+        t = trot.rotate(t.rotate(trot.inverse())); // rotate inertia
+        t.trans = trans*oldcom;
+        return *this;
+    }
+
+    /// \brief changes the center of rotation (ie center of mass)
+    MASS& ChangeCenterOfRotation(const Vector& newcor)
+    {
+        Vector v = newcor-t.trans;
+        // translate the inertia tensor
+        dReal x2 = v.x*v.x, y2 = v.y*v.y, z2 = v.z*v.z;
+        t.m[0] += fTotalMass * (y2+z2);     t.m[1] -= fTotalMass * v.x * v.y;   t.m[2] -= fTotalMass * v.x * v.z;
+        t.m[4] -= fTotalMass * v.y * v.x;   t.m[5] += fTotalMass * (x2+z2);     t.m[6] -= fTotalMass * v.y * v.z;
+        t.m[8] -= fTotalMass * v.z * v.x;   t.m[9] -= fTotalMass * v.z * v.y;   t.m[10] += fTotalMass * (x2+y2);
+        return *this;
+    }
+
+    /// \brief computes the frame of reference so that the inertia matrix is reduced to a diagonal
+    void GetMassFrame(Transform& tmassframe, Vector& vinertiamoments) const {
+        double fCovariance[9] = { t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
+        double eigenvalues[3], eigenvectors[9];
+        mathextra::EigenSymmetric3(fCovariance,eigenvalues,eigenvectors);
+        TransformMatrix tinertiaframe;
+        for(int j = 0; j < 3; ++j) {
+            tinertiaframe.m[4*j+0] = eigenvectors[3*j];
+            tinertiaframe.m[4*j+1] = eigenvectors[3*j+1];
+            tinertiaframe.m[4*j+2] = eigenvectors[3*j+2];
+        }
+        tmassframe.rot = quatFromMatrix(tinertiaframe);
+        tmassframe.trans = t.trans;
+        vinertiamoments[0] = eigenvalues[0];
+        vinertiamoments[1] = eigenvalues[1];
+        vinertiamoments[2] = eigenvalues[2];
+    }
+
+    TransformMatrix t;
+    dReal fTotalMass;
+};
+
 }
 
 using namespace OpenRAVE;

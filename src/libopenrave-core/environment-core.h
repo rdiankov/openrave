@@ -1259,7 +1259,7 @@ public:
             preadable->_pinterface->__struri = filename;
             return preadable->_pinterface;
         }
-        catch(const openrave_exception &ex) {
+        catch(const std::exception &ex) {
             RAVELOG_ERROR(str(boost::format("ReadInterfaceXMLFile exception: %s\n")%ex.what()));
         }
         return InterfaceBasePtr();
@@ -1765,7 +1765,7 @@ protected:
                     _vecbodies.push_back(pnewrobot);
                     _vecrobots.push_back(pnewrobot);
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to clone robot %s: %s")%(*itrobot)->GetName()%ex.what()));
                 }
             }
@@ -1785,7 +1785,7 @@ protected:
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                     _vecbodies.push_back(pnewbody);
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
@@ -1839,7 +1839,7 @@ protected:
                     pnewsensor->Clone(*itsensor, options);
                     _listSensors.push_back(pnewsensor);
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to clone sensor %s: %s")%(*itsensor)->GetName()%ex.what()));
                 }
             }
@@ -1852,7 +1852,7 @@ protected:
                 try {
                     AddViewer(RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId()));
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to lone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
                 }
             }
@@ -1940,7 +1940,7 @@ protected:
                 try {
                     StepSimulation(_fDeltaSimTime);
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
                 }
                 uint64_t passedtime = GetMicroTime()-_nSimStartTime;

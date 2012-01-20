@@ -274,9 +274,37 @@ class TestMoving(EnvironmentSetup):
         traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
         traj2=RaveCreateTrajectory(env,'')
         traj2.Clone(traj,0)
-        planningutils.SmoothAffineTrajectory(traj,[2,2,1],[5,5,5],False,'LinearTrajectoryRetimer')
-        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,'ParabolicSmoother')
-        robot.GetController().SetPath(traj2)
+
+        env.StartSimulation(0.01,False)
+            
+        for itraj in range(2):
+            with env:
+                T=robot.GetTransform()
+                planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
+                assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
+                for i in range(traj.GetNumWaypoints()):
+                    waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                    waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                    assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+            robot.GetController().SetPath(traj2)
+            robot.WaitForController(0)
+
+        plannernames = ['parabolicsmoother','shortcut_linear']
+        for plannername in plannernames:
+            traj2=RaveCreateTrajectory(env,'')
+            traj2.Clone(traj,0)
+            for itraj in range(2):
+                with env:
+                    T=robot.GetTransform()
+                    planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                    assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                    for i in [0,-1]:
+                        waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                        waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                        assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+                robot.GetController().SetPath(traj2)
+                robot.WaitForController(0)
 
     def test_releasefingers(self):
         env=self.env

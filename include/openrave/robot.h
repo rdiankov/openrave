@@ -364,6 +364,8 @@ private:
         virtual void _RestoreRobot();
     };
 
+    typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
+
     virtual ~RobotBase();
 
     /// \brief Return the static interface type this class points to (used for safe casting).
@@ -390,7 +392,8 @@ private:
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
 
-    virtual void SetLinkTransformations(const std::vector<Transform>& vbodies);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);

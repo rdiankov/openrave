@@ -1,7 +1,7 @@
 .. htmlonly::
    
    :Latest Stable Version: |version| (|release|)
-   :Latest Official Version: 0.4.2
+   :Latest Official Version: 0.5.0
    :Last Updated: |today|
 
 Welcome to Open Robotics Automation Virtual Environment

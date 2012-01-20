@@ -311,6 +311,11 @@ inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLi
     return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(end,start), lowerLimit, upperLimit);
 }
 
+template <typename T>
+inline T Sqr(T t) {
+    return t*t;
+}
+
 inline static dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();

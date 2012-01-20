@@ -780,8 +780,8 @@ public:
                                 RAVELOG_WARN(str(boost::format("unknown equation type %s")%equationtype));
                             }
                         }
-                        catch(const openrave_exception &ex) {
-                            RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s")%equationtype%pjoint->GetName()));
+                        catch(const std::exception &ex) {
+                            RAVELOG_WARN(str(boost::format("failed to parse formula %s for target %s: %s")%equationtype%pjoint->GetName()%ex.what()));
                         }
                     }
                 }
@@ -800,7 +800,7 @@ public:
                         }
                     }
                 }
-                catch(const openrave_exception &ex) {
+                catch(const std::exception &ex) {
                     RAVELOG_WARN(str(boost::format("failed to parse formula for target %s: %s")%pjoint->GetName()%ex.what()));
                 }
             }
@@ -896,14 +896,16 @@ public:
                     itlinkbinding->_link = plink;
                     if( !!itlinkbinding->_nodephysicsoffset ) {
                         // set the rigid offset to the transform of the link that the node points to
-                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
-                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) ) {
-                                if( !!itlinkbinding2->_link ) {
-                                    trigidoffset = itlinkbinding2->_link->_t;
-                                }
-                                break;
-                            }
-                        }
+                        // ...actually this might not be mentioned anywhere in the collada spec...
+                        // the target specification exists for rigid_objects to override the target.
+//                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
+//                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) == 0 ) {
+//                                if( !!itlinkbinding2->_link ) {
+//                                    trigidoffset = itlinkbinding2->_link->_t;
+//                                }
+//                                break;
+//                            }
+//                        }
                     }
                     break;
                 }
@@ -925,15 +927,12 @@ public:
             if( !!rigiddata->getMass_frame() ) {
                 tmassframe *= _ExtractFullTransform(rigiddata->getMass_frame());
             }
-            TransformMatrix minertia;
             if( !!rigiddata->getInertia() ) {
-                minertia.m[0] = rigiddata->getInertia()->getValue()[0];
-                minertia.m[5] = rigiddata->getInertia()->getValue()[1];
-                minertia.m[10] = rigiddata->getInertia()->getValue()[2];
+                plink->_vinertiamoments[0] = rigiddata->getInertia()->getValue()[0];
+                plink->_vinertiamoments[1] = rigiddata->getInertia()->getValue()[1];
+                plink->_vinertiamoments[2] = rigiddata->getInertia()->getValue()[2];
             }
-            TransformMatrix transMass = plink->_t.inverse() * tmassframe;
-            plink->_transMass = transMass*minertia*transMass.inverse();
-            plink->_transMass.trans = transMass.trans;
+            plink->_tMassFrame = plink->_t.inverse() * tmassframe;
             if( !!rigiddata->getDynamic() ) {
                 plink->_bStatic = !rigiddata->getDynamic()->getValue();
             }

@@ -1138,6 +1138,23 @@ class IKFastSolver(AutoReloader):
         return IKFastSolver.rodrigues2(axis,cos(angle),sin(angle))
 
     @staticmethod
+    def matrixFromQuat(quat):
+        M = eye(3)
+        qq1 = 2*quat[1]*quat[1]
+        qq2 = 2*quat[2]*quat[2]
+        qq3 = 2*quat[3]*quat[3]
+        M[0,0] = 1 - qq2 - qq3
+        M[0,1] = 2*(quat[1]*quat[2] - quat[0]*quat[3])
+        M[0,2] = 2*(quat[1]*quat[3] + quat[0]*quat[2])
+        M[1,0] = 2*(quat[1]*quat[2] + quat[0]*quat[3])
+        M[1,1]= 1 - qq1 - qq3
+        M[1,2]= 2*(quat[2]*quat[3] - quat[0]*quat[1])
+        M[2,0] = 2*(quat[1]*quat[3] - quat[0]*quat[2])
+        M[2,1] = 2*(quat[2]*quat[3] + quat[0]*quat[1])
+        M[2,2] = 1 - qq1 - qq2
+        return M
+
+    @staticmethod
     def rodrigues2(axis, cosangle, sinangle):
         skewsymmetric = Matrix(3, 3, [S.Zero,-axis[2],axis[1],axis[2],S.Zero,-axis[0],-axis[1],axis[0],S.Zero])
         return eye(3) + sinangle * skewsymmetric + (S.One-cosangle)*skewsymmetric*skewsymmetric
@@ -2121,17 +2138,24 @@ class IKFastSolver(AutoReloader):
         if several points exist, so have to choose one that is least complex?
         """
         ilinks = [i for i,Tlink in enumerate(Links) if self.has_any_symbols(Tlink,*solvejointvars)]
-        for i in range(len(ilinks)-2):
-            startindex = ilinks[i]
-            endindex = ilinks[i+2]+1
-            p0 = self.multiplyMatrix(Links[ilinks[i]:ilinks[i+1]])[0:3,3]
-            p1 = self.multiplyMatrix(Links[ilinks[i+1]:ilinks[i+2]])[0:3,3]
-            if self.has_any_symbols(p0,*solvejointvars) and self.has_any_symbols(p1,*solvejointvars):
-                T0links = Links[startindex:endindex]
-                T1links = LinksInv[:startindex][::-1]
-                T1links.append(self.Tee)
-                T1links += LinksInv[endindex:][::-1]
-                yield T0links, T1links
+        usedindices = []
+        for imode in range(2):
+            for i in range(len(ilinks)-2):
+                if i in usedindices:
+                        continue
+                startindex = ilinks[i]
+                endindex = ilinks[i+2]+1
+                p0 = self.multiplyMatrix(Links[ilinks[i]:ilinks[i+1]])[0:3,3]
+                p1 = self.multiplyMatrix(Links[ilinks[i+1]:ilinks[i+2]])[0:3,3]
+                has0 = self.has_any_symbols(p0,*solvejointvars)
+                has1 = self.has_any_symbols(p1,*solvejointvars)
+                if (imode == 0 and has0 and has1) or (imode == 1 and (has0 or has1)):
+                    T0links = Links[startindex:endindex]
+                    T1links = LinksInv[:startindex][::-1]
+                    T1links.append(self.Tee)
+                    T1links += LinksInv[endindex:][::-1]
+                    usedindices.append(i)
+                    yield T0links, T1links
 
     def solve6DIntersectingAxes(self, T0links, T1links, transvars,rotvars,solveRotationFirst,endbranchtree):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.

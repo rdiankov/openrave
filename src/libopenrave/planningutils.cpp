@@ -139,6 +139,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     if( !parameters ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need planner parameters to verify trajectory",ORE_InvalidArguments);
     }
+    EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
     BOOST_ASSERT((int)parameters->_vConfigLowerLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigUpperLimit.size() == parameters->GetDOF());
     BOOST_ASSERT((int)parameters->_vConfigResolution.size() == parameters->GetDOF());
@@ -217,7 +218,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     }
 }
 
-void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
+void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& interpolation, bool bsmooth)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -230,14 +231,22 @@ void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool
         return;
     }
 
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
+    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
     }
-    string interpolation = "linear";
-    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    if( !bsmooth ) {
+        params->_setstatefn.clear();
+        params->_checkpathconstraintsfn.clear();
+    }
+
+    params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps>")%hastimestamps);
+    if( interpolation.size() > 0 ) {
+        params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation>")%interpolation);
+    }
     if( !planner->InitPlan(probot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
     }
@@ -271,19 +280,65 @@ static void _SetTransformBody(std::vector<dReal>::const_iterator itvalues, KinBo
     pbody->SetTransform(t);
 }
 
-void _SetAffineState(const std::vector<dReal>& v, const std::list< boost::function< void(std::vector<dReal>::const_iterator) > >& listfunctions)
+static void _GetTransformBody(std::vector<dReal>::iterator itvalues, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
 {
-    FOREACHC(itfn,listfunctions) {
+    Transform t = pbody->GetTransform();
+    RaveGetAffineDOFValuesFromTransform(itvalues+index,t, affinedofs,vActvAffineRotationAxis);
+}
+
+void _SetAffineState(const std::vector<dReal>& v, const std::list< boost::function< void(std::vector<dReal>::const_iterator) > >& listsetfunctions)
+{
+    FOREACHC(itfn,listsetfunctions) {
         (*itfn)(v.begin());
     }
 }
 
-// this function is very messed up
-void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
+void _GetAffineState(std::vector<dReal>& v, const std::list< boost::function< void(std::vector<dReal>::iterator) > >& listgetfunctions)
 {
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("lineartrajectoryretimer"));
+    FOREACHC(itfn,listgetfunctions) {
+        (*itfn)(v.begin());
+    }
+}
+
+class PlannerStateSaver
+{
+public:
+    PlannerStateSaver(int dof, const PlannerBase::PlannerParameters::SetStateFn& setfn, const PlannerBase::PlannerParameters::GetStateFn& getfn) : _setfn(setfn) {
+        _savedvalues.resize(dof);
+        getfn(_savedvalues);
+        BOOST_ASSERT(!!_setfn);
+    }
+    virtual ~PlannerStateSaver() {
+        _setfn(_savedvalues);
+    }
+
+private:
+    const PlannerBase::PlannerParameters::SetStateFn& _setfn;
+    vector<dReal> _savedvalues;
+};
+
+// this function is very messed up...?
+static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& interpolation, bool bsmooth)
+{
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need retiming, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return;
+    }
+
+    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    ConfigurationSpecification newspec = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
+    if( newspec.GetDOF() != (int)maxvelocities.size() || newspec.GetDOF() != (int)maxaccelerations.size() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)",newspec.GetDOF()%maxvelocities.size()%maxaccelerations.size(), ORE_InvalidArguments);
+    }
+    ConvertTrajectorySpecification(traj,newspec);
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-    string interpolation = "linear";
     params->_vConfigVelocityLimit = maxvelocities;
     params->_vConfigAccelerationLimit = maxaccelerations;
     params->_configurationspecification = traj->GetConfigurationSpecification();
@@ -296,9 +351,10 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
         params->_vConfigResolution[i] = 0.01;
     }
 
-    // analyze the configuration for identified dimensions
-    list< boost::function<void(std::vector<dReal>::const_iterator) > > listfunctions;
+    list< boost::function<void(std::vector<dReal>::const_iterator) > > listsetfunctions;
+    list< boost::function<void(std::vector<dReal>::iterator) > > listgetfunctions;
     std::vector<int> vrotaxes;
+    // analyze the configuration for identified dimensions
     KinBodyPtr robot;
     FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
         if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
@@ -309,14 +365,14 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
             BOOST_ASSERT( !!ss );
             KinBodyPtr pbody = traj->GetEnv()->GetKinBody(tempname);
             BOOST_ASSERT( !!pbody );
-            int index = itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis);
             Vector vaxis(0,0,1);
             if( affinedofs & DOF_RotationAxis ) {
                 vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
             robot = pbody;
-            listfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,index,affinedofs,vaxis));
+            listsetfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+            listgetfunctions.push_back(boost::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
             int iktypeint = 0;
@@ -333,21 +389,56 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
             RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
         }
     }
-    if( listfunctions.size() > 0 ) {
-        params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listfunctions));
 
-        boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
-        params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
+    boost::shared_ptr<PlannerStateSaver> statesaver;
+    if( bsmooth ) {
+        if( listsetfunctions.size() > 0 ) {
+            params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listsetfunctions));
+            params->_getstatefn = boost::bind(_GetAffineState,_1,boost::ref(listgetfunctions));
+            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
+            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
+            statesaver.reset(new PlannerStateSaver(traj->GetConfigurationSpecification().GetDOF(), params->_setstatefn, params->_getstatefn));
+        }
     }
+    else {
+        params->_setstatefn.clear();
+        params->_getstatefn.clear();
+        params->_checkpathconstraintsfn.clear();
+    }
+
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
+
     //params->_distmetricfn;
-    params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation><hastimestamps>%d</hastimestamps>")%interpolation%hastimestamps);
+    params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps>")%hastimestamps);
+    if( interpolation.size() > 0 ) {
+        params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation>")%interpolation);
+    }
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
     }
     if( planner->PlanPath(traj) != PS_HasSolution ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
     }
+}
+
+void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
+{
+    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", "", true);
+}
+
+void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
+{
+    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "parabolicsmoother", "", true);
+}
+
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
+{
+    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", true);
+}
+
+void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
+{
+    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", false);
 }
 
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)

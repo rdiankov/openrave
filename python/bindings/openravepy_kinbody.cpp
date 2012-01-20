@@ -176,19 +176,34 @@ public:
         object GetCOMOffset() const {
             return toPyVector3(_plink->GetCOMOffset());
         }
-        object GetInertia() const
+        object GetLocalCOM() const {
+            return toPyVector3(_plink->GetLocalCOM());
+        }
+        object GetGlobalCOM() const {
+            return toPyVector3(_plink->GetGlobalCOM());
+        }
+
+        object GetLocalInertia() const
         {
-            TransformMatrix t = _plink->GetInertia();
-            npy_intp dims[] = { 3,4};
+            TransformMatrix t = _plink->GetLocalInertia();
+            npy_intp dims[] = { 3, 3};
             PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
             dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-            pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans[0];
-            pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans[1];
-            pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans[2];
+            pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
+            pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
+            pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
             return static_cast<numeric::array>(handle<>(pyvalues));
         }
         dReal GetMass() const {
             return _plink->GetMass();
+        }
+        object GetPrincipalMomentsOfInertia() const
+        {
+            return toPyVector3(_plink->GetPrincipalMomentsOfInertia());
+        }
+        object GetLocalMassFrame() const
+        {
+            return ReturnTransform(_plink->GetLocalMassFrame());
         }
 
         void SetStatic(bool bStatic) {
@@ -945,8 +960,10 @@ public:
     object GetLinkTransformations() const
     {
         boost::python::list transforms;
-        FOREACHC(itlink, _pbody->GetLinks()) {
-            transforms.append(ReturnTransform((*itlink)->GetTransform()));
+        vector<Transform> vtransforms;
+        _pbody->GetLinkTransformations(vtransforms);
+        FOREACHC(it, vtransforms) {
+            transforms.append(ReturnTransform(*it));
         }
         return transforms;
     }
@@ -2437,7 +2454,7 @@ void init_openravepy_kinbody()
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
                         .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, DOXY_FN(KinBody,GetConfigurationSpecification))
                         .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, args("indices"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices))
-                        .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values"), DOXY_FN(KinBody,SetConfigurationValues))
+                        .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues))
                         .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
@@ -2489,7 +2506,11 @@ void init_openravepy_kinbody()
                          .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
                          .def("GetTransform",&PyKinBody::PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
                          .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset, DOXY_FN(KinBody::Link,GetCOMOffset))
-                         .def("GetInertia",&PyKinBody::PyLink::GetInertia, DOXY_FN(KinBody::Link,GetInertia))
+                         .def("GetLocalCOM",&PyKinBody::PyLink::GetLocalCOM, DOXY_FN(KinBody::Link,GetLocalCOM))
+                         .def("GetGlobalCOM",&PyKinBody::PyLink::GetGlobalCOM, DOXY_FN(KinBody::Link,GetGlobalCOM))
+                         .def("GetLocalInertia",&PyKinBody::PyLink::GetLocalInertia, DOXY_FN(KinBody::Link,GetLocalInertia))
+                         .def("GetPrincipalMomentsOfInertia",&PyKinBody::PyLink::GetPrincipalMomentsOfInertia, DOXY_FN(KinBody::Link,GetPrincipalMomentsOfInertia))
+                         .def("GetLocalMassFrame",&PyKinBody::PyLink::GetLocalMassFrame, DOXY_FN(KinBody::Link,GetLocalMassFrame))
                          .def("GetMass",&PyKinBody::PyLink::GetMass, DOXY_FN(KinBody::Link,GetMass))
                          .def("SetStatic",&PyKinBody::PyLink::SetStatic,args("static"), DOXY_FN(KinBody::Link,SetStatic))
                          .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"), DOXY_FN(KinBody::Link,SetTransform))
