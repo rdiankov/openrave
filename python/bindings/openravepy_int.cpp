@@ -1122,6 +1122,9 @@ public:
     string __str__() {
         return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));
     }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
 
     EnvironmentBasePtr GetEnv() const {
         return _penv;
@@ -1203,6 +1206,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 
+object get_openrave_exception_unicode(openrave_exception* p)
+{
+    std::string s = p->message();
+    return ConvertStringToUnicode(s);
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
 #if BOOST_VERSION >= 103500
@@ -1224,6 +1233,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     .def( init<const openrave_exception&>() )
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
     .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
+    .def( "__unicode__", get_openrave_exception_unicode)
     ;
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();
@@ -1253,6 +1263,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
+        .def("__unicode__", &PyInterfaceBase::__unicode__)
         .def("__eq__",&PyInterfaceBase::__eq__)
         .def("__ne__",&PyInterfaceBase::__ne__)
         ;
@@ -1427,6 +1438,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("__ne__",&PyEnvironmentBase::__ne__)
                     .def("__repr__",&PyEnvironmentBase::__repr__)
                     .def("__str__",&PyEnvironmentBase::__str__)
+                    .def("__unicode__",&PyEnvironmentBase::__unicode__)
         ;
 
         object selectionoptions = enum_<EnvironmentBase::SelectionOptions>("SelectionOptions" DOXY_ENUM(SelectionOptions))

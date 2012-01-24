@@ -99,8 +99,8 @@ public:
             object GetRenderScale() const {
                 return toPyVector3(_plink->GetGeometry(_geomindex).GetRenderScale());
             }
-            string GetRenderFilename() const {
-                return _plink->GetGeometry(_geomindex).GetRenderFilename();
+            object GetRenderFilename() const {
+                return ConvertStringToUnicode(_plink->GetGeometry(_geomindex).GetRenderFilename());
             }
             float GetTransparency() const {
                 return _plink->GetGeometry(_geomindex).GetTransparency();
@@ -123,8 +123,8 @@ public:
             return _plink;
         }
 
-        string GetName() {
-            return _plink->GetName();
+        object GetName() {
+            return ConvertStringToUnicode(_plink->GetName());
         }
         int GetIndex() {
             return _plink->GetIndex();
@@ -263,6 +263,9 @@ public:
         string __str__() {
             return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName());
         }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
         bool __eq__(boost::shared_ptr<PyLink> p) {
             return !!p && _plink == p->_plink;
         }
@@ -288,8 +291,8 @@ public:
             return _pjoint;
         }
 
-        string GetName() {
-            return _pjoint->GetName();
+        object GetName() {
+            return ConvertStringToUnicode(_pjoint->GetName());
         }
         bool IsMimic(int iaxis=-1) {
             return _pjoint->IsMimic(iaxis);
@@ -469,6 +472,9 @@ public:
         string __str__() {
             return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName());
         }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
         bool __eq__(boost::shared_ptr<PyJoint> p) {
             return !!p && _pjoint==p->_pjoint;
         }
@@ -526,6 +532,9 @@ public:
             SensorSystemBasePtr psystem = _pdata->GetSystem();
             string systemname = !psystem ? "(NONE)" : psystem->GetXMLId();
             return boost::str(boost::format("<managedata:%s, parent=%s:%s>")%systemname%plink->GetParent()->GetName()%plink->GetName());
+        }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
         }
         bool __eq__(boost::shared_ptr<PyManageData> p) {
             return !!p && _pdata==p->_pdata;
@@ -602,8 +611,8 @@ public:
     void SetName(const std::string& name) {
         _pbody->SetName(name);
     }
-    string GetName() const {
-        return _pbody->GetName();
+    object GetName() const {
+        return ConvertStringToUnicode(_pbody->GetName());
     }
     int GetDOF() const {
         return _pbody->GetDOF();
@@ -1272,8 +1281,8 @@ public:
         return toPyUserData(_pbody->GetViewerData());
     }
 
-    std::string GetURI() const {
-        return _pbody->GetURI();
+    object GetURI() const {
+        return ConvertStringToUnicode(_pbody->GetURI());
     }
 
     object GetNonAdjacentLinks() const {
@@ -1337,6 +1346,10 @@ public:
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash());
     }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
     virtual void __enter__()
     {
         // necessary to lock physics to prevent multiple threads from interfering
@@ -1384,8 +1397,8 @@ public:
             return ReturnTransform(_pmanip->GetTransform());
         }
 
-        string GetName() const {
-            return _pmanip->GetName();
+        object GetName() const {
+            return ConvertStringToUnicode(_pmanip->GetName());
         }
 
         void SetName(const std::string& s) {
@@ -1646,6 +1659,9 @@ public:
         string __str__() {
             return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName());
         }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
         bool __eq__(boost::shared_ptr<PyManipulator> p) {
             return !!p && _pmanip==p->_pmanip;
         }
@@ -1683,8 +1699,8 @@ public:
         PyRobotBasePtr GetRobot() const {
             return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
         }
-        string GetName() const {
-            return _pattached->GetName();
+        object GetName() const {
+            return ConvertStringToUnicode(_pattached->GetName());
         }
 
         object GetData()
@@ -1703,6 +1719,9 @@ public:
         }
         string __str__() {
             return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName());
+        }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
         }
         bool __eq__(boost::shared_ptr<PyAttachedSensor> p) {
             return !!p && _pattached==p->_pattached;
@@ -1771,13 +1790,16 @@ public:
     }
 
     PyManipulatorPtr SetActiveManipulator(int index) {
-        _probot->SetActiveManipulator(index); return GetActiveManipulator();
+        _probot->SetActiveManipulator(index);
+        return GetActiveManipulator();
     }
     PyManipulatorPtr SetActiveManipulator(const std::string& manipname) {
-        _probot->SetActiveManipulator(manipname); return GetActiveManipulator();
+        _probot->SetActiveManipulator(manipname);
+        return GetActiveManipulator();
     }
     PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip) {
-        _probot->SetActiveManipulator(pmanip->GetName()); return GetActiveManipulator();
+        _probot->SetActiveManipulator(pmanip->GetManipulator()->GetName());
+        return GetActiveManipulator();
     }
     PyManipulatorPtr GetActiveManipulator() {
         return _GetManipulator(_probot->GetActiveManipulator());
@@ -2196,6 +2218,9 @@ public:
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash());
     }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
     virtual void __enter__()
     {
         // necessary to lock physics to prevent multiple threads from interfering
@@ -2476,6 +2501,9 @@ void init_openravepy_kinbody()
                         .def("CreateKinBodyStateSaver",statesaver2, args("options"), "Creates KinBodySaveStater for this body")
                         .def("__enter__",&PyKinBody::__enter__)
                         .def("__exit__",&PyKinBody::__exit__)
+                        .def("__repr__",&PyKinBody::__repr__)
+                        .def("__str__",&PyKinBody::__str__)
+                        .def("__unicode__",&PyKinBody::__unicode__)
         ;
 
         enum_<KinBody::SaveParameters>("SaveParameters" DOXY_ENUM(SaveParameters))
@@ -2523,6 +2551,7 @@ void init_openravepy_kinbody()
                          .def("SetVelocity",&PyKinBody::PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
                          .def("__repr__", &PyKinBody::PyLink::__repr__)
                          .def("__str__", &PyKinBody::PyLink::__str__)
+                         .def("__unicode__", &PyKinBody::PyLink::__unicode__)
                          .def("__eq__",&PyKinBody::PyLink::__eq__)
                          .def("__ne__",&PyKinBody::PyLink::__ne__)
             ;
@@ -2605,6 +2634,7 @@ void init_openravepy_kinbody()
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
                           .def("__str__", &PyKinBody::PyJoint::__str__)
+                          .def("__unicode__", &PyKinBody::PyJoint::__unicode__)
                           .def("__eq__",&PyKinBody::PyJoint::__eq__)
                           .def("__ne__",&PyKinBody::PyJoint::__ne__)
             ;
@@ -2634,10 +2664,11 @@ void init_openravepy_kinbody()
                                .def("IsEnabled", &PyKinBody::PyManageData::IsEnabled, DOXY_FN(KinBody::ManageData,IsEnabled))
                                .def("IsLocked", &PyKinBody::PyManageData::IsLocked, DOXY_FN(KinBody::ManageData,IsLocked))
                                .def("Lock", &PyKinBody::PyManageData::Lock,args("dolock"), DOXY_FN(KinBody::ManageData,Lock))
-                               .def("__repr__", &PyKinBody::PyJoint::__repr__)
-                               .def("__str__", &PyKinBody::PyJoint::__str__)
-                               .def("__eq__",&PyKinBody::PyJoint::__eq__)
-                               .def("__ne__",&PyKinBody::PyJoint::__ne__)
+                               .def("__repr__", &PyKinBody::PyManageData::__repr__)
+                               .def("__str__", &PyKinBody::PyManageData::__str__)
+                               .def("__unicode__", &PyKinBody::PyManageData::__unicode__)
+                               .def("__eq__",&PyKinBody::PyManageData::__eq__)
+                               .def("__ne__",&PyKinBody::PyManageData::__ne__)
             ;
         }
     }
@@ -2751,6 +2782,7 @@ void init_openravepy_kinbody()
                       .def("CreateRobotStateSaver",statesaver2,args("options"),"Creates RobotSaveStater for this robot.")
                       .def("__repr__", &PyRobotBase::__repr__)
                       .def("__str__", &PyRobotBase::__str__)
+                      .def("__unicode__", &PyRobotBase::__unicode__)
         ;
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
 
@@ -2810,6 +2842,7 @@ void init_openravepy_kinbody()
         .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash, DOXY_FN(RobotBase::Manipulator,GetKinematicsStructureHash))
         .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
         .def("__str__",&PyRobotBase::PyManipulator::__str__)
+        .def("__unicode__",&PyRobotBase::PyManipulator::__unicode__)
         .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
         .def("__ne__",&PyRobotBase::PyManipulator::__ne__)
         ;
@@ -2826,6 +2859,7 @@ void init_openravepy_kinbody()
         .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash, DOXY_FN(RobotBase::AttachedSensor,GetStructureHash))
         .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
         .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
+        .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)
         .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
         ;

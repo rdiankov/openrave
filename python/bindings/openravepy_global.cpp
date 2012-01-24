@@ -38,6 +38,9 @@ string PyRay::__repr__() {
 string PyRay::__str__() {
     return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
+object PyRay::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -110,6 +113,9 @@ public:
     virtual string __str__() {
         return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
 
     AABB ab;
 };
@@ -177,6 +183,9 @@ public:
 
     string __str__() {
         return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices));
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
 
     object vertices,indices;
@@ -355,6 +364,9 @@ public:
         std::stringstream ss;
         ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
         return ss.str();
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
 
     ConfigurationSpecification _spec;
@@ -538,6 +550,9 @@ public:
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return ss.str();
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
 };
 
@@ -1118,6 +1133,7 @@ void init_openravepy_global()
     .def("dir",&PyRay::dir)
     .def("pos",&PyRay::pos)
     .def("__str__",&PyRay::__str__)
+    .def("__unicode__",&PyRay::__unicode__)
     .def("__repr__",&PyRay::__repr__)
     .def_pickle(Ray_pickle_suite())
     ;
@@ -1126,6 +1142,7 @@ void init_openravepy_global()
     .def("extents",&PyAABB::extents)
     .def("pos",&PyAABB::pos)
     .def("__str__",&PyAABB::__str__)
+    .def("__unicode__",&PyAABB::__unicode__)
     .def("__repr__",&PyAABB::__repr__)
     .def_pickle(AABB_pickle_suite())
     ;
@@ -1134,6 +1151,7 @@ void init_openravepy_global()
     .def_readwrite("vertices",&PyTriMesh::vertices)
     .def_readwrite("indices",&PyTriMesh::indices)
     .def("__str__",&PyTriMesh::__str__)
+    .def("__unicode__",&PyAABB::__unicode__)
     .def_pickle(TriMesh_pickle_suite())
     ;
     class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
@@ -1167,6 +1185,7 @@ void init_openravepy_global()
                                            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
                                            .def_pickle(ConfigurationSpecification_pickle_suite())
                                            .def("__str__",&PyConfigurationSpecification::__str__)
+                                           .def("__unicode__",&PyConfigurationSpecification::__unicode__)
                                            .def("__repr__",&PyConfigurationSpecification::__repr__)
         ;
 
@@ -1243,6 +1262,7 @@ void init_openravepy_global()
                                    .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
                                    .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
                                    .def("__str__",&PyIkParameterization::__str__)
+                                   .def("__unicode__",&PyIkParameterization::__unicode__)
                                    .def("__repr__",&PyIkParameterization::__repr__)
         ;
         ikparameterization.attr("Type") = iktype;
