@@ -37,7 +37,7 @@ def itemselectioncb(link,pos,org,env):
 def main(env,options):
     "Main example code."
     env.Load(options.scene)
-    handle = env.GetViewer().RegisterCallback(Viewer.Events.ItemSelection,lambda link,pos,org: itemselectioncb(link,pos,org,env))
+    handle = env.GetViewer().RegisterItemSelectionCallback(lambda link,pos,org: itemselectioncb(link,pos,org,env))
     if handle is None:
         print 'failed to register handle'
         sys.exit(1)
