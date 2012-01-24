@@ -207,3 +207,18 @@ class TestEnvironment(EnvironmentSetup):
         assert(robot.GetName() == robotname)
         assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         assert(robot.GetLinks()[0].GetName() == linkname)
+
+    def test_cloneplan(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        cloningoptions = [CloningOptions.Bodies | CloningOptions.RealControllers | CloningOptions.Simulation, CloningOptions.Bodies | CloningOptions.RealControllers]
+        for options in cloningoptions:
+            env2 = env.CloneSelf(options)
+            robot = env2.GetRobots()[0]
+            basemanip = interfaces.BaseManipulation(robot)
+            base_angle = zeros(len(robot.GetActiveManipulator().GetArmIndices()))
+            base_angle[0] = 1
+            basemanip.MoveManipulator(base_angle)
+            while not robot.GetController().IsDone():
+                env2.StepSimulation(0.01)
+            env2.Destroy()
