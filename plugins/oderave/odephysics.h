@@ -247,6 +247,22 @@ The possible properties that can be set are: ";
         return false;
     }
 
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        PhysicsEngineBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<ODEPhysicsEngine const> r = boost::dynamic_pointer_cast<ODEPhysicsEngine const>(preference);
+
+        SetGravity(r->_gravity);
+        _options = r->_options;
+        _globalfriction = r->_globalfriction;
+        _globalcfm = r->_globalcfm;
+        _globalerp = r->_globalerp;
+        if( !!_odespace && _odespace->IsInitialized() ) {
+            dWorldSetERP(_odespace->GetWorld(),_globalerp);
+            dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
+        }
+    }
+
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
     {
         _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
@@ -414,7 +430,7 @@ The possible properties that can be set are: ";
     virtual void SetGravity(const Vector& gravity)
     {
         _gravity = gravity;
-        if( _odespace->IsInitialized() ) {
+        if( !!_odespace && _odespace->IsInitialized() ) {
             dWorldSetGravity(_odespace->GetWorld(),_gravity.x, _gravity.y, _gravity.z);
         }
     }
