@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Core
+----
+
+* Correctly cloning physics/collision/viewers.
+
 Python
 ------
 
