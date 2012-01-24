@@ -1856,9 +1856,6 @@ protected:
                     PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
                     p->Clone(r->GetPhysicsEngine(),options);
                     SetPhysicsEngine(p);
-                    FOREACH(itbody, _vecbodies) {
-                        GetPhysicsEngine()->InitKinBody(*itbody);
-                    }
                 }
                 catch(const std::exception& ex) {
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetPhysicsEngine()->GetXMLId(),ORE_InvalidPlugin);
@@ -1867,6 +1864,9 @@ protected:
             _bEnableSimulation = r->_bEnableSimulation;
             _nCurSimTime = r->_nCurSimTime;
             _nSimStartTime = r->_nSimStartTime;
+        }
+        FOREACH(itbody, _vecbodies) {
+            GetPhysicsEngine()->InitKinBody(*itbody);
         }
 
         if( options & Clone_Viewer ) {
