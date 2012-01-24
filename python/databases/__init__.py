@@ -204,6 +204,8 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 sys.exit(0)
             if options.gethas:
                 hasmodel=model.load()
+                if hasmodel:
+                    hasmodel = os.path.isfile(model.getfilename(True))
                 print int(hasmodel)
                 openravepy_int.RaveDestroy()
                 sys.exit(not hasmodel)
