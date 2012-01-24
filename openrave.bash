@@ -6,4 +6,5 @@ else
     export PATH=$1/bin:$PATH
     export PYTHONPATH=`openrave-config --python-dir`:$PYTHONPATH
     export LD_LIBRARY_PATH=$1/lib:$LD_LIBRARY_PATH
+    source `openrave-config --share-dir`/openrave_completion.bash
 fi
