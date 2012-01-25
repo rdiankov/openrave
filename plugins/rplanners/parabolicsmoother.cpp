@@ -99,6 +99,16 @@ public:
                     continue;
                 }
             }
+            // check if the point is not the same as the previous point
+            if( path.size() > 0 ) {
+                dReal d = 0;
+                for(size_t i = 0; i < q.size(); ++i) {
+                    d += RaveFabs(q[i]-path.back().at(i));
+                }
+                if( d <= q.size()*std::numeric_limits<dReal>::epsilon() ) {
+                    continue;
+                }
+            }
             path.push_back(q);
         }
         try {

@@ -250,6 +250,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         return clone
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
+    
     def save(self):
         statsfilename=self.getstatsfilename(False)
         mkdir_recursive(os.path.split(statsfilename)[0])

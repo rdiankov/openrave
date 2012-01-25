@@ -66,6 +66,9 @@ public:
             ss << *_paramsread << endl;
             return ss.str();
         }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
         bool __eq__(boost::shared_ptr<PyPlannerParameters> p) {
             return !!p && _paramsread == p->_paramsread;
         }
@@ -160,6 +163,7 @@ void init_openravepy_planner()
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
         .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
+        .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
         .def("__eq__",&PyPlannerBase::PyPlannerParameters::__eq__)
         .def("__ne__",&PyPlannerBase::PyPlannerParameters::__ne__)

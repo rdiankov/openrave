@@ -46,6 +46,9 @@ public:
             ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
             return ss.str();
         }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
         object pos, norm;
         dReal depth;
     };
@@ -78,6 +81,9 @@ public:
     string __str__()
     {
         return report->__str__();
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
 
     int options;
@@ -180,6 +186,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)
     .def_readonly("depth",&PyCollisionReport::PYCONTACT::depth)
     .def("__str__",&PyCollisionReport::PYCONTACT::__str__)
+    .def("__unicode__",&PyCollisionReport::PYCONTACT::__unicode__)
     ;
     class_<PyCollisionReport, boost::shared_ptr<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
     .def_readonly("options",&PyCollisionReport::options)
@@ -190,6 +197,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
     .def_readonly("contacts",&PyCollisionReport::contacts)
     .def("__str__",&PyCollisionReport::__str__)
+    .def("__unicode__",&PyCollisionReport::__unicode__)
     ;
 
     class_<PyCollisionCheckerBase, boost::shared_ptr<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)

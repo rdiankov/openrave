@@ -133,6 +133,11 @@ struct null_deleter { void operator()(void const *) const {
                       }
 };
 
+inline boost::python::object ConvertStringToUnicode(const std::string& s)
+{
+    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
+}
+
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
     return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));
@@ -408,6 +413,7 @@ public:
     object pos();
     virtual string __repr__();
     virtual string __str__();
+    virtual boost::python::object __unicode__();
     RAY r;
 };
 
@@ -501,6 +507,9 @@ protected:
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
+    }
+    virtual boost::python::object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();

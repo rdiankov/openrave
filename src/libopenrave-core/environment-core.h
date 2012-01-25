@@ -1743,9 +1743,15 @@ protected:
         EnvironmentMutex::scoped_lock lock(GetMutex());
         boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
 
-        // clone collision and physics
         if( !!r->GetCollisionChecker() ) {
-            SetCollisionChecker(RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId()));
+            try {
+                CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId());
+                p->Clone(r->GetCollisionChecker(),options);
+                SetCollisionChecker(p);
+            }
+            catch(const std::exception& ex) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetCollisionChecker()->GetXMLId(),ORE_InvalidPlugin);
+            }
         }
 
         if( options & Clone_Bodies ) {
@@ -1828,7 +1834,6 @@ protected:
             }
             FOREACH(itbody, _vecbodies) {
                 GetCollisionChecker()->InitKinBody(*itbody);
-                GetPhysicsEngine()->InitKinBody(*itbody);
             }
         }
         if( options & Clone_Sensors ) {
@@ -1845,26 +1850,38 @@ protected:
             }
         }
 
+        if( options & Clone_Simulation ) {
+            if( !!r->GetPhysicsEngine() ) {
+                try {
+                    PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
+                    p->Clone(r->GetPhysicsEngine(),options);
+                    SetPhysicsEngine(p);
+                }
+                catch(const std::exception& ex) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetPhysicsEngine()->GetXMLId(),ORE_InvalidPlugin);
+                }
+            }
+            _bEnableSimulation = r->_bEnableSimulation;
+            _nCurSimTime = r->_nCurSimTime;
+            _nSimStartTime = r->_nSimStartTime;
+        }
+        FOREACH(itbody, _vecbodies) {
+            GetPhysicsEngine()->InitKinBody(*itbody);
+        }
+
         if( options & Clone_Viewer ) {
             list<ViewerBasePtr> listViewers;
             r->GetViewers(listViewers);
             FOREACH(itviewer, listViewers) {
                 try {
-                    AddViewer(RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId()));
+                    ViewerBasePtr p = RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId());
+                    p->Clone(*itviewer,options);
+                    AddViewer(p);
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR(str(boost::format("failed to lone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
+                    RAVELOG_ERROR(str(boost::format("failed to clone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
                 }
             }
-        }
-
-        if( options & Clone_Simulation ) {
-            if( !!r->GetPhysicsEngine() ) {
-                SetPhysicsEngine(RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId()));
-            }
-            _bEnableSimulation = r->_bEnableSimulation;
-            _nCurSimTime = r->_nCurSimTime;
-            _nSimStartTime = r->_nSimStartTime;
         }
 
         if( !!_threadSimulation ) {

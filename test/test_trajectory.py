@@ -137,3 +137,18 @@ class TestTrajectory(EnvironmentSetup):
         robot.GetController().SetPath(traj)
         assert(robot.WaitForController(0.1))
         assert(robot.GetGrabbed()[-1] == body1)
+
+    def test_smoothingsamepoint(self):
+        env = self.env
+        env.Load('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        for delta in [1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,robot.GetActiveDOFValues())
+            traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
+            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+

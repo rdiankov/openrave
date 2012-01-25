@@ -38,11 +38,6 @@ using namespace std;
 
 namespace ParabolicRamp {
 
-const static Real EpsilonX = 1e-5;
-const static Real EpsilonV = 1e-5;
-const static Real EpsilonT = 1e-8;
-const static Real EpsilonA = 1e-5;
-
 inline Real LInfDistance(const Vector& a,const Vector& b)
 {
     PARABOLIC_ASSERT(a.size()==b.size());
@@ -483,7 +478,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         Real tc = (section.ta+section.tb)*0.5;
         Vector xc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                              //infeasible config
+        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                   //infeasible config
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -788,7 +783,7 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                  //same ramp
+        if(i1 == i2) continue;                                                                  //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_ASSERT(u1 >= 0);

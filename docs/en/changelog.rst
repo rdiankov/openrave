@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Core
+----
+
+* Correctly cloning physics/collision/viewers.
+
+Python
+------
+
+* All name strings are now returned/set as unicode objects. All openravepy objects support __unicode__
+
 Version 0.5.1 Unstable
 ======================
 

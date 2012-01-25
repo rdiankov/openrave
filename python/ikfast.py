@@ -3115,7 +3115,7 @@ class IKFastSolver(AutoReloader):
         polyeqs = [[peq[0].as_basic(),peq[1]] for peq in rawpolyeqs if peq[0].has_any_symbols(cvar,svar)]
 
         neweqs=[]
-        for i in range(0,8,2):
+        for i in range(0,len(polyeqs),2):
             p0 = Poly(polyeqs[i][0],cvar,svar)
             p1 = Poly(polyeqs[i+1][0],cvar,svar)
             r0 = polyeqs[i][1].as_basic()

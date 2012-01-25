@@ -173,32 +173,52 @@ class TestEnvironment(EnvironmentSetup):
         body.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
         body.SetName(name)
         env.AddKinBody(body)
-        assert(body.GetName().decode('utf-8')==name)
+        assert(body.GetName()==name)
+        assert(unicode(body.GetName())==name)
 
         openrave_config = Popen(['openrave-config','--share-dir'],stdout=PIPE)
         share_dir = openrave_config.communicate()[0].strip()
         srcfile = os.path.join(share_dir,'models','WAM','wam0.iv')
-        destfile = '新しいファイル.iv'
+        destfile = '新しいファイル.iv'.decode('utf-8')
+        robotname = 'ロボット名'.decode('utf-8')
+        linkname = 'テスト'.decode('utf-8')
         shutil.copyfile(srcfile,destfile)
-        robotxml = """<?xml version="1.0" encoding="utf-8"?>
-<robot name="ロボット名">
+        urobotxml = u"""<?xml version="1.0" encoding="utf-8"?>
+<robot name="%s">
   <kinbody>
-    <body name="テスト">
+    <body name="%s">
       <geom type="trimesh">
         <data>%s</data>
       </geom>
     </body>
   </kinbody>
 </robot>
-"""%destfile
-        urobotxml = robotxml.decode('utf-8')
-        robot=env.ReadRobotXMLData(urobotxml)
-        env.AddRobot(robot)
-        assert(robot.GetName() == 'ロボット名')
-        assert(robot.GetLinks()[0].GetName() == 'テスト')
-        env.Remove(robot)
-
+"""%(robotname,linkname,destfile)
+        robotxml = urobotxml.encode('utf-8')
         robot=env.ReadRobotXMLData(robotxml)
         env.AddRobot(robot)
-        assert(robot.GetName() == 'ロボット名')
-        assert(robot.GetLinks()[0].GetName() == 'テスト')
+        assert(robot.GetName() == robotname)
+        assert(robot.GetLinks()[0].GetName() == linkname)
+        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        env.Remove(robot)
+
+        robot=env.ReadRobotData(robotxml)
+        env.AddRobot(robot)
+        assert(robot.GetName() == robotname)
+        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        assert(robot.GetLinks()[0].GetName() == linkname)
+
+    def test_cloneplan(self):
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        cloningoptions = [CloningOptions.Bodies | CloningOptions.RealControllers | CloningOptions.Simulation, CloningOptions.Bodies | CloningOptions.RealControllers]
+        for options in cloningoptions:
+            env2 = env.CloneSelf(options)
+            robot = env2.GetRobots()[0]
+            basemanip = interfaces.BaseManipulation(robot)
+            base_angle = zeros(len(robot.GetActiveManipulator().GetArmIndices()))
+            base_angle[0] = 1
+            basemanip.MoveManipulator(base_angle)
+            while not robot.GetController().IsDone():
+                env2.StepSimulation(0.01)
+            env2.Destroy()

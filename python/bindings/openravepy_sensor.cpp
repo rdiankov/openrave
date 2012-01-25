@@ -355,8 +355,8 @@ public:
         return ReturnTransform(_psensor->GetTransform());
     }
 
-    string GetName() {
-        return _psensor->GetName();
+    object GetName() {
+        return ConvertStringToUnicode(_psensor->GetName());
     }
 
     virtual string __repr__() {
@@ -364,6 +364,9 @@ public:
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName());
+    }
+    virtual object __unicode__() {
+        return ConvertStringToUnicode(__str__());
     }
 };
 
@@ -413,6 +416,7 @@ void init_openravepy_sensor()
                        .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
                        .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
                        .def("__str__",&PySensorBase::__str__)
+                       .def("__unicode__",&PySensorBase::__unicode__)
                        .def("__repr__",&PySensorBase::__repr__)
         ;
 

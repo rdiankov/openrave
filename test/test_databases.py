@@ -16,3 +16,16 @@ from common_test_openrave import *
 def test_linkstatistics():
     # test with pr2-beta-static.zae
     pass
+
+class TestDatabases(EnvironmentSetup):
+    def test_ikmodulegeneration(self):
+        env=self.env
+        env.Load('robots/neuronics-katana.zae')
+        robot=env.GetRobots()[0]
+        manip=robot.GetActiveManipulator()
+        ikmodule = RaveCreateModule(env,'ikfast')
+        env.AddModule(ikmodule,'')
+        out=ikmodule.SendCommand('LoadIKFastSolver %s %d 1'%(robot.GetName(),IkParameterizationType.TranslationDirection5D))
+        assert(out is not None)
+        assert(manip.GetIkSolver() is not None)
+        
