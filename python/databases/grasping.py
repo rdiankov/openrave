@@ -543,7 +543,8 @@ class GraspingModel(DatabaseGenerator):
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.translationstepmult = translationstepmult
         self.finestep = finestep
-
+        if isinstance(graspingnoise,float):
+            graspingnoise = (graspingnoise,10)
         with self.robot: # lock the environment and save the robot state
             Ttarget = self.target.GetTransform()
             Trobotorig = self.robot.GetTransform()
