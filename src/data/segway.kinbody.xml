@@ -5,7 +5,7 @@
       <Render>models/segwayrmp/segwayrmp.iv</Render>
     </Geom>
     <Geom type="box" render="false">
-      <extents>0.24 0.24 0.015</extents>
+      <extents>0.24 0.24 0.0145</extents>
     </Geom>
     <!-- cylinder collisions are buggy -->
 <!--     <Geom type="cylinder">

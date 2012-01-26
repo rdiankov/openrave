@@ -940,97 +940,91 @@ public:
                     }
                 }
 
-                if( pmanip->GetIkSolver()->GetNumFreeParameters() == 0 ) {
-                    if( bsuccess ) {
-                        success++;
-                    }
-                    i++;
-                    continue;
-                }
-
-                // test with the free parameters
-                robot->SetActiveDOFValues(vrand, false);
-                if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, vfreeparameters, vfreeparameters_out.size()-1) ) {
-                    robot->SetActiveDOFValues(viksolution, false);
-                    twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
-                        bsuccess = false;
-                        s.str("");
-                        s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                          << "freeparams: ";
-                        FOREACH(it, vfreeparameters) {
-                            s << *it << " ";
-                        }
-                        s << endl << "Original Joint Val: ";
-                        FOREACH(it, vrealsolution) {
-                            s << *it << " ";
-                        }
-                        s << endl << "Returned Joint Val: ";
-                        FOREACH(it, viksolution) {
-                            s << *it << " ";
-                        }
-                        s << endl << "in: " << twrist << endl;
-                        s << "out: " << twrist_out << endl << endl;
-                        RAVELOG_ERROR(s.str());
-                        ++i;
-                        continue;
-                    }
-
-                    // make sure they are the same
-                    if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
-                        RAVELOG_WARN("failed to get freeparameters");
-                    }
-                    for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
-                        if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
-                            RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
-                            vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
+                if( pmanip->GetIkSolver()->GetNumFreeParameters() > 0 ) {
+                    // test with the free parameters
+                    robot->SetActiveDOFValues(vrand, false);
+                    if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, vfreeparameters, vfreeparameters_out.size()-1) ) {
+                        robot->SetActiveDOFValues(viksolution, false);
+                        twrist_out = pmanip->GetIkParameterization(twrist);
+                        if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
+                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters));
                             bsuccess = false;
+                            s.str("");
+                            s << "FindIKSolution (freeparams): Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
+                              << "freeparams: ";
+                            FOREACH(it, vfreeparameters) {
+                                s << *it << " ";
+                            }
+                            s << endl << "Original Joint Val: ";
+                            FOREACH(it, vrealsolution) {
+                                s << *it << " ";
+                            }
+                            s << endl << "Returned Joint Val: ";
+                            FOREACH(it, viksolution) {
+                                s << *it << " ";
+                            }
+                            s << endl << "in: " << twrist << endl;
+                            s << "out: " << twrist_out << endl << endl;
+                            RAVELOG_ERROR(s.str());
+                            ++i;
+                            continue;
+                        }
+
+                        // make sure they are the same
+                        if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_out) ) {
+                            RAVELOG_WARN("failed to get freeparameters");
+                        }
+                        for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j) {
+                            if( fabsf(vfreeparameters.at(j)-vfreeparameters_out.at(j)) > 0.0001f ) {
+                                RAVELOG_WARN(str(boost::format("free params %d not equal: %f!=%f\n")%j%vfreeparameters[j]%vfreeparameters_out[j]));
+                                vnofullsolutions.push_back(make_pair(twrist,vfreeparameters));
+                                bsuccess = false;
+                                break;
+                            }
+                        }
+                    }
+                    else {
+                        // not sure if should record failure here... the free parameters increment are different than the IK one
+                    }
+
+                    // test the multiple solution function
+                    robot->SetActiveDOFValues(vrand, false);
+                    viksolutions.resize(0);
+                    DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, vfreeparameters_out, vfreeparameters_out.size()-1);
+                    // not sure if should record failure if no solutions found... the free parameters increment are different than the IK one
+                    bool bfail = false;
+                    FOREACH(itsol, viksolutions) {
+                        robot->SetActiveDOFValues(*itsol, false);
+                        twrist_out = pmanip->GetIkParameterization(twrist);
+                        if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
+                            vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
+                            s.str("");
+                            s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
+                              << "Original Joint Val: ";
+                            FOREACH(it, vrealsolution) {
+                                s << *it << " ";
+                            }
+                            s << endl << "Returned Joint Val: ";
+                            FOREACH(it, *itsol) {
+                                s << *it << " ";
+                            }
+                            s << endl << "in: " << twrist << endl;
+                            s << "out: " << twrist_out << endl;
+                            s << "raw ik command: ";
+                            GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                            FOREACH(itfree,vfreeparameters_out) {
+                                s << *itfree << " ";
+                            }
+                            s << endl << endl;
+                            RAVELOG_ERROR(s.str());
+                            bfail = true;
                             break;
                         }
                     }
-                }
-                else {
-                    // not sure if should record failure here... the free parameters increment are different than the IK one
-                }
-
-                // test the multiple solution function
-                robot->SetActiveDOFValues(vrand, false);
-                viksolutions.resize(0);
-                DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, vfreeparameters_out, vfreeparameters_out.size()-1);
-                // not sure if should record failure if no solutions found... the free parameters increment are different than the IK one
-                bool bfail = false;
-                FOREACH(itsol, viksolutions) {
-                    robot->SetActiveDOFValues(*itsol, false);
-                    twrist_out = pmanip->GetIkParameterization(twrist);
-                    if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
-                        vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
-                        s.str("");
-                        s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                          << "Original Joint Val: ";
-                        FOREACH(it, vrealsolution) {
-                            s << *it << " ";
-                        }
-                        s << endl << "Returned Joint Val: ";
-                        FOREACH(it, *itsol) {
-                            s << *it << " ";
-                        }
-                        s << endl << "in: " << twrist << endl;
-                        s << "out: " << twrist_out << endl;
-                        s << "raw ik command: ";
-                        GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
-                        FOREACH(itfree,vfreeparameters_out) {
-                            s << *itfree << " ";
-                        }
-                        s << endl << endl;
-                        RAVELOG_ERROR(s.str());
-                        bfail = true;
-                        break;
+                    if( bfail ) {
+                        ++i;
+                        continue;
                     }
-                }
-                if( bfail ) {
-                    ++i;
-                    continue;
                 }
 
                 if( bsuccess ) {

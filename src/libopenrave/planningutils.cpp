@@ -76,6 +76,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
         }
         bCollision = false;
+        bool bConstraintFailed = false;
         FOREACH(itperturbation,perturbations) {
             for(size_t j = 0; j < deltadof.size(); ++j) {
                 deltadof2[j] = deltadof[j] + *itperturbation;
@@ -83,8 +84,9 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             if( bConstraint ) {
                 newdof = curdof;
                 if( !neighstatefn(newdof,deltadof2,0) ) {
-                    RAVELOG_DEBUG("constraint function failed\n");
-                    continue;
+                    RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%f\n")%*itperturbation));
+                    bConstraintFailed = true;
+                    break;
                 }
             }
             else {
@@ -98,7 +100,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 break;
             }
         }
-        if( !bCollision ) {
+        if( !bCollision && !bConstraintFailed ) {
             // have to restore to non-perturbed configuration!
             for(size_t j = 0; j < deltadof.size(); ++j) {
                 newdof[j] = curdof[j] + deltadof[j];

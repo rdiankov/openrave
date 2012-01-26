@@ -144,7 +144,7 @@ else:
     from numpy import array
 
 from ..openravepy_ext import openrave_exception, RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys

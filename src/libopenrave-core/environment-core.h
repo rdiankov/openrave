@@ -1676,10 +1676,11 @@ public:
         // updated the published bodies
         _vPublishedBodies.resize(_vecbodies.size());
 
+        std::vector<int> vdofbranches;
         vector<KinBody::BodyState>::iterator itstate = _vPublishedBodies.begin();
         FOREACH(itbody, _vecbodies) {
             itstate->pbody = *itbody;
-            (*itbody)->GetLinkTransformations(itstate->vectrans);
+            (*itbody)->GetLinkTransformations(itstate->vectrans, vdofbranches);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
             itstate->pviewerdata = (*itbody)->GetViewerData();

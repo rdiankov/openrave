@@ -123,7 +123,7 @@ class ConstraintPlanning:
                         while True:
                             T = array(Tee)
                             T[0:3,3] += 0.5*(random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
-                            if self.manip.FindIKSolution(T,True) is not None:
+                            if self.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions) is not None:
                                 break
                     if showtarget is not None:
                         showtarget.SetTransform(dot(T,dot(linalg.inv(self.manip.GetEndEffectorTransform()),target.GetTransform())))

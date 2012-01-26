@@ -164,15 +164,23 @@ public:
         GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
-            _tOriginalEE = _pmanip->GetTransform();
-            _tTargetFrameLeft = tTargetWorldFrame*_tOriginalEE.inverse();
+            _tTargetFrameLeft = tTargetWorldFrame;
             _tTargetFrameRight = tTargetWorldFrame.inverse();
+            _tOriginalEE = _tTargetFrameLeft*_pmanip->GetTransform()*_tTargetFrameRight;
+            _vOriginalEEAxisAngle = axisAngleFromQuat(_tOriginalEE.rot);
             _J.resize(6,_probot->GetActiveDOF());
             _invJJt.resize(6,6);
             _error.resize(6,1);
             _nMaxIterations = 40;
             _pmanip->GetRobot()->GetActiveDOFLimits(_vlower,_vupper);
-
+            _viweights.resize(_pmanip->GetArmIndices().size(),0);
+            for(size_t i = 0; i < _viweights.size(); ++i) {
+                int dof = _pmanip->GetArmIndices().at(i);
+                dReal fweight = _probot->GetJointFromDOFIndex(dof)->GetWeight(dof-_probot->GetJointFromDOFIndex(dof)->GetDOFIndex());
+                if( fweight > 0 ) {
+                    _viweights.at(i) = 1/fweight;
+                }
+            }
         }
         virtual ~GripperJacobianConstrains() {
         }
@@ -195,28 +203,27 @@ public:
             _lasterror=0;
             _probot->SetActiveDOFValues(vnew);
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
-                Transform tEE = _pmanip->GetTransform();
-                Transform t = _tTargetFrameLeft * tEE * _tTargetFrameRight;
+                Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight;
+                Vector vEEAxisAngle = axisAngleFromQuat(tEE.rot);
+                if( vEEAxisAngle.dot3(_vOriginalEEAxisAngle) < 0 ) {
+                    dReal length2 = vEEAxisAngle.lengthsqr3();
+                    if( length2 > 0 ) {
+                        vEEAxisAngle *= 1-2*PI/RaveSqrt(length2);
+                    }
+                }
 
                 T totalerror=0;
                 for(int i = 0; i < 3; ++i) {
-                    dReal ang = 2.0f*RaveAtan2(t.rot[i+1],t.rot[0]);
-                    if( ang > PI ) {
-                        ang -= 2*PI;
-                    }
-                    if( ang < -PI ) {
-                        ang += 2*PI;
-                    }
-                    _error(i,0) = _vfreedoms[i]*ang;
-                    _error(i+3,0) = _vfreedoms[i+3]*t.trans[i];
+                    _error(i,0) = _vfreedoms[i]*(_vOriginalEEAxisAngle[i]-vEEAxisAngle[i]);
+                    _error(i+3,0) = _vfreedoms[i+3]*(_tOriginalEE.trans[i]-tEE.trans[i]);
                     totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
                 }
                 if( totalerror < _errorthresh2 ) {
                     vprev = vnew;
                     return true;
                 }
-                // 4.0 is an arbitrary number...
-                if(( totalerror > 4.0*_lasterror) &&( fdistcur > 4.0*fdistprev) ) {
+                // 2.0 is an arbitrary number...
+                if( totalerror > 2.0*_lasterror && fdistcur > 2.0*fdistprev ) {
                     // last adjustment was greater than total distance (jacobian was close to being singular)
                     _iter = -1;
                     //RAVELOG_INFO(str(boost::format("%f > %f && %f > %f\n")%totalerror%_lasterror%fdistcur%fdistprev));
@@ -227,11 +234,15 @@ public:
                 // compute jacobian
                 _pmanip->CalculateAngularVelocityJacobian(_vjacobian);
                 for(size_t i = 0; i < 3; ++i) {
-                    std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,i,0));
+                    for(size_t j = 0; j < _viweights.size(); ++j) {
+                        _J(i,j) = _vjacobian[i][j]*_viweights[j];
+                    }
                 }
                 _pmanip->CalculateJacobian(_vjacobian);
                 for(size_t i = 0; i < 3; ++i) {
-                    std::copy(_vjacobian[i].begin(),_vjacobian[i].end(),_J.find2(0,3+i,0));
+                    for(size_t j = 0; j < _viweights.size(); ++j) {
+                        _J(3+i,j) = _vjacobian[i][j]*_viweights[j];
+                    }
                 }
                 // pseudo inverse of jacobian
                 _Jt = trans(_J);
@@ -253,7 +264,7 @@ public:
                 _invJ = prod(_Jt,_invJJt);
                 _qdelta = prod(_invJ,_error);
                 for(size_t i = 0; i < vnew.size(); ++i) {
-                    vnew.at(i) += _qdelta(i,0);
+                    vnew.at(i) += _qdelta(i,0)*_viweights.at(i);
                 }
                 fdistcur = _distmetricfn(vprev,vnew);
                 _probot->SetActiveDOFValues(vnew);         // for next iteration
@@ -289,7 +300,8 @@ protected:
         RobotBasePtr _probot;
         RobotBase::ManipulatorPtr _pmanip;
         Transform _tTargetFrameLeft, _tTargetFrameRight,_tOriginalEE;
-        vector<dReal> _vlower, _vupper;
+        Vector _vOriginalEEAxisAngle;
+        vector<dReal> _vlower, _vupper, _viweights;
         boost::array<T,6> _vfreedoms;
         T _errorthresh2;
         boost::multi_array<dReal,2> _vjacobian;

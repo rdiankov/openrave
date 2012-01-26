@@ -76,6 +76,11 @@ class fmod(core.function.Function):
     is_real = True
     is_Function = True
 
+class atan2check(atan2):
+    nargs = 2
+    is_real = True
+    is_Function = True
+
 def evalNumbers(expr):
     """Replaces all numbers with symbols, this is to make gcd faster when fractions get too big"""
     if expr.is_number:
@@ -191,6 +196,7 @@ class CodeGenerator(AutoReloader):
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
 #include <sstream>
+#include <iostream>
 
 #ifdef _MSC_VER
 #ifndef __PRETTY_FUNCTION__
@@ -338,6 +344,9 @@ public:
 
 inline float IKabs(float f) { return fabsf(f); }
 inline double IKabs(double f) { return fabs(f); }
+
+inline float IKsqr(float f) { return f*f; }
+inline double IKsqr(double f) { return f*f; }
 
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
@@ -1155,6 +1164,22 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
+        if node.getEquationsUsed() is not None and len(node.getEquationsUsed()) > 0:
+            code += '{\nIKReal evalcond[%d];\n'%len(node.getEquationsUsed())
+            code += self.writeEquations(lambda i: 'evalcond[%d]'%(i),node.getEquationsUsed())
+            code += 'if( '
+            for i in range(len(node.getEquationsUsed())):
+                if i != 0:
+                    code += ' || '
+                # using smaller node.thresh increases the missing solution rate, really not sure whether the solutions themselves
+                # are bad due to double precision arithmetic, or due to singularities
+                code += 'IKabs(evalcond[%d]) > 0.000001 '%(i)
+            code += ' )\n{\n'
+            #code += 'cout <<'
+            #code += '<<'.join(['evalcond[%d]'%i for i in range(len(node.getEquationsUsed()))])
+            #code += '<< endl;'
+            code += 'continue;\n}\n'
+            code += '}\n'
         code += '\n'
         return code
 
@@ -1660,6 +1685,16 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
                 sepcode += 'if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code2)
+            elif expr.func == atan2check:
+                code += 'IKatan2('
+                # check for divides by 0 in arguments, this could give two possible solutions?!?
+                # if common arguments is nan! solution is lost!
+                code2,sepcode = self.writeExprCode(expr.args[0])
+                code += code2+', '
+                code3,sepcode2 = self.writeExprCode(expr.args[1])
+                code += code3
+                sepcode += sepcode2
+                sepcode += 'if( IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(%s)+IKsqr(%s)-1) <= IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code3,code2,code3)
             elif expr.func == atan2:
                 code += 'IKatan2('
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
@@ -1929,7 +1964,8 @@ static inline bool %s(const IKReal* Breal)
     }
     IKReal tol = 1e-6*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[0]*Breal[0]-Breal[1]) < tol && IKabs(Breal[0]*Breal[2]-Breal[3]) < tol && IKabs(Breal[1]*Breal[2]-Breal[4]) < tol && IKabs(Breal[2]*Breal[2]-Breal[5]) < tol && IKabs(Breal[0]*Breal[5]-Breal[6]) < tol && IKabs(Breal[1]*Breal[5]-Breal[7]) < tol && IKabs(Breal[2]*Breal[5]-Breal[8]) < tol && IKabs(Breal[0]*Breal[8]-Breal[9]) < tol && IKabs(Breal[1]*Breal[8]-Breal[10]) < tol;
-}"""%name
+}
+"""%name
             self.functions[name] = fcode
         return name
 

@@ -79,6 +79,41 @@ class TestMoving(EnvironmentSetup):
                 ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=2,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,outputtraj=True,steplength=0.001)
                 assert(ret is not None)
 
+    def test_constraintwam(self):
+        env = self.env
+        env.Load('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+
+        with env:
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
+            if not gmodel.load():
+                gmodel.autogenerate()
+            basemanip = interfaces.BaseManipulation(robot)
+            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
+            
+            robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+            validgrasps,validindices = gmodel.computeValidGrasps(returnnum=1)
+            validgrasp=validgrasps[0]
+            gmodel.setPreshape(validgrasp)
+            T = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
+            sol = gmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
+            robot.SetActiveDOFValues(sol)
+            robot.Grab(gmodel.target)
+            
+            xyzconstraints = array([1,2],int)
+            constraintfreedoms = array([1,1,0,1,0,0]) # rotation xyz, translation xyz
+            constraintmatrix = eye(4)
+            constrainterrorthresh = 0.01
+            T = ikmodel.manip.GetEndEffectorTransform()
+            T[1,3] += 0.1
+            T[2,3] += 0.2
+            sol = ikmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
+            assert(sol is not None)
+            traj = basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
+
     def test_movehandstraight(self):
         env = self.env
         env.Load('data/lab1.env.xml')
