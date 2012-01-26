@@ -2271,7 +2271,7 @@ class IKFastSolver(AutoReloader):
                     continue
 
         if coupledsolutions is None:
-            raise self.CannotSolveError('raghavan roth equations too complex')
+            raise self.CannotSolveError('6D general method failed, raghavan roth equations might be too complex')
 
         log.info('solved coupled variables: %s',usedvars)
         AllEquations = []
@@ -3199,6 +3199,10 @@ class IKFastSolver(AutoReloader):
             AUadjugate = None
             AUinv = None
             AU = A[:A.shape[1],:]
+            nummatrixsymbols = __builtin__.sum([1 for a in AU if not a.is_number])
+            if nummatrixsymbols > 80:
+                raise self.CannotSolveError('matrix has too many symbols (%d), giving up since most likely will freeze'%nummatrixsymbols)
+
             AUdet = AU.det()
             if AUdet != S.Zero:
                 rows = range(A.shape[1])
@@ -4836,6 +4840,13 @@ class IKFastSolver(AutoReloader):
                         # sometimes the returned simplest solution makes really gross approximations
                         svarfracsimp_denom = self.trigsimp(svarfrac[1],othersolvedvars)
                         cvarfracsimp_denom = self.trigsimp(cvarfrac[1],othersolvedvars)
+                        # self.simplifyTransform could help in reducing denoms further...
+                        denomsequal = False
+                        if self.equal(svarfracsimp_denom,cvarfracsimp_denom):
+                            denomsequal = True
+                        elif self.equal(svarfracsimp_denom,-cvarfracsimp_denom):
+                            cvarfrac[0] = -cvarfrac[0]
+                            cvarfracsimp_denom = -cvarfracsimp_denom
                         if self.equal(svarfracsimp_denom,cvarfracsimp_denom) and not svarfracsimp_denom.is_number:
                             log.debug('%s solution: denominator is equal %s, doing a global substitution',var.name,svarfracsimp_denom)
                             denom = self.gsymbolgen.next()
