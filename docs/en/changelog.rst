@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.5.1 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
 Core
 ----
 
@@ -25,12 +32,9 @@ Misc
 
 * Fixed ``openrave.py --database inversekinematics --show``
 
-Version 0.5.1 Unstable
-======================
+* Fixed crash when smoothing close configurations.
 
-Subversion Revision: **Unreleased**
-
-Initial Release: **Unreleased**
+* Fixed ``--graspingnoise`` when multi-threading is used
 
 Version 0.5.0
 =============
