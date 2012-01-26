@@ -2264,7 +2264,7 @@ class IKFastSolver(AutoReloader):
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
                     if rawpolyeqs2[j] is not None:
-                        coupledsolutions,usedvars = self.solveManochaCanny(rawpolyeqs2[j],solvejointvars,endbranchtree=[AST.SolverSequence([leftovervarstree])])
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars,endbranchtree=[AST.SolverSequence([leftovervarstree])])
                         break
                 except self.CannotSolveError, e:
                     log.warn('%s',e)
