@@ -389,8 +389,8 @@ private:
         return _vecSensors;
     }
 
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits = false);
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool checklimits = true);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool checklimits = true);
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
@@ -523,9 +523,9 @@ private:
         return _fQuatAngleResolution;
     }
 
-    virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits=false);
+    virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool checklimits=true);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
-    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits=false);
+    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool checklimits=true);
     virtual void GetActiveDOFVelocities(std::vector<dReal>& velocities) const;
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;

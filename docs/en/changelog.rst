@@ -15,6 +15,8 @@ Core
 
 * Correctly cloning physics/collision/viewers.
 
+* By default all SetDOFValues/SetActiveDOFValues methods check joint limits
+
 Planning
 --------
 
@@ -37,6 +39,8 @@ Misc
 * Fixed crash when smoothing close configurations.
 
 * Fixed ``--graspingnoise`` when multi-threading is used
+
+* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
 
 Version 0.5.0
 =============

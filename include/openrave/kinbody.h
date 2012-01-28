@@ -1161,14 +1161,14 @@ private:
         \param[in] vDOFVelocities - velocities of each of the degrees of freeom
         \param checklimits if true, will excplicitly check the joint velocity limits before setting the values.
      */
-    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = false);
+    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
 
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom
     /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = false);
+    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = true);
 
     /// \brief Returns the linear and angular velocities for each link
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
@@ -1212,9 +1212,9 @@ private:
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = true);
 
-    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = false) {
+    virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
         SetDOFValues(values,checklimits);
     }
 
@@ -1223,9 +1223,9 @@ private:
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \param transform represents the transformation of the first body.
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false);
+    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true);
 
-    virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = false)
+    virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true)
     {
         SetDOFValues(values,transform,checklimits);
     }
@@ -1398,7 +1398,7 @@ private:
     /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
     ///
     /// \param itvalues the iterator to the vector containing the dof values. Must have GetConfigurationSpecification().GetDOF() values!
-    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits = false);
+    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits = true);
 
     /// \brief returns the configuration values as specified by \ref GetConfigurationSpecification()
     virtual void GetConfigurationValues(std::vector<dReal>& v) const;

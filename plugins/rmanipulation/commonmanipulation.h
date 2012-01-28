@@ -267,7 +267,8 @@ public:
                     vnew.at(i) += _qdelta(i,0)*_viweights.at(i);
                 }
                 fdistcur = _distmetricfn(vprev,vnew);
-                _probot->SetActiveDOFValues(vnew);         // for next iteration
+                _probot->SetActiveDOFValues(vnew,true);
+                _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
             }
 
             _iter = -1;
