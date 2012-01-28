@@ -22,6 +22,8 @@ Planning
 
 * Fxied :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
+* Fixed linear smoothing fallback when parabolic smoother fails.
+
 Python
 ------
 
