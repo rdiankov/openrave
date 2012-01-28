@@ -888,6 +888,8 @@ protected:
     virtual int GetDOF() const;
 
     /// \brief check if the groups form a continguous space
+    ///
+    /// If there are two or more groups with the same semantic names, will fail. Theese groups should be merged into one.
     virtual bool IsValid() const;
 
     virtual bool operator==(const ConfigurationSpecification& r) const;
@@ -962,19 +964,21 @@ protected:
     /// \brief adds the deltatime tag to the end if one doesn't exist and returns the index into the configuration space
     virtual int AddDeltaTimeGroup();
 
-    /// \brief adds a new group to the specification and returns its new offset.
-    ///
-    /// If the new group's semantic name exists in the current specification and it exactly matches, then succeeds. If the match
-    /// isn't exact, then an openrave_exception is throw.
+    /** \brief Adds a new group to the specification and returns its new offset.
+
+        If the new group's semantic name does not exist in the current specification, adds it and returns the new offset.
+        If the new group's semantic name exists in the current specification and it exactly matches, then function returns the old group's index. If the semantic names match, but parameters do not match, then an openrave_exception is thrown.
+        This method is not responsible for merging semantic information
+     */
     virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
 
-    /// \brief merges all the information from the input group into this group
+    /// \brief Merges all the information from the input group into this group
     ///
     /// For groups that are merged, the interpolation method is not changed.
     /// \throw openrave_exception throws if groups do not contain enough information to be merged
     virtual ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
 
-    /// \brief return a new specification that holds the merged information from the current and input specification and the input parameter..
+    /// \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
     ///
     /// For groups that are merged, the interpolation method is not changed.
     /// \throw openrave_exception throws if groups do not contain enough information to be merged

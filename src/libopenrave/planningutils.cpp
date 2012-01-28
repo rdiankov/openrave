@@ -42,6 +42,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             newdof = curdof;
             if( !neighstatefn(newdof,deltadof,0) ) {
+                robot->SetActiveDOFValues(curdof,true);
                 return -1;
             }
         }
@@ -76,6 +77,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             deltadof[j] = fRand * (RaveRandomFloat()-0.5f);
         }
         bCollision = false;
+        bool bConstraintFailed = false;
         FOREACH(itperturbation,perturbations) {
             for(size_t j = 0; j < deltadof.size(); ++j) {
                 deltadof2[j] = deltadof[j] + *itperturbation;
@@ -83,8 +85,9 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             if( bConstraint ) {
                 newdof = curdof;
                 if( !neighstatefn(newdof,deltadof2,0) ) {
-                    RAVELOG_DEBUG("constraint function failed\n");
-                    continue;
+                    RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%f\n")%*itperturbation));
+                    bConstraintFailed = true;
+                    break;
                 }
             }
             else {
@@ -98,7 +101,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 break;
             }
         }
-        if( !bCollision ) {
+        if( !bCollision && !bConstraintFailed ) {
             // have to restore to non-perturbed configuration!
             for(size_t j = 0; j < deltadof.size(); ++j) {
                 newdof[j] = curdof[j] + deltadof[j];
@@ -439,6 +442,11 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool 
 void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
 {
     _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", false);
+}
+
+void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, const std::string& plannername)
+{
+    RAVELOG_WARN("InsertActiveDOFWaypointWithRetiming not implemented\n");
 }
 
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)

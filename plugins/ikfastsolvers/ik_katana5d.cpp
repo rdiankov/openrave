@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 52 generated on 2012-01-09 16:09:16.469246
+/// ikfast version 52 generated on 2012-01-25 20:26:50.346297
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object:
@@ -33,6 +33,7 @@
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
 #include <sstream>
+#include <iostream>
 
 #ifdef _MSC_VER
 #ifndef __PRETTY_FUNCTION__
@@ -180,6 +181,9 @@ public:
 
 inline float IKabs(float f) { return fabsf(f); }
 inline double IKabs(double f) { return fabs(f); }
+
+inline float IKsqr(float f) { return f*f; }
+inline double IKsqr(double f) { return f*f; }
 
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }

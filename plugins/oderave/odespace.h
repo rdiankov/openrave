@@ -184,6 +184,8 @@ public:
         int nLastStamp;
 
         vector<boost::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+        vector<int> _vdofbranches;
+
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
         vector<dJointFeedback> vjointfeedback;
@@ -560,7 +562,7 @@ private:
     void Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        pinfo->pbody->GetLinkTransformations(vtrans);
+        pinfo->pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {

@@ -474,6 +474,7 @@ The possible properties that can be set are: ";
         FOREACHC(itbody, vbodies) {
             ODESpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
+            vector<Transform> vtrans(pinfo->vlinks.size());
             for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
                 const dReal* prot = dBodyGetQuaternion(pinfo->vlinks[i]->body);
                 Vector vrot(prot[0],prot[1],prot[2],prot[3]);
@@ -482,9 +483,9 @@ The possible properties that can be set are: ";
                     continue;
                 }
                 const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
-                (*itbody)->GetLinks()[i]->SetTransform(Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])));
+                vtrans.at(i) = Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2]));
             }
-
+            (*itbody)->SetLinkTransformations(vtrans,pinfo->_vdofbranches);
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
 

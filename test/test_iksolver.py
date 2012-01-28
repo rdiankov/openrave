@@ -84,4 +84,4 @@ class TestIkSolver(EnvironmentSetup):
             sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0.03)
             assert(sampler.Sample() is not None)
 
-    
+

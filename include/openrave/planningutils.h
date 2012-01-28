@@ -29,7 +29,7 @@ namespace planningutils {
 
 /// \brief Jitters the active joint angles of the robot until it escapes collision.
 ///
-/// Return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded.
+/// Return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded and position is different.
 OPENRAVE_API int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn());
 
 /// \brief Jitters the transform of a body until it escapes collision.
@@ -87,6 +87,15 @@ OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
  */
 OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
 
+/** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. <b>[multi-thread safe]</b>
+
+    Collision is not checked on the modified segments of the trajectory.
+    \param waypointindex
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param robot use the robot's active dofs to initialize the trajectory space
+    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+ */
+OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, const std::string& plannername="");
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);

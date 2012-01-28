@@ -1270,6 +1270,17 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         throw OPENRAVE_EXCEPTION_FORMAT("one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     }
     BOOST_ASSERT((int)vaxes.size()==GetDOF());
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( _vmaxvel[i] < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("joint %s[%d] max velocity %f < 0",_name%i%_vmaxvel[i], ORE_InvalidArguments);
+        }
+        if( _vmaxaccel[i] < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("joint %s[%d] max acceleration %f < 0",_name%i%_vmaxaccel[i], ORE_InvalidArguments);
+        }
+        if( _vmaxtorque[i] < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("joint %s[%d] max acceleration %f < 0",_name%i%_vmaxtorque[i], ORE_InvalidArguments);
+        }
+    }
 
     KinBodyPtr parent(_parent);
     _bInitialized = false;

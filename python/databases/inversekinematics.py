@@ -143,8 +143,8 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
-from ..openravepy_ext import openrave_exception
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion
+from ..openravepy_ext import openrave_exception, RobotStateSaver
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
 from . import DatabaseGenerator
 from ..misc import mkdir_recursive, myrelpath, TSP
 import time,platform,shutil,sys
@@ -879,7 +879,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     successrate = ikmodel.testik(iktests=options.iktests)
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))
-                    log.info('mean: %fs, median: %fs, min: %fs, max: %fs', mean(results),median(results),min(results),max(results))
+                    log.info('running time mean: %fs, median: %fs, min: %fs, max: %fs', mean(results),median(results),min(results),max(results))
             finally:
                 env.Destroy()
                 RaveDestroy()

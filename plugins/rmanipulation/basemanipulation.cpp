@@ -715,14 +715,21 @@ protected:
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(params->_configurationspecification);
-        ptraj->Insert(0,params->vinitialconfig);
 
+        vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        if( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0 ) {
+        switch( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) ) {
+        case 0:
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
+        case 1:
+            RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
+            vinsertconfiguration = params->vinitialconfig;
+            robot->GetActiveDOFValues(params->vinitialconfig);
+            break;
+        default:
+            break;
         }
-        robot->GetActiveDOFValues(params->vinitialconfig);
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -754,6 +761,10 @@ protected:
         }
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             planningutils::VerifyTrajectory(params, ptraj);
+        }
+
+        if( vinsertconfiguration.size() > 0 ) {
+            planningutils::InsertActiveDOFWaypointWithRetiming(0,vinsertconfiguration,vector<dReal>(), ptraj, robot, _fMaxVelMult);
         }
 
         if( jitterikparam > 0 ) {

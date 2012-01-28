@@ -406,6 +406,8 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
         planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
         if( !!planner ) {
             RAVELOG_WARN(str(boost::format("%s post processing failed, trying shortcut_linear")%GetParameters()->_sPostProcessingPlanner));
+            params->_sPostProcessingPlanner = "lineartrajectoryretimer";
+            params->_sPostProcessingParameters = "<hastimestamps>0</hastimestamps><interpolation>linear</interpolation>";
             if( planner->InitPlan(probot, params) ) {
                 PlannerStatus status = planner->PlanPath(ptraj);
                 if( status != PS_Failed ) {

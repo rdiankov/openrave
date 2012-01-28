@@ -3,22 +3,44 @@
 ChangeLog
 #########
 
-Core
-----
-
-* Correctly cloning physics/collision/viewers.
-
-Python
-------
-
-* All name strings are now returned/set as unicode objects. All openravepy objects support __unicode__
-
 Version 0.5.1 Unstable
 ======================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Core
+----
+
+* Correctly cloning physics/collision/viewers.
+
+* By default all SetDOFValues/SetActiveDOFValues methods check joint limits
+
+Planning
+--------
+
+* Fixed :module:`.examples.constraintplanning` demo and GripperJacobianConstrains classed used for linear constraints.
+
+* Fxied :ref:`.planningutils.JitterActiveDOF` when constraints are used.
+
+* Fixed linear smoothing fallback when parabolic smoother fails.
+
+Python
+------
+
+* All name strings are now returned/set as unicode objects. All openravepy objects support __unicode__
+
+Misc
+----
+
+* Fixed ``openrave.py --database inversekinematics --show``
+
+* Fixed crash when smoothing close configurations.
+
+* Fixed ``--graspingnoise`` when multi-threading is used
+
+* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
 
 Version 0.5.0
 =============
@@ -78,7 +100,7 @@ Grasping
 
 * added new :mod:`.examples.fastgraspingthreaded` example to show how to use multithreaded functions to compute good grasps in real-time.
 
-* added ``--numthreads`` option to ``openrave.py --database graspin`` to allow users to set number of threads.
+* added ``--numthreads`` option to ``openrave.py --database grasping`` to allow users to set number of threads.
 
 * now storing translationstepmult and finestep parameters in the database since they affect success rates
 
