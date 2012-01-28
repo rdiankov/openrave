@@ -299,6 +299,21 @@ class TestMoving(EnvironmentSetup):
         basemanip = interfaces.BaseManipulation(robot)
         trajdata=basemanip.MoveActiveJoints([1,1,1],outputtraj=True)
 
+    def test_smoothwithcircular(self):
+        print 'test smoothing with circular joints'
+        env=self.env
+        env.Load('data/pa10grasp.env.xml')
+        robot=env.GetRobots()[0]
+        circularindices = [j.GetDOFIndex() for j in robot.GetJoints() if j.IsCircular(0)]
+        assert(len(circularindices)>0)
+        robot.SetActiveDOFs(circularindices)
+        traj=RaveCreateTrajectory(env,'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,r_[-2.7*ones(robot.GetActiveDOF()),3.7*ones(robot.GetActiveDOF())])
+
+        plannernames = ['parabolicsmoother','shortcut_linear']
+        planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannernames[0])
+        
     def test_affine_smoothing(self):
         env=self.env
         robot=env.ReadRobotURI('robots/barrettwam.robot.xml')
