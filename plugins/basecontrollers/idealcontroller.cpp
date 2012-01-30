@@ -367,11 +367,12 @@ private:
             }
         }
         if( timeelapsed > 0 ) {
+            vector<dReal> vdiff = curvalues;
+            _probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
-                dReal diff = RaveFabs(curvalues.at(i)-prevvalues.at(i));
                 dReal maxallowed = timeelapsed * _vupper[1][i]+5e-5f;
-                if( diff > maxallowed ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f")%_probot->GetName()%i%diff%maxallowed));
+                if( RaveFabs(vdiff.at(i)) > maxallowed ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed));
                 }
             }
         }

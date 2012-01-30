@@ -164,7 +164,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
-    std::vector<dReal> vdata, vdatavel;
+    std::vector<dReal> vdata, vdatavel, vdiff;
     for(size_t ipoint = 0; ipoint < trajectory->GetNumWaypoints(); ++ipoint) {
         trajectory->GetWaypoint(ipoint,vdata,parameters->_configurationspecification);
         trajectory->GetWaypoint(ipoint,vdatavel,velspec);
@@ -181,8 +181,10 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         vector<dReal> newq;
         parameters->_getstatefn(newq);
         BOOST_ASSERT(vdata.size() == newq.size());
-        for(size_t i = 0; i < newq.size(); ++i) {
-            if( RaveFabs(vdata.at(i) - newq.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+        vdiff = newq;
+        parameters->_diffstatefn(vdiff,vdata);
+        for(size_t i = 0; i < vdiff.size(); ++i) {
+            if( RaveFabs(vdiff.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
                 string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -206,7 +208,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 
         if( trajectory->GetDuration() > 0 && samplingstep > 0 ) {
             // use sampling and check segment constraints
-            std::vector<dReal> vprevdata, vprevdatavel, vdiff;
+            std::vector<dReal> vprevdata, vprevdatavel;
             PlannerBase::ConfigurationListPtr configs(new PlannerBase::ConfigurationList());
             trajectory->Sample(vprevdata,0,parameters->_configurationspecification);
             trajectory->Sample(vprevdatavel,0,velspec);
@@ -488,7 +490,7 @@ void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
 
 void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername)
 {
-    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", true);
+    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", false);
 }
 
 void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername)
@@ -651,6 +653,11 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     }
     presulttraj->Insert(0,vnewdata);
     return presulttraj;
+}
+
+void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec)
+{
+    throw OPENRAVE_EXCEPTION_FORMAT0("SetPlannerParametersFromSpecification not implemented",ORE_NotImplemented);
 }
 
 LineCollisionConstraint::LineCollisionConstraint()

@@ -1631,16 +1631,6 @@ public:
         return KinBodyPtr();
     }
 
-    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, const ConfigurationSpecification& spec)
-    {
-        throw OPENRAVE_EXCEPTION_FORMAT0("SetConfigurationValues not implemented",ORE_NotImplemented);
-    }
-
-    virtual void GetConfigurationValues(std::vector<dReal>& v, const ConfigurationSpecification& spec) const
-    {
-        throw OPENRAVE_EXCEPTION_FORMAT0("GetConfigurationValues not implemented",ORE_NotImplemented);
-    }
-
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());

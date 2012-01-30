@@ -389,12 +389,6 @@ public:
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
 
-    /// \brief sets configuration values in the environment depending on the specification.
-    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, const ConfigurationSpecification& spec) = 0;
-
-    /// \brief gets configuration values in the environment depending on the specification.
-    virtual void GetConfigurationValues(std::vector<dReal>& v, const ConfigurationSpecification& spec) const = 0;
-
     /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
     ///
     /// \param[out] trimesh - The output triangle mesh

@@ -1396,6 +1396,14 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     }
     _tinvRight = _tRight.inverse();
     _tinvLeft = _tLeft.inverse();
+
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( IsCircular(i) ) {
+            // can rotate forever, so don't limit it
+            _vlowerlimit[i] = -1e5;
+            _vupperlimit[i] = 1e5;
+        }
+    }
     _bInitialized = true;
 }
 

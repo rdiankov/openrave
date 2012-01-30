@@ -25,7 +25,7 @@ def run_example(name,args=[]):
 def test_examples():
     print "test if all the examples run"
     yield run_example, 'hanoi', []
-    #yield run_example, 'calibrationviews'
+    yield run_example, 'calibrationviews', ['--noshowsensor']
     #yield run_example, 'graspplanning', []
 
 #     for name in dir(examples):

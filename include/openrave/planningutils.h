@@ -114,6 +114,12 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 /// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
 OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
 
+/** \brief sets the planner parameters structure from a configuration specification
+
+    Attempt to set default values for all parameters
+ */
+OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec);
+
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
 {

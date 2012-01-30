@@ -17,6 +17,8 @@ Core
 
 * By default all SetDOFValues/SetActiveDOFValues methods check joint limits
 
+* Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER.
+
 Planning
 --------
 
@@ -35,18 +37,23 @@ Python
 
 * All name strings are now returned/set as unicode objects. All openravepy objects support __unicode__
 
+Inverse Kinematics
+------------------
+
+* Fixed crash when smoothing close configurations.
+
+* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+
 Misc
 ----
 
 * Fixed ``openrave.py --database inversekinematics --show``
 
-* Fixed crash when smoothing close configurations.
-
 * Fixed ``--graspingnoise`` when multi-threading is used
 
-* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
-
 * Fixed default value for :ref:`.Robot.GetActiveConfigurationSpecification`
+
+* Fixed trajectory sampling with circular joints
 
 Version 0.5.0
 =============

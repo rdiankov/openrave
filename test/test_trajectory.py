@@ -152,3 +152,79 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
             planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
 
+    def test_smoothwithcircular(self):
+        print 'test smoothing with circular joints'
+        env=self.env
+        self.LoadEnv('data/pa10calib.env.xml')
+        robot=env.GetRobots()[0]
+        traj=RaveCreateTrajectory(env,'')
+        traj.deserialize(open('testdata/pa10calib.env.traj.xml','r').read())
+        with env:
+            circularindices = [j.GetDOFIndex() for j in robot.GetJoints() if j.IsCircular(0)]
+            assert(len(circularindices)>0)
+            robot.SetActiveDOFs(circularindices)
+            spec = robot.GetActiveConfigurationSpecification()
+            parameters = Planner.PlannerParameters()
+            parameters.SetRobotActiveJoints(robot)
+            startconfig = traj.GetWaypoint(0,spec)
+            endconfig = traj.GetWaypoint(-1,spec)
+            # discontinuity happens between 47 and 48, double check
+            disindex = 47
+            assert(abs(traj.GetWaypoint(disindex,spec)-traj.GetWaypoint(disindex+1,spec)) > 4)
+            plannernames = ['lineartrajectoryretimer']
+            for plannername in plannernames:
+                traj2 = RaveCreateTrajectory(env,traj.GetXMLId())
+                traj2.Clone(traj,0)
+                planningutils.RetimeActiveDOFTrajectory(traj2,robot,False,maxvelmult=1,plannername=plannername)
+
+                # make sure discontinuity is covered
+                timespec = ConfigurationSpecification()
+                timespec.AddGroup('deltatime',1,'linear')
+                times = cumsum(traj2.GetWaypoints(0,traj2.GetNumWaypoints(),timespec))
+                assert(transdist(traj2.Sample(times[disindex],spec), traj2.Sample((times[disindex]+times[disindex+1])/2,spec)) < 0.01)
+                
+                planningutils.VerifyTrajectory(parameters,traj2,samplingstep=0.002)
+                assert(transdist(traj2.GetWaypoint(0,spec),startconfig) <= g_epsilon)
+                assert(transdist(traj2.GetWaypoint(-1,spec),endconfig) <= g_epsilon)
+
+    def test_affine_smoothing(self):
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
+        traj=RaveCreateTrajectory(env,'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
+        traj2=RaveCreateTrajectory(env,'')
+        traj2.Clone(traj,0)
+
+        env.StartSimulation(0.01,False)
+            
+        for itraj in range(2):
+            with env:
+                T=robot.GetTransform()
+                planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
+                assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
+                for i in range(traj.GetNumWaypoints()):
+                    waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                    waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                    assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+            robot.GetController().SetPath(traj2)
+            robot.WaitForController(0)
+
+        plannernames = ['parabolicsmoother','shortcut_linear']
+        for plannername in plannernames:
+            traj2=RaveCreateTrajectory(env,'')
+            traj2.Clone(traj,0)
+            for itraj in range(2):
+                with env:
+                    T=robot.GetTransform()
+                    planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                    assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                    for i in [0,-1]:
+                        waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                        waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                        assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+                robot.GetController().SetPath(traj2)
+                robot.WaitForController(0)
+
