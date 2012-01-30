@@ -131,7 +131,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -159,6 +159,8 @@ class BaseManipulation:
             cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
         if constraintmatrix is not None:
             cmd += 'constraintmatrix %s '%matrixSerialization(constraintmatrix)
+        if constrainttaskmatrix is not None:
+            cmd += 'constrainttaskmatrix %s '%matrixSerialization(constrainttaskmatrix)
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if jitter is not None:

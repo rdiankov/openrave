@@ -64,7 +64,7 @@ def main(env,options):
     robot.WaitForController(0)
 
     # test verification with offset (should succeed)
-    T = ikmodel.manip.GetEndEffectorTransform()
+    T = ikmodel.manip.GetTransform()
     T[1,3] += 0.1
     success = basemanip.MoveHandStraight(direction=updir,starteematrix=T,stepsize=0.01,minsteps=1,maxsteps=20)
     robot.WaitForController(0)
@@ -72,7 +72,7 @@ def main(env,options):
     print 'checking for existance of trajectories with random queries of moving in a straight line'
     armlength = 0
     armjoints = [j for j in robot.GetDependencyOrderedJoints() if j.GetJointIndex() in ikmodel.manip.GetArmIndices()]
-    eetrans = ikmodel.manip.GetEndEffectorTransform()[0:3,3]
+    eetrans = ikmodel.manip.GetTransform()[0:3,3]
     for j in armjoints[::-1]:
         armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
         eetrans = j.GetAnchor()
@@ -80,7 +80,7 @@ def main(env,options):
     failedattempt = 0
     while True:
         with env:
-            #Tee = dot(ikmodel.manip.GetEndEffectorTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
+            #Tee = dot(ikmodel.manip.GetTransform(),matrixFromAxisAngle(random.rand(3)-0.5,0.2*random.rand()))
             Tee = matrixFromAxisAngle(random.rand(3)-0.5,pi*random.rand())
             direction = random.rand(3)-0.5
             direction /= linalg.norm(direction)

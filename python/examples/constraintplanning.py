@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2012 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -102,34 +102,45 @@ class ConstraintPlanning:
                     geom.SetTransparency(0.7)
 
         try:
-            print 'moving mug without XY rotation'
+            print 'moving mug without global XY rotation'
             while True:
+                # find the z rotation axis of the cup's frame
+                localrotaxis = dot(linalg.inv(target.GetTransform()[0:3,0:3]),[0,0,1])
                 xyzconstraints = random.permutation(3)[0:2]
-                constraintfreedoms = array([1,1,0,1,1,1]) # rotation xyz, translation xyz
+                constraintfreedoms = ones(6) # rotation xyz, translation xyz
                 constraintfreedoms[3+xyzconstraints] = 0
-                print 'planning with freedoms: ',constraintfreedoms
-                Tplane = eye(4)
-                Tplane[0:3,0:2] = Tplane[0:3,xyzconstraints]
-                Tplane[0:3,2] = cross(Tplane[0:3,0],Tplane[0:3,1])
-                Tplane[0:3,3] = self.manip.GetEndEffectorTransform()[0:3,3]
-                hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
-
-                constraintmatrix = eye(4)
-                constrainterrorthresh = 0.01
+                index = argmax(abs(localrotaxis))
+                constraintfreedoms[index] = 0
+                localrotaxis = zeros(3)
+                localrotaxis[index] = 1
+                print localrotaxis
+                print 'planning with freedoms: %s, local rot axis: %s '%(constraintfreedoms,localrotaxis)
+                
+                constrainterrorthresh = 0.005
                 for iter in range(3):
                     with self.robot:
                         vcur = self.robot.GetDOFValues()
-                        Tee = self.manip.GetEndEffectorTransform()
+                        Tee = self.manip.GetTransform()
                         while True:
-                            T = array(Tee)
-                            T[0:3,3] += 0.5*(random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
+                            Ttarget = target.GetTransform()
+                            Tlocaltarget = matrixFromAxisAngle(localrotaxis*2*(random.rand()-0.5))
+                            Tlocaltarget[0:3,3] = 0.5*(random.rand(3)-0.5)*(1.0-array(constraintfreedoms[3:]))
+                            Tnewtarget = dot(Ttarget,Tlocaltarget)
+                            T = dot(Tnewtarget, dot(linalg.inv(target.GetTransform()), Tee))
                             if self.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions) is not None:
                                 break
                     if showtarget is not None:
-                        showtarget.SetTransform(dot(T,dot(linalg.inv(self.manip.GetEndEffectorTransform()),target.GetTransform())))
+                        showtarget.SetTransform(Tnewtarget)
                         self.envreal.UpdatePublishedBodies()
+                        Tplane = array(Ttarget)
+                        Tplane[0:3,0:2] = Tplane[0:3,xyzconstraints]
+                        Tplane[0:3,2] = cross(Tplane[0:3,0],Tplane[0:3,1])
+                        hplane = self.envreal.drawplane(transform=Tplane,extents=[1.0,1.0],texture=reshape([1,1,0.5,0.5],(1,1,4)))
+
                     try:
-                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
+                        constrainttaskmatrix=dot(linalg.inv(Tee),target.GetTransform())
+                        constraintmatrix = linalg.inv(target.GetTransform())
+                        self.basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix, constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
                     except planning_error,e:
                         print e
                     self.robot.WaitForController(0)

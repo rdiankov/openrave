@@ -235,7 +235,7 @@ protected:
 
     bool EvaluateConstraints(ostream& sout, istream& sinput)
     {
-        Transform tTargetWorldFrame;
+        Transform tTargetWorldFrame, tConstraintTaskFrame;
         boost::array<double,6> vfreedoms = { { 1,1,1,1,1,1}};
         string cmd;
         list< vector<dReal> > listconfigs;
@@ -255,8 +255,15 @@ protected:
             else if( cmd == "constraintmatrix" ) {
                 TransformMatrix m; sinput >> m; tTargetWorldFrame = m;
             }
-            else if( cmd == "constraintpose" )
+            else if( cmd == "constraintpose" ) {
                 sinput >> tTargetWorldFrame;
+            }
+            else if( cmd == "constrainttaskmatrix" ) {
+                TransformMatrix m; sinput >> m; tConstraintTaskFrame = m;
+            }
+            else if( cmd == "constrainttaskpose" ) {
+                sinput >> tConstraintTaskFrame;
+            }
             else if( cmd == "config" ) {
                 vector<dReal> vconfig(_robot->GetActiveDOF());
                 FOREACH(it,vconfig) {
@@ -283,7 +290,7 @@ protected:
         ActiveDistMetric distmetric(_robot);
         vector<dReal> vprev, vdelta;
         _robot->GetActiveDOFValues(vprev);
-        CM::GripperJacobianConstrains<double> constraints(_robot->GetActiveManipulator(),tTargetWorldFrame,vfreedoms,errorthresh);
+        CM::GripperJacobianConstrains<double> constraints(_robot->GetActiveManipulator(),tTargetWorldFrame,tConstraintTaskFrame, vfreedoms,errorthresh);
         constraints._distmetricfn = boost::bind(&ActiveDistMetric::Eval,&distmetric,_1,_2);
         vdelta.resize(vprev.size());
         FOREACH(itconfig,listconfigs) {

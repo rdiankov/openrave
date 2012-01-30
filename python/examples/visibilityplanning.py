@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2012 Rosen Diankov (rosen.diankov@gmail.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -280,7 +280,7 @@ class VisibilityGrasping:
 
             self.robot.Grab(self.target)
             self.robotreal.Grab(self.orenvreal.GetKinBody(self.target.GetName()))
-            Trelative = dot(linalg.inv(self.target.GetTransform()),self.manip.GetEndEffectorTransform())
+            Trelative = dot(linalg.inv(self.target.GetTransform()),self.manip.GetTransform())
             Tnewgoals = [dot(Tgoal,Trelative) for Tgoal in self.Tgoals]
             if len(Tnewgoals) > 0:
                 try:

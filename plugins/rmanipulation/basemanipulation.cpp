@@ -527,7 +527,7 @@ protected:
 
         // constraint stuff
         boost::array<double,6> vconstraintfreedoms = { { 0,0,0,0,0,0}};
-        Transform tConstraintTargetWorldFrame;
+        Transform tConstraintTargetWorldFrame, tConstraintTaskFrame;
         double constrainterrorthresh=0;
         int goalsamples = 40;
         string cmd;
@@ -632,6 +632,12 @@ protected:
             else if( cmd == "constraintpose" ) {
                 sinput >> tConstraintTargetWorldFrame;
             }
+            else if( cmd == "constrainttaskmatrix" ) {
+                TransformMatrix m; sinput >> m; tConstraintTaskFrame = m;
+            }
+            else if( cmd == "constrainttaskpose" ) {
+                sinput >> tConstraintTaskFrame;
+            }
             else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
             }
@@ -676,11 +682,16 @@ protected:
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
-            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
+            robot->SetActiveDOFValues(params->vinitialconfig); // have to set the initial configuraiton!
+            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,tConstraintTaskFrame, vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
             // use linear interpolation!
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
+            vector<dReal> vdelta(params->vinitialconfig.size(),0);
+            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
+            }
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
@@ -691,9 +702,16 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0) ) {
-                    RAVELOG_DEBUG("constraint function failed\n");
-                    continue;
+                if(constrainterrorthresh > 0 ) {
+                    robot->SetActiveDOFValues(vgoal);
+                    switch( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) ) {
+                    case 0:
+                        RAVELOG_DEBUG("constraint function failed\n");
+                        continue;
+                    case 1:
+                        robot->GetActiveDOFValues(vgoal);
+                        break;
+                    }
                 }
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
                 --nSeedIkSolutions;
@@ -726,8 +744,6 @@ protected:
             RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
             vinsertconfiguration = params->vinitialconfig;
             robot->GetActiveDOFValues(params->vinitialconfig);
-            break;
-        default:
             break;
         }
 

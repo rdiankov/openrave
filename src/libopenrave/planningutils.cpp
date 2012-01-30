@@ -84,8 +84,11 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             if( bConstraint ) {
                 newdof = curdof;
+                robot->SetActiveDOFValues(newdof,true);
                 if( !neighstatefn(newdof,deltadof2,0) ) {
-                    RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%f\n")%*itperturbation));
+                    if( *itperturbation != 0 ) {
+                        RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
+                    }
                     bConstraintFailed = true;
                     break;
                 }
@@ -103,8 +106,18 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
         }
         if( !bCollision && !bConstraintFailed ) {
             // have to restore to non-perturbed configuration!
-            for(size_t j = 0; j < deltadof.size(); ++j) {
-                newdof[j] = curdof[j] + deltadof[j];
+            if( bConstraint ) {
+                newdof = curdof;
+                robot->SetActiveDOFValues(newdof,true);
+                if( !neighstatefn(newdof,deltadof,0) ) {
+                    RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
+                    continue;
+                }
+            }
+            else {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    newdof[j] = curdof[j] + deltadof[j];
+                }
             }
             robot->SetActiveDOFValues(newdof);
             return 1;
@@ -730,6 +743,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         _vtempconfig[i] = pQ0[i];
     }
     if( start > 0 ) {
+        params->_setstatefn(_vtempconfig);
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
             return false;
         }

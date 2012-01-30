@@ -42,7 +42,7 @@ def main(env,options):
         with env:
             # move the robot in a random collision-free position and call the IK
             while True:
-                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                target=ikmodel.manip.GetTransform()[0:3,3]+(random.rand(3)-0.5)
                 solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.Lookat3D),IkFilterOptions.CheckEnvCollisions)
                 if len(solutions) > 0:
                     break
@@ -50,7 +50,7 @@ def main(env,options):
         for i in random.permutation(len(solutions))[0:min(100,len(solutions))]:
             with env:
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
-                T = ikmodel.manip.GetEndEffectorTransform()
+                T = ikmodel.manip.GetTransform()
                 globaldir = numpy.dot(T[0:3,0:3],ikmodel.manip.GetDirection())
                 dist = linalg.norm(T[0:3,3]-target)+0.4
                 hray = env.drawlinelist(array([T[0:3,3], T[0:3,3]+dist*globaldir]),5,colors=[0.1,0.1,1])

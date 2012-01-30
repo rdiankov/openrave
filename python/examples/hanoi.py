@@ -102,7 +102,7 @@ class HanoiPuzzle:
             srcpegbox = srcpeg.ComputeAABB()
             destpegbox = destpeg.ComputeAABB()
             # get all the transformations
-            Thand = self.robot.GetActiveManipulator().GetEndEffectorTransform()
+            Thand = self.robot.GetActiveManipulator().GetTransform()
             Tdisk = disk.GetTransform()
             Tsrcpeg = srcpeg.GetTransform()
             Tpeg = destpeg.GetTransform()

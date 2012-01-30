@@ -82,6 +82,7 @@ class TestMoving(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
+        env.StartSimulation(0.01,True)
 
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
@@ -89,12 +90,12 @@ class TestMoving(EnvironmentSetup):
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             gmodel.numthreads = 2 # at least two threads
-            gmodel.autogenerate()
-                
+            gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
+            gmodel.save()
+            
         with env:
             basemanip = interfaces.BaseManipulation(robot)
-            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
-            
+            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)            
             robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
             validgrasps,validindices = gmodel.computeValidGrasps(returnnum=1)
             validgrasp=validgrasps[0]
@@ -102,21 +103,31 @@ class TestMoving(EnvironmentSetup):
             T = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             sol = gmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
             robot.SetActiveDOFValues(sol)
-            robot.Grab(gmodel.target)
-            
+            robot.Grab(gmodel.target)            
             xyzconstraints = array([1,2],int)
-            constraintfreedoms = array([1,1,0,1,0,0]) # rotation xyz, translation xyz
-            constraintmatrix = eye(4)
-            constrainterrorthresh = 0.01
-            T = ikmodel.manip.GetEndEffectorTransform()
-            T[1,3] += 0.1
-            T[2,3] += 0.2
-            solgoal = ikmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
+            constraintfreedoms = array([1,0,1,1,0,0]) # rotation xyz, translation xyz
+            localrotaxis = array([0,1,0])
+            constrainterrorthresh = 0.005
+            constrainttaskmatrix=dot(linalg.inv(T),gmodel.target.GetTransform())
+            constraintmatrix = linalg.inv(gmodel.target.GetTransform())
+            Tgoal = ikmodel.manip.GetTransform()
+            Tgoal[0:3,3] += [0,0.1,0.2]
+            solgoal = ikmodel.manip.FindIKSolution(Tgoal,IkFilterOptions.CheckEnvCollisions)
             assert(solgoal is not None)
-            traj = basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
+            RaveSetDebugLevel(int32(DebugLevel.Debug)|int32(DebugLevel.VerifyPlans))
+            traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
             print 'make sure it starts at the initial configuration'
             assert(transdist(soltraj,sol) <= g_epsilon)
+            robot.GetController().SetPath(traj)
+        robot.WaitForController(0)
+        with env:
+            # try another goal
+            Tlocal = matrixFromAxisAngle([0,1,0])
+            Tlocal[0:3,3] = [0,0.1,-0.2]
+            Tnewtarget = dot(gmodel.target.GetTransform(),Tlocal)
+            Tgoal = dot(Tnewtarget, dot(linalg.inv(gmodel.target.GetTransform()), ikmodel.manip.GetTransform()))
+            traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
 
     def test_movehandstraight(self):
         env = self.env

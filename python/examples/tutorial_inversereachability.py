@@ -157,7 +157,7 @@ Set up goal
 .. code-block:: python
 
     # set up goal grasp transform
-    # goal grasp transform specified in global frame, this equals manip.GetEndEffectorTransform() in the goal state    
+    # goal grasp transform specified in global frame, this equals manip.GetTransform() in the goal state    
     O_T_grasp = array([[ -9.88017917e-01,  -1.54339954e-01 ,  0.00000000e+00 ,  1.06494129e+00],
                        [  1.54339954e-01,  -9.88017917e-01 ,  0.00000000e+00 ,  5.51449812e-05],
                        [  0.00000000e+00 ,  0.00000000e+00 ,  1.00000000e+00 ,  9.55221763e-01],
@@ -217,7 +217,7 @@ Get robot base distribution
 - Input for computeBaseDistribution()::
 
    Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame
-           equals manip.GetEndEffectorTransform() in the goal state
+           equals manip.GetTransform() in the goal state
 
 - Output for computeBaseDistribution()::
 
@@ -362,7 +362,7 @@ class InverseReachabilityDemo:
     def showPossibleBasePoses(self,Tgrasp, gripper_angle=.548,N=1):
         """visualizes possible base poses for a grasp specified by Tgrasp and gripper_angle
         
-        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame. equals manip.GetEndEffectorTransform() in the goal state
+        :param Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame. equals manip.GetTransform() in the goal state
         :param gripper_angle: float, the gripper angle
         :param N: int, the number of sample poses we want to get 
         """
@@ -377,7 +377,7 @@ class InverseReachabilityDemo:
         # find the robot base distribution for the grasp specified by Tgrasp
         # Input for computeBaseDistribution():
         #      Tgrasp: 4x4 numpy.array, row major matrix, the grasp transform in global frame
-        #              equals manip.GetEndEffectorTransform() in the goal state
+        #              equals manip.GetTransform() in the goal state
         # Output for computeBaseDistribution():
         #      densityfn: gaussian kernel density function taking poses of openrave quaternion type, returns probabilities
         #      samplerfn: gaussian kernel sampler function taking number of sample and weight, returns robot base poses and joint states
@@ -451,7 +451,7 @@ class InverseReachabilityDemo:
         probot.SetActiveDOFValues(v)
         with databases.grasping.GraspingModel.GripperVisibility(pmanip): # show only the gripper
             O_T_R = probot.GetTransform() # robot transform R in global frame O 
-            O_T_G = pmanip.GetEndEffectorTransform() # grasping frame G in global frame O
+            O_T_G = pmanip.GetTransform() # grasping frame G in global frame O
             G_T_O = linalg.inv(O_T_G) # global frame O in grasping frame G
             G_T_R = dot(G_T_O, O_T_R) # robot frame R in grasping frame G
             O_T_G_goal = Tgrasp # final grasping frame G_goal in global frame O 
@@ -479,7 +479,7 @@ def main(env,options):
     target.SetTransform(array(O_T_Target))
 
     # set up goal grasp transform
-    # goal grasp transform specified in global frame, this equals manip.GetEndEffectorTransform() in the goal state    
+    # goal grasp transform specified in global frame, this equals manip.GetTransform() in the goal state    
     O_T_grasp = array([[ -9.88017917e-01,  -1.54339954e-01 ,  0.00000000e+00 ,  1.06494129e+00],
                        [  1.54339954e-01,  -9.88017917e-01 ,  0.00000000e+00 ,  5.51449812e-05],
                        [  0.00000000e+00 ,  0.00000000e+00 ,  1.00000000e+00 ,  9.55221763e-01],

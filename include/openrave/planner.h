@@ -183,7 +183,7 @@ public:
         /** \brief Adds a delta state to a curent state, acting like a next-nearest-neighbor function along a given direction.
 
             success = _neighstatefn(q,qdelta,fromgoal) -> q = Filter(q+qdelta)
-            \param q the current state
+            \param q the current state. In order to save computation, assumes this state is the currently set configuration.
             \param qdelta the delta to add
             \param fromgoal 1 if q is coming from a goal state, 0 if it is coming from an initial state
 

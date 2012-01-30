@@ -22,9 +22,9 @@ Planning
 
 * Fixed segment feasibility checking on parabolic smoother by using perterbations, now most small collisions are avoided.
 
-* Fixed :module:`.examples.constraintplanning` demo and GripperJacobianConstrains classed used for linear constraints.
+* **Many** fixes for :module:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
 
-* Fxied :ref:`.planningutils.JitterActiveDOF` when constraints are used.
+* Fixed :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
 * Fixed linear smoothing fallback when parabolic smoother fails.
 
