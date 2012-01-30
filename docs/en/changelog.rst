@@ -20,11 +20,15 @@ Core
 Planning
 --------
 
+* Fixed segment feasibility checking on parabolic smoother by using perterbations, now most small collisions are avoided.
+
 * Fixed :module:`.examples.constraintplanning` demo and GripperJacobianConstrains classed used for linear constraints.
 
 * Fxied :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
 * Fixed linear smoothing fallback when parabolic smoother fails.
+
+* Added many more constraints checking to :ref:`.planningutils.VerifyTrajectory`
 
 Python
 ------
@@ -41,6 +45,8 @@ Misc
 * Fixed ``--graspingnoise`` when multi-threading is used
 
 * Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+
+* Fixed default value for :ref:`.Robot.GetActiveConfigurationSpecification`
 
 Version 0.5.0
 =============

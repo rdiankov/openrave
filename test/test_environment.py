@@ -18,16 +18,16 @@ import shutil
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
         env=self.env
-        env.Load('../src/models/WAM/wam0.iv')
+        self.LoadEnv('../src/models/WAM/wam0.iv')
         
         for fullfilename in locate('*.xml','../src/data'):
             print 'loading: ',fullfilename
             env.Reset()
-            assert(env.Load(fullfilename))
+            self.LoadEnv(fullfilename)
             
     def test_loadnogeom(self):
         env=self.env
-        assert(env.Load('robots/pr2-beta-static.zae',{'skipgeometry':'1'}))
+        self.LoadEnv('robots/pr2-beta-static.zae',{'skipgeometry':'1'})
         assert(len(env.GetBodies())==1)
         robot=env.GetRobots()[0]
         trimesh=env.Triangulate(robot)
@@ -41,7 +41,7 @@ class TestEnvironment(EnvironmentSetup):
         xml="""<environment>
   <kinbody file="data/jsk-plate.zae"/>
 </environment>"""
-        env.LoadData(xml)
+        self.LoadDataEnv(xml)
         assert(env.GetBodies()[0].GetURI().find('data/jsk-plate.zae') >= 0)
 
     def test_scalegeometry(self):
@@ -75,12 +75,10 @@ class TestEnvironment(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                robot0=env.ReadRobotURI(robotfile)
-                env.AddRobot(robot0,True)
+                robot0=self.LoadRobot(robotfile)
                 robot0.SetTransform(eye(4))
                 env.Save('test.zae')
-                robot1=env.ReadRobotURI('test.zae')
-                env.AddRobot(robot1,True)
+                robot1=self.LoadRobot('test.zae')
                 robot1.SetTransform(eye(4))
                 assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
                 assert(len(robot0.GetPassiveJoints()) == len(robot1.GetPassiveJoints()))
@@ -154,15 +152,14 @@ class TestEnvironment(EnvironmentSetup):
 
             # test if collada can store current joint values
             env.Reset()
-            robot0=env.ReadRobotURI(g_robotfiles[0])
-            env.AddRobot(robot0,True)
+            robot0=self.LoadRobot(g_robotfiles[0])
             robot0.SetTransform(eye(4))
             lower,upper = robot0.GetDOFLimits()
             robot0.SetDOFValues(lower+random.rand(robot0.GetDOF())*(upper-lower))
             env.Save('test.dae')
             oldname = robot0.GetName()
             robot0.SetName('__dummy__')
-            env.Load('test.dae')
+            self.LoadEnv('test.dae')
             robot1=env.GetRobot(oldname)
             assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= 1e-4 ) # for now have to use this precision until collada-dom can store doubles
 
@@ -195,22 +192,20 @@ class TestEnvironment(EnvironmentSetup):
 </robot>
 """%(robotname,linkname,destfile)
         robotxml = urobotxml.encode('utf-8')
-        robot=env.ReadRobotXMLData(robotxml)
-        env.AddRobot(robot)
+        robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
         assert(robot.GetLinks()[0].GetName() == linkname)
         assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         env.Remove(robot)
 
-        robot=env.ReadRobotData(robotxml)
-        env.AddRobot(robot)
+        robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
         assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         assert(robot.GetLinks()[0].GetName() == linkname)
 
     def test_cloneplan(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         cloningoptions = [CloningOptions.Bodies | CloningOptions.RealControllers | CloningOptions.Simulation, CloningOptions.Bodies | CloningOptions.RealControllers]
         for options in cloningoptions:
             env2 = env.CloneSelf(options)

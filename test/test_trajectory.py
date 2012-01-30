@@ -16,7 +16,7 @@ from common_test_openrave import *
 class TestTrajectory(EnvironmentSetup):
     def test_merging(self):
         env = self.env
-        env.Load('robots/pr2-beta-static.zae')
+        self.LoadEnv('robots/pr2-beta-static.zae')
         robot=env.GetRobots()[0]
         basemanip=interfaces.BaseManipulation(robot)
         manip1=robot.SetActiveManipulator('leftarm')
@@ -46,7 +46,7 @@ class TestTrajectory(EnvironmentSetup):
     def test_grabbing(self):
         env = self.env
         with env:
-            env.Load('robots/pr2-beta-static.zae')
+            self.LoadEnv('robots/pr2-beta-static.zae')
             robot=env.GetRobots()[0]
             basemanip=interfaces.BaseManipulation(robot)
             manip1=robot.SetActiveManipulator('leftarm')
@@ -117,7 +117,7 @@ class TestTrajectory(EnvironmentSetup):
     def test_grabonly(self):
         env = self.env
         with env:
-            env.Load('robots/pr2-beta-static.zae')
+            self.LoadEnv('robots/pr2-beta-static.zae')
             robot=env.GetRobots()[0]
             manip1=robot.SetActiveManipulator('leftarm')
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
@@ -140,7 +140,7 @@ class TestTrajectory(EnvironmentSetup):
 
     def test_smoothingsamepoint(self):
         env = self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         for delta in [1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
             traj = RaveCreateTrajectory(env,'')

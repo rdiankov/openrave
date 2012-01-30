@@ -19,7 +19,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
-                self.env.Load(envfile,{'skipgeometry':'1'})
+                self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
                     T = eye(4)
                     for body in self.env.GetBodies():
@@ -99,7 +99,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
-                self.env.Load(envfile,{'skipgeometry':'1'})
+                self.LoadEnv(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines
                 #self.env.SetPhysicsEngine()
                 for i in range(10):
@@ -140,7 +140,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
-                self.env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = self.env.GetBodies()[0]
                 lowerlimit,upperlimit = body.GetDOFLimits()
                 for i in range(len(lowerlimit)):
@@ -211,7 +211,7 @@ class TestKinematics(EnvironmentSetup):
         print "change geometry and test if changes are updated"
         env=self.env
         with env:
-            env.Load(g_envfiles[0])
+            self.LoadEnv(g_envfiles[0])
             for body in env.GetBodies():
                 for link in body.GetLinks():
                     geom = link.GetGeometries()[0]
@@ -223,8 +223,7 @@ class TestKinematics(EnvironmentSetup):
                         assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )
 
     def test_hashes(self):
-        robot = self.env.ReadRobotURI(g_robotfiles[0])
-        self.env.AddRobot(robot)
+        robot = self.LoadRobot(g_robotfiles[0])
         s = robot.serialize(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
         robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()])
@@ -233,8 +232,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_staticlinks(self):
         env=self.env
-        robot=env.ReadRobotURI('robots/barrettwam.robot.xml')
-        env.AddRobot(robot)
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
         with env:
             robot.SetDOFValues([0.5],[0])
             values = robot.GetDOFValues()
@@ -256,7 +254,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())
@@ -288,7 +286,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())
@@ -394,7 +392,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_specification(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         spec=robot.GetConfigurationSpecification()
         s=pickle.dumps(spec)

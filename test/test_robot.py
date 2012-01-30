@@ -16,8 +16,7 @@ from common_test_openrave import *
 class TestRobot(EnvironmentSetup):
     def test_dualarm_grabbing(self):
         with self.env:
-            robot = self.env.ReadRobotURI('robots/schunk-lwa3-dual.robot.xml')
-            self.env.AddRobot(robot)
+            robot = self.LoadRobot('robots/schunk-lwa3-dual.robot.xml')
             body = self.env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
             self.env.AddKinBody(body)
             T = eye(4)
@@ -35,9 +34,9 @@ class TestRobot(EnvironmentSetup):
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
-                robot = self.env.ReadRobotURI(robotfile)
-                self.env.AddRobot(robot)
+                robot = self.LoadRobot(robotfile)
                 assert(robot.GetDOF() == robot.GetActiveDOF())
+                assert(robot.GetLinks()[0].GetParent().GetActiveDOF() == robot.GetActiveDOF())
 
     def test_collisionmaprobot(self):
         env=self.env
@@ -46,7 +45,7 @@ class TestRobot(EnvironmentSetup):
 </robot>
 </environment>
 """
-        env.LoadData(xml)
+        self.LoadDataEnv(xml)
         with env:
             robot=env.GetRobots()[0]
             assert(robot.GetXMLId().lower()=='collisionmaprobot')
@@ -55,21 +54,20 @@ class TestRobot(EnvironmentSetup):
             robot.SetDOFValues([0/180.0*pi,1/180.0*pi],[1,2])
             assert(not robot.CheckSelfCollision())
             env.Reset()
-            robot=env.ReadRobotURI('robots/collisionmap.robot.xml')
-            env.AddRobot(robot)
+            robot=self.LoadRobot('robots/collisionmap.robot.xml')
             assert(robot.GetXMLId().lower()=='collisionmaprobot')
 
     def test_grabcollision(self):
         env=self.env
-        env.Load('robots/man1.zae') # load a simple scene
+        self.LoadEnv('robots/man1.zae') # load a simple scene
         with env:
             robot = env.GetRobots()[0] # get the first robot
             leftarm = robot.GetManipulator('leftarm')
             rightarm = robot.GetManipulator('rightarm')
 
-            env.Load('data/mug1.kinbody.xml'); 
+            self.LoadEnv('data/mug1.kinbody.xml'); 
             leftmug = env.GetKinBody('mug')
-            env.Load('data/mug2.kinbody.xml')
+            self.LoadEnv('data/mug2.kinbody.xml')
             rightmug = env.GetKinBody('mug2')
 
             env.StopSimulation()
@@ -106,19 +104,46 @@ class TestRobot(EnvironmentSetup):
             assert(not env.CheckCollision(robot))
 
             robot.ReleaseAllGrabbed()
-            assert(env.CheckCollision(leftmug,rightmug))
+            assert(env.CheckCollision(leftmug,rightmug))        
 
-    def test_basic(self):
-        robot = self.env.ReadRobotURI('robots/schunk-lwa3-dual.robot.xml')
-        self.env.AddRobot(robot)
-        assert(robot.GetLinks()[0].GetParent().GetActiveDOF() == robot.GetActiveDOF())
+    def test_badtrajectory(self):
+        print 'create a discontinuous trajectory and check if robot throws exception'
+        env=self.env
+        robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
+        with env:
+            orgvalues = robot.GetActiveDOFValues()
+            lower,upper = robot.GetDOFLimits()
+            traj=RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[orgvalues,upper+0.1])
+            assert(traj.GetNumWaypoints()==2)
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+            try:
+                robot.GetController().SetPath(traj)
+                while not robot.GetController().IsDone():
+                    env.StepSimulation(0.01)
+                raise ValueError('controller did not throw limit expected exception!')
+            
+            except Exception, e:
+                pass
 
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[lower,upper])
+            assert(traj.GetNumWaypoints()==2)
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+            try:
+                robot.GetController().SetPath(traj)
+                while not robot.GetController().IsDone():
+                    env.StepSimulation(0.01)
+                raise ValueError('controller did not throw velocity limit expected exception!')
+            except Exception, e:
+                pass
+            
     def test_ikcollision(self):
         print 'test if can solve IK during collisions'
         env=self.env
         with env:
-            robot = env.ReadRobotURI('robots/pr2-beta-static.zae')
-            env.AddRobot(robot)
+            robot = self.LoadRobot('robots/pr2-beta-static.zae')
             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
             env.AddKinBody(target,True)
             T=target.GetTransform()
@@ -208,10 +233,9 @@ class TestRobot(EnvironmentSetup):
 #     import inversekinematics
 #     env = Environment()
 #     env.SetDebugLevel(DebugLevel.Debug)
-#     #robot = env.ReadRobotURI('robots/barrettsegway.robot.xml')
-#     robot = env.ReadRobotURI('robots/barrettwam4.robot.xml')
+#     #robot = self.LoadRobot('robots/barrettsegway.robot.xml')
+#     robot = self.LoadRobot('robots/barrettwam4.robot.xml')
 #     robot.SetActiveManipulator('arm')
-#     env.AddRobot(robot)
 #     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
 # 
 #     freejoints=None
@@ -230,8 +254,7 @@ class TestRobot(EnvironmentSetup):
 # 
 # def test_handstraight_jacobian():
 #     env = Environment()
-#     robot = env.ReadRobotURI('robots/barrettwam.robot.xml')
-#     env.AddRobot(robot)
+#     robot = self.LoadRobot('robots/barrettwam.robot.xml')
 #     # use jacobians for validation
 #     with env:
 #         deltastep = 0.01
@@ -288,8 +311,7 @@ class TestRobot(EnvironmentSetup):
 #     import inversekinematics
 #     env = Environment()
 #     env.SetDebugLevel(DebugLevel.Debug)
-#     robot = env.ReadRobotURI('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
-#     env.AddRobot(robot)
+#     robot = self.LoadRobot('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
 #     manip=robot.GetActiveManipulator()
 #     #manip=robot.SetActiveManipulator('leftarm_torso')
 #     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
@@ -316,7 +338,7 @@ class TestRobot(EnvironmentSetup):
 #         
 # def debug_ik():
 #     env = Environment()
-#     env.Load('data/katanatable.env.xml')
+#     self.LoadEnv('data/katanatable.env.xml')
 #     env.StopSimulation()
 #     robot = env.GetRobots()[0]
 # 

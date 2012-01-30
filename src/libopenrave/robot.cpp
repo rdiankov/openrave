@@ -2308,11 +2308,27 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 void RobotBase::_ComputeInternalInformation()
 {
     KinBody::_ComputeInternalInformation();
-    _activespec._vgroups.reserve(2);
     _vAllDOFIndices.resize(GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
         _vAllDOFIndices[i] = i;
     }
+
+    _activespec._vgroups.reserve(2);
+    _activespec._vgroups.resize(0);
+    if( _vAllDOFIndices.size() > 0 ) {
+        ConfigurationSpecification::Group group;
+        stringstream ss;
+        ss << "joint_values " << GetName();
+        FOREACHC(it,_vAllDOFIndices) {
+            ss << " " << *it;
+        }
+        group.name = ss.str();
+        group.dof = (int)_vAllDOFIndices.size();
+        group.offset = 0;
+        group.interpolation = "linear";
+        _activespec._vgroups.push_back(group);
+    }
+
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
         if( (*itmanip)->GetName().size() == 0 ) {

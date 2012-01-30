@@ -47,12 +47,13 @@ class HanoiPuzzle:
         self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
         if self.lmodel.load():
             self.lmodel.setRobotWeights()
-            self.lmodel.setRobotResolutions(xyzdelta=0.003) # the pegs are really thin
+            self.lmodel.setRobotResolutions(xyzdelta=0.002) # the pegs are really thin
             print 'robot resolutions: ',robot.GetDOFResolutions()
             print 'robot weights: ',robot.GetDOFWeights()
         else:
             print 'could not load linkstatistics model, setting weights manually'
-            resolutions = [ 0.00292825,  0.00303916,  0.01520142,  0.0163279,   0.03591959,  0.03591959,  0.08129367]
+            resolutionsbase = array([  0.97608215,   1.01305412,   5.0671395 ,   5.44263243, 11.97319745,  11.97319745,  27.09788841])
+            resolutions = 0.002*resolutionsbase
             weights = [ 1.61903856,  1.11858069,  0.20061367,  0.15267405,  0.05951496,  0.04199751,  0.01950391]
             for j in robot.GetJoints():
                 j.SetWeights(weights[j.GetDOFIndex():(j.GetDOFIndex()+j.GetDOF())])

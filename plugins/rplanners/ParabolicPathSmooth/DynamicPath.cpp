@@ -478,7 +478,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         Real tc = (section.ta+section.tb)*0.5;
         Vector xc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                   //infeasible config
+        if(!feas->ConfigFeasible(xc)) return false;                                                                                                            //infeasible config
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -501,9 +501,12 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
     return true;
 }
 
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,Real tol)
+bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const ParabolicRamp::Vector& tol)
 {
-    PARABOLIC_ASSERT(tol > 0);
+    PARABOLIC_ASSERT(tol.size() == ramp.ramps.size());
+    for(size_t i = 0; i < tol.size(); ++i) {
+        PARABOLIC_ASSERT(tol[i] > 0);
+    }
     if(!space->ConfigFeasible(ramp.x0)) return false;
     if(!space->ConfigFeasible(ramp.x1)) return false;
     //PARABOLIC_ASSERT(space->ConfigFeasible(ramp.x0));
@@ -533,21 +536,23 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,Real to
         Real tnext=t;
         Real amax = 0;
         Real switchNext=ramp.endTime;
+        Real dtmin = 1e30;
         for(size_t i=0; i<ramp.ramps.size(); i++) {
             if(t < ramp.ramps[i].tswitch1) {  //ramp up
                 switchNext =  Min(switchNext, ramp.ramps[i].tswitch1);
                 amax = Max(amax,Max(Abs(ramp.ramps[i].a1),Abs(ramp.ramps[i].a2)));
+                dtmin = min(dtmin,2.0*Sqrt(tol[i]/amax));
             }
             else if(t < ramp.ramps[i].tswitch2) {  //constant vel
                 switchNext = Min(switchNext, ramp.ramps[i].tswitch2);
             }
             else if(t < ramp.ramps[i].ttotal) {  //ramp down
                 amax = Max(amax,Max(Abs(ramp.ramps[i].a1),Abs(ramp.ramps[i].a2)));
+                dtmin = min(dtmin,2.0*Sqrt(tol[i]/amax));
             }
         }
-        Real dt = 2.0*Sqrt(tol/amax);
-        if(t+dt > switchNext) tnext = switchNext;
-        else tnext = t+dt;
+        if(t+dtmin > switchNext) tnext = switchNext;
+        else tnext = t+dtmin;
 
         t = tnext;
         divs.push_back(tnext);
@@ -579,7 +584,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,Real to
     return true;
 }
 
-RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,Real _tol)
+RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const ParabolicRamp::Vector& _tol)
     : feas(_feas),tol(_tol),distance(NULL),maxiters(0)
 {
 }
@@ -783,7 +788,7 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                                                  //same ramp
+        if(i1 == i2) continue;                                                                                                                                                                  //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_ASSERT(u1 >= 0);

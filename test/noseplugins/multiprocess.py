@@ -355,8 +355,9 @@ class MultiProcessTestRunner(TextTestRunner):
             log.debug("Waiting for results (%s/%s tasks), next timeout=%.3fs",
                       len(completed), total_tasks,nexttimeout)
             try:
+                # should periodically check for timeouts with a min of 10s since processes can terminate sporadically
                 iworker, addr, newtask_addrs, batch_result = resultQueue.get(
-                                                        timeout=nexttimeout)
+                                                        timeout=min(10,nexttimeout))
                 log.debug('Results received for worker %d, %s, new tasks: %d',
                           iworker,addr,len(newtask_addrs))
                 try:

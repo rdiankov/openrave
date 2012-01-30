@@ -22,7 +22,7 @@ class TestCollision(EnvironmentSetup):
     def test_basic(self):
         env=self.env
         with env:
-            env.Load('data/hironxtable.env.xml')
+            self.LoadEnv('data/hironxtable.env.xml')
             robot=env.GetRobots()[0]
             env.CheckCollision(robot)
             newobject=env.ReadKinBodyURI('data/mug1.kinbody.xml')
@@ -51,7 +51,7 @@ class TestCollision(EnvironmentSetup):
 
     def test_selfcollision(self):
         with self.env:
-            self.env.Load('data/lab1.env.xml')
+            self.LoadEnv('data/lab1.env.xml')
             target1 = self.env.GetKinBody('mug1')
             target2 = self.env.GetKinBody('mug2')
             target2.SetTransform(target1.GetTransform())
@@ -149,14 +149,13 @@ class TestCollision(EnvironmentSetup):
 </Robot>
 """
         with self.env:
-            robot=self.env.ReadRobotXMLData(testrobot_xml)
-            self.env.AddRobot(robot)
+            robot=self.LoadRobotData(testrobot_xml)
             robot.SetDOFValues([-0.91,2.05],[1,3])
             assert(robot.CheckSelfCollision())
 
     def test_known_collisions(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
         assert(env.CheckCollision(robot))

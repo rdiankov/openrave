@@ -20,7 +20,7 @@ def test_linkstatistics():
 class TestDatabases(EnvironmentSetup):
     def test_ikmodulegeneration(self):
         env=self.env
-        env.Load('robots/neuronics-katana.zae')
+        self.LoadEnv('robots/neuronics-katana.zae')
         robot=env.GetRobots()[0]
         manip=robot.GetActiveManipulator()
         ikmodule = RaveCreateModule(env,'ikfast')

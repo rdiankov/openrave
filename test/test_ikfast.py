@@ -56,7 +56,7 @@ def setup_robotstats():
     env.StopSimulation()
     ikfastproblem = RaveCreateProblem(env,'ikfast')
     assert(ikfastproblem is not None)
-    env.LoadProblem(ikfastproblem,'')
+    env.AddModule(ikfastproblem,'')
 
 def teardown_robotstats():
     global env,ikfastproblem

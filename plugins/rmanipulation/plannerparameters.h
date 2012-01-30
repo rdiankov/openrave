@@ -408,7 +408,7 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation("linear"), _hastimestamps(false), _pointtolerance(0.001), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation("linear"), _hastimestamps(false), _pointtolerance(0.2), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("pointtolerance");
@@ -416,7 +416,7 @@ public:
 
     string _interpolation;
     bool _hastimestamps;
-    dReal _pointtolerance;
+    dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
 
 protected:
     bool _bProcessing;

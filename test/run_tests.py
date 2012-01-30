@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
+import sys, logging
 from optparse import OptionParser
 import nose
 from nose.plugins import failuredetail
@@ -42,6 +42,11 @@ if __name__ == "__main__":
     numprocesses = options.numprocesses if options.numprocesses is not None else cpu_count()
     if usemultiprocess:
         multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter('%(name)s: %(levelname)s %(message)s'))
+        multiprocess.log.addHandler(handler)
+        multiprocess.log.setLevel(logging.DEBUG)
+        
     argv=['nosetests','-v','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
