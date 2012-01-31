@@ -1400,8 +1400,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(int i = 0; i < GetDOF(); ++i) {
         if( IsCircular(i) ) {
             // can rotate forever, so don't limit it
-            _vlowerlimit[i] = -1e5;
-            _vupperlimit[i] = 1e5;
+            _vlowerlimit.at(i) = -1e5;
+            _vupperlimit.at(i) = 1e5;
         }
     }
     _bInitialized = true;

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -83,7 +83,7 @@ public:
             for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
                 const string& interpolation = _spec._vgroups[i].interpolation;
                 const string& name = _spec._vgroups[i].name;
-                bool bNeedDerivatives = false;
+                int nNeedDerivatives = 0;
                 if( interpolation == "previous" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                 }
@@ -92,37 +92,40 @@ public:
                 }
                 else if( interpolation == "linear" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    nNeedDerivatives = 2;
                 }
                 else if( interpolation == "quadratic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    bNeedDerivatives = true;
+                    nNeedDerivatives = 3;
                 }
                 else if( interpolation == "cubic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    bNeedDerivatives = true;
+                    nNeedDerivatives = 3;
                 }
                 else if( interpolation == "quadric" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadric,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    bNeedDerivatives = true;
+                    nNeedDerivatives = 3;
                 }
                 else if( interpolation == "quintic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    bNeedDerivatives = true;
+                    nNeedDerivatives = 3;
                 }
                 else if( name != "deltatime" ) {
                     RAVELOG_DEBUG(str(boost::format("unknown interpolation method '%s' for group '%s'")%interpolation%name));
                 }
 
-                if( bNeedDerivatives ) {
+                if( nNeedDerivatives ) {
                     std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
                     if( itderiv == _spec._vgroups.end() ) {
                         // don't throw an error here since it is unknown if the trajectory will be sampled
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                            _vderivoffsets[_spec._vgroups[i].offset+j] = -2;
+                            _vderivoffsets[_spec._vgroups[i].offset+j] = -nNeedDerivatives;
                         }
                     }
-                    for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                        _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
+                    else {
+                        for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                            _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
+                        }
                     }
                 }
             }
@@ -387,7 +390,7 @@ protected:
             const string& interpolation = _spec._vgroups[i].interpolation;
             const string& name = _spec._vgroups[i].name;
             for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                if( _vderivoffsets[_spec._vgroups[i].offset+j] < -1 ) {
+                if( _vderivoffsets[_spec._vgroups[i].offset+j] < -2 ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("%s interpolation group '%s' needs derivatives for sampling",interpolation%name,ORE_InvalidArguments);
                 }
             }
@@ -411,10 +414,20 @@ protected:
 
     void _InterpolateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        size_t offset= ipoint*_spec.GetDOF()+g.offset;
-        dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
-        for(int i = 0; i < g.dof; ++i) {
-            data[g.offset+i] = (1-f)*_vtrajdata[offset+i] + f*_vtrajdata[_spec.GetDOF()+offset+i];
+        size_t offset= ipoint*_spec.GetDOF();
+        int derivoffset = _vderivoffsets[g.offset];
+        if( derivoffset < 0 ) {
+            // expected derivative offset, interpolation can be wrong for circular joints
+            dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
+            for(int i = 0; i < g.dof; ++i) {
+                data[g.offset+i] = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+            }
+        }
+        else {
+            for(int i = 0; i < g.dof; ++i) {
+                dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
+            }
         }
     }
 

@@ -32,6 +32,8 @@ Planning
 
 * Added many more constraints checking to :ref:`.planningutils.VerifyTrajectory`
 
+* Added very simple parabolic retimier.
+
 Python
 ------
 

@@ -45,7 +45,7 @@ if __name__ == "__main__":
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(logging.Formatter('%(name)s: %(levelname)s %(message)s'))
         multiprocess.log.addHandler(handler)
-        multiprocess.log.setLevel(logging.DEBUG)
+        #multiprocess.log.setLevel(logging.DEBUG)
         
     argv=['nosetests','-v','-d','--with-callableclass','-s']
     if options.os_only:
