@@ -223,12 +223,11 @@ public:
                 else {
                     *(itdata+_timeoffset) = mintime;
                 }
-                if( !bUseEndVelocity ) {
-                    // given the mintime, fill the velocities
-                    FOREACH(itfn,listvelocityfns) {
-                        (*itfn)(itorgdiff, itdataprev, itdata);
-                    }
+                // given the mintime, fill the velocities
+                FOREACH(itfn,listvelocityfns) {
+                    (*itfn)(itorgdiff, itdataprev, itdata);
                 }
+
                 FOREACH(itfn,listwritefns) {
                     (*itfn)(itorgdiff, itdataprev, itdata);
                 }
@@ -244,7 +243,7 @@ public:
 
         // finally initialize the output trajectory
         _WriteTrajectory(ptraj,newspec, data);
-        RAVELOG_DEBUG(str(boost::format("TrajectoryRetimer path length=%fs")%ptraj->GetDuration()));
+        RAVELOG_DEBUG(str(boost::format("%s path length=%fs")%GetXMLId()%ptraj->GetDuration()));
         return PS_HasSolution;
     }
 

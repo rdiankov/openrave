@@ -221,7 +221,11 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
                 for(size_t i = 0; i < parameters->_vConfigVelocityLimit.size(); ++i) {
                     dReal velthresh = parameters->_vConfigVelocityLimit.at(i)*samplingstep+fthresh;
                     if( RaveFabs(vdiff.at(i)) > velthresh ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f",ftime%(ftime+samplingstep)%i%RaveFabs(vdiff.at(i))%velthresh,ORE_InconsistentConstraints);
+                        string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                        ofstream f(filename.c_str());
+                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                        trajectory->serialize(f);
+                        throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%i%RaveFabs(vdiff.at(i))%velthresh%filename,ORE_InconsistentConstraints);
                     }
                 }
                 if( !parameters->_checkpathconstraintsfn(vprevdata,vdata,IT_Closed, configs) ) {
