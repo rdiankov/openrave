@@ -204,6 +204,8 @@ public:
             for(size_t i = 0; i < vnew.size(); ++i) {
                 vnew[i] += vdelta.at(i);
             }
+
+            KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
             _probot->SetActiveDOFValues(vnew);
             _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
             dReal fdistprev = _distmetricfn(vprev,vnew), fdistcur=0;

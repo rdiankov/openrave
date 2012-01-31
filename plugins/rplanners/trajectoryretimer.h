@@ -16,17 +16,25 @@
 #ifndef OPENRAVE_TRAJECTORY_RETIMER
 #define OPENRAVE_TRAJECTORY_RETIMER
 
+#include "plugindefs.h"
+#include "plannerparameters.h"
+
 class TrajectoryRetimer : public PlannerBase
 {
 protected:
-    struct GroupInfo
+    class GroupInfo
     {
+public:
         GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel) {
+        }
+        virtual ~GroupInfo() {
         }
         int degree;
         const ConfigurationSpecification::Group& gpos, &gvel;
         int orgdofoffset;
     };
+    typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
+    typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
 
 public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
@@ -108,9 +116,10 @@ public:
             }
 
             // analyze the configuration space and set the necessary converters
-            list<GroupInfo> listgroupinfo;
+            _listgroupinfo.clear();
             list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
+            list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > listwritefns;
             const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
             for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
                 ConfigurationSpecification::Group& gpos = newspec._vgroups[i];
@@ -129,8 +138,8 @@ public:
                 BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
                 std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
                 BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
-                listgroupinfo.push_back(GroupInfo(degree,gpos,*itvelgroup));
-                listgroupinfo.back().orgdofoffset = orgdofoffset;
+                _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
+                _listgroupinfo.back()->orgdofoffset = orgdofoffset;
 
                 stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
                 string bodyname;
@@ -147,24 +156,27 @@ public:
 
                 if( !_parameters->_hastimestamps ) {
                     if( igrouptype == 0 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,boost::ref(listgroupinfo.back()),_1,_2,_3,_4));
+                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
                     }
                     else if( igrouptype == 1 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,boost::ref(listgroupinfo.back()),affinedofs,_1,_2,_3,_4));
+                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
                     }
                     else if( igrouptype == 2 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,boost::ref(listgroupinfo.back()),iktype,_1,_2,_3,_4));
+                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
                     }
                 }
 
                 if( igrouptype == 0 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,boost::ref(listgroupinfo.back()),_1,_2,_3));
+                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                 }
                 else if( igrouptype == 1 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,boost::ref(listgroupinfo.back()),affinedofs,_1,_2,_3));
+                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                 }
                 else if( igrouptype == 2 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,boost::ref(listgroupinfo.back()),iktype,_1,_2,_3));
+                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                 }
 
                 gpos.interpolation = posinterpolation;
@@ -183,9 +195,9 @@ public:
             std::vector<dReal>::iterator itdata = data.begin();
             data.at(_timeoffset) = 0;
             // set velocities to 0
-            FOREACH(it, listgroupinfo) {
-                int offset = it->gvel.offset;
-                for(int j = 0; j < it->gvel.dof; ++j) {
+            FOREACH(it, _listgroupinfo) {
+                int offset = (*it)->gvel.offset;
+                for(int j = 0; j < (*it)->gvel.dof; ++j) {
                     data.at(offset+j) = 0; // initial
                     data.at(data.size()-dof+offset+j) = 0; // end
                 }
@@ -217,6 +229,9 @@ public:
                         (*itfn)(itorgdiff, itdataprev, itdata);
                     }
                 }
+                FOREACH(itfn,listwritefns) {
+                    (*itfn)(itorgdiff, itdataprev, itdata);
+                }
                 itdataprev = itdata;
             }
         }
@@ -228,8 +243,7 @@ public:
         }
 
         // finally initialize the output trajectory
-        ptraj->Init(newspec);
-        ptraj->Insert(0,data);
+        _WriteTrajectory(ptraj,newspec, data);
         RAVELOG_DEBUG(str(boost::format("TrajectoryRetimer path length=%fs")%ptraj->GetDuration()));
         return PS_HasSolution;
     }
@@ -237,17 +251,35 @@ public:
 protected:
     // method to be overriden by individual timing types
 
+    virtual GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
+        return GroupInfoPtr(new GroupInfo(degree, gpos, gvel));
+    }
+
     virtual bool _SupportInterpolation() = 0;
-    virtual dReal _ComputeMinimumTimeJointValues(GroupInfo& info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
-    virtual void _ComputeVelocitiesJointValues(GroupInfo& info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
-    virtual dReal _ComputeMinimumTimeAffine(GroupInfo& info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
-    virtual void _ComputeVelocitiesAffine(GroupInfo& info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
-    virtual dReal _ComputeMinimumTimeIk(GroupInfo& info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
-    virtual void _ComputeVelocitiesIk(GroupInfo& info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
+    virtual void _ComputeVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual void _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    }
+
+    virtual dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
+    virtual void _ComputeVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual void _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    }
+
+    virtual dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
+    virtual void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual void _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    }
+
+    virtual void _WriteTrajectory(TrajectoryBasePtr ptraj, const ConfigurationSpecification& newspec, const std::vector<dReal>& data) {
+        ptraj->Init(newspec);
+        ptraj->Insert(0,data);
+    }
 
     TrajectoryTimingParametersPtr _parameters;
-    vector<dReal> _vimaxvel, _vimaxaccel;
+    std::vector<dReal> _vimaxvel, _vimaxaccel;
     int _timeoffset;
+    std::list<GroupInfoPtr> _listgroupinfo;
 };
 
 #endif

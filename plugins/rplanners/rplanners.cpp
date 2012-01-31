@@ -56,9 +56,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "lineartrajectoryretimer" ) {
             return CreateLinearTrajectoryRetimer(penv,sinput);
         }
-//        else if( interfacename == "parabolictrajectoryretimer" ) {
-//            return CreateParabolicTrajectoryRetimer(penv,sinput);
-//        }
+        else if( interfacename == "parabolictrajectoryretimer" ) {
+            return CreateParabolicTrajectoryRetimer(penv,sinput);
+        }
         else if( interfacename == "workspacetrajectorytracker" ) {
             return CreateWorkspaceTrajectoryTracker(penv,sinput);
         }
@@ -81,7 +81,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("GraspGradient");
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
     info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
-    //info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
+    info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
 }

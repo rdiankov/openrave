@@ -568,6 +568,12 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     if( listtrajectories.size() == 0 ) {
         return presulttraj;
     }
+    if( listtrajectories.size() == 1 ) {
+        presulttraj = RaveCreateTrajectory(listtrajectories.front()->GetEnv(),listtrajectories.front()->GetXMLId());
+        presulttraj->Clone(listtrajectories.front(),0);
+        return presulttraj;
+    }
+
     ConfigurationSpecification spec;
     vector<dReal> vpointdata;
     vector<dReal> vtimes; vtimes.reserve(listtrajectories.front()->GetNumWaypoints());

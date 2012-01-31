@@ -32,7 +32,7 @@ Planning
 
 * Added many more constraints checking to :ref:`.planningutils.VerifyTrajectory`
 
-* Added very simple parabolic retimier.
+* Added very simple parabolic retimer :ref:`planner-parabolicretimer`
 
 Python
 ------
@@ -55,7 +55,7 @@ Misc
 
 * Fixed default value for :ref:`.Robot.GetActiveConfigurationSpecification`
 
-* Fixed trajectory sampling with circular joints
+* Fixed GenericTrajectory sampling with circular joints
 
 Version 0.5.0
 =============
