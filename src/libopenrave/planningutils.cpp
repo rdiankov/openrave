@@ -176,7 +176,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
             }
         }
         for(size_t i = 0; i < parameters->_vConfigVelocityLimit.size(); ++i) {
-            if( !(RaveFabs(vdatavel.at(i)) <= parameters->_vConfigVelocityLimit[i]+fthresh) ) { // !(x<=y) necessary for catching nans
+            if( !(RaveFabs(vdatavel.at(i)) <= parameters->_vConfigVelocityLimit[i]+fthresh) ) { // !(x<=y) necessary for catching NaNs
                 throw OPENRAVE_EXCEPTION_FORMAT("velocity exceeded configuration %d dof %d: %f>%f", ipoint%i%RaveFabs(vdatavel.at(i))%parameters->_vConfigVelocityLimit[i], ORE_InconsistentConstraints);
             }
         }
@@ -507,11 +507,80 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
 
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, const std::string& plannername)
 {
+    BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
+    BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
     vector<dReal> v1pos(robot->GetActiveDOF(),0), v1vel(robot->GetActiveDOF(),0);
-    vector<dReal> vwaypointstart, vwaypointend;
-    traj->GetWaypoint(0,vwaypointend, robot->GetActiveConfigurationSpecification());
-    //vwaypointstart
-    RAVELOG_WARN("InsertActiveDOFWaypointWithRetiming not implemented\n");
+    ConfigurationSpecification newspec = robot->GetActiveConfigurationSpecification();
+
+    string interpolation = "";
+    FOREACH(it,newspec._vgroups) {
+        std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = traj->GetConfigurationSpecification().FindCompatibleGroup(*it, false);
+        if( itgroup == traj->GetConfigurationSpecification()._vgroups.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("could not find group %s in trajectory",newspec._vgroups.at(0).name,ORE_InvalidArguments);
+        }
+        it->interpolation = itgroup->interpolation;
+        interpolation = itgroup->interpolation;
+    }
+    newspec.AddVelocityGroups(false);
+
+    vector<dReal> vwaypointstart(newspec.GetDOF()), vwaypointend;
+    traj->GetWaypoint(0,vwaypointend, newspec);
+
+    ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvalues.begin(), robot->GetActiveConfigurationSpecification(), 1, traj->GetEnv(), true);
+    if( dofvalues.size() == dofvelocities.size() ) {
+        ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec.ConvertToVelocitySpecification(), dofvelocities.begin(), robot->GetActiveConfigurationSpecification().ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+    }
+
+    TrajectoryBasePtr trajinitial = RaveCreateTrajectory(traj->GetEnv(),traj->GetXMLId());
+    trajinitial->Init(newspec);
+    trajinitial->Insert(0,vwaypointstart);
+    trajinitial->Insert(1,vwaypointend);
+    std::string newplannername = plannername;
+    if( newplannername.size() == 0 ) {
+        if( interpolation == "linear" ) {
+            newplannername = "lineartrajectoryretimer";
+        }
+        else if( interpolation == "quadratic" ) {
+            newplannername = "parabolictrajectoryretimer";
+        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT("currently do not support retiming for %s interpolations",interpolation,ORE_InvalidArguments);
+        }
+    }
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,newplannername);
+
+    trajinitial->GetWaypoint(-1,vwaypointend);
+
+    vector<dReal> vtargetvalues;
+    traj->GetWaypoint(0,vtargetvalues); // in target spec
+
+//    // insert the delta time
+//    dReal lastdeltatime = 0;
+//    if( !trajinitial->GetConfigurationSpecification().ExtractDeltaTime(lastdeltatime, vwaypointend.begin()) ) {
+//        throw OPENRAVE_EXCEPTION_FORMAT0("failed to extract delta time",ORE_Assert);
+//    }
+//    if( !traj->GetConfigurationSpecification().InsertDeltaTime(vtargetvalues.begin(),lastdeltatime) ) {
+//        throw OPENRAVE_EXCEPTION_FORMAT0("failed to insert delta time",ORE_Assert);
+//    }
+//    traj->Insert(0,vtargetvalues,true);
+
+    size_t targetdof = vtargetvalues.size();
+    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
+        std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
+    }
+    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+
+    // copy to the target values while preserving other data
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+    // have to insert the first N-1 and overwrite the Nth
+    vwaypointstart.resize(targetdof);
+    std::copy(vtargetvalues.begin()+vtargetvalues.size()-targetdof,vtargetvalues.end(),vwaypointstart.begin());
+    traj->Insert(0,vwaypointstart,true);
+    vtargetvalues.resize(vtargetvalues.size()-targetdof);
+    if( vtargetvalues.size() > 0 ) {
+        traj->Insert(0,vtargetvalues);
+    }
 }
 
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)

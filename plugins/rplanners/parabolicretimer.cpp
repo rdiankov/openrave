@@ -91,8 +91,15 @@ protected:
     }
 
     void _ComputeVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        for(int i=0; i < info->gvel.dof; ++i) {
-            *(itdata+info->gvel.offset+i) = 0;
+        if( info->orgveloffset >= 0 ) {
+            for(int i=0; i < info->gvel.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = *(itorgdiff+info->orgveloffset+i);
+            }
+        }
+        else {
+            for(int i=0; i < info->gvel.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = 0;
+            }
         }
     }
 
@@ -109,7 +116,7 @@ protected:
             _v1vel.resize(info->gvel.dof);
             for(int i = 0; i < info->gvel.dof; ++i) {
                 _v0vel[i] = *(itdataprev+info->gvel.offset+i);
-                _v1vel[i] = 0;
+                _v1vel[i] = *(itdata+info->gvel.offset+i);
             }
             _ramps.resize(info->gpos.dof);
             dReal deltatime = *(itdata+_timeoffset);

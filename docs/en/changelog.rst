@@ -19,6 +19,8 @@ Core
 
 * Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER.
 
+* Added :ref:`.KinBody.Joint.SubtractValues`
+
 Planning
 --------
 
@@ -33,6 +35,8 @@ Planning
 * Added many more constraints checking to :ref:`.planningutils.VerifyTrajectory`
 
 * Added very simple parabolic retimer :ref:`planner-parabolicretimer`
+
+* If robot originally colliding, MoveToHandPosition/MoveManipulator correctly add the colliding configuration to the trajectory.
 
 Python
 ------

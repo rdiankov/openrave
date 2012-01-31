@@ -1399,9 +1399,9 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
     for(int i = 0; i < GetDOF(); ++i) {
         if( IsCircular(i) ) {
-            // can rotate forever, so don't limit it
-            _vlowerlimit.at(i) = -1e5;
-            _vupperlimit.at(i) = 1e5;
+            // can rotate forever, so don't limit it. Unfortunately if numbers are too big precision will start getting lost
+            _vlowerlimit.at(i) = -1e4;
+            _vupperlimit.at(i) = 1e4;
         }
     }
     _bInitialized = true;
@@ -1572,6 +1572,18 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         _vweights[i] = vweights.at(i);
     }
     GetParent()->_ParametersChanged(Prop_JointProperties);
+}
+
+void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( IsCircular(i) ) {
+            q1.at(i) = ANGLE_DIFF(q1.at(i), q2.at(i));
+        }
+        else {
+            q1.at(i) -= q2.at(i);
+        }
+    }
 }
 
 void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)

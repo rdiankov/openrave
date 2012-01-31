@@ -1416,6 +1416,7 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
             ConfigurationSpecification::Group g;
             g.name = replacename + itgroup->name.substr(offset);
             g.dof = itgroup->dof;
+            g.interpolation = GetInterpolationDerivative(itgroup->interpolation);
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompat = FindCompatibleGroup(g);
             if( itcompat != _vgroups.end() ) {
                 if( itcompat->dof == g.dof ) {
@@ -1468,6 +1469,8 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToVelocitySpecific
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
             itgroup->name = string("ikparam_velocities") + itgroup->name.substr(14);
         }
+
+        itgroup->interpolation = GetInterpolationDerivative(itgroup->interpolation);
     }
     return vspec;
 }
@@ -1574,93 +1577,99 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
         if( itcompatgroupconst == _vgroups.end() ) {
             listaddgroups.push_back(itrgroup);
         }
-        else if( itcompatgroupconst->name == itrgroup->name ) {
-            BOOST_ASSERT(itrgroup->dof == itcompatgroupconst->dof);
-        }
         else {
-            std::vector<Group>::iterator itcompatgroup = _vgroups.begin()+(itcompatgroupconst-_vgroups.begin());
-            // have to divide into tokens
-            ss.clear();
-            ss.str(itcompatgroup->name);
-            std::vector<std::string> targettokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-            ss.clear();
-            ss.str(itrgroup->name);
-            std::vector<std::string> sourcetokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+            if( itrgroup->interpolation != itcompatgroupconst->interpolation ) {
+                RAVELOG_WARN(str(boost::format("interpolation values of group %s differ: %s!=%s")%itcompatgroupconst->name%itcompatgroupconst->interpolation%itrgroup->interpolation));
+            }
 
-            if( targettokens.at(0).size() >= 6 && targettokens.at(0).substr(0,6) == "joint_") {
-                if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
-                    BOOST_ASSERT((int)targettokens.size()>=itcompatgroup->dof+2);
-                    BOOST_ASSERT((int)sourcetokens.size()>=itrgroup->dof+2);
-                    vindices.resize(itcompatgroup->dof);
-                    for(size_t i = 0; i < vindices.size(); ++i) {
-                        vindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
-                    }
-                    for(int i = 0; i < itrgroup->dof; ++i) {
-                        int index = boost::lexical_cast<int>(sourcetokens.at(i+2));
-                        if( find(vindices.begin(),vindices.end(),index) == vindices.end() ) {
-                            itcompatgroup->name += string(" ");
-                            itcompatgroup->name += sourcetokens.at(i+2);
-                            itcompatgroup->dof += 1;
-                            vindices.push_back(index);
-                        }
-                    }
-                }
-                else {
-                    listaddgroups.push_back(itrgroup);
-                }
-            }
-            else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
-                if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
-                    int targetmask = boost::lexical_cast<int>(targettokens.at(2));
-                    int sourcemask = boost::lexical_cast<int>(sourcetokens.at(2));
-                    targetmask |= sourcemask;
-                    if( targetmask & DOF_RotationQuat ) {
-                        targetmask = (targetmask&~DOF_RotationMask)|DOF_RotationQuat;
-                    }
-                    if( targetmask & DOF_Rotation3D ) {
-                        targetmask = (targetmask&~DOF_RotationMask)|DOF_Rotation3D;
-                    }
-
-                    targettokens[2] = boost::lexical_cast<string>(targetmask);
-                    itcompatgroup->dof = RaveGetAffineDOF(targetmask);
-                    itcompatgroup->name = targettokens.at(0);
-                    for(size_t i = 1; i < targettokens.size(); ++i) {
-                        itcompatgroup->name += string(" ");
-                        itcompatgroup->name += targettokens[i];
-                    }
-                }
-                else {
-                    listaddgroups.push_back(itrgroup);
-                }
-            }
-            else if( targettokens.at(0).size() >= 8 && targettokens.at(0).substr(0,8) == "ikparam_") {
-                // no idea how to merge two different ikparams...
-                listaddgroups.push_back(itrgroup);
-            }
-            else if( targettokens.at(0).size() >= 4 && targettokens.at(0).substr(0,4) == "grab") {
-                if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
-                    BOOST_ASSERT((int)targettokens.size()>=itcompatgroup->dof+2);
-                    BOOST_ASSERT((int)sourcetokens.size()>=itrgroup->dof+2);
-                    vindices.resize(itcompatgroup->dof);
-                    for(size_t i = 0; i < vindices.size(); ++i) {
-                        vindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
-                    }
-                    for(int i = 0; i < itrgroup->dof; ++i) {
-                        int index = boost::lexical_cast<int>(sourcetokens.at(i+2));
-                        if( find(vindices.begin(),vindices.end(),index) == vindices.end() ) {
-                            itcompatgroup->name += string(" ");
-                            itcompatgroup->name += sourcetokens.at(i+2);
-                            itcompatgroup->dof += 1;
-                            vindices.push_back(index);
-                        }
-                    }
-                }
-                else {
-                    listaddgroups.push_back(itrgroup);
-                }
+            if( itcompatgroupconst->name == itrgroup->name ) {
+                BOOST_ASSERT(itrgroup->dof == itcompatgroupconst->dof);
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT("do not know how to merge group '%s' into '%s'",itrgroup->name%itcompatgroup->name,ORE_InvalidArguments);
+                std::vector<Group>::iterator itcompatgroup = _vgroups.begin()+(itcompatgroupconst-_vgroups.begin());
+                // have to divide into tokens
+                ss.clear();
+                ss.str(itcompatgroup->name);
+                std::vector<std::string> targettokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                ss.clear();
+                ss.str(itrgroup->name);
+                std::vector<std::string> sourcetokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+
+                if( targettokens.at(0).size() >= 6 && targettokens.at(0).substr(0,6) == "joint_") {
+                    if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
+                        BOOST_ASSERT((int)targettokens.size()>=itcompatgroup->dof+2);
+                        BOOST_ASSERT((int)sourcetokens.size()>=itrgroup->dof+2);
+                        vindices.resize(itcompatgroup->dof);
+                        for(size_t i = 0; i < vindices.size(); ++i) {
+                            vindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
+                        }
+                        for(int i = 0; i < itrgroup->dof; ++i) {
+                            int index = boost::lexical_cast<int>(sourcetokens.at(i+2));
+                            if( find(vindices.begin(),vindices.end(),index) == vindices.end() ) {
+                                itcompatgroup->name += string(" ");
+                                itcompatgroup->name += sourcetokens.at(i+2);
+                                itcompatgroup->dof += 1;
+                                vindices.push_back(index);
+                            }
+                        }
+                    }
+                    else {
+                        listaddgroups.push_back(itrgroup);
+                    }
+                }
+                else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
+                    if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
+                        int targetmask = boost::lexical_cast<int>(targettokens.at(2));
+                        int sourcemask = boost::lexical_cast<int>(sourcetokens.at(2));
+                        targetmask |= sourcemask;
+                        if( targetmask & DOF_RotationQuat ) {
+                            targetmask = (targetmask&~DOF_RotationMask)|DOF_RotationQuat;
+                        }
+                        if( targetmask & DOF_Rotation3D ) {
+                            targetmask = (targetmask&~DOF_RotationMask)|DOF_Rotation3D;
+                        }
+
+                        targettokens[2] = boost::lexical_cast<string>(targetmask);
+                        itcompatgroup->dof = RaveGetAffineDOF(targetmask);
+                        itcompatgroup->name = targettokens.at(0);
+                        for(size_t i = 1; i < targettokens.size(); ++i) {
+                            itcompatgroup->name += string(" ");
+                            itcompatgroup->name += targettokens[i];
+                        }
+                    }
+                    else {
+                        listaddgroups.push_back(itrgroup);
+                    }
+                }
+                else if( targettokens.at(0).size() >= 8 && targettokens.at(0).substr(0,8) == "ikparam_") {
+                    // no idea how to merge two different ikparams...
+                    listaddgroups.push_back(itrgroup);
+                }
+                else if( targettokens.at(0).size() >= 4 && targettokens.at(0).substr(0,4) == "grab") {
+                    if( targettokens.size() >= 2 && sourcetokens.size() >= 2 && targettokens.at(1) == sourcetokens.at(1) ) {
+                        BOOST_ASSERT((int)targettokens.size()>=itcompatgroup->dof+2);
+                        BOOST_ASSERT((int)sourcetokens.size()>=itrgroup->dof+2);
+                        vindices.resize(itcompatgroup->dof);
+                        for(size_t i = 0; i < vindices.size(); ++i) {
+                            vindices[i] = boost::lexical_cast<int>(targettokens.at(i+2));
+                        }
+                        for(int i = 0; i < itrgroup->dof; ++i) {
+                            int index = boost::lexical_cast<int>(sourcetokens.at(i+2));
+                            if( find(vindices.begin(),vindices.end(),index) == vindices.end() ) {
+                                itcompatgroup->name += string(" ");
+                                itcompatgroup->name += sourcetokens.at(i+2);
+                                itcompatgroup->dof += 1;
+                                vindices.push_back(index);
+                            }
+                        }
+                    }
+                    else {
+                        listaddgroups.push_back(itrgroup);
+                    }
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT("do not know how to merge group '%s' into '%s'",itrgroup->name%itcompatgroup->name,ORE_InvalidArguments);
+                }
             }
         }
     }
@@ -1888,7 +1897,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     return bfound;
 }
 
-bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime)
+bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime) const
 {
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
@@ -2295,6 +2304,23 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
             }
         }
     }
+}
+
+std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation)
+{
+    const static boost::array<std::string,6> ordered = {{"next","linear","quadratic","cubic","quadric","quintic"}};
+    for(size_t i = 0; i < ordered.size(); ++i) {
+        if( interpolation == ordered[i] ) {
+            if( i == 0 ) {
+                return ordered.at(0);
+            }
+            else {
+                return ordered.at(i-1);
+            }
+        }
+    }
+
+    throw OPENRAVE_EXCEPTION_FORMAT("failed to find derivative of interpolation %s",interpolation,ORE_InvalidArguments);
 }
 
 ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _spec(spec)

@@ -626,6 +626,11 @@ public:
         /// \brief \see GetWeight
         virtual void SetWeights(const std::vector<dReal>& weights);
 
+        /// \brief Computes the configuration difference values1-values2 and stores it in values1.
+        ///
+        /// Takes into account joint limits and wrapping of circular joints.
+        virtual void SubtractValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
+
         /// \brief Return internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
