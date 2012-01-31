@@ -171,11 +171,14 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         BOOST_ASSERT((int)vdata.size()==parameters->GetDOF());
         BOOST_ASSERT((int)vdatavel.size()==parameters->GetDOF());
         for(size_t i = 0; i < vdata.size(); ++i) {
-            BOOST_ASSERT(vdata[i] >= parameters->_vConfigLowerLimit[i]-fthresh);
-            BOOST_ASSERT(vdata[i] <= parameters->_vConfigUpperLimit[i]+fthresh);
+            if( !(vdata[i] >= parameters->_vConfigLowerLimit[i]-fthresh) || !(vdata[i] <= parameters->_vConfigUpperLimit[i]+fthresh) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("limits exceeded configuration %d dof %d: %f in [%f,%f]", ipoint%i%vdata[i]%parameters->_vConfigLowerLimit[i]%parameters->_vConfigUpperLimit[i], ORE_InconsistentConstraints);
+            }
         }
         for(size_t i = 0; i < parameters->_vConfigVelocityLimit.size(); ++i) {
-            BOOST_ASSERT(RaveFabs(vdatavel.at(i)) <= parameters->_vConfigVelocityLimit[i]+fthresh);
+            if( !(RaveFabs(vdatavel.at(i)) <= parameters->_vConfigVelocityLimit[i]+fthresh) ) { // !(x<=y) necessary for catching nans
+                throw OPENRAVE_EXCEPTION_FORMAT("velocity exceeded configuration %d dof %d: %f>%f", ipoint%i%RaveFabs(vdatavel.at(i))%parameters->_vConfigVelocityLimit[i], ORE_InconsistentConstraints);
+            }
         }
         parameters->_setstatefn(vdata);
         vector<dReal> newq;
@@ -184,7 +187,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         vdiff = newq;
         parameters->_diffstatefn(vdiff,vdata);
         for(size_t i = 0; i < vdiff.size(); ++i) {
-            if( RaveFabs(vdiff.at(i)) > 0.001 * parameters->_vConfigResolution[i] ) {
+            if( !(RaveFabs(vdiff.at(i)) <= 0.001 * parameters->_vConfigResolution[i]) ) {
                 string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -220,7 +223,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
                 parameters->_diffstatefn(vdiff,vprevdata);
                 for(size_t i = 0; i < parameters->_vConfigVelocityLimit.size(); ++i) {
                     dReal velthresh = parameters->_vConfigVelocityLimit.at(i)*samplingstep+fthresh;
-                    if( RaveFabs(vdiff.at(i)) > velthresh ) {
+                    if( !(RaveFabs(vdiff.at(i)) <= velthresh) ) {
                         string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
                         ofstream f(filename.c_str());
                         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -504,6 +507,10 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
 
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, const std::string& plannername)
 {
+    vector<dReal> v1pos(robot->GetActiveDOF(),0), v1vel(robot->GetActiveDOF(),0);
+    vector<dReal> vwaypointstart, vwaypointend;
+    traj->GetWaypoint(0,vwaypointend, robot->GetActiveConfigurationSpecification());
+    //vwaypointstart
     RAVELOG_WARN("InsertActiveDOFWaypointWithRetiming not implemented\n");
 }
 

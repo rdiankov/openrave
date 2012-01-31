@@ -204,6 +204,7 @@ class TestTrajectory(EnvironmentSetup):
             assert(abs(traj.GetWaypoint(disindex,spec)-traj.GetWaypoint(disindex+1,spec)) > 4)
             plannernames = ['parabolictrajectoryretimer','lineartrajectoryretimer']
             for plannername in plannernames:
+                print 'planner',plannername
                 traj2 = RaveCreateTrajectory(env,traj.GetXMLId())
                 traj2.Clone(traj,0)
                 planningutils.RetimeActiveDOFTrajectory(traj2,robot,False,maxvelmult=1,plannername=plannername)

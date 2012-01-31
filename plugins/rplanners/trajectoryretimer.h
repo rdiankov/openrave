@@ -25,13 +25,13 @@ protected:
     class GroupInfo
     {
 public:
-        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel) {
+        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel), orgposoffset(-1), orgveloffset(-1) {
         }
         virtual ~GroupInfo() {
         }
         int degree;
         const ConfigurationSpecification::Group& gpos, &gvel;
-        int orgdofoffset;
+        int orgposoffset, orgveloffset;
     };
     typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
     typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
@@ -134,12 +134,19 @@ public:
                 }
 
                 // group is supported
-                int orgdofoffset = oldspec.FindCompatibleGroup(gpos)->offset;
-                BOOST_ASSERT(orgdofoffset+gpos.dof <= _parameters->GetDOF());
+                std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = oldspec.FindCompatibleGroup(gpos);
+                BOOST_ASSERT(itgroup != oldspec._vgroups.end());
+                int orgposoffset = itgroup->offset;
+                BOOST_ASSERT(orgposoffset+gpos.dof <= _parameters->GetDOF());
                 std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
                 BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
                 _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
-                _listgroupinfo.back()->orgdofoffset = orgdofoffset;
+                _listgroupinfo.back()->orgposoffset = orgposoffset;
+                itgroup = oldspec.FindCompatibleGroup(*itvelgroup);
+                if( itgroup != oldspec._vgroups.end() ) {
+                    // velocity is optional
+                    _listgroupinfo.back()->orgveloffset = itgroup->offset;
+                }
 
                 stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
                 string bodyname;

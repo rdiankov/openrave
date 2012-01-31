@@ -71,7 +71,7 @@ protected:
         _v1pos.resize(info->gpos.dof);
         for(int i = 0; i < info->gpos.dof; ++i) {
             _v0pos[i] = *(itdataprev+info->gpos.offset+i);
-            _v1pos[i] = _v0pos[i] + *(itorgdiff+info->orgdofoffset+i);
+            _v1pos[i] = _v0pos[i] + *(itorgdiff+info->orgposoffset+i);
         }
         _v0vel.resize(info->gvel.dof);
         _v1vel.resize(info->gvel.dof);
@@ -103,7 +103,7 @@ protected:
             _v1pos.resize(info->gpos.dof);
             for(int i = 0; i < info->gpos.dof; ++i) {
                 _v0pos[i] = *(itdataprev+info->gpos.offset+i);
-                _v1pos[i] = _v0pos[i] + *(itorgdiff+info->orgdofoffset+i);
+                _v1pos[i] = _v0pos[i] + *(itorgdiff+info->orgposoffset+i);
             }
             _v0vel.resize(info->gvel.dof);
             _v1vel.resize(info->gvel.dof);
