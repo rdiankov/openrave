@@ -22,11 +22,12 @@ def run_example(name,args=[]):
     example = getattr(examples,name)
     example.run(args=args+['--testmode',"--viewer="])
 
-def test_examples():
-    print "test if all the examples run"
-    yield run_example, 'hanoi', []
-    yield run_example, 'calibrationviews', ['--noshowsensor']
-    #yield run_example, 'graspplanning', []
+# def test_examples():
+#     print "test if all the examples run"
+#     yield run_example, 'hanoi', []
+#     yield run_example, 'calibrationviews', ['--noshowsensor']
+#     #yield run_example, 'graspplanning', []
+
 
 #     for name in dir(examples):
 #         if not name.startswith('__'):
