@@ -162,7 +162,8 @@ class TestMoving(EnvironmentSetup):
             robot.GetController().SetPath(traj)
             while not robot.GetController().IsDone():
                 env.StepSimulation(0.01)
-            robot.Grab(gmodel.target)            
+            robot.Grab(gmodel.target)
+            sol = robot.GetActiveDOFValues()
             traj = basemanip.MoveManipulator(orgvalues,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
             print 'test_wamgraspfromcollision: make sure it starts at the initial configuration'
