@@ -3,12 +3,12 @@
 ChangeLog
 #########
 
-Version 0.5.1 Unstable
-======================
+Version 0.6.0
+=============
 
-Subversion Revision: **Unreleased**
+Subversion Revision: r3032
 
-Initial Release: **Unreleased**
+Initial Release: 2012/02/01
 
 Core
 ----

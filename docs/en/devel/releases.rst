@@ -69,7 +69,7 @@ Debian source packages for Ubuntu/Debian can be prepared by calling cmake with
 
 .. code-block:: bash
   
-  cmake -DOPT_BUILD_PACKAGES=ON ..
+  cmake -DOPT_BUILD_PACKAGES=ON
 
 To upload the packges on the server do
 
@@ -81,20 +81,20 @@ Many times, a special 4th distribution version number ``w`` is attached to the O
 
 .. code-block:: bash
   
-  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w ..
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w
 
 It is possible to customize the PGP signer, the host to upload them, and what distributions to compile them for using
 
 .. code-block:: bash
   
-  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name" ..
+  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name"
 
 
 To compile and upload single precision side-by-side a double precision build do
 
 .. code-block:: bash
   
-  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w -DOPT_BUILD_PACKAGE_DEFAULT=OFF -DOPT_DOUBLE_PRECISION=OFF ..
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w -DOPT_BUILD_PACKAGE_DEFAULT=OFF -DOPT_DOUBLE_PRECISION=OFF
 
 `Ubuntu Debian Packaging Guide <https://wiki.ubuntu.com/PackagingGuide/Complete>`_
 
