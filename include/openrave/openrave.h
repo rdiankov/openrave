@@ -975,16 +975,18 @@ protected:
      */
     virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
 
-    /// \brief Merges all the information from the input group into this group
-    ///
-    /// For groups that are merged, the interpolation method is not changed.
-    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    /** \brief Merges all the information from the input group into this group
+
+        For groups that are merged, the interpolation is overwritten if the source group has an empty string.
+        \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
+     */
     virtual ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
 
-    /// \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
-    ///
-    /// For groups that are merged, the interpolation method is not changed.
-    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    /** \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
+
+        For groups that are merged, the interpolation either has to match for both groups, or one of the groups needs an empty interpolation.
+        \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
+     */
     virtual ConfigurationSpecification operator+ (const ConfigurationSpecification& r) const;
 
     /** \brief extracts an affine transform given the start of a configuration space point

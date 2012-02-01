@@ -331,6 +331,8 @@ protected:
         int nMaxSeedGrasps = 20, nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
         bool bQuitAfterFirstRun = false;
+        dReal jitter = 0.03;
+        int nJitterIterations = 5000;
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
@@ -463,30 +465,45 @@ protected:
         }
         RobotBase::RobotStateSaver saver(_robot);
 
-        bool bMobileBase = _robot->GetAffineDOF()!=0;     // if mobile base, cannot rely on IK
-        if( bMobileBase ) {
+        int nMobileAffine = _robot->GetAffineDOF();     // if mobile base, cannot rely on IK
+        if( nMobileAffine ) {
             RAVELOG_INFO("planning with mobile base!\n");
         }
-        bool bInitialRobotChanged = false;
-        vector<dReal> vCurHandValues, vCurRobotValues, vOrgRobotValues, vHandLowerLimits, vHandUpperLimits;
+
+        vector<int> vindices(pmanip->GetArmIndices().size()+pmanip->GetGripperIndices().size());
+        std::copy(pmanip->GetArmIndices().begin(),pmanip->GetArmIndices().end(),vindices.begin());
+        std::copy(pmanip->GetGripperIndices().begin(),pmanip->GetGripperIndices().end(),vindices.begin()+pmanip->GetArmIndices().size());
+        _robot->SetActiveDOFs(vindices, nMobileAffine, _robot->GetAffineRotationAxis());
+        ConfigurationSpecification specfinal = _robot->GetActiveConfigurationSpecification();
+        specfinal.AddVelocityGroups(true);
+        specfinal.AddDeltaTimeGroup();
+
+        vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
+        // jitter again for initial collision
+
+        vector<dReal> vCurHandValues, vCurRobotValues, vHandLowerLimits, vHandUpperLimits;
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
         _robot->GetActiveDOFValues(vCurHandValues);
         _robot->GetActiveDOFLimits(vHandLowerLimits,vHandUpperLimits);
-        _robot->GetDOFValues(vOrgRobotValues);
+        _robot->GetDOFValues(vCurRobotValues);
 
         SwitchModelState switchstate(shared_problem());
         _UpdateSwitchModels(true,true);
+
         // check if robot is in collision with padded models
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
-            if( !planningutils::JitterActiveDOF(_robot) ) {
-                RAVELOG_ERROR("failed to jitter robot\n");
+            switch( planningutils::JitterActiveDOF(_robot,nJitterIterations,jitter) ) {
+            case 0:
+                RAVELOG_WARN("jitter failed for initial\n");
                 return false;
+            case 1:
+                RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
+                vinsertconfiguration = vCurRobotValues;
+                _robot->GetDOFValues(vCurRobotValues);
+                break;
             }
-            bInitialRobotChanged = true;
         }
-
-        _robot->GetDOFValues(vCurRobotValues);
 
         string strResponse;
         Transform transTarg = ptarget->GetTransform();
@@ -711,7 +728,7 @@ protected:
             }
 
             IkParameterization tApproachEndEffector = tGoalEndEffector;
-            if( !bMobileBase ) {
+            if( !nMobileAffine ) {
                 // check ik
                 Vector vglobalpalmdir;
                 if( iGraspDir >= 0 ) {
@@ -800,7 +817,7 @@ protected:
                     continue;
                 }
 
-                if( !bMobileBase ) {
+                if( !nMobileAffine ) {
                     if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions) ) {
                         listDests.push_back(tDestEndEffector);
                     }
@@ -832,6 +849,7 @@ protected:
 
                 _robot->SetActiveDOFs(pmanip->GetArmIndices());
                 TrajectoryBasePtr ptrajToPreshape = RaveCreateTrajectory(GetEnv(),"");
+                ptrajToPreshape->Init(specfinal);
                 bool bSuccess = CM::MoveUnsync::_MoveUnsyncJoints(GetEnv(), _robot, ptrajToPreshape, pmanip->GetGripperIndices(), vgoalpreshape);
 
                 if( !bSuccess ) {
@@ -841,22 +859,25 @@ protected:
                 }
 
                 // add a grasp with the full preshape
+                specfinal += ptrajToPreshape->GetConfigurationSpecification(); //. don't want to lose any extra information the smoothers might have added
                 if( iGraspPreshape >= 0 ) {
-                    BOOST_ASSERT(ptrajToPreshape->GetNumWaypoints()>0);
-                    vector<dReal> vtrajdata;
-                    ptrajToPreshape->GetWaypoint(-1,vtrajdata);
-                    vector<dReal> vpreshapevalues(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF());
-                    ptrajToPreshape->GetConfigurationSpecification().InsertJointValues(vtrajdata.begin(),vpreshapevalues.begin(),_robot,pmanip->GetGripperIndices());
-                    ptrajToPreshape->Insert(ptrajToPreshape->GetNumWaypoints(),vtrajdata);
-                    planningutils::SmoothActiveDOFTrajectory(ptrajToPreshape,_robot);
+                    planningutils::ConvertTrajectorySpecification(ptrajToPreshape,specfinal);
+                    vector<dReal> vpreshapevalues(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+pmanip->GetGripperIndices().size());
+                    _robot->SetActiveDOFs(pmanip->GetGripperIndices());
+                    // actually should use _phandtraj
+                    planningutils::InsertActiveDOFWaypointWithRetiming(ptrajToPreshape->GetNumWaypoints(), vpreshapevalues, std::vector<dReal>(), ptrajToPreshape, _robot, _fMaxVelMult);
                 }
 
                 mapPreshapeTrajectories[vgoalpreshape] = ptrajToPreshape;
             }
 
-            if( iGraspPreshape >= 0 ) {
-                _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
-            }
+//            itpreshapetraj = mapPreshapeTrajectories.find(vgoalpreshape);
+//            BOOST_ASSERT(itpreshapetraj != mapPreshapeTrajectories.end());
+
+//            if( iGraspPreshape >= 0 ) {
+//                _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
+//            }
+
             listGraspGoals.push_back(GRASPGOAL());
             GRASPGOAL& goal = listGraspGoals.back();
             goal.graspindex = igrasp;
@@ -878,9 +899,9 @@ protected:
                 uint64_t basestart = GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
                 nSearchTime += GetMicroTime() - basestart;
-
-                if( bQuitAfterFirstRun )
+                if( bQuitAfterFirstRun ) {
                     break;
+                }
             }
 
             if( !!ptraj ) {
@@ -899,59 +920,73 @@ protected:
 
         _UpdateSwitchModels(false,false);
 
-        if( !!ptraj ) {
-            PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
-            if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
-                RAVELOG_ERROR("no preshape trajectory!\n");
-                FOREACH(itpreshape,mapPreshapeTrajectories) {
-                    RAVELOG_ERROR("%f %f %f %f %f %f\n",itpreshape->first[0],itpreshape->first[1],itpreshape->first[2],itpreshape->first[3],itpreshape->first[4],itpreshape->first[5]);
-                }
-                return false;
-            }
-
-            TrajectoryBasePtr ptrajfinal = RaveCreateTrajectory(GetEnv(),"");
-            ConfigurationSpecification specfinal = _robot->GetConfigurationSpecification();
-            specfinal.AddVelocityGroups(true);
-            ptrajfinal->Init(specfinal);
-            vector<dReal> vtrajdata;
-            if( bInitialRobotChanged ) {
-                _robot->GetConfigurationValues(vtrajdata);
-                ptrajfinal->Insert(0,vtrajdata,_robot->GetConfigurationSpecification());
-            }
-
-            if( strpreshapetraj.size() > 0 ) {     // write the preshape
-                ofstream f(strpreshapetraj.c_str());
-                itpreshapetraj->second->serialize(f);
-            }
-            if( bCombinePreShapeTraj ) {     // add the preshape
-                itpreshapetraj->second->GetWaypoints(0,itpreshapetraj->second->GetNumWaypoints(),vtrajdata,specfinal);
-                ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
-                // set the last point so the converters can pick it up
-                ptrajfinal->GetWaypoint(-1,vtrajdata,_robot->GetConfigurationSpecification());
-                _robot->SetConfigurationValues(vtrajdata.begin(),true);
-            }
-
-            ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,specfinal);
-            ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
-
-            RAVELOG_DEBUG("grasp index %d\n",goalFound.graspindex);
-            sout << goalFound.listDests.size() << " ";
-            FOREACH(itdest, goalFound.listDests) {
-                sout << *itdest << " ";
-            }
-            sout << goalFound.graspindex << " " << (float)nSearchTime/1000000.0f << " ";
-
-            // set the trajectory
-            vector<int> indices(_robot->GetDOF());
-            for(int i = 0; i < _robot->GetDOF(); ++i) {
-                indices[i] = i;
-            }
-            _robot->SetActiveDOFs(indices);
-            CM::SetActiveTrajectory(_robot,ptrajfinal, bExecute, strtrajfilename, pOutputTrajStream);
-            return true;
+        if( !ptraj ) {
+            return false;     // couldn't not find any grasps
         }
 
-        return false;     // couldn't not find for this cup
+        PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
+        if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
+            std::stringstream ss;
+            ss << "no preshape trajectory where there should have been one!" << endl;
+            RAVELOG_ERROR("no preshape trajectory!\n");
+            FOREACH(itpreshape,mapPreshapeTrajectories) {
+                FOREACHC(itvalue,itpreshape->first) {
+                    ss << *itvalue << ", ";
+                }
+                ss << endl;
+            }
+            throw openrave_exception(ss.str(),ORE_InconsistentConstraints);
+        }
+
+        specfinal += ptraj->GetConfigurationSpecification();
+        TrajectoryBasePtr ptrajfinal = RaveCreateTrajectory(GetEnv(),"");
+        ptrajfinal->Init(specfinal);
+
+        _robot->SetDOFValues(vCurRobotValues);
+
+        if( vinsertconfiguration.size() > 0 ) {
+            _robot->SetActiveDOFs(pmanip->GetArmIndices());
+
+            TrajectoryBasePtr pstarttraj = RaveCreateTrajectory(GetEnv(),"");
+            pstarttraj->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecification());
+            pstarttraj->Insert(0,vinsertconfiguration,_robot->GetConfigurationSpecification());
+            planningutils::RetimeActiveDOFTrajectory(pstarttraj, _robot, false, _fMaxVelMult);
+            // add
+            pstarttraj->GetWaypoints(0,pstarttraj->GetNumWaypoints(),vtrajdata,specfinal);
+            ptrajfinal->Insert(0,vtrajdata);
+        }
+
+        if( bCombinePreShapeTraj ) {     // add the preshape
+            itpreshapetraj->second->GetWaypoints(0,itpreshapetraj->second->GetNumWaypoints(),vtrajdata,specfinal);
+            ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
+            // set the last point so the converters can pick it up
+            ptrajfinal->GetWaypoint(-1,vtrajdata,_robot->GetConfigurationSpecification());
+            _robot->SetConfigurationValues(vtrajdata.begin(),true);
+        }
+
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,specfinal);
+        ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
+
+        if( strpreshapetraj.size() > 0 ) {     // write the preshape
+            ofstream f(strpreshapetraj.c_str());
+            itpreshapetraj->second->serialize(f);
+        }
+
+        RAVELOG_DEBUG("grasp index %d\n",goalFound.graspindex);
+        sout << goalFound.listDests.size() << " ";
+        FOREACH(itdest, goalFound.listDests) {
+            sout << *itdest << " ";
+        }
+        sout << goalFound.graspindex << " " << (float)nSearchTime/1000000.0f << " ";
+
+        // set the trajectory
+        vector<int> indices(_robot->GetDOF());
+        for(int i = 0; i < _robot->GetDOF(); ++i) {
+            indices[i] = i;
+        }
+        _robot->SetActiveDOFs(indices);
+        CM::SetActiveTrajectory(_robot,ptrajfinal, bExecute, strtrajfilename, pOutputTrajStream);
+        return true;
     }
 
     bool CloseFingers(ostream& sout, istream& sinput)
@@ -1354,7 +1389,7 @@ protected:
     class SwitchModelContainer
     {
 public:
-        SwitchModelContainer(KinBodyPtr pbody, const string& fatfilename) : _pbody(pbody) {
+        SwitchModelContainer(KinBodyPtr pbody, const string &fatfilename) : _pbody(pbody) {
             RAVELOG_VERBOSE(str(boost::format("register %s body with %s fatfile\n")%pbody->GetName()%fatfilename));
             _pbodyfat = pbody->GetEnv()->ReadKinBodyURI(fatfilename);
             // validate the fat body
@@ -1474,8 +1509,13 @@ protected:
         return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>& activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)
+    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)
     {
+        int nSeedIkSolutions = 8;
+        int nJitterIterations = 5000;
+        dReal jitter = 0.03;
+        int nMaxTries = 3;
+        dReal fGoalSamplingProb = 0.05;
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
         TrajectoryBasePtr ptraj;
@@ -1495,11 +1535,9 @@ protected:
         params->SetRobotActiveJoints(_robot);
         //params->_sPathOptimizationPlanner = ""; // no smoothing
 
-        vector<dReal> pzero;
-        _robot->GetActiveDOFValues(pzero);
+        _robot->GetActiveDOFValues(params->vinitialconfig);
 
         // make sure the initial and goal configs are not in collision
-        int nSeedIkSolutions = 8;
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
         goalsampler.SetSamplingProb(1);
@@ -1517,28 +1555,33 @@ protected:
             return ptraj;
         }
 
-        goalsampler.SetSamplingProb(0.05);
+        goalsampler.SetSamplingProb(fGoalSamplingProb);
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         // restore
-        _robot->SetActiveDOFValues(pzero);
+        _robot->SetActiveDOFValues(params->vinitialconfig);
 
+        vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        if( !planningutils::JitterActiveDOF(_robot) ) {
-            return ptraj;
+        switch( planningutils::JitterActiveDOF(_robot,nJitterIterations,jitter) ) {
+        case 0:
+            RAVELOG_WARN("jitter failed for initial\n");
+            return TrajectoryBasePtr();
+        case 1:
+            RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
+            vinsertconfiguration = params->vinitialconfig;
+            _robot->GetActiveDOFValues(params->vinitialconfig);
+            break;
         }
 
-        _robot->GetActiveDOFValues(params->vinitialconfig);
         ptraj = RaveCreateTrajectory(GetEnv(),"");
-        ptraj->Init(_robot->GetActiveConfigurationSpecification());
-
         params->_nMaxIterations = nMaxIterations;     // max iterations before failure
 
         bool bSuccess = false;
         RAVELOG_VERBOSE("starting planning\n");
 
         stringstream ss;
-        for(int iter = 0; iter < 3; ++iter) {
+        for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !_pRRTPlanner->InitPlan(_robot, params) ) {
                 RAVELOG_WARN("InitPlan failed\n");
                 ptraj.reset();
@@ -1555,9 +1598,6 @@ protected:
                 else {
                     RAVELOG_INFO(str(boost::format("finished planning, goal index: %d")%nGoalIndex));
                 }
-                if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-                    planningutils::VerifyTrajectory(params,ptraj);
-                }
                 bSuccess = true;
                 break;
             }
@@ -1569,11 +1609,17 @@ protected:
         if( !bSuccess ) {
             ptraj.reset();
         }
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            planningutils::VerifyTrajectory(params, ptraj);
+        }
+        if( vinsertconfiguration.size() > 0 ) {
+            planningutils::InsertActiveDOFWaypointWithRetiming(0,vinsertconfiguration,vector<dReal>(), ptraj, _robot, _fMaxVelMult);
+        }
         return ptraj;
     }
 
     /// grasps using the list of grasp goals. Removes all the goals that the planner planned with
-    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>& listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories)
+    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories)
     {
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         TrajectoryBasePtr ptraj;
@@ -1618,10 +1664,10 @@ protected:
         PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
         if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
             if( itpreshapetraj->second->GetNumWaypoints() > 0 ) {
-                vector<dReal> vtrajdata;
-                _robot->GetConfigurationValues(vtrajdata);
-                itpreshapetraj->second->GetWaypoint(-1,vtrajdata,_robot->GetConfigurationSpecification());
-                _robot->SetConfigurationValues(vtrajdata.begin(),true);
+                vector<dReal> vconfig;
+                _robot->GetConfigurationValues(vconfig);
+                itpreshapetraj->second->GetWaypoint(-1,vconfig,_robot->GetConfigurationSpecification());
+                _robot->SetConfigurationValues(vconfig.begin(),true);
             }
         }
         else {
@@ -1636,25 +1682,19 @@ protected:
 
         int nGoalIndex = -1;
         ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations);
-        if (!ptraj ) {
-            return ptraj;
+        if (!!ptraj) {
+            int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
+            BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
+            list<GRASPGOAL>::iterator it = listgraspsused.begin();
+            advance(it,nGraspIndex);
+            goalfound = *it;
+            RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
         }
 
-        int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
-        BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
-        list<GRASPGOAL>::iterator it = listgraspsused.begin();
-        advance(it,nGraspIndex);
-        goalfound = *it;
-
-        TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(GetEnv(),"");
-        _robot->SetActiveDOFs(pmanip->GetArmIndices());
-        _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
-
-        RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
-        return pfulltraj;
+        return ptraj;
     }
 
-    IkFilterReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikaram, KinBodyPtr ptarget)
+    IkFilterReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikaram, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
             return IKFR_Success;

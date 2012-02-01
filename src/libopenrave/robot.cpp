@@ -1093,6 +1093,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
     _nAffineDOFs = nAffineDOFBitmask;
     _nActiveDOF = vJointIndices.size() + RaveGetAffineDOF(_nAffineDOFs);
 
+    // do not initialize interpolation, since it implies a motion sampling strategy
     int offset = 0;
     _activespec._vgroups.resize(0);
     if( GetActiveDOFIndices().size() > 0 ) {
@@ -1105,7 +1106,6 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         group.name = ss.str();
         group.dof = (int)GetActiveDOFIndices().size();
         group.offset = offset;
-        group.interpolation = "linear";
         offset += group.dof;
         _activespec._vgroups.push_back(group);
     }
@@ -1114,7 +1114,6 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
         group.offset = offset;
         group.dof = RaveGetAffineDOF(GetAffineDOF());
-        group.interpolation = "linear";
         _activespec._vgroups.push_back(group);
     }
 
@@ -2325,7 +2324,7 @@ void RobotBase::_ComputeInternalInformation()
         group.name = ss.str();
         group.dof = (int)_vAllDOFIndices.size();
         group.offset = 0;
-        group.interpolation = "linear";
+        // do not initialize interpolation, since it implies a motion sampling strategy
         _activespec._vgroups.push_back(group);
     }
 

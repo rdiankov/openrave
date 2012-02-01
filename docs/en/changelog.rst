@@ -21,6 +21,8 @@ Core
 
 * Added :ref:`.KinBody.Joint.SubtractValues`
 
+* **interpolation** is set to empty in configurations returned by :ref:`.KinBody.GetConfigurationSpecification` and :ref:`.Robot.GetActiveConfigurationSpecification`.
+
 Planning
 --------
 

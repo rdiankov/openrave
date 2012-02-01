@@ -82,7 +82,6 @@ public:
             _vderivoffsets.resize(_spec.GetDOF(),-1);
             for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
                 const string& interpolation = _spec._vgroups[i].interpolation;
-                const string& name = _spec._vgroups[i].name;
                 int nNeedDerivatives = 0;
                 if( interpolation == "previous" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
@@ -109,9 +108,6 @@ public:
                 else if( interpolation == "quintic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                     nNeedDerivatives = 3;
-                }
-                else if( name != "deltatime" ) {
-                    RAVELOG_DEBUG(str(boost::format("unknown interpolation method '%s' for group '%s'")%interpolation%name));
                 }
 
                 if( nNeedDerivatives ) {
@@ -386,6 +382,14 @@ protected:
 
     void _VerifySampling() const
     {
+        for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
+            if( _spec._vgroups.at(i).offset != _timeoffset ) {
+                if( !_vgroupinterpolators[i] ) {
+                    RAVELOG_WARN(str(boost::format("unknown interpolation method '%s' for group '%s'")%_spec._vgroups.at(i).interpolation%_spec._vgroups.at(i).name));
+                }
+            }
+        }
+
         for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
             const string& interpolation = _spec._vgroups[i].interpolation;
             const string& name = _spec._vgroups[i].name;

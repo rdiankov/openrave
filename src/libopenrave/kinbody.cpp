@@ -4272,6 +4272,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     {
+        // do not initialize interpolation, since it implies a motion sampling strategy
         int offset = 0;
         _spec._vgroups.resize(0);
         if( GetDOF() > 0 ) {
@@ -4284,7 +4285,6 @@ void KinBody::_ComputeInternalInformation()
             group.name = ss.str();
             group.dof = GetDOF();
             group.offset = offset;
-            group.interpolation = "linear";
             offset += group.dof;
             _spec._vgroups.push_back(group);
         }
@@ -4293,7 +4293,6 @@ void KinBody::_ComputeInternalInformation()
         group.name = str(boost::format("affine_transform %s %d")%GetName()%DOF_Transform);
         group.offset = offset;
         group.dof = RaveGetAffineDOF(DOF_Transform);
-        group.interpolation = "linear";
         _spec._vgroups.push_back(group);
     }
 

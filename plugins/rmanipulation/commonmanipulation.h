@@ -148,6 +148,10 @@ public:
                 return false;
             }
 
+            if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+                planningutils::VerifyTrajectory(params,ptraj);
+            }
+
             return true;
         }
 

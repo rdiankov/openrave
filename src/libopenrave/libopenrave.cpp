@@ -1578,15 +1578,18 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
             listaddgroups.push_back(itrgroup);
         }
         else {
-            if( itrgroup->interpolation != itcompatgroupconst->interpolation ) {
-                RAVELOG_WARN(str(boost::format("interpolation values of group %s differ: %s!=%s")%itcompatgroupconst->name%itcompatgroupconst->interpolation%itrgroup->interpolation));
+            std::vector<Group>::iterator itcompatgroup = _vgroups.begin()+(itcompatgroupconst-_vgroups.begin());
+            if( itcompatgroup->interpolation.size() == 0 ) {
+                itcompatgroup->interpolation = itrgroup->interpolation;
+            }
+            else if( itrgroup->interpolation.size() > 0 && itrgroup->interpolation != itcompatgroup->interpolation ) {
+                RAVELOG_WARN(str(boost::format("interpolation values of group %s differ: %s!=%s")%itcompatgroup->name%itcompatgroup->interpolation%itrgroup->interpolation));
             }
 
-            if( itcompatgroupconst->name == itrgroup->name ) {
-                BOOST_ASSERT(itrgroup->dof == itcompatgroupconst->dof);
+            if( itcompatgroup->name == itrgroup->name ) {
+                BOOST_ASSERT(itrgroup->dof == itcompatgroup->dof);
             }
             else {
-                std::vector<Group>::iterator itcompatgroup = _vgroups.begin()+(itcompatgroupconst-_vgroups.begin());
                 // have to divide into tokens
                 ss.clear();
                 ss.str(itcompatgroup->name);
@@ -2319,8 +2322,7 @@ std::string ConfigurationSpecification::GetInterpolationDerivative(const std::st
             }
         }
     }
-
-    throw OPENRAVE_EXCEPTION_FORMAT("failed to find derivative of interpolation %s",interpolation,ORE_InvalidArguments);
+    return "";
 }
 
 ConfigurationSpecification::Reader::Reader(ConfigurationSpecification& spec) : _spec(spec)
