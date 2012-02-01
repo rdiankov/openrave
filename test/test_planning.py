@@ -59,7 +59,7 @@ class TestMoving(EnvironmentSetup):
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
-            print transdist(Tee,ikmodel.manip.GetEndEffectorTransform())
+            print 'test_ikplanning:',transdist(Tee,ikmodel.manip.GetEndEffectorTransform())
             assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):
@@ -83,15 +83,17 @@ class TestMoving(EnvironmentSetup):
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
 
+        print 'test_constraintwam: ikmodel'
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
             ikmodel.autogenerate()
+        print 'test_constraintwam: gmodel'
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
-            
+        print 'test_constraintwam: planning'
         with env:
             basemanip = interfaces.BaseManipulation(robot)
             taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)            
@@ -115,7 +117,7 @@ class TestMoving(EnvironmentSetup):
             assert(solgoal is not None)
             traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
-            print 'make sure it starts at the initial configuration'
+            print 'test_constraintwam: make sure it starts at the initial configuration'
             assert(transdist(soltraj,sol) <= g_epsilon)
             robot.GetController().SetPath(traj)
             while not robot.GetController().IsDone():
@@ -156,7 +158,7 @@ class TestMoving(EnvironmentSetup):
             robot.Grab(gmodel.target)            
             traj = basemanip.MoveManipulator(orgvalues,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
-            print 'make sure it starts at the initial configuration'
+            print 'test_wamgraspfromcollision: make sure it starts at the initial configuration'
             assert(transdist(soltraj,sol) <= g_epsilon)
             robot.GetController().SetPath(traj)
             while not robot.GetController().IsDone():
@@ -274,7 +276,7 @@ class TestMoving(EnvironmentSetup):
             robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
             assert(env.CheckCollision(robot))
 
-            print 'case: environment collision'
+            print 'test_planwithcollision: environment collision'
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
@@ -287,7 +289,7 @@ class TestMoving(EnvironmentSetup):
             ret = basemanip.MoveToHandPosition([Tnew],execute=False)
             assert(ret is not None)
 
-            print 'case: self collision'
+            print 'test_planwithcollision: self collision'
             robot.SetDOFValues(defaultvalues)
             robot.SetDOFValues([ 1.34046301,  0.94535038,  3.03934583, -1.30743665, 0 , 0 ,  0], robot.GetManipulator('leftarm').GetArmIndices())
             assert(robot.CheckSelfCollision())

@@ -37,19 +37,23 @@ if __name__ == "__main__":
                       help='set to create coverage statistics')
     parser.add_option('--os-only',action='store_true',dest='os_only',default=False,
                       help='set to run only tests that test program execution to make sure things run on the current OS')
+    parser.add_option('--test',action='store',dest='testname',default=None,
+                      help='manually specify a test')
     (options, args) = parser.parse_args()
 
     numprocesses = options.numprocesses if options.numprocesses is not None else cpu_count()
     if usemultiprocess:
         multiprocess._instantiate_plugins = [capture.Capture, xunitmultiprocess.Xunitmp,failuredetail.FailureDetail,callableclass.CallableClass]
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(logging.Formatter('%(name)s: %(levelname)s %(message)s'))
+        handler.setFormatter(logging.Formatter('%(name)s %(asctime)s: %(levelname)s %(message)s'))
         multiprocess.log.addHandler(handler)
         multiprocess.log.setLevel(logging.DEBUG)
         
     argv=['nosetests','-v','-d','--with-callableclass','-s']
     if options.os_only:
         argv.append('test_programs.py')
+    if options.testname is not None:
+        argv.append(options.testname)
     if options.with_coverage:
         argv += ['--with-coverage', '--cover-package=openravepy','--cover-html']
 

@@ -143,6 +143,23 @@ class TimedOutException(Exception):
     def __str__(self):
         return repr(self.value)
 
+class UnknownTerminationException(Exception):
+    def __init__(self, value = "Unknown termination"):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+class ForceErrorClass(object):
+    failedaddr=None
+    failedargs=None
+    def __init__(self,failedaddr,failedargs):
+        self.failedaddr=failedaddr
+        self.failedargs=failedargs
+    def __str__(self):
+        return ''
+    def __unicode__(self):
+        return u''
+
 def _import_mp():
     global Process, Queue, Pool, Event, Value, Array
     try:
@@ -331,15 +348,18 @@ class MultiProcessTestRunner(TextTestRunner):
         for i in range(self.config.multiprocess_workers):
             currentaddr = Array('c',1000)
             currentaddr.value = bytes_('')
+            currentargs = Array('c',1000)
+            currentargs.value = bytes_('')
             currentstart = Value('d')
             keyboardCaught = Event()
             p = Process(target=runner, args=(i, testQueue, resultQueue,
-                                             currentaddr, currentstart,
+                                             currentaddr, currentargs, currentstart,
                                              keyboardCaught, shouldStop,
                                              self.loaderClass,
                                              result.__class__,
                                              pickle.dumps(self.config)))
             p.currentaddr = currentaddr
+            p.currentargs = currentargs
             p.currentstart = currentstart
             p.keyboardCaught = keyboardCaught
             # p.setDaemon(True)
@@ -356,10 +376,8 @@ class MultiProcessTestRunner(TextTestRunner):
                       len(completed), total_tasks,nexttimeout)
             try:
                 # should periodically check for timeouts with a min of 10s since processes can terminate sporadically
-                iworker, addr, newtask_addrs, batch_result = resultQueue.get(
-                                                        timeout=min(10,nexttimeout))
-                log.debug('Results received for worker %d, %s, new tasks: %d',
-                          iworker,addr,len(newtask_addrs))
+                iworker, addr, newtask_addrs, batch_result = resultQueue.get(timeout=min(10,nexttimeout))
+                log.debug('Results received for worker %d , %s, new tasks: %d', iworker,addr,len(newtask_addrs))
                 try:
                     try:
                         tasks.remove(addr)
@@ -391,6 +409,8 @@ class MultiProcessTestRunner(TextTestRunner):
                         log.debug('starting new process on worker %s',iworker)
                         currentaddr = Array('c',1000)
                         currentaddr.value = bytes_('')
+                        currentargs = Array('c',1000)
+                        currentargs.value = bytes_('')
                         currentstart = Value('d')
                         currentstart.value = time.time()
                         keyboardCaught = Event()
@@ -398,6 +418,7 @@ class MultiProcessTestRunner(TextTestRunner):
                                                    args=(iworker, testQueue,
                                                          resultQueue,
                                                          currentaddr,
+                                                         currentargs,
                                                          currentstart,
                                                          keyboardCaught,
                                                          shouldStop,
@@ -405,33 +426,70 @@ class MultiProcessTestRunner(TextTestRunner):
                                                          result.__class__,
                                                          pickle.dumps(self.config)))
                         workers[iworker].currentaddr = currentaddr
+                        workers[iworker].currentargs = currentargs
                         workers[iworker].currentstart = currentstart
                         workers[iworker].keyboardCaught = keyboardCaught
                         workers[iworker].start()
             except Empty:
-                log.debug("Timed out with %s tasks pending "
-                          "(empty testQueue=%d): %s",
-                          len(tasks),testQueue.empty(),str(tasks))
+                log.debug("Timed out with %s tasks pending (empty testQueue=%d): %s", len(tasks),testQueue.empty(),str(tasks))
                 any_alive = False
                 for iworker, w in enumerate(workers):
-                    if w.is_alive():
-                        worker_addr = bytes_(w.currentaddr.value,'ascii')
+                    worker_addr = bytes_(w.currentaddr.value,'ascii')
+                    worker_args = pickle.loads(bytes_(w.currentargs.value,'ascii'))
+                    test_addr = worker_addr
+                    if worker_args is not None:
+                        test_addr += str(worker_args)
+
+                    if not w.is_alive():
+                        # it could have segmented with the last job assigned
+                        if len(worker_addr) > 0:
+                            foundtask = [task for task in tasks if task==test_addr]
+                            log.debug('dead worker %d currentaddr: %s, currentargs: %s, found %d matching tasks', iworker, worker_addr,str(worker_args), len(foundtask))
+                            if len(foundtask) > 0:
+                                tasks.remove(foundtask[0])
+                            testQueue.put((worker_addr,ForceErrorClass(worker_addr,worker_args)),block=False)
+                            tasks.append(worker_addr)
+
+                            # restart the worker
+                            currentaddr = Array('c',1000)
+                            currentaddr.value = bytes_('')
+                            currentargs = Array('c',1000)
+                            currentargs.value = bytes_('')
+                            currentstart = Value('d')
+                            currentstart.value = time.time()
+                            keyboardCaught = Event()
+                            workers[iworker] = Process(target=runner,
+                                                       args=(iworker, testQueue,
+                                                             resultQueue,
+                                                             currentaddr,
+                                                             currentargs,
+                                                             currentstart,
+                                                             keyboardCaught,
+                                                             shouldStop,
+                                                             self.loaderClass,
+                                                             result.__class__,
+                                                             pickle.dumps(self.config)))
+                            workers[iworker].currentaddr = currentaddr
+                            workers[iworker].currentargs = currentargs
+                            workers[iworker].currentstart = currentstart
+                            workers[iworker].keyboardCaught = keyboardCaught
+                            workers[iworker].start()
+                            any_alive = True # force continuation
+
+                    else:
                         timeprocessing = time.time()-w.currentstart.value
-                        if (len(worker_addr) == 0
-                            and timeprocessing > self.config.multiprocess_timeout-0.1):
-                            log.debug('worker %d has finished its work item, '
-                                      'but is not exiting? do we wait for it?',
-                                      iworker)
+                        if len(worker_addr) == 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
+                            log.debug('worker %d has finished its work item, but is not exiting? do we wait for it?', iworker)
                             if timeprocessing > self.config.multiprocess_timeout+30:
                                 log.error('worker %d force kill', iworker)
                                 os.kill(w.pid, signal.SIGINT)
                                 time.sleep(0.1)
+                            else:
+                                any_alive = True
                         else:
                             any_alive = True
-                        if (len(worker_addr) > 0
-                            and timeprocessing > self.config.multiprocess_timeout-0.1):
-                            log.debug('timed out worker %s: %s',
-                                      iworker,worker_addr)
+                        if len(worker_addr) > 0 and timeprocessing > self.config.multiprocess_timeout-0.1:
+                            log.debug('timed out worker %s: %s', iworker,worker_addr)
                             w.currentaddr.value = bytes_('')
                             # If the process is in C++ code, sending a SIGINT
                             # might not send a python KeybordInterrupt exception
@@ -445,19 +503,30 @@ class MultiProcessTestRunner(TextTestRunner):
                                     # have to terminate...
                                     log.error("terminating worker %s",iworker)
                                     w.terminate()
+
+                                    foundtask = [task for task in tasks if task==test_addr]
+                                    log.debug('found %d matching tasks', len(foundtask))
+                                    if len(foundtask) > 0:
+                                        tasks.remove(foundtask[0])
+                                    testQueue.put((worker_addr,ForceErrorClass(worker_addr,worker_args)),block=False)
+                                    tasks.append(worker_addr)
+
                                     currentaddr = Array('c',1000)
                                     currentaddr.value = bytes_('')
+                                    currentargs = Array('c',1000)
+                                    currentargs.value = bytes_('')
                                     currentstart = Value('d')
                                     currentstart.value = time.time()
                                     keyboardCaught = Event()
                                     workers[iworker] = Process(target=runner,
                                         args=(iworker, testQueue, resultQueue,
-                                              currentaddr, currentstart,
+                                              currentaddr, currentargs, currentstart,
                                               keyboardCaught, shouldStop,
                                               self.loaderClass,
                                               result.__class__,
                                               pickle.dumps(self.config)))
                                     workers[iworker].currentaddr = currentaddr
+                                    workers[iworker].currentargs = currentargs
                                     workers[iworker].currentstart = currentstart
                                     workers[iworker].keyboardCaught = keyboardCaught
                                     workers[iworker].start()
@@ -636,12 +705,12 @@ class MultiProcessTestRunner(TextTestRunner):
         log.debug("Ran %s tests (total: %s)", testsRun, result.testsRun)
 
 
-def runner(ix, testQueue, resultQueue, currentaddr, currentstart,
+def runner(ix, testQueue, resultQueue, currentaddr, currentargs, currentstart,
            keyboardCaught, shouldStop, loaderClass, resultClass, config):
     try:
         try:
             try:
-                return __runner(ix, testQueue, resultQueue, currentaddr, currentstart,
+                return __runner(ix, testQueue, resultQueue, currentaddr, currentargs, currentstart,
                         keyboardCaught, shouldStop, loaderClass, resultClass, config)
             except KeyboardInterrupt:
                 keyboardCaught.set()
@@ -652,7 +721,7 @@ def runner(ix, testQueue, resultQueue, currentaddr, currentstart,
         testQueue.close()
         resultQueue.close()
 
-def __runner(ix, testQueue, resultQueue, currentaddr, currentstart,
+def __runner(ix, testQueue, resultQueue, currentaddr, currentargs, currentstart,
            keyboardCaught, shouldStop, loaderClass, resultClass, config):
     config = pickle.loads(config)
     dummy_parser = config.parserClass()
@@ -703,22 +772,22 @@ def __runner(ix, testQueue, resultQueue, currentaddr, currentstart,
         test.testQueue = testQueue
         test.tasks = []
         test.arg = arg
-        log.debug("Worker %s Test is %s (%s)", ix, test_addr, test)
+        log.debug("Worker %s Test is %s (%s), args: %s", ix, test_addr, test, str(arg))
         try:
+            task_addr = test_addr
             if arg is not None:
-                test_addr = test_addr + str(arg)
+                task_addr += str(arg)
             currentaddr.value = bytes_(test_addr)
+            currentargs.value = bytes_(pickle.dumps(arg))
             currentstart.value = time.time()
+            result.currentaddr = currentaddr
             test(result)
             currentaddr.value = bytes_('')
-            resultQueue.put((ix, test_addr, test.tasks, batch(result)))
+            resultQueue.put((ix, task_addr, test.tasks, batch(result)))
         except KeyboardInterrupt:
             keyboardCaught.set()
             if len(currentaddr.value) > 0:
-                log.debug(
-                        'Worker %s keyboard interrupt, failing current test %s',
-                        ix,test_addr
-                )
+                log.debug('Worker %s keyboard interrupt, failing current test %s', ix,test_addr )
                 currentaddr.value = bytes_('')
                 failure.Failure(*sys.exc_info())(result)
                 resultQueue.put((ix, test_addr, test.tasks, batch(result)))
@@ -726,13 +795,12 @@ def __runner(ix, testQueue, resultQueue, currentaddr, currentstart,
                 log.debug('Worker %s test %s timed out',ix,test_addr)
                 resultQueue.put((ix, test_addr, test.tasks, batch(result)))
         except SystemExit:
-            currentaddr.value = bytes_('')
             log.exception('Worker %s system exit',ix)
+            currentaddr.value = bytes_('')
             raise
         except:
+            log.exception("Worker %s error running test or returning results",ix)
             currentaddr.value = bytes_('')
-            log.exception("Worker %s error running test or returning "
-                            "results",ix)
             failure.Failure(*sys.exc_info())(result)
             resultQueue.put((ix, test_addr, test.tasks, batch(result)))
         if config.multiprocess_restartworker:
@@ -765,8 +833,7 @@ class NoSharedFixtureContextSuite(ContextSuite):
         """Run tests in suite inside of suite fixtures.
         """
         # proxy the result for myself
-        log.debug("suite %s (%s) run called, tests: %s",
-                  id(self), self, self._tests)
+        log.debug("suite %s (%s) run called, tests: %s", id(self), self, self._tests)
         if self.resultProxy:
             result, orig = self.resultProxy(result, self), result
         else:
@@ -789,28 +856,41 @@ class NoSharedFixtureContextSuite(ContextSuite):
                         # to get the exception
                         test(orig)
                     else:
-                        MultiProcessTestRunner.addtask(self.testQueue,
-                                                       self.tasks, test)
+                        MultiProcessTestRunner.addtask(self.testQueue, self.tasks, test)
             else:
                 for test in localtests:
-                    if (isinstance(test,nose.case.Test)
-                        and self.arg is not None):
+                    if isinstance(test,nose.case.Test) and self.arg is not None:
                         test.test.arg = self.arg
                     else:
                         test.arg = self.arg
                     test.testQueue = self.testQueue
                     test.tasks = self.tasks
+
                     if result.shouldStop:
                         log.debug("stopping")
                         break
+
+                    test_addr = MultiProcessTestRunner.address(test)
+                    orig.currentaddr.value = bytes_(test_addr)
+
+                    if isinstance(self.arg, ForceErrorClass) and self.arg.failedaddr == test_addr:
+                        if isinstance(test,nose.case.Test) and self.arg is not None:
+                            test.test.arg = self.arg.failedargs
+                        else:
+                            test.arg = self.arg.failedargs
+                        test.capturedOutput = None
+                        err = (UnknownTerminationException,UnknownTerminationException(str(test)), None)
+                        test.config.plugins.addError(test,err)
+                        orig.addError(test,err)
+                        return
+
                     # each nose.case.Test will create its own result proxy
                     # so the cases need the original result, to avoid proxy
                     # chains
                     try:
                         test(orig)
                     except KeyboardInterrupt,e:
-                        err = (TimedOutException,TimedOutException(str(test)),
-                               sys.exc_info()[2])
+                        err = (TimedOutException,TimedOutException(str(test)), sys.exc_info()[2])
                         test.config.plugins.addError(test,err)
                         orig.addError(test,err)
         finally:
