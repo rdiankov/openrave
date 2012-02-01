@@ -501,7 +501,7 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool 
     std::string interpolation;
     if( newplannername.size() == 0 ) {
         // check out the trajectory interpolation values and take it from there
-        FOREACH(itgroup,traj->GetConfigurationSpecification()._vgroups) {
+        FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
             if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
                 interpolation = itgroup->interpolation;
                 break;
