@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -117,7 +117,12 @@ public:
             dynamicpath.SetJointLimits(parameters->_vConfigLowerLimit,parameters->_vConfigUpperLimit);
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             RAVELOG_DEBUG(str(boost::format("initial path size %d, duration: %f")%path.size()%dynamicpath.GetTotalTime()));
-            ParabolicRamp::RampFeasibilityChecker checker(this,parameters->_pointtolerance);
+
+            ParabolicRamp::Vector tol = parameters->_vConfigResolution;
+            FOREACH(it,tol) {
+                *it *= parameters->_pointtolerance;
+            }
+            ParabolicRamp::RampFeasibilityChecker checker(this,tol);
             int numshortcuts=0;
             if( !!_parameters->_setstatefn ) {
                 dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
@@ -198,8 +203,9 @@ public:
             RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, length=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const openrave_exception& ex) {
-            RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
-            ofstream f("failedsmoothing.traj");
+            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
+            ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ptraj->serialize(f);
             return PS_Failed;
@@ -210,14 +216,37 @@ public:
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a)
     {
-        _parameters->_setstatefn(a);
-        return _parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr());
+        // have to also test with tolerances!
+        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
+        ParabolicRamp::Vector anew(a.size());
+        FOREACH(itperturbation,perturbations) {
+            for(size_t i = 0; i < a.size(); ++i) {
+                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+            }
+            _parameters->_setstatefn(anew);
+            if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b)
     {
-        _parameters->_setstatefn(a);
-        return _parameters->_checkpathconstraintsfn(a,b,IT_OpenStart,PlannerBase::ConfigurationListPtr());
+        // have to also test with tolerances!
+        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
+        ParabolicRamp::Vector anew(a.size()), bnew(b.size());
+        FOREACH(itperturbation,perturbations) {
+            for(size_t i = 0; i < a.size(); ++i) {
+                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+            }
+            _parameters->_setstatefn(anew);
+            if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     virtual dReal Rand()

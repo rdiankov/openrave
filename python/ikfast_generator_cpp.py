@@ -181,8 +181,8 @@ class CodeGenerator(AutoReloader):
 /// ikfast version %s generated on %s
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
-/// To compile without any main function as a shared object:
-///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
+/// To compile without any main function as a shared object (might need -llapack):
+///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -DIKFAST_CLIBRARY -shared -Wl,-soname,libik.so -o libik.so ik.cpp
 #include <cmath>
 #include <vector>
 #include <limits>
@@ -1877,6 +1877,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 # Durand-Kerner polynomial root finding method
                 # In case of multiple roots, see Pierre Fraigniaud's work on Quadratic-Like Convergence of the Mean
                 # http://www.springerlink.com/content/t72g1635574u10q3/
+                # the following poly has 2 double roots and requires 105-110 steps to get accurate roots (-2.48003364697210,  -0.266182031226875, -0.399192786087098, 5.23118700753098, 1.42932474708659, -3.56915690046190, 1.51649127129379, -0.100045756315578, -1.36239190484780)
+                # on universalrobots-ur6-85-5-a.zae (deg 8), 110 steps is 87.5%, 150 steps is 88.8%, performance difference is 200ms
                 fcode = """static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
 {
     using std::complex;
@@ -1884,7 +1886,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
     const IKReal tolsqrt = 8*sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[%d];
-    const int maxsteps = 50;
+    const int maxsteps = 110;
     for(int i = 0; i < %d; ++i) {
         coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
     }
@@ -1942,7 +1944,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             if( n > 1 ) {
                 newroot /= n;
             }
-            if( IKabs(imag(newroot)) < tol ) {
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
+            if( IKabs(imag(newroot)) < sqrt(std::numeric_limits<IKReal>::epsilon()) ) {
                 rawroots[numroots++] = real(newroot);
             }
         }

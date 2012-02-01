@@ -24,6 +24,7 @@ PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream&
 PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -55,6 +56,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "lineartrajectoryretimer" ) {
             return CreateLinearTrajectoryRetimer(penv,sinput);
         }
+        else if( interfacename == "parabolictrajectoryretimer" ) {
+            return CreateParabolicTrajectoryRetimer(penv,sinput);
+        }
         else if( interfacename == "workspacetrajectorytracker" ) {
             return CreateWorkspaceTrajectoryTracker(penv,sinput);
         }
@@ -77,6 +81,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("GraspGradient");
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
     info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
+    info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
 }

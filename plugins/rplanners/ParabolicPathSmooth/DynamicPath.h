@@ -68,18 +68,18 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
 
 /// Checks whether the ramp is feasible using a piecewise linear approximation
 /// with tolerance tol
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,Real tol);
+bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const ParabolicRamp::Vector& tol);
 
 
 class RampFeasibilityChecker
 {
 public:
-    RampFeasibilityChecker(FeasibilityCheckerBase* feas,Real tol);
+    RampFeasibilityChecker(FeasibilityCheckerBase* feas,const ParabolicRamp::Vector& tol);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
     bool Check(const ParabolicRampND& x);
 
     FeasibilityCheckerBase* feas;
-    Real tol;
+    ParabolicRamp::Vector tol;
     DistanceCheckerBase* distance;
     int maxiters;
 };

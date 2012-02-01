@@ -15,11 +15,11 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 52 generated on 2012-01-25 20:24:57.594507
+/// ikfast version 54 generated on 2012-02-01 02:31:46.793535
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
-/// To compile without any main function as a shared object:
-///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
+/// To compile without any main function as a shared object (might need -llapack):
+///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -DIKFAST_CLIBRARY -shared -Wl,-soname,libik.so -o libik.so ik.cpp
 #include <cmath>
 #include <vector>
 #include <limits>
@@ -979,7 +979,7 @@ static inline void polyroots4(IKReal rawcoeffs[4+1], IKReal rawroots[4], int& nu
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
     const IKReal tolsqrt = 8*sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[4];
-    const int maxsteps = 50;
+    const int maxsteps = 110;
     for(int i = 0; i < 4; ++i) {
         coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
     }
@@ -1037,7 +1037,8 @@ static inline void polyroots4(IKReal rawcoeffs[4+1], IKReal rawroots[4], int& nu
             if( n > 1 ) {
                 newroot /= n;
             }
-            if( IKabs(imag(newroot)) < tol ) {
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
+            if( IKabs(imag(newroot)) < sqrt(std::numeric_limits<IKReal>::epsilon()) ) {
                 rawroots[numroots++] = real(newroot);
             }
         }
@@ -1055,7 +1056,7 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "2640ae411e0c87b03f56bf289296f9d8"; }
 
-IKFAST_API const char* getIKFastVersion() { return "52"; }
+IKFAST_API const char* getIKFastVersion() { return "54"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

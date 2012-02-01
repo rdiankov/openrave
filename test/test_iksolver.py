@@ -16,7 +16,7 @@ from common_test_openrave import *
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
         if not ikmodel.load():
@@ -66,7 +66,7 @@ class TestIkSolver(EnvironmentSetup):
 
     def test_iksolutionjitter(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
         if not ikmodel.load():

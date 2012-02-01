@@ -928,7 +928,7 @@ protected:
 
     bool worEnvCreateModule(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        if( GetEnv()->LoadProblem(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second) != 0 ) {
+        if( GetEnv()->AddModule(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second) != 0 ) {
             RAVELOG_WARN("failed to load problem");
             return false;
         }

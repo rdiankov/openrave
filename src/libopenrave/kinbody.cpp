@@ -1396,6 +1396,14 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     }
     _tinvRight = _tRight.inverse();
     _tinvLeft = _tLeft.inverse();
+
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( IsCircular(i) ) {
+            // can rotate forever, so don't limit it. Unfortunately if numbers are too big precision will start getting lost
+            _vlowerlimit.at(i) = -1e4;
+            _vupperlimit.at(i) = 1e4;
+        }
+    }
     _bInitialized = true;
 }
 
@@ -1564,6 +1572,18 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         _vweights[i] = vweights.at(i);
     }
     GetParent()->_ParametersChanged(Prop_JointProperties);
+}
+
+void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        if( IsCircular(i) ) {
+            q1.at(i) = ANGLE_DIFF(q1.at(i), q2.at(i));
+        }
+        else {
+            q1.at(i) -= q2.at(i);
+        }
+    }
 }
 
 void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
@@ -2946,11 +2966,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
                                 veval.push_back(*iteval);
                             }
-                            else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilon*10000 ) {
+                            else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilon*100000 ) {
                                 veval.push_back(pjoint->_vlowerlimit[i]);
                                 RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
                             }
-                            else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilon*10000 ) {
+                            else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilon*100000 ) {
                                 veval.push_back(pjoint->_vupperlimit[i]);
                                 RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
                             }
@@ -4252,6 +4272,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     {
+        // do not initialize interpolation, since it implies a motion sampling strategy
         int offset = 0;
         _spec._vgroups.resize(0);
         if( GetDOF() > 0 ) {
@@ -4264,7 +4285,6 @@ void KinBody::_ComputeInternalInformation()
             group.name = ss.str();
             group.dof = GetDOF();
             group.offset = offset;
-            group.interpolation = "linear";
             offset += group.dof;
             _spec._vgroups.push_back(group);
         }
@@ -4273,7 +4293,6 @@ void KinBody::_ComputeInternalInformation()
         group.name = str(boost::format("affine_transform %s %d")%GetName()%DOF_Transform);
         group.offset = offset;
         group.dof = RaveGetAffineDOF(DOF_Transform);
-        group.interpolation = "linear";
         _spec._vgroups.push_back(group);
     }
 

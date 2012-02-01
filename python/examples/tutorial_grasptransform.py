@@ -72,7 +72,7 @@ Given:
 .. code-block:: python
 
     O_T_R = self.robot.GetTransform() # robot transform R in global frame O 
-    O_T_G = self.robot.GetActiveManipulator().GetEndEffectorTransform() # grasping frame G in global frame O
+    O_T_G = self.robot.GetActiveManipulator().GetTransform() # grasping frame G in global frame O
     
 Want:
 
@@ -115,7 +115,7 @@ Related Functions
  `Environment.ReadRobotXMLFile` , `Environment.AddRobot` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , 
  `KinBody.GetTransform` , `KinBody.SetTransform` , 
  `Robot.GetActiveDOFValues` , `Robot.SetActiveDOFValues` , `Robot.GetTransform` , `Robot.SetTransform` , `Robot.GetActiveManipulator`,
- `Robot.Manipulator.GetEndEffectorTransform`
+ `Robot.Manipulator.GetTransform`
 
 .. examplepost-block:: tutorial_grasptransform
 """
@@ -143,12 +143,12 @@ class GraspTransform:
                 self.env.drawarrow(p1=T[0:3,3],p2=T[0:3,3]+length*T[0:3,2],linewidth=0.01,color=[0.0,0.0,1.0])]
             
     def showGrasp(self,Tgrasp):
-        """visualizes the robot configuration when robot.GetActiveManipulator().GetEndEffectorTransform()==Tgrasp
+        """visualizes the robot configuration when robot.GetActiveManipulator().GetTransform()==Tgrasp
         
         :param Tgrasp: a row-major 4x4 matrix in numpy.array format
         """
         O_T_R = self.robot.GetTransform() # robot transform R in global frame O 
-        O_T_G = self.robot.GetActiveManipulator().GetEndEffectorTransform() # grasping frame G in global frame O
+        O_T_G = self.robot.GetActiveManipulator().GetTransform() # grasping frame G in global frame O
         G_T_O = linalg.inv(O_T_G) # global frame O in grasping frame G
         G_T_R = dot(G_T_O, O_T_R) # robot frame R in grasping frame G
         O_T_G_goal = Tgrasp # final grasping frame G_goal in global frame O 
@@ -184,7 +184,7 @@ def main(env,options):
     handles = gt.drawTransform(gt.target.GetTransform())
     raw_input('press ENTER to continue...')
     print 'showing grasping frame in global frame O_T_G'
-    handles = gt.drawTransform(gt.robot.GetActiveManipulator().GetEndEffectorTransform())
+    handles = gt.drawTransform(gt.robot.GetActiveManipulator().GetTransform())
     raw_input('press ENTER to continue...')
     raw_input('Guess what the robot will look like when the hand is on the target?\npress ENTER to continue...')
     gt.showGrasp(target.GetTransform())

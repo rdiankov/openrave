@@ -41,7 +41,7 @@ def main(env,options):
     while True:
         with env:
             while True:
-                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                target=ikmodel.manip.GetTransform()[0:3,3]+(random.rand(3)-0.5)
                 direction = random.rand(3)-0.5
                 direction /= linalg.norm(direction)
                 solutions = ikmodel.manip.FindIKSolutions(IkParameterization(Ray(target,direction),IkParameterization.Type.TranslationDirection5D),IkFilterOptions.CheckEnvCollisions)

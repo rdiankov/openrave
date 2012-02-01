@@ -10,14 +10,14 @@ All releases are compiled, signed, and uploaded using:
 * email: openrave.testing@gmail.com
 * sourceforge id: `openravetesting <https://sourceforge.net/users/openravetesting>`_
 * launchpad id: `openrave <https://launchpad.net/~openrave>`_
-* GPG id: OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) <openrave.testing@gmail.com>
+* GPG id: ``OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) <openrave.testing@gmail.com>``
 
 Versioning
 ----------
 
-Should allow multiple openrave versions to be installed simultaneously. This requires using suffixing several files and executables with $MAJOR.$MINOR similar to how python and `boost <https://svn.boost.org/trac/boost/wiki/ImprovingPractices>`_ work.
+Official releases have all even MINOR/PATCH version numbers like 0.6.0, 0.6.2, 0.8.0, 1.2.0. Development releases have odd version numbers like 0.5.0, 0.5.1, 0.6.1, 0.8.3. Any API changes require the MINOR version to increase. OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. In otherwords all 0.3.x releases should be binary compatible with each other. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion.
 
-OpenRAVE patch releases should always be binary compatible so that newer versions can read old plugins. In otherwords all 0.3.x releases should be binary compatible with each other. See `ABI Compatibility <http://www.ros.org/reps/rep-0009.html>`_ for an excellent discussion.
+Allow multiple openrave versions to be installed simultaneously. This requires using suffixing several files and executables with $MAJOR.$MINOR similar to how python and `boost <https://svn.boost.org/trac/boost/wiki/ImprovingPractices>`_ work.
 
 For Linux systems, SOVERSION is always "0" since the important version numbers are part of the library name itself.
 
@@ -37,7 +37,7 @@ The installer:
 * modifies **openrave/config.h** to point to the user-installed location,
 * adds options to install Octave/Python bindings,
 * registers the necessary DLLs and adds registry keys for OpenRAVE
- * Under **HKEY_LOCAL_MACHINE\SOFTWARE\OpenRAVE** will be every OpenRAVE version that is installed. For example "|version|". Under that will be **InstallRoot**.
+ * Under **HKEY_LOCAL_MACHINE\\SOFTWARE\\OpenRAVE** will be every OpenRAVE version that is installed. For example "|version|". Under that will be **InstallRoot**.
 * and modifies the PYTHONPATH and Path environment variables.
 
 Note that the provides DLLs are all compiled in Multithreaded DLL runtime.
@@ -65,22 +65,36 @@ Each package is separated into:
 Building
 ~~~~~~~~
 
-Debian source packages for Ubuntu/Debian can be prepared by calling cmake with::
+Debian source packages for Ubuntu/Debian can be prepared by calling cmake with
 
-  cmake -DOPT_BUILD_PACKAGES=ON ..
+.. code-block:: bash
+  
+  cmake -DOPT_BUILD_PACKAGES=ON
 
-To upload the packges on the server do::
+To upload the packges on the server do
 
+.. code-block:: bash
+  
   make dput
 
-Many times, a special "distribution version" is attached to the OpenRAVE version::
+Many times, a special 4th distribution version number ``w`` is attached to the OpenRAVE version ``x.y.z``
 
-  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_PACKAGE_VERSION="|version|.w" ..
+.. code-block:: bash
+  
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w
 
-It is possible to customize the PGP signer, the host to upload them, and what distributions to compile them for using::
+It is possible to customize the PGP signer, the host to upload them, and what distributions to compile them for using
 
-  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name" ..
+.. code-block:: bash
+  
+  cmake -DOPT_BUILD_PACKAGES=ON -DCPACK_DEBIAN_DISTRIBUTION_RELEASES="lucid;maverick;natty" -DCPACK_PACKAGE_CONTACT="new signer" -DDPUT_HOST="ppa:new_signer/name"
 
+
+To compile and upload single precision side-by-side a double precision build do
+
+.. code-block:: bash
+  
+  cmake -DOPT_BUILD_PACKAGES=ON -DPACKAGE_VERSION=w -DOPT_BUILD_PACKAGE_DEFAULT=OFF -DOPT_DOUBLE_PRECISION=OFF
 
 `Ubuntu Debian Packaging Guide <https://wiki.ubuntu.com/PackagingGuide/Complete>`_
 

@@ -52,7 +52,7 @@ def main(env,options):
         with env:
             # move the robot in a random collision-free position and call the IK
             while True:
-                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                target=ikmodel.manip.GetTransform()[0:3,3]+(random.rand(3)-0.5)
                 robotsolutions = []
                 for ikmodel in ikmodels:
                     for ikmodel2 in ikmodels:
@@ -85,7 +85,7 @@ def main(env,options):
             with env:
                 for ikmodel,sol in izip(ikmodels,sols):
                     ikmodel.robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
-                    T = ikmodel.manip.GetEndEffectorTransform()
+                    T = ikmodel.manip.GetTransform()
                     globaldir = numpy.dot(T[0:3,0:3],ikmodel.manip.GetDirection())
                     dist = linalg.norm(T[0:3,3]-target)+0.4
                     handlerays.append(env.drawlinelist(array([T[0:3,3], T[0:3,3]+dist*globaldir]),5,colors=[0.1,0.1,1]))

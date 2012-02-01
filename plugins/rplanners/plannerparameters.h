@@ -213,7 +213,7 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation("linear"), _pointtolerance(0.001), _hastimestamps(false), _outputaccelchanges(true), _fToolAccelerationLimit(0), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _outputaccelchanges(true), _fToolAccelerationLimit(0), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("pointtolerance");
@@ -222,7 +222,7 @@ public:
     }
 
     string _interpolation;
-    dReal _pointtolerance;
+    dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
     bool _hastimestamps;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     dReal _fToolAccelerationLimit; ///< if non-zero then the timer shoulld consdier the max acceleration limit of the tool.

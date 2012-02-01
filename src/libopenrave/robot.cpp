@@ -860,8 +860,10 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _vTranslationResolutions = Vector(0.001f,0.001f,0.001f);
     _vTranslationWeights = Vector(2.0f,2.0f,2.0f);
 
-    _vRotationAxisLowerLimits = Vector(-PI,-PI,-PI,-PI);
-    _vRotationAxisUpperLimits = Vector(PI,PI,PI,PI);
+    // rotation axis has infinite movement, so make sure the limits are big
+    _vRotationAxisLowerLimits = Vector(-1e4,-1e4,-1e4,1e4);
+    _vRotationAxisUpperLimits = Vector(1e4,1e4,1e4,1e4);
+
     _vRotationAxisMaxVels = Vector(0.4f,0.4f,0.4f,0.4f);
     _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
     _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f,2.0f);
@@ -1093,6 +1095,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
     _nAffineDOFs = nAffineDOFBitmask;
     _nActiveDOF = vJointIndices.size() + RaveGetAffineDOF(_nAffineDOFs);
 
+    // do not initialize interpolation, since it implies a motion sampling strategy
     int offset = 0;
     _activespec._vgroups.resize(0);
     if( GetActiveDOFIndices().size() > 0 ) {
@@ -1105,7 +1108,6 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         group.name = ss.str();
         group.dof = (int)GetActiveDOFIndices().size();
         group.offset = offset;
-        group.interpolation = "linear";
         offset += group.dof;
         _activespec._vgroups.push_back(group);
     }
@@ -1114,7 +1116,6 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
         group.offset = offset;
         group.dof = RaveGetAffineDOF(GetAffineDOF());
-        group.interpolation = "linear";
         _activespec._vgroups.push_back(group);
     }
 
@@ -2308,11 +2309,27 @@ void RobotBase::SimulationStep(dReal fElapsedTime)
 void RobotBase::_ComputeInternalInformation()
 {
     KinBody::_ComputeInternalInformation();
-    _activespec._vgroups.reserve(2);
     _vAllDOFIndices.resize(GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
         _vAllDOFIndices[i] = i;
     }
+
+    _activespec._vgroups.reserve(2);
+    _activespec._vgroups.resize(0);
+    if( _vAllDOFIndices.size() > 0 ) {
+        ConfigurationSpecification::Group group;
+        stringstream ss;
+        ss << "joint_values " << GetName();
+        FOREACHC(it,_vAllDOFIndices) {
+            ss << " " << *it;
+        }
+        group.name = ss.str();
+        group.dof = (int)_vAllDOFIndices.size();
+        group.offset = 0;
+        // do not initialize interpolation, since it implies a motion sampling strategy
+        _activespec._vgroups.push_back(group);
+    }
+
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
         if( (*itmanip)->GetName().size() == 0 ) {

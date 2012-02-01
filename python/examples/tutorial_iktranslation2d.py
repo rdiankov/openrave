@@ -42,11 +42,11 @@ def main(env,options):
     while True:
         with env:
             while True:
-                target=ikmodel.manip.GetEndEffectorTransform()[0:2,3]+0.5*(random.rand(2)-0.5)
+                target=ikmodel.manip.GetTransform()[0:2,3]+0.5*(random.rand(2)-0.5)
                 solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.TranslationXY2D),IkFilterOptions.CheckEnvCollisions)
                 if solutions is not None and len(solutions) > 0: # if found, then break
                     break
-        h=env.plot3(array([target[0],target[1],ikmodel.manip.GetEndEffectorTransform()[2,3]]),10.0)
+        h=env.plot3(array([target[0],target[1],ikmodel.manip.GetTransform()[2,3]]),10.0)
         for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())

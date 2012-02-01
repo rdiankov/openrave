@@ -89,21 +89,21 @@ class BaseManipulation:
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
-    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None):
+    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None,jitter=None):
         """See :ref:`module-basemanipulation-movemanipulator`
         """
         if goal is not None:
             assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
-        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj)
+        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter)
     
-    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None):
+    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         if goal is not None:
             assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj)
+        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter)
 
-    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None):
+    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         cmd += ' '
@@ -124,6 +124,8 @@ class BaseManipulation:
             cmd += 'maxiter %d '%maxiter
         if maxtries is not None:
             cmd += 'maxtries %d '%maxtries
+        if jitter is not None:
+            cmd += 'jitter %f '%jitter
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveActiveJoints')
@@ -131,7 +133,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -159,6 +161,8 @@ class BaseManipulation:
             cmd += 'constraintfreedoms %s '%(' '.join(str(constraintfreedoms[i]) for i in range(6)))
         if constraintmatrix is not None:
             cmd += 'constraintmatrix %s '%matrixSerialization(constraintmatrix)
+        if constrainttaskmatrix is not None:
+            cmd += 'constrainttaskmatrix %s '%matrixSerialization(constrainttaskmatrix)
         if constrainterrorthresh is not None:
             cmd += 'constrainterrorthresh %s '%constrainterrorthresh
         if jitter is not None:

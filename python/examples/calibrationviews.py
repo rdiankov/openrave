@@ -260,7 +260,7 @@ def main(env,options):
     self = CalibrationViews(robot,sensorname=options.sensorname,sensorrobot=sensorrobot,randomize=options.randomize)
 
     attachedsensor = self.vmodel.attachedsensor
-    if attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
+    if options.showsensor and attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
         attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
         attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
 
@@ -292,6 +292,8 @@ def run(args=None):
                       help='If set, will not randomize the bodies and robot position in the scene.')
     parser.add_option('--novisibility', action='store_false',dest='usevisibility',default=True,
                       help='If set, will not perform any visibility searching.')
+    parser.add_option('--noshowsensor', action='store_false',dest='showsensor',default=True,
+                      help='If set, will not show the sensor.')
     parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
     (options, leftargs) = parser.parse_args(args=args)

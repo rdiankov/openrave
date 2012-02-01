@@ -3,12 +3,12 @@
 ChangeLog
 #########
 
-Version 0.5.1 Unstable
-======================
+Version 0.6.0
+=============
 
-Subversion Revision: **Unreleased**
+Subversion Revision: r3032
 
-Initial Release: **Unreleased**
+Initial Release: 2012/02/01
 
 Core
 ----
@@ -17,30 +17,51 @@ Core
 
 * By default all SetDOFValues/SetActiveDOFValues methods check joint limits
 
+* Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER.
+
+* Added :ref:`.KinBody.Joint.SubtractValues`
+
+* **interpolation** is set to empty in configurations returned by :ref:`.KinBody.GetConfigurationSpecification` and :ref:`.Robot.GetActiveConfigurationSpecification`.
+
 Planning
 --------
 
-* Fixed :module:`.examples.constraintplanning` demo and GripperJacobianConstrains classed used for linear constraints.
+* Fixed segment feasibility checking on parabolic smoother by using perterbations, now most small collisions are avoided.
 
-* Fxied :ref:`.planningutils.JitterActiveDOF` when constraints are used.
+* **Many** fixes for :module:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
+
+* Fixed :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
 * Fixed linear smoothing fallback when parabolic smoother fails.
+
+* Added many more constraints checking to :ref:`.planningutils.VerifyTrajectory`
+
+* Added very simple parabolic retimer :ref:`planner-parabolicretimer`
+
+* If robot originally colliding, MoveToHandPosition/MoveManipulator correctly add the colliding configuration to the trajectory.
 
 Python
 ------
 
 * All name strings are now returned/set as unicode objects. All openravepy objects support __unicode__
 
+Inverse Kinematics
+------------------
+
+* Fixed crash when smoothing close configurations.
+
+* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+
 Misc
 ----
 
 * Fixed ``openrave.py --database inversekinematics --show``
 
-* Fixed crash when smoothing close configurations.
-
 * Fixed ``--graspingnoise`` when multi-threading is used
 
-* Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+* Fixed default value for :ref:`.Robot.GetActiveConfigurationSpecification`
+
+* Fixed GenericTrajectory sampling with circular joints
 
 Version 0.5.0
 =============

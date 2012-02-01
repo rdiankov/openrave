@@ -2,13 +2,13 @@
 # install ccache and colorgcc if they are not installed
 if [ -z "`which ccache`" ]; then
   echo Installing ColorGCC ...
-  sudo aptitude install ccache
+  sudo apt-get install ccache
 fi
 
 # Color GCC
 if [ -z "`which colorgcc`" ]; then
   echo Installing ColorGCC ...
-  sudo aptitude install colorgcc
+  sudo apt-get install colorgcc
 fi
 if [ ! -z "`which colorgcc`" ]; then
   export CC="colorgcc"
@@ -59,7 +59,7 @@ done < /etc/colorgcc/colorgccrc
 ### Color Make
 #if [ -z "`which colormake`" ]; then
 #  echo Installing ColorMake ...
-#  sudo aptitude install colormake
+#  sudo apt-get install colormake
 #fi
 #if [ ! -z "`which colormake`" ]; then
 #  alias make='colormake'

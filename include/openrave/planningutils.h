@@ -40,7 +40,7 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
     \param trajectory trajectory of points to be checked
     \param parameters the planner parameters passed to the planner that returned the trajectory
-    \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval.
+    \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
     \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
@@ -90,12 +90,14 @@ OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vect
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. <b>[multi-thread safe]</b>
 
     Collision is not checked on the modified segments of the trajectory.
-    \param waypointindex
+    \param index The index where to start modifying the trajectory.
+    \param dofvalues the configuration to insert into the trajectcory (active dof values of the robot)
+    \param dofvelocities the velocities that the inserted point should start with
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
  */
-OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, const std::string& plannername="");
+OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, const std::string& plannername="");
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
@@ -111,6 +113,12 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 /// trajectories's data can be set at a time.
 /// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
 OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
+
+/** \brief sets the planner parameters structure from a configuration specification
+
+    Attempt to set default values for all parameters
+ */
+OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec);
 
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint

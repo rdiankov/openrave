@@ -40,7 +40,7 @@ Finally all the IK solutions are computed
 
 .. code-block:: python
 
-  solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),True)
+  solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetTransform(),True)
 
 
 In order to render the ik solutions, create a new robot for every solution and make it trasparent
@@ -96,7 +96,7 @@ def main(env,options):
                 lower,upper = [v[ikmodel.manip.GetArmIndices()] for v in ikmodel.robot.GetDOFLimits()]
                 robot.SetDOFValues(random.rand()*(upper-lower)+lower,ikmodel.manip.GetArmIndices()) # set random values
                 if not robot.CheckSelfCollision():
-                    solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetEndEffectorTransform(),IkFilterOptions.CheckEnvCollisions)
+                    solutions = ikmodel.manip.FindIKSolutions(ikmodel.manip.GetTransform(),IkFilterOptions.CheckEnvCollisions)
                     if solutions is not None and len(solutions) > 0: # if found, then break
                         break
             

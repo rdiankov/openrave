@@ -16,49 +16,61 @@ from common_test_openrave import *
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
         print "check if the joint-link set-get functions are consistent along with jacobians"
-        with self.env:
+        env=self.env
+        with env:
             for envfile in g_envfiles:
-                self.env.Reset()
-                self.env.Load(envfile,{'skipgeometry':'1'})
+                env.Reset()
+                self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
                     T = eye(4)
-                    for body in self.env.GetBodies():
-                        print body.GetXMLFilename()
+                    for body in env.GetBodies():
                         # change the staticness of the first link (shouldn't affect anything)
                         body.GetLinks()[0].SetStatic((i%2)>0)
-
+                        
                         Told = body.GetTransform()
                         Tallold = body.GetLinkTransformations()
                         dofvaluesold = body.GetDOFValues()
                         T = randtrans()
                         body.SetTransform(T)
-                        assert( transdist(T,body.GetTransform()) <= g_epsilon )
+                        _T = body.GetTransform()
+                        assert( transdist(T,_T) <= g_epsilon )
                         body.SetLinkTransformations(Tallold)
-                        assert( transdist(Tallold,body.GetLinkTransformations()) <= g_epsilon )
+                        _Tallold = body.GetLinkTransformations()
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
                         Tallnew = [randtrans() for j in range(len(Tallold))]
                         body.SetLinkTransformations(Tallnew)
-                        assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
+                        _Tallnew = body.GetLinkTransformations()
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
                         for link, T in izip(body.GetLinks(),Tallold):
                             link.SetTransform(T)
-                        assert( transdist(Tallold,body.GetLinkTransformations()) <= g_epsilon )
+                        _Tallold = body.GetLinkTransformations()
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
                         # dof
-                        assert( transdist(dofvaluesold,body.GetDOFValues()) <= g_epsilon )
+                        _dofvaluesold = body.GetDOFValues()
+                        assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon )
                         dofvaluesnew = randlimits(*body.GetDOFLimits())
                         body.SetDOFValues(dofvaluesnew)
-                        assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        _dofvaluesnew = body.GetDOFValues()
+                        assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
                         Tallnew = body.GetLinkTransformations()
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
-                        assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
-                        assert( transdist(dofvaluesnew,body.GetDOFValues()) <= g_epsilon )
+                        _Tallnew = body.GetLinkTransformations()
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        _dofvaluesnew = body.GetDOFValues()
+                        assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
+                        
                         # do it again
                         body.SetDOFValues(dofvaluesnew)
-                        assert( transdist(Tallnew,body.GetLinkTransformations()) <= g_epsilon )
+                        _Tallnew = body.GetLinkTransformations()
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
                         for joint in body.GetJoints():
-                            assert( transdist(joint.GetValues(), dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
+                            _dofvaluesnew = joint.GetValues()
+                            assert( all(abs(joint.SubtractValues(dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())], _dofvaluesnew)) <= g_epsilon) )
                         Tallnew2 = [randtrans() for link in body.GetLinks()]
                         for link,T in izip(body.GetLinks(),Tallnew2):
                             link.SetTransform(T)
-                        assert( transdist(body.GetLinkTransformations(),Tallnew2) <= g_epsilon )
+                        _Tallnew2 = body.GetLinkTransformations()
+                        assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon )
                         body.SetLinkTransformations(Tallnew)
                         for idir in range(20):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
@@ -99,7 +111,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
-                self.env.Load(envfile,{'skipgeometry':'1'})
+                self.LoadEnv(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines
                 #self.env.SetPhysicsEngine()
                 for i in range(10):
@@ -115,7 +127,7 @@ class TestKinematics(EnvironmentSetup):
                         dofvelnew = randlimits(-vellimits,vellimits)
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         body.SetVelocity(*link0vel)
-                        assert( sum(abs(body.GetDOFVelocities())) <= g_epsilon )
+                        assert( all(abs(body.GetDOFVelocities()) <= g_epsilon ) )
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
                         assert( transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
                         linkvels = body.GetLinkVelocities()
@@ -140,7 +152,7 @@ class TestKinematics(EnvironmentSetup):
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
-                self.env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = self.env.GetBodies()[0]
                 lowerlimit,upperlimit = body.GetDOFLimits()
                 for i in range(len(lowerlimit)):
@@ -211,7 +223,7 @@ class TestKinematics(EnvironmentSetup):
         print "change geometry and test if changes are updated"
         env=self.env
         with env:
-            env.Load(g_envfiles[0])
+            self.LoadEnv(g_envfiles[0])
             for body in env.GetBodies():
                 for link in body.GetLinks():
                     geom = link.GetGeometries()[0]
@@ -223,8 +235,7 @@ class TestKinematics(EnvironmentSetup):
                         assert( transdist(0.5*(vmax-vmin),extents) <= g_epsilon )
 
     def test_hashes(self):
-        robot = self.env.ReadRobotURI(g_robotfiles[0])
-        self.env.AddRobot(robot)
+        robot = self.LoadRobot(g_robotfiles[0])
         s = robot.serialize(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
         robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()])
@@ -233,8 +244,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_staticlinks(self):
         env=self.env
-        robot=env.ReadRobotURI('robots/barrettwam.robot.xml')
-        env.AddRobot(robot)
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
         with env:
             robot.SetDOFValues([0.5],[0])
             values = robot.GetDOFValues()
@@ -256,7 +266,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())
@@ -288,7 +298,7 @@ class TestKinematics(EnvironmentSetup):
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
-                env.Load(robotfile,{'skipgeometry':'1'})
+                self.LoadEnv(robotfile,{'skipgeometry':'1'})
                 body = env.GetBodies()[0]
 
                 zerovalues = zeros(body.GetDOF())
@@ -394,7 +404,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_specification(self):
         env=self.env
-        env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
         spec=robot.GetConfigurationSpecification()
         s=pickle.dumps(spec)

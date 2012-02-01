@@ -789,7 +789,7 @@ public:
             size_t istandoff = id % standoffs.size();
             size_t ipreshape = (id / standoffs.size()) % preshapes.size();
             size_t iroll = (id / (preshapes.size() * standoffs.size())) % rolls.size();
-            size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()));
+            size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()))%approachrays.size();
             size_t imanipulatordirection = (id / (rolls.size() * preshapes.size() * standoffs.size()*approachrays.size()));
 
             boost::mutex::scoped_lock lock(_mutexGrasp);
@@ -801,12 +801,12 @@ public:
             BOOST_ASSERT(!_graspParamsWork);
             _graspParamsWork.reset(new GraspParametersThread());
             _graspParamsWork->id = id;
-            _graspParamsWork->vtargetposition = approachrays[iapproachray].first;
-            _graspParamsWork->vtargetdirection = approachrays[iapproachray].second;
-            _graspParamsWork->vmanipulatordirection = manipulatordirections[imanipulatordirection];
-            _graspParamsWork->ftargetroll = rolls[iroll];
-            _graspParamsWork->fstandoff = standoffs[istandoff];
-            _graspParamsWork->preshape = preshapes[ipreshape];
+            _graspParamsWork->vtargetposition = approachrays.at(iapproachray).first;
+            _graspParamsWork->vtargetdirection = approachrays.at(iapproachray).second;
+            _graspParamsWork->vmanipulatordirection = manipulatordirections.at(imanipulatordirection);
+            _graspParamsWork->ftargetroll = rolls.at(iroll);
+            _graspParamsWork->fstandoff = standoffs.at(istandoff);
+            _graspParamsWork->preshape = preshapes.at(ipreshape);
             _condGraspHasWork.notify_one();     // notify there is work
             _condGraspReceivedWork.wait(lock);     // wait for more work
         }

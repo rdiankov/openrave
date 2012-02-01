@@ -34,7 +34,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         RegisterCommand("SetCheckCollisions",boost::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
         RegisterCommand("SetThrowExceptions",boost::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
-                        "If set, will throw exceptions instead of print warnings");
+                        "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
         fTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -57,12 +57,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
-            _dofchecklimits.resize(0);
+            _dofcircular.resize(0);
             FOREACH(it,_dofindices) {
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-                _dofchecklimits.push_back(!pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
+                _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
@@ -124,10 +124,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 else {
                     _tdesired = _probot->GetTransform();
                 }
-                _SetDOFValues(_vecdesired,_tdesired);
+                _SetDOFValues(_vecdesired,_tdesired,0);
             }
             else {
-                _SetDOFValues(_vecdesired);
+                _SetDOFValues(_vecdesired,0);
             }
             _bIsDone = false;     // set after _vecdesired has changed
         }
@@ -188,8 +188,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 ptraj->serialize(flog);
             }
 
+            _ptraj = RaveCreateTrajectory(GetEnv(),ptraj->GetXMLId());
+            _ptraj->Clone(ptraj,0);
             _bIsDone = false;
-            _ptraj = ptraj;
         }
 
         return true;
@@ -233,14 +234,14 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( _bTrajHasTransform && _nControlTransformation ) {
                 _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
                 if( vdofvalues.size() > 0 ) {
-                    _SetDOFValues(vdofvalues,t);
+                    _SetDOFValues(vdofvalues,t, fTime > 0 ? fTimeElapsed : 0);
                 }
                 else {
                     _probot->SetTransform(t);
                 }
             }
             else if( vdofvalues.size() > 0 ) {
-                _SetDOFValues(vdofvalues);
+                _SetDOFValues(vdofvalues, fTime > 0 ? fTimeElapsed : 0);
             }
 
             // always release after setting dof values
@@ -259,10 +260,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
         if( _vecdesired.size() > 0 ) {
             if( _nControlTransformation ) {
-                _SetDOFValues(_vecdesired,_tdesired);
+                _SetDOFValues(_vecdesired,_tdesired, 0);
             }
             else {
-                _SetDOFValues(_vecdesired);
+                _SetDOFValues(_vecdesired, 0);
             }
             _bIsDone = true;
         }
@@ -311,14 +312,17 @@ private:
     virtual void _SetJointLimits()
     {
         if( !!_probot ) {
-            _probot->GetDOFLimits(_vlower,_vupper);
+            _probot->GetDOFLimits(_vlower[0],_vupper[0]);
+            _probot->GetDOFVelocityLimits(_vupper[1]);
+            _probot->GetDOFAccelerationLimits(_vupper[2]);
         }
     }
 
-    virtual void _SetDOFValues(const std::vector<dReal>&values)
+    virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
     {
-        vector<dReal> curvalues, curvel;
-        _probot->GetDOFValues(curvalues);
+        vector<dReal> prevvalues, curvalues, curvel;
+        _probot->GetDOFValues(prevvalues);
+        curvalues = prevvalues;
         _probot->GetDOFVelocities(curvel);
         Vector linearvel, angularvel;
         _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
@@ -327,37 +331,48 @@ private:
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _CheckLimits(curvalues);
+        _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,true);
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
         _CheckConfiguration();
     }
-    virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t)
+    virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
     {
         BOOST_ASSERT(_nControlTransformation);
-        vector<dReal> curvalues, curvel;
-        _probot->GetDOFValues(curvalues);
+        vector<dReal> prevvalues, curvalues, curvel;
+        _probot->GetDOFValues(prevvalues);
+        curvalues = prevvalues;
         _probot->GetDOFVelocities(curvel);
         int i = 0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _CheckLimits(curvalues);
+        _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
         _CheckConfiguration();
     }
 
-    void _CheckLimits(std::vector<dReal>&curvalues)
+    void _CheckLimits(std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
     {
-        for(size_t i = 0; i < _vlower.size(); ++i) {
-            if( _dofchecklimits[i] ) {
-                if( curvalues.at(i) < _vlower[i]-5e-5f ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %s < %s")%_probot->GetName()%i%_vlower[i]%curvalues[i]));
+        for(size_t i = 0; i < _vlower[0].size(); ++i) {
+            if( !_dofcircular[i] ) {
+                if( curvalues.at(i) < _vlower[0][i]-5e-5f ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %f < %f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]));
                 }
-                if( curvalues.at(i) > _vupper[i]+5e-5f ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %s > %s")%_probot->GetName()%i%_vupper[i]%curvalues[i]));
+                if( curvalues.at(i) > _vupper[0][i]+5e-5f ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %f > %f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]));
+                }
+            }
+        }
+        if( timeelapsed > 0 ) {
+            vector<dReal> vdiff = curvalues;
+            _probot->SubtractDOFValues(vdiff,prevvalues);
+            for(size_t i = 0; i < _vupper[1].size(); ++i) {
+                dReal maxallowed = timeelapsed * _vupper[1][i]+5e-5f;
+                if( RaveFabs(vdiff.at(i)) > maxallowed ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed));
                 }
             }
         }
@@ -387,7 +402,7 @@ private:
 
     RobotBasePtr _probot;               ///< controlled body
     dReal _fSpeed;                    ///< how fast the robot should go
-    TrajectoryBaseConstPtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
+    TrajectoryBasePtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;
     vector< pair<int, int> > _vgrablinks; /// (data offset, link index) pairs
     dReal fTime;
@@ -396,8 +411,8 @@ private:
     Transform _tdesired;
 
     std::vector<int> _dofindices;
-    std::vector<uint8_t> _dofchecklimits;
-    std::vector<dReal> _vlower, _vupper;
+    std::vector<uint8_t> _dofcircular;
+    boost::array< std::vector<dReal>, 3> _vlower, _vupper; ///< position, velocity, acceleration limits
     int _nControlTransformation;
     ofstream flog;
     int cmdid;

@@ -62,10 +62,9 @@ public:
                 vhanddelta[i] = (vhandgoal[i]-vhandvalues[i])/(dReal)numiter;
 
             while(numiter-- > 0) {
-
-                for(size_t i = 0; i < vhandjoints.size(); ++i)
+                for(size_t i = 0; i < vhandjoints.size(); ++i) {
                     vhandvalues[i] += vhanddelta[i];
-
+                }
                 _robot->SetActiveDOFValues(vhandvalues);
 
                 if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) {
@@ -149,6 +148,10 @@ public:
                 return false;
             }
 
+            if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+                planningutils::VerifyTrajectory(params,ptraj);
+            }
+
             return true;
         }
 
@@ -161,11 +164,15 @@ protected:
     template <typename T>
     class GripperJacobianConstrains {
 public:
-        GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
+        /// \param tTargetWorldFrame the world frame in which the constraints axes are aligned to
+        /// \param tTaskFrameInManip the frame inside the manipulator frame to move
+        /// \param vfreedoms The freedoms along tTargetWorldFrame which are constraints are applied to
+        /// \param errorthresh the threshold of the error on the constraints
+        GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const Transform& tTaskFrameInManip, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
             _tTargetFrameLeft = tTargetWorldFrame;
-            _tTargetFrameRight = tTargetWorldFrame.inverse();
+            _tTargetFrameRight = tTaskFrameInManip; //*tTargetWorldFrame;
             _tOriginalEE = _tTargetFrameLeft*_pmanip->GetTransform()*_tTargetFrameRight;
             _vOriginalEEAxisAngle = axisAngleFromQuat(_tOriginalEE.rot);
             _J.resize(6,_probot->GetActiveDOF());
@@ -189,60 +196,65 @@ public:
         {
             const T lambda2 = 1e-8;         // normalization constant
             using namespace boost::numeric::ublas;
+            if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+                T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
+                if( totalerror2 >= _errorthresh2 ) {
+                    Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight; // for debugging
+                    throw OPENRAVE_EXCEPTION_FORMAT("initial robot configuration does not satisfy constraints %f>%f",totalerror2%_errorthresh2,ORE_InconsistentConstraints);
+                }
+            }
+
             std::vector<dReal> vnew = vprev;
             for(size_t i = 0; i < vnew.size(); ++i) {
                 vnew[i] += vdelta.at(i);
-                if( vnew[i] < _vlower[i] ) {
-                    vnew[i] = _vlower[i];
-                }
-                else if( vnew[i] > _vupper[i] ) {
-                    vnew[i] = _vupper[i];
-                }
             }
+
+            KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
+            _probot->SetActiveDOFValues(vnew);
+            _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
             dReal fdistprev = _distmetricfn(vprev,vnew), fdistcur=0;
             _lasterror=0;
-            _probot->SetActiveDOFValues(vnew);
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
-                Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight;
-                Vector vEEAxisAngle = axisAngleFromQuat(tEE.rot);
-                if( vEEAxisAngle.dot3(_vOriginalEEAxisAngle) < 0 ) {
-                    dReal length2 = vEEAxisAngle.lengthsqr3();
-                    if( length2 > 0 ) {
-                        vEEAxisAngle *= 1-2*PI/RaveSqrt(length2);
+                T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
+                if( totalerror2 < _errorthresh2 ) {
+                    if( fdistcur > 2*fdistprev ) {
+                        RAVELOG_VERBOSE(str(boost::format("new distance from previous %f is greater than delta distance %f, so scaling and trying again")%fdistcur%fdistprev));
+                        dReal t = fdistprev/fdistcur;
+                        for(size_t i = 0; i < vnew.size(); ++i) {
+                            vnew[i] = vnew[i]*t + (1-t)*vprev[i];
+                        }
+                        _probot->SetActiveDOFValues(vnew);
+                        fdistcur = _distmetricfn(vprev,vnew);
+                        continue;
+                    }
+                    else {
+                        vprev = vnew;
+                        return true;
                     }
                 }
-
-                T totalerror=0;
-                for(int i = 0; i < 3; ++i) {
-                    _error(i,0) = _vfreedoms[i]*(_vOriginalEEAxisAngle[i]-vEEAxisAngle[i]);
-                    _error(i+3,0) = _vfreedoms[i+3]*(_tOriginalEE.trans[i]-tEE.trans[i]);
-                    totalerror += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
-                }
-                if( totalerror < _errorthresh2 ) {
-                    vprev = vnew;
-                    return true;
-                }
                 // 2.0 is an arbitrary number...
-                if( totalerror > 2.0*_lasterror && fdistcur > 2.0*fdistprev ) {
+                if( totalerror2 > 4.0*_lasterror && fdistcur > 4.0*fdistprev ) {
                     // last adjustment was greater than total distance (jacobian was close to being singular)
                     _iter = -1;
                     //RAVELOG_INFO(str(boost::format("%f > %f && %f > %f\n")%totalerror%_lasterror%fdistcur%fdistprev));
                     return false;
                 }
-                _lasterror = totalerror;
+                _lasterror = totalerror2;
 
-                // compute jacobian
+                // compute jacobians, make sure to transform by the world frame
                 _pmanip->CalculateAngularVelocityJacobian(_vjacobian);
-                for(size_t i = 0; i < 3; ++i) {
-                    for(size_t j = 0; j < _viweights.size(); ++j) {
-                        _J(i,j) = _vjacobian[i][j]*_viweights[j];
-                    }
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[0][j],_vjacobian[1][j],_vjacobian[2][j]));
+                    _J(0,j) = v[0]*_viweights[j];
+                    _J(1,j) = v[1]*_viweights[j];
+                    _J(2,j) = v[2]*_viweights[j];
                 }
                 _pmanip->CalculateJacobian(_vjacobian);
-                for(size_t i = 0; i < 3; ++i) {
-                    for(size_t j = 0; j < _viweights.size(); ++j) {
-                        _J(3+i,j) = _vjacobian[i][j]*_viweights[j];
-                    }
+                for(size_t j = 0; j < _viweights.size(); ++j) {
+                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[0][j],_vjacobian[1][j],_vjacobian[2][j]));
+                    _J(3+0,j) = v[0]*_viweights[j];
+                    _J(3+1,j) = v[1]*_viweights[j];
+                    _J(3+2,j) = v[2]*_viweights[j];
                 }
                 // pseudo inverse of jacobian
                 _Jt = trans(_J);
@@ -251,7 +263,7 @@ public:
                     _invJJt(i,i) += lambda2;
                 }
                 try {
-                    if( !InvertMatrix(_invJJt,_invJJt) ) {
+                    if( !_InvertMatrix(_invJJt,_invJJt) ) {
                         RAVELOG_VERBOSE("failed to invert matrix\n");
                         _iter = -1;
                         return false;
@@ -266,18 +278,35 @@ public:
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0)*_viweights.at(i);
                 }
-                fdistcur = _distmetricfn(vprev,vnew);
                 _probot->SetActiveDOFValues(vnew,true);
                 _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
+                fdistcur = _distmetricfn(vprev,vnew);
             }
 
             _iter = -1;
-            RAVELOG_DEBUG("constraint function exceeded iterations\n");
+            RAVELOG_VERBOSE("constraint function exceeded iterations\n");
             return false;
         }
 
+        virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error)
+        {
+            Transform tEE = _tTargetFrameLeft * tcur * _tTargetFrameRight;
+            Vector vEEAxisAngle = axisAngleFromQuat(tEE.rot);
+            if( vEEAxisAngle.dot3(_vOriginalEEAxisAngle) < 0 ) {
+                // compute from other hemisphere
+                vEEAxisAngle = axisAngleFromQuat(-tEE.rot);
+            }
+            T totalerror2=0;
+            for(int i = 0; i < 3; ++i) {
+                error(i,0) = _vfreedoms[i]*(_vOriginalEEAxisAngle[i]-vEEAxisAngle[i]);
+                error(i+3,0) = _vfreedoms[i+3]*(_tOriginalEE.trans[i]-tEE.trans[i]);
+                totalerror2 += _error(i,0)*_error(i,0) + _error(3+i,0)*_error(3+i,0);
+            }
+            return totalerror2;
+        }
+
         // Matrix inversion routine. Uses lu_factorize and lu_substitute in uBLAS to invert a matrix */
-        static bool InvertMatrix(const boost::numeric::ublas::matrix<T>& input, boost::numeric::ublas::matrix<T>& inverse) {
+        static bool _InvertMatrix(const boost::numeric::ublas::matrix<T>& input, boost::numeric::ublas::matrix<T>& inverse) {
             using namespace boost::numeric::ublas;
             matrix<T> A(input);         // create a working copy of the input
             permutation_matrix<std::size_t> pm(A.size1());         // create a permutation matrix for the LU-factorization

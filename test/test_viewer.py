@@ -67,7 +67,7 @@ class TestViewer(EnvironmentSetup):
 #     def test_memory(self):
 #         env=self.env
 #         env.StartSimulation(0.1,False)
-#         env.Load('data/pr2test2.env.xml')
+#         self.LoadEnv('data/pr2test2.env.xml')
 #         memusage = []
 #         for i in range(10):
 #             memusage.append(memory())

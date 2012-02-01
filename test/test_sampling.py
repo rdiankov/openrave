@@ -44,7 +44,7 @@ class TestSampling(EnvironmentSetup):
             self._runsampler(type)
         
     def test_robot(self):
-        self.env.Load('data/lab1.env.xml')
+        self.LoadEnv('data/lab1.env.xml')
         robot = self.env.GetRobots()[0]
         sp=RaveCreateSpaceSampler(self.env,'RobotConfiguration %s'%robot.GetName())
         assert(sp.Supports(SampleDataType.Real))

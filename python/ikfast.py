@@ -228,7 +228,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '53'
+__version__ = '54'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -245,6 +245,11 @@ try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
     pass
+
+from sympy import __version__ as sympy_version
+
+if sympy_version >= '0.7.0':
+    raise ValueError('ikfast needs sympy 0.6.x')
 
 try:
     import re # for latex cleanup
@@ -1004,6 +1009,7 @@ class AST:
             assert(0) # need to change angle
 
 from sympy.core import function # for sympy 0.7.1+
+
 class fmod(function.Function):
     """defines floating-point mod"""
     nargs = 2
@@ -3331,6 +3337,7 @@ class IKFastSolver(AutoReloader):
                             usedvars.append(Symbol(jointname))
                         except Exception, e:
                             log.warn(e)
+                            
                     jointcheckeqs = []
                     for i,monom in enumerate(allmonoms):
                         if not i in indices:
@@ -3361,7 +3368,9 @@ class IKFastSolver(AutoReloader):
                         jointtrees.append(finaltree)
                         return [halfanglesolution]+nexttree,usedvars
                     
-                    except self.CannotSolveError:
+                    except self.CannotSolveError,e:
+                        log.debug('failed to solve for final variable %s, so returning just two: %s'%(usedvars[2],str(usedvars[0:2])))
+                        jointtrees += endbranchtree
                         # sometimes the last variable cannot be solved, so returned the already solved variables and let the higher function take care of it 
                         return [halfanglesolution]+nexttree,usedvars[0:2]
                 

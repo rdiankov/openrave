@@ -68,7 +68,7 @@ def main(env,options):
     while True:
         with env:
             while True:
-                target=ikmodel.manip.GetEndEffectorTransform()[0:3,3]+(random.rand(3)-0.5)
+                target=ikmodel.manip.GetTransform()[0:3,3]+(random.rand(3)-0.5)
                 if options.withlocal:
                     localtarget = 0.5*(random.rand(3)-0.5)
                     ikparam = IkParameterization([localtarget,target],IkParameterization.Type.TranslationLocalGlobal6D)
@@ -79,12 +79,12 @@ def main(env,options):
                 if solutions is not None and len(solutions) > 0: # if found, then break
                     break
         h=env.plot3(array([target]),10.0)
-        T2 = robot2.GetActiveManipulator().GetEndEffectorTransform()
+        T2 = robot2.GetActiveManipulator().GetTransform()
         h2=env.plot3(dot(T2[0:3,0:3],localtarget)+T2[0:3,3],15.0,[0,1,0])
         for i in random.permutation(len(solutions))[0:min(80,len(solutions))]:
             with env:
                 robot.SetDOFValues(solutions[i],ikmodel.manip.GetArmIndices())
-                T = ikmodel.manip.GetEndEffectorTransform()
+                T = ikmodel.manip.GetTransform()
                 env.UpdatePublishedBodies()
             time.sleep(0.05)
         h=None

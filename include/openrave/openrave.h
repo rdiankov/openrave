@@ -942,14 +942,17 @@ protected:
     /** \brief adds a velocity group for every position group.
 
         If velocities groups already exist, they are checked for and/or modified. Note that the configuration space
-        might be re-ordered as a result of this function call.
+        might be re-ordered as a result of this function call. If a new group is added, its interpolation will be
+        the derivative of the position group as returned by \ref GetInterpolationDerivative.
         \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
      */
     virtual void AddVelocityGroups(bool adddeltatime);
 
-    /// \brief converts all the groups to the corresponding velocity groups and returns the specification
-    ///
-    /// The velocity configuration space will have a one-to-one correspondence with the
+    /** \brief converts all the groups to the corresponding velocity groups and returns the specification
+
+        The velocity configuration space will have a one-to-one correspondence with the original configuration.
+        The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative.
+     */
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /// \brief returns a new specification of just particular time-derivative groups.
@@ -972,16 +975,18 @@ protected:
      */
     virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
 
-    /// \brief Merges all the information from the input group into this group
-    ///
-    /// For groups that are merged, the interpolation method is not changed.
-    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    /** \brief Merges all the information from the input group into this group
+
+        For groups that are merged, the interpolation is overwritten if the source group has an empty string.
+        \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
+     */
     virtual ConfigurationSpecification& operator+= (const ConfigurationSpecification& r);
 
-    /// \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
-    ///
-    /// For groups that are merged, the interpolation method is not changed.
-    /// \throw openrave_exception throws if groups do not contain enough information to be merged
+    /** \brief Return a new specification that holds the merged information from the current and input specification and the input parameter..
+
+        For groups that are merged, the interpolation either has to match for both groups, or one of the groups needs an empty interpolation.
+        \throw openrave_exception throws if groups do not contain enough information to be merged or interpolations do not match.
+     */
     virtual ConfigurationSpecification operator+ (const ConfigurationSpecification& r) const;
 
     /** \brief extracts an affine transform given the start of a configuration space point
@@ -1046,7 +1051,7 @@ protected:
         \param[in] deltatime the delta time of the time stamp (from previous point)
         \return true if at least one group was found for inserting
      */
-    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime);
+    virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -1074,6 +1079,11 @@ protected:
         \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
      */
     static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    /// \brief gets the name of the interpolation that represents the derivative of the passed in interpolation.
+    ///
+    /// For example GetInterpolationDerivative("quadratic") -> "linear"
+    static std::string GetInterpolationDerivative(const std::string& interpolation);
 
     std::vector<Group> _vgroups;
 };

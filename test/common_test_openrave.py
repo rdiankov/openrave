@@ -92,3 +92,35 @@ class EnvironmentSetup(object):
     def teardown(self):
         self.env.Destroy()
         self.env=None
+    def LoadDataEnv(self,*args,**kwargs):
+        print 'LoadDataEnv'
+        assert(self.env.LoadData(*args,**kwargs))
+        self._PreprocessEnv()
+    
+    def LoadEnv(self,*args,**kwargs):
+        print 'LoadEnv',args,kwargs
+        assert(self.env.Load(*args,**kwargs))
+        self._PreprocessEnv()
+
+    def LoadRobot(self,*args,**kwargs):
+        print 'LoadRobot',args,kwargs
+        robot=self.env.ReadRobotURI(*args,**kwargs)
+        self.env.AddRobot(robot,True)
+        self._PreprocessRobot(robot)
+        return robot
+
+    def LoadRobotData(self,*args,**kwargs):
+        robot=self.env.ReadRobotData(*args,**kwargs)
+        self.env.AddRobot(robot,True)
+        self._PreprocessRobot(robot)
+        return robot
+    
+    def _PreprocessEnv(self):
+        for robot in self.env.GetRobots():
+            self._PreprocessRobot(robot)
+
+    def _PreprocessRobot(self,robot):
+        if robot.GetController() is not None and robot.GetController().GetXMLId().lower() == 'idealcontroller':
+            # need to throw exceptions so test fails
+            robot.GetController().SendCommand('SetThrowExceptions 1')
+            

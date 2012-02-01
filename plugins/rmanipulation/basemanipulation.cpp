@@ -374,7 +374,7 @@ protected:
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
-
+        dReal jitter = 0.03;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -390,6 +390,9 @@ protected:
                     sinput >> f;
                     params->vgoalconfig.push_back(f);
                 }
+            }
+            else if( cmd == "jitter" ) {
+                sinput >> jitter;
             }
             else if( cmd == "goals" ) {
                 size_t numgoals = 0;
@@ -439,8 +442,6 @@ protected:
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         // make sure the initial and goal configs are not in collision
-        std::vector<dReal> originalvalues;
-        robot->GetActiveDOFValues(originalvalues);
         vector<dReal> vonegoal(robot->GetActiveDOF());
 
         size_t writeindex=0;
@@ -448,27 +449,35 @@ protected:
             std::copy(params->vgoalconfig.begin()+i,params->vgoalconfig.begin()+i+robot->GetActiveDOF(),vonegoal.begin());
             robot->SetActiveDOFValues(vonegoal, true);
             robot->GetActiveDOFValues(vonegoal);
-            if( planningutils::JitterActiveDOF(robot) == 0 ) {
+            switch( planningutils::JitterActiveDOF(robot,5000,jitter) ) {
+            case 0:
                 RAVELOG_WARN(str(boost::format("jitter failed %d\n")%i));
-            }
-            else {
+                continue;
+            case 1:
                 robot->GetActiveDOFValues(vonegoal);
-                std::copy(vonegoal.begin(),vonegoal.end(),params->vgoalconfig.begin()+writeindex);
-                writeindex += robot->GetActiveDOF();
+                break;
             }
+            std::copy(vonegoal.begin(),vonegoal.end(),params->vgoalconfig.begin()+writeindex);
+            writeindex += robot->GetActiveDOF();
         }
         if( writeindex == 0 ) {
             return false;
         }
         params->vgoalconfig.resize(writeindex);
-        robot->SetActiveDOFValues(originalvalues);
+        robot->SetActiveDOFValues(params->vinitialconfig);
 
+        vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
-            RAVELOG_WARN("jitter failed\n");
+        switch( planningutils::JitterActiveDOF(robot,5000,jitter) ) {
+        case 0:
+            RAVELOG_WARN("jitter failed for initial\n");
             return false;
+        case 1:
+            RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
+            vinsertconfiguration = params->vinitialconfig;
+            robot->GetActiveDOFValues(params->vinitialconfig);
+            break;
         }
-        robot->GetActiveDOFValues(params->vinitialconfig);
 
         PlannerBasePtr rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
@@ -502,6 +511,10 @@ protected:
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
             planningutils::VerifyTrajectory(params, ptraj);
         }
+        if( vinsertconfiguration.size() > 0 ) {
+            planningutils::InsertActiveDOFWaypointWithRetiming(0,vinsertconfiguration,vector<dReal>(), ptraj, robot, _fMaxVelMult);
+        }
+
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
         return true;
     }
@@ -527,7 +540,7 @@ protected:
 
         // constraint stuff
         boost::array<double,6> vconstraintfreedoms = { { 0,0,0,0,0,0}};
-        Transform tConstraintTargetWorldFrame;
+        Transform tConstraintTargetWorldFrame, tConstraintTaskFrame;
         double constrainterrorthresh=0;
         int goalsamples = 40;
         string cmd;
@@ -632,6 +645,12 @@ protected:
             else if( cmd == "constraintpose" ) {
                 sinput >> tConstraintTargetWorldFrame;
             }
+            else if( cmd == "constrainttaskmatrix" ) {
+                TransformMatrix m; sinput >> m; tConstraintTaskFrame = m;
+            }
+            else if( cmd == "constrainttaskpose" ) {
+                sinput >> tConstraintTaskFrame;
+            }
             else if( cmd == "constrainterrorthresh" ) {
                 sinput >> constrainterrorthresh;
             }
@@ -676,11 +695,16 @@ protected:
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
-            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,vconstraintfreedoms,constrainterrorthresh));
+            robot->SetActiveDOFValues(params->vinitialconfig); // have to set the initial configuraiton!
+            boost::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,tConstraintTaskFrame, vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
             // use linear interpolation!
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
+            vector<dReal> vdelta(params->vinitialconfig.size(),0);
+            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
+            }
         }
 
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
@@ -691,9 +715,16 @@ protected:
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
-                if(( constrainterrorthresh > 0) &&( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) == 0) ) {
-                    RAVELOG_DEBUG("constraint function failed\n");
-                    continue;
+                if(constrainterrorthresh > 0 ) {
+                    robot->SetActiveDOFValues(vgoal);
+                    switch( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) ) {
+                    case 0:
+                        RAVELOG_DEBUG("constraint function failed\n");
+                        continue;
+                    case 1:
+                        robot->GetActiveDOFValues(vgoal);
+                        break;
+                    }
                 }
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
                 --nSeedIkSolutions;
@@ -713,12 +744,9 @@ protected:
         // restore
         robot->SetActiveDOFValues(params->vinitialconfig);
 
-        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
-        ptraj->Init(params->_configurationspecification);
-
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        switch( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) ) {
+        switch( planningutils::JitterActiveDOF(robot,5000,jitter,constrainterrorthresh > 0 ? params->_neighstatefn : PlannerBase::PlannerParameters::NeighStateFn()) ) {
         case 0:
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
@@ -726,8 +754,6 @@ protected:
             RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
             vinsertconfiguration = params->vinitialconfig;
             robot->GetActiveDOFValues(params->vinitialconfig);
-            break;
-        default:
             break;
         }
 
@@ -738,6 +764,7 @@ protected:
         }
 
         bool bSuccess = false;
+        TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         RAVELOG_INFO("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {

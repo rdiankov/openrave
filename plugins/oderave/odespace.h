@@ -321,15 +321,9 @@ private:
 
             if( !(*itlink)->IsStatic() && _bUsingPhysics ) {
                 // set the mass
-                RaveTransformMatrix<dReal> I = (*itlink)->GetLocalInertia();
                 dMass mass;
                 dMassSetZero(&mass);
                 mass.mass = (*itlink)->GetMass();
-                mass.I[0] = I.m[0]; mass.I[1] = I.m[1]; mass.I[2] = I.m[2];
-                mass.I[4] = I.m[4]; mass.I[5] = I.m[5]; mass.I[6] = I.m[6];
-                mass.I[8] = I.m[8]; mass.I[9] = I.m[9]; mass.I[10] = I.m[10];
-                // ignore center of mass for now (ode doesn't like it when it is non-zero)
-                //mass.c = I.trans;
                 if( mass.mass <= 0 ) {
                     RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass.mass));
                     mass.mass = 1e-7;
@@ -337,6 +331,22 @@ private:
                     mass.I[4] = 0; mass.I[5] = 1; mass.I[6] = 0;
                     mass.I[8] = 0; mass.I[9] = 0; mass.I[10] = 1;
                 }
+                else {
+                    if( (*itlink)->GetPrincipalMomentsOfInertia().lengthsqr3() > 0 ) {
+                        RaveTransformMatrix<dReal> I = (*itlink)->GetLocalInertia();
+                        mass.I[0] = I.m[0]; mass.I[1] = I.m[1]; mass.I[2] = I.m[2];
+                        mass.I[4] = I.m[4]; mass.I[5] = I.m[5]; mass.I[6] = I.m[6];
+                        mass.I[8] = I.m[8]; mass.I[9] = I.m[9]; mass.I[10] = I.m[10];
+                    }
+                    else {
+                        mass.I[0] = 1; mass.I[1] = 0; mass.I[2] = 0;
+                        mass.I[4] = 0; mass.I[5] = 1; mass.I[6] = 0;
+                        mass.I[8] = 0; mass.I[9] = 0; mass.I[10] = 1;
+                    }
+                }
+                // ignore center of mass for now (ode doesn't like it when it is non-zero)
+                //mass.c = ?;
+
                 dBodySetMass(link->body, &mass);
             }
 

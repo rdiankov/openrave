@@ -461,6 +461,15 @@ public:
             _pjoint->SetWeights(ExtractArray<dReal>(o));
         }
 
+        object SubtractValues(object ovalues0, object ovalues1) {
+            vector<dReal> values0 = ExtractArray<dReal>(ovalues0);
+            vector<dReal> values1 = ExtractArray<dReal>(ovalues1);
+            BOOST_ASSERT((int)values0.size() == GetDOF() );
+            BOOST_ASSERT((int)values1.size() == GetDOF() );
+            _pjoint->SubtractValues(values0,values1);
+            return toPyArray(values0);
+        }
+
         void AddTorque(object otorques) {
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
             return _pjoint->AddTorque(vtorques);
@@ -2631,6 +2640,8 @@ void init_openravepy_kinbody()
                           .def("SetTorqueLimits",&PyKinBody::PyJoint::SetTorqueLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetTorqueLimits))
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
+                          .def("SubtractValues",&PyKinBody::PyJoint::SubtractValues,args("values0","values1"), DOXY_FN(KinBody::Joint,SubtractValues))
+
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
                           .def("__str__", &PyKinBody::PyJoint::__str__)
@@ -2753,7 +2764,7 @@ void init_openravepy_kinbody()
                       .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights))
                       .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"), DOXY_FN(RobotBase,SetActiveDOFValues))
                       .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues))
-                      .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFWeights))
+                      .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFWeights, DOXY_FN(RobotBase,GetActiveDOFWeights))
                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
                       .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
                       .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))

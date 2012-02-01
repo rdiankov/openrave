@@ -17,7 +17,7 @@ class TestPhysics(EnvironmentSetup):
     def test_static(self):
         env=self.env
         scene = 'data/hanoi.env.xml'
-        env.Load(scene)
+        self.LoadEnv(scene)
         with env:
             robot=env.GetRobots()[0]
             Trobot = robot.GetTransform()
@@ -135,7 +135,7 @@ class TestPhysics(EnvironmentSetup):
         </environment>
 
         """
-        env.LoadData(xmldata)
+        self.LoadDataEnv(xmldata)
         robot = env.GetRobots()[0]
         with env:
             robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis,[0,0,1])

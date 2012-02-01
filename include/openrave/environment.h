@@ -375,28 +375,6 @@ public:
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
 
-    /// \brief adds a viewer to the environment
-    ///
-    /// \throw openrave_exception Throw if body is invalid or already added
-    virtual void AddViewer(ViewerBasePtr pviewer) = 0;
-
-    /// \deprecated (11/06/13) see AddViewer
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
-        AddViewer(pnewviewer); return true;
-    }
-
-    /// \brief Return a viewer with a particular name.
-    ///
-    /// When no name is specified, the first loaded viewer is returned.
-    virtual ViewerBasePtr GetViewer(const std::string& name="") const = 0;
-
-    /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
-    ///
-    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
-
-
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// Note that the pbody pointer might become invalid as soon as GetPublishedBodies returns.
@@ -430,7 +408,8 @@ public:
     /// \brief Load a new module, need to Lock if calling outside simulation thread
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs) = 0;
 
-    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) {
+    /// \deprecated (12/01/30) see \ref EnvironmentBase::AddModule
+    virtual int LoadProblem(ModuleBasePtr module, const std::string& cmdargs) RAVE_DEPRECATED {
         return AddModule(module,cmdargs);
     }
 
@@ -460,6 +439,27 @@ public:
 
     /// \deprecated (10/11/05)
     typedef OpenRAVE::GraphHandlePtr GraphHandlePtr RAVE_DEPRECATED;
+
+    /// \brief adds a viewer to the environment
+    ///
+    /// \throw openrave_exception Throw if body is invalid or already added
+    virtual void AddViewer(ViewerBasePtr pviewer) = 0;
+
+    /// \deprecated (11/06/13) see AddViewer
+    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
+        AddViewer(pnewviewer); return true;
+    }
+
+    /// \brief Return a viewer with a particular name.
+    ///
+    /// When no name is specified, the first loaded viewer is returned.
+    virtual ViewerBasePtr GetViewer(const std::string& name="") const = 0;
+
+    /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
+    ///
+    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
+    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
+    virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
 
     /// \brief Plot a point cloud with one color. <b>[multi-thread safe]</b>
     ///
