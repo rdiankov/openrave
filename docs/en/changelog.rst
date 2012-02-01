@@ -6,7 +6,7 @@ ChangeLog
 Version 0.6.0
 =============
 
-Subversion Revision: r3032
+Subversion Revision: r3033
 
 Initial Release: 2012/02/01
 
@@ -28,7 +28,7 @@ Planning
 
 * Fixed segment feasibility checking on parabolic smoother by using perterbations, now most small collisions are avoided.
 
-* **Many** fixes for :module:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
+* **Many** fixes for :mod:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
 
 * Fixed :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
