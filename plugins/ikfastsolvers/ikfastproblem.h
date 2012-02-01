@@ -72,7 +72,7 @@ public:
 
             getNumFreeParameters = (getNumFreeParametersFn)SysLoadSym(plib, "getNumFreeParameters");
             if( getNumFreeParameters == NULL ) {
-                RAVELOG_WARN("failed to find getNumFreeParameters in %s\n", _libraryname.c_str());
+                RAVELOG_WARN(str(boost::format("failed to find getNumFreeParameters in %s. If the library is correct, have you compiled with IKFAST_CLIBRARY define that enables extern \"C\"?")%_libraryname));
                 return false;
             }
             getFreeParameters = (getFreeParametersFn)SysLoadSym(plib, "getFreeParameters");

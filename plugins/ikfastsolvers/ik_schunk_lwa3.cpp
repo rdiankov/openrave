@@ -15,11 +15,11 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 52 generated on 2012-01-25 20:25:45.741627
+/// ikfast version 54 generated on 2012-02-01 02:33:00.759439
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
-/// To compile without any main function as a shared object:
-///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -shared -Wl,-soname,ik.so -o ik.so ik.cpp
+/// To compile without any main function as a shared object (might need -llapack):
+///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -DIKFAST_CLIBRARY -shared -Wl,-soname,libik.so -o libik.so ik.cpp
 #include <cmath>
 #include <vector>
 #include <limits>
@@ -2031,7 +2031,7 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "bcb25302dbec7575df10994dd89abd19"; }
 
-IKFAST_API const char* getIKFastVersion() { return "52"; }
+IKFAST_API const char* getIKFastVersion() { return "54"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

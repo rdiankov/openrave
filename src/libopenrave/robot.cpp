@@ -860,8 +860,10 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _vTranslationResolutions = Vector(0.001f,0.001f,0.001f);
     _vTranslationWeights = Vector(2.0f,2.0f,2.0f);
 
-    _vRotationAxisLowerLimits = Vector(-PI,-PI,-PI,-PI);
-    _vRotationAxisUpperLimits = Vector(PI,PI,PI,PI);
+    // rotation axis has infinite movement, so make sure the limits are big
+    _vRotationAxisLowerLimits = Vector(-1e4,-1e4,-1e4,1e4);
+    _vRotationAxisUpperLimits = Vector(1e4,1e4,1e4,1e4);
+
     _vRotationAxisMaxVels = Vector(0.4f,0.4f,0.4f,0.4f);
     _vRotationAxisResolutions = Vector(0.01f,0.01f,0.01f,0.01f);
     _vRotationAxisWeights = Vector(2.0f,2.0f,2.0f,2.0f);
