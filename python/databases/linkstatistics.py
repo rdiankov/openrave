@@ -344,7 +344,14 @@ class LinkStatisticsModel(DatabaseGenerator):
     @staticmethod
     def computeIsosurface(sweptvolume,samplingdelta,thresh=0.1):
         """computes the isosurface"""
-        api = __import__('enthought.tvtk.api',fromlist=['tvtk']) # for isosurface computation, don't put this at the top of the py file
+        # for isosurface computation, don't put this at the top of the py file
+        try:
+            api = __import__('enthought.tvtk.api',fromlist=['tvtk'])
+            
+        except ImportError:
+            # ubuntu 11.10 does not have tvtk under enthought directory
+            api = __import__('tvtk.api',fromlist=['tvtk'])
+            
         minpoint = numpy.min(sweptvolume,0)-2.0*samplingdelta
         maxpoint = numpy.max(sweptvolume,0)+2.0*samplingdelta
         volumeshape = array(ceil((maxpoint-minpoint)/samplingdelta),'int')
