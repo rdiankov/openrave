@@ -794,20 +794,24 @@ template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMat
 /// \param[in] quat quaternion, (s,vx,vy,vz)
 template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
 {
+    // should normalize the quaternion first
+    dReal length2 = quat.lengthsqr4();
+    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    dReal ilength2 = 2/length2;
     RaveTransformMatrix<T> t;
-    T qq1 = 2*quat[1]*quat[1];
-    T qq2 = 2*quat[2]*quat[2];
-    T qq3 = 2*quat[3]*quat[3];
+    T qq1 = ilength2*quat[1]*quat[1];
+    T qq2 = ilength2*quat[2]*quat[2];
+    T qq3 = ilength2*quat[3]*quat[3];
     t.m[4*0+0] = 1 - qq2 - qq3;
-    t.m[4*0+1] = 2*(quat[1]*quat[2] - quat[0]*quat[3]);
-    t.m[4*0+2] = 2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    t.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    t.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
     t.m[4*0+3] = 0;
-    t.m[4*1+0] = 2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    t.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
     t.m[4*1+1] = 1 - qq1 - qq3;
-    t.m[4*1+2] = 2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    t.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
     t.m[4*1+3] = 0;
-    t.m[4*2+0] = 2*(quat[1]*quat[3] - quat[0]*quat[2]);
-    t.m[4*2+1] = 2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    t.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    t.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
     t.m[4*2+2] = 1 - qq1 - qq2;
     t.m[4*2+3] = 0;
     return t;
@@ -820,19 +824,23 @@ template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVec
 /// \param[in] quat quaternion, (s,vx,vy,vz)
 template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
 {
-    T qq1 = 2*quat[1]*quat[1];
-    T qq2 = 2*quat[2]*quat[2];
-    T qq3 = 2*quat[3]*quat[3];
+    // should normalize the quaternion first
+    dReal length2 = quat.lengthsqr4();
+    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    dReal ilength2 = 2/length2;
+    T qq1 = ilength2*quat[1]*quat[1];
+    T qq2 = ilength2*quat[2]*quat[2];
+    T qq3 = ilength2*quat[3]*quat[3];
     rotation.m[4*0+0] = 1 - qq2 - qq3;
-    rotation.m[4*0+1] = 2*(quat[1]*quat[2] - quat[0]*quat[3]);
-    rotation.m[4*0+2] = 2*(quat[1]*quat[3] + quat[0]*quat[2]);
+    rotation.m[4*0+1] = ilength2*(quat[1]*quat[2] - quat[0]*quat[3]);
+    rotation.m[4*0+2] = ilength2*(quat[1]*quat[3] + quat[0]*quat[2]);
     rotation.m[4*0+3] = 0;
-    rotation.m[4*1+0] = 2*(quat[1]*quat[2] + quat[0]*quat[3]);
+    rotation.m[4*1+0] = ilength2*(quat[1]*quat[2] + quat[0]*quat[3]);
     rotation.m[4*1+1] = 1 - qq1 - qq3;
-    rotation.m[4*1+2] = 2*(quat[2]*quat[3] - quat[0]*quat[1]);
+    rotation.m[4*1+2] = ilength2*(quat[2]*quat[3] - quat[0]*quat[1]);
     rotation.m[4*1+3] = 0;
-    rotation.m[4*2+0] = 2*(quat[1]*quat[3] - quat[0]*quat[2]);
-    rotation.m[4*2+1] = 2*(quat[2]*quat[3] + quat[0]*quat[1]);
+    rotation.m[4*2+0] = ilength2*(quat[1]*quat[3] - quat[0]*quat[2]);
+    rotation.m[4*2+1] = ilength2*(quat[2]*quat[3] + quat[0]*quat[1]);
     rotation.m[4*2+2] = 1 - qq1 - qq2;
     rotation.m[4*2+3] = 0;
 }

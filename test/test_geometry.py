@@ -66,6 +66,10 @@ def test_transformations():
         for j in range(len(posearray0)):
             assert( sum(abs(transformInversePoints(matrices[j],X) - poseTransformPoints(posearrayinv0[j],X))) <= g_epsilon )
 
+        # slightly unnormalized pose
+        T = matrixFromPose([ 0.00422863, 0.00522595, 0.707, 0.707182, 0.204229, 0.628939, 1.40061])
+        assert(abs(linalg.det(T[0:3,0:3])-1) <= g_epsilon )
+        
 def test_fitcircle():
     print 'fits 2d and 3d circles to a set of points'
     perturbation = 0.001

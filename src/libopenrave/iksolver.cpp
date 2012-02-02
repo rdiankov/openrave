@@ -59,12 +59,36 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase:
 
 IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param)
 {
+    vector<dReal> vtestsolution,vtestsolution2;
+    if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        manipulator->GetRobot()->GetConfigurationValues(vtestsolution);
+        for(size_t i = 0; i < manipulator->GetArmIndices().size(); ++i) {
+            int dofindex = manipulator->GetArmIndices()[i];
+            if( RaveFabs(vtestsolution.at(dofindex) - solution.at(i)) > 1000*g_fEpsilon ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
+            }
+        }
+    }
+
     FOREACHC(it,__listRegisteredFilters) {
         CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata) {
             IkFilterReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKFR_Success ) {
                 return ret;
+            }
+            if( vtestsolution.size() > 0 ) {
+                // check that the robot is set to solution
+                vector<dReal> vtestsolution2;
+                manipulator->GetRobot()->GetConfigurationValues(vtestsolution2);
+                for(size_t i = 0; i < manipulator->GetArmIndices().size(); ++i) {
+                    vtestsolution.at(manipulator->GetArmIndices()[i]) = solution.at(i);
+                }
+                for(size_t i = 0; i < vtestsolution.size(); ++i) {
+                    if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > 1000*g_fEpsilon ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("one of the filters set on robot %s manip %s did not restore the robot configuraiton. config dof %d (%f -> %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%i%vtestsolution.at(i)%vtestsolution2.at(i), ORE_InconsistentConstraints);
+                    }
+                }
             }
         }
     }

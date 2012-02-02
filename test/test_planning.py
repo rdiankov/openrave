@@ -166,22 +166,53 @@ class TestMoving(EnvironmentSetup):
                 
     def test_movehandstraight(self):
         env = self.env
-        self.LoadEnv('data/lab1.env.xml')
-        robot = env.GetRobots()[0]
-        basemanip = interfaces.BaseManipulation(robot)
-
-        testvalues = [[array([ -2.83686683e-01,   1.40828054e+00,   0.00000000e+00, 5.26754682e-01,  -3.14159265e+00,  -1.20655743e+00, -1.85448301e+00,   1.66533454e-16,   1.66533454e-16,         1.66533454e-16,   0.00000000e+00]), array([ -9.22429319e-16,  -3.90560499e-15,  -1.00000000e+00])],
-                      [array([-0.26085414,  1.37967815,  0.        ,  0.60871186, -3.14159265,       -1.15320264, -0.26085414,  0.        ,  0.        ,  0.        ,  0.        ]), array([ -7.21644966e-16,  -3.28903571e-15,  -1.00000000e+00])],
-                      [array([ -5.90848599e-02,   9.54294051e-01,   0.00000000e+00,         2.22628339e+00,   9.99200722e-15,  -3.89847865e-02,         1.51171147e+00,   1.66533454e-16,   1.66533454e-16,         1.66533454e-16,   0.00000000e+00]), array([ -1.03626102e-14,   7.85046229e-16,  -1.00000000e+00])],
-                      [array([-0.53374407,  0.9960226 ,  0.        ,  1.91409838, -3.14159265,       -0.23147168, -2.10454039,  0.        ,  0.        ,  0.        ,  0.        ]), array([  6.86915451e-16,  -1.35420475e-15,  -1.00000000e+00])]]
-        
         with env:
+            self.LoadEnv('data/lab1.env.xml')
+            robot = env.GetRobots()[0]
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+
+            basemanip = interfaces.BaseManipulation(robot)
+
+            testvalues = [[array([ -2.83686683e-01,   1.40828054e+00,   0.00000000e+00, 5.26754682e-01,  -3.14159265e+00,  -1.20655743e+00, -1.85448301e+00,   1.66533454e-16,   1.66533454e-16,         1.66533454e-16,   0.00000000e+00]), array([ -9.22429319e-16,  -3.90560499e-15,  -1.00000000e+00])],
+                          [array([-0.26085414,  1.37967815,  0.        ,  0.60871186, -3.14159265,       -1.15320264, -0.26085414,  0.        ,  0.        ,  0.        ,  0.        ]), array([ -7.21644966e-16,  -3.28903571e-15,  -1.00000000e+00])],
+                          [array([ -5.90848599e-02,   9.54294051e-01,   0.00000000e+00,         2.22628339e+00,   9.99200722e-15,  -3.89847865e-02,         1.51171147e+00,   1.66533454e-16,   1.66533454e-16,         1.66533454e-16,   0.00000000e+00]), array([ -1.03626102e-14,   7.85046229e-16,  -1.00000000e+00])],
+                          [array([-0.53374407,  0.9960226 ,  0.        ,  1.91409838, -3.14159265,       -0.23147168, -2.10454039,  0.        ,  0.        ,  0.        ,  0.        ]), array([  6.86915451e-16,  -1.35420475e-15,  -1.00000000e+00])]]
+        
             for dofvalues, direction in testvalues:
                 robot.SetDOFValues(dofvalues)
                 assert( not env.CheckCollision(robot) )
                 ret = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=False,stepsize=0.001,minsteps=19,maxsteps=20, execute=False)
                 assert(ret is not None)
-                
+
+            # try another environment with grabbing
+            env.Reset()
+            self.LoadEnv('data/puma_tabletop.env.xml')
+            robot = env.GetRobots()[0]
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            basemanip = interfaces.BaseManipulation(robot)
+            taskmanip = interfaces.TaskManipulation(robot)
+            traj=taskmanip.ReleaseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            Tstart = array([[ -1,  0,  0,   2.00000000e-01], [  0,0,   1, 6.30000000e-01], [  0,   1  , 0,   5.50000000e-02], [  0,0,0,1]])
+            traj=basemanip.MoveToHandPosition(matrices=[Tstart],execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
+            traj=taskmanip.CloseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            target = env.GetKinBody('cylinder_green_3')
+            robot.Grab(target)
+            updir = array((0,0,1))
+            traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=0,maxsteps=0,execute=False,outputtrajobj=True)
+            traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
+            traj = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
+
+            Tee = array([[ 0.99705865,  0.00312377, -0.07657862, -1.21198141], [-0.00492394,  0.9997157 , -0.02332985, -0.04183522], [ 0.07648397,  0.0236383 ,  0.99679057,  0.81078164], [ 0.        ,  0.        ,  0.        ,  1.        ]])
+            success = basemanip.MoveHandStraight(direction=array([ 0.23920199, -0.67242331, -0.70044936]),starteematrix=Tee,stepsize=0.01,minsteps=20,maxsteps=40)
+            self.RunTrajectory(robot,traj)
 
     def test_movetohandpositiongrab(self):
         env=self.env

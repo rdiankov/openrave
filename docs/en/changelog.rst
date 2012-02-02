@@ -17,6 +17,8 @@ Planning
 
 * :ref:`module-basemanipulation-movehandstraight` replaced :ref:`.planningutils.SmoothAffineTrajectory` call with :ref:`.planningutils.RetimeAffineTrajectory`
 
+* Fixed :ref:`planner-workspacetrajectorytracker` filter issues related to MoveHandStraight
+
 Inverse Kinematics
 ------------------
 

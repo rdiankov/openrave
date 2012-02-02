@@ -361,6 +361,8 @@ protected:
         }
 
         if( _filteroptions & IKFO_CheckEnvCollisions ) {
+            RobotBase::RobotStateSaver saver(_robot);
+
             // check rest of environment collisions
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(true);

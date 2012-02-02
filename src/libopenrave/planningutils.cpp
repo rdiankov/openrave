@@ -450,7 +450,9 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
                     break;
                 }
             }
-            RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
+            if( bsmooth ) {
+                RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
+            }
         }
     }
 
