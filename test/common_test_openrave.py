@@ -114,7 +114,13 @@ class EnvironmentSetup(object):
         self.env.AddRobot(robot,True)
         self._PreprocessRobot(robot)
         return robot
-    
+
+    def RunTrajectory(self,robot,traj):
+        assert(traj is not None)
+        robot.GetController().SetPath(traj)
+        while not robot.GetController().IsDone():
+            self.env.StepSimulation(0.01)
+        
     def _PreprocessEnv(self):
         for robot in self.env.GetRobots():
             self._PreprocessRobot(robot)

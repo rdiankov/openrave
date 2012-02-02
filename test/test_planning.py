@@ -30,10 +30,7 @@ class TestMoving(EnvironmentSetup):
                 parameters = Planner.PlannerParameters()
                 parameters.SetRobotActiveJoints(robot)
                 planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
-
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
             
     def test_ikplanning(self):
         env = self.env
@@ -80,8 +77,8 @@ class TestMoving(EnvironmentSetup):
             constraintfreedoms=array([1,1,0,1,0,0]) # can rotate along z, translate along y
             constraintmatrix=array([[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]])
             for constrainterrorthresh in [0.002,0.01]:
-                ret = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=2,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,outputtraj=True,steplength=0.001)
-                assert(ret is not None)
+                traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=6000,maxtries=2,seedik=16, constraintfreedoms=constraintfreedoms, constraintmatrix=constraintmatrix, constrainterrorthresh=constrainterrorthresh,execute=False,outputtrajobj=True,steplength=0.001)
+                self.RunTrajectory(robot,traj)
 
     def test_constraintwam(self):
         env = self.env
@@ -124,9 +121,7 @@ class TestMoving(EnvironmentSetup):
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
             print 'test_constraintwam: make sure it starts at the initial configuration'
             assert(transdist(soltraj,sol) <= g_epsilon)
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
                 
             # try another goal
             Tlocal = matrixFromAxisAngle([0,1,0])
@@ -134,6 +129,7 @@ class TestMoving(EnvironmentSetup):
             Tnewtarget = dot(gmodel.target.GetTransform(),Tlocal)
             Tgoal = dot(Tnewtarget, dot(linalg.inv(gmodel.target.GetTransform()), ikmodel.manip.GetTransform()))
             traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
+            self.RunTrajectory(robot,traj)
 
     def test_wamgraspfromcollision(self):
         env = self.env
@@ -159,18 +155,14 @@ class TestMoving(EnvironmentSetup):
             gmodel.setPreshape(validgrasp)
             T = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             traj = basemanip.MoveToHandPosition(matrices=[T],outputtrajobj=True,execute=False)
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
             robot.Grab(gmodel.target)
             sol = robot.GetActiveDOFValues()
             traj = basemanip.MoveManipulator(orgvalues,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
             print 'test_wamgraspfromcollision: make sure it starts at the initial configuration'
             assert(transdist(soltraj,sol) <= g_epsilon)
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
                 
     def test_movehandstraight(self):
         env = self.env
@@ -354,7 +346,8 @@ class TestMoving(EnvironmentSetup):
         robot=self.LoadRobotData(xml)
         robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
         basemanip = interfaces.BaseManipulation(robot)
-        trajdata=basemanip.MoveActiveJoints([1,1,1],outputtraj=True)
+        traj=basemanip.MoveActiveJoints([1,1,1],outputtrajobj=True)
+        self.RunTrajectory(robot,traj)
 
     def test_wamtaskplanwithgoal(self):
         env = self.env
@@ -408,16 +401,12 @@ class TestMoving(EnvironmentSetup):
             approachoffset = 0.02
             dests = ComputeDestinations(target,env.GetKinBody('table'))
             goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps, target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep,execute=False,outputtrajobj=True)
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
 
             stepsize=0.001
             expectedsteps = floor(approachoffset/stepsize)
             traj = basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()), ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps,execute=False,outputtrajobj=True)
-            robot.GetController().SetPath(traj)
-            while not robot.GetController().IsDone():
-                env.StepSimulation(0.01)
+            self.RunTrajectory(robot,traj)
 
             print 'test_wamtaskplanwithgoal: this check is wrong'
             Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=False)
@@ -436,12 +425,44 @@ class TestMoving(EnvironmentSetup):
             initialvalues = tile(-0.43,len(m.GetGripperIndices()))
             robot.SetDOFValues(initialvalues,m.GetGripperIndices())
         taskmanip=interfaces.TaskManipulation(robot)
-        trajdata=taskmanip.ReleaseFingers(execute=False,outputtraj=True)[1]
-        traj=RaveCreateTrajectory(env,'').deserialize(trajdata)
+        traj=taskmanip.ReleaseFingers(execute=False,outputtrajobj=True)[1]
         assert(traj.GetDuration()>0)
         newvalues=traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1),robot,m.GetGripperIndices(),0)
         assert(transdist(initialvalues,newvalues) > 0.1 )
-        
+        self.RunTrajectory(robot,traj)
+
+    def test_releasefingerscollision(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            # move the robot until in collision
+            Trobot=robot.GetTransform()
+            Trobot[2,3] -= 1.5
+            robot.SetTransform(Trobot)
+            assert(env.CheckCollision(robot))
+            m=robot.SetActiveManipulator('arm')
+            Tmanip = m.GetTransform()
+            assert( not m.CheckEndEffectorCollision(Tmanip) )
+            
+            taskmanip=interfaces.TaskManipulation(robot)
+            traj=taskmanip.CloseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            traj=taskmanip.ReleaseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            
+            body=env.GetKinBody('mug2')
+            body.SetTransform(Tmanip)
+            initialvalues = tile(-0.43,len(m.GetGripperIndices()))
+            robot.SetDOFValues(initialvalues,m.GetGripperIndices())
+            
+            taskmanip=interfaces.TaskManipulation(robot)
+            traj=taskmanip.CloseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            assert( m.CheckEndEffectorCollision(Tmanip) )
+            traj=taskmanip.ReleaseFingers(execute=False,outputtrajobj=True)[1]
+            self.RunTrajectory(robot,traj)
+            
     def test_handgoal_collision(self):
         env=self.env
         self.LoadEnv('data/lab1.env.xml')

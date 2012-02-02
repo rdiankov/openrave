@@ -23,17 +23,14 @@ class TestTrajectory(EnvironmentSetup):
         Tgoal1 = manip1.GetTransform()
         Tgoal1[0,3] -= 0.3
         Tgoal1[2,3] += 0.4
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtraj=True)
-        traj1=RaveCreateTrajectory(env,'').deserialize(trajdata)
+        traj1=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtrajobj=True)
 
         manip2=robot.SetActiveManipulator('rightarm')
         Tgoal2 = manip2.GetTransform()
         Tgoal2[0,3] -= 0.5
         Tgoal2[1,3] -= 0.5
         Tgoal2[2,3] += 0.2
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtraj=True)
-        traj2=RaveCreateTrajectory(env,'').deserialize(trajdata)
-
+        traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
         traj3=planningutils.MergeTrajectories([traj1,traj2])
 
         with robot:
@@ -54,9 +51,7 @@ class TestTrajectory(EnvironmentSetup):
             Tgoal1[0,3] -= 0.3
             Tgoal1[2,3] += 0.4
 
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtraj=True)
-        traj1=RaveCreateTrajectory(env,'').deserialize(trajdata)
-        
+        traj1=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtrajobj=True)
         with env:
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
             env.AddKinBody(body1,True)
@@ -87,8 +82,7 @@ class TestTrajectory(EnvironmentSetup):
             Tgoal2[0,3] -= 0.5
             Tgoal2[1,3] -= 0.5
             Tgoal2[2,3] += 0.2
-            trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtraj=True)
-            traj2=RaveCreateTrajectory(env,'').deserialize(trajdata)
+            traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
 
         with env:
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml')
@@ -167,9 +161,7 @@ class TestTrajectory(EnvironmentSetup):
         parameters = Planner.PlannerParameters()
         parameters.SetRobotActiveJoints(robot)
         planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
-        robot.GetController().SetPath(traj)
-        while not robot.GetController().IsDone():
-            env.StepSimulation(0.01)
+        self.RunTrajectory(robot,traj)
             
     def test_smoothwithcircular(self):
         print 'test smoothing with circular joints'
@@ -227,9 +219,7 @@ class TestTrajectory(EnvironmentSetup):
                     dist02 = fmod((v0-v2)+3*pi,2*pi)-pi
                     assert(all(abs(dist01)<=abs(dist02)))
 
-                robot.GetController().SetPath(traj2)
-                while not robot.GetController().IsDone():
-                    env.StepSimulation(0.01)
+                self.RunTrajectory(robot,traj2)
 
     def test_affine_smoothing(self):
         env=self.env
@@ -253,6 +243,7 @@ class TestTrajectory(EnvironmentSetup):
                     waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                     waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                     assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+
             robot.GetController().SetPath(traj2)
             robot.WaitForController(0)
 

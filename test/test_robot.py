@@ -119,9 +119,7 @@ class TestRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
             try:
-                robot.GetController().SetPath(traj)
-                while not robot.GetController().IsDone():
-                    env.StepSimulation(0.01)
+                self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
             except Exception, e:
@@ -132,10 +130,9 @@ class TestRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
             try:
-                robot.GetController().SetPath(traj)
-                while not robot.GetController().IsDone():
-                    env.StepSimulation(0.01)
+                self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
+            
             except Exception, e:
                 pass
             
