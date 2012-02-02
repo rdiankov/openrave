@@ -247,7 +247,7 @@ def parseoptions(args=None):
         elif robot == 'pr2':
             options.robotfilenames += ['robots/pr2-beta-static.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml','robots/kuka-youbot.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml','robots/kuka-youbot.zae', 'robots/universalrobots-ur6-85-5-a.zae']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
