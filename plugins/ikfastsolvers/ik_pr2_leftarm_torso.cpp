@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 54 generated on 2012-02-01 02:32:37.863832
+/// ikfast version 55 generated on 2012-02-02 15:11:15.598826
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -3633,7 +3633,7 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "12ceb0aaa06143fe305efa6e48faae0b"; }
 
-IKFAST_API const char* getIKFastVersion() { return "54"; }
+IKFAST_API const char* getIKFastVersion() { return "55"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

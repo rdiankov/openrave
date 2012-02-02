@@ -164,30 +164,30 @@ public:
     /// \deprecated (11/10/04)
     typedef Point TPOINT RAVE_DEPRECATED;
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) see \ref Sample
     virtual bool SampleTrajectory(dReal time, Point& tp) const RAVE_DEPRECATED;
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) use \ref GetWaypoints
     virtual const std::vector<Point>& GetPoints() const RAVE_DEPRECATED;
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) use GetConfigurationSpecification().GetDOF()
     inline int GetDOF() const RAVE_DEPRECATED {
         return GetConfigurationSpecification().GetDOF();
     }
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) see \ref GetDuration()
     virtual dReal GetTotalDuration() const RAVE_DEPRECATED
     {
         return GetDuration();
     }
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) see \ref serialize
     virtual bool Write(std::ostream& O, int options) const RAVE_DEPRECATED {
         serialize(O,options);
         return true;
     }
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) see \ref deserialize
     virtual bool Read(std::istream& I, RobotBaseConstPtr) RAVE_DEPRECATED {
         deserialize(I);
         return true;
@@ -198,7 +198,7 @@ public:
         return 0;
     }
 
-    /// \deprecated (11/10/04)
+    /// \deprecated (11/10/04) see \ref planningutils::RetimeActiveDOFTrajectory and planningutils::RetimeAffineTrajectory
     virtual bool CalcTrajTiming(RobotBasePtr probot, int interp,  bool autocalc, bool activedof, dReal fmaxvelmult=1) RAVE_DEPRECATED;
 
     /// \deprecated (11/10/04)

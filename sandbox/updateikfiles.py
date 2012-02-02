@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
     saveresults = [[args[i], finalresults[i]] for i in range(len(finalresults)) if finalresults[i] is not None]
     pickle.dump(saveresults,open(os.path.join(options.destdir, 'results.pp'),'w'))
-    print 'results: %s',saveresults
+    print 'results: ',saveresults
 
     # select max success rate one in all free indies combinations.
     findices=[]
@@ -234,6 +234,7 @@ if __name__ == "__main__":
 
     for i in findices:
         try:
+            args[i]['forcegenerate'] = False
             updateik(do_test=False,**args[i])
         except Exception,e:
             print e

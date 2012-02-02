@@ -17,6 +17,11 @@ Planning
 
 * :ref:`module-basemanipulation-movehandstraight` replaced :ref:`.planningutils.SmoothAffineTrajectory` call with :ref:`.planningutils.RetimeAffineTrajectory`
 
+Inverse Kinematics
+------------------
+
+* ikfast computation of katana ik goes from 77% to 93% success rate.
+
 Version 0.6.0
 =============
 
@@ -65,6 +70,8 @@ Inverse Kinematics
 * Fixed crash when smoothing close configurations.
 
 * Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+
+* ikfast compute Universal Robots UR6-85-5-A arm IK
 
 Misc
 ----
