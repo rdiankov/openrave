@@ -136,17 +136,26 @@ class TestTrajectory(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
-        for delta in [1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
+        for delta in [0,1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,robot.GetActiveDOFValues())
-            traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
+            # get some values, hopefully non-zero
+            basevalues = numpy.minimum(robot.GetActiveDOFValues()+0.5,robot.GetActiveDOFLimits()[1]-0.1)
+            traj.Insert(0,basevalues)
+            traj.Insert(1,basevalues+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolicsmoother','shortcut_linear']:
                 planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                self.RunTrajectory(robot,traj)
+                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,robot.GetActiveDOFValues())
+            traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolictrajectoryretimer', 'lineartrajectoryretimer']:
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                self.RunTrajectory(robot,traj)
+                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
 
     def test_simpleretiming(self):
         env=self.env
@@ -225,41 +234,38 @@ class TestTrajectory(EnvironmentSetup):
         env=self.env
         robot=self.LoadRobot('robots/barrettwam.robot.xml')
         robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
-        traj=RaveCreateTrajectory(env,'')
-        traj.Init(robot.GetActiveConfigurationSpecification())
-        traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
-        traj2=RaveCreateTrajectory(env,'')
-        traj2.Clone(traj,0)
+        with env:
+            allwaypoints = [[1,0,1,  1,0,1], [0,0,0,  1,0,0.7,  1,0,-5.58,  1,0,-3.2]]
+            for waypoints in allwaypoints:
+                traj=RaveCreateTrajectory(env,'')
+                traj.Init(robot.GetActiveConfigurationSpecification())
+                traj.Insert(0,waypoints)
+                traj2=RaveCreateTrajectory(env,'')
+                traj2.Clone(traj,0)
 
-        env.StartSimulation(0.01,False)
-            
-        for itraj in range(2):
-            with env:
-                T=robot.GetTransform()
-                planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
-                assert(transdist(robot.GetTransform(),T) <= g_epsilon)
-                assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
-                for i in range(traj.GetNumWaypoints()):
-                    waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
-                    waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
-                    assert(transdist(waypoint0,waypoint1) <= g_epsilon)
-
-            robot.GetController().SetPath(traj2)
-            robot.WaitForController(0)
-
-        plannernames = ['parabolicsmoother','shortcut_linear']
-        for plannername in plannernames:
-            traj2=RaveCreateTrajectory(env,'')
-            traj2.Clone(traj,0)
-            for itraj in range(2):
-                with env:
+                for itraj in range(2):
                     T=robot.GetTransform()
-                    planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                    planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
                     assert(transdist(robot.GetTransform(),T) <= g_epsilon)
-                    for i in [0,-1]:
+                    assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
+                    for i in range(traj.GetNumWaypoints()):
                         waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                         waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                         assert(transdist(waypoint0,waypoint1) <= g_epsilon)
-                robot.GetController().SetPath(traj2)
-                robot.WaitForController(0)
+                    self.RunTrajectory(robot,traj2)
+                    self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
 
+                plannernames = ['parabolicsmoother','shortcut_linear']
+                for plannername in plannernames:
+                    traj2=RaveCreateTrajectory(env,'')
+                    traj2.Clone(traj,0)
+                    for itraj in range(2):
+                        T=robot.GetTransform()
+                        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                        assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                        for i in [0,-1]:
+                            waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                            waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                            assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+                        self.RunTrajectory(robot,traj2)
+                        self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))

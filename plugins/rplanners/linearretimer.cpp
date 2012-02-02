@@ -109,22 +109,30 @@ protected:
 
     void _ComputeVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
     {
-        dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
-        const boost::array<DOFAffine,4> testdofs={{DOF_X,DOF_Y,DOF_Z,DOF_RotationAxis}};
-        FOREACHC(itdof,testdofs) {
-            if( affinedofs & *itdof ) {
-                int index = RaveGetIndexFromAffineDOF(affinedofs,*itdof);
-                *(itdata+info->gvel.offset+index) = *(itorgdiff+info->orgposoffset+index)*invdeltatime;
+        if( *(itdata+_timeoffset) > 0 ) {
+            dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
+            const boost::array<DOFAffine,4> testdofs={{DOF_X,DOF_Y,DOF_Z,DOF_RotationAxis}};
+            FOREACHC(itdof,testdofs) {
+                if( affinedofs & *itdof ) {
+                    int index = RaveGetIndexFromAffineDOF(affinedofs,*itdof);
+                    *(itdata+info->gvel.offset+index) = *(itorgdiff+info->orgposoffset+index)*invdeltatime;
+                }
+            }
+            if( affinedofs & DOF_RotationQuat ) {
+                int index = RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationQuat);
+                for(int i = 0; i < 4; ++i) {
+                    *(itdata+info->gvel.offset+index+i) = *(itorgdiff+index+i)*invdeltatime;
+                }
+            }
+            else if( affinedofs & DOF_Rotation3D ) {
+                RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
             }
         }
-        if( affinedofs & DOF_RotationQuat ) {
-            int index = RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationQuat);
-            for(int i = 0; i < 4; ++i) {
-                *(itdata+info->gvel.offset+index+i) = *(itorgdiff+index+i)*invdeltatime;
+        else {
+            // copy the velocity?
+            for(int i = 0; i < info->gpos.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = *(itdataprev+info->gvel.offset+i);
             }
-        }
-        else if( affinedofs & DOF_Rotation3D ) {
-            RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
         }
     }
 
@@ -209,10 +217,18 @@ protected:
 
     void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata)
     {
-        dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
-        // can probably do better...
-        for(int i = 0; i < info->gpos.dof; ++i) {
-            *(itdata+info->gvel.offset+i) = *(itorgdiff+info->orgposoffset+i)*invdeltatime;
+        if( *(itdata+_timeoffset) > 0 ) {
+            dReal invdeltatime = 1.0 / *(itdata+_timeoffset);
+            // can probably do better...
+            for(int i = 0; i < info->gpos.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = *(itorgdiff+info->orgposoffset+i)*invdeltatime;
+            }
+        }
+        else {
+            // copy the velocity?
+            for(int i = 0; i < info->gpos.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = *(itdataprev+info->gvel.offset+i);
+            }
         }
     }
 };

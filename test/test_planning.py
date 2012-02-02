@@ -209,9 +209,9 @@ class TestMoving(EnvironmentSetup):
             traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
             traj = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
-
+            self.RunTrajectory(robot,traj)
             Tee = array([[ 0.99705865,  0.00312377, -0.07657862, -1.21198141], [-0.00492394,  0.9997157 , -0.02332985, -0.04183522], [ 0.07648397,  0.0236383 ,  0.99679057,  0.81078164], [ 0.        ,  0.        ,  0.        ,  1.        ]])
-            success = basemanip.MoveHandStraight(direction=array([ 0.23920199, -0.67242331, -0.70044936]),starteematrix=Tee,stepsize=0.01,minsteps=20,maxsteps=40)
+            traj = basemanip.MoveHandStraight(direction=array([ 0.23920199, -0.67242331, -0.70044936]),starteematrix=Tee,stepsize=0.01,minsteps=20,maxsteps=40,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
 
     def test_movetohandpositiongrab(self):

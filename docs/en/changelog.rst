@@ -19,6 +19,8 @@ Planning
 
 * Fixed :ref:`planner-workspacetrajectorytracker` filter issues related to MoveHandStraight
 
+* Fixed :ref:`planner-lineartrajectoryretimer` interpolation issue
+
 Inverse Kinematics
 ------------------
 

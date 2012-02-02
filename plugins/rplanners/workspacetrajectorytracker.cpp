@@ -126,6 +126,7 @@ Planner Parameters\n\
             return false;
         }
 
+        _retimerplanner = RaveCreatePlanner(GetEnv(),"lineartrajectoryretimer");
         _parameters = parameters;
         return true;
     }
@@ -269,7 +270,11 @@ Planner Parameters\n\
             return PS_Failed;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%ftime%((0.001f*(float)(GetMilliTime()-basetime)))));
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj) ) {
+            return PS_Failed;
+        }
+
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(GetMilliTime()-basetime)))));
         return PS_HasSolution;
     }
 
@@ -306,6 +311,8 @@ protected:
 
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
+        RobotBase::RobotStateSaver saver(_robot);
+
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
             BOOST_ASSERT(ikp.GetType()==IKP_Transform6D);
@@ -360,9 +367,29 @@ protected:
             }
         }
 
-        if( _filteroptions & IKFO_CheckEnvCollisions ) {
-            RobotBase::RobotStateSaver saver(_robot);
+        if( _vprevsolution.size() > 0 ) {
+            // take the midpoint of the solutions and ikparameterization and see if they are close
+            std::vector<dReal> vmidsolution(vsolution.size());
+            for(size_t i = 0; i < vsolution.size(); ++i) {
+                vmidsolution[i] = 0.5*(vsolution[i]+_vprevsolution[i]);
+            }
+            //RobotBase::RobotStateSaver savestate(_robot);
+            _robot->SetActiveDOFs(pmanip->GetArmIndices());
+            _robot->SetActiveDOFValues(vmidsolution);
+            IkParameterization ikmidreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
 
+            IkParameterization ikmidest;
+            ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,0.5), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
+            const dReal ikmidpointmaxdist2mult = 0.5;
+            dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
+            dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
+            if( middist2 > g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+                RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
+                return IKFR_Reject;
+            }
+        }
+
+        if( _filteroptions & IKFO_CheckEnvCollisions ) {
             // check rest of environment collisions
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(true);
@@ -390,6 +417,7 @@ protected:
     boost::multi_array<dReal,2> _mjacobian, _mquatjacobian;
     IkParameterization _ikprev;
     vector<dReal> _vprevsolution;
+    PlannerBasePtr _retimerplanner;
 };
 
 PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) {
