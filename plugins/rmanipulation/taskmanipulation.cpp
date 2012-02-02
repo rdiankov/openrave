@@ -1066,6 +1066,8 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
         ptraj->Insert(0,graspparams->vinitialconfig); // have to add the first point
@@ -1174,6 +1176,8 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         // have to add the first point
         vector<dReal> vinitialconfig;
         _robot->GetActiveDOFValues(vinitialconfig);
@@ -1184,7 +1188,6 @@ protected:
             return false;
         case 1:
             _robot->GetActiveDOFValues(vinitialconfig);
-        default:
             break;
         }
 
@@ -1318,6 +1321,8 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         // have to add the first point
         vector<dReal> vinitialconfig;
         _robot->GetActiveDOFValues(vinitialconfig);
@@ -1328,7 +1333,6 @@ protected:
             return false;
         case 1:
             _robot->GetActiveDOFValues(vinitialconfig);
-        default:
             break;
         }
 

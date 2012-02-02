@@ -330,7 +330,7 @@ protected:
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
             vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
-            planningutils::SmoothAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
+            planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);

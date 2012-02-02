@@ -762,7 +762,13 @@ public:
                     else {
                         for(int j = 0; j < (int)vrealsolution.size(); j++) {
                             if( RaveRandomFloat() > sampledegeneratecases ) {
-                                vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                                int dof = pmanip->GetArmIndices().at(j);
+                                if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
+                                    vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
+                                }
+                                else {
+                                    vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                                }
                             }
                             else {
                                 switch(RaveRandomInt()%3) {

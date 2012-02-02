@@ -3,6 +3,20 @@
 ChangeLog
 #########
 
+Version 0.6.1 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Planning
+--------
+
+* CloseFingers/ReleaseFingers now only check collisions between fingers, so robot can be in collision when performing this
+
+* :ref:`module-basemanipulation-movehandstraight` replaced :ref:`.planningutils.SmoothAffineTrajectory` call with :ref:`.planningutils.RetimeAffineTrajectory`
+
 Version 0.6.0
 =============
 

@@ -181,6 +181,7 @@ Planner Parameters\n\
                         break;
                     }
                 }
+                RAVELOG_WARN(str(boost::format("end effector collision at time %f/%f")%ftime%workspacetraj->GetDuration()));
                 return PS_Failed;
             }
             else {
