@@ -333,6 +333,11 @@ protected:
             planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
+        if( params->workspacetraj->GetDuration() == 0 ) {
+            RAVELOG_WARN("workspace traj has is empty\n");
+            return false;
+        }
+
         PlannerBasePtr planner = RaveCreatePlanner(GetEnv(),plannername);
         if( !planner ) {
             RAVELOG_WARN("failed to create planner\n");

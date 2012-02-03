@@ -177,7 +177,7 @@ public:
                 size_t copyelements = min(numpoints,_vtrajdata.size()/_spec.GetDOF()-index);
                 ittargetdata = _vtrajdata.begin()+index*_spec.GetDOF();
                 itsourcedata = data.begin();
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,copyelements);
+                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,copyelements,false);
                 sourceindex = copyelements*spec.GetDOF();
                 index += copyelements;
             }
@@ -186,7 +186,7 @@ public:
                 std::vector<dReal> vtemp(numelements*_spec.GetDOF());
                 ittargetdata = vtemp.begin();
                 itsourcedata = data.begin()+sourceindex;
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,numelements);
+                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,numelements,true);
                 _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(),vtemp.begin(),vtemp.end());
             }
             _bChanged = true;
@@ -324,13 +324,13 @@ public:
     }
 
 protected:
-    void _ConvertData(std::vector<dReal>::iterator ittargetdata, std::vector<dReal>::const_iterator itsourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements)
+    void _ConvertData(std::vector<dReal>::iterator ittargetdata, std::vector<dReal>::const_iterator itsourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
     {
         for(size_t igroup = 0; igroup < vconvertgroups.size(); ++igroup) {
             if( vconvertgroups[igroup] != spec._vgroups.end() ) {
-                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], itsourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv());
+                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], itsourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv(),filluninitialized);
             }
-            else {
+            else if( filluninitialized ) {
                 vector<dReal> vdefaultvalues(_spec._vgroups[igroup].dof,0);
                 const string& groupname = _spec._vgroups[igroup].name;
                 if( groupname.size() >= 16 && groupname.substr(0,16) == "affine_transform" ) {

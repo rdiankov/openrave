@@ -269,3 +269,4 @@ class TestTrajectory(EnvironmentSetup):
                             assert(transdist(waypoint0,waypoint1) <= g_epsilon)
                         self.RunTrajectory(robot,traj2)
                         self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
+

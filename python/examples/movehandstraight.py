@@ -93,7 +93,7 @@ def main(env,options):
         try:
             success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)
             params = (direction,Tee)
-            print '%d failed attemps before found'%failedattempt
+            print '%d failed attemps before found'%failedattempt,repr(params)
             failedattempt = 0
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,1])
             robot.WaitForController(0)

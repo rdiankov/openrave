@@ -205,15 +205,20 @@ class TestMoving(EnvironmentSetup):
             target = env.GetKinBody('cylinder_green_3')
             robot.Grab(target)
             updir = array((0,0,1))
-            traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=0,maxsteps=0,execute=False,outputtrajobj=True)
+            try:
+                traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=0,maxsteps=0,execute=False,outputtrajobj=True)
+                raise ValueError('test_movehandstraight: should not succeed')
+            except planning_error:
+                pass
+            
             traj = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
             traj = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
-            Tee = array([[ 0.99705865,  0.00312377, -0.07657862, -1.21198141], [-0.00492394,  0.9997157 , -0.02332985, -0.04183522], [ 0.07648397,  0.0236383 ,  0.99679057,  0.81078164], [ 0.        ,  0.        ,  0.        ,  1.        ]])
-            traj = basemanip.MoveHandStraight(direction=array([ 0.23920199, -0.67242331, -0.70044936]),starteematrix=Tee,stepsize=0.01,minsteps=20,maxsteps=40,execute=False,outputtrajobj=True)
+            Tee = array([[ 0.99502802,  0.07738446,  0.06269684, -0.42132618], [-0.07583651,  0.99676253, -0.02670751, -0.3924502 ], [-0.06456061,  0.02182001,  0.99767521,  0.95401548], [ 0.        ,  0.        ,  0.        ,  1.        ]])
+            traj = basemanip.MoveHandStraight(direction=array([ 0.78915764,  0.13771766,  0.59855163]),starteematrix=Tee,stepsize=0.01,minsteps=60,maxsteps=80,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
-
+            
     def test_movetohandpositiongrab(self):
         env=self.env
         self.LoadEnv('data/hanoi_complex2.env.xml')
@@ -441,7 +446,8 @@ class TestMoving(EnvironmentSetup):
 
             print 'test_wamtaskplanwithgoal: this check is wrong'
             Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=False)
-            assert(transdist(Tglobalgrasp,gmodel.manip.GetTransform()) <= 2*stepsize)
+            Tcurgrasp = gmodel.manip.GetTransform()
+            assert(transdist(Tglobalgrasp,Tcurgrasp) <= 2*stepsize)
         
     def test_releasefingers(self):
         env=self.env
