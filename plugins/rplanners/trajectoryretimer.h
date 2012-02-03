@@ -19,6 +19,8 @@
 #include "plugindefs.h"
 #include "plannerparameters.h"
 
+static const dReal g_fLimitThresh = g_fEpsilon*100000;
+
 class TrajectoryRetimer : public PlannerBase
 {
 protected:
@@ -89,6 +91,25 @@ public:
         newspec.AddVelocityGroups(true);
         vector<dReal> vdiffdata, data;
         ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
+        // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks
+        for(size_t i = 0; i < vdiffdata.size(); i += oldspec.GetDOF()) {
+            for(int j = 0; j < oldspec.GetDOF(); ++j) {
+                dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
+                if( vdiffdata.at(i+j) < lower ) {
+                    if( vdiffdata.at(i+j) < lower-g_fLimitThresh ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                    }
+                    vdiffdata.at(i+j) = lower;
+                }
+                else if( vdiffdata.at(i+j) > upper ) {
+                    if( vdiffdata.at(i+j) > upper+g_fLimitThresh ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                    }
+                    vdiffdata.at(i+j) = upper;
+                }
+            }
+        }
+
         data.resize(numpoints*newspec.GetDOF(),0);
         ConfigurationSpecification::ConvertData(data.begin(),newspec,vdiffdata.begin(),oldspec,numpoints,GetEnv());
         int degree = 1;
@@ -209,36 +230,47 @@ public:
                     data.at(data.size()-dof+offset+j) = 0; // end
                 }
             }
-            std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
-            std::vector<dReal>::iterator itdataprev = itdata;
-            itdata += dof;
-            for(size_t i = 1; i < numpoints; ++i, itdata += dof, itorgdiff += oldspec.GetDOF()) {
-                dReal mintime = 0;
-                bool bUseEndVelocity = i+1==numpoints;
-                FOREACH(itmin,listmintimefns) {
-                    dReal time = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
-                    if( mintime < time ) {
-                        mintime = time;
+
+            try {
+                std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
+                std::vector<dReal>::iterator itdataprev = itdata;
+                itdata += dof;
+                for(size_t i = 1; i < numpoints; ++i, itdata += dof, itorgdiff += oldspec.GetDOF()) {
+                    dReal mintime = 0;
+                    bool bUseEndVelocity = i+1==numpoints;
+                    FOREACH(itmin,listmintimefns) {
+                        dReal time = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
+                        if( mintime < time ) {
+                            mintime = time;
+                        }
                     }
-                }
-                if( _parameters->_hastimestamps ) {
-                    if( *(itdata+_timeoffset) < mintime ) {
-                        RAVELOG_WARN(str(boost::format("point %d has unreachable minimum time %f > %f, changing...")%i%(*(itdata+_timeoffset))%mintime));
+                    if( _parameters->_hastimestamps ) {
+                        if( *(itdata+_timeoffset) < mintime ) {
+                            RAVELOG_WARN(str(boost::format("point %d has unreachable minimum time %f > %f, changing...")%i%(*(itdata+_timeoffset))%mintime));
+                            *(itdata+_timeoffset) = mintime;
+                        }
+                    }
+                    else {
                         *(itdata+_timeoffset) = mintime;
                     }
-                }
-                else {
-                    *(itdata+_timeoffset) = mintime;
-                }
-                // given the mintime, fill the velocities
-                FOREACH(itfn,listvelocityfns) {
-                    (*itfn)(itorgdiff, itdataprev, itdata);
-                }
+                    // given the mintime, fill the velocities
+                    FOREACH(itfn,listvelocityfns) {
+                        (*itfn)(itorgdiff, itdataprev, itdata);
+                    }
 
-                FOREACH(itfn,listwritefns) {
-                    (*itfn)(itorgdiff, itdataprev, itdata);
+                    FOREACH(itfn,listwritefns) {
+                        (*itfn)(itorgdiff, itdataprev, itdata);
+                    }
+                    itdataprev = itdata;
                 }
-                itdataprev = itdata;
+            }
+            catch (const std::exception& ex) {
+                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
+                ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ptraj->serialize(f);
+                return PS_Failed;
             }
         }
         else {

@@ -105,14 +105,17 @@ except:
 
 
 class GraspPlanning:
-    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
+    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1, freeindices=None, manipname=None):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.plannername=plannername
         self.nodestinations = nodestinations
         self.minimumgoalpaths=minimumgoalpaths
         try:
-            self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if manipname is not None:
+                manip = robot.SetActiveManipulator(manipname)
+            print 'robot=%s,iktype=IkParameterization.Type.Transform6D, freeindices=%s'%(robot,freeindices)
+            self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D, freeindices=freeindices)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
         except ValueError:
@@ -120,6 +123,13 @@ class GraspPlanning:
             self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.TranslationDirection5D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
+
+        self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
+        if self.lmodel.load():
+            self.lmodel.setRobotWeights()
+            self.lmodel.setRobotResolutions(xyzdelta=0.005)
+            print 'robot resolutions: ',robot.GetDOFResolutions()
+            print 'robot weights: ',robot.GetDOFWeights()
 
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
@@ -137,6 +147,7 @@ class GraspPlanning:
             if len(self.graspables) == 0:
                 print 'attempting to auto-generate a grasp table'
                 targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0 or t.GetName().find('target')>=0]
+                print targets
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
                     if not gmodel.load():
@@ -171,6 +182,7 @@ class GraspPlanning:
         print 'searching for graspable objects (robot=%s)...'%(self.robot.GetRobotStructureHash())
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
+                print '%s is not robot'%target
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=target)
                 if gmodel.load():
                     print '%s is graspable'%target.GetName()
@@ -426,7 +438,8 @@ def main(env,options):
     robot = env.GetRobots()[0]
     env.UpdatePublishedBodies()
     time.sleep(0.1) # give time for environment to update
-    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations,plannername=options.planner)
+    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations,plannername=options.planner, freeindices=(52,65,68), manipname='leftarm_waist')
+#    self = GraspPlanning(robot,randomize=options.randomize,nodestinations=options.nodestinations,plannername=options.planner, manipname='leftarm_waist')
     self.performGraspPlanning(withreplacement=not options.testmode)
 
 from optparse import OptionParser

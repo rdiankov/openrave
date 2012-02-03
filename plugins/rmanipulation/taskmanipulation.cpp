@@ -478,6 +478,8 @@ protected:
         specfinal.AddVelocityGroups(true);
         specfinal.AddDeltaTimeGroup();
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
 

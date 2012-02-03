@@ -56,6 +56,9 @@ inline bool FuzzyZero(Real x,Real tol) {
 inline bool FuzzyEquals(Real x,Real y,Real tol) {
     return OpenRAVE::RaveFabs(x-y)<=tol;
 }
+inline bool FuzzyInRange(Real x, Real xmin, Real xmax, Real tol) {
+    return x>=xmin-tol && x <=xmax+tol;
+}
 inline void Swap(Real& x,Real& y) {
     Real temp=x; x=y; y=temp;
 }
