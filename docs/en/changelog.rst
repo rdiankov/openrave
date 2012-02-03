@@ -33,6 +33,11 @@ Trajectory
 
 * :meth:`.Trajectory.Insert` overwrite option now does not touch unspecified data
 
+Misc
+----
+
+* If trajectory timing is not initialized, use retimer rather than smoother
+
 Version 0.6.0
 =============
 

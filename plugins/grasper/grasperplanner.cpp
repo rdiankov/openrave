@@ -489,7 +489,7 @@ public:
         }
 
         if( bAddLastPoint ) {
-            // don't forget the final point!
+            // don't forget the final point!, it is most likely in collision
             _robot->GetActiveDOFValues(dofvals);
             std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
             if(!_parameters->breturntrajectory) {

@@ -104,40 +104,40 @@ protected:
 
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout)
+    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
-        if( pActiveTraj->GetPoints().size() == 0 )
+        if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;
-
-        pActiveTraj->CalcTrajTiming(robot, pActiveTraj->GetInterpMethod(), true, true);
-
+        }
+        if( pActiveTraj->GetDuration() == 0 && pActiveTraj->GetNumWaypoints() > 1 ) {
+            planningutils::RetimeActiveDOFTrajectory(pActiveTraj,robot,false,fMaxVelMult);
+        }
         bool bExecuted = false;
         if( bExecute ) {
-            if( pActiveTraj->GetPoints().size() > 1 ) {
-                robot->SetActiveMotion(pActiveTraj);
-                bExecute = true;
+            if( pActiveTraj->GetNumWaypoints() > 1 ) {
+                if( !!robot->GetController() ) {
+                    robot->GetController()->SetPath(pActiveTraj);
+                    bExecute = true;
+                }
             }
-            // have to set anyway since calling script will orEnvWait!
+            // have to set anyway since calling script will query ControllerBase::IsDone
             else if( !!robot->GetController() ) {
-                TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
-                robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
-
-                if( robot->GetController()->SetDesired(pfulltraj->GetPoints()[0].q))
+                vector<dReal> robotvalues;
+                pActiveTraj->GetWaypoint(0,robotvalues,robot->GetConfigurationSpecification());
+                robotvalues.resize(robot->GetDOF());
+                if( robot->GetController()->SetDesired(robotvalues)) {
                     bExecuted = true;
+                }
             }
         }
 
         if( strsavetraj.size() || !!pout ) {
-            TrajectoryBasePtr pfulltraj = RaveCreateTrajectory(robot->GetEnv(),robot->GetDOF());
-            robot->GetFullTrajectoryFromActive(pfulltraj, pActiveTraj);
-
             if( strsavetraj.size() > 0 ) {
                 ofstream f(strsavetraj.c_str());
-                pfulltraj->serialize(f);
+                pActiveTraj->serialize(f);
             }
-
             if( !!pout ) {
-                pfulltraj->serialize(*pout);
+                pActiveTraj->serialize(*pout);
             }
         }
 
