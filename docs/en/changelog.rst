@@ -15,7 +15,7 @@ Planning
 
 * CloseFingers/ReleaseFingers now only check collisions between fingers, so robot can be in collision when performing this
 
-* :ref:`module-basemanipulation-movehandstraight` replaced :ref:`.planningutils.SmoothAffineTrajectory` call with :ref:`.planningutils.RetimeAffineTrajectory`
+* :ref:`module-basemanipulation-movehandstraight` replaced :meth:`.planningutils.SmoothAffineTrajectory` call with :meth:`.planningutils.RetimeAffineTrajectory`
 
 * Fixed :ref:`planner-workspacetrajectorytracker` filter issues related to MoveHandStraight
 
@@ -25,6 +25,11 @@ Inverse Kinematics
 ------------------
 
 * ikfast computation of katana ik goes from 77% to 93% success rate.
+
+Trajectory
+----------
+
+* :meth:`.Trajectory.Insert` overwrite option now does not touch unspecified data
 
 Version 0.6.0
 =============
@@ -42,9 +47,9 @@ Core
 
 * Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER.
 
-* Added :ref:`.KinBody.Joint.SubtractValues`
+* Added :meth:`.KinBody.Joint.SubtractValues`
 
-* **interpolation** is set to empty in configurations returned by :ref:`.KinBody.GetConfigurationSpecification` and :ref:`.Robot.GetActiveConfigurationSpecification`.
+* **interpolation** is set to empty in configurations returned by :meth:`.KinBody.GetConfigurationSpecification` and :meth:`.Robot.GetActiveConfigurationSpecification`.
 
 Planning
 --------

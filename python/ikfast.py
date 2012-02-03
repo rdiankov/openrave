@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
-# Copyright (C) 2009-2011 Rosen Diankov
+# Copyright (C) 2009-2012 Rosen Diankov
 #
 # ikfast is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
