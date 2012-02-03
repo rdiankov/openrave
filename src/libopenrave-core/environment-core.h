@@ -150,7 +150,7 @@ public:
 
         // set a collision checker, don't call EnvironmentBase::CreateCollisionChecker
         CollisionCheckerBasePtr localchecker;
-        boost::array<string,3> checker_prefs = { { "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
+        boost::array<string,3> checker_prefs = { { "bullet", "ode", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
         FOREACH(itchecker,checker_prefs) {
             localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
             if( !!localchecker ) {
