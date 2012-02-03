@@ -13,13 +13,13 @@ typedef std::vector<Real> Vector;
 #define PARABOLIC_ASSERT BOOST_ASSERT
 
 //tolerance for time
-const static Real EpsilonT = 1e-8;
+const static Real EpsilonT = 1e-9;
 //tolerance for position
-const static Real EpsilonX = 1e-8;
+const static Real EpsilonX = 1e-9;
 //tolerance for velocity
-const static Real EpsilonV = 1e-8;
+const static Real EpsilonV = 1e-9;
 //tolerance for acceleration
-const static Real EpsilonA = 1e-8;
+const static Real EpsilonA = 1e-9;
 
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;

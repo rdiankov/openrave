@@ -21,6 +21,8 @@ Planning
 
 * Fixed :ref:`planner-lineartrajectoryretimer` interpolation issue
 
+* Better error handling for smoothing/retiming failures.
+
 Inverse Kinematics
 ------------------
 

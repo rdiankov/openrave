@@ -275,7 +275,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
                     ofstream f(filename.c_str());
                     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                     trajectory->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d, wrote trajectory to %s",(i-1)%i%filename,ORE_InconsistentConstraints);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d, wrote trajectory to %s",i%filename,ORE_InconsistentConstraints);
                 }
             }
         }
@@ -321,6 +321,10 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     }
     if( planner->PlanPath(traj) != PS_HasSolution ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+
+    if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        planningutils::VerifyTrajectory(params,traj);
     }
 }
 

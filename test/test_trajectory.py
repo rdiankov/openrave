@@ -136,11 +136,18 @@ class TestTrajectory(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
+        assert(not env.CheckCollision(robot))
         for delta in [0,1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             # get some values, hopefully non-zero
-            basevalues = numpy.minimum(robot.GetActiveDOFValues()+0.5,robot.GetActiveDOFLimits()[1]-0.1)
+            basevalues = robot.GetActiveDOFValues()
+            with robot:
+                for delta in arange(0.1,0.5,0.1):
+                    robot.SetActiveDOFValues(delta*ones(robot.GetActiveDOF()))
+                    if not env.CheckCollision(robot):
+                        basevalues = robot.GetActiveDOFValues()
+                        break
             traj.Insert(0,basevalues)
             traj.Insert(1,basevalues+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolicsmoother','shortcut_linear']:
@@ -156,6 +163,16 @@ class TestTrajectory(EnvironmentSetup):
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 self.RunTrajectory(robot,traj)
                 self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+                
+        env.Reset()
+        self.LoadEnv('data/katanatable.env.xml')
+        robot=env.GetRobots()[0]
+        robot.SetActiveDOFs(range(5))
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347, 2.437978870810338, -0.4588760200376995, -1.425257530151644, 1.257459103400449, 2.274410109574348])
+        planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+        self.RunTrajectory(robot,traj)
 
     def test_simpleretiming(self):
         env=self.env
