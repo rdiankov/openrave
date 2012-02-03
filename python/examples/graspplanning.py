@@ -407,8 +407,9 @@ class GraspPlanning:
     def performGraspPlanning(self,withreplacement=True,**kwargs):
         print 'starting to pick and place random objects'
         graspables = self.graspables[:]
+        failures = 0
         while True:
-            if len(graspables) == 0:
+            if len(graspables) == 0 or failures > len(graspables)+1:
                 if withreplacement:
                     time.sleep(4)
                     self.randomizeObjects()
@@ -423,8 +424,10 @@ class GraspPlanning:
                 success = self.graspAndPlaceObject(graspables[i][0],graspables[i][1],**kwargs)
                 print 'success: ',success
                 graspables.pop(i)
+                failures = 0
             except planning_error, e:
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
+                failures += 1
                 print e
 
 def main(env,options):
