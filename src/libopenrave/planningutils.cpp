@@ -519,6 +519,9 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool 
         else if( interpolation == "linear" ) {
             newplannername = "lineartrajectoryretimer";
         }
+        else {
+            newplannername = "lineartrajectoryretimer";
+        }
     }
     _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,newplannername, interpolation, false);
 }

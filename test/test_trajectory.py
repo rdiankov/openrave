@@ -270,3 +270,27 @@ class TestTrajectory(EnvironmentSetup):
                         self.RunTrajectory(robot,traj2)
                         self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
 
+    def test_overwritetraj(self):
+        env=self.env
+        trajspec = ConfigurationSpecification()
+        trajspec.AddGroup('joint_values',3,'linear')
+        trajspec.AddGroup('customgroup',1,'previous')
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(trajspec)
+        orgpoints = [ 11.,  12.,  13.,   0.,  21.,  22.,  23.,   0.]
+        traj.Insert(0,orgpoints)
+        assert(traj.GetNumWaypoints()==2)
+        
+        blendspec = ConfigurationSpecification()
+        blendspec.AddGroup('customgroup',1,'previous')        
+        traj.Insert(0,[55,56],blendspec,True)
+        assert(traj.GetNumWaypoints()==2)
+        orgpoints[3] = 55
+        orgpoints[7] = 56
+        newwaypoints = traj.GetWaypoints(0,2)
+        assert(transdist(orgpoints,newwaypoints) <= g_epsilon)
+        
+        g = blendspec.GetGroupFromName('customgroup')
+        blendspec = ConfigurationSpecification(g)
+        assert(traj.GetWaypoint(0,g)==55)
+        assert(traj.GetWaypoint(1,ConfigurationSpecification(g))==56)

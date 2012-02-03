@@ -1174,6 +1174,22 @@ ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedof
     return spec;
 }
 
+ConfigurationSpecification::ConfigurationSpecification()
+{
+}
+
+ConfigurationSpecification::ConfigurationSpecification(const ConfigurationSpecification::Group& g)
+{
+    BOOST_ASSERT(g.dof>=0);
+    _vgroups.push_back(g);
+    _vgroups.front().offset = 0;
+}
+
+ConfigurationSpecification::ConfigurationSpecification(const ConfigurationSpecification& c)
+{
+    _vgroups = c._vgroups;
+}
+
 int ConfigurationSpecification::GetDOF() const
 {
     int maxdof = 0;
@@ -1565,6 +1581,11 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
     g.interpolation = interpolation;
     _vgroups.push_back(g);
     return g.offset;
+}
+
+int ConfigurationSpecification::AddGroup(const ConfigurationSpecification::Group& g)
+{
+    return AddGroup(g.name,g.dof,g.interpolation);
 }
 
 ConfigurationSpecification& ConfigurationSpecification::operator+= (const ConfigurationSpecification& r)
