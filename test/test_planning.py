@@ -389,7 +389,7 @@ class TestMoving(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
-
+        
         def ComputeDestinations(target, table,transdelta=0.1,zoffset=0.01):
             with table:
                 Ttable = table.GetTransform()
@@ -438,17 +438,26 @@ class TestMoving(EnvironmentSetup):
             dests = ComputeDestinations(target,env.GetKinBody('table'))
             goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps, target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
-
+            grasp = gmodel.grasps[graspindex]
+            direction=gmodel.getGlobalApproachDir(grasp)
+            Tcurgrasp = gmodel.manip.GetTransform()
+            Tgoalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=False)
+            assert(transdist(Tcurgrasp[0:3,0:3],Tgoalgrasp[0:3,0:3]) <= g_epsilon)
+            assert(transdist(Tcurgrasp[0:3,3]+direction*approachoffset, Tgoalgrasp[0:3,3]) <= g_epsilon)
+            
             stepsize=0.001
             expectedsteps = floor(approachoffset/stepsize)
-            traj = basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()), ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps,execute=False,outputtrajobj=True)
+            with gmodel.target:
+                gmodel.target.Enable(False)
+                traj = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps,execute=False,outputtrajobj=True)
+            with robot:
+                robot.SetActiveDOFValues(traj.GetWaypoint(-1,robot.GetActiveConfigurationSpecification()))
+                Tfinal = gmodel.manip.GetTransform()
+                assert( transdist(Tfinal[0:3,3]-Tcurgrasp[0:3,3],direction*stepsize*expectedsteps) <= g_epsilon )
             self.RunTrajectory(robot,traj)
-
-            print 'test_wamtaskplanwithgoal: this check is wrong'
-            Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=False)
             Tcurgrasp = gmodel.manip.GetTransform()
-            assert(transdist(Tglobalgrasp,Tcurgrasp) <= 2*stepsize)
-        
+            assert(transdist(Tgoalgrasp,Tcurgrasp) <= g_epsilon )
+            
     def test_releasefingers(self):
         env=self.env
         self.LoadEnv('data/katanatable.env.xml')

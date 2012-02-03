@@ -291,16 +291,14 @@ class GraspPlanning:
         target = gmodel.target
         stepsize = 0.001
         while istartgrasp < len(gmodel.grasps):
-            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
-                                                                                target=target,approachoffset=approachoffset,destposes=dests,
-                                                                                seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
-                                                                                randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
+            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:], target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
             istartgrasp = graspindex+1
-            Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=True)
-
+            grasp = gmodel.grasps[graspindex]
+            Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+            
             print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             self.waitrobot(robot)
-
+            
             if approachoffset != 0:
                 print 'moving hand'
                 expectedsteps = floor(approachoffset/stepsize)
@@ -309,9 +307,9 @@ class GraspPlanning:
                     # of the gripper with respect to the object
                     print repr(robot.GetDOFValues())
                     print repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()))
-                    print stepsize,expectedsteps-1,expectedsteps
-                    res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()),
-                                                          ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
+                    with gmodel.target:
+                        gmodel.target.Enable(False)
+                        res = self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp), ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
                 except planning_error:
                     print 'use a planner to move the rest of the way'
                     try:
@@ -322,8 +320,7 @@ class GraspPlanning:
                 self.waitrobot(robot)
 
             self.taskmanip.CloseFingers(translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
-            self.waitrobot(robot)
-            
+            self.waitrobot(robot)            
 
             with env:
                 robot.Grab(target)

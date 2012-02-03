@@ -23,6 +23,8 @@ Planning
 
 * Better error handling for smoothing/retiming failures.
 
+* Task GraspPlanning now respects approach offset distance
+
 Inverse Kinematics
 ------------------
 

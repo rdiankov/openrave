@@ -166,7 +166,7 @@ Planner Parameters\n\
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
         dReal ftime = 0;
-        for(; ftime < workspacetraj->GetDuration(); ftime += _parameters->_fStepLength) {
+        for(; ftime < workspacetraj->GetDuration()-_parameters->_fStepLength*0.5; ftime += _parameters->_fStepLength) {
             workspacetraj->Sample(vtrajpoint,ftime);
             workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
             Transform t = ikparam.GetTransform6D();
@@ -233,7 +233,7 @@ Planner Parameters\n\
         list<Transform>::iterator ittrans = listtransforms.begin();
         bPrevInCollision = true;
         ftime = 0;
-        for(; ftime < fendtime; ftime += _parameters->_fStepLength, ++ittrans) {
+        for(; ittrans != listtransforms.end(); ftime += _parameters->_fStepLength, ++ittrans) {
             _filteroptions = (ftime >= fstarttime) ? IKFO_CheckEnvCollisions : 0;
             IkParameterization ikparam(*ittrans,IKP_Transform6D);
             if( !_manip->FindIKSolution(ikparam,vsolution,_filteroptions) ) {
