@@ -407,7 +407,7 @@ class SpaceSamplerExtra:
         The samples are evenly distributed with an average distance of averagedist inside the box with extents boxextents.
         Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
         roots = numpy.array([2.8793852415718155,0.65270364466613917,-0.53208888623795614])
-        bases = c_[numpy.ones(3),roots,roots**2]
+        bases = numpy.c_[numpy.ones(3),roots,roots**2]
         tbases = numpy.transpose(bases)
         boxextents = 0.5*numpy.array(boxdims)
         # determine the input bounds, which can be very large and inefficient...
@@ -419,7 +419,7 @@ class SpaceSamplerExtra:
                               (-boxextents[0],boxextents[1],-boxextents[2]),
                               (-boxextents[0],-boxextents[1],boxextents[2]),
                               (-boxextents[0],-boxextents[1],-boxextents[2])))
-        inputbounds = numpy.max(dot(bounds,linalg.inv(tbases)),0)
+        inputbounds = numpy.max(numpy.dot(bounds,numpy.linalg.inv(tbases)),0)
         scale = averagedist/numpy.sqrt(3.0)
         X,Y,Z = numpy.mgrid[-inputbounds[0]:inputbounds[0]:scale,-inputbounds[1]:inputbounds[1]:scale,-inputbounds[2]:inputbounds[2]:scale]
         p = numpy.c_[X.flat,Y.flat,Z.flat]
@@ -449,7 +449,7 @@ class SpaceSamplerExtra:
         pts = numpy.zeros((N,3))
         pts[:,0] = numpy.linspace(0.0,meddimdist,N)
         pts[:,1] = meddimdist*numpy.mod(0.5+0.5*numpy.sqrt(numpy.arange(0,5.0*N,5.0)),1.0)
-        pts[:,2] = meddimdist*numpy.mod(0.5+numpy.sqrt(numpy.arange(0,13.0*N,13.0)),1.0)
+        pts[:,2] = meddimdist*numpy.mod(0.5+3*numpy.sqrt(numpy.arange(0,13.0*N,13.0)),1.0)
         if boxdims[minaxis] < meddimdist:
             pts = pts[pts[:,minaxis]<=boxdims[minaxis],:]
         if boxdims[maxaxis] > meddimdist:
