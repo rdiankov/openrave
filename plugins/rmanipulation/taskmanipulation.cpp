@@ -679,6 +679,9 @@ protected:
                     }
                     if( fstep > 0 ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: moved %f along direction=[%f,%f,%f]")%igrasp%fstep% -vglobalpalmdir.x% -vglobalpalmdir.y% -vglobalpalmdir.z));
+                        if( fGraspApproachOffset < 0 ) {
+                            RAVELOG_WARN(str(boost::format("grasp %d: moved too far back to avoid collision, approach offset is now negative (%f) and cannot recover. Should increase approachoffset")%igrasp%fGraspApproachOffset));
+                        }
                     }
                 }
 

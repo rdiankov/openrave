@@ -3,12 +3,19 @@
 ChangeLog
 #########
 
-Version 0.6.1 Unstable
+Version 0.6.3 Unstable
 ======================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.6.2
+=============
+
+Subversion Revision: r3059
+
+Initial Release: 2012/02/04
 
 Planning
 --------
@@ -47,7 +54,7 @@ Misc
 
 * If trajectory timing is not initialized, use retimer rather than smoother
 
-* Using ode in multi-threaded environments now works when cmake flag ODE_USE_MULTITHREAD is not specified.
+* Using ode in multi-threaded environments now works when cmake flag ODE_USE_MULTITHREAD is not specified. Ubuntu installations shouldn't crash anymore.
 
 Version 0.6.0
 =============
