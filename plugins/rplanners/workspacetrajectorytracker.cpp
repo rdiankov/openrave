@@ -379,7 +379,7 @@ protected:
             IkParameterization ikmidreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
 
             IkParameterization ikmidest;
-            ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,0.5), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
+            ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
             const dReal ikmidpointmaxdist2mult = 0.5;
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
             dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
