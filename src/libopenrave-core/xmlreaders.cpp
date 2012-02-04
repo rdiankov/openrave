@@ -2092,17 +2092,18 @@ public:
             rootjpoffset = (int)_pchain->GetPassiveJoints().size();
             //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
             // reisze _vTransforms to be the same size as the initial number of links
-            _pchain->GetLinkTransformations(_vTransforms);
+            std::vector<int> dofbranches;
+            _pchain->GetLinkTransformations(_vTransforms,dofbranches);
             _pchain->SetViewerData(UserDataPtr());
         }
     }
 
     Transform GetOffsetFrom(KinBody::LinkPtr plink)
     {
-        if(( plink->GetIndex() < 0) ||( plink->GetIndex() >= (int)_vTransforms.size()) ) {
+        if( plink->GetIndex() < 0 || plink->GetIndex() >= (int)_vTransforms.size() ) {
             return plink->GetTransform();
         }
-        return _vTransforms[plink->GetIndex()];
+        return _vTransforms.at(plink->GetIndex());
     }
 
     string GetModelsDir(const std::string& filename) const
@@ -2248,7 +2249,7 @@ public:
                     }
 
                     // do this later, or else offsetfrom will be messed up!
-                    _vTransforms[_plink->GetIndex()] = boost::dynamic_pointer_cast<LinkXMLReader>(_pcurreader)->GetOrigTransform();
+                    _vTransforms.at(_plink->GetIndex()) = boost::dynamic_pointer_cast<LinkXMLReader>(_pcurreader)->GetOrigTransform();
                     _plink.reset();
                 }
                 else if( xmlname == "joint" ) {
@@ -2269,7 +2270,8 @@ public:
                 else if( xmlname == "kinbody" ) {
                     // most likely new transforms were added, so update
                     _CheckInterface();
-                    _pchain->GetLinkTransformations(_vTransforms);
+                    std::vector<int> dofbranches;
+                    _pchain->GetLinkTransformations(_vTransforms,dofbranches);
                 }
                 else
                     RAVELOG_INFOA(str(boost::format("releasing unknown tag %s\n")%xmlname));
@@ -2447,7 +2449,7 @@ protected:
     float _fMassValue;                       ///< density or total mass
     Vector _vMassExtents;
 
-    vector<Transform> _vTransforms;             ///< original transforms of the bodies for offsetfrom
+    std::vector<Transform> _vTransforms;             ///< original transforms of the bodies for offsetfrom
 
     string _strModelsDir, _bodyname;
     string _prefix;         ///< add this prefix to all names of links and joints

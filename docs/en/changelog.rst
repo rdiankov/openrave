@@ -25,6 +25,13 @@ Planning
 
 * Task GraspPlanning now respects approach offset distance
 
+* Parabolic Smoother updates (thanks to Kris Hauser)
+
+Sampling
+--------
+
+* Robot Configuration Sampler now respects circular DOFs (including affine rotation).
+
 Inverse Kinematics
 ------------------
 

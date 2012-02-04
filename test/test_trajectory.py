@@ -164,7 +164,8 @@ class TestTrajectory(EnvironmentSetup):
                 self.RunTrajectory(robot,traj)
                 self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
                 
-        env.Reset()
+    def test_smoothing(self):
+        env = self.env
         self.LoadEnv('data/katanatable.env.xml')
         robot=env.GetRobots()[0]
         robot.SetActiveDOFs(range(5))

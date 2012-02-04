@@ -501,7 +501,6 @@ bool PPRamp::SolveMinTime(Real amax)
         int res=quadratic(a*a,b,c,t1,t2);
         PARABOLIC_RAMP_PLOG("Quadratic equation %g x^2 + %g x + %g = 0\n",a*a,b,c);
         PARABOLIC_RAMP_PLOG("%d results, %g %g\n",res,t1,t2);
-        //getchar();
         SaveRamp("PP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,Inf,-1);
         return false;
     }
@@ -579,7 +578,6 @@ bool PPRamp::SolveMinTime2(Real amax,Real timeLowerBound)
         int res=quadratic(a*a,b,c,t1,t2);
         PARABOLIC_RAMP_PLOG("Quadratic equation %g x^2 + %g x + %g = 0\n",a*a,b,c);
         PARABOLIC_RAMP_PLOG("%d results, %g %g\n",res,t1,t2);
-        //getchar();
         SaveRamp("PP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,Inf,timeLowerBound);
         return false;
     }
@@ -641,7 +639,6 @@ bool PPRamp::SolveMinAccel(Real endTime)
             PARABOLIC_RAMP_PLOG("Solutions: %d, %g and %g\n",res,t1,t2);
         }
         SaveRamp("PP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,Inf,endTime);
-        //getchar();
     }
     if(!FuzzyEquals(dx0 + a*tswitch,dx1-a*t2mT,EpsilonV)) {
         PARABOLIC_RAMP_PLOG("PPRamp: Error solving min-accel!\n");
@@ -747,7 +744,7 @@ Real PPRamp::CalcSwitchTime(Real a) const
         //check total time
         if(t2*Abs(a) < (dx1-dx0)*Sign(a)) return t1;
         else if(t1*Abs(a) < (dx1-dx0)*Sign(a)) return t2;
-        else return Min(t1,t2);                                                                                                                                                                                                                                                                                                           //both are ok
+        else return Min(t1,t2);                                                                                                                                                                                                                                                                                                                                            //both are ok
     }
     else return t1;
 }
@@ -910,7 +907,6 @@ Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
         PARABOLIC_RAMP_PLOG("x0 %g, dx0 %g, x1 %g, dx1 %g\n",x0,dx0,x1,dx1);
         PARABOLIC_RAMP_PLOG("EndTime %g, sign %g\n",endTime,sign);
         PARABOLIC_RAMP_PLOG("Results %g %g\n",accel1,accel2);
-        //getchar();
        }
        if(switchTime1 >= 0 && switchTime1 <= endTime) { switchTime=switchTime1; return accel1; }
        return -1.0;
@@ -922,7 +918,6 @@ Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
         PARABOLIC_RAMP_PLOG("x0 %g, dx0 %g, x1 %g, dx1 %g\n",x0,dx0,x1,dx1);
         PARABOLIC_RAMP_PLOG("EndTime %g, sign %g\n",endTime,sign);
         PARABOLIC_RAMP_PLOG("Results %g %g\n",accel1,accel2);
-        //getchar();
        }
        if(FuzzyZero(switchTime1,EpsilonT) || FuzzyZero(switchTime2,EpsilonT)) {
         //need to double check for numerical instability
@@ -1049,7 +1044,6 @@ Real PLPRamp::CalcMinAccel(Real endTime,Real v) const
        //Real t2mt1_test = 0.5*(Sqr(dx1) + Sqr(dx0))/(v*a) - v/a + (x1 - x0)/v;
        PARABOLIC_RAMP_PLOG("y1=%g, y2=%g, t2mt1 = %g\n",y1_test,y2_test,t2mt1_test);
        PARABOLIC_RAMP_PLOG("dy1=%g, dy2=%g, dt2mt1 = %g\n",y1-y1_test,y2-y2_test,t2mt1-t2mt1_test);
-       //getchar();
        return Inf;
        PARABOLIC_RAMP_ASSERT(y1 == y1_test);
        PARABOLIC_RAMP_ASSERT(y2 == y2_test);
@@ -1148,7 +1142,6 @@ bool PLPRamp::SolveMinTime2(Real amax,Real vmax,Real timeLowerBound)
         PARABOLIC_RAMP_PLOG("Acceleration %g, vel %g, deceleration %g\n",a,v,-a);
         PARABOLIC_RAMP_PLOG("Switch times %g %g %g\n",tswitch1,tswitch2,ttotal);
         SaveRamp("PLP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,timeLowerBound);
-        //getchar();
         //return false;
     }
     return true;
@@ -1194,7 +1187,6 @@ bool PLPRamp::SolveMinAccel(Real endTime,Real vmax)
             PARABOLICWARN("  Ramp %g,%g -> %g,%g\n",x0,dx0,x1,dx1);
             PARABOLICWARN("  endTime %g, accel %g, vel %g, switch times %g %g, total time %g\n",endTime,a,v,tswitch1,tswitch2,ttotal);
             SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-            //getchar();
             return false;
         }
     }
@@ -1224,7 +1216,6 @@ bool PLPRamp::SolveMinAccel(Real endTime,Real vmax)
         PARABOLIC_RAMP_PLOG("Acceleration %g, vel %g, deceleration %g\n",a,v,-a);
         PARABOLIC_RAMP_PLOG("Switch times %g %g %g\n",tswitch1,tswitch2,ttotal);
         SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-        //getchar();
         //return false;
     }
 
@@ -1244,13 +1235,13 @@ Real PLPRamp::CalcMinTime2(Real endTime,Real a,Real vmax) const
         Real ts1 = (v1-dx0)/a;
         Real ts2 = endTime - (v1-dx1)/a;
         //PARABOLIC_RAMP_PLOG("Solution 1 times %g %g %g\n",ts1,ts2,endTime);
-        if(Abs(v1) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v1;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      //it's a valid solution!
+        if(Abs(v1) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v1;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          //it's a valid solution!
     }
     if(res == 2) {
         Real ts1 = (v2-dx0)/a;
         Real ts2 = endTime - (v2-dx1)/a;
         //PARABOLIC_RAMP_PLOG("Solution 2 times %g %g %g\n",ts1,ts2,endTime);
-        if(Abs(v2) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v2;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      //it's a valid solution!
+        if(Abs(v2) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v2;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          //it's a valid solution!
     }
     return -1;
 }
@@ -1472,7 +1463,6 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         PARABOLIC_RAMP_PLOG("x0=%g, x1=%g, dx0=%g, dx1=%g\n",x0,x1,dx0,dx1);
         PARABOLIC_RAMP_PLOG("vmax = %g, amax = %g\n",vmax,amax);
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        //getchar();
     }
     return true;
 }
@@ -1553,7 +1543,6 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
         PARABOLIC_RAMP_PLOG("vmax = %g, amax = %g\n",vmax,amax);
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
         SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,tLowerBound);
-        //getchar();
     }
     PARABOLIC_RAMP_ASSERT(ttotal >= tLowerBound);
     return true;
@@ -1931,7 +1920,6 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 bool res=ramps[i].SolveMinTime2(amax[i],vmax[i],endTime);
                 if(!res) {
                     PARABOLIC_RAMP_PLOG("Couldn't solve min-time with lower bound!\n");
-                    //getchar();
                     return false;
                 }
                 PARABOLIC_RAMP_ASSERT(ramps[i].ttotal > endTime);
@@ -2022,7 +2010,6 @@ bool ParabolicRampND::SolveMinAccelLinear(const Vector& vmax,Real time)
     bool res=sramp.SolveMinAccel(svmax,time);
     if(!res) {
         PARABOLICWARN("Warning in straight-line parameter solve\n");
-        //getchar();
         return false;
     }
 
@@ -2036,7 +2023,6 @@ bool ParabolicRampND::SolveMinAccelLinear(const Vector& vmax,Real time)
         ramps[i].ttotal = endTime;
         if(!ramps[i].IsValid()) {
             PARABOLICWARN("Warning, error in straight-line path formula\n");
-            //getchar();
             res=false;
         }
     }
@@ -2475,7 +2461,6 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
         PARABOLIC_RAMP_PLOG("x0 %g v0 %g, x1 %g v1 %g\n",x0,v0,x1,v1);
         PARABOLIC_RAMP_PLOG("endTime %g, vmax %g\n",endTime,vmax);
         PARABOLIC_RAMP_PLOG("x bounds [%g,%g]\n",xmin,xmax);
-        //getchar();
         return false;
     }
     for(size_t i=0; i<ramps.size(); i++) {
@@ -2483,7 +2468,6 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
         if(bmin < xmin-EpsilonX || bmax > xmax+EpsilonX) {
             PARABOLIC_RAMP_PLOG("SolveMinAccelBounded: Warning, path exceeds bounds?\n");
             PARABOLIC_RAMP_PLOG("  ramp[%d] bounds %g %g, limits %g %g\n",i,bmin,bmax,xmin,xmax);
-            //getchar();
             return false;
         }
     }
@@ -2606,7 +2590,6 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 ramps[i][0].Bounds(bmin,bmax);
                 if(bmin < xmin[i] || bmax > xmax[i]) {
                     //PARABOLIC_RAMP_PLOG("Couldn't solve min-time with lower bound while staying in bounds\n");
-                    //getchar();
                     return -1;
                 }
 
@@ -2681,7 +2664,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::v
             if(indices[i] != ramps[i].end())
                 tnext = Min(tnext,timeOffsets[i]+indices[i]->ttotal);
         }
-        if(IsInf(tnext)) break;                                                                                                                                                                                                                                                                                                           //done
+        if(IsInf(tnext)) break;                                                                                                                                                                                                                                                                                                                                            //done
         if(!(tnext > t || t == 0)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
             PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());
@@ -2769,7 +2752,6 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::v
                         }
                         PARABOLIC_RAMP_PLOG(", total %g\n",ttotal);
                     }
-                    //getchar();
                 }
                 //set the 1D ramp manually
                 ramp.ramps[i].x0 = ramp.x0[i];
@@ -2802,19 +2784,15 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::v
     for(size_t i=0; i<ramps.size(); i++) {
         if(!FuzzyEquals(ramps[i].front().x0,ndramps.front().x0[i],EpsilonX)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
-            //getchar();
         }
         if(!FuzzyEquals(ramps[i].front().dx0,ndramps.front().dx0[i],EpsilonV)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
-            //getchar();
         }
         if(!FuzzyEquals(ramps[i].back().x1,ndramps.back().x1[i],EpsilonX)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
-            //getchar();
         }
         if(!FuzzyEquals(ramps[i].back().dx1,ndramps.back().dx1[i],EpsilonV)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
-            //getchar();
         }
         ndramps.front().x0[i] = ndramps.front().ramps[i].x0 = ramps[i].front().x0;
         ndramps.front().dx0[i] = ndramps.front().ramps[i].dx0 = ramps[i].front().dx0;

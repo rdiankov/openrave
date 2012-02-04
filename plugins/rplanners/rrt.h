@@ -339,6 +339,24 @@ public:
 
         if( listgoalpaths.size() == 0 ) {
             RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
+//            {
+//                ofstream f((RaveGetHomeDirectory() + string("/sourcetree.txt")).c_str());
+//                FOREACH(itnode,_treeForward._nodes) {
+//                    FOREACH(it,(*itnode)->q) {
+//                        f << *it << " ";
+//                    }
+//                    f << endl;
+//                }
+//            }
+//            {
+//                ofstream f((RaveGetHomeDirectory() + string("/goaltree.txt")).c_str());
+//                FOREACH(itnode,_treeBackward._nodes) {
+//                    FOREACH(it,(*itnode)->q) {
+//                        f << *it << " ";
+//                    }
+//                    f << endl;
+//                }
+//            }
             return PS_Failed;
         }
 

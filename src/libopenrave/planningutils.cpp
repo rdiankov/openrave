@@ -162,6 +162,12 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 
     ConfigurationSpecification velspec =  parameters->_configurationspecification.ConvertToVelocitySpecification();
 
+    dReal fresolutionmean = 0;
+    FOREACH(it,parameters->_vConfigResolution) {
+        fresolutionmean += *it;
+    }
+    fresolutionmean /= parameters->_vConfigResolution.size();
+
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
     std::vector<dReal> vdata, vdatavel, vdiff;
@@ -197,7 +203,15 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         }
         if( !!parameters->_neighstatefn ) {
             newq = vdata;
-            if( !parameters->_neighstatefn(newq,deltaq,0) ) {
+            if( !parameters->_neighstatefn(newq,vdiff,0) ) {
+                string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                trajectory->serialize(f);
+                throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d, wrote trajectory %s",ipoint%filename,ORE_InconsistentConstraints);
+            }
+            dReal fdist = parameters->_distmetricfn(newq,vdata);
+            if( fdist > 0.01 * fresolutionmean ) {
                 string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost

@@ -56,7 +56,7 @@ def myrelpath(path, start=os.path.curdir):
         return os.path.curdir
     return os.path.join(*rel_list)
 
-def LoadTrajectoryFromFile(trajfile,env,trajtype=''):
+def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
     
 class OpenRAVEGlobalArguments:

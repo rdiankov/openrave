@@ -376,6 +376,7 @@ protected:
         int nMaxTries = 2;     // max tries for the planner
         boost::shared_ptr<ostream> pOutputTrajStream;
 
+        int nMaxJitterIterations = 1000;
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
@@ -454,7 +455,7 @@ protected:
             std::copy(params->vgoalconfig.begin()+i,params->vgoalconfig.begin()+i+robot->GetActiveDOF(),vonegoal.begin());
             robot->SetActiveDOFValues(vonegoal, true);
             robot->GetActiveDOFValues(vonegoal);
-            switch( planningutils::JitterActiveDOF(robot,5000,jitter) ) {
+            switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,jitter) ) {
             case 0:
                 RAVELOG_WARN(str(boost::format("jitter failed %d\n")%i));
                 continue;
@@ -473,7 +474,7 @@ protected:
 
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        switch( planningutils::JitterActiveDOF(robot,5000,jitter) ) {
+        switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,jitter) ) {
         case 0:
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
@@ -542,7 +543,7 @@ protected:
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;
-
+        int nMaxJitterIterations = 1000;
         // constraint stuff
         boost::array<double,6> vconstraintfreedoms = { { 0,0,0,0,0,0}};
         Transform tConstraintTargetWorldFrame, tConstraintTaskFrame;
@@ -722,7 +723,7 @@ protected:
             if( goalsampler.Sample(vgoal) ) {
                 if(constrainterrorthresh > 0 ) {
                     robot->SetActiveDOFValues(vgoal);
-                    switch( planningutils::JitterActiveDOF(robot,5000,jitter,params->_neighstatefn) ) {
+                    switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,jitter,params->_neighstatefn) ) {
                     case 0:
                         RAVELOG_DEBUG("constraint function failed\n");
                         continue;
@@ -751,7 +752,7 @@ protected:
 
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
-        switch( planningutils::JitterActiveDOF(robot,5000,jitter,constrainterrorthresh > 0 ? params->_neighstatefn : PlannerBase::PlannerParameters::NeighStateFn()) ) {
+        switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,jitter,constrainterrorthresh > 0 ? params->_neighstatefn : PlannerBase::PlannerParameters::NeighStateFn()) ) {
         case 0:
             RAVELOG_WARN("jitter failed for initial\n");
             return false;
@@ -770,7 +771,7 @@ protected:
 
         bool bSuccess = false;
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
-        RAVELOG_INFO("starting planning\n");
+        RAVELOG_DEBUG("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {
             if( !rrtplanner->InitPlan(robot, params) ) {
@@ -780,7 +781,7 @@ protected:
 
             if( rrtplanner->PlanPath(ptraj) ) {
                 bSuccess = true;
-                RAVELOG_INFO("finished planning\n");
+                RAVELOG_DEBUG("finished planning\n");
                 break;
             }
             else {
@@ -827,6 +828,7 @@ protected:
         boost::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries=1;
         int maxdivision=10;
+        int nMaxJitterIterations = 1000;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -880,7 +882,7 @@ protected:
 
         RobotBase::RobotStateSaver saver(robot);
         uint32_t starttime = GetMilliTime();
-        if( planningutils::JitterActiveDOF(robot) == 0 ) {
+        if( planningutils::JitterActiveDOF(robot,nMaxJitterIterations) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
 
@@ -916,7 +918,7 @@ protected:
         bool bExecute = true, bOutputFinal=false;
         boost::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
-        int nMaxIterations=5000;
+        int nMaxJitterIterations=5000;
         dReal fJitter=0.03f;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -929,7 +931,7 @@ protected:
                 sinput >> bExecute;
             }
             else if( cmd == "maxiter" ) {
-                sinput >> nMaxIterations;
+                sinput >> nMaxJitterIterations;
             }
             else if( cmd == "jitter" ) {
                 sinput >> fJitter;
@@ -958,7 +960,7 @@ protected:
         vector<dReal> vvalues;
         robot->GetActiveDOFValues(vvalues);
         ptraj->Insert(0,vvalues);
-        switch( planningutils::JitterActiveDOF(robot,nMaxIterations,fJitter) ) {
+        switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,fJitter) ) {
         case 0:
             RAVELOG_WARN("could not jitter out of collision\n");
             return false;

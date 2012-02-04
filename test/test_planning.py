@@ -248,10 +248,8 @@ class TestMoving(EnvironmentSetup):
 
     def test_navigationmanip(self):
         env=self.env
-        env.StartSimulation(0.1,False)
         self.LoadEnv('data/pr2test2.env.xml')
         robot = env.GetRobots()[0]
-
         manip = robot.SetActiveManipulator('leftarm_torso')
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
@@ -261,44 +259,41 @@ class TestMoving(EnvironmentSetup):
         basemanip = interfaces.BaseManipulation(robot)
         taskmanip = interfaces.TaskManipulation(robot)
         target=env.GetKinBody('TibitsBox1')
+
         with env:
             targetcollision = env.CheckCollision(target)
             jointnames = ['l_shoulder_lift_joint','l_elbow_flex_joint','l_wrist_flex_joint','r_shoulder_lift_joint','r_elbow_flex_joint','r_wrist_flex_joint']
             armindices = [robot.GetJoint(name).GetDOFIndex() for name in jointnames]
             armgoal = [1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996]
             robot.SetActiveDOFs(armindices)
-            basemanip.MoveActiveJoints(goal=armgoal)
-        robot.WaitForController(100)
-        
-        with env:
+            traj=basemanip.MoveActiveJoints(goal=armgoal,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
+            assert( transdist(robot.GetActiveDOFValues(),armgoal) <= g_epsilon )
+            
             robot.SetActiveDOFs([],Robot.DOFAffine.X|Robot.DOFAffine.Y|Robot.DOFAffine.RotationAxis,[0,0,1])
-            basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=5000,steplength=0.15,maxtries=2)
+            traj = basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=1000,steplength=0.15,maxtries=2,execute=False,outputtrajobj=True)
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
-        robot.WaitForController(100)
-
-        taskmanip.ReleaseFingers()
-        with env:
+            self.RunTrajectory(robot,traj)
+            
+            traj = taskmanip.ReleaseFingers(execute=False,outputtrajobj=True)[1]
             assert( transdist(robot.GetDOFValues(armindices),armgoal) <= g_epsilon )
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
-        robot.WaitForController(100)
-
-        Tgoal = array([[0,-1,0,3.5],[-1,0,0,-1.3],[0,0,-1,0.842],[0,0,0,1]])
-        res = basemanip.MoveToHandPosition(matrices=[Tgoal],seedik=16)
-        with env:
+            self.RunTrajectory(robot,traj)
+            
+            Tgoal = array([[0,-1,0,3.5],[-1,0,0,-1.3],[0,0,-1,0.842],[0,0,0,1]])
+            traj = basemanip.MoveToHandPosition(matrices=[Tgoal],seedik=16,execute=False,outputtrajobj=True)
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
-        robot.WaitForController(100)
-
-        taskmanip.CloseFingers()
-        with env:
+            self.RunTrajectory(robot,traj)
+            
+            traj = taskmanip.CloseFingers(execute=False,outputtrajobj=True)[1]
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
-        robot.WaitForController(100)
-
-        with env:
+            self.RunTrajectory(robot,traj)
+            
             robot.Grab(target)
             assert( transdist(nonadjlinks,array(robot.GetNonAdjacentLinks(KinBody.AdjacentOptions.Enabled))) == 0 )
             assert( not targetcollision or env.CheckCollision(robot) )
-            basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0])
-        robot.WaitForController(100)
+            traj = basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0],execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
 
     def test_planwithcollision(self):
         env=self.env
@@ -308,15 +303,14 @@ class TestMoving(EnvironmentSetup):
             defaultvalues = robot.GetDOFValues()
             manip = robot.SetActiveManipulator('rightarm')
             basemanip = interfaces.BaseManipulation(robot)
-
             robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
             assert(env.CheckCollision(robot))
-
+            
             print 'test_planwithcollision: environment collision'
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
-
+                
             Tdelta = eye(4)
             Tdelta[0,3] = -0.2
             Tdelta[2,3] = -0.2
