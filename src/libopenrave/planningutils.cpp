@@ -163,7 +163,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     ConfigurationSpecification velspec =  parameters->_configurationspecification.ConvertToVelocitySpecification();
 
     dReal fresolutionmean = 0;
-    FOREACH(it,parameters->_vConfigResolution) {
+    FOREACHC(it,parameters->_vConfigResolution) {
         fresolutionmean += *it;
     }
     fresolutionmean /= parameters->_vConfigResolution.size();
