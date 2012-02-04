@@ -8,9 +8,10 @@ namespace ParabolicRamp {
 typedef OpenRAVE::dReal Real;
 typedef std::vector<Real> Vector;
 
-#define PARABOLICLOG RAVELOG_VERBOSE
+#define PARABOLIC_RAMP_PLOG RAVELOG_VERBOSE
+#define PARABOLIC_RAMP_PERROR RAVELOG_ERROR
 #define PARABOLICWARN RAVELOG_DEBUG
-#define PARABOLIC_ASSERT BOOST_ASSERT
+#define PARABOLIC_RAMP_ASSERT BOOST_ASSERT
 
 //tolerance for time
 const static Real EpsilonT = 1e-9;
