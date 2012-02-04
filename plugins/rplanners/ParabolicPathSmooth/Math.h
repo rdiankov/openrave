@@ -8,18 +8,19 @@ namespace ParabolicRamp {
 typedef OpenRAVE::dReal Real;
 typedef std::vector<Real> Vector;
 
-#define PARABOLICLOG RAVELOG_VERBOSE
+#define PARABOLIC_RAMP_PLOG RAVELOG_VERBOSE
+#define PARABOLIC_RAMP_PERROR RAVELOG_ERROR
 #define PARABOLICWARN RAVELOG_DEBUG
-#define PARABOLIC_ASSERT BOOST_ASSERT
+#define PARABOLIC_RAMP_ASSERT BOOST_ASSERT
 
 //tolerance for time
-const static Real EpsilonT = 1e-8;
+const static Real EpsilonT = 1e-9;
 //tolerance for position
-const static Real EpsilonX = 1e-7;
+const static Real EpsilonX = 1e-9;
 //tolerance for velocity
-const static Real EpsilonV = 1e-7;
+const static Real EpsilonV = 1e-9;
 //tolerance for acceleration
-const static Real EpsilonA = 1e-6;
+const static Real EpsilonA = 1e-9;
 
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;
@@ -55,6 +56,9 @@ inline bool FuzzyZero(Real x,Real tol) {
 }
 inline bool FuzzyEquals(Real x,Real y,Real tol) {
     return OpenRAVE::RaveFabs(x-y)<=tol;
+}
+inline bool FuzzyInRange(Real x, Real xmin, Real xmax, Real tol) {
+    return x>=xmin-tol && x <=xmax+tol;
 }
 inline void Swap(Real& x,Real& y) {
     Real temp=x; x=y; y=temp;

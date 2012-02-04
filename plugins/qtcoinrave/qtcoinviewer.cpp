@@ -80,6 +80,12 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
+    if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
+        _name += " (Development Version)";
+    }
+    else {
+        _name += " (Stable Release)";
+    }
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle(_name.c_str());
     statusBar()->showMessage(tr("Status Bar"));

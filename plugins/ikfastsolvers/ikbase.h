@@ -743,7 +743,12 @@ private:
         IkParameterization ikparamnew = pmanip->GetBase()->GetTransform().inverse()*pmanip->GetIkParameterization(param.GetType());
         dReal ikworkspacedist = param.ComputeDistanceSqr(ikparamnew);
         if( ikworkspacedist > _ikthreshold ) {
-            stringstream ss; ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << ikworkspacedist << ": " << param << endl;;
+            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            FOREACHC(itvalue,vravesol) {
+                ss << *itvalue << ", ";
+            }
+            ss << "]" << endl;
             RAVELOG_ERROR(ss.str());
             return SR_Continue;
         }

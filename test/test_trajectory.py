@@ -23,17 +23,14 @@ class TestTrajectory(EnvironmentSetup):
         Tgoal1 = manip1.GetTransform()
         Tgoal1[0,3] -= 0.3
         Tgoal1[2,3] += 0.4
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtraj=True)
-        traj1=RaveCreateTrajectory(env,'').deserialize(trajdata)
+        traj1=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtrajobj=True)
 
         manip2=robot.SetActiveManipulator('rightarm')
         Tgoal2 = manip2.GetTransform()
         Tgoal2[0,3] -= 0.5
         Tgoal2[1,3] -= 0.5
         Tgoal2[2,3] += 0.2
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtraj=True)
-        traj2=RaveCreateTrajectory(env,'').deserialize(trajdata)
-
+        traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
         traj3=planningutils.MergeTrajectories([traj1,traj2])
 
         with robot:
@@ -54,9 +51,7 @@ class TestTrajectory(EnvironmentSetup):
             Tgoal1[0,3] -= 0.3
             Tgoal1[2,3] += 0.4
 
-        trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtraj=True)
-        traj1=RaveCreateTrajectory(env,'').deserialize(trajdata)
-        
+        traj1=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtrajobj=True)
         with env:
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
             env.AddKinBody(body1,True)
@@ -87,8 +82,7 @@ class TestTrajectory(EnvironmentSetup):
             Tgoal2[0,3] -= 0.5
             Tgoal2[1,3] -= 0.5
             Tgoal2[2,3] += 0.2
-            trajdata=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtraj=True)
-            traj2=RaveCreateTrajectory(env,'').deserialize(trajdata)
+            traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
 
         with env:
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml')
@@ -142,17 +136,44 @@ class TestTrajectory(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
-        for delta in [1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
+        assert(not env.CheckCollision(robot))
+        for delta in [0,1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,robot.GetActiveDOFValues())
-            traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
+            # get some values, hopefully non-zero
+            basevalues = robot.GetActiveDOFValues()
+            with robot:
+                for delta in arange(0.1,0.5,0.1):
+                    robot.SetActiveDOFValues(delta*ones(robot.GetActiveDOF()))
+                    if not env.CheckCollision(robot):
+                        basevalues = robot.GetActiveDOFValues()
+                        break
+            traj.Insert(0,basevalues)
+            traj.Insert(1,basevalues+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolicsmoother','shortcut_linear']:
                 planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                self.RunTrajectory(robot,traj)
+                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,robot.GetActiveDOFValues())
+            traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolictrajectoryretimer', 'lineartrajectoryretimer']:
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                self.RunTrajectory(robot,traj)
+                self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
+                
+    def test_smoothing(self):
+        env = self.env
+        self.LoadEnv('data/katanatable.env.xml')
+        robot=env.GetRobots()[0]
+        robot.SetActiveDOFs(range(5))
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347, 2.437978870810338, -0.4588760200376995, -1.425257530151644, 1.257459103400449, 2.274410109574348])
+        planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+        self.RunTrajectory(robot,traj)
 
     def test_simpleretiming(self):
         env=self.env
@@ -167,9 +188,7 @@ class TestTrajectory(EnvironmentSetup):
         parameters = Planner.PlannerParameters()
         parameters.SetRobotActiveJoints(robot)
         planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
-        robot.GetController().SetPath(traj)
-        while not robot.GetController().IsDone():
-            env.StepSimulation(0.01)
+        self.RunTrajectory(robot,traj)
             
     def test_smoothwithcircular(self):
         print 'test smoothing with circular joints'
@@ -227,48 +246,69 @@ class TestTrajectory(EnvironmentSetup):
                     dist02 = fmod((v0-v2)+3*pi,2*pi)-pi
                     assert(all(abs(dist01)<=abs(dist02)))
 
-                robot.GetController().SetPath(traj2)
-                while not robot.GetController().IsDone():
-                    env.StepSimulation(0.01)
+                self.RunTrajectory(robot,traj2)
 
     def test_affine_smoothing(self):
         env=self.env
         robot=self.LoadRobot('robots/barrettwam.robot.xml')
         robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y |DOFAffine.RotationAxis, [0,0,1])
-        traj=RaveCreateTrajectory(env,'')
-        traj.Init(robot.GetActiveConfigurationSpecification())
-        traj.Insert(0,[0,0,0,  1,0,0.7, 1,0,-5.58, 1,0,-3.2])
-        traj2=RaveCreateTrajectory(env,'')
-        traj2.Clone(traj,0)
+        with env:
+            allwaypoints = [[1,0,1,  1,0,1], [0,0,0,  1,0,0.7,  1,0,-5.58,  1,0,-3.2]]
+            for waypoints in allwaypoints:
+                traj=RaveCreateTrajectory(env,'')
+                traj.Init(robot.GetActiveConfigurationSpecification())
+                traj.Insert(0,waypoints)
+                traj2=RaveCreateTrajectory(env,'')
+                traj2.Clone(traj,0)
 
-        env.StartSimulation(0.01,False)
-            
-        for itraj in range(2):
-            with env:
-                T=robot.GetTransform()
-                planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
-                assert(transdist(robot.GetTransform(),T) <= g_epsilon)
-                assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
-                for i in range(traj.GetNumWaypoints()):
-                    waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
-                    waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
-                    assert(transdist(waypoint0,waypoint1) <= g_epsilon)
-            robot.GetController().SetPath(traj2)
-            robot.WaitForController(0)
-
-        plannernames = ['parabolicsmoother','shortcut_linear']
-        for plannername in plannernames:
-            traj2=RaveCreateTrajectory(env,'')
-            traj2.Clone(traj,0)
-            for itraj in range(2):
-                with env:
+                for itraj in range(2):
                     T=robot.GetTransform()
-                    planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                    planningutils.RetimeAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername='lineartrajectoryretimer')
                     assert(transdist(robot.GetTransform(),T) <= g_epsilon)
-                    for i in [0,-1]:
+                    assert(traj2.GetNumWaypoints()==traj.GetNumWaypoints())
+                    for i in range(traj.GetNumWaypoints()):
                         waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                         waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
                         assert(transdist(waypoint0,waypoint1) <= g_epsilon)
-                robot.GetController().SetPath(traj2)
-                robot.WaitForController(0)
+                    self.RunTrajectory(robot,traj2)
+                    self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
 
+                plannernames = ['parabolicsmoother','shortcut_linear']
+                for plannername in plannernames:
+                    traj2=RaveCreateTrajectory(env,'')
+                    traj2.Clone(traj,0)
+                    for itraj in range(2):
+                        T=robot.GetTransform()
+                        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                        assert(transdist(robot.GetTransform(),T) <= g_epsilon)
+                        for i in [0,-1]:
+                            waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                            waypoint1=traj2.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
+                            assert(transdist(waypoint0,waypoint1) <= g_epsilon)
+                        self.RunTrajectory(robot,traj2)
+                        self.RunTrajectory(robot,RaveCreateTrajectory(env,traj2.GetXMLId()).deserialize(traj2.serialize(0)))
+
+    def test_overwritetraj(self):
+        env=self.env
+        trajspec = ConfigurationSpecification()
+        trajspec.AddGroup('joint_values',3,'linear')
+        trajspec.AddGroup('customgroup',1,'previous')
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(trajspec)
+        orgpoints = [ 11.,  12.,  13.,   0.,  21.,  22.,  23.,   0.]
+        traj.Insert(0,orgpoints)
+        assert(traj.GetNumWaypoints()==2)
+        
+        blendspec = ConfigurationSpecification()
+        blendspec.AddGroup('customgroup',1,'previous')        
+        traj.Insert(0,[55,56],blendspec,True)
+        assert(traj.GetNumWaypoints()==2)
+        orgpoints[3] = 55
+        orgpoints[7] = 56
+        newwaypoints = traj.GetWaypoints(0,2)
+        assert(transdist(orgpoints,newwaypoints) <= g_epsilon)
+        
+        g = blendspec.GetGroupFromName('customgroup')
+        blendspec = ConfigurationSpecification(g)
+        assert(traj.GetWaypoint(0,g)==55)
+        assert(traj.GetWaypoint(1,ConfigurationSpecification(g))==56)

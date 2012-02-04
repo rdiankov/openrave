@@ -6,21 +6,22 @@ if(ODE_LIBRARY_FOUND)
   link_directories(${OPENRAVE_LINK_DIRS} ${ODE_LINK_DIRS})
 
   # doesn't work
-  #  set(CMAKE_REQUIRED_INCLUDES ${ODE_INCLUDE_DIRS})
-  #  set(CMAKE_REQUIRED_FLAGS "${ODE_CXXFLAGS}")
-  #  set(CMAKE_REQUIRED_LIBRARIES ${ODE_LIBRARY})
-  #  message(STATUS "ode lib: ${ODE_LIBRARY}")
-  #  check_function_exists(dAllocateODEDataForThread ODE_HAVE_ALLOCATE_DATA_THREAD)
+  set(CMAKE_REQUIRED_INCLUDES ${ODE_INCLUDE_DIRS})
+  set(CMAKE_REQUIRED_FLAGS "${ODE_CXXFLAGS}")
+  set(CMAKE_REQUIRED_LIBRARIES ${ODE_LIBRARY})
+  check_function_exists(dAllocateODEDataForThread ODE_HAVE_ALLOCATE_DATA_THREAD)
   if( ODE_HAVE_ALLOCATE_DATA_THREAD )
-    add_definitions("-DODE_HAVE_ALLOCATE_DATA_THREAD")
+    if( WIN32 OR ODE_USE_MULTITHREAD )
+      add_definitions("-DODE_HAVE_ALLOCATE_DATA_THREAD")
+    else()
+      message(STATUS "Detected ODE multi-threading extensions, but not sure if should enable them... define ODE_USE_MULTITHREAD variable to use them")
+    endif()
   endif()
 
   include_directories(${ODE_INCLUDE_DIRS})
   add_library(oderave SHARED oderave.cpp odecollision.h odephysics.h odespace.h odecontroller.h plugindefs.h)
   
   # test for ode version 0.10
-  set(CMAKE_REQUIRED_INCLUDES ${ODE_INCLUDE_DIRS})
-  set(CMAKE_REQUIRED_FLAGS "${ODE_CXXFLAGS}")
   check_cxx_source_compiles("
     #include <ode/ode.h>
 

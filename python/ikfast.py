@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
-# Copyright (C) 2009-2011 Rosen Diankov
+# Copyright (C) 2009-2012 Rosen Diankov
 #
 # ikfast is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -142,6 +142,9 @@ The global functions are:
   // the size in bytes of the configured number type
   int getIKRealSize();
 
+  // the ikfast version used to generate this file
+  const char* getIKFastVersion();
+  
   // the ik type ID
   int getIKType();
 
@@ -226,9 +229,9 @@ A. Most likely not, usually an iksolver finishes within 10 minutes.
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '54'
+__version__ = '55'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -3303,23 +3306,44 @@ class IKFastSolver(AutoReloader):
                     treefirst = self.solveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
                     # solvable, which means we now have len(AllEquations)-1 with two variables, solve with half angles
                     halfanglesolution=self.solvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freejointvars+[curvar])[0]
+                    # sometimes halfanglesolution can evaluate to all zeros (katana arm), need to catch this and go to a different branch
                     halfanglesolution.AddHalfTanValue = True
                     jointtrees2.append(halfanglesolution)
                     halfanglevar = unknownvars[0] if halfanglesolution.jointname==unknownvars[0].name else unknownvars[1]
                     unknownvars.remove(halfanglevar)
+
+                    try:
+                        # give that two variables are solved, can most likely solve the rest. Solving with the original
+                        # equations yields simpler solutions since reducedeqs hold half-tangents
+                        curvars = solvejointvars[:]
+                        curvars.remove(curvar)
+                        curvars.remove(halfanglevar)
+                        subsinv = []
+                        for v in solvejointvars:
+                            subsinv += self.Variable(v).subsinv
+                        AllEquationsOrig = [(peq[0].as_basic()-peq[1].as_basic()).subs(subsinv) for peq in rawpolyeqs]
+                        self.sortComplexity(AllEquationsOrig)
+                        jointtrees2 += self.solveAllEquations(AllEquationsOrig,curvars=curvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree)
+                        return solutiontree+treefirst,solvejointvars
+                
+                    except self.CannotSolveError,e:
+                        # try another strategy
+                        log.debug(e)
+
                     # solve all the unknowns now
                     jointtrees3=[]
                     treesecond = self.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees3])])
                     for t in treesecond:
                         # most likely t is a solution...
                         t.AddHalfTanValue = True
-                        # can be SolverCheckZeros
-                        if hasattr(t,'zerobranch'):
+                        if isinstance(t,AST.SolverCheckZeros):
                             for t2 in t.zerobranch:
                                 t2.AddHalfTanValue = True
-                        if hasattr(t,'nonzerobranch'):
                             for t2 in t.nonzerobranch:
                                 t2.AddHalfTanValue = True
+                            if len(t.zerobranch) == 0 or isinstance(t.zerobranch[0],AST.SolverBreak):
+                                log.info('detected zerobranch with SolverBreak, trying to fix')
+                                
                     jointtrees2 += treesecond
                     # using these solutions, can evaluate all monoms and check for consistency, this step is crucial since
                     # AllEquations might not constrain all degrees of freedom (check out katana)

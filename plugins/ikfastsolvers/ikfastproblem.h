@@ -598,13 +598,13 @@ public:
         return true;
     }
 
-    bool DebugIKFindSolution(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, std::vector<dReal>& viksolution, int filteroptions, std::vector<dReal>& parameters, int paramindex)
+    bool DebugIKFindSolution(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, std::vector<dReal>& viksolution, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
-        for(dReal f = 0.0001; f <= 0.9999; f += 0.01f) {
+        for(dReal f = 0; f <= 1; f += deltafree) {
             parameters[paramindex] = f;
             if( paramindex > 0 ) {
-                if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, parameters, paramindex-1) ) {
+                if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, parameters, paramindex-1,deltafree) ) {
                     return true;
                 }
             }
@@ -618,13 +618,13 @@ public:
         return false;
     }
 
-    void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex)
+    void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
-        for(dReal f = 0.0001; f <= 0.9999; f += 0.01f) {
+        for(dReal f = 0; f <= 1; f += deltafree) {
             parameters.at(paramindex) = f;
             if( paramindex > 0 ) {
-                DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, parameters, paramindex-1);
+                DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, parameters, paramindex-1,deltafree);
             }
             else {
                 vector< vector<dReal> > vtempsol;
@@ -736,6 +736,7 @@ public:
         vector<pair<IkParameterization, vector<dReal> > >& vnofullsolutions = vsolutionresults[2];     // solution returned, but not all of them
         int success=0;
         int nTotalIterations = 0;
+        int nNumFreeTests = 100*pmanip->GetIkSolver()->GetNumFreeParameters();
 
         FOREACHC(itiktype, RaveGetIkParameterizationMap()) {
             if( !pmanip->GetIkSolver()->Supports(itiktype->first) ) {
@@ -762,7 +763,13 @@ public:
                     else {
                         for(int j = 0; j < (int)vrealsolution.size(); j++) {
                             if( RaveRandomFloat() > sampledegeneratecases ) {
-                                vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                                int dof = pmanip->GetArmIndices().at(j);
+                                if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
+                                    vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
+                                }
+                                else {
+                                    vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                                }
                             }
                             else {
                                 switch(RaveRandomInt()%3) {
@@ -940,10 +947,13 @@ public:
                     }
                 }
 
-                if( pmanip->GetIkSolver()->GetNumFreeParameters() > 0 ) {
+                if( pmanip->GetIkSolver()->GetNumFreeParameters() > 0 && nNumFreeTests > 0 ) {
+                    dReal freerange = 1;
+                    dReal deltafree = freerange/dReal(exp(log(double(nNumFreeTests))/double(pmanip->GetIkSolver()->GetNumFreeParameters())));
+
                     // test with the free parameters
                     robot->SetActiveDOFValues(vrand, false);
-                    if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, vfreeparameters, vfreeparameters_out.size()-1) ) {
+                    if( DebugIKFindSolution(pmanip, twrist, viksolution, filteroptions, vfreeparameters, vfreeparameters_out.size()-1,deltafree) ) {
                         robot->SetActiveDOFValues(viksolution, false);
                         twrist_out = pmanip->GetIkParameterization(twrist);
                         if(twrist.ComputeDistanceSqr(twrist_out) > fthreshold ) {
@@ -990,7 +1000,7 @@ public:
                     // test the multiple solution function
                     robot->SetActiveDOFValues(vrand, false);
                     viksolutions.resize(0);
-                    DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, vfreeparameters_out, vfreeparameters_out.size()-1);
+                    DebugIKFindSolutions(pmanip, twrist, viksolutions, filteroptions, vfreeparameters_out, vfreeparameters_out.size()-1,deltafree);
                     // not sure if should record failure if no solutions found... the free parameters increment are different than the IK one
                     bool bfail = false;
                     FOREACH(itsol, viksolutions) {

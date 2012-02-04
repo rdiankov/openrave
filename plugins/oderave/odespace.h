@@ -225,6 +225,10 @@ private:
 
     bool InitEnvironment()
     {
+#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+        dAllocateODEDataForThread(dAllocateMaskAll);
+#endif
+
         RAVELOG_VERBOSE("init ode collision environment\n");
         _ode.reset(new ODEResources());
         return true;
@@ -243,6 +247,9 @@ private:
     KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+#ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
+        dAllocateODEDataForThread(dAllocateMaskAll);
+#endif
 
         // create all ode bodies and joints
         if( !pinfo ) {

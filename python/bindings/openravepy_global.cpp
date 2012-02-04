@@ -227,6 +227,9 @@ public:
     PyConfigurationSpecification(const ConfigurationSpecification& spec) {
         _spec = spec;
     }
+    PyConfigurationSpecification(const ConfigurationSpecification::Group& g) {
+        _spec = ConfigurationSpecification(g);
+    }
     PyConfigurationSpecification(PyConfigurationSpecificationPtr pyspec) {
         _spec = pyspec->_spec;
     }
@@ -282,6 +285,11 @@ public:
     int AddGroup(const std::string& name, int dof, const std::string& interpolation)
     {
         return _spec.AddGroup(name,dof,interpolation);
+    }
+
+    int AddGroup(const ConfigurationSpecification::Group& g)
+    {
+        return _spec.AddGroup(g);
     }
 
 //    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
@@ -645,6 +653,27 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
 {
     return p->_spec;
 }
+
+struct spec_from_group
+{
+    spec_from_group()
+    {
+        boost::python::converter::registry::push_back(&convertible, &construct, boost::python::type_id<PyConfigurationSpecificationPtr>());
+    }
+
+    static void* convertible(PyObject* obj)
+    {
+        return obj == Py_None ||  boost::python::extract<ConfigurationSpecification::Group>(obj).check() ? obj : NULL;
+    }
+
+    static void construct(PyObject* obj, boost::python::converter::rvalue_from_python_stage1_data* data)
+    {
+        ConfigurationSpecification::Group g = (ConfigurationSpecification::Group)boost::python::extract<ConfigurationSpecification::Group>(obj);
+        void* storage = ((boost::python::converter::rvalue_from_python_storage<PyConfigurationSpecificationPtr>*)data)->storage.bytes;
+        new (storage) PyConfigurationSpecificationPtr(new PyConfigurationSpecification(g));
+        data->convertible = storage;
+    }
+};
 
 std::string openravepyCompilerVersion()
 {
@@ -1163,8 +1192,12 @@ void init_openravepy_global()
     ;
 
     {
+        int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
+        int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
+
         scope configurationspecification = class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
                                            .def(init<PyConfigurationSpecificationPtr>(args("spec")) )
+                                           .def(init<const ConfigurationSpecification::Group&>(args("group")) )
                                            .def(init<const std::string&>(args("xmldata")) )
                                            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
                                            .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
@@ -1174,8 +1207,8 @@ void init_openravepy_global()
                                            .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
                                            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
-                                           .def("AddGroup",&PyConfigurationSpecification::AddGroup,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup))
-
+                                           .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
+                                           .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
@@ -1198,6 +1231,8 @@ void init_openravepy_global()
             ;
         }
     }
+
+    openravepy::spec_from_group();
 
     {
         int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;

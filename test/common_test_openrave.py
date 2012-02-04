@@ -33,8 +33,11 @@ g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_comple
 g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml','robots/barrettwam-dual.robot.xml']
 
 def setup_module(module):
-    os.environ['OPENRAVE_DATABASE'] = os.path.join(os.getcwd(),'.openravetest') # don't mess with the default OPENRAVE_DATABASE
+    dbdir = os.path.join(os.getcwd(),'.openravetest')
+    os.environ['OPENRAVE_DATABASE'] = dbdir
+    os.environ['OPENRAVE_HOME'] = dbdir
     RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
+    assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
     
 def teardown_module(module):
     RaveDestroy()
@@ -114,7 +117,13 @@ class EnvironmentSetup(object):
         self.env.AddRobot(robot,True)
         self._PreprocessRobot(robot)
         return robot
-    
+
+    def RunTrajectory(self,robot,traj):
+        assert(traj is not None)
+        robot.GetController().SetPath(traj)
+        while not robot.GetController().IsDone():
+            self.env.StepSimulation(0.01)
+        
     def _PreprocessEnv(self):
         for robot in self.env.GetRobots():
             self._PreprocessRobot(robot)

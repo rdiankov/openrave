@@ -155,7 +155,7 @@ private:
         _world.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005)
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0001)
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -420,7 +420,8 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        pinfo->pbody->GetLinkTransformations(vtrans);
+        std::vector<int> dofbranches;
+        pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {

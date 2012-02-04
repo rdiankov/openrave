@@ -3,10 +3,63 @@
 ChangeLog
 #########
 
+Version 0.6.3 Unstable
+======================
+
+Subversion Revision: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Version 0.6.2
+=============
+
+Subversion Revision: r3061
+
+Initial Release: 2012/02/04
+
+Planning
+--------
+
+* CloseFingers/ReleaseFingers now only check collisions between fingers, so robot can be in collision when performing this
+
+* :ref:`module-basemanipulation-movehandstraight` replaced :meth:`.planningutils.SmoothAffineTrajectory` call with :meth:`.planningutils.RetimeAffineTrajectory`
+
+* Fixed :ref:`planner-workspacetrajectorytracker` filter issues related to MoveHandStraight
+
+* Fixed :ref:`planner-lineartrajectoryretimer` interpolation issue
+
+* Better error handling for smoothing/retiming failures.
+
+* Task GraspPlanning now respects approach offset distance
+
+* Parabolic Smoother updates (thanks to Kris Hauser)
+
+Sampling
+--------
+
+* Robot Configuration Sampler now respects circular DOFs (including affine rotation).
+
+Inverse Kinematics
+------------------
+
+* ikfast computation of katana ik goes from 77% to 93% success rate.
+
+Trajectory
+----------
+
+* :meth:`.Trajectory.Insert` overwrite option now does not touch unspecified data
+
+Misc
+----
+
+* If trajectory timing is not initialized, use retimer rather than smoother
+
+* Using ode in multi-threaded environments now works when cmake flag ODE_USE_MULTITHREAD is not specified. Ubuntu installations shouldn't crash anymore.
+
 Version 0.6.0
 =============
 
-Subversion Revision: r3032
+Subversion Revision: r3033
 
 Initial Release: 2012/02/01
 
@@ -19,16 +72,16 @@ Core
 
 * Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER.
 
-* Added :ref:`.KinBody.Joint.SubtractValues`
+* Added :meth:`.KinBody.Joint.SubtractValues`
 
-* **interpolation** is set to empty in configurations returned by :ref:`.KinBody.GetConfigurationSpecification` and :ref:`.Robot.GetActiveConfigurationSpecification`.
+* **interpolation** is set to empty in configurations returned by :meth:`.KinBody.GetConfigurationSpecification` and :meth:`.Robot.GetActiveConfigurationSpecification`.
 
 Planning
 --------
 
 * Fixed segment feasibility checking on parabolic smoother by using perterbations, now most small collisions are avoided.
 
-* **Many** fixes for :module:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
+* **Many** fixes for :mod:`.examples.constraintplanning` demo and GripperJacobianConstrains class used for linear constraint planning.
 
 * Fixed :ref:`.planningutils.JitterActiveDOF` when constraints are used.
 
@@ -51,6 +104,8 @@ Inverse Kinematics
 * Fixed crash when smoothing close configurations.
 
 * Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`
+
+* ikfast compute Universal Robots UR6-85-5-A arm IK
 
 Misc
 ----

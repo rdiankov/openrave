@@ -344,7 +344,7 @@ protected:
             return false;
         }
         if( pActiveTraj->GetDuration() == 0 && pActiveTraj->GetNumWaypoints() > 1 ) {
-            planningutils::SmoothActiveDOFTrajectory(pActiveTraj,robot);
+            planningutils::RetimeActiveDOFTrajectory(pActiveTraj,robot,false,fMaxVelMult);
         }
         bool bExecuted = false;
         if( bExecute ) {

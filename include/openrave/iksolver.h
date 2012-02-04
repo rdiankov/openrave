@@ -49,8 +49,9 @@ public:
     /** Inverse kinematics filter callback function.
 
         The filter is of the form <tt>return = filterfn(solution, manipulator, param)</tt>.
-        The solution is guaranteed to be set on the robot's joint values before this function is called.
-        If modifying the robot state, should restore it before this function returns.
+        The solution is guaranteed to be set on the robot's joint values before this function is called. The active dof values of the robot will be set to the manipulator's arms.
+        If the filter internally modifies the robot state and it returns IKFR_Success, the filter **has** to restore the original robot dof values and active dofs before it returns.
+        If the filter happens to modify solution, the the robot state has to be set to the new solution.
 
         \param solution The current solution of the manipulator. Can be modified by this function, but note that it will not go through previous checks again.
         \param manipulator The current manipulator that the ik is being solved for.

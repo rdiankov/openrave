@@ -121,6 +121,13 @@ class GraspPlanning:
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
 
+        self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
+        if self.lmodel.load():
+            self.lmodel.setRobotWeights()
+            self.lmodel.setRobotResolutions(xyzdelta=0.005)
+            print 'robot resolutions: ',robot.GetDOFResolutions()
+            print 'robot weights: ',robot.GetDOFWeights()
+
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
 #         if not self.cdmodel.load():
@@ -284,16 +291,14 @@ class GraspPlanning:
         target = gmodel.target
         stepsize = 0.001
         while istartgrasp < len(gmodel.grasps):
-            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:],
-                                                                                target=target,approachoffset=approachoffset,destposes=dests,
-                                                                                seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000,
-                                                                                randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
+            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:], target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
             istartgrasp = graspindex+1
-            Tglobalgrasp = gmodel.getGlobalGraspTransform(gmodel.grasps[graspindex],collisionfree=True)
-
+            grasp = gmodel.grasps[graspindex]
+            Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
+            
             print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             self.waitrobot(robot)
-
+            
             if approachoffset != 0:
                 print 'moving hand'
                 expectedsteps = floor(approachoffset/stepsize)
@@ -302,9 +307,9 @@ class GraspPlanning:
                     # of the gripper with respect to the object
                     print repr(robot.GetDOFValues())
                     print repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()))
-                    print stepsize,expectedsteps-1,expectedsteps
-                    res = self.basemanip.MoveHandStraight(direction=dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()),
-                                                          ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
+                    with gmodel.target:
+                        gmodel.target.Enable(False)
+                        res = self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp), ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
                 except planning_error:
                     print 'use a planner to move the rest of the way'
                     try:
@@ -315,8 +320,7 @@ class GraspPlanning:
                 self.waitrobot(robot)
 
             self.taskmanip.CloseFingers(translationstepmult=gmodel.translationstepmult,finestep=gmodel.finestep)
-            self.waitrobot(robot)
-            
+            self.waitrobot(robot)            
 
             with env:
                 robot.Grab(target)
@@ -400,8 +404,9 @@ class GraspPlanning:
     def performGraspPlanning(self,withreplacement=True,**kwargs):
         print 'starting to pick and place random objects'
         graspables = self.graspables[:]
+        failures = 0
         while True:
-            if len(graspables) == 0:
+            if len(graspables) == 0 or failures > len(graspables)+1:
                 if withreplacement:
                     time.sleep(4)
                     self.randomizeObjects()
@@ -416,8 +421,10 @@ class GraspPlanning:
                 success = self.graspAndPlaceObject(graspables[i][0],graspables[i][1],**kwargs)
                 print 'success: ',success
                 graspables.pop(i)
+                failures = 0
             except planning_error, e:
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
+                failures += 1
                 print e
 
 def main(env,options):

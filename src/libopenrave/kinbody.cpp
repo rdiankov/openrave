@@ -4703,11 +4703,13 @@ void KinBody::GetConfigurationValues(std::vector<dReal>& v) const
 
 const ConfigurationSpecification& KinBody::GetConfigurationSpecification() const
 {
+    CHECK_INTERNAL_COMPUTATION;
     return _spec;
 }
 
 ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>& indices) const
 {
+    CHECK_INTERNAL_COMPUTATION;
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
     stringstream ss;

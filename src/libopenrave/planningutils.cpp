@@ -162,6 +162,12 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 
     ConfigurationSpecification velspec =  parameters->_configurationspecification.ConvertToVelocitySpecification();
 
+    dReal fresolutionmean = 0;
+    FOREACHC(it,parameters->_vConfigResolution) {
+        fresolutionmean += *it;
+    }
+    fresolutionmean /= parameters->_vConfigResolution.size();
+
     dReal fthresh = 5e-5f;
     vector<dReal> deltaq(parameters->GetDOF(),0);
     std::vector<dReal> vdata, vdatavel, vdiff;
@@ -197,7 +203,15 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
         }
         if( !!parameters->_neighstatefn ) {
             newq = vdata;
-            if( !parameters->_neighstatefn(newq,deltaq,0) ) {
+            if( !parameters->_neighstatefn(newq,vdiff,0) ) {
+                string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                trajectory->serialize(f);
+                throw OPENRAVE_EXCEPTION_FORMAT("neighstatefn is rejecting configuration %d, wrote trajectory %s",ipoint%filename,ORE_InconsistentConstraints);
+            }
+            dReal fdist = parameters->_distmetricfn(newq,vdata);
+            if( fdist > 0.01 * fresolutionmean ) {
                 string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -275,7 +289,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
                     ofstream f(filename.c_str());
                     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                     trajectory->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d-%d, wrote trajectory to %s",(i-1)%i%filename,ORE_InconsistentConstraints);
+                    throw OPENRAVE_EXCEPTION_FORMAT("checkpathconstraintsfn failed at %d, wrote trajectory to %s",i%filename,ORE_InconsistentConstraints);
                 }
             }
         }
@@ -321,6 +335,10 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     }
     if( planner->PlanPath(traj) != PS_HasSolution ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+
+    if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        planningutils::VerifyTrajectory(params,traj);
     }
 }
 
@@ -450,7 +468,9 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
                     break;
                 }
             }
-            RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
+            if( bsmooth ) {
+                RAVELOG_VERBOSE("cannot smooth state for IK configurations\n");
+            }
         }
     }
 
@@ -515,6 +535,9 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool 
             newplannername = "parabolictrajectoryretimer";
         }
         else if( interpolation == "linear" ) {
+            newplannername = "lineartrajectoryretimer";
+        }
+        else {
             newplannername = "lineartrajectoryretimer";
         }
     }

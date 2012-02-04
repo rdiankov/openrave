@@ -18,6 +18,11 @@
 
 #include "odespace.h"
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+static boost::mutex _mutexode;
+static bool _bnotifiedmessage=false;
+#endif
+
 class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
     struct COLLISIONCALLBACK
@@ -109,6 +114,12 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
         RegisterCommand("SetMaxContacts",boost::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,_1,_2),
                         str(boost::format("sets the maximum contacts that can be returned by the checker (limit is %d)")%_nMaxContacts));
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        if( !_bnotifiedmessage ) {
+            RAVELOG_DEBUG("ode will be slow in multi-threaded environments\n");
+            _bnotifiedmessage = false;
+        }
+#endif
     }
     ~ODECollisionChecker() {
         if( geomray != NULL ) {
@@ -197,6 +208,9 @@ public:
             return false;
         }
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
@@ -219,6 +233,9 @@ public:
             return false;
         }
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
         odespace->Synchronize();
 
         // have to go through all attached bodies manually (not sure if there's a fast way to set temporary groups in ode)
@@ -249,6 +266,9 @@ public:
             return false;
         }
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, LinkCollisionCallback);
         return cb._bCollision;
@@ -299,6 +319,10 @@ public:
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
+
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
 
         odespace->Synchronize();
         return _CheckCollision(plink1,plink2,report);
@@ -398,6 +422,10 @@ public:
             return false;
         }
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
+
         odespace->Synchronize();
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
@@ -447,6 +475,10 @@ public:
         if( vlinkexcluded.size() > 0 ) {
             cb.pvlinkexcluded = &vlinkexcluded;
         }
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
+
         odespace->Synchronize();
         dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
@@ -461,6 +493,10 @@ public:
             RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
         }
+
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
 
         odespace->Synchronize();
         OpenRAVE::dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
@@ -568,6 +604,10 @@ public:
             return false;
         }
 
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
+
         odespace->Synchronize();
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
@@ -599,6 +639,10 @@ public:
         if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         }
+
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
 
         dGeomRaySetClosestHit(geomray, !(_options&OpenRAVE::CO_RayAnyHit));     // only care about the closest points
@@ -631,6 +675,10 @@ public:
         }
 
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+
+#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
         odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));

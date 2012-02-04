@@ -158,3 +158,12 @@ importing anything. For example:
 
   __builtins__.__openravepy_version__ = '0.4'
   import openravepy
+
+Output Levels
+-------------
+
+It is possible to set the output levels using the DebugLevel enum:
+
+.. code-block:: python
+  
+  RaveSetDebugLevel(DebugLevel.Verbose)

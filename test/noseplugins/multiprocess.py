@@ -435,7 +435,13 @@ class MultiProcessTestRunner(TextTestRunner):
                 any_alive = False
                 for iworker, w in enumerate(workers):
                     worker_addr = bytes_(w.currentaddr.value,'ascii')
-                    worker_args = pickle.loads(bytes_(w.currentargs.value,'ascii'))
+                    worker_args = ''
+                    try:
+                        if len(w.currentargs.value) > 0:
+                            worker_args = pickle.loads(bytes_(w.currentargs.value,'ascii'))
+                    except EOFError,e:
+                        log.warn('worker %d: exception in getting worker args (%s): %s',iworker, w.currentargs.value, str(e))
+                        
                     test_addr = worker_addr
                     if worker_args is not None:
                         test_addr += str(worker_args)

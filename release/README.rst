@@ -14,4 +14,4 @@ Files are generated and uploaded using the scripts in the **release** source fol
 latest_stable
 ------------------
 
-Files in latest_stable are uploaded nightly depending if the OpenRAVE trunk passes all tests. Old files are kept for a maximum of 7 days.
+Files in latest_stable are uploaded regularly depending if the OpenRAVE trunk passes all tests. Old files are kept for a maximum of 30 days.

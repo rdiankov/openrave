@@ -478,6 +478,8 @@ protected:
         specfinal.AddVelocityGroups(true);
         specfinal.AddDeltaTimeGroup();
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
 
@@ -615,6 +617,8 @@ protected:
             _robot->SetActiveDOFs(pmanip->GetGripperIndices(), DOF_NoTransform);
             _robot->SetActiveDOFValues(vgoalpreshape,true);
 
+            dReal fGraspApproachOffset = fApproachOffset;
+
             if( !!_pGrasperPlanner && pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                 _robot->SetActiveDOFs(pmanip->GetGripperIndices(), DOF_X|DOF_Y|DOF_Z);
                 if( !_phandtraj ) {
@@ -626,11 +630,11 @@ protected:
                 graspparams->ftargetroll = pgrasp[iGraspRoll];
                 graspparams->vtargetdirection = Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]);
                 graspparams->vtargetposition = Vector(pgrasp[iGraspPos], pgrasp[iGraspPos+1], pgrasp[iGraspPos+2]);
-                if( imanipulatordirection < 0 ) {
-                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                if( imanipulatordirection >= 0 ) {
+                    graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
                 }
                 else {
-                    graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
+                    graspparams->vmanipulatordirection = pmanip->GetDirection();
                 }
                 graspparams->btransformrobot = true;
                 graspparams->breturntrajectory = false;
@@ -665,10 +669,19 @@ protected:
                     else {
                         vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetDirection());
                     }
-
+                    dReal fstep=0;
+                    dReal fstepbacksize = 0.001f;
                     while(GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget))) {
-                        t.trans -= vglobalpalmdir*0.001f;
+                        t.trans -= vglobalpalmdir*fstepbacksize;
+                        fGraspApproachOffset -= fstepbacksize;
+                        fstep += fstepbacksize;
                         _robot->SetTransform(t);
+                    }
+                    if( fstep > 0 ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: moved %f along direction=[%f,%f,%f]")%igrasp%fstep% -vglobalpalmdir.x% -vglobalpalmdir.y% -vglobalpalmdir.z));
+                        if( fGraspApproachOffset < 0 ) {
+                            RAVELOG_WARN(str(boost::format("grasp %d: moved too far back to avoid collision, approach offset is now negative (%f) and cannot recover. Should increase approachoffset")%igrasp%fGraspApproachOffset));
+                        }
                     }
                 }
 
@@ -698,7 +711,7 @@ protected:
                     tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
                     vector<dReal> vsolution;
                     if( !pmanip->FindIKSolution(tGoalEndEffector,vsolution,IKFO_CheckEnvCollisions) ) {
-                        RAVELOG_DEBUG("ik 5d failed: %d\n", igrasp);
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed")%igrasp));
                         continue; // failed
                     }
                     vFinalGripperValues = _vFinalGripperValues;
@@ -717,7 +730,7 @@ protected:
                 }
             }
             else {
-                RAVELOG_ERROR("grasper problem not valid\n");
+                RAVELOG_ERROR(str(boost::format("grasp %d: grasper problem not valid")%igrasp));
                 return false;
             }
 
@@ -743,12 +756,6 @@ protected:
                     }
                 }
 
-                dReal fSmallOffset = 0.0001f;
-                if( fApproachOffset != 0 ) {
-                    Transform tsmalloffset; tsmalloffset.trans = -fSmallOffset * vglobalpalmdir;
-                    tApproachEndEffector = tsmalloffset*tApproachEndEffector;
-                }
-
                 // first test the IK solution at the destination tGoalEndEffector
                 if( !pmanip->FindIKSolution(tApproachEndEffector, viksolution, IKFO_CheckEnvCollisions) ) {
                     RAVELOG_DEBUG("grasp %d: No IK solution found (final)\n", igrasp);
@@ -756,10 +763,10 @@ protected:
                 }
 
                 _UpdateSwitchModels(true,true);     // switch to fat models
-                if( fApproachOffset != 0 ) {
+                if( fGraspApproachOffset > 0 ) {
                     Transform tsmalloffset;
                     // now test at the approach point (with offset)
-                    tsmalloffset.trans = -(fApproachOffset-fSmallOffset) * vglobalpalmdir;
+                    tsmalloffset.trans = -fGraspApproachOffset * vglobalpalmdir;
                     tApproachEndEffector = tsmalloffset*tApproachEndEffector;
 
                     // set the previous robot ik configuration to get the closest configuration!!
@@ -771,12 +778,12 @@ protected:
                         continue;
                     }
                     else {
-                        stringstream ss;
-                        ss << "IK found: ";
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "ikfound = [";
                         FOREACH(it, viksolution) {
-                            ss << *it << " ";
+                            ss << *it << ", ";
                         }
-                        ss << endl;
+                        ss << "]" << endl;
                         RAVELOG_DEBUG(ss.str());
                     }
                 }
@@ -1066,6 +1073,8 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
         ptraj->Insert(0,graspparams->vinitialconfig); // have to add the first point
@@ -1174,6 +1183,8 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         // have to add the first point
         vector<dReal> vinitialconfig;
         _robot->GetActiveDOFValues(vinitialconfig);
@@ -1184,7 +1195,6 @@ protected:
             return false;
         case 1:
             _robot->GetActiveDOFValues(vinitialconfig);
-        default:
             break;
         }
 
@@ -1318,6 +1328,8 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         // have to add the first point
         vector<dReal> vinitialconfig;
         _robot->GetActiveDOFValues(vinitialconfig);
@@ -1328,7 +1340,6 @@ protected:
             return false;
         case 1:
             _robot->GetActiveDOFValues(vinitialconfig);
-        default:
             break;
         }
 

@@ -85,18 +85,19 @@ def main(env,options):
             direction = random.rand(3)-0.5
             direction /= linalg.norm(direction)
             x = random.rand(3)-0.5
-            length = 0.4*random.rand()*armlength
+            length = 0.6*random.rand()*armlength
             Tee[0:3,3] = eetrans + x/linalg.norm(x)*(armlength-length)
-            maxsteps=int(length/stepsize)
+            maxsteps=int(length/stepsize)+1
             minsteps = maxsteps/2
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),1)
         try:
             success = basemanip.MoveHandStraight(direction=direction,starteematrix=Tee,stepsize=stepsize,minsteps=minsteps,maxsteps=maxsteps)
             params = (direction,Tee)
-            print '%d failed attemps before found'%failedattempt
+            print '%d failed attemps before found'%failedattempt,repr(params)
             failedattempt = 0
             h = env.drawlinelist(array([Tee[0:3,3],Tee[0:3,3]+direction*maxsteps*stepsize]),4,[0,0,1])
             robot.WaitForController(0)
+            
         except planning_error,e:
             failedattempt += 1
 
