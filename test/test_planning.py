@@ -93,7 +93,7 @@ class TestMoving(EnvironmentSetup):
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             # don't do multithreaded yet since ode on some ubuntu distors does not support it
-            #gmodel.numthreads = 2 # at least two threads
+            gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
         print 'test_constraintwam: planning'
@@ -142,7 +142,7 @@ class TestMoving(EnvironmentSetup):
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             # don't do multithreaded yet since ode on some ubuntu distors does not support it
-            #gmodel.numthreads = 2 # at least two threads
+            gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
             
@@ -420,7 +420,7 @@ class TestMoving(EnvironmentSetup):
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             # don't do multithreaded yet since ode on some ubuntu distors does not support it
-            #gmodel.numthreads = 2 # at least two threads
+            gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
             

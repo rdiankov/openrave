@@ -47,6 +47,8 @@ Misc
 
 * If trajectory timing is not initialized, use retimer rather than smoother
 
+* Using ode in multi-threaded environments now works when cmake flag ODE_USE_MULTITHREAD is not specified.
+
 Version 0.6.0
 =============
 
