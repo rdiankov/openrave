@@ -1,7 +1,6 @@
 cmake_minimum_required (VERSION 2.6.0)
 project (cppexamples)
 
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../..) # only used for cppexamples!
 find_package(OpenRAVE REQUIRED)
 
@@ -76,6 +75,12 @@ set_target_properties(orplanning_planner PROPERTIES COMPILE_FLAGS "${OpenRAVE_CX
 set_target_properties(orplanning_planner PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
 target_link_libraries(orplanning_planner ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
 install(TARGETS orplanning_planner DESTINATION . )
+
+add_executable(orplanning_door orplanning_door.cpp)
+set_target_properties(orplanning_door PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")
+set_target_properties(orplanning_door PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
+target_link_libraries(orplanning_door ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+install(TARGETS orplanning_door DESTINATION . )
 
 add_executable(orplanning_ik orplanning_ik.cpp)
 set_target_properties(orplanning_ik PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}")

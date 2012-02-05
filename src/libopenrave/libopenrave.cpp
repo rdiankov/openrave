@@ -1362,6 +1362,7 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
             }
             if( bestmatchscore < matchscore ) {
                 itsemanticmatch = itgroup;
+                bestmatchscore = matchscore;
             }
         }
     }

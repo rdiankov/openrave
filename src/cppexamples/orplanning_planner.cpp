@@ -54,21 +54,21 @@ int main(int argc, char ** argv)
     }
     RAVELOG_INFO(str(boost::format("planning with manipulator %s\n")%pmanip->GetName()));
 
-    probot->SetActiveDOFs(pmanip->GetArmIndices());
-    vector<dReal> vlower,vupper;
-    probot->GetActiveDOFLimits(vlower,vupper);
-
-    // create a planner
-    PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
+    // create the planner parameters
     PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
     params->_nMaxIterations = 4000; // max iterations before failure
     params->SetRobotActiveJoints(probot); // set planning configuration space to current active dofs
     params->vgoalconfig.resize(probot->GetActiveDOF());
+    PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
 
     while(1) {
         GraphHandlePtr pgraph;
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+
+            probot->SetActiveDOFs(pmanip->GetArmIndices());
+            vector<dReal> vlower,vupper;
+            probot->GetActiveDOFLimits(vlower,vupper);
 
             // find a set of free joint values for the robot
             {
