@@ -220,6 +220,7 @@ int main(int argc, char ** argv)
     }
 
     PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
+    TrajectoryBasePtr ptraj;
 
 //    for(dReal fangle = 0; fangle <= 1; fangle += 0.1) {
 //        vector<dReal> v(doorconfig->GetDOF());
@@ -244,8 +245,7 @@ int main(int argc, char ** argv)
             params->_getstatefn(params->vinitialconfig);
 
             params->vgoalconfig = params->vinitialconfig;
-            params->_getstatefn(params->vgoalconfig);
-            params->vgoalconfig.back() = 1; // in radians
+            params->vgoalconfig.back() = RaveRandomFloat()*PI/2; // in radians
             params->_setstatefn(params->vgoalconfig);
             params->_getstatefn(params->vgoalconfig);
 
@@ -270,7 +270,7 @@ int main(int argc, char ** argv)
             }
 
             // create a new output trajectory
-            TrajectoryBasePtr ptraj = RaveCreateTrajectory(penv,"");
+            ptraj = RaveCreateTrajectory(penv,"");
             if( !planner->PlanPath(ptraj) ) {
                 RAVELOG_WARN("plan failed, trying again\n");
                 continue;
@@ -289,12 +289,9 @@ int main(int argc, char ** argv)
                 pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
             }
 
-            ofstream f("traj.xml");
-            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ptraj->serialize(f,0);
-
             // send the trajectory to the robot
             probot->GetController()->SetPath(ptraj);
+            target->GetController()->SetPath(ptraj);
         }
 
 
@@ -303,8 +300,6 @@ int main(int argc, char ** argv)
             usleep(1000);
         }
 
-        int n;
-        cin >> n;
     }
 
     thviewer.join(); // wait for the viewer thread to exit
