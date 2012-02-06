@@ -979,15 +979,6 @@ protected:
      */
     virtual int AddGroup(const std::string& name, int dof, const std::string& interpolation = "");
 
-    /** \brief Adds a new group to the specification and returns its new offset.
-
-        \param g the group whose name, dof, and interpolation are extracted.
-        If the new group's semantic name does not exist in the current specification, adds it and returns the new offset.
-        If the new group's semantic name exists in the current specification and it exactly matches, then function returns the old group's index. If the semantic names match, but parameters do not match, then an openrave_exception is thrown.
-        This method is not responsible for merging semantic information
-     */
-    virtual int AddGroup(const Group& g);
-
     /** \brief Merges all the information from the input group into this group
 
         For groups that are merged, the interpolation is overwritten if the source group has an empty string.
@@ -1065,6 +1056,15 @@ protected:
         \return true if at least one group was found for inserting
      */
     virtual bool InsertDeltaTime(std::vector<dReal>::iterator itdata, dReal deltatime) const;
+
+    /** \brief Adds a new group to the specification and returns its new offset.
+
+        \param g the group whose name, dof, and interpolation are extracted.
+        If the new group's semantic name does not exist in the current specification, adds it and returns the new offset.
+        If the new group's semantic name exists in the current specification and it exactly matches, then function returns the old group's index. If the semantic names match, but parameters do not match, then an openrave_exception is thrown.
+        This method is not responsible for merging semantic information
+     */
+    virtual int AddGroup(const Group& g);
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
