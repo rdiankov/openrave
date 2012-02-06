@@ -1,5 +1,5 @@
 cmake_policy(SET CMP0005 NEW)
-set(openrave_lib_SOURCES controller.cpp iksolver.cpp interface.cpp kinbody.cpp  libopenrave.cpp libopenrave.h math.cpp planner.cpp planningutils.cpp plugindatabase.h robot.cpp sensorsystem.cpp trajectory.cpp utils.cpp ${rave_header_files})
+set(openrave_lib_SOURCES controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp  libopenrave.cpp libopenrave.h math.cpp planner.cpp planningutils.cpp plugindatabase.h robot.cpp sensorsystem.cpp trajectory.cpp utils.cpp ${rave_header_files})
 
 check_function_exists(asinh HAS_ASINH)
 check_function_exists(acosh HAS_ACOSH)
