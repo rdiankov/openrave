@@ -1,6 +1,9 @@
 /** \example orplanning_door.cpp
     \author Rosen Diankov
 
+    \image html cppexample_orplanning_door.jpg "Robot opening door for different initial/goal configurations."
+    \image latex cppexample_orplanning_door.jpg "Robot opening door for different initial/goal configurations." width=10cm
+
     Shows how to use a planner two plan for a robot opening a door.
     The configuration space consists of the robot's manipulator joints and the door joint.
     A generic planner is just passed in this configuration space inside its planner parameters.
@@ -35,6 +38,14 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 /// \brief builds up the configuration space of a robot and a door
 class DoorConfiguration : public boost::enable_shared_from_this<DoorConfiguration>
 {
+    static dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+    {
+        //dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
+        dReal facos = min((t1.rot-t2.rot).lengthsqr4(),(t1.rot+t2.rot).lengthsqr4());
+        return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos; //*facos;
+    }
+
+
 public:
     DoorConfiguration(RobotBase::ManipulatorPtr pmanip, KinBody::JointPtr pdoorjoint) : _pmanip(pmanip), _pdoorjoint(pdoorjoint) {
         _probot = pmanip->GetRobot();
@@ -75,16 +86,23 @@ public:
         return false;
     }
 
-    bool _SetState(std::vector<dReal>& v) {
+    bool _SetState(std::vector<dReal>& v, int filteroptions=IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters) {
+        // save state before modifying it
+        RobotBase::RobotStateSaverPtr savestate1(new RobotBase::RobotStateSaver(_probot));
+        RobotBase::RobotStateSaverPtr savestate2(new RobotBase::RobotStateSaver(_ptarget));
+
         vector<dReal> vdoor(1); vdoor[0] = v.back();
         _ptarget->SetActiveDOFValues(vdoor);
-
         _probot->SetActiveDOFValues(v);
+
         vector<dReal> vsolution;
-        bool bsuccess = _pmanip->FindIKSolution(_pdoorlink->GetTransform() * _tgrasp, vsolution, IKFO_CheckEnvCollisions);
+        bool bsuccess = _pmanip->FindIKSolution(_pdoorlink->GetTransform() * _tgrasp, vsolution, filteroptions);
         if( bsuccess ) {
+            savestate1.reset();
+            savestate2.reset();
             _probot->SetActiveDOFValues(vsolution);
             std::copy(vsolution.begin(),vsolution.end(),v.begin());
+            _ptarget->SetActiveDOFValues(vdoor);
         }
         return bsuccess;
     }
@@ -93,7 +111,7 @@ public:
     {
         vector<dReal> vtemp = v;
         if( !_SetState(vtemp) ) {
-            RAVELOG_WARN("could not set state\n");
+            throw OPENRAVE_EXCEPTION_FORMAT0("could not set state",ORE_InvalidArguments);
         }
     }
 
@@ -112,16 +130,53 @@ public:
 
     bool NeightState(std::vector<dReal>& v,const std::vector<dReal>& vdelta, int fromgoal)
     {
+        _vprevsolution = v;
+        // the previous solution should already be set on the robot, so do a sanity check
+        _tmanipprev = _pmanip->GetTransform();
+        Transform tdoorprev = _pdoorlink->GetTransform();
+        BOOST_ASSERT( TransformDistance2(tdoorprev*_tgrasp,_tmanipprev) <= g_fEpsilon );
+
+        {
+            KinBody::KinBodyStateSaver statesaver(_ptarget);
+            vector<dReal> vdoor(1);
+            vdoor[0] = v.back()+0.5*vdelta.back();
+            _ptarget->SetActiveDOFValues(vdoor);
+            _tmanipmidreal = _pdoorlink->GetTransform()*_tgrasp;
+        }
+
         for(int i = 0; i < GetDOF(); ++i) {
             v.at(i) += vdelta.at(i);
         }
-        return _SetState(v);
+
+        return _SetState(v,IKFO_CheckEnvCollisions);
+    }
+
+    // due to discontinues check that the robot midpoint is also along the door's expected trajectory
+    // take the midpoint of the solutions and ikparameterization and see if they are close
+    IkFilterReturn _CheckContinuityFilter(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
+    {
+        Transform tmanipnew = ikp.GetTransform6D();
+        std::vector<dReal> vmidsolution(_probot->GetActiveDOF());
+        dReal realdist2 = TransformDistance2(_tmanipprev, tmanipnew);
+        const dReal ikmidpointmaxdist2mult = 0.5;
+
+        RobotBase::RobotStateSaver savestate(_probot);
+        for(int i = 0; i < _probot->GetActiveDOF(); ++i) {
+            vmidsolution.at(i) = 0.5*(_vprevsolution.at(i)+vsolution.at(i));
+        }
+        _probot->SetActiveDOFValues(vmidsolution);
+
+        Transform tmanipmid = _pmanip->GetTransform();
+        dReal middist2 = TransformDistance2(tmanipmid, _tmanipmidreal);
+        if( middist2 > g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+            RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
+            return IKFR_Reject;
+        }
+        return IKFR_Success;
     }
 
     void SetPlannerParameters(PlannerBase::PlannerParametersPtr params)
     {
-        //RobotBase::RobotStateSaver saver1(_probot);
-        //RobotBase::RobotStateSaver saver2(_ptarget);
         _probot->SetActiveDOFs(_pmanip->GetArmIndices());
         vector<int> v(1); v[0] = _pdoorjoint->GetDOFIndex();
         _ptarget->SetActiveDOFs(v);
@@ -138,8 +193,6 @@ public:
 
         _probot->GetActiveDOFResolutions(params->_vConfigResolution);
         params->_vConfigResolution.push_back(0.05);
-
-        //robot->GetActiveDOFValues(params->vinitialconfig);
 
         _robotdistmetric.reset(new planningutils::SimpleDistanceMetric(_probot));
         _doordistmetric.reset(new planningutils::SimpleDistanceMetric(_ptarget));
@@ -159,6 +212,8 @@ public:
 
         _collision.reset(new planningutils::LineCollisionConstraint());
         params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _probot, _1, _2, _3, _4);
+
+        _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
     }
 
     RobotBase::ManipulatorPtr _pmanip;
@@ -166,6 +221,9 @@ public:
     KinBody::JointPtr _pdoorjoint;
     Transform _tgrasp; ///< the grasp transform in the door link frame
     RobotBasePtr _probot, _ptarget;
+    vector<dReal> _vprevsolution;
+    Transform _tmanipprev, _tmanipmidreal;
+    UserDataPtr _ikfilter;
 
     boost::shared_ptr<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
     boost::shared_ptr<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
@@ -214,63 +272,64 @@ int main(int argc, char ** argv)
         probot->SetActiveDOFValues(vpreshape);
 
         doorconfig->SetPlannerParameters(params);
-        params->_nMaxIterations = 4000; // max iterations before failure
+        params->_nMaxIterations = 150; // max iterations before failure
 
         trobotorig = probot->GetTransform();
     }
 
     PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
     TrajectoryBasePtr ptraj;
-
-//    for(dReal fangle = 0; fangle <= 1; fangle += 0.1) {
-//        vector<dReal> v(doorconfig->GetDOF());
-//        {
-//            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
-//            params->_getstatefn(v);
-//            v.back()=fangle;
-//            params->_setstatefn(v);
-//            params->_getstatefn(v);
-//        }
-//        int n;
-//        cin >> n;
-//    }
+    int iter = 0;
 
     while(1) {
+        iter += 1;
         GraphHandlePtr pgraph;
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
-            params->_getstatefn(params->vinitialconfig);
-            params->_setstatefn(params->vinitialconfig);
-            params->_getstatefn(params->vinitialconfig);
+            if( (iter%5) == 0 ) {
+                RAVELOG_INFO("find a new position for the robot\n");
+                for(int i = 0; i < 100; ++i) {
+                    Transform tnew = trobotorig;
+                    tnew.trans.x += 0.5*(RaveRandomFloat()-0.5);
+                    tnew.trans.y += 0.5*(RaveRandomFloat()-0.5);
+                    probot->SetTransform(tnew);
 
-            params->vgoalconfig = params->vinitialconfig;
-            params->vgoalconfig.back() = RaveRandomFloat()*PI/2; // in radians
-            params->_setstatefn(params->vgoalconfig);
-            params->_getstatefn(params->vgoalconfig);
+                    try {
+                        params->_getstatefn(params->vinitialconfig);
+                        params->_setstatefn(params->vinitialconfig);
+                        params->_getstatefn(params->vinitialconfig);
 
-//            // find a set of free joint values for the robot
-//            {
-//                RobotBase::RobotStateSaver saver(probot); // save the state
-//                while(1) {
-//                    for(size_t i = 0; i < vlower.size(); ++i) {
-//                        params->vgoalconfig[i] = vlower[i] + (vupper[i]-vlower[i])*RaveRandomFloat();
-//                    }
-//                    probot->SetActiveDOFValues(params->vgoalconfig);
-//                    if( !penv->CheckCollision(probot) && !probot->CheckSelfCollision() ) {
-//                        break;
-//                    }
-//                }
-//                // robot state is restored
-//            }
+                        params->vgoalconfig = params->vinitialconfig;
+                        params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
+                        params->_setstatefn(params->vgoalconfig);
+                        params->_getstatefn(params->vgoalconfig);
+                        break;
+                    }
+                    catch(const openrave_exception& ex) {
+                        probot->SetTransform(trobotorig);
+                    }
+                }
+            }
+            else {
+                params->_getstatefn(params->vinitialconfig);
+                params->_setstatefn(params->vinitialconfig);
+                params->_getstatefn(params->vinitialconfig);
 
+                params->vgoalconfig = params->vinitialconfig;
+                params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
+                params->_setstatefn(params->vgoalconfig);
+                params->_getstatefn(params->vgoalconfig);
+            }
+
+            //params->_sPostProcessingPlanner = "lineartrajectoryretimer";
+            ptraj = RaveCreateTrajectory(penv,"");
             if( !planner->InitPlan(probot,params) ) {
                 RAVELOG_WARN("plan failed to init\n");
                 continue;
             }
 
             // create a new output trajectory
-            ptraj = RaveCreateTrajectory(penv,"");
             if( !planner->PlanPath(ptraj) ) {
                 RAVELOG_WARN("plan failed, trying again\n");
                 continue;
@@ -299,7 +358,6 @@ int main(int argc, char ** argv)
         while(!probot->GetController()->IsDone()) {
             usleep(1000);
         }
-
     }
 
     thviewer.join(); // wait for the viewer thread to exit
