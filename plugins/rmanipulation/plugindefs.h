@@ -1,5 +1,5 @@
 // -*- coding: utf-8 --*
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -59,12 +59,10 @@
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
-#include <stdint.h>
 #include <fstream>
 #include <iostream>
 
 #include <boost/bind.hpp>
-#include <boost/array.hpp>
 
 using namespace std;
 using namespace OpenRAVE;

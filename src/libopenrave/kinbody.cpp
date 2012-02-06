@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -15,10 +15,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <fparser.hh>
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>
+
+#include "fparsermulti.h"
 
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -1626,7 +1627,7 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
             }
         }
         if( itype == 0 ) {
-            _vmimic.at(iaxis)->_posfn->toMathML(sout,Vars);
+            boost::static_pointer_cast<OpenRAVEFunctionParserReal>(_vmimic.at(iaxis)->_posfn)->toMathML(sout,Vars);
             if((sout.size() > 9)&&(sout.substr(0,9) == "<csymbol>")) {
                 // due to a bug in ROS robot_model, have to return with <apply> (remove this in 2012).
                 sout = boost::str(boost::format("<apply>\n  <plus/><cn type=\"real\">0</cn>\n  %s\n  </apply>")%sout);
@@ -1636,14 +1637,14 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         else if( itype == 1 ) {
             std::string stemp;
             FOREACHC(itfn, _vmimic.at(iaxis)->_velfns) {
-                (*itfn)->toMathML(stemp,Vars);
+                boost::static_pointer_cast<OpenRAVEFunctionParserReal>(*itfn)->toMathML(stemp,Vars);
                 sout += str(mathfmt%stemp);
             }
         }
         else if( itype == 2 ) {
             std::string stemp;
             FOREACHC(itfn, _vmimic.at(iaxis)->_accelfns) {
-                (*itfn)->toMathML(stemp,Vars);
+                boost::static_pointer_cast<OpenRAVEFunctionParserReal>(*itfn)->toMathML(stemp,Vars);
                 sout += str(mathfmt%stemp);
             }
         }
@@ -1677,7 +1678,8 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     mimic->_equations.at(1) = veleq;
     mimic->_equations.at(2) = acceleq;
 
-    mimic->_posfn = parent->_CreateFunctionParser();
+    OpenRAVEFunctionParserRealPtr posfn = boost::static_pointer_cast<OpenRAVEFunctionParserReal>(parent->_CreateFunctionParser());
+    mimic->_posfn = posfn;
     // because openrave joint names can hold symbols like '-' and '.' can affect the equation, so first do a search and replace
     std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(parent->GetJoints().size());
     FOREACHC(itjoint,parent->GetJoints()) {
@@ -1699,9 +1701,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
 
     std::string eq;
-    int ret = mimic->_posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
+    int ret = posfn->ParseAndDeduceVariables(utils::SearchAndReplace(eq,mimic->_equations[0],jointnamepairs),resultVars);
     if( ret >= 0 ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to set equation '%s' on %s:%s, at %d. Error is %s\n", mimic->_equations[0]%parent->GetName()%GetName()%ret%mimic->_posfn->ErrorMsg(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to set equation '%s' on %s:%s, at %d. Error is %s\n", mimic->_equations[0]%parent->GetName()%GetName()%ret%posfn->ErrorMsg(),ORE_InvalidArguments);
     }
     // process the variables
     FOREACH(itvar,resultVars) {
@@ -2878,7 +2880,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         }
                     }
                     //dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
-                    pjoint->_vmimic.at(i)->_posfn->EvalMulti(veval, vtempvalues.empty() ? NULL : &vtempvalues[0]);
+                    boost::static_pointer_cast<OpenRAVEFunctionParserReal>(pjoint->_vmimic.at(i)->_posfn)->EvalMulti(veval, vtempvalues.empty() ? NULL : &vtempvalues[0]);
                     if( pjoint->_vmimic.at(i)->_posfn->EvalError() ) {
                         RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%pjoint->_vmimic.at(i)->_posfn->EvalError()));
                     }
@@ -4723,7 +4725,7 @@ static std::vector<dReal> fparser_sass(const dReal* coeffs)
 
 boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
 {
-    boost::shared_ptr<FunctionParserBase<dReal> > parser(new FunctionParserBase<dReal>());
+    OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParser<dReal>());
     // register commonly used functions
     parser->AddFunction("polyroots2",fparser_polyroots2,3);
     parser->AddFunction("polyroots3",fparser_polyroots<3>,4);

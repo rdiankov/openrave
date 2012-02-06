@@ -660,8 +660,8 @@ endif()
 #endif()
 
 # function expression parser library
-add_subdirectory(3rdparty/fparser-4.3)
-set(FPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.3")
+add_subdirectory(3rdparty/fparser-4.4.3)
+set(FPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.4.3")
 set(FPARSER_LIBRARY fparser)
 set(FPARSER_FOUND 1)
 
