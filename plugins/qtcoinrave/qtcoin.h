@@ -17,6 +17,7 @@
 #define OPENRAVE_QTCOIN_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -262,17 +263,6 @@ inline void SetSoTransform(SoTransform* ptrans, const RaveTransform<float>& t)
 {
     ptrans->rotation.setValue(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
     ptrans->translation.setValue(t.trans.x, t.trans.y, t.trans.z);
-}
-
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
-
-template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
-{
-    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
 class QtCoinViewer;

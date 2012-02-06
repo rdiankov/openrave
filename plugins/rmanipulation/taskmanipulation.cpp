@@ -357,7 +357,7 @@ protected:
                 }
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "execute" ) {
                 sinput >> bExecute;
@@ -572,9 +572,9 @@ protected:
                 _UpdateSwitchModels(true,false);
 
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
-                uint64_t basestart = GetMicroTime();
+                uint64_t basestart = utils::GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
-                nSearchTime += GetMicroTime() - basestart;
+                nSearchTime += utils::GetMicroTime() - basestart;
 
                 if( !!ptraj || bQuitAfterFirstRun ) {
                     break;
@@ -903,9 +903,9 @@ protected:
 
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
-                uint64_t basestart = GetMicroTime();
+                uint64_t basestart = utils::GetMicroTime();
                 ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
-                nSearchTime += GetMicroTime() - basestart;
+                nSearchTime += utils::GetMicroTime() - basestart;
                 if( bQuitAfterFirstRun ) {
                     break;
                 }
@@ -920,9 +920,9 @@ protected:
         while( !ptraj && listGraspGoals.size() > 0 ) {
             //TODO have to update ptrajToPreshape
             RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
-            uint64_t basestart = GetMicroTime();
+            uint64_t basestart = utils::GetMicroTime();
             ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
-            nSearchTime += GetMicroTime() - basestart;
+            nSearchTime += utils::GetMicroTime() - basestart;
         }
 
         _UpdateSwitchModels(false,false);
@@ -1022,7 +1022,7 @@ protected:
                 sinput >> strtrajfilename;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1147,7 +1147,7 @@ protected:
                 ptarget = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1294,7 +1294,7 @@ protected:
                 sinput >> bExecute;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1670,7 +1670,7 @@ protected:
             }
         }
 
-        uint64_t tbase = GetMicroTime();
+        uint64_t tbase = utils::GetMicroTime();
 
         PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
         if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
@@ -1699,7 +1699,7 @@ protected:
             list<GRASPGOAL>::iterator it = listgraspsused.begin();
             advance(it,nGraspIndex);
             goalfound = *it;
-            RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(GetMicroTime()-tbase)/1000);
+            RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(utils::GetMicroTime()-tbase)/1000);
         }
 
         return ptraj;

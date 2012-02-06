@@ -96,7 +96,7 @@ public:
         }
         _pmanip = pmanip;
         RobotBasePtr probot = pmanip->GetRobot();
-        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
+        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
 
         if( _nTotalDOF != (int)pmanip->GetArmIndices().size() ) {
             RAVELOG_ERROR(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalDOF));
@@ -709,7 +709,7 @@ private:
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
+                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
                     return SR_Continue;
                 }
             }
@@ -728,7 +728,7 @@ private:
                 }
                 stateCheck.ResetCheckEndEffectorCollision();
             }
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
                 if( !!report.plink1 && !!report.plink2 ) {
                     RAVELOG_VERBOSE(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
                 }
@@ -820,7 +820,7 @@ private:
             stateCheck.SetSelfCollisionState();
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 CollisionReport report;
-                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,null_deleter())) ) {
+                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
                     return SR_Continue;
                 }
             }

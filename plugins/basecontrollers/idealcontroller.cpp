@@ -62,7 +62,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&sptr_from<IdealController>, weak_controller())));
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&utils::sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {

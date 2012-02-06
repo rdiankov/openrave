@@ -17,6 +17,8 @@
 
 /** \file planningutils.h
     \brief Planning related utilities likes samplers, distance metrics, etc.
+
+    This file is optional and not automatically included with openrave.h
  */
 #ifndef OPENRAVE_PLANNINGUTILS_H
 #define OPENRAVE_PLANNINGUTILS_H

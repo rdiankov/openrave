@@ -1884,7 +1884,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
     using std::complex;
     IKFAST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
-    const IKReal tolsqrt = 8*sqrt(std::numeric_limits<IKReal>::epsilon());
+    const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[%d];
     const int maxsteps = 110;
     for(int i = 0; i < %d; ++i) {
@@ -1935,7 +1935,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             complex<IKReal> newroot=roots[i];
             int n = 1;
             for(int j = i+1; j < %d; ++j) {
-                if( abs(roots[i]-roots[j]) < tolsqrt ) {
+                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;
@@ -1945,7 +1945,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 newroot /= n;
             }
             // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
-            if( IKabs(imag(newroot)) < sqrt(std::numeric_limits<IKReal>::epsilon()) ) {
+            if( IKabs(imag(newroot)) < tolsqrt ) {
                 rawroots[numroots++] = real(newroot);
             }
         }

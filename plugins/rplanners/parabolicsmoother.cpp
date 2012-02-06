@@ -72,7 +72,7 @@ public:
             statesaver.reset(new RobotBase::RobotStateSaver(_probot));
         }
 
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
@@ -210,7 +210,7 @@ public:
             ptraj->serialize(f);
             return PS_Failed;
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return PS_HasSolution;
     }
 

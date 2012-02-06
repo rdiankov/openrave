@@ -216,7 +216,7 @@ public:
                 else {
                     if( failed < 10 ) {
                         failed++;
-                        Sleep(1);
+                        usleep(1000);
                         continue;
                     }
                     perror("failed to read line");
@@ -454,7 +454,7 @@ public:
         // wait for worker thread to stop
         while(_bWorking) {
             _condWorker.notify_all();
-            Sleep(1);
+            usleep(1000);
         }
     }
 
@@ -538,7 +538,7 @@ private:
 
             // finally initialize the socket
             if( !psocket->Accept(server_sockfd) ) {
-                Sleep(100);
+                usleep(100000);
                 continue;
             }
 
@@ -556,7 +556,6 @@ private:
         string cmd, line;
         stringstream sout;
         while(!bCloseThread) {
-            //Sleep(100);
             if( psocket->ReadLine(line) && line.length() ) {
 
                 if( !!flog &&( GetEnv()->GetDebugLevel()>0) ) {
@@ -636,7 +635,7 @@ private:
             else if( !psocket->IsInit() ) {
                 break;
             }
-            Sleep(1);
+            usleep(1000);
         }
 
         RAVELOG_VERBOSE("Closing socket connection\n");
@@ -2230,7 +2229,7 @@ protected:
 
         if( !!pcontroller ) {
             while( !pcontroller->IsDone() ) {
-                Sleep(1);
+                usleep(1000);
                 if( timeout > 0 ) {
                     if( --timeout == 0 )
                         break;

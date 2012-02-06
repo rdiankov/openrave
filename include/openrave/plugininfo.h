@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file plugininfo.h
     \brief  Holds the plugin information structure.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_PLUGIN_INFO
 #define OPENRAVE_PLUGIN_INFO

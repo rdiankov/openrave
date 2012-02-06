@@ -58,7 +58,7 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                                                                                                                    // minimum on top of stack
+                    return a.second > b.second;                                                                                                                                                                                                                                                                                                       // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
             }
@@ -317,7 +317,7 @@ public:
                         int val = RaveRandomInt()&3;
                         id |= val<<(2*(i-_robot->GetActiveDOF()));
                         _vsample[i] = pCurSample[i] + fRadius*(float)GetTargetValue(val);
-                        _vsample[i] = CLAMP_ON_RANGE(_vsample[i], _lower[i], _upper[i]);
+                        _vsample[i] = utils::ClampOnRange(_vsample[i], _lower[i], _upper[i]);
                     }
 
                     dReal fval = Eval(_vsample);
@@ -468,7 +468,7 @@ public:
             //    while(iter-- > 0) {
             //        // randomly sample params
             //        for(int j = 0; j < pmanip->GetIkSolver()->GetNumFreeParameters(); ++j)
-            //            _vfreeparams[j] = CLAMP_ON_RANGE(_vcurfreeparams[j] + 0.5f*fConfigThresh*(RaveRandomFloat()-0.5f),(dReal)0,(dReal)1);
+            //            _vfreeparams[j] = utils::ClampOnRange(_vcurfreeparams[j] + 0.5f*fConfigThresh*(RaveRandomFloat()-0.5f),(dReal)0,(dReal)1);
             //
             //        if( pmanip->FindIKSolution(tgrasp, _vfreeparams, solution, true) ) {
             //
@@ -942,7 +942,7 @@ private:
             return false;
         }
 
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF());
 
         if( !planner->PlanPath(ptraj) ) {
@@ -951,7 +951,7 @@ private:
         }
 
 
-        RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(GetMilliTime()-basetime)));
+        RAVELOG_INFO(str(boost::format("finished computing grasp set: pts=%d in %dms\n")%ptraj->GetPoints().size()%(utils::GetMilliTime()-basetime)));
 
         vtargetvalues = graspfn->vtargetvalues;
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
@@ -1048,10 +1048,10 @@ private:
                 sinput >> nLinkIndex;
             }
             else if( cmd == "savetraj") {
-                strsavetraj = getfilename_withseparator(sinput,';');
+                strsavetraj = utils::GetFilenameUntilSeparator(sinput,';');
             }
             else if( cmd == "savebodytraj") {
-                strbodytraj = getfilename_withseparator(sinput,';');
+                strbodytraj = utils::GetFilenameUntilSeparator(sinput,';');
             }
             else if( cmd == "graspthresh") {
                 sinput >> taskdata->fGraspThresh;
@@ -1078,7 +1078,7 @@ private:
             else if(cmd == "graspset") {
                 taskdata->pvGraspSet.reset(new vector<Transform>());
                 taskdata->pvGraspSet->reserve(200);
-                string filename = getfilename_withseparator(sinput,';');
+                string filename = utils::GetFilenameUntilSeparator(sinput,';');
                 ifstream fgrasp(filename.c_str());
                 while(!fgrasp.eof()) {
                     Transform t;
@@ -1093,7 +1093,7 @@ private:
             else if( cmd == "graspcontactset") {
                 taskdata->pvGraspContactSet.reset(new vector<Transform>());
                 taskdata->pvGraspContactSet->reserve(200);
-                string filename = getfilename_withseparator(sinput,';');
+                string filename = utils::GetFilenameUntilSeparator(sinput,';');
                 ifstream fgrasp(filename.c_str());
                 while(!fgrasp.eof()) {
                     Transform t;
@@ -1192,7 +1192,7 @@ private:
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
 
-        uint32_t basetime = GetMilliTime(), finaltime;
+        uint32_t basetime = utils::GetMilliTime(), finaltime;
         taskdata->SetRobot(_robot);
 
         boost::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
@@ -1235,7 +1235,7 @@ private:
             }
 
             if( !bSucceed ) {
-                RAVELOG_WARN("failed to find goal configuration = %dms\n", GetMilliTime()-basetime);
+                RAVELOG_WARN("failed to find goal configuration = %dms\n", utils::GetMilliTime()-basetime);
                 return false;
             }
 
@@ -1255,7 +1255,7 @@ private:
             //        }
             //
             //        if( !bSucceed ) {
-            //            RAVELOG_WARN("failed to find initial configuration = %dms\n", GetMilliTime()-basetime);
+            //            RAVELOG_WARN("failed to find initial configuration = %dms\n", utils::GetMilliTime()-basetime);
             //            return false;
             //        }
 
@@ -1278,7 +1278,7 @@ private:
 
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(GetMilliTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d\n")%(utils::GetMilliTime()-basetime)%ivgrasp%taskdata->vtargettraj.size()));
                     break;
                 }
             }
@@ -1299,7 +1299,7 @@ private:
 
             RAVELOG_WARN("planning a caging grasp...\n");
             if( !pra->PlanPath(ptrajtemp) ) {
-                RAVELOG_WARN("planner failure, time = %dms\n", GetMilliTime()-basetime);
+                RAVELOG_WARN("planner failure, time = %dms\n", utils::GetMilliTime()-basetime);
                 return false;
             }
         }
@@ -1358,7 +1358,7 @@ private:
 
                 if( !bHasIK ) {
                     // no ik solution found for this grasp, so quit
-                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(GetMilliTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
+                    RAVELOG_ERROR(str(boost::format("failure, due to ik time=%dms, %d/%d, col=%d\n")%(utils::GetMilliTime()-basetime)%realindex%taskdata->vtargettraj.size()%bIndependentCollision));
                     if( bIndependentCollision )
                         RAVELOG_ERROR(str(boost::format("colliding %s:%s with %s:%s\n")%report->plink1->GetParent()->GetName()%report->plink1->GetName()%report->plink2->GetParent()->GetName()%report->plink2->GetName()));
                     break;
@@ -1394,12 +1394,12 @@ private:
             }
 
             if( !bSuccess ) {
-                RAVELOG_WARN("failure, time=%dms\n", GetMilliTime()-basetime);
+                RAVELOG_WARN("failure, time=%dms\n", utils::GetMilliTime()-basetime);
                 return false;
             }
         }
 
-        finaltime = GetMilliTime()-basetime;
+        finaltime = utils::GetMilliTime()-basetime;
 
         Trajectory::TPOINT tp;
         vector<Trajectory::TPOINT> vtemppoints = ptrajtemp->GetPoints();
@@ -1514,7 +1514,7 @@ private:
             }
             else if( cmd == "graspset") {
                 listGraspSet.clear();
-                string filename = getfilename_withseparator(sinput,';');
+                string filename = utils::GetFilenameUntilSeparator(sinput,';');
                 ifstream fgrasp(filename.c_str());
                 while(!fgrasp.eof()) {
                     Transform t;
@@ -1584,7 +1584,7 @@ private:
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
         taskdata->SetRobot(_robot);
 
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
 
         vector<vector<dReal> > solutions;
         list<vector<dReal> > vtrajectory;
@@ -1632,7 +1632,7 @@ private:
                 break;
         }
 
-        uint32_t finaltime = GetMilliTime()-basetime;
+        uint32_t finaltime = utils::GetMilliTime()-basetime;
 
         if( !bSuccess ) {
             RAVELOG_WARN("failure, time=%dms\n", finaltime);
@@ -1709,10 +1709,12 @@ private:
                 break;
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "targettraj")
-                strtraj = getfilename_withseparator(sinput,sep);
-            else if( cmd == "sep")
+            if( cmd == "targettraj") {
+                strtraj = utils::GetFilenameUntilSeparator(sinput,sep);
+            }
+            else if( cmd == "sep") {
                 sinput >> sep;
+            }
             else if( cmd == "target") {
                 string name; sinput >> name;
                 body.ptarget = GetEnv()->GetKinBody(name);

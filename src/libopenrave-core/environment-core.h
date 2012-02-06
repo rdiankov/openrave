@@ -47,7 +47,7 @@ public:
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
@@ -59,7 +59,12 @@ public:
 
         {
             bool bExists=false;
-            RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
+#ifdef _WIN32
+            const char* delim = ";";
+#else
+            const char* delim = ":";
+#endif
+            utils::TokenizeString(getenv("OPENRAVE_DATA"), delim, _vdatadirs);
             string installdir = OPENRAVE_DATA_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
             if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
@@ -134,7 +139,7 @@ public:
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _bRealTime = true;
         _bEnableSimulation = true;     // need to start by default
 
@@ -502,7 +507,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
-        if( !IsValidName(pbody->GetName()) ) {
+        if( !utils::IsValidName(pbody->GetName()) ) {
             throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%pbody->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
@@ -511,7 +516,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 pbody->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
                     break;
                 }
             }
@@ -534,7 +539,7 @@ public:
         if( !robot->IsRobot() ) {
             throw openrave_exception(str(boost::format("kinbody \"%s\" is not a robot")%robot->GetName()));
         }
-        if( !IsValidName(robot->GetName()) ) {
+        if( !utils::IsValidName(robot->GetName()) ) {
             throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%robot->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
@@ -543,7 +548,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
                     break;
                 }
             }
@@ -564,7 +569,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
-        if( !IsValidName(psensor->GetName()) ) {
+        if( !utils::IsValidName(psensor->GetName()) ) {
             throw openrave_exception(str(boost::format("sensor name: \"%s\" is not valid")%psensor->GetName()));
         }
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor),!bAnonymous) ) {
@@ -573,7 +578,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 psensor->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
                     break;
                 }
             }
@@ -1049,10 +1054,10 @@ public:
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
-                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        robot->SetName(utils::ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
                         boost::filesystem::path pfilename(filename, boost::filesystem::native);
-                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        robot->SetName(utils::ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
                         robot->SetName("object");
@@ -1167,10 +1172,10 @@ public:
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
-                        body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        body->SetName(utils::ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
                         boost::filesystem::path pfilename(filename, boost::filesystem::native);
-                        body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        body->SetName(utils::ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
                         body->SetName("object");
@@ -1638,7 +1643,7 @@ public:
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
         //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
-        _nSimStartTime = GetMicroTime()-_nCurSimTime;
+        _nSimStartTime = utils::GetMicroTime()-_nCurSimTime;
     }
 
     virtual bool IsSimulationRunning() const {
@@ -1721,7 +1726,7 @@ protected:
         _homedirectory = r->_homedirectory;
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _nEnvironmentIndex = r->_nEnvironmentIndex;
         _bRealTime = r->_bRealTime;
 
@@ -1946,8 +1951,8 @@ protected:
 
     void _SimulationThread()
     {
-        uint64_t nLastUpdateTime = GetMicroTime();
-        uint64_t nLastSleptTime = GetMicroTime();
+        uint64_t nLastUpdateTime = utils::GetMicroTime();
+        uint64_t nLastSleptTime = utils::GetMicroTime();
         while( _bInit ) {
             bool bNeedSleep = true;
 
@@ -1961,15 +1966,15 @@ protected:
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
                 }
-                uint64_t passedtime = GetMicroTime()-_nSimStartTime;
+                uint64_t passedtime = utils::GetMicroTime()-_nSimStartTime;
                 int64_t sleeptime = _nCurSimTime-passedtime;
                 if( _bRealTime ) {
                     if(( sleeptime > 2*deltasimtime) &&( sleeptime > 2000) ) {
                         lockenv.unlock();
                         // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                        Sleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2)/1000,1) );
+                        usleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2),1000) );
                         //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
-                        nLastSleptTime = GetMicroTime();
+                        nLastSleptTime = utils::GetMicroTime();
                     }
                     else if( sleeptime < -3*deltasimtime ) {
                         // simulation is getting late, so catch up
@@ -1978,25 +1983,26 @@ protected:
                     }
                 }
                 else {
-                    nLastSleptTime = GetMicroTime();
+                    nLastSleptTime = utils::GetMicroTime();
                 }
 
-                //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
+                //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
             }
 
-            if( GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
-                Sleep(1); bNeedSleep = false;
-                nLastSleptTime = GetMicroTime();
+            if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
+                usleep(1000);
+                bNeedSleep = false;
+                nLastSleptTime = utils::GetMicroTime();
             }
 
-            if( GetMicroTime()-nLastUpdateTime > 10000 ) {
+            if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
                 EnvironmentMutex::scoped_lock lockenv(GetMutex());
-                nLastUpdateTime = GetMicroTime();
+                nLastUpdateTime = utils::GetMicroTime();
                 UpdatePublishedBodies();
             }
 
             if( bNeedSleep ) {
-                Sleep(1);
+                usleep(1000);
             }
         }
     }

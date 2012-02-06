@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file collisionchecker.h
     \brief Collision checking related definitions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_COLLISIONCHECKER_H
 #define OPENRAVE_COLLISIONCHECKER_H

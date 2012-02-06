@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file physicsengine.h
     \brief Physics engine related definitions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_PHYSICSENGINE_H
 #define OPENRAVE_PHYSICSENGINE_H

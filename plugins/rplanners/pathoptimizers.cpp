@@ -70,7 +70,7 @@ public:
             statesaver.reset(new RobotBase::RobotStateSaver(_probot));
         }
 
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         PlannerParametersConstPtr parameters = GetParameters();
 
         // subsample trajectory and add to list
@@ -121,7 +121,7 @@ public:
         FOREACH(it, path) {
             ptraj->Insert(ptraj->GetNumWaypoints(),*it);
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         _ProcessPostPlanners(RobotBasePtr(),ptraj);
         return PS_HasSolution;
     }

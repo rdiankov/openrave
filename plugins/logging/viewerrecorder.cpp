@@ -256,7 +256,7 @@ protected:
 
     void _ViewerImageCallback(const uint8_t* memory, int width, int height, int pixeldepth)
     {
-        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : GetMicroTime();
+        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
         boost::mutex::scoped_lock lock(_mutex);
         boost::shared_ptr<VideoFrame> frame;
 

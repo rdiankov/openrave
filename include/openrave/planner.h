@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file planner.h
     \brief Planning related defintions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_PLANNER_H
 #define OPENRAVE_PLANNER_H

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   robot.h
     \brief  Base robot and manipulator description.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_ROBOT_H
 #define OPENRAVE_ROBOT_H

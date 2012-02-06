@@ -185,7 +185,7 @@ protected:
         char sep = ' ';
         if( filename == "sep" ) {
             sinput >> sep;
-            filename = getfilename_withseparator(sinput,sep);
+            filename = utils::GetFilenameUntilSeparator(sinput,sep);
         }
 
         if( filename == "stream" ) {
@@ -247,7 +247,7 @@ protected:
                 sinput >> minsteps;
             }
             else if( cmd == "outputtraj") {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
@@ -411,7 +411,7 @@ protected:
                 }
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
@@ -572,7 +572,7 @@ protected:
                 listgoals.back().SetRotation3D(q);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "matrix" ) {
                 TransformMatrix m;
@@ -840,7 +840,7 @@ protected:
                 sinput >> strsavetraj;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "handjoints" ) {
                 int dof = 0;
@@ -881,7 +881,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        uint32_t starttime = GetMilliTime();
+        uint32_t starttime = utils::GetMilliTime();
         if( planningutils::JitterActiveDOF(robot,nMaxJitterIterations) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
@@ -903,7 +903,7 @@ protected:
 
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
-        sout << (GetMilliTime()-starttime)/1000.0f << " ";
+        sout << (utils::GetMilliTime()-starttime)/1000.0f << " ";
         vector<dReal> q;
         ptraj->GetWaypoint(-1,q,robot->GetActiveConfigurationSpecification());
         FOREACH(it, q) {
@@ -937,7 +937,7 @@ protected:
                 sinput >> fJitter;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;

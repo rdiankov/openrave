@@ -3109,7 +3109,7 @@ public:
                         if( (*itjoint2)->IsMimic(idof) ) {
                             for(int ieq = 0; ieq < 3; ++ieq) {
                                 string neweq;
-                                SearchAndReplace(neweq,(*itjoint2)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                                utils::SearchAndReplace(neweq,(*itjoint2)->_vmimic[idof]->_equations[ieq],jointnamepairs);
                                 (*itjoint2)->_vmimic[idof]->_equations[ieq] = neweq;
                             }
                         }

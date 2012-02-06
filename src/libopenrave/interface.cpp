@@ -70,7 +70,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
     boost::mutex::scoped_lock lock(_mutexInterface);
-    if((cmdname.size() == 0)|| !IsValidName(cmdname) ||(stricmp(cmdname.c_str(),"commands") == 0)) {
+    if((cmdname.size() == 0)|| !utils::IsValidName(cmdname) ||(stricmp(cmdname.c_str(),"commands") == 0)) {
         throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
     }
     if( __mapCommands.find(cmdname) != __mapCommands.end() ) {

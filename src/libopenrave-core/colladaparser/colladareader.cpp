@@ -457,7 +457,7 @@ public:
                 if( (*itjoint)->IsMimic(idof) ) {
                     for(int ieq = 0; ieq < 3; ++ieq) {
                         string neweq;
-                        SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                        utils::SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
                         (*itjoint)->_vmimic[idof]->_equations[ieq] = neweq;
                     }
                 }
@@ -2109,7 +2109,7 @@ public:
         elt->getChildren(children);
         AttributesList atts;
         for (size_t i = 0; i < children.getCount(); i++) {
-            string xmltag = tolowerstring(children[i]->getElementName());
+            string xmltag = utils::ConvertToLowerCase(children[i]->getElementName());
             daeTArray<daeElement::attr> domatts;
             children[i]->getAttributes(domatts);
             atts.clear();
@@ -3090,7 +3090,7 @@ private:
         if( name.size() == 0 ) {
             return str(boost::format("__dummy%d")%_nGlobalIndex++);
         }
-        return ConvertToOpenRAVEName(name);
+        return utils::ConvertToOpenRAVEName(name);
     }
 
     inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)

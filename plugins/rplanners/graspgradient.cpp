@@ -115,7 +115,7 @@ public:
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -190,7 +190,7 @@ public:
             ptraj->Insert(ptraj->GetNumWaypoints(),*it);
         }
 
-        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan %s, path=%d points in %fs\n")%(bSuccess ? "success" : "failure")%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime))));
 
         return bSuccess ? PS_HasSolution : PS_Failed;
     }

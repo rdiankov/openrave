@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file sensorsystem.h
     \brief Sensor systems used to define how environment information is organized and how bodies are managed.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_SENSORSYSTEM_H
 #define OPENRAVE_SENSORSYSTEM_H

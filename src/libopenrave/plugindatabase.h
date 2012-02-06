@@ -215,7 +215,7 @@ public:
         }
 
         InterfaceBasePtr CreateInterface(InterfaceType type, const std::string& name, const char* interfacehash, EnvironmentBasePtr penv) {
-            pair< InterfaceType, string> p(type,tolowerstring(name));
+            pair< InterfaceType, string> p(type,utils::ConvertToLowerCase(name));
             if( _setBadInterfaces.find(p) != _setBadInterfaces.end() ) {
                 return InterfaceBasePtr();
             }
@@ -347,7 +347,12 @@ protected:
     {
         _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
         std::vector<std::string> vplugindirs;
-        RaveParseDirectories(getenv("OPENRAVE_PLUGINS"), vplugindirs);
+#ifdef _WIN32
+        const char* delim = ";";
+#else
+        const char* delim = ":";
+#endif
+        utils::TokenizeString(getenv("OPENRAVE_PLUGINS"), delim, vplugindirs);
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -500,7 +505,7 @@ protected:
                                 pointer.reset();
                             }
                             else {
-                                pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                                pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
                                 pointer->__strpluginname = "__internal__";
                                 pointer->__strxmlid = name;
                                 //pointer->__plugin; // need to protect resources?
@@ -519,16 +524,16 @@ protected:
                     if( !!pointer ) {
                         if( strcmp(pointer->GetHash(), hash) ) {
                             RAVELOG_FATAL(str(boost::format("plugin interface name %s, %s has invalid hash, might be compiled with stale openrave files\n")%name%RaveGetInterfaceName(type)));
-                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,utils::ConvertToLowerCase(name)));
                             pointer.reset();
                         }
                         else if( pointer->GetInterfaceType() != type ) {
                             RAVELOG_FATAL(str(boost::format("plugin interface name %s, type %s, types do not match\n")%name%RaveGetInterfaceName(type)));
-                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,tolowerstring(name)));
+                            (*itplugin)->_setBadInterfaces.insert(make_pair(type,utils::ConvertToLowerCase(name)));
                             pointer.reset();
                         }
                         else {
-                            pointer = InterfaceBasePtr(pointer.get(), smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                            pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
                             pointer->__strpluginname = (*itplugin)->ppluginname;
                             pointer->__strxmlid = name;
                             pointer->__plugin = *itplugin;

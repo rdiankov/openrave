@@ -16,11 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
-#define CHECK_INTERNAL_COMPUTATION { \
-        if( _nHierarchyComputed != 2 ) { \
-            throw OPENRAVE_EXCEPTION_FORMAT0("joint hierarchy needs to be computed (is body added to environment?)", ORE_Failed); \
-        } \
-} \
+#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -109,9 +105,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vect
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
-    if( !_pIkSolver ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
-    }
+    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     RobotBasePtr probot = GetRobot();
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> temp;
@@ -127,7 +121,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     else {
         localgoal=goal;
     }
-    boost::shared_ptr< vector<dReal> > psolution(&solution, null_deleter());
+    boost::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
     return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
@@ -138,9 +132,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
-    if( !_pIkSolver ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s:%s does not have an IK solver set", RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
-    }
+    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!_pBase ) {
@@ -697,7 +689,7 @@ const std::string& RobotBase::Manipulator::GetStructureHash() const
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_RobotManipulators);
-        __hashstructure = GetMD5HashString(ss.str());
+        __hashstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashstructure;
 }
@@ -708,7 +700,7 @@ const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics);
-        __hashkinematicsstructure = GetMD5HashString(ss.str());
+        __hashkinematicsstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashkinematicsstructure;
 }
@@ -791,7 +783,7 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_RobotSensors);
-        __hashstructure = GetMD5HashString(ss.str());
+        __hashstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashstructure;
 }
@@ -833,7 +825,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot()
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
         _probot->ReleaseAllGrabbed();
-        BOOST_ASSERT(_probot->_vGrabbedBodies.size()==0);
+        OPENRAVE_ASSERT_OP(_probot->_vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
             KinBodyPtr pbody = itgrabbed->pbody.lock();
             if( !!pbody ) {
@@ -1075,9 +1067,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices) {
-        if((*itj < 0)||(*itj >= (int)GetDOF())) {
-            throw OPENRAVE_EXCEPTION_FORMAT("bad indices %d",*itj,ORE_InvalidArguments);
-        }
+        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad indices %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
     }
     // only reset the cache if the dof values are different
     if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
@@ -1128,9 +1118,7 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheck
         SetDOFValues(values,bCheckLimits);
         return;
     }
-    if( (int)values.size() < GetActiveDOF() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("not enough values %d<%d",values.size()%GetActiveDOF(),ORE_InvalidArguments);
-    }
+    OPENRAVE_ASSERT_OP_FORMAT((int)values.size(),>=,GetActiveDOF(), "not enough values %d<%d",values.size()%GetActiveDOF(),ORE_InvalidArguments);
 
     Transform t;
     if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
@@ -1510,7 +1498,7 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         JointConstPtr pjoint = _vecjoints.at(*it);
         for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
             if( pjoint->IsCircular(i) ) {
-                q1.at(index) = ANGLE_DIFF(q1.at(index), q2.at(index));
+                q1.at(index) = utils::SubtractCircularAngle(q1.at(index), q2.at(index));
             }
             else {
                 q1.at(index) -= q2.at(index);
@@ -1532,7 +1520,7 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
-        q1.at(index) = ANGLE_DIFF(q1.at(index),q2.at(index));
+        q1.at(index) = utils::SubtractCircularAngle(q1.at(index),q2.at(index));
         index++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
@@ -1738,11 +1726,11 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boos
         ind++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        BOOST_ASSERT(!"rotation 3d not supported");
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
         ind += 3;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        BOOST_ASSERT(!"quaternion not supported");
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
         ind += 4;
     }
 }
@@ -1812,10 +1800,10 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
 
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        BOOST_ASSERT(!"rotation 3d not supported");
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        BOOST_ASSERT(!"quaternions not supported");
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
 
         // most likely wrong
         Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);
@@ -1954,12 +1942,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
-    if( !pbody || !plink ||(plink->GetParent() != shared_kinbody())) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
-    }
-    if( pbody == shared_kinbody() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
-    }
+    OPENRAVE_ASSERT_FORMAT(!!pbody && !!plink && plink->GetParent() == shared_kinbody(), "robot %s invalid grab arguments. for example, link needs to be part of robot",GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"robot %s cannot grab itself",GetName(), ORE_InvalidArguments);
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
         return true;
@@ -2000,12 +1984,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
 {
-    if( !pbody || !pRobotLinkToGrabWith ||(pRobotLinkToGrabWith->GetParent() != shared_kinbody())) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("invalid grab arguments",ORE_InvalidArguments);
-    }
-    if( pbody == shared_kinbody() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
-    }
+    OPENRAVE_ASSERT_FORMAT(!!pbody && !!pRobotLinkToGrabWith && pRobotLinkToGrabWith->GetParent() == shared_kinbody(), "robot %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
         return true;
@@ -2338,7 +2318,7 @@ void RobotBase::_ComputeInternalInformation()
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));
             (*itmanip)->_name = ss.str();
         }
-        else if( !IsValidName((*itmanip)->GetName()) ) {
+        else if( !utils::IsValidName((*itmanip)->GetName()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", (*itmanip)->GetName(), ORE_Failed);
         }
         if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
@@ -2434,7 +2414,7 @@ void RobotBase::_ComputeInternalInformation()
             RAVELOG_WARN(str(boost::format("robot %s has a sensor with no name, setting to %s\n")%GetName()%ss.str()));
             (*itsensor)->_name = ss.str();
         }
-        else if( !IsValidName((*itsensor)->GetName()) ) {
+        else if( !utils::IsValidName((*itsensor)->GetName()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);
         }
         if( !!(*itsensor)->GetSensor() ) {
@@ -2587,7 +2567,7 @@ const std::string& RobotBase::GetRobotStructureHash() const
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
-        __hashrobotstructure = GetMD5HashString(ss.str());
+        __hashrobotstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashrobotstructure;
 }

@@ -459,9 +459,9 @@ private:
             }
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
         if( _bUsingPhysics ) {
-            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
         }
 
         Synchronize(pinfo);

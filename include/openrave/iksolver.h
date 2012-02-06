@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file iksolver.h
     \brief Inverse kinematics related definitions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_IKSOLVER_H
 #define OPENRAVE_IKSOLVER_H

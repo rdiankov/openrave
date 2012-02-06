@@ -348,7 +348,7 @@ private:
             }
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&BulletSpace::GeometryChangedCallback,boost::bind(&sptr_from<BulletSpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&BulletSpace::GeometryChangedCallback,boost::bind(&utils::sptr_from<BulletSpace>, weak_space()),KinBodyWeakPtr(pbody)));
         _Synchronize(pinfo);
         return pinfo;
     }

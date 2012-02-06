@@ -18,6 +18,7 @@
 #define OPENRAVE_PLUGINDEFS_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -49,6 +50,8 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
@@ -57,117 +60,6 @@
 #include <boost/bind.hpp>
 
 using namespace std;
-
-#include <time.h>
-
-#ifndef _WIN32
-#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
-#include <sys/time.h>
-#endif
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <sys/timeb.h>    // ftime(), struct timeb
-#endif
-
-#ifdef _WIN32
-inline static uint32_t GetMilliTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
-}
-
-inline static uint64_t GetMicroTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-}
-
-inline static uint64_t GetNanoTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000000) / freq.QuadPart;
-}
-
-#else
-
-inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
-{
-#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-    struct timespec start;
-    clock_gettime(CLOCK_REALTIME, &start);
-    sec  = start.tv_sec;
-    nsec = start.tv_nsec;
-#else
-    struct timeval timeofday;
-    gettimeofday(&timeofday,NULL);
-    sec  = timeofday.tv_sec;
-    nsec = timeofday.tv_usec * 1000;
-#endif
-}
-
-inline static uint64_t GetNanoTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
-}
-
-inline static uint64_t GetMicroTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
-}
-
-inline static uint32_t GetMilliTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
-}
-
-#endif
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
 using namespace OpenRAVE;
-
-template <typename T>
-inline T NORMALIZE_ANGLE(T theta, T min, T max)
-{
-    if (theta < min) {
-        theta += T(2*PI);
-        while (theta < min) {
-            theta += T(2*PI);
-        }
-    }
-    else if (theta > max) {
-        theta -= T(2*PI);
-        while (theta > max) {
-            theta -= T(2*PI);
-        }
-    }
-    return theta;
-}
-
-template <typename T>
-inline T ANGLE_DIFF(T f0, T f1)
-{
-    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
-}
-
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
 
 #endif

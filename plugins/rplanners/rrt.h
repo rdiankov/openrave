@@ -230,7 +230,7 @@ public:
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
 
         // the main planning loop
         RobotBase::RobotStateSaver savestate(_robot);
@@ -338,7 +338,7 @@ public:
         }
 
         if( listgoalpaths.size() == 0 ) {
-            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
+            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
             return PS_Failed;
         }
 
@@ -353,7 +353,7 @@ public:
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return _ProcessPostPlanners(_robot,ptraj);
     }
 
@@ -522,7 +522,7 @@ public:
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
 
         int lastnode = 0;
         bool bSuccess = false;
@@ -591,7 +591,7 @@ public:
         }
 
         if( !bSuccess ) {
-            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(GetMilliTime()-basetime));
+            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
             return PS_Failed;
         }
 
@@ -616,7 +616,7 @@ public:
         }
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%((0.001f*(float)(GetMilliTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
         return status;
     }
 

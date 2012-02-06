@@ -21,7 +21,6 @@
 #include <boost/thread/once.hpp>
 
 #include <streambuf>
-#include "md5.h"
 
 #ifndef _WIN32
 #include <sys/stat.h>
@@ -394,11 +393,14 @@ public:
         CreateDirectory(_homedirectory.c_str(),NULL);
 #endif
 
+#ifdef _WIN32
+        const char* delim = ";";
+#else
+        const char* delim = ":";
+#endif
         _vdbdirectories.clear();
-        if( !RaveParseDirectories(getenv("OPENRAVE_DATABASE"), _vdbdirectories) ) {
-            _vdbdirectories.push_back(_homedirectory);
-        }
-
+        utils::TokenizeString(getenv("OPENRAVE_PLUGINS"), delim, _vdbdirectories);
+        _vdbdirectories.push_back(_homedirectory);
         return 0;
     }
 
@@ -2440,7 +2442,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </configuration> in %s",buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,null_deleter()), pbuf.c_str(), ppsize);
+        LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 
@@ -2601,86 +2603,6 @@ double RaveRandomDouble(IntervalType interval)
     std::vector<dReal> sample;
     RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample,1,interval);
     return sample.at(0);
-}
-
-std::string GetMD5HashString(const std::string& s)
-{
-    if( s.size() == 0 )
-        return "";
-
-    md5_state_t state;
-    md5_byte_t digest[16];
-
-    md5_init(&state);
-    md5_append(&state, (const md5_byte_t *)s.c_str(), s.size());
-    md5_finish(&state, digest);
-    string hex_output;
-    hex_output.resize(32);
-    for (int di = 0; di < 16; ++di) {
-        int n = (digest[di]&0xf);
-        hex_output[2*di+1] = n > 9 ? ('a'+n-10) : ('0'+n);
-        n = (digest[di]&0xf0)>>4;
-        hex_output[2*di+0] = n > 9 ? ('a'+n-10) : ('0'+n);
-    }
-    return hex_output;
-}
-
-std::string GetMD5HashString(const std::vector<uint8_t>&v)
-{
-    if( v.size() == 0 )
-        return "";
-
-    md5_state_t state;
-    md5_byte_t digest[16];
-
-    md5_init(&state);
-    md5_append(&state, (const md5_byte_t *)&v[0], v.size());
-    md5_finish(&state, digest);
-    string hex_output;
-    hex_output.resize(32);
-    for (int di = 0; di < 16; ++di) {
-        int n = (digest[di]&0xf);
-        hex_output[2*di+0] = n > 9 ? ('a'+n-10) : ('0'+n);
-        n = (digest[di]&0xf0)>>4;
-        hex_output[2*di+1] = n > 9 ? ('a'+n-10) : ('0'+n);
-    }
-    return hex_output;
-}
-
-bool PairStringLengthCompare(const std::pair<std::string, std::string>&p0, const std::pair<std::string, std::string>&p1)
-{
-    return p0.first.size() > p1.first.size();
-}
-
-std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >&_pairs)
-{
-    BOOST_ASSERT(&out != &in);
-    FOREACHC(itp,_pairs) {
-        BOOST_ASSERT(itp->first.size()>0);
-    }
-    std::vector< std::pair<std::string, std::string> > pairs = _pairs;
-    stable_sort(pairs.begin(),pairs.end(),PairStringLengthCompare);
-    out.resize(0);
-    size_t startindex = 0;
-    while(startindex < in.size()) {
-        size_t nextindex=std::string::npos;
-        std::vector< std::pair<std::string, std::string> >::const_iterator itbestp;
-        FOREACHC(itp,pairs) {
-            size_t index = in.find(itp->first,startindex);
-            if((nextindex == std::string::npos)|| ((index != std::string::npos)&&(index < nextindex)) ) {
-                nextindex = index;
-                itbestp = itp;
-            }
-        }
-        if( nextindex == std::string::npos ) {
-            out += in.substr(startindex);
-            break;
-        }
-        out += in.substr(startindex,nextindex-startindex);
-        out += itbestp->second;
-        startindex = nextindex+itbestp->first.size();
-    }
-    return out;
 }
 
 namespace LocalXML {

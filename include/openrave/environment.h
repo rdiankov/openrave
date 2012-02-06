@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file environment.h
     \brief Definition of the EnvironmentBase interface used for managing all objects in an environment.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H

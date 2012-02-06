@@ -18,6 +18,7 @@
 #define OPENRAVE_PLUGINDEFS_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -49,6 +50,8 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
@@ -57,16 +60,6 @@
 #include <boost/bind.hpp>
 
 using namespace std;
-
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
-{
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
 // OpenRAVE includes a dReal typedef which could cause conflict with ODEs, so don't include it
 using OpenRAVE::BaseXMLReader;
@@ -111,10 +104,5 @@ using OpenRAVE::AttributesList;
 #if defined(NEED_DTRIINDEX_TYPEDEF)
 typedef int dTriIndex;
 #endif
-
-template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
-{
-    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
-}
 
 #endif

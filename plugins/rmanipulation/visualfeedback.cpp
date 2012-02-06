@@ -1013,7 +1013,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
 
-        uint64_t starttime = GetMicroTime();
+        uint64_t starttime = utils::GetMicroTime();
         vector<dReal> vsample;
         vector<dReal> vsamples(_robot->GetActiveDOF()*numsamples);
         int numsampled = 0;
@@ -1027,7 +1027,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( numsampled == 0 ) {
             return false;
         }
-        float felapsed = (GetMicroTime()-starttime)*1e-6f;
+        float felapsed = (utils::GetMicroTime()-starttime)*1e-6f;
         RAVELOG_INFO("total time for %d samples is %fs, %f avg\n", numsamples,felapsed,felapsed/numsamples);
         sout << numsampled << " ";
         for(int i = 0; i < numsampled*_robot->GetActiveDOF(); ++i) {
@@ -1056,7 +1056,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "affinedofs" ) {
                 sinput >> affinedofs;
@@ -1121,7 +1121,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
-        uint64_t starttime = GetMicroTime();
+        uint64_t starttime = utils::GetMicroTime();
         for(int iter = 0; iter < 1; ++iter) {
             if( !planner->InitPlan(_robot, params) ) {
                 RAVELOG_ERROR("InitPlan failed\n");
@@ -1137,7 +1137,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        float felapsed = (GetMicroTime()-starttime)*0.000001f;
+        float felapsed = (utils::GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;
@@ -1168,7 +1168,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
@@ -1240,7 +1240,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
-        uint64_t starttime = GetMicroTime();
+        uint64_t starttime = utils::GetMicroTime();
         if( !planner->InitPlan(_robot, params) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
@@ -1253,7 +1253,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             RAVELOG_WARN("PlanPath failed\n");
         }
 
-        float felapsed = (GetMicroTime()-starttime)*0.000001f;
+        float felapsed = (utils::GetMicroTime()-starttime)*0.000001f;
         RAVELOG_INFOA("total planning time: %fs\n", felapsed);
         if( !bSuccess ) {
             return false;

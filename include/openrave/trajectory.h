@@ -16,8 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file trajectory.h
     \brief  Definition of \ref OpenRAVE::TrajectoryBase
- */
 
+    Automatically included with \ref openrave.h
+ */
 #ifndef OPENRAVE_TRAJECTORY_H
 #define OPENRAVE_TRAJECTORY_H
 

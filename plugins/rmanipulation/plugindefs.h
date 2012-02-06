@@ -18,6 +18,7 @@
 #define OPENRAVE_PLUGINDEFS_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 #include <openrave/planningutils.h>
 
 // include boost for vc++ only (to get typeof working)
@@ -56,6 +57,8 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
@@ -64,122 +67,6 @@
 #include <boost/array.hpp>
 
 using namespace std;
-
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
-{
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-#include <time.h>
-
-#ifndef _WIN32
-#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
-#include <sys/time.h>
-#endif
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <sys/timeb.h>    // ftime(), struct timeb
-#endif
-
-#ifdef _WIN32
-inline static uint32_t GetMilliTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
-}
-
-inline static uint64_t GetMicroTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-}
-
-inline static uint64_t GetNanoTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000000) / freq.QuadPart;
-}
-
-#else
-
-inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
-{
-#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-    struct timespec start;
-    clock_gettime(CLOCK_REALTIME, &start);
-    sec  = start.tv_sec;
-    nsec = start.tv_nsec;
-#else
-    struct timeval timeofday;
-    gettimeofday(&timeofday,NULL);
-    sec  = timeofday.tv_sec;
-    nsec = timeofday.tv_usec * 1000;
-#endif
-}
-
-inline static uint64_t GetNanoTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
-}
-
-inline static uint64_t GetMicroTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
-}
-
-inline static uint32_t GetMilliTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
-}
-
-#endif
-
 using namespace OpenRAVE;
-
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
-
-inline string getfilename_withseparator(istream& sinput, char separator)
-{
-    string filename;
-    if( !getline(sinput, filename, separator) ) {
-        // just input directly
-        RAVELOG_ERROR("graspset filename not terminated with ';'\n");
-        sinput >> filename;
-    }
-
-    // trim leading spaces
-    size_t startpos = filename.find_first_not_of(" \t");
-    size_t endpos = filename.find_last_not_of(" \t");
-
-    // if all spaces or empty return an empty string
-    if(( string::npos == startpos ) || ( string::npos == endpos)) {
-        return "";
-    }
-    filename = filename.substr( startpos, endpos-startpos+1 );
-    return filename;
-}
 
 #endif

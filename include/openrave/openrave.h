@@ -145,6 +145,7 @@ enum OpenRAVEErrorCode {
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
     ORE_NotImplemented=7, ///< function is not implemented by the interface.
     ORE_InconsistentConstraints=8, ///< return solutions or trajectories do not follow the constraints of the planner/module
+    ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
@@ -538,6 +539,17 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 /// adds the function name and line number to an openrave exception
 #define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+
+#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%args),errorcode); } }
+
+#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)),errorcode); } }
+
+// note that expr1 and expr2 will be evaluated twice if not equal
+#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%args),errorcode); } }
+
+#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s!=%s, (eval %s!=%s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),errorcode); } }
+
+#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s!=%s, (eval %s!=%s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 
@@ -1985,7 +1997,9 @@ OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
 OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
 
-/// \brief separates the directories from a string and returns them in a vector
+/// \deprecated (12/02/06) see \ref OpenRAVE::utils::TokenizeString
+bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs) RAVE_DEPRECATED;
+
 inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
 {
     vdirs.resize(0);

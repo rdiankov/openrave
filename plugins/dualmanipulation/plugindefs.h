@@ -18,6 +18,7 @@
 #define OPENRAVE_PLUGINDEFS_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -55,6 +56,8 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
@@ -63,44 +66,6 @@
 #include <boost/array.hpp>
 
 using namespace std;
-
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
-{
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
 using namespace OpenRAVE;
-
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
-
-inline string getfilename_withseparator(istream& sinput, char separator)
-{
-    string filename;
-    if( !getline(sinput, filename, separator) ) {
-        // just input directly
-        RAVELOG_ERROR("graspset filename not terminated with ';'\n");
-        sinput >> filename;
-    }
-
-    // trim leading spaces
-    size_t startpos = filename.find_first_not_of(" \t");
-    size_t endpos = filename.find_last_not_of(" \t");
-
-    // if all spaces or empty return an empty string
-    if(( string::npos == startpos ) || ( string::npos == endpos))
-        return "";
-
-    filename = filename.substr( startpos, endpos-startpos+1 );
-    return filename;
-}
 
 #endif
