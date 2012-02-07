@@ -113,7 +113,7 @@ class OpenRAVEGlobalArguments:
             handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
         except ImportError:
             handler = logging.StreamHandler()
-            raveLogVerbose('python logutils not present so cannot colorize python output.')
+            openravepy_int.raveLogVerbose('python logutils not present so cannot colorize python output.')
 
         format=logging.Formatter('%(name)s: %(funcName)s, %(message)s')
         handler.setFormatter(format)
