@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 # 
@@ -62,12 +61,13 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+import numpy
+from ..openravepy_ext import transformPoints, openrave_exception
+from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle
 from . import DatabaseGenerator
 from .. import pyANN
 import convexdecomposition
@@ -105,6 +105,9 @@ class LinkStatisticsModel(DatabaseGenerator):
         except e:
             return False
 
+    def getversion(self):
+        return 2
+    
     def save(self):
         DatabaseGenerator.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
 
@@ -398,7 +401,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             try:
                 allneighs,alldists,kball = kdtree.kFRSearchArray(points,thresh2,k,sqrt(thresh2)*0.01)
                 break
-            except pyann_exception:
+            except pyANN.pyann_exception:
                 log.error('prunePointsKDTree: ann memory exceeded. Retrying with less neighbors')
                 k = (k+1)/2
             except MemoryError:
