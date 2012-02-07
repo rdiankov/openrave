@@ -518,8 +518,8 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
+#define RAVELOG_LEVELW(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
+#define RAVELOG_LEVELA(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
 #define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)

@@ -81,6 +81,8 @@ class OpenRAVEGlobalArguments:
                           help='server to use (default=None).')
         ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
                           help='port to load server on (default=%default).')
+        ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
+                          help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
                           help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
         if testmode:
@@ -141,6 +143,13 @@ class OpenRAVEGlobalArguments:
                     env.AddModule(sr,'%d'%options._serverport)
         except openrave_exception, e:
             log.warn(e)
+        for name,args in options._modules:
+            try:
+                module = openravepy_int.RaveCreateModule(env,name)
+                if module is not None:
+                    env.AddModule(module,args)
+            except openrave_exception, e:
+                log.warn(e)
         try:
             viewer=None
             if options._viewer is not None:
