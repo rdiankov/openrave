@@ -24,6 +24,9 @@ try:
 except ImportError:
     pass
 
+import logging
+log = logging.getLogger('openravepy')
+
 class KinBodyStateSaver:
     """Saves/restores the body state, use **with** statement.
     """
@@ -94,7 +97,9 @@ class openrave_exception(Exception):
         Exception.__init__( self )
         self._pimpl = app_error
     def __str__( self ):
-        return self._pimpl.message()
+        return str(self._pimpl)
+    def __unicode__( self ):
+        return unicode(self._pimpl)
     def __getattribute__(self, attr):
         my_pimpl = super(openrave_exception, self).__getattribute__("_pimpl")
         try:

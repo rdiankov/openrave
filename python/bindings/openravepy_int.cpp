@@ -1212,6 +1212,11 @@ object get_openrave_exception_unicode(openrave_exception* p)
     return ConvertStringToUnicode(s);
 }
 
+std::string get_openrave_exception_repr(openrave_exception* p)
+{
+    return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
 #if BOOST_VERSION >= 103500
@@ -1232,8 +1237,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
+    .def("GetCode", &openrave_exception::GetCode )
     .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
+    .def( "__repr__", get_openrave_exception_repr)
     ;
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();

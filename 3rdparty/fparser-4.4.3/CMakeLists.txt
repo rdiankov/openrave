@@ -43,7 +43,6 @@ else()
 endif()
 
 # custom flag
-set(FP_USE_BOOST_FUNCTION 1)
 set(FP_EPSILON "1e-14")
 set(FP_EVAL_MAX_REC_LEVEL 1000)
 

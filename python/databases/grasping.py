@@ -189,6 +189,9 @@ except:
         for prod in result:
             yield tuple(prod)
 
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 class GraspingModel(DatabaseGenerator):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
 

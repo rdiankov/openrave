@@ -2223,7 +2223,7 @@ void KinBody::GetDOFValues(std::vector<dReal>& v) const
             v.insert(v.end(),toadd,0);
         }
         else if( toadd < 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("dof indices mismatch joint %s, toadd=%d", (*it)->GetName()%toadd, ORE_InconsistentConstraints);
+            throw OPENRAVE_EXCEPTION_FORMAT("dof indices mismatch joint %s, toadd=%d", (*it)->GetName()%toadd, ORE_InvalidState);
         }
         (*it)->GetValues(v,true);
     }
@@ -2632,7 +2632,7 @@ void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>
             dofbranches.insert(dofbranches.end(),toadd,0);
         }
         else if( toadd < 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("dof indices mismatch joint %s, toadd=%d", (*it)->GetName()%toadd, ORE_InconsistentConstraints);
+            throw OPENRAVE_EXCEPTION_FORMAT("dof indices mismatch joint %s, toadd=%d", (*it)->GetName()%toadd, ORE_InvalidState);
         }
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
             dofbranches.push_back((*it)->_dofbranches[i]);
@@ -4379,8 +4379,8 @@ int KinBody::GetEnvironmentId() const
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    OPENRAVE_ASSERT_FORMAT(jointindex >= 0 && jointindex < (int)_vecjoints.size(), "body %s jointindex %d invalid (num joints %d)", GetName()%jointindex%_vecjoints.size(), ORE_InconsistentConstraints);
-    OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InconsistentConstraints);
+    OPENRAVE_ASSERT_FORMAT(jointindex >= 0 && jointindex < (int)_vecjoints.size(), "body %s jointindex %d invalid (num joints %d)", GetName()%jointindex%_vecjoints.size(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
 }
 

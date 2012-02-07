@@ -10,6 +10,30 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Core
+----
+
+* Added more error codes
+
+* Added **openrave/utils.h** file for common programming constructs not related to the OpenRAVE API.
+
+Python
+------
+
+* Setup openravepy logging hierarchy, colorized logging output with logutils library.
+
+* Added GetCode to python openrave_exception class
+
+Examples
+--------
+
+* Added orplanning_door example to show how to plan with robot+door at same time.
+
+Misc
+----
+
+* Removed isosurface computation from linkstatistics since it was buggy. Now forcing linkstatistics generation of all planning models.
+
 Version 0.6.2
 =============
 

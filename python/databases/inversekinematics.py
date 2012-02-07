@@ -151,7 +151,6 @@ import time,platform,shutil,sys
 import os.path
 from os import getcwd, remove
 import distutils
-import logging
 from distutils import ccompiler
 from optparse import OptionParser
 
@@ -160,12 +159,8 @@ try:
 except:
     import pickle
 
-log = logging.getLogger(__name__)
-format = logging.Formatter('%(name)s: %(message)s')
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(format)
-log.addHandler(handler)
-log.setLevel(logging.INFO)
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
@@ -209,8 +204,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if rigidlyattached.IsStatic():
                     raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
         self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
-        self.ikfast.log.addHandler(handler)
-        self.ikfast.log.setLevel(logging.INFO)
+        for handler in log.handlers:
+            self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.AddModule(self.ikfastproblem,'')

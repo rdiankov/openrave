@@ -1726,11 +1726,11 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boos
         ind++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 3;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 4;
     }
 }
@@ -1800,10 +1800,10 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
 
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_InconsistentConstraints);
+        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
 
         // most likely wrong
         Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);

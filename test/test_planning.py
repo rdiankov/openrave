@@ -510,3 +510,25 @@ class TestMoving(EnvironmentSetup):
         robot.SetDOFValues(array([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00]))
         assert(env.CheckCollision(robot))
         
+    def test_invalidactive(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            manip=robot.GetActiveManipulator()
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            manip.GetEndEffector().SetStatic(True)
+            basemanip=interfaces.BaseManipulation(robot)
+            try:
+                basemanip.MoveActiveJoints(goal=robot.GetActiveDOFValues())
+                raise ValueError('let static link pass')
+            except openrave_exception, ex:
+                assert(ex.GetCode()==ErrorCode.InvalidState)
+                
+            try:
+                params=Planner.PlannerParameters()
+                params.SetRobotActiveJoints(robot)
+                raise ValueError('let static link pass')
+            except openrave_exception, ex:
+                assert(ex.GetCode()==ErrorCode.InvalidState)
+                

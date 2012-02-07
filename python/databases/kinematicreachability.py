@@ -69,6 +69,9 @@ import os.path
 from heapq import nsmallest # for nth smallest element
 from optparse import OptionParser
 
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 class ReachabilityModel(DatabaseGenerator):
     """Computes the robot manipulator's reachability space (stores it in 6D) and
     offers several functions to use it effectively in planning."""
@@ -230,7 +233,7 @@ class ReachabilityModel(DatabaseGenerator):
                 for q in qarray:
                     neighdists.append(nsmallest(2,quatArrayTDist(q,qarray))[1])
                 self.quatdelta = mean(neighdists)
-            print 'radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d'%(maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
+            log.info('radius: %f, xyzsamples: %d, quatdelta: %f, rot samples: %d, freespace: %d',maxradius,len(insideinds),self.quatdelta,len(rotations),usefreespace)
             
         self.reachabilitydensity3d = zeros(prod(shape))
         self.reachability3d = zeros(prod(shape))
@@ -282,7 +285,7 @@ class ReachabilityModel(DatabaseGenerator):
         mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
-        print 'max reachability: ',numpy.max(self.reachability3d)
+        log.info('max reachability: %r',numpy.max(self.reachability3d))
         if options is not None:
             reachability3d = minimum(self.reachability3d*options.showscale,1.0)
         else:

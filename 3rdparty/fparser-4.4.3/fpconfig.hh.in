@@ -1,6 +1,6 @@
 /***************************************************************************\
 |* Function Parser for C++ v4.3                                            *|
-|*|*|*|*-------------------------------------------------------------------------*|
+|*|*|*|*|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen                                                *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -132,5 +132,3 @@
  */
 #cmakedefine FP_NO_EVALUATION_CHECKS
 
-
-#cmakedefine FP_USE_BOOST_FUNCTION

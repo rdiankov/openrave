@@ -137,16 +137,36 @@ OPENRAVE_API dReal RaveFabs(dReal f);
 /// %OpenRAVE error codes
 enum OpenRAVEErrorCode {
     ORE_Failed=0,
-    ORE_InvalidArguments=1,
+    ORE_InvalidArguments=1, ///< passed in input arguments are not valid
     ORE_EnvironmentNotLocked=2,
     ORE_CommandNotSupported=3, ///< string command could not be parsed or is not supported
     ORE_Assert=4,
     ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
     ORE_NotImplemented=7, ///< function is not implemented by the interface.
-    ORE_InconsistentConstraints=8, ///< return solutions or trajectories do not follow the constraints of the planner/module
+    ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
     ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
+    ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
 };
+
+inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
+{
+    switch(error) {
+    case ORE_Failed: return "Failed";
+    case ORE_InvalidArguments: return "InvalidArguments";
+    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
+    case ORE_CommandNotSupported: return "CommandNotSupported";
+    case ORE_Assert: return "Assert";
+    case ORE_InvalidPlugin: return "InvalidPlugin";
+    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
+    case ORE_NotImplemented: return "NotImplemented";
+    case ORE_InconsistentConstraints: return "InconsistentConstraints";
+    case ORE_NotInitialized: return "NotInitialized";
+    case ORE_InvalidState: return "InvalidState";
+    }
+    // should throw an exception?
+    return "";
+}
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
 class OPENRAVE_API openrave_exception : public std::exception
@@ -157,19 +177,7 @@ public:
     openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
         _error = error;
         _s = "openrave (";
-        switch(_error) {
-        case ORE_Failed: _s += "Failed"; break;
-        case ORE_InvalidArguments: _s += "InvalidArguments"; break;
-        case ORE_EnvironmentNotLocked: _s += "EnvironmentNotLocked"; break;
-        case ORE_CommandNotSupported: _s += "CommandNotSupported"; break;
-        case ORE_Assert: _s += "Assert"; break;
-        case ORE_InvalidPlugin: _s += "InvalidPlugin"; break;
-        case ORE_InvalidInterfaceHash: _s += "InvalidInterfaceHash"; break;
-        case ORE_NotImplemented: _s += "NotImplemented"; break;
-        default:
-            _s += boost::str(boost::format("%8.8x")%static_cast<int>(_error));
-            break;
-        }
+        _s += GetErrorCodeString(_error);
         _s += "): ";
         _s += s;
     }

@@ -307,7 +307,7 @@ except ImportError:
 
 
 import logging
-log = logging.getLogger('ikfast')
+log = logging.getLogger('openravepy.ikfast')
 
 CodeGenerators = {}
 # try:

@@ -19,6 +19,10 @@ import openravepy_ext
 import os.path
 import numpy
 from itertools import izip
+
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 def mkdir_recursive(newdir):
     """works the way a good mkdir should :)
         - already exists, silently complete
@@ -86,11 +90,32 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
+        logginglevel = logging.INFO
         if options._level is not None:
+            levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
             for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
+                    logginglevel = levelmap[debugname]
                     break
+
+        log=logging.getLogger()
+        log.setLevel(logginglevel)
+        try:
+            colorize=__import__('logutils.colorize',fromlist=['colorize'])
+            handler = colorize.ColorizingStreamHandler()
+            handler.level_map[logging.DEBUG] =(None, 'green', False)
+            handler.level_map[logging.INFO] = (None, None, False)
+            handler.level_map[logging.WARNING] = (None, 'yellow', False)
+            handler.level_map[logging.ERROR] = (None, 'red', False)
+            handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
+        except ImportError:
+            handler = logging.StreamHandler()
+            raveLogVerbose('python logutils not present so cannot colorize python output.')
+
+        format=logging.Formatter('%(name)s: %(funcName)s, %(message)s')
+        handler.setFormatter(format)
+        log.addHandler(handler)
     
     @staticmethod
     def parseEnvironment(options,env,defaultviewer=False,returnviewer=False,**kwargs):
@@ -101,21 +126,21 @@ class OpenRAVEGlobalArguments:
                 if cc is not None:
                     env.SetCollisionChecker(cc)
         except openrave_exception, e:
-            print e
+            log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
         except openrave_exception, e:
-            print e
+            log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.AddModule(sr,'%d'%options._serverport)
         except openrave_exception, e:
-            print e
+            log.warn(e)
         try:
             viewer=None
             if options._viewer is not None:
@@ -128,7 +153,8 @@ class OpenRAVEGlobalArguments:
             elif viewer is not None:
                 env.SetViewer(viewer)
         except openrave_exception, e:
-            print e
+            log.warn(e)
+            
     @staticmethod
     def parseAndCreate(options,createenv=openravepy_int.Environment,**kwargs):
         """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""

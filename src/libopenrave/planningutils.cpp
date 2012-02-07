@@ -159,9 +159,9 @@ public:
 
     void VerifyParameters() {
         OPENRAVE_ASSERT_FORMAT0(!!_parameters,"need planner parameters to verify trajectory",ORE_InvalidArguments);
-        OPENRAVE_ASSERT_OP((int)_parameters->_vConfigLowerLimit.size(), ==, _parameters->GetDOF());
-        OPENRAVE_ASSERT_OP((int)_parameters->_vConfigUpperLimit.size(), ==, _parameters->GetDOF());
-        OPENRAVE_ASSERT_OP((int)_parameters->_vConfigResolution.size(), ==, _parameters->GetDOF());
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_parameters->_vConfigLowerLimit.size(), ==, _parameters->GetDOF(), "unexpected size",ORE_InvalidState);
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_parameters->_vConfigUpperLimit.size(), ==, _parameters->GetDOF(), "unexpected size",ORE_InvalidState);
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_parameters->_vConfigResolution.size(), ==, _parameters->GetDOF(), "unexpected size",ORE_InvalidState);
     }
 
     void VerifyTrajectory(TrajectoryBaseConstPtr trajectory, dReal samplingstep)

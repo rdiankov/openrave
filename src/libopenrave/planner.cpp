@@ -313,6 +313,16 @@ std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& 
 
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
+    // check if any of the links affected by the dofs beside the base link are static
+    FOREACHC(itlink, robot->GetLinks()) {
+        if( (*itlink)->IsStatic() ) {
+            FOREACHC(itdof, robot->GetActiveDOFIndices()) {
+                KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(*itdof);
+                OPENRAVE_ASSERT_FORMAT(!robot->DoesAffect(pjoint->GetJointIndex(),(*itlink)->GetIndex()),"robot %s link %s is static when it is affected by active joint %s", robot->GetName()%(*itlink)->GetName()%pjoint->GetName(), ORE_InvalidState);
+            }
+        }
+    }
+
     using namespace planningutils;
     _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));

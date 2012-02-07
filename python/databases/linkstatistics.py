@@ -25,7 +25,7 @@
 
   openrave.py --database linkstatistics --robot=robots/barrettsegway.robot.xml
 
-**Showing the Reachability** (uses mayavi2)
+**Showing the Swept Volumes**
 
 .. code-block:: bash
 
@@ -77,6 +77,9 @@ import os.path
 from optparse import OptionParser
 from itertools import izip
 
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 class LinkStatisticsModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
     def __init__(self,robot):
@@ -120,6 +123,8 @@ class LinkStatisticsModel(DatabaseGenerator):
                     # some cross areas are 0.... bad sampling?
                     if len(crossarea) > 0:
                         joint.SetResolution(xyzdelta/numpy.max(crossarea[:,0]))
+                    else:
+                        pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
             self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(self.affinevolumes[3+2]['crossarea'][:,0]),4))
 
@@ -138,7 +143,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     weight=(volumeinfo['volumedelta']*accumvolume)**weightexp
                     if weight <= 0:
-                        print 'joint %d has weight=%e, setting to 1e-6'%(ijoint,weight)
+                        log.info('joint %d has weight=%e, setting to 1e-6'%(ijoint,weight))
                         weight = 1e-6
                     return weight
                 
@@ -179,11 +184,11 @@ class LinkStatisticsModel(DatabaseGenerator):
         with self.robot:
             self.robot.SetTransform(eye(4))
             # compute the convex hulls for every link
-            print 'Generating link volume points, sampling delta = %f'%self.samplingdelta
+            log.info('Generating link volume points, sampling delta = %f',self.samplingdelta)
             links = self.robot.GetLinks()
             self.linkstats = [None]*len(links)
             for ilink,link,linkcd in izip(range(len(links)),links,self.cdmodel.linkgeometry):
-                print 'link %d/%d'%(ilink,len(links))
+                log.info('link %d/%d',ilink,len(links))
                 hulls = []
                 for ig,geom in enumerate(link.GetGeometries()):
                     cdhulls = [cdhull for ig2,cdhull in linkcd if ig2==ig]
@@ -200,14 +205,14 @@ class LinkStatisticsModel(DatabaseGenerator):
                         hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
                 self.linkstats[ilink] = self.computeGeometryStatistics(hulls)
                 
-            print 'Generating swept volumes...'
+            log.info('Generating swept volumes...')
             self.jointvolumes = [None]*len(self.robot.GetJoints())
             jointvolumes_points = [None]*len(self.robot.GetJoints())
             density = 0.2*self.samplingdelta
             for joint in self.robot.GetDependencyOrderedJoints()[::-1]: # go through all the joints in reverse hierarchical order
-                print 'joint %d'%joint.GetJointIndex()
+                log.info('joint %d',joint.GetJointIndex())
                 if joint.GetDOF() > 1:
-                    print 'do not support joints with > 1 DOF'
+                    log.info('do not support joints with > 1 DOF')
                 lower,upper = joint.GetLimits()
                 # final all the directly connected links
                 connectedjoints = [joint]+[j for j in self.robot.GetJoints()+self.robot.GetPassiveJoints() if j.IsMimic(0) and joint.GetDOFIndex() in j.GetMimicDOFIndices(0)]
@@ -228,11 +233,11 @@ class LinkStatisticsModel(DatabaseGenerator):
                     if childjoint.GetJointIndex() != joint.GetJointIndex() and (childjoint.GetFirstAttached().GetIndex() in connectedlinkindices or childjoint.GetSecondAttached().GetIndex() in connectedlinkindices):
                         jointvolume = r_[jointvolume, self.transformJointPoints(childjoint,jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
                         jointvolumes_points[childjoint.GetJointIndex()] = None # release since won't be needing it anymore
-                sweptpoints,sweptindices,sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0],samplingdelta=self.samplingdelta)
+                sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0],samplingdelta=self.samplingdelta)
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
                 R = rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))
                 sweptvolume = dot(sweptvolume,transpose(R))
-                sweptpoints = dot(sweptpoints,transpose(R))
+                jointvolume = dot(jointvolume,transpose(R))
                 # compute simple statistics and compress the joint volume
                 volumecom = mean(sweptvolume,0)
                 volume = len(sweptvolume)*self.samplingdelta**3
@@ -244,11 +249,11 @@ class LinkStatisticsModel(DatabaseGenerator):
                     volumedelta = sum(crossarea[:,0])*density**2
                 else:
                     volumedelta = 0
-                self.jointvolumes[joint.GetJointIndex()] = {'sweptpoints':sweptpoints,'sweptindices':sweptindices,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
+                self.jointvolumes[joint.GetJointIndex()] = {'sweptvolume':sweptvolume,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
                 jointvolumes_points[joint.GetJointIndex()] = sweptvolume
                 del sweptvolume
 
-            print 'Computing statistics for the entire robot volume...'
+            log.info('Computing statistics for the entire robot volume...')
             Trobot = self.robot.GetTransform()
             robotvolume = None
             for link,linkstat in izip(self.robot.GetLinks(),self.linkstats):
@@ -273,7 +278,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             self.affinevolumes = [None]*6
             # compute for rotation around axes
             for i in [2]:
-                print 'rotation %s'%(('x','y','z')[i])
+                log.info('rotation %s',('x','y','z')[i])
                 axis = array((0,0,0))
                 axis[i] = 1.0
                 # get the cross sections and a dV/dAngle measure
@@ -285,7 +290,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 volume = sum(crossarea[:,0]**2*pi)*density**2
                 self.affinevolumes[3+i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volume':volume}
             for i in range(3):
-                print 'translation %s'%(('x','y','z')[i])
+                log.info('translation %s',('x','y','z')[i])
                 indices = range(3)
                 indices.remove(i)
                 crossarea = robotvolume[:,indices]
@@ -336,38 +341,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         del volumepoints_pow
         # transform points by minangle since everything was computed ignoring it
         sweptvolume = dot(sweptvolume,transpose(rotationMatrixFromAxisAngle(axis,minangle)))
-        sweptpoints,sweptindices = LinkStatisticsModel.computeIsosurface(sweptvolume,samplingdelta*2.0,0.5)
-        #h1 = self.env.plot3(points=sweptpoints,pointsize=2.0,colors=array((1.0,0,0)))
-        #h2 = self.env.drawtrimesh (points=sweptpoints,indices=sweptindices,colors=array((0,0,1,0.5)))
-        return sweptpoints,sweptindices,sweptvolume
-
-    @staticmethod
-    def computeIsosurface(sweptvolume,samplingdelta,thresh=0.1):
-        """computes the isosurface"""
-        # for isosurface computation, don't put this at the top of the py file
-        try:
-            api = __import__('enthought.tvtk.api',fromlist=['tvtk'])
-            
-        except ImportError:
-            # ubuntu 11.10 does not have tvtk under enthought directory
-            api = __import__('tvtk.api',fromlist=['tvtk'])
-            
-        minpoint = numpy.min(sweptvolume,0)-2.0*samplingdelta
-        maxpoint = numpy.max(sweptvolume,0)+2.0*samplingdelta
-        volumeshape = array(ceil((maxpoint-minpoint)/samplingdelta),'int')
-        indices = array((sweptvolume-tile(minpoint,(len(sweptvolume),1)))*(1.0/samplingdelta)+0.5,int)
-        sweptdata = zeros(prod(volumeshape))
-        sweptdata[indices[:,0]+volumeshape[0]*(indices[:,1]+volumeshape[1]*indices[:,2])] = 1
-        id = api.tvtk.ImageData(origin=minpoint,spacing=array((samplingdelta,samplingdelta,samplingdelta)),dimensions=volumeshape)
-        id.point_data.scalars = sweptdata.ravel()
-        m = api.tvtk.MarchingCubes()
-        m.set_input(id)
-        m.set_value(0,thresh)
-        m.update()
-        o = m.get_output()
-        sweptpoints = array(o.points)
-        sweptindices = reshape(array(o.polys.data,'int'),(len(o.polys.data)/4,4))[:,1:4] # first column is usually 3 (for 3 points per tri)
-        return sweptpoints,sweptindices
+        return sweptvolume
 
     @staticmethod
     def transformJointPoints(joint,points,translation=array((0.0,0.0,0.0))):
@@ -377,10 +351,10 @@ class LinkStatisticsModel(DatabaseGenerator):
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
         for joint in self.robot.GetJoints():
-            print joint.GetJointIndex()
+            log.info('joint %d',joint.GetJointIndex())
             haxis = self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))
             jv = self.jointvolumes[joint.GetJointIndex()]
-            hvol = self.env.drawtrimesh(points=self.transformJointPoints(joint,jv['sweptpoints']),indices=jv['sweptindices'],colors=array((0,0,1,0.2)))
+            hvol = self.env.plot3(self.transformJointPoints(joint,jv['sweptvolume']),2,colors=array((0,0,1,0.2)))
             crossarea = jv['crossarea']
             harea = self.env.plot3(points=self.transformJointPoints(joint,c_[crossarea[:,0],zeros(len(crossarea)),crossarea[:,1]]),pointsize=5.0,colors=array((1,0,0,0.3)))
             raw_input('press any key to go to next: ')
@@ -398,7 +372,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         insidepoints = zeros(len(volumepoints),bool)
         for i,point in enumerate(volumepoints):
             if mod(i,10000) == 0:
-                print '%d/%d'%(i,len(volumepoints))
+                log.debug('%d/%d'%(i,len(volumepoints)))
             for hull in hulls:
                 if all(dot(hull[2][:,0:3],point)+hull[2][:,3] <= 0):
                     insidepoints[i] = True
@@ -425,10 +399,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 allneighs,alldists,kball = kdtree.kFRSearchArray(points,thresh2,k,sqrt(thresh2)*0.01)
                 break
             except pyann_exception:
-                print 'prunePointsKDTree: ann memory exceeded. Retrying with less neighbors'
+                log.error('prunePointsKDTree: ann memory exceeded. Retrying with less neighbors')
                 k = (k+1)/2
             except MemoryError:
-                print 'prunePointsKDTree: memory error. Retrying with less neighbors'
+                log.error('prunePointsKDTree: memory error. Retrying with less neighbors')
                 k = (k+1)/2
         inds = []
         for i in xrange(N):
@@ -445,7 +419,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         dorepeat = any(allneighs[:,-1]>=0)
         del kdtree, allneighs, alldists
         if dorepeat:
-            #print 'repeating pruning... %d/%d'%(len(inds),points.shape[0])
+            log.debug('repeating pruning... %d/%d',len(inds),points.shape[0])
             newinds = LinkStatisticsModel.prunePointsKDTree(points[inds,:], thresh2, neighsize,k)
             inds = [inds[i] for i in newinds]
         return inds

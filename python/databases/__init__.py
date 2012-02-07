@@ -36,6 +36,9 @@ import os.path
 from os import getenv
 import time
 
+import logging
+log = logging.getLogger('openravepy.databases')
+
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
     """
@@ -67,9 +70,9 @@ class DatabaseGenerator(metaclass.AutoReloader):
             if modelversion == self.getversion():
                 return params
             else:
-                print 'version is wrong ',modelversion,'!=',self.getversion()
+                log.error('version is wrong %s!=%s ',modelversion,self.getversion())
         except MemoryError,e:
-            print '%s failed: '%filename,e
+            log.error('%s failed: ',filename,e)
         except:
             pass
         return None
@@ -77,7 +80,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
         return 0
     def save(self,params):
         filename=self.getfilename(False)
-        print 'saving model to %s'%filename
+        log.info('saving model to %s',filename)
         mkdir_recursive(os.path.split(filename)[0])
         pickle.dump((self.getversion(),params), open(filename, 'w'))
     def generate(self):
@@ -100,13 +103,13 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def generate(self,*args,**kwargs):
         starttime = time.time()
         producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
-        print 'database %s has %d items'%(__name__,numjobs)
+        log.info('database %s has %d items',__name__.split()[-1],numjobs)
         for work in producer():
             results = consumer(*work)
             if len(results) > 0:
                 gatherer(*results)
         gatherer() # gather results
-        print 'database %s finished in %fs'%(__name__,time.time()-starttime)
+        log.info('database %s finished in %fs',__name__,time.time()-starttime)
 
     @staticmethod
     def CreateOptionParser(useManipulator=True):
@@ -234,4 +237,4 @@ if version_info[0:3]>=(2,6,0):
     import inversereachability
     import visibilitymodel
 else:
-    print 'some openravepy.datbases cannot be used python versions < 2.6'
+    log.warn('some openravepy.datbases cannot be used python versions < 2.6')

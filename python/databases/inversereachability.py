@@ -70,6 +70,9 @@ try:
 except ImportError:
     pass
 
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
     def __init__(self,robot,id=None):
@@ -191,7 +194,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 self.rmodel.autogenerate()
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            print "Generating Inverse Reachability",heightthresh,quatthresh
+            log.info("Generating Inverse Reachability, heightthresh=%f, quatthresh=%f",heightthresh,quatthresh)
             self.robot.SetDOFValues(*self.necessaryjointstate())
             # get base of link manipulator with respect to base link
             Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
@@ -247,7 +250,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                                     c_[-zangles,equivalenttransinv,equivalenttrans[:,7:]])
                 self.equivalenceclasses.append(equivalenceclass)
                 basetrans = basetrans[flatnonzero(foundindices==False),:]
-                print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
+                log.info('new equivalence class outliers: %d/%d, left over trans: %d',self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         finally:
             statesaver.close()
             for b,enable in bodies:
@@ -295,7 +298,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
         bestindex = argmax(logll)
         if logll[bestindex] < logllthresh:
-            print 'inversereachability: could not find base distribution: ',logll[bestindex]
+            log.info('inversereachability: could not find base distribution: index=%d',logll[bestindex])
             return None,None,None
 
         # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
@@ -385,7 +388,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
         if len(points) == 0:
-            print 'inversereachability: could not find base distribution, logllthresh too high?', highestlogll
+            log.info('inversereachability: could not find base distribution, logllthresh too high? logll=%f', highestlogll)
             return None,None,None
         
         # transform points by the base pose
@@ -528,7 +531,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         if self.manip.FindIKSolution(eye(4),0) is None:
                             #print 'pose failed: ',pose
                             failures += 1
-                    print 'height %f, failures: %d'%(height,failures)
+                    log.info('height %f, failures: %d',height,failures)
                     allfailures.append(failures)
                 else:
                     allfailures.append(inf)
@@ -568,7 +571,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         # split it into chunks to avoid memory overflow
         probs = zeros(len(poses))
         for i in range(0,len(poses),500000):
-            print '%d/%d'%(i,len(poses))
+            log.info('%d/%d',i,len(poses))
             probs[i:(i+500000)] = densityfn(poses[i:(i+500000),:]);
         if marginalizeangle:
             probsxy = mean(reshape(probs,(A.shape[0],A.shape[1]*A.shape[2])),axis=0)
@@ -617,7 +620,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.robot.SetDOFValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         try:
-            print 'number of locations: ',len(robotlocs)
+            log.info('number of locations %d',len(robotlocs))
             with self.env:
                 self.env.Remove(self.robot)
                 newrobots = []
@@ -664,7 +667,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             with self.env:
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,logllthresh=1.0)
                 if densityfn is None:
-                    print 'no distribution exists'
+                    log.warn('no distribution exists')
                     continue
                 goals = []
                 while len(goals) < maxnumber:
@@ -680,7 +683,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                             if len(goals) >= maxnumber:
                                 break
                         else:
-                            print 'failed to sample'
+                            log.warn('failed to sample')
             try:
                 h=self.env.plot3(Tgrasp[0:3,3],20.0)
                 with self.env:

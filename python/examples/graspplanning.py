@@ -123,10 +123,11 @@ class GraspPlanning:
 
         self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
         if self.lmodel.load():
-            self.lmodel.setRobotWeights()
-            self.lmodel.setRobotResolutions(xyzdelta=0.005)
-            print 'robot resolutions: ',robot.GetDOFResolutions()
-            print 'robot weights: ',robot.GetDOFWeights()
+            self.lmodel.autogenerate()
+        self.lmodel.setRobotWeights()
+        self.lmodel.setRobotResolutions(xyzdelta=0.005)
+        print 'robot resolutions: ',robot.GetDOFResolutions()
+        print 'robot weights: ',robot.GetDOFWeights()
 
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
