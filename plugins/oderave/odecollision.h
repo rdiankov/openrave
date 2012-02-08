@@ -18,7 +18,7 @@
 
 #include "odespace.h"
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
 static boost::mutex _mutexode;
 static bool _bnotifiedmessage=false;
 #endif
@@ -114,7 +114,7 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
         RegisterCommand("SetMaxContacts",boost::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,_1,_2),
                         str(boost::format("sets the maximum contacts that can be returned by the checker (limit is %d)")%_nMaxContacts));
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         if( !_bnotifiedmessage ) {
             RAVELOG_DEBUG("ode will be slow in multi-threaded environments\n");
             _bnotifiedmessage = false;
@@ -208,7 +208,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
         odespace->Synchronize();
@@ -233,7 +233,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
         odespace->Synchronize();
@@ -266,7 +266,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
         odespace->Synchronize();
@@ -320,7 +320,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
@@ -422,7 +422,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
@@ -475,7 +475,7 @@ public:
         if( vlinkexcluded.size() > 0 ) {
             cb.pvlinkexcluded = &vlinkexcluded;
         }
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
@@ -494,7 +494,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
@@ -604,7 +604,7 @@ public:
             return false;
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
@@ -640,7 +640,7 @@ public:
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         }
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
         dGeomRaySet(geomray, ray.pos.x, ray.pos.y, ray.pos.z, vnormdir.x, vnormdir.y, vnormdir.z);
@@ -676,7 +676,7 @@ public:
 
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
 
-#ifndef ODE_HAVE_ALLOCATE_DATA_THREAD
+#ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
         odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
