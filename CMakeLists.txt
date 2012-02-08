@@ -769,6 +769,9 @@ if( UNIX OR CYGWIN)
       install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${BASH_COMPLETION_ABSOLUTE_DIR})" COMPONENT openrave)
     endif()
   endif()
+  # don't need symlinks
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.bash" IMMEDIATE @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.bash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
