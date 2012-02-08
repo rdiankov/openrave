@@ -3,9 +3,10 @@
 if test $# -eq 0; then
     # try the installed path
     abspath=@CMAKE_INSTALL_PREFIX@
+else
+    abspath=`cd $1; pwd`
 fi
 
-abspath=`cd $1; pwd`
 export PATH=$abspath/bin:$PATH
 if [ -e "`which openrave-config`" ]; then
     export LD_LIBRARY_PATH=$abspath/lib:$LD_LIBRARY_PATH
