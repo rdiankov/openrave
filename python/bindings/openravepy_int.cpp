@@ -1271,6 +1271,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)
+        .def("__hash__",&PyInterfaceBase::__hash__)
         .def("__eq__",&PyInterfaceBase::__eq__)
         .def("__ne__",&PyInterfaceBase::__ne__)
         ;

@@ -34,6 +34,8 @@ Misc
 
 * Removed isosurface computation from linkstatistics since it was buggy. Now forcing linkstatistics generation of all planning models. Also fixed bug with cross-section computation.
 
+* Installing **openrave.bash** to share folder to allow users to easy set paths for openrave runtimes.
+
 Version 0.6.2
 =============
 

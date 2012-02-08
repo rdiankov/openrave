@@ -511,6 +511,9 @@ protected:
     virtual boost::python::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
+    virtual int __hash__() {
+        return static_cast<int>(uintptr_t(_pbase.get()));
+    }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();
     }

@@ -34,7 +34,12 @@ class TestEnvironment(EnvironmentSetup):
         assert(len(trimesh.vertices)==0)
         
     def test_misc(self):
-        assert(self.env.plot3([0,0,0],10)==None) # no viewer attached
+        env=self.env
+        assert(env.plot3([0,0,0],10)==None) # no viewer attached
+        self.LoadEnv('data/lab1.env.xml')
+        bodies = dict([(b,b.GetEnvironmentId()) for b in env.GetBodies()])
+        assert(env.GetBodies()[0] in bodies)
+        assert(bodies[env.GetBodies()[0]] == env.GetBodies()[0].GetEnvironmentId())
 
     def test_uri(self):
         env=self.env
