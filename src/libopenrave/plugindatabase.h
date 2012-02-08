@@ -352,7 +352,10 @@ protected:
 #else
         const char* delim = ":";
 #endif
-        utils::TokenizeString(getenv("OPENRAVE_PLUGINS"), delim, vplugindirs);
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS");
+        if( pOPENRAVE_PLUGINS != NULL ) {
+            utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
+        }
         bool bExists=false;
         string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM

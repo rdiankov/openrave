@@ -64,7 +64,10 @@ public:
 #else
             const char* delim = ":";
 #endif
-            utils::TokenizeString(getenv("OPENRAVE_DATA"), delim, _vdatadirs);
+            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA");
+            if( pOPENRAVE_DATA != NULL ) {
+                utils::TokenizeString(pOPENRAVE_DATA, delim, _vdatadirs);
+            }
             string installdir = OPENRAVE_DATA_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
             if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {

@@ -399,7 +399,10 @@ public:
         const char* delim = ":";
 #endif
         _vdbdirectories.clear();
-        utils::TokenizeString(getenv("OPENRAVE_PLUGINS"), delim, _vdbdirectories);
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS");
+        if( pOPENRAVE_PLUGINS != NULL ) {
+            utils::TokenizeString(pOPENRAVE_PLUGINS, delim, _vdbdirectories);
+        }
         _vdbdirectories.push_back(_homedirectory);
         return 0;
     }
