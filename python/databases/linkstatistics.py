@@ -244,9 +244,14 @@ class LinkStatisticsModel(DatabaseGenerator):
                 # compute simple statistics and compress the joint volume
                 volumecom = mean(sweptvolume,0)
                 volume = len(sweptvolume)*self.samplingdelta**3
-                volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*volume
-                # get the cross sections and a dV/dAngle measure
-                crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),jointvolume[:,2:]]
+                log.debug('volume points: %r',sweptvolume.shape)
+                if sweptvolume.size > 1:
+                    volumeinertia = cov(sweptvolume,rowvar=0,bias=1)*volume
+                    # get the cross sections and a dV/dAngle measure
+                    crossarea = c_[sqrt(sum(jointvolume[:,0:2]**2,1)),jointvolume[:,2:]]
+                else:
+                    volumeinertia = zeros((3,3))
+                    crossarea = zeros((0,2))
                 if len(crossarea) > 0:
                     crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
                     volumedelta = sum(crossarea[:,0])*density**2
@@ -284,8 +289,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 log.info('rotation %s',('x','y','z')[i])
                 axis = array((0,0,0))
                 axis[i] = 1.0
+                R = rotationMatrixFromQuat(quatRotateDirection(axis,[0,0,1]))
+                volume = dot(robotvolume,transpose(R))
                 # get the cross sections and a dV/dAngle measure
-                crossarea = c_[sqrt(sum(robotvolume[:,0:2]**2,1)),robotvolume[:,2:]]
+                crossarea = c_[sqrt(sum(volume[:,0:2]**2,1)),volume[:,2:]]
                 crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 # compute simple statistics and compress the joint volume
                 volumedelta = sum(crossarea[:,0])*density**2
@@ -308,7 +315,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def computeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
         if len(volumepoints) == 0:
-            return zeros((0,3)),zeros(0,int),zeros((0,3))
+            return zeros((0,3))
         maxradius = sqrt(numpy.max(sum(cross(volumepoints,axis)**2,1)))
         anglerange = maxangle-minangle
         angledelta = samplingdelta/maxradius
@@ -348,8 +355,11 @@ class LinkStatisticsModel(DatabaseGenerator):
 
     @staticmethod
     def transformJointPoints(joint,points,translation=array((0.0,0.0,0.0))):
-        Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
-        return dot(points,transpose(Rinv)) + tile(joint.GetAnchor()+translation,(len(points),1))
+        if len(points) > 0:
+            Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
+            return dot(points,transpose(Rinv)) + tile(joint.GetAnchor()+translation,(len(points),1))
+        
+        return points
 
     def show(self,options=None):
         self.env.SetViewer('qtcoin')
