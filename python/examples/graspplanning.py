@@ -122,7 +122,7 @@ class GraspPlanning:
                 self.ikmodel.autogenerate()
 
         self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
-        if self.lmodel.load():
+        if not self.lmodel.load():
             self.lmodel.autogenerate()
         self.lmodel.setRobotWeights()
         self.lmodel.setRobotResolutions(xyzdelta=0.005)
