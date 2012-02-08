@@ -45,15 +45,32 @@ class TaskManipulation:
         if envother.AddModule(clone.prob,clone.args) != 0:
             raise ValueError('module failed to initialize')
         return clone
-    def GraspPlanning(self,graspindices,grasps,target,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None):
+    def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None):
         """See :ref:`module-taskmanipulation-graspplanning`
+
+        If gmodel is specified, then do not have to fill graspindices, grasps, target, grasptranslationstepmult, graspfinestep
         """
+        if gmodel is not None:
+            if target is None:
+                target = gmodel.target
+            if graspindices is None:
+                graspindices = gmodel.graspindices
+            if grasps is None:
+                grasps=gmodel.grasps
+            if grasptranslationstepmult is None:
+                grasptranslationstepmult=gmodel.translationstepmult
+            if graspfinestep is None:
+                graspfinestep=gmodel.finestep
         cmd = 'graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1])
         for f in grasps.flat:
             cmd += str(f) + ' '
         for name,valuerange in graspindices.iteritems():
             if name[0] == 'i' and len(valuerange) > 0 or name == 'grasptrans_nocol':
                 cmd += name + ' ' + str(valuerange[0]) + ' '
+        if grasptranslationstepmult is not None:
+            cmd += 'grasptranslationstepmult %.15e '%grasptranslationstepmult
+        if graspfinestep is not None:
+            cmd += 'graspfinestep %.15e '%graspfinestep
         if destposes is not None and len(destposes) > 0:
             if len(destposes[0]) == 7: # pose
                 cmd += 'posedests %d '%len(destposes)
@@ -79,10 +96,6 @@ class TaskManipulation:
             cmd += 'execute %d '%execute
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
-        if grasptranslationstepmult is not None:
-            cmd += 'grasptranslationstepmult %.15e '%grasptranslationstepmult
-        if graspfinestep is not None:
-            cmd += 'graspfinestep %.15e '%graspfinestep
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error()

@@ -106,7 +106,7 @@ class TestMoving(EnvironmentSetup):
             T = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             sol = gmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
             robot.SetActiveDOFValues(sol)
-            robot.Grab(gmodel.target)            
+            robot.Grab(gmodel.target)
             xyzconstraints = array([1,2],int)
             constraintfreedoms = array([1,0,1,1,0,0]) # rotation xyz, translation xyz
             localrotaxis = array([0,1,0])
@@ -426,11 +426,11 @@ class TestMoving(EnvironmentSetup):
             
         with env:
             basemanip = interfaces.BaseManipulation(robot)
-            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)            
+            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
             target = env.GetKinBody('mug1')
             approachoffset = 0.02
             dests = ComputeDestinations(target,env.GetKinBody('table'))
-            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps, target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep,execute=False,outputtrajobj=True)
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
             self.RunTrajectory(robot,traj)
             grasp = gmodel.grasps[graspindex]
             direction=gmodel.getGlobalApproachDir(grasp)

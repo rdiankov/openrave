@@ -292,7 +292,7 @@ class GraspPlanning:
         target = gmodel.target
         stepsize = 0.001
         while istartgrasp < len(gmodel.grasps):
-            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:], target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
+            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(gmodel=gmodel,grasps=gmodel.grasps[istartgrasp:], approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=True,randomdests=True)
             istartgrasp = graspindex+1
             grasp = gmodel.grasps[graspindex]
             Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
