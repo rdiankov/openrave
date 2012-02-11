@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,15 +16,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   geometry.h
     \brief  Basic gemoetric primitives and affine math functions on them.
+
+    This file can be used stand-alone without \ref openrave.h .
  */
 #ifndef OPENRAVE_GEOMETRY_H
 #define OPENRAVE_GEOMETRY_H
 
 #include <cmath>
-#include <iostream>
+#include <vector>
+#include <string>
 #include <limits>
 #include <utility> // for std::pair
-#include <cstring>
 #include <cstdlib>
 
 #ifndef RAVE_DEPRECATED

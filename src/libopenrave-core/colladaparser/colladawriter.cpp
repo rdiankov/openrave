@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,9 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /// functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
-
-using namespace OpenRAVE;
-using namespace std;
 
 #include <dae.h>
 #include <dae/daeErrorHandler.h>

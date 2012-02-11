@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -18,17 +18,25 @@
 /** \file utils.h
     \brief Programming related utilities likes tokenizers, timers, name checkers, etc.
 
-    This file is optional and not automatically included with \ref openrave.h
+    This file is optional and not automatically included with \ref openrave.h . Furthermore, it can be used stand-alone without \ref openrave.h .
  */
 #ifndef OPENRAVE_UTILS_H
 #define OPENRAVE_UTILS_H
 
-#include <openrave/openrave.h>
+#include <openrave/config.h>
+#include <stdint.h>
+#include <string>
+#include <istream>
+#include <vector>
+
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/function.hpp>
 
 #include <time.h>
 
 #ifndef _WIN32
-#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
+#if !(defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0))
 #include <sys/time.h>
 #endif
 #else
@@ -256,15 +264,17 @@ template <typename T>
 inline T NormalizeCircularAngle(T theta, T min, T max)
 {
     if (theta < min) {
-        theta += T(2*PI);
+        T range = max-min;
+        theta += range;
         while (theta < min) {
-            theta += T(2*PI);
+            theta += range;
         }
     }
     else if (theta > max) {
-        theta -= T(2*PI);
+        T range = max-min;
+        theta -= range;
         while (theta > max) {
-            theta -= T(2*PI);
+            theta -= range;
         }
     }
     return theta;
@@ -273,6 +283,7 @@ inline T NormalizeCircularAngle(T theta, T min, T max)
 template <typename T>
 inline T SubtractCircularAngle(T f0, T f1)
 {
+    const T PI = T(3.14159265358979323846);
     return NormalizeCircularAngle(f0-f1, T(-PI), T(PI));
 }
 
@@ -312,7 +323,6 @@ inline std::string ConvertToOpenRAVEName(const std::string& name)
             newname[i] = '_';
         }
     }
-    RAVELOG_WARN(boost::str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
     return newname;
 }
 

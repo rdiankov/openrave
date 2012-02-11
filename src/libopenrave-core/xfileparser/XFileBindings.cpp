@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2011-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -19,9 +19,6 @@
 
 #include "XFileHelper.h"
 #include "XFileParser.h"
-
-using namespace OpenRAVE;
-using namespace std;
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>

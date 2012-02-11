@@ -3,8 +3,8 @@
 ChangeLog
 #########
 
-Version 0.6.3 Unstable
-======================
+Version 0.6.3 Development
+=========================
 
 Subversion Revision: **Unreleased**
 

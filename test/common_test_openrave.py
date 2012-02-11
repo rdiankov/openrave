@@ -34,7 +34,7 @@ g_jacobianstep = 0.01
 g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
 g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml','robots/barrettwam-dual.robot.xml']
 
-log=logging.getLogger('openravepy')
+log=logging.getLogger('openravepytest')
     
 def setup_module(module):
     dbdir = os.path.join(os.getcwd(),'.openravetest')
@@ -111,7 +111,7 @@ class EnvironmentSetup(object):
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()
-        self.log = logging.getLogger('openravepy.'+self.__class__.__name__)
+        self.log = logging.getLogger('openravepytest.'+self.__class__.__name__)
         
     def teardown(self):
         self.env.Destroy()

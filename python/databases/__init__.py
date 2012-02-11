@@ -103,13 +103,13 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def generate(self,*args,**kwargs):
         starttime = time.time()
         producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
-        log.info('database %s has %d items',__name__.split()[-1],numjobs)
+        log.info('database %s has %d items',self.__class__.__name__.split()[-1],numjobs)
         for work in producer():
             results = consumer(*work)
             if len(results) > 0:
                 gatherer(*results)
         gatherer() # gather results
-        log.info('database %s finished in %fs',__name__,time.time()-starttime)
+        log.info('database %s finished in %fs',self.__class__.__name__,time.time()-starttime)
 
     @staticmethod
     def CreateOptionParser(useManipulator=True):

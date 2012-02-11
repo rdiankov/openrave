@@ -61,10 +61,22 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
 {
     vector<dReal> vtestsolution,vtestsolution2;
     if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
-        manipulator->GetRobot()->GetConfigurationValues(vtestsolution);
+        RobotBasePtr robot = manipulator->GetRobot();
+        robot->GetConfigurationValues(vtestsolution);
         for(size_t i = 0; i < manipulator->GetArmIndices().size(); ++i) {
             int dofindex = manipulator->GetArmIndices()[i];
-            if( RaveFabs(vtestsolution.at(dofindex) - solution.at(i)) > 1000*g_fEpsilon ) {
+            dReal fdiff = 0;
+            KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex);
+            if( pjoint->GetDOF() == 1 ) {
+                // use subtract values
+                vector<dReal> v1(1), v2(1); v1[0] = vtestsolution.at(dofindex); v2[0] = solution.at(i);
+                pjoint->SubtractValues(v1,v2);
+                fdiff = RaveFabs(v1.at(0));
+            }
+            else {
+                fdiff = RaveFabs(vtestsolution.at(dofindex) - solution.at(i));
+            }
+            if( fdiff > 1000*g_fEpsilon ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
             }
         }

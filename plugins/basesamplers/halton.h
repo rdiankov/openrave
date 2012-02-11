@@ -79,15 +79,8 @@ protected:
     dReal atan4 ( dReal y, dReal x );
     char digit_to_ch ( int i );
     int get_seed ( void );
-    bool halham_leap_check ( int dim_num, int leap[] );
-    bool halham_n_check ( int n );
-    bool halham_dim_num_check ( int dim_num );
-    bool halham_seed_check ( int dim_num, int seed[] );
-    bool halham_step_check ( int step );
-    void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[],
-                        dReal r[], char *file_out_name );
+    void halham_write ( int dim_num, int n, int step, int seed[], int leap[], int base[], dReal r[], char *file_out_name );
     void halton ( dReal r[] );
-    bool halton_base_check ( int dim_num, int base[] );
     int *halton_base_get ( void ) const;
     void halton_base_set ( int base[] );
     int *halton_leap_get ( void ) const;
@@ -101,12 +94,9 @@ protected:
     void halton_step_set ( int step );
     int i4_log_10 ( int i );
     int i4_min ( int i1, int i2 );
-    void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[],
-                        dReal r[] );
-    void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[],
-                                 int base[], dReal r[] );
+    void i4_to_halton ( int dim_num, int step, int seed[], int leap[], int base[], dReal r[] );
+    void i4_to_halton_sequence ( int dim_num, int n, int step, int seed[], int leap[], int base[], dReal r[] );
     char *i4_to_s ( int i );
-    void i4vec_transpose_print ( int n, int a[], char *title );
     int prime ( int n );
     dReal r8_epsilon ( void );
     dReal r8vec_dot_product ( int n, dReal *r1, dReal *r2 );

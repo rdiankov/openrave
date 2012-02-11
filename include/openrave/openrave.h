@@ -99,7 +99,7 @@ typedef float dReal;
 #endif
 
 /// \brief openrave constant for PI, could be replaced by accurate precision number depending on choice of dReal.
-static const dReal PI = (dReal)3.14159265358979323846;
+static const dReal PI = dReal(3.14159265358979323846);
 
 /// Wrappers of common basic math functions, allows OpenRAVE to control the precision requirements.
 /// \ingroup affine_math

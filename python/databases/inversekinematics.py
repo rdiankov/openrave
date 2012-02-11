@@ -870,8 +870,12 @@ class InverseKinematicsModel(DatabaseGenerator):
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices)
                 if not ikmodel.load():
                     raise ValueError('failed to load ik')
+                
                 if options.iktests is not None:
-                    successrate = ikmodel.testik(iktests=options.iktests)
+                    successrate, wrongrate = ikmodel.testik(iktests=options.iktests)
+                    if wrongrate > 0:
+                        raise ValueError('wrong rate %f > 0!'%wrongrate)
+                    
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))
                     log.info('running time mean: %fs, median: %fs, min: %fs, max: %fs', mean(results),median(results),min(results),max(results))
