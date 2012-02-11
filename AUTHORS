@@ -13,6 +13,7 @@ Contributors
 * Masaru Ryumae - initial japanese documentation
 * Alan Tan - simplemanipulation python example
 * Atsushi Tsuda - multithreading of grasper plugin
+* Nick Hillier - bobcat model, ode physics additions
 
 .. _`Rosen Diankov`: http://www.programmingvision.com
 

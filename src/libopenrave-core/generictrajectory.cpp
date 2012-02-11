@@ -160,7 +160,7 @@ public:
         if( data.size() == 0 ) {
             return;
         }
-        BOOST_ASSERT((data.size()%spec.GetDOF()) == 0);
+        BOOST_ASSERT(spec.GetDOF()>0 && (data.size()%spec.GetDOF()) == 0);
         if( _spec == spec ) {
             Insert(index,data,bOverwrite);
         }

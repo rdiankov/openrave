@@ -14,7 +14,7 @@
 from common_test_openrave import *
 
 def test_transformations():
-    print 'tests basic math transformations'
+    log.info('tests basic math transformations')
     for i in range(20):
         axisangle0 = (random.rand(3)-0.5)*1.99*pi/sqrt(3) # cannot have mag more than pi
         trans = random.rand(3)-0.5
@@ -71,7 +71,7 @@ def test_transformations():
         assert(abs(linalg.det(T[0:3,0:3])-1) <= g_epsilon )
         
 def test_fitcircle():
-    print 'fits 2d and 3d circles to a set of points'
+    log.info('fits 2d and 3d circles to a set of points')
     perturbation = 0.001
     for i in range(1000):
         T = randtrans()
@@ -97,7 +97,7 @@ def test_fitcircle():
         assert( error <= perturbation*4 )
 
 def test_segments():
-    print 'test segment intersection'
+    log.info('test segment intersection')
     for i in range(100):
         center = random.rand(3)-0.5
         d0 = random.rand(3)-0.5

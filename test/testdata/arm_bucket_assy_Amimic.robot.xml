@@ -1,0 +1,292 @@
+<!--
+ *
+ * CSIRO Autonomous Systems Laboratory
+ * Queensland Centre for Advanced Technologies
+ * PO Box 883, Kenmore, QLD 4069, Australia
+ * http://www.ict.csiro.au/
+ *  
+ * Copyright (c) CSIRO 2010
+ *
+ * Nick Hillier
+ *
+ * Simplified version of the vrml-based bobcat arm with the standard 
+ * bucket attachment.
+-->
+<Robot name="arm_bucket_assy">
+    <KinBody name="arm_bucket_assembly" MakeJoinedLinksAdjacent="0">
+        <Body name="chassis" type="dynamic">
+            <!-- include the chassis from the chassis_and_wheels.robot.xml -->
+            <mass type="custom">
+                <total>1475</total>
+                <com>0.0 0 0.0</com>
+                <inertia>374 -1.3 63 1.3 845 -3 63 3 698</inertia>
+            </mass>
+            <Geom type="trimesh">
+                <Render>bobcat_arm_vrml/bobcat_base_model3.wrl.or</Render>
+                <data>bobcat_arm_vrml/bobcat_base_model3.wrl.or</data>
+            </Geom>
+        </Body>
+        <Body name="side_links" type="dynamic">
+            <mass>
+                <total>32</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>0.12570489 0 0.21364116</Translation>
+            <Geom type="box">
+                <Extents>0.505 0.025 0.05</Extents>
+                <Translation> 0 0.488 0 </Translation>
+            </Geom>
+            <Geom type="box">
+                <Extents>0.505 0.025 0.05</Extents>
+                <Translation> 0 -0.488 0 </Translation>
+            </Geom>
+        </Body>
+        
+        <Body name="boom" type="dynamic">
+            <mass>
+                <total>200</total>
+            </mass>
+            <Geom type="trimesh">
+                <Render>bobcat_arm_vrml/bobcat_boom.wrl.or</Render>
+                <data>bobcat_arm_vrml/bobcat_boom.wrl.or</data>
+            </Geom>
+            <RotationAxis>1 0 0 90</RotationAxis>
+            <rotationaxis>0 1 0 28.580278363155873</rotationaxis>
+            <translation>0.36936305 0 0.5320269</translation>
+            <offsetfrom>chassis</offsetfrom>
+        </Body>
+        <Body name="boom_cyl_low" type="dynamic">
+            <mass>
+                <total>3</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>-0.76552 0 -0.23652</Translation>
+            <Geom type="box">
+                <Extents>0.03 0.03 0.41</Extents>
+                <Translation> 0 -0.505 0.38</Translation>
+            </Geom>
+            <Geom type="box">
+                <Extents>0.03 0.03 0.41</Extents>
+                <Translation> 0 0.505 0.38</Translation>
+            </Geom>
+            <RotationAxis>0 1 0 20.169518382546372</RotationAxis>
+        </Body>
+        <Body name="boom_cyl_up" type="dynamic">
+            <mass>
+                <total>3</total>
+            </mass>
+            <offsetfrom>boom_cyl_low</offsetfrom>
+            <Geom type="cylinder">
+              <radius>0.02</radius>
+              <height>0.86820166263537468</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <Translation> 0 -0.505 0.43410083131768734</Translation>
+              <diffusecolor>0 0 0</diffusecolor>
+            </Geom>
+            <Geom type="cylinder">
+              <radius>0.02</radius>
+              <height>0.86820166263537468</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <Translation> 0 0.505 0.43410083131768734</Translation>
+              <diffusecolor>0 0 0</diffusecolor>
+            </Geom>
+        </Body>
+        <Body name="rear_link" type="dynamic">
+            <mass>
+                <total>13</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>-0.84422408 0 0.81839822</Translation>
+            <RotationAxis>0 1 0 34.587582593027598</RotationAxis>
+            <Geom type="box">
+                <Extents>0.025 0.45 0.025</Extents>
+                <Translation> 0.0 0.0 0.0 </Translation>
+            </Geom>
+            <Geom type="box">
+                <Extents>0.05 0.025 0.2725</Extents>
+                <Translation> 0.0 0.5 0.0 </Translation>
+            </Geom>
+            <Geom type="box">
+                <Extents>0.05 0.025 0.2725</Extents>
+                <Translation> 0.0 -0.5 0.0 </Translation>
+            </Geom>
+        </Body>
+        <Body name="bucket_slider" type="dynamic">
+            <mass>
+                <total>1</total>
+            </mass>
+            <Geom type="cylinder">
+              <radius>0.04</radius>
+              <height>0.3</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <rotationaxis>0 1 0 -44.130974598777108</rotationaxis>
+              <translation> 0.10095874000000001  0.5 -0.097941714999999999</translation>
+            </Geom>
+            <Geom type="cylinder">
+              <radius>0.04</radius>
+              <height>0.3</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <rotationaxis>0 1 0 -44.130974598777108</rotationaxis>
+              <translation> 0.10095874000000001  -0.5 -0.097941714999999999</translation>
+            </Geom>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>0.93016919095998696 0 0.16944707139955784</Translation> 
+        </Body>
+        <Body name="bucket_hinge" type="dynamic">
+            <mass>
+                <total>0.1</total>
+            </mass>
+            <Geom type="cylinder">
+              <radius>0.02</radius>
+              <height>0.56264014611294</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <rotationaxis>0 1 0 -44.130974598777108</rotationaxis>
+              <translation> -0.20191748  0.5 0.19588343</translation>
+              <diffusecolor>0 0 0</diffusecolor>
+            </Geom>
+            <Geom type="cylinder">
+              <radius>0.02</radius>
+              <height>0.56264014611294</height>
+              <rotationaxis>1 0 0 90</rotationaxis>
+              <rotationaxis>0 1 0 -44.130974598777108</rotationaxis>
+              <translation> -0.20191748  -0.5 0.19588343</translation>
+              <diffusecolor>0 0 0</diffusecolor>
+            </Geom>
+            <Geom type="sphere">
+              <radius>0.03</radius>
+              <translation>0 -0.5 0</translation>
+            </Geom>
+            <Geom type="sphere">
+              <radius>0.03</radius>
+              <translation>0 0.5 0</translation>
+            </Geom>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>1.3340041431568537 0 -0.2223197794213671</Translation> 
+        </Body>
+        <Body name="bucket_back" type="dynamic">
+            <mass>
+                <total>80</total>
+            </mass>
+            <Geom type="trimesh">
+                <Render>bobcat_arm_vrml/bucket-back.wrl</Render>
+                <data>bobcat_arm_vrml/bucket-back.wrl</data>
+            </Geom>
+            <RotationAxis>1 0 0 90</RotationAxis>
+            <RotationAxis>0 1 0 -82.542</RotationAxis>
+            <translation>1.3340041431568537 0 -0.4023197794213671</translation>
+            <offsetfrom>chassis</offsetfrom>
+        </Body>
+        <Body name="bucket_front" type="dynamic">
+            <mass>
+                <total>100</total>
+            </mass>
+            <Geom type="trimesh">
+                <Render>bobcat_arm_vrml/bucket-front.wrl</Render>
+                <data>bobcat_arm_vrml/bucket-front.wrl</data>
+            </Geom>
+            <RotationAxis>1 0 0 90</RotationAxis>
+            <RotationAxis>0 1 0 -27.4</RotationAxis>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation>1.3847149004666903 0.0 0.052476523445719354</Translation>
+        </Body>
+
+        <Joint name="P0" type="hinge" enable="true" mimic_pos="atan2((1.08453619116507793407322424173 - 0.326891171552424864010788496671*sin(P1) - 0.889924878334829361214985965489*cos(P1) + 0.194611313079564973715918085873*sin(P1)*sin(P2) + 0.293313923287406186357628712358*cos(P1)*sin(P2) + 0.293313923287406186357628712358*cos(P2)*sin(P1) - 0.194611313079564973715918085873*cos(P1)*cos(P2))/(0.814960576350561405334360642883 + 0.938676590165949287225544139801*A), (0.848537824524000061643391745747 + 0.889924878334829361214985965489*sin(P1) - 0.326891171552424808499637265413*cos(P1) + 0.194611313079564973715918085873*cos(P1)*sin(P2) + 0.194611313079564973715918085873*cos(P2)*sin(P1) + 0.293313923287406186357628712358*cos(P1)*cos(P2) - 0.293313923287406186357628712358*sin(P1)*sin(P2))/(0.814960576350561405334360642883 + 0.938676590165949287225544139801*A))" mimic_vel="|P1 0 |P2 0 |A 0">
+            <Body>chassis</Body>
+            <Body>boom_cyl_low</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor> -0.76552 0 -0.23652</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+         <Joint name="P1" type="hinge" enable="true" mimic_pos="-P2+P3-P4" mimic_vel="|P2 -1 |P3 1 |P4 -1">
+            <Body>chassis</Body>
+            <Body>side_links</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>0.63070488570321825 0 0.21364115841222436</Anchor>
+            <!-- correct with cad model
+            <Anchor>0.64195276158659409 0 0.17713375060768677</Anchor>
+            -->
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="P2" type="hinge" mimic_pos="atan2(0.820630548733223830204508431052 - 0.306314464159838095724808226805*sin(P3) - 0.444234040930636064903325177511*cos(P3) + 1.61348294094792121811110519047*cos(P4)*sin(P3) - 0.37639650780258804285693940983*cos(P3)*cos(P4) - 0.37639650780258804285693940983*sin(P3)*sin(P4) - 1.61348294094792121811110519047*cos(P3)*sin(P4), -0.307168476788082900341692038637 + 0.444234040930636064903325177511*sin(P3) - 0.306314464159838095724808226805*cos(P3) + 0.37639650780258804285693940983*cos(P4)*sin(P3) + 1.61348294094792121811110519047*cos(P3)*cos(P4) + 1.61348294094792121811110519047*sin(P3)*sin(P4) - 0.37639650780258804285693940983*cos(P3)*sin(P4))" mimic_vel="|P3 0 |P4 0">
+            <Body>side_links</Body>
+            <Body>boom</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>-0.37929511429678175 0 0.21364115841222436</Anchor> 
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="A" type="slider">
+            <Body>boom_cyl_up</Body>
+            <Body>boom_cyl_low</Body>
+            <offsetfrom>boom_cyl_low</offsetfrom>
+            <Anchor> 0 0 0</Anchor>
+            <axis> 0 0 -1 </axis>
+            <limits>0 0.63</limits>
+        </Joint>
+        <!-- max limit? 0.814556303541217 -->
+        <Joint name="P3" type="hinge" enable="true" mimic_pos="atan2(-((2.86032055136193452682391580311 + 1.69756828446370255925046421908*sin(P4) - 0.667196447505891465645788684924*cos(P4))*(0.27819378282662526880031350629 + 0.874866684792881987853263581201*cos(P4) - 0.154332188685678023398750724482*sin(P4)) - (0.55179632227301012026288162815 + 2.46549243968254128134276470519*sin(P4) + 1.641327781583032718870640565*cos(P4))*(0.552382122997171043365938203351 + 0.600678344622336268798790115397*cos(P4) + 0.723201591485230332878586523293*sin(P4) - 1.73640332527074914281683959416*A - 0.999999999999999888977697537484*A^2))/(0.0489193355238501182745856028536 + 1.35034906443576881070052383077*sin(P4) + 0.879071382615921122872734456224*cos(P4) - 1.37074519455706930966763087498e-16*cos(P4)*sin(P4) + 2.41028690596929738231834668828*sin(P4)^2 + 2.41028690596929815935605623591*cos(P4)^2), -((0.791241994157018679878490274859 + 1.641327781583032718870640565*sin(P4) - 2.46549243968254216952118440531*cos(P4))*(0.552382122997171043365938203351 + 0.600678344622336268798790115397*cos(P4) + 0.723201591485230332878586523293*sin(P4) - 1.73640332527074914281683959416*A - 0.999999999999999888977697537484*A^2) - (2.86032055136193452682391580311 + 1.69756828446370255925046421908*sin(P4) - 0.667196447505891465645788684924*cos(P4))*(0.487567473993715416735739154319 + 0.154332188685678023398750724482*cos(P4) + 0.874866684792881987853263581201*sin(P4)))/(0.0489193355238501182745856028536 + 1.35034906443576881070052383077*sin(P4) + 0.879071382615921122872734456224*cos(P4) - 1.37074519455706930966763087498e-16*cos(P4)*sin(P4) + 2.41028690596929738231834668828*sin(P4)^2 + 2.41028690596929815935605623591*cos(P4)^2))" mimic_vel="|A 0 |P4 0">
+            <Body>rear_link</Body>
+            <Body>boom</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>-0.68953527585274565 0 1.0424780126327804</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="P4" type="hinge" enable="true" mimic_pos="dummy := polyroots6(3.93382841074770794875803403556 + 23.2367673968627954650401079562*A + 48.9403586504919871913443785161*A^2 + 40.9561909144454006082014529966*A^3 + 11.7933979733825058389129480929*A^4,
+ 4.41119907575140857147744100075 + 14.2911286857696548935336977593*A + 40.3005251094114598231499257963*A^2 + 36.938676408138846340989402961*A^3 + 10.6365485110952455727328924695*A^4,
+ 0.942805736424042084564689503168 + 4.25145874505513710062132304301*A + 96.5185462160762313033046666533*A^2 + 108.350538976661582069027645048*A^3 + 31.1997038360217935348828177666*A^4,
+ 9.63330986023988344868485000916 - 17.5117238035054576528182224138*A + 54.0553851050696891888946993276*A^2 + 73.877352816277692681978805922*A^3 + 21.273097022190491145465784939*A^4,
+ 15.4530089304715776421517148265 - 38.3952167523728817855044326279*A + 59.3536139593891789445478934795*A^2 + 93.8325052099869623134509311058*A^3 + 27.0192137518960642239562730538*A^4,
+ 13.0363889527676697355218493612 - 31.8028524892751107699950807728*A + 13.7548599956582311421016129316*A^2 + 36.938676408138846340989402961*A^3 + 10.6365485110952455727328924695*A^4,
+ -19.409908100565225197442487115*A + 11.775426393804940161658123543*A^2 + 26.4381571477707844053384178551*A^3 + 7.61290788925678008070008218056*A^4); 2*atan(dummy)" mimic_vel="|A 0">
+            <Body>rear_link</Body>
+            <Body>chassis</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>-0.99891288465418215 0 0.59380163129283803</Anchor>
+            <axis> 0 1 0 </axis>
+            <limitsrad>-0.1 2</limitsrad>
+        </Joint>
+        <Joint name="P5" type="hinge" mimic_pos="-P0+P3-P4" mimic_vel="|P0 -1 |P3 1 |P4 -1">
+            <Body>boom_cyl_up</Body>
+            <Body>boom</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>-0.46616505015418619 0 0.57844057635056145</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="P6" type="hinge" mimic_pos="-0.955846181068647 - asin(-0.816802093293857910851305528267 + 4.46556648932134788585813142994*L + 3.96861705390367866366170749482*L^2)" mimic_vel="|L 0">
+            <Body>bucket_back</Body>
+            <Body>boom</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>1.3340041431568537 0 -0.4023197794213671</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="P7" type="hinge" mimic_pos="atan2(((0.542040968354291052833104913589 + 0.963716731790405622959383435955*L)*(0.30891000000000000402788913334 + 0.0861077602279823131053824690795*sin(P6) - 0.158070407187810796773040038844*cos(P6)) - (0.150844258841834916173851866006 + 0.267117335392556276563169603833*L)*(0.628149999999999875122114190162 - 0.158070407187810796773040038844*sin(P6) - 0.0861077602279823131053824690795*cos(P6)))/(0.31656240180000004587447260328 + 1.12533413400000008486127682972*L + 1.00010161000000000588986622788*L^2), ((0.542040968354291052833104913589 + 0.963716731790405622959383435955*L)*(0.628149999999999875122114190162 - 0.158070407187810796773040038844*sin(P6) - 0.0861077602279823131053824690795*cos(P6)) + (0.150844258841834916173851866006 + 0.267117335392556276563169603833*L)*(0.30891000000000000402788913334 + 0.0861077602279823131053824690795*sin(P6) - 0.158070407187810796773040038844*cos(P6)))/(0.31656240180000004587447260328 + 1.12533413400000008486127682972*L + 1.00010161000000000588986622788*L^2))" mimic_vel="|L 0 |P6 0">
+            <Body>boom</Body>
+            <Body>bucket_slider</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>0.93016919095998696 0 0.16944707139955784</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="L" type="slider">
+            <Body>bucket_slider</Body>
+            <Body>bucket_hinge</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>0.93016919095998696 0.16944707139955784</Anchor>
+            <axis>0.718460462 0  -0.695567800</axis>
+            <limits>0 0.3</limits>
+        </Joint>
+        <Joint name="P8" type="hinge" mimic_pos="-P6-P7" mimic_vel="|P6 -1 |P7 -1">
+            <Body>bucket_hinge</Body>
+            <Body>bucket_back</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>1.3340041431568537 0 -0.2223197794213671</Anchor>
+            <axis> 0 1 0 </axis>
+        </Joint>
+        <Joint name="bucket" type="hinge">
+            <Body>bucket_back</Body>
+            <Body>bucket_front</Body>
+            <offsetfrom>chassis</offsetfrom>
+            <Anchor>1.3847149004666903 0.0 0.052476523445719354</Anchor>
+            <limits>-1.3 0</limits>
+            <axis> 0 1 0 </axis>
+        </Joint>
+    </KinBody>
+</Robot>

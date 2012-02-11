@@ -96,7 +96,7 @@ class TestRobot(EnvironmentSetup):
             assert(not robot.CheckSelfCollision())
             assert(not env.CheckCollision(robot))
 
-            print 'Now changing arm joint angles so that the two mugs collide. The checkSelfCollision returns:'
+            self.log.debug('Now changing arm joint angles so that the two mugs collide. The checkSelfCollision returns:')
             collisionJointAngles = array([ -2.38418579e-07,   0.00000000e+00,  -2.96873480e-01, -1.65527940e+00,  -3.82479293e-08,  -1.23165381e-10, 1.35525272e-20]);
             robot.SetDOFValues(collisionJointAngles,rightarm.GetArmIndices())
             robot.SetDOFValues(collisionJointAngles,leftarm.GetArmIndices())
@@ -107,7 +107,7 @@ class TestRobot(EnvironmentSetup):
             assert(env.CheckCollision(leftmug,rightmug))        
 
     def test_badtrajectory(self):
-        print 'create a discontinuous trajectory and check if robot throws exception'
+        self.log.info('create a discontinuous trajectory and check if robot throws exception')
         env=self.env
         robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
         with env:
@@ -137,7 +137,7 @@ class TestRobot(EnvironmentSetup):
                 pass
             
     def test_ikcollision(self):
-        print 'test if can solve IK during collisions'
+        self.log.info('test if can solve IK during collisions')
         env=self.env
         with env:
             robot = self.LoadRobot('robots/pr2-beta-static.zae')

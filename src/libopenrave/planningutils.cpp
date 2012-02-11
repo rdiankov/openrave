@@ -297,7 +297,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& interpolation, bool bsmooth)
 {
     if( traj->GetNumWaypoints() == 1 ) {
-        // don't need retiming, but should at least add a time group
+        // don't need velocities, but should at least add a time group
         ConfigurationSpecification spec = traj->GetConfigurationSpecification();
         spec.AddDeltaTimeGroup();
         vector<dReal> data;
@@ -325,11 +325,6 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     }
     if( !planner->InitPlan(probot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
-    }
-
-    if( params->GetDOF() != traj->GetConfigurationSpecification().GetDOF() ) {
-        // have to remove unnecessary DOFs in order for spaces to match
-        ConvertTrajectorySpecification(traj,probot->GetActiveConfigurationSpecification());
     }
     if( planner->PlanPath(traj) != PS_HasSolution ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);

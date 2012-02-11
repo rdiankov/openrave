@@ -25,6 +25,8 @@ import fnmatch
 import time
 import os
 import cPickle as pickle
+import logging
+
 _multiprocess_can_split_ = True
 
 g_epsilon = 1e-7
@@ -32,12 +34,29 @@ g_jacobianstep = 0.01
 g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
 g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml','robots/barrettwam-dual.robot.xml']
 
+log=logging.getLogger('openravepy')
+    
 def setup_module(module):
     dbdir = os.path.join(os.getcwd(),'.openravetest')
     os.environ['OPENRAVE_DATABASE'] = dbdir
     os.environ['OPENRAVE_HOME'] = dbdir
     RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
     assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
+    log.setLevel(logging.INFO)
+    try:
+        colorize=__import__('logutils.colorize',fromlist=['colorize'])
+        handler = colorize.ColorizingStreamHandler()
+        handler.level_map[logging.DEBUG] =(None, 'green', False)
+        handler.level_map[logging.INFO] = (None, None, False)
+        handler.level_map[logging.WARNING] = (None, 'yellow', False)
+        handler.level_map[logging.ERROR] = (None, 'red', False)
+        handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
+    except ImportError:
+        handler = logging.StreamHandler()
+        raveLogVerbose('python logutils not present so cannot colorize python output.')
+
+    handler.setFormatter(logging.Formatter('%(name)s.%(funcName)s: %(message)s'))
+    log.addHandler(handler)
     
 def teardown_module(module):
     RaveDestroy()
@@ -92,21 +111,24 @@ class EnvironmentSetup(object):
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()
+        self.log = logging.getLogger('openravepy.'+self.__class__.__name__)
+        self.log.setLevel(logging.INFO)
+        
     def teardown(self):
         self.env.Destroy()
         self.env=None
     def LoadDataEnv(self,*args,**kwargs):
-        print 'LoadDataEnv'
+        self.log.info('LoadDataEnv')
         assert(self.env.LoadData(*args,**kwargs))
         self._PreprocessEnv()
     
     def LoadEnv(self,*args,**kwargs):
-        print 'LoadEnv',args,kwargs
+        self.log.info('%r, %r',args,kwargs)
         assert(self.env.Load(*args,**kwargs))
         self._PreprocessEnv()
 
     def LoadRobot(self,*args,**kwargs):
-        print 'LoadRobot',args,kwargs
+        self.log.info('%r, %r',args,kwargs)
         robot=self.env.ReadRobotURI(*args,**kwargs)
         self.env.AddRobot(robot,True)
         self._PreprocessRobot(robot)

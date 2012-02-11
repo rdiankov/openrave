@@ -15,10 +15,10 @@ from common_test_openrave import *
 
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
-        print "check if the joint-link set-get functions are consistent along with jacobians"
+        self.log.info('check if the joint-link set-get functions are consistent along with jacobians')
         env=self.env
         with env:
-            for envfile in g_envfiles:
+            for envfile in g_envfiles+['testdata/bobcat.robot.xml']:
                 env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
@@ -103,11 +103,11 @@ class TestKinematics(EnvironmentSetup):
                                 assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
                                 raveLogDebug(repr(dofvaluesnew))
                                 raveLogDebug(repr(deltavalues))
-                                #print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
+                                self.log.debug('angledist=%f, thresh=%f, armlength=%f',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength)
                                 assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
 
     def test_bodyvelocities(self):
-        print "check physics/dynamics properties"
+        self.log.info('check physics/dynamics properties')
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
@@ -148,7 +148,7 @@ class TestKinematics(EnvironmentSetup):
                         # test consistency with kinematics
 
     def test_hierarchy(self):
-        print "tests the kinematics hierarchy"
+        self.log.info('tests the kinematics hierarchy')
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
@@ -203,7 +203,7 @@ class TestKinematics(EnvironmentSetup):
                 #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
 
     def test_initkinbody(self):
-        print "tests initializing a kinematics body"
+        self.log.info('tests initializing a kinematics body')
         with self.env:
             k = RaveCreateKinBody(self.env,'')
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
@@ -220,7 +220,7 @@ class TestKinematics(EnvironmentSetup):
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
 
     def test_geometrychange(self):
-        print "change geometry and test if changes are updated"
+        self.log.info('change geometry and test if changes are updated')
         env=self.env
         with env:
             self.LoadEnv(g_envfiles[0])
@@ -469,3 +469,63 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)
+
+    def test_closedlinkage(self):
+        self.log.info('check a very complex closed linkage model')
+        env=self.env
+        self.LoadEnv('testdata/bobcat.robot.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            Ajoint = robot.GetJoint('A')
+            Ljoint = robot.GetJoint('L')
+            assert(Ajoint.GetDOF() == 1 and Ljoint.GetDOF() == 1)
+            dofindices = [Ajoint.GetDOFIndex(), Ljoint.GetDOFIndex()]
+            robot.SetActiveDOFs(dofindices)
+            linkdata = [[ [0,0], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   1.66533454e-16, 2.46519033e-32,   1.25704890e-01,  -2.48984221e-32, -4.36358840e-01],
+                                         [  6.85227643e-01,   6.85227643e-01,   1.74536749e-01, -1.74536749e-01,   3.69363050e-01,   1.68017796e-18, -1.17973100e-01],
+                                         [  9.84549793e-01,   4.84676144e-27,   1.75104840e-01, -6.20658774e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                         [  9.84549793e-01,   4.84676144e-27,   1.75104840e-01, -6.20658774e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                         [  9.54793018e-01,   8.25093916e-18,   2.97271412e-01, 1.25474580e-18,  -8.44224080e-01,   0.00000000e+00, 1.68398220e-01],
+                                         [  1.00000000e+00,   5.20417043e-17,  -4.32015615e-06, -4.16333634e-17,   9.30169191e-01,  -2.75764047e-17, -4.80552929e-01],
+                                         [  1.00000000e+00,   5.20417043e-17,  -4.32015615e-06, -4.16333634e-17,   1.33400753e+00,  -2.04263127e-17, -8.72316290e-01],
+                                         [  5.31460156e-01,   5.31460156e-01,  -4.66422665e-01, 4.66422665e-01,   1.33400414e+00,   1.50396600e-16, -1.05231978e+00],
+                                         [  6.86988988e-01,   6.86988988e-01,  -1.67469790e-01, 1.67469790e-01,   1.38471499e+00,   7.72830067e-18, -5.97523487e-01]])],
+                         [ [0.2,0.15], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                            [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                              [  9.88182137e-01,   0.00000000e+00,   1.53284259e-01, 2.77555756e-17,   1.49435915e-01,  -2.80331312e-17, -2.83371348e-01],
+                                              [  7.06794528e-01,   7.06794528e-01,   2.10117950e-02, -2.10117950e-02,   2.10279270e-01,   1.22666523e-18, 4.76223716e-01],
+                                              [  9.95574100e-01,   1.73472348e-18,   9.39798451e-02, -6.93889390e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                              [  9.95574100e-01,   1.73472348e-18,   9.39798451e-02, -6.93889390e-18,  -7.28094440e-01,  -2.54446008e-17, -6.90052885e-01],
+                                              [  9.99520409e-01,   6.93889390e-18,   3.09669378e-02, -2.77555756e-17,  -9.82177231e-01,   7.63757772e-19, 2.16000404e-01],
+                                              [  9.67858375e-01,  -2.60208521e-18,  -2.51495859e-01, -1.21430643e-17,   8.72051279e-01,  -7.74527579e-17, 3.86638746e-01],
+                                              [  9.67858375e-01,  -2.60208521e-18,  -2.51495859e-01, -1.21430643e-17,   1.56045196e+00,  -9.43376201e-17, 2.02355294e-01],
+                                              [  6.23592186e-01,   6.23592186e-01,  -3.33365844e-01, 3.33365844e-01,   1.48074579e+00,  -3.52546462e-17, 4.09640579e-02],
+                                              [  7.07073309e-01,   7.07073309e-01,  -6.88009992e-03, 6.88009992e-03,   1.72761367e+00,   1.03884658e-16, 4.26278877e-01]])],
+                         [ [0.6,0.3], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                             [  8.63508551e-01,   0.00000000e+00,   5.04334197e-01, 1.11022302e-16,   3.82601401e-01,  -8.40993932e-17, 3.49301605e-03],
+                                             [  6.60498754e-01,   6.60498754e-01,  -2.52470583e-01, 2.52470583e-01,   8.54405236e-02,  -2.38637001e-16, 1.25541132e+00],
+                                             [  9.83185295e-01,  -2.16840434e-19,   1.82610721e-01, -2.16840434e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                             [  9.83185295e-01,  -2.16840434e-19,   1.82610721e-01, -2.16840434e-18,  -5.50071789e-01,  -7.36981434e-17, -3.26536011e-01],
+                                             [  9.72102789e-01,   1.04083409e-17,   2.34555254e-01, -1.04083409e-17,  -8.74679979e-01,   5.97978576e-17, 1.86574033e-01],
+                                             [  8.41280342e-01,  -7.63278329e-17,  -5.40599100e-01, -1.11022302e-16,   6.15005480e-01,  -4.15705803e-16, 1.66226340e+00],
+                                             [  8.41280342e-01,  -7.63278329e-17,  -5.40599100e-01, -1.11022302e-16,   1.41851038e+00,  -6.29478324e-16, 1.97615467e+00],
+                                             [  6.71448444e-01,   6.71448444e-01,  -2.21713751e-01, 2.21713751e-01,   1.28904974e+00,  -4.73379676e-16, 1.85111343e+00],
+                                             [  6.97817029e-01,   6.97817029e-01,   1.14242700e-01, -1.14242700e-01,   1.65140668e+00,  -3.55752435e-16, 2.13059278e+00]])],
+                         ]
+
+            for dofvalues, linkposes in linkdata:
+                robot.SetActiveDOFValues(dofvalues)
+                curposes = poseFromMatrices(robot.GetLinkTransformations())
+                assert( transdist(linkposes,curposes) <= 1e-6 )

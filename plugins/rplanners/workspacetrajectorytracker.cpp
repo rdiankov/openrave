@@ -312,12 +312,11 @@ protected:
     IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
         RobotBase::RobotStateSaver saver(_robot);
-        IkParameterization ikpreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
 
         // check if continuous with previous solution using the jacobian
         if( _mjacobian.num_elements() > 0 ) {
             BOOST_ASSERT(ikp.GetType()==IKP_Transform6D);
-            Vector expecteddeltatrans = ikpreal.GetTransform6D().trans - _ikprev.GetTransform6D().trans;
+            Vector expecteddeltatrans = ikp.GetTransform6D().trans - _ikprev.GetTransform6D().trans;
             Vector jdeltatrans;
             dReal solutiondiff = 0;
             for(size_t j = 0; j < vsolution.size(); ++j) {
@@ -338,7 +337,7 @@ protected:
             }
 
             // constrain rotations
-            Vector expecteddeltaquat = ikpreal.GetTransform6D().rot - _ikprev.GetTransform6D().rot;
+            Vector expecteddeltaquat = ikp.GetTransform6D().rot - _ikprev.GetTransform6D().rot;
             Vector jdeltaquat;
             solutiondiff = 0;
             for(size_t j = 0; j < vsolution.size(); ++j) {
@@ -380,10 +379,10 @@ protected:
             IkParameterization ikmidreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
 
             IkParameterization ikmidest;
-            ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikpreal.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikpreal.GetTransform6D().trans)));
+            ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
             const dReal ikmidpointmaxdist2mult = 0.25;
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
-            dReal realdist2 = ikpreal.ComputeDistanceSqr(_ikprev);
+            dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
             // note that ikp might be a little off from vsolution due to the ik solver!
             if( middist2 > 100*g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));

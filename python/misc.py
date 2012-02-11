@@ -101,7 +101,7 @@ class OpenRAVEGlobalArguments:
                     logginglevel = levelmap[debugname]
                     break
 
-        log=logging.getLogger()
+        log=logging.getLogger('openravepy')
         log.setLevel(logginglevel)
         try:
             colorize=__import__('logutils.colorize',fromlist=['colorize'])

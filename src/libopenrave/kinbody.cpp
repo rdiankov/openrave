@@ -3702,10 +3702,10 @@ void KinBody::_ComputeInternalInformation()
         }
         // fill each link's parent links
         FOREACH(itlink,_veclinks) {
-            if(((*itlink)->GetIndex() > 0)&&(vuniquepaths[(*itlink)->GetIndex()].size() == 0)) {
+            if( (*itlink)->GetIndex() > 0 && vuniquepaths.at((*itlink)->GetIndex()).size() == 0 ) {
                 RAVELOG_WARN(str(boost::format("_ComputeInternalInformation: %s has incomplete kinematics! link %s not connected to root %s")%GetName()%(*itlink)->GetName()%_veclinks.at(0)->GetName()));
             }
-            FOREACH(itpath, vuniquepaths[(*itlink)->GetIndex()]) {
+            FOREACH(itpath, vuniquepaths.at((*itlink)->GetIndex())) {
                 OPENRAVE_ASSERT_OP(itpath->back(),==,(*itlink)->GetIndex());
                 int parentindex = *---- itpath->end();
                 if( find((*itlink)->_vParentLinks.begin(),(*itlink)->_vParentLinks.end(),parentindex) == (*itlink)->_vParentLinks.end() ) {
@@ -3729,7 +3729,7 @@ void KinBody::_ComputeInternalInformation()
                     int bestindex = -1;
                     FOREACH(itparent, (*itlink)->_vParentLinks) {
                         if( vlinkdepths[*itparent] >= 0 ) {
-                            if((bestindex == -1)|| ((bestindex >= 0)&&(vlinkdepths[*itparent] < bestindex)) ) {
+                            if( bestindex == -1 || (bestindex >= 0 && vlinkdepths[*itparent] < bestindex) ) {
                                 bestindex = vlinkdepths[*itparent]+1;
                             }
                         }
@@ -3741,6 +3741,19 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
         }
+
+
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            FOREACH(itlink, _veclinks) {
+                std::stringstream ss; ss << GetName() << ":" << (*itlink)->GetName() << " depth=" << vlinkdepths.at((*itlink)->GetIndex()) << ", parents=[";
+                FOREACHC(itparentlink, (*itlink)->_vParentLinks) {
+                    ss << _veclinks.at(*itparentlink)->GetName() << ", ";
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+        }
+
         // build up a directed graph of joint dependencies
         int numjoints = (int)(_vecjoints.size()+_vPassiveJoints.size());
         // build the adjacency list
@@ -3748,13 +3761,13 @@ void KinBody::_ComputeInternalInformation()
         for(int ij0 = 0; ij0 < numjoints; ++ij0) {
             JointPtr j0 = ij0 < (int)_vecjoints.size() ? _vecjoints[ij0] : _vPassiveJoints[ij0-_vecjoints.size()];
             bool bj0hasstatic = (!j0->GetFirstAttached() || j0->GetFirstAttached()->IsStatic()) || (!j0->GetSecondAttached() || j0->GetSecondAttached()->IsStatic());
-            // mimic joint sorting is a hard limit
+            // mimic joint sorting is the hardest limit
             if( j0->IsMimic() ) {
                 for(int i = 0; i < j0->GetDOF(); ++i) {
                     if(j0->IsMimic(i)) {
                         FOREACH(itdofformat, j0->_vmimic[i]->_vdofformat) {
                             if( itdofformat->dofindex < 0 ) {
-                                vjointadjacency[itdofformat->jointindex*numjoints+ij0] = 2;
+                                vjointadjacency[itdofformat->jointindex*numjoints+ij0] = 1;
                             }
                         }
                     }
@@ -3765,18 +3778,8 @@ void KinBody::_ComputeInternalInformation()
                 JointPtr j1 = ij1 < (int)_vecjoints.size() ? _vecjoints[ij1] : _vPassiveJoints[ij1-_vecjoints.size()];
                 bool bj1hasstatic = (!j1->GetFirstAttached() || j1->GetFirstAttached()->IsStatic()) || (!j1->GetSecondAttached() || j1->GetSecondAttached()->IsStatic());
 
-                // test if connected to world
-                if( bj0hasstatic ) {
-                    if( bj1hasstatic ) {
-                        continue;
-                    }
-                    else {
-                        vjointadjacency[ij0*numjoints+ij1] = 1;
-                        continue;
-                    }
-                }
-                else if( bj1hasstatic ) {
-                    vjointadjacency[ij1*numjoints+ij0] = 1;
+                // test if connected to world, next in priority to mimic joints
+                if( bj0hasstatic && bj1hasstatic ) {
                     continue;
                 }
                 if( vjointadjacency[ij1*numjoints+ij0] || vjointadjacency[ij0*numjoints+ij1] ) {
@@ -3941,7 +3944,7 @@ void KinBody::_ComputeInternalInformation()
                 RAVELOG_WARN(str(boost::format("could not compute parent link for joint %s")%(*itjoint)->GetName()));
             }
             else if( parentlinkindex != (*itjoint)->GetFirstAttached()->GetIndex() ) {
-                RAVELOG_DEBUG(str(boost::format("swapping link order of joint %s(%d)")%(*itjoint)->GetName()%(*itjoint)->GetJointIndex()));
+                RAVELOG_VERBOSE(str(boost::format("swapping link order of joint %s(%d)")%(*itjoint)->GetName()%(*itjoint)->GetJointIndex()));
                 // have to swap order
                 Transform tswap = (*itjoint)->GetInternalHierarchyRightTransform().inverse();
                 std::vector<Vector> vaxes((*itjoint)->GetDOF());
@@ -4018,14 +4021,14 @@ void KinBody::_ComputeInternalInformation()
                 }
             }
 
-            if( IS_DEBUGLEVEL(Level_Debug) ) {
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 stringstream ss;
                 ss << GetName() << " closedloop found: ";
                 FOREACH(itlinkindex,*itclosedloop) {
                     LinkPtr plink = _veclinks.at(*itlinkindex);
                     ss << plink->GetName() << "(" << plink->GetIndex() << ") ";
                 }
-                RAVELOG_DEBUG(ss.str());
+                RAVELOG_VERBOSE(ss.str());
             }
         }
     }
@@ -4105,8 +4108,8 @@ void KinBody::_ComputeInternalInformation()
         JointPtr pjoint0 = _vTopologicallySortedJointsAll[ijoint0];
         for(size_t ijoint1 = ijoint0+1; ijoint1 < _vTopologicallySortedJointsAll.size(); ++ijoint1 ) {
             JointPtr pjoint1 = _vTopologicallySortedJointsAll[ijoint1];
-            if((pjoint0->GetName() == pjoint1->GetName())&& ((pjoint0->GetJointIndex() >= 0)||(pjoint1->GetJointIndex() >= 0)) ) {
-                RAVELOG_WARN(str(boost::format("joint indices %d and %d share the same name %s")%pjoint0->GetJointIndex()%pjoint1->GetJointIndex()%pjoint0->GetName()));
+            if( pjoint0->GetName() == pjoint1->GetName() && (pjoint0->GetJointIndex() >= 0 || pjoint1->GetJointIndex() >= 0) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("joint indices %d and %d share the same name '%s'", pjoint0->GetJointIndex()%pjoint1->GetJointIndex()%pjoint0->GetName(), ORE_InvalidState);
             }
         }
     }
@@ -4568,7 +4571,7 @@ void KinBody::_ParametersChanged(int parameters)
         return;
     }
 
-    if(((parameters & Prop_JointMimic) == Prop_JointMimic)||((parameters & Prop_LinkStatic) == Prop_LinkStatic)) {
+    if( (parameters & Prop_JointMimic) == Prop_JointMimic || (parameters & Prop_LinkStatic) == Prop_LinkStatic) {
         KinBodyStateSaver saver(shared_kinbody(),Save_LinkTransformation);
         vector<dReal> vzeros(GetDOF(),0);
         SetDOFValues(vzeros,Transform(),true);

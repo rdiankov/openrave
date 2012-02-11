@@ -178,20 +178,47 @@ class TestTrajectory(EnvironmentSetup):
     def test_simpleretiming(self):
         env=self.env
         env.Load('robots/barrettwam.robot.xml')
-        robot=env.GetRobots()[0]
-        robot.SetActiveDOFs(range(7))
-        traj = RaveCreateTrajectory(env,'')
-        traj.Init(robot.GetActiveConfigurationSpecification())
-        traj.Insert(0,zeros(7))
-        traj.Insert(1,numpy.minimum(0.5,robot.GetActiveDOFLimits()[1]))
-        planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer')
-        parameters = Planner.PlannerParameters()
-        parameters.SetRobotActiveJoints(robot)
-        planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
-        self.RunTrajectory(robot,traj)
+        with env:
+            robot=env.GetRobots()[0]
+            robot.SetActiveDOFs(range(7))
+            finalvalues = numpy.minimum(0.5,robot.GetActiveDOFLimits()[1])
+            parameters = Planner.PlannerParameters()
+            parameters.SetRobotActiveJoints(robot)
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,zeros(robot.GetActiveDOF()))
+            traj.Insert(1,finalvalues)
+            try:
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,plannername='parabolictrajectoryretimer')
+                raise ValueError('expected failure')
+            
+            except openrave_exception,e:
+                pass
+            
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer')
+            planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
+            self.RunTrajectory(robot,traj)
+            self.log.info('try with timestamps')
+            spec = robot.GetActiveConfigurationSpecification()
+            timeoffset=spec.AddDeltaTimeGroup()
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(spec)
+            traj.Insert(0,r_[zeros(robot.GetActiveDOF()),finalvalues],robot.GetActiveConfigurationSpecification())
+            assert(traj.GetNumWaypoints()==2)
+            assert(traj.GetDuration()==0)
+            g=ConfigurationSpecification.Group()
+            g.name='deltatime'
+            g.dof=1
+            traj.Insert(1,[3.0],g,True)
+            assert(traj.GetNumWaypoints()==2 and traj.GetDuration()==3)
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,plannername='parabolictrajectoryretimer')
+            assert(traj.GetDuration()==3)
+            planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
+            self.RunTrajectory(robot,traj)
+            assert( transdist(robot.GetActiveDOFValues(),finalvalues) <= g_epsilon)
             
     def test_smoothwithcircular(self):
-        print 'test smoothing with circular joints'
+        self.log.info('test smoothing with circular joints')
         env=self.env
         self.LoadEnv('data/pa10calib.env.xml')
         robot=env.GetRobots()[0]
@@ -223,7 +250,7 @@ class TestTrajectory(EnvironmentSetup):
             assert(abs(traj.GetWaypoint(disindex,spec)-traj.GetWaypoint(disindex+1,spec)) > 4)
             plannernames = ['parabolictrajectoryretimer','lineartrajectoryretimer']
             for plannername in plannernames:
-                print 'planner',plannername
+                self.log.debug('planner=%s',plannername)
                 traj2 = RaveCreateTrajectory(env,traj.GetXMLId())
                 traj2.Clone(traj,0)
                 planningutils.RetimeActiveDOFTrajectory(traj2,robot,False,maxvelmult=1,plannername=plannername)

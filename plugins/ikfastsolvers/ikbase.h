@@ -696,8 +696,13 @@ private:
 
         // check for self collisions
         probot->SetActiveDOFValues(vravesol,false);
+
+        // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
+        IkParameterization paramnewglobal = pmanip->GetIkParameterization(param.GetType());
+        IkParameterization paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
-            switch(_CallFilters(vravesol, pmanip, param)) {
+            switch(_CallFilters(vravesol, pmanip, paramnew)) {
             case IKFR_Reject: return SR_Continue;
             case IKFR_Quit: return SR_Quit;
             case IKFR_Success:
@@ -723,7 +728,7 @@ private:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
                 // if gripper is colliding, solutions will always fail, so completely stop solution process
-                if(  pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
+                if(  pmanip->CheckEndEffectorCollision(paramnewglobal.GetTransform6D()) ) {
                     return SR_Quit; // stop the search
                 }
                 stateCheck.ResetCheckEndEffectorCollision();
@@ -740,8 +745,7 @@ private:
         }
 
         // check that end effector moved in the correct direction
-        IkParameterization ikparamnew = pmanip->GetBase()->GetTransform().inverse()*pmanip->GetIkParameterization(param.GetType());
-        dReal ikworkspacedist = param.ComputeDistanceSqr(ikparamnew);
+        dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
@@ -807,8 +811,12 @@ private:
         RobotBasePtr probot = pmanip->GetRobot();
         probot->SetActiveDOFValues(vravesol,false);
 
+        // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
+        IkParameterization paramnewglobal = pmanip->GetIkParameterization(param.GetType());
+        IkParameterization paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
-            switch(_CallFilters(vravesol, pmanip, param)) {
+            switch(_CallFilters(vravesol, pmanip, paramnew)) {
             case IKFR_Reject: return SR_Continue;
             case IKFR_Quit: return SR_Quit;
             case IKFR_Success:
@@ -833,7 +841,7 @@ private:
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(pmanip->GetBase()->GetTransform()*param.GetTransform6D()) ) {
+                if( pmanip->CheckEndEffectorCollision(paramnewglobal.GetTransform6D()) ) {
                     return SR_Quit; // stop the search
                 }
                 stateCheck.ResetCheckEndEffectorCollision();

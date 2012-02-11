@@ -13,9 +13,11 @@ Initial Release: **Unreleased**
 Core
 ----
 
-* Added more error codes
+* Added more :ref:`.ErrorCode` error codes and many new types of OPENRAVE_ASSERT_X macros.
 
 * Added **openrave/utils.h** file for common programming constructs not related to the OpenRAVE API.
+
+* Fixed bug in closed-chain kinematics when static links are present.
 
 Python
 ------
@@ -35,6 +37,8 @@ Misc
 * Removed isosurface computation from linkstatistics since it was buggy. Now forcing linkstatistics generation of all planning models. Also fixed bug with cross-section computation.
 
 * Installing **openrave.bash** to share folder to allow users to easy set paths for openrave runtimes.
+
+* Fixed :meth:`.planningutils.RetimeActiveDOFTrajectory` and :meth:`.planningutils.RetimeAffineTrajectory` when trajectories have timestamps.
 
 Version 0.6.2
 =============

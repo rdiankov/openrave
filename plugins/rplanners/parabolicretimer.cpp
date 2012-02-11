@@ -34,7 +34,7 @@ public:
 
     ParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing without modifying any of the points. This assumes all waypoints have velocity 0. Overwrites the velocities and timestamps of input trajectory.";
+        __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
@@ -120,6 +120,21 @@ protected:
             }
             _ramps.resize(info->gpos.dof);
             dReal deltatime = *(itdata+_timeoffset);
+            if( deltatime == 0 ) {
+                if( info->ptraj->GetNumWaypoints() == 0 ) {
+                    // add the first point
+                    _vtrajpoints.resize(info->ptraj->GetConfigurationSpecification().GetDOF());
+                    std::copy(itdata,itdata+_vtrajpoints.size(),_vtrajpoints.begin());
+                    _vtrajpoints.at(info->waypointindex) = 1;
+                    info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
+                }
+                return;
+            }
+            OPENRAVE_ASSERT_OP(deltatime,>,0);
+            if( deltatime < ParabolicRamp::EpsilonT ) {
+                RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
+            }
+
             bool success = ParabolicRamp::SolveMinAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, _parameters->_vConfigVelocityLimit, _parameters->_vConfigLowerLimit,_parameters->_vConfigUpperLimit, _ramps);
             BOOST_ASSERT(success);
 

@@ -85,6 +85,11 @@ public:
     {
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
+        std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
+        if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
+            RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
+            return PS_Failed;
+        }
         size_t numpoints = ptraj->GetNumWaypoints();
         const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
         ConfigurationSpecification newspec = ptraj->GetConfigurationSpecification();
@@ -182,7 +187,8 @@ public:
                     iktype = static_cast<IkParameterizationType>(niktype);
                 }
 
-                if( !_parameters->_hastimestamps ) {
+                {
+                    // if _parameters->_hastimestamps, then use this for double checking that times are feasible
                     if( igrouptype == 0 ) {
                         listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
                     }
@@ -231,6 +237,11 @@ public:
                 }
             }
 
+            if( _parameters->_hastimestamps ) {
+                vector<dReal> vdeltatimes;
+                ptraj->GetWaypoints(0,numpoints,vdeltatimes,*itoldgrouptime);
+                ConfigurationSpecification::ConvertData(data.begin(),newspec,vdeltatimes.begin(),*itoldgrouptime,numpoints,GetEnv(),false);
+            }
             try {
                 std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
                 std::vector<dReal>::iterator itdataprev = itdata;
@@ -247,7 +258,8 @@ public:
                     if( _parameters->_hastimestamps ) {
                         if( *(itdata+_timeoffset) < mintime ) {
                             RAVELOG_WARN(str(boost::format("point %d has unreachable minimum time %f > %f, changing...")%i%(*(itdata+_timeoffset))%mintime));
-                            *(itdata+_timeoffset) = mintime;
+                            //*(itdata+_timeoffset) = mintime;
+                            return PS_Failed;
                         }
                     }
                     else {

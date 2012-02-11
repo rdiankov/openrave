@@ -158,7 +158,7 @@ public:
     }
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
-        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
+        if(( f < T(1)-std::numeric_limits<T>::epsilon()) ||( f > T(1)+std::numeric_limits<T>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             // yes it is faster to multiply by (1/f), but with 4 divides we gain precision (which is more important in robotics)
             f = MATH_SQRT(f);
@@ -168,7 +168,7 @@ public:
     }
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
-        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
+        if(( f < T(1)-std::numeric_limits<T>::epsilon()) ||( f > T(1)+std::numeric_limits<T>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             f = MATH_SQRT(f);
             x /= f; y /= f; z /= f;
@@ -795,9 +795,9 @@ template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMat
 template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
 {
     // should normalize the quaternion first
-    dReal length2 = quat.lengthsqr4();
-    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    dReal ilength2 = 2/length2;
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
     RaveTransformMatrix<T> t;
     T qq1 = ilength2*quat[1]*quat[1];
     T qq2 = ilength2*quat[2]*quat[2];
@@ -825,9 +825,9 @@ template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVec
 template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
 {
     // should normalize the quaternion first
-    dReal length2 = quat.lengthsqr4();
-    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    dReal ilength2 = 2/length2;
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
     T qq1 = ilength2*quat[1]*quat[1];
     T qq2 = ilength2*quat[2]*quat[2];
     T qq3 = ilength2*quat[3]*quat[3];
@@ -1007,8 +1007,8 @@ template<typename T>
 std::pair<T, RaveVector<T> > normalizeAxisRotation(const RaveVector<T>& axis, const RaveVector<T>& quat)
 {
     T axislen = MATH_SQRT(axis.lengthsqr3());
-    dReal angle = MATH_ATAN2(-quat.w*axis.z-quat.z*axis.y-quat.y*axis.x,quat.x*axislen);
-    dReal sinangle2 = MATH_SIN(angle)/axislen, cosangle2 = MATH_COS(angle);
+    T angle = MATH_ATAN2(-quat.w*axis.z-quat.z*axis.y-quat.y*axis.x,quat.x*axislen);
+    T sinangle2 = MATH_SIN(angle)/axislen, cosangle2 = MATH_COS(angle);
     RaveVector<T> normalizingquat = RaveVector<T>(cosangle2,axis.x*sinangle2,axis.y*sinangle2,axis.z*sinangle2);
     return std::make_pair(2*angle,quatMultiply(normalizingquat,quat));
 }

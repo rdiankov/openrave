@@ -1,0 +1,5 @@
+<Robot name="bobcat">
+  <Robot file="chassis_and_wheels.robot.xml" name="chassis_and_wheels"/>
+  <Robot file="arm_bucket_assy_Amimic.robot.xml" name="arm_bucket_assy"/>
+  <Translation> 0 0 -0.65</Translation>
+</Robot>

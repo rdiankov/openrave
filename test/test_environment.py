@@ -21,7 +21,7 @@ class TestEnvironment(EnvironmentSetup):
         self.LoadEnv('../src/models/WAM/wam0.iv')
         
         for fullfilename in locate('*.xml','../src/data'):
-            print 'loading: ',fullfilename
+            self.log.info('loading: %s',fullfilename)
             env.Reset()
             self.LoadEnv(fullfilename)
             
@@ -74,7 +74,7 @@ class TestEnvironment(EnvironmentSetup):
                 assert( transdist(ab3.extents(),ab2.extents()) <= g_epsilon )
 
     def test_collada(self):
-        print "test that collada import/export works"
+        self.log.info('test that collada import/export works')
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
         env=self.env
         with env:
