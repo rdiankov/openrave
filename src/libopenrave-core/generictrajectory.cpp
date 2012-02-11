@@ -161,8 +161,8 @@ public:
         if( data.size() == 0 ) {
             return;
         }
-        BOOST_ASSERT(_spec.GetDOF()>0);
-        OPENRAVE_ASSERT_FORMAT((data.size()%_spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%_spec.GetDOF(), ORE_InvalidArguments);
+        BOOST_ASSERT(spec.GetDOF()>0);
+        OPENRAVE_ASSERT_FORMAT((data.size()%spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%spec.GetDOF(), ORE_InvalidArguments);
         if( _spec == spec ) {
             Insert(index,data,bOverwrite);
         }
