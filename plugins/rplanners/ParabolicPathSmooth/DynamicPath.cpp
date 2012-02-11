@@ -36,7 +36,7 @@
 #include <algorithm>
 using namespace std;
 
-namespace ParabolicRamp {
+namespace ParabolicRampInternal {
 
 inline Real LInfDistance(const Vector& a,const Vector& b)
 {
@@ -93,19 +93,8 @@ inline bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,con
     return true;
 }
 
-class RandomSamplerStd : public RandomSamplerBase
-{
-    Real Rand()
-    {
-        return Real(rand())/Real(RAND_MAX);
-    }
-};
-
-RandomSamplerStd s_samplerstd;
-
 DynamicPath::DynamicPath()
 {
-    sampler = &s_samplerstd;
 }
 
 void DynamicPath::Init(const Vector& _velMax,const Vector& _accMax)
@@ -303,30 +292,25 @@ void DynamicPath::Append(const Vector& x,const Vector& dx)
 {
     size_t n=ramps.size();
     size_t p=n-1;
-    if(ramps.size()==0) {
-        PARABOLICWARN("Can't append milestone with a nonzero velocity to an empty path\n");
-        PARABOLIC_RAMP_ASSERT(0);
+    PARABOLIC_RAMP_ASSERT(ramps.size()!=0);
+    if(xMin.empty()) {
+        ramps.resize(ramps.size()+1);
+        ramps[n].x0 = ramps[p].x1;
+        ramps[n].dx0 = ramps[p].dx1;
+        ramps[n].x1 = x;
+        ramps[n].dx1 = dx;
+        bool res=ramps[n].SolveMinTime(accMax,velMax);
+        PARABOLIC_RAMP_ASSERT(res);
     }
     else {
-        if(xMin.empty()) {
-            ramps.resize(ramps.size()+1);
-            ramps[n].x0 = ramps[p].x1;
-            ramps[n].dx0 = ramps[p].dx1;
-            ramps[n].x1 = x;
-            ramps[n].dx1 = dx;
-            bool res=ramps[n].SolveMinTime(accMax,velMax);
-            PARABOLIC_RAMP_ASSERT(res);
-        }
-        else {
-            PARABOLIC_RAMP_ASSERT(InBounds(x,xMin,xMax));
-            std::vector<std::vector<ParabolicRamp1D> > tempRamps;
-            std::vector<ParabolicRampND> tempRamps2;
-            Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,dx,
-                                         accMax,velMax,xMin,xMax,tempRamps);
-            PARABOLIC_RAMP_ASSERT(res>=0);
-            CombineRamps(tempRamps,tempRamps2);
-            ramps.insert(ramps.end(),tempRamps2.begin(),tempRamps2.end());
-        }
+        PARABOLIC_RAMP_ASSERT(InBounds(x,xMin,xMax));
+        std::vector<std::vector<ParabolicRamp1D> > tempRamps;
+        std::vector<ParabolicRampND> tempRamps2;
+        Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,dx,
+                                     accMax,velMax,xMin,xMax,tempRamps);
+        PARABOLIC_RAMP_ASSERT(res>=0);
+        CombineRamps(tempRamps,tempRamps2);
+        ramps.insert(ramps.end(),tempRamps2.begin(),tempRamps2.end());
     }
 }
 
@@ -478,7 +462,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         Real tc = (section.ta+section.tb)*0.5;
         Vector xc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                                                                                                                                                                                //infeasible config
+        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               //infeasible config
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -501,7 +485,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
     return true;
 }
 
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const ParabolicRamp::Vector& tol)
+bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol)
 {
     PARABOLIC_RAMP_ASSERT(tol.size() == ramp.ramps.size());
     for(size_t i = 0; i < tol.size(); ++i) {
@@ -584,7 +568,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const P
     return true;
 }
 
-RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const ParabolicRamp::Vector& _tol)
+RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const Vector& _tol)
     : feas(_feas),tol(_tol),distance(NULL),maxiters(0)
 {
 }
@@ -670,6 +654,12 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
 
 int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check)
 {
+    RandomNumberGeneratorBase rng;
+    return Shortcut(numIters,check,&rng);
+}
+
+int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng)
+{
     int shortcuts = 0;
     vector<Real> rampStartTime(ramps.size());
     Real endTime=0;
@@ -680,7 +670,7 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check)
     Vector x0,x1,dx0,dx1;
     DynamicPath intermediate;
     for(int iters=0; iters<numIters; iters++) {
-        Real t1=sampler->Rand()*endTime,t2=sampler->Rand()*endTime;
+        Real t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
         if( iters == 0 ) {
             t1 = 0;
             t2 = endTime;
@@ -765,8 +755,13 @@ int DynamicPath::ShortCircuit(RampFeasibilityChecker& check)
     return shortcuts;
 }
 
-
 int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check)
+{
+    RandomNumberGeneratorBase rng;
+    return OnlineShortcut(leadTime,padTime,check,&rng);
+}
+
+int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng)
 {
     Timer timer;
     int shortcuts = 0;
@@ -784,11 +779,11 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(starttime+padTime >= endTime) break;
         starttime = Max(0.0,starttime+padTime);
 
-        Real t1=starttime+Sqr(sampler->Rand())*(endTime-starttime),t2=starttime+sampler->Rand()*(endTime-starttime);
+        Real t1=starttime+Sqr(rng->Rand())*(endTime-starttime),t2=starttime+rng->Rand()*(endTime-starttime);
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                                                                                                                                                                                                                                                                                  //same ramp
+        if(i1 == i2) continue;  //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_RAMP_ASSERT(u1 >= 0);

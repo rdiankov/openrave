@@ -17,11 +17,13 @@
 #include "plannerparameters.h"
 #include <fstream>
 
-#include "ParabolicPathSmooth/DynamicPath.h"
-
 #include <openrave/planningutils.h>
 
-class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomSamplerBase
+#include "ParabolicPathSmooth/DynamicPath.h"
+
+namespace ParabolicRamp = ParabolicRampInternal;
+
+class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
 public:
     ParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
@@ -125,7 +127,7 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
             int numshortcuts=0;
             if( !!_parameters->_setstatefn ) {
-                dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
+                dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this);
             }
 
             ConfigurationSpecification oldspec = _parameters->_configurationspecification;
@@ -243,7 +245,7 @@ public:
         return true;
     }
 
-    virtual dReal Rand()
+    virtual ParabolicRamp::Real Rand()
     {
         std::vector<dReal> vsamples;
         _puniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);

@@ -17,6 +17,8 @@
 #include <openrave/planningutils.h>
 #include "ParabolicPathSmooth/ParabolicRamp.h"
 
+namespace ParabolicRamp = ParabolicRampInternal;
+
 class ParabolicTrajectoryRetimer : public TrajectoryRetimer
 {
 public:

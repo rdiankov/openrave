@@ -34,7 +34,7 @@
 #include <math.h>
 #include "Math.h"
 
-namespace ParabolicRamp {
+namespace ParabolicRampInternal {
 
 /** @file ParabolicRamp.h
  * @brief Functions for optimal acceleration-bounded trajectories.

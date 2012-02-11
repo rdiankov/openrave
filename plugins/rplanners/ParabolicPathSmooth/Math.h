@@ -3,7 +3,7 @@
 
 #include <openrave/openrave.h>
 
-namespace ParabolicRamp {
+namespace ParabolicRampInternal {
 
 typedef OpenRAVE::dReal Real;
 typedef std::vector<Real> Vector;
@@ -24,6 +24,10 @@ const static Real EpsilonA = 1e-9;
 
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;
+
+inline Real Rand() {
+    return OpenRAVE::RaveRandomFloat();
+}
 
 inline bool IsInf(Real x) {
     return x==Inf;
