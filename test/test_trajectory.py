@@ -138,6 +138,7 @@ class TestTrajectory(EnvironmentSetup):
         robot=env.GetRobots()[0]
         assert(not env.CheckCollision(robot))
         for delta in [0,1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
+            self.log.debug('delta=%.16e',delta)
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             # get some values, hopefully non-zero
@@ -148,6 +149,7 @@ class TestTrajectory(EnvironmentSetup):
                     if not env.CheckCollision(robot):
                         basevalues = robot.GetActiveDOFValues()
                         break
+            self.log.debug('smoothing')
             traj.Insert(0,basevalues)
             traj.Insert(1,basevalues+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolicsmoother','shortcut_linear']:
@@ -158,6 +160,7 @@ class TestTrajectory(EnvironmentSetup):
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,robot.GetActiveDOFValues())
             traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
+            self.log.debug('retiming')
             for plannername in ['parabolictrajectoryretimer', 'lineartrajectoryretimer']:
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
                 planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
@@ -259,7 +262,6 @@ class TestTrajectory(EnvironmentSetup):
                     planningutils.VerifyTrajectory(parameters,traj2,samplingstep=0.002)
                 assert(transdist(traj2.GetWaypoint(0,spec),startconfig) <= g_epsilon)
                 assert(transdist(traj2.GetWaypoint(-1,spec),endconfig) <= g_epsilon)
-                
                 # make sure discontinuity is covered
                 timespec = ConfigurationSpecification()
                 timespec.AddGroup('deltatime',1,'linear')
@@ -272,7 +274,6 @@ class TestTrajectory(EnvironmentSetup):
                     dist01 = fmod((v0-v1)+3*pi,2*pi)-pi
                     dist02 = fmod((v0-v2)+3*pi,2*pi)-pi
                     assert(all(abs(dist01)<=abs(dist02)))
-
                 self.RunTrajectory(robot,traj2)
 
     def test_affine_smoothing(self):

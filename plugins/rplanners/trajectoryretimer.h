@@ -92,7 +92,7 @@ public:
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
-        ConfigurationSpecification newspec = ptraj->GetConfigurationSpecification();
+        ConfigurationSpecification newspec = oldspec;
         newspec.AddVelocityGroups(true);
         vector<dReal> vdiffdata, data;
         ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
@@ -292,7 +292,6 @@ public:
             }
         }
 
-        // finally initialize the output trajectory
         _WriteTrajectory(ptraj,newspec, data);
         RAVELOG_DEBUG(str(boost::format("%s path length=%fs")%GetXMLId()%ptraj->GetDuration()));
         return PS_HasSolution;

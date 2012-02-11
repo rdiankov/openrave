@@ -128,17 +128,11 @@ public:
                 dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
             }
 
-            ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
+            ConfigurationSpecification oldspec = _parameters->_configurationspecification;
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddVelocityGroups(true);
-            int waypointoffset = newspec.GetDOF();
-            ConfigurationSpecification::Group gwaypoint;
-            gwaypoint.offset = waypointoffset;
-            gwaypoint.dof = 1;
-            gwaypoint.name = "iswaypoint";
-            gwaypoint.interpolation = "next";
-            newspec._vgroups.push_back(gwaypoint);
+            int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
 
             int timeoffset=-1;
             FOREACH(itgroup,newspec._vgroups) {

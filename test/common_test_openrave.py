@@ -112,7 +112,6 @@ class EnvironmentSetup(object):
         self.env=Environment()
         self.env.StopSimulation()
         self.log = logging.getLogger('openravepy.'+self.__class__.__name__)
-        self.log.setLevel(logging.INFO)
         
     def teardown(self):
         self.env.Destroy()

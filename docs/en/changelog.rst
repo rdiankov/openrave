@@ -19,6 +19,11 @@ Core
 
 * Fixed bug in closed-chain kinematics when static links are present.
 
+Planning
+--------
+
+* Fixed bug in retiming/smoothing planners taking in inconsistent trajectory configurations.
+
 Python
 ------
 
