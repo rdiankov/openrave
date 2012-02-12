@@ -19,6 +19,8 @@ Core
 
 * Fixed bug in closed-chain kinematics when static links are present.
 
+* Added :meth:`.RaveClone`
+
 Planning
 --------
 

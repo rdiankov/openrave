@@ -746,6 +746,27 @@ object RaveGetLoadedInterfaces()
     return ointerfacenames;
 }
 
+PyInterfaceBasePtr RaveClone(PyInterfaceBasePtr pyreference, int cloningoptions)
+{
+    InterfaceBasePtr pclone = OpenRAVE::RaveClone<InterfaceBase>(pyreference->GetInterfaceBase(), cloningoptions);
+    switch(pclone->GetInterfaceType()) {
+    case PT_Planner: return toPyPlanner(RaveInterfaceCast<PlannerBase>(pclone), pyreference->GetEnv());
+    case PT_Robot: return toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyreference->GetEnv());
+    case PT_SensorSystem: return toPySensorSystem(RaveInterfaceCast<SensorSystemBase>(pclone), pyreference->GetEnv());
+    case PT_Controller: return toPyController(RaveInterfaceCast<ControllerBase>(pclone), pyreference->GetEnv());
+    case PT_Module: return toPyModule(RaveInterfaceCast<ModuleBase>(pclone), pyreference->GetEnv());
+    case PT_InverseKinematicsSolver: return toPyIkSolver(RaveInterfaceCast<IkSolverBase>(pclone), pyreference->GetEnv());
+    case PT_KinBody: return toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyreference->GetEnv());
+    case PT_PhysicsEngine: return toPyPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(pclone), pyreference->GetEnv());
+    case PT_Sensor: return toPySensor(RaveInterfaceCast<SensorBase>(pclone), pyreference->GetEnv());
+    case PT_CollisionChecker: return toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyreference->GetEnv());
+    case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyreference->GetEnv());
+    case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyreference->GetEnv());
+    case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyreference->GetEnv());
+    }
+    throw openrave_exception("invalid interface type",ORE_InvalidArguments);
+}
+
 object quatFromAxisAngle1(object oaxis)
 {
     return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis)));
@@ -1361,6 +1382,7 @@ void init_openravepy_global()
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin,args("filename"),DOXY_FN1(RaveLoadPlugins));
     def("RaveHasInterface",OpenRAVE::RaveHasInterface,args("type","name"),DOXY_FN1(RaveHasInterface));
     def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    def("RaveClone",openravepy::RaveClone,args("ref","cloningoptions"), DOXY_FN1(RaveClone));
 
     def("raveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));

@@ -20,7 +20,7 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
-#ifndef RAVE_DISABLE_ASSERT_HANDLER
+#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
 #endif
 
@@ -1955,7 +1955,20 @@ OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::st
 /// \brief Return an empty trajectory instance.
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
 
+/// \deprecated (11/10/01)
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof) RAVE_DEPRECATED;
+
+/// \brief returned a fully cloned interface
+template <typename T>
+inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions)
+{
+    InterfaceBasePtr pcloned = RaveCreateInterface(preference->GetEnv(), preference->GetInterfaceType(), preference->GetXMLId());
+    OPENRAVE_ASSERT_FORMAT(!!pcloned, "Failed to clone interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
+    boost::shared_ptr<T> pclonedcast = boost::dynamic_pointer_cast<T>(pcloned);
+    OPENRAVE_ASSERT_FORMAT(!!pclonedcast, "Interface created but failed to cast interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
+    pclonedcast->Clone(preference,cloningoptions);
+    return pclonedcast;
+}
 
 /** \brief Registers a function to create an interface, this allows the interface to be created by other modules.
 
@@ -2063,7 +2076,7 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if !defined(RAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
+#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
 /// Modifications controlling %boost library behavior.
 namespace boost
 {

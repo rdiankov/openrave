@@ -40,21 +40,21 @@ def run_example(name,args=[]):
 #             except ImportError:
 #                 pass
 
-def run_database(name,args=[]):
-    log.info('testing database %s',name)
+def run_database(name,docname,args=[]):
+    __doc__='database.%s.%s'%(name,docname)
     database = getattr(databases,name)
     database.run(args=args+["--viewer="])
 
 def test_databases():
     """test if all the databases run on default parameters"""
-    yield run_database, 'kinematicreachability', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2']
-    yield run_database, 'kinematicreachability', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4']
-    yield run_database, 'convexdecomposition', ['--robot=robots/kawada-hironx.zae']
-    yield run_database, 'linkstatistics', ['--robot=robots/kawada-hironx.zae']
-    yield run_database, 'linkstatistics', ['--robot=robots/pr2-beta-static.zae']
-    yield run_database, 'grasping', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1']
-    yield run_database, 'grasping', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2']
-    yield run_database, 'inversekinematics', ['--robot=robots/barrettwam.robot.xml','--iktests=100']
+    yield run_database, 'kinematicreachability', 'wam', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2']
+    yield run_database, 'kinematicreachability', 'pr2', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4']
+    yield run_database, 'convexdecomposition', 'hironx', ['--robot=robots/kawada-hironx.zae']
+    yield run_database, 'linkstatistics', 'hironx', ['--robot=robots/kawada-hironx.zae']
+    yield run_database, 'linkstatistics', 'pr2', ['--robot=robots/pr2-beta-static.zae']
+    yield run_database, 'grasping', 'barrett', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1']
+    yield run_database, 'grasping', 'barrett_multi', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2']
+    yield run_database, 'inversekinematics', 'wam', ['--robot=robots/barrettwam.robot.xml','--iktests=100']
         
 #     yield run_database, 'inversereachability', ['--robot=robots/barrettwam.robot.xml']
 #     yield run_database, 'grasping', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--target=data/box_frootloops.kinbody.xml','--boxdelta=0.05']

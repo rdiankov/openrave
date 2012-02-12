@@ -25,6 +25,10 @@ const static Real EpsilonA = 1e-9;
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;
 
+inline std::string GetDumpDirectory() {
+    return OpenRAVE::RaveGetHomeDirectory();
+}
+
 inline Real Rand() {
     return OpenRAVE::RaveRandomFloat();
 }

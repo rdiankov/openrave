@@ -130,12 +130,15 @@ bool SaveRamp(const char* fn,Real x0,Real dx0,Real x1,Real dx1,
               Real a,Real v,Real t)
 {
     if(gSuppressSavingRamps) return true;
-    PARABOLIC_RAMP_PLOG("Saving ramp to %s\n",fn);
-    FILE* f=fopen(fn,"ab");
+    std::string fullfilename = GetDumpDirectory();
+    fullfilename += '/';
+    fullfilename += fn;
+    PARABOLIC_RAMP_PLOG("Saving ramp to %s\n",fullfilename.c_str());
+    FILE* f=fopen(fullfilename.c_str(),"ab");
     if(!f) {
-        f = fopen(fn,"wb");
+        f = fopen(fullfilename.c_str(),"wb");
         if(!f) {
-            PARABOLIC_RAMP_PLOG("Unable to open file %s for saving\n",fn);
+            PARABOLIC_RAMP_PLOG("Unable to open file %s for saving\n",fullfilename.c_str());
             return false;
         }
     }
@@ -744,7 +747,7 @@ Real PPRamp::CalcSwitchTime(Real a) const
         //check total time
         if(t2*Abs(a) < (dx1-dx0)*Sign(a)) return t1;
         else if(t1*Abs(a) < (dx1-dx0)*Sign(a)) return t2;
-        else return Min(t1,t2);                                                                                                                                                                                                                                                                                                                                                                             //both are ok
+        else return Min(t1,t2);                                                                                                                                                                                                                                                                                                                                                                                                              //both are ok
     }
     else return t1;
 }
@@ -1235,13 +1238,13 @@ Real PLPRamp::CalcMinTime2(Real endTime,Real a,Real vmax) const
         Real ts1 = (v1-dx0)/a;
         Real ts2 = endTime - (v1-dx1)/a;
         //PARABOLIC_RAMP_PLOG("Solution 1 times %g %g %g\n",ts1,ts2,endTime);
-        if(Abs(v1) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v1;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              //it's a valid solution!
+        if(Abs(v1) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v1;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  //it's a valid solution!
     }
     if(res == 2) {
         Real ts1 = (v2-dx0)/a;
         Real ts2 = endTime - (v2-dx1)/a;
         //PARABOLIC_RAMP_PLOG("Solution 2 times %g %g %g\n",ts1,ts2,endTime);
-        if(Abs(v2) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v2;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              //it's a valid solution!
+        if(Abs(v2) <= vmax && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime) return v2;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  //it's a valid solution!
     }
     return -1;
 }
@@ -2664,7 +2667,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::v
             if(indices[i] != ramps[i].end())
                 tnext = Min(tnext,timeOffsets[i]+indices[i]->ttotal);
         }
-        if(IsInf(tnext)) break;                                                                                                                                                                                                                                                                                                                                                                             //done
+        if(IsInf(tnext)) break;                                                                                                                                                                                                                                                                                                                                                                                                              //done
         if(!(tnext > t || t == 0)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
             PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());
