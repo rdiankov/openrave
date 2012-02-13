@@ -68,6 +68,7 @@ public:
             BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid());
             _bInit = false;
             _vgroupinterpolators.resize(0);
+            _vgroupvalidators.resize(0);
             _vderivoffsets.resize(0);
             _spec = spec;
             // order the groups based on computation order
@@ -79,6 +80,7 @@ public:
                 }
             }
             _vgroupinterpolators.resize(_spec._vgroups.size());
+            _vgroupvalidators.resize(_spec._vgroups.size());
             _vderivoffsets.resize(_spec.GetDOF(),-1);
             for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
                 const string& interpolation = _spec._vgroups[i].interpolation;
@@ -91,22 +93,27 @@ public:
                 }
                 else if( interpolation == "linear" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 2;
                 }
                 else if( interpolation == "quadratic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 3;
                 }
                 else if( interpolation == "cubic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 3;
                 }
                 else if( interpolation == "quadric" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadric,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 3;
                 }
                 else if( interpolation == "quintic" ) {
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 3;
                 }
 
@@ -125,12 +132,12 @@ public:
                     }
                 }
             }
-            _bSamplingVerified = false;
         }
         _vtrajdata.resize(0);
         _vaccumtime.resize(0);
         _vdeltainvtime.resize(0);
         _bChanged = true;
+        _bSamplingVerified = false;
         _bInit = true;
     }
 
@@ -380,10 +387,16 @@ protected:
             }
         }
         _bChanged = false;
+        _bSamplingVerified = false;
     }
 
+    /// \brief assumes _ComputeInternal has finished
     void _VerifySampling() const
     {
+        BOOST_ASSERT(!_bChanged && _bInit);
+        if( _bSamplingVerified ) {
+            return;
+        }
         for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
             if( _spec._vgroups.at(i).offset != _timeoffset ) {
                 if( !_vgroupinterpolators[i] ) {
@@ -401,11 +414,31 @@ protected:
                 }
             }
         }
+
+        if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            // go through all the points
+            for(size_t ipoint = 0; ipoint+1 < _vaccumtime.size(); ++ipoint) {
+                dReal deltatime = _vaccumtime[ipoint+1] - _vaccumtime[ipoint];
+                for(size_t i = 0; i < _vgroupvalidators.size(); ++i) {
+                    if( !!_vgroupvalidators[i] ) {
+                        _vgroupvalidators[i](ipoint,deltatime);
+                    }
+                }
+            }
+        }
+        _bSamplingVerified = true;
     }
 
     void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
         size_t offset= ipoint*_spec.GetDOF()+g.offset;
+        if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
+            // if point is so close the previous, then choose the next
+            dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
+            if( f > 1-g_fEpsilon ) {
+                offset += _spec.GetDOF();
+            }
+        }
         std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,data.begin()+g.offset);
     }
 
@@ -414,7 +447,11 @@ protected:
         if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
             ipoint += 1;
         }
-        size_t offset= ipoint*_spec.GetDOF()+g.offset;
+        size_t offset= ipoint*_spec.GetDOF() + g.offset;
+        if( deltatime <= g_fEpsilon && ipoint > 0 ) {
+            // if point is so close the previous, then choose the previous
+            offset -= _spec.GetDOF();
+        }
         std::copy(_vtrajdata.begin()+offset,_vtrajdata.begin()+offset+g.dof,data.begin()+g.offset);
     }
 
@@ -464,15 +501,59 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("quintic interpolation not supported",ORE_InvalidArguments);
     }
 
+    void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
+        size_t offset= ipoint*_spec.GetDOF();
+        int derivoffset = _vderivoffsets[g.offset];
+        if( derivoffset >= 0 ) {
+            for(int i = 0; i < g.dof; ++i) {
+                dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
+                dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i] - expected);
+                OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+            }
+        }
+    }
+
+    void _ValidateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
+        size_t offset= ipoint*_spec.GetDOF();
+        int derivoffset = _vderivoffsets[g.offset];
+        for(int i = 0; i < g.dof; ++i) {
+            // coeff*t^2 + deriv0*t + pos0
+            dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+            dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
+            dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+            dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]-expected);
+            OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+        }
+    }
+
+    void _ValidateCubic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation not supported",ORE_InvalidArguments);
+    }
+
+    void _ValidateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("quadric interpolation not supported",ORE_InvalidArguments);
+    }
+
+    void _ValidateQuintic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("quintic interpolation not supported",ORE_InvalidArguments);
+    }
+
     ConfigurationSpecification _spec;
     std::vector< boost::function<void(size_t,dReal,std::vector<dReal>&)> > _vgroupinterpolators;
+    std::vector< boost::function<void(size_t,dReal)> > _vgroupvalidators;
     std::vector<int> _vderivoffsets; ///< for every group that relies on derivatives, this will point to the offset (-1 if invalid and not needed, -2 if invalid and needed)
     int _timeoffset;
-    bool _bInit, _bSamplingVerified;
+    bool _bInit;
 
     std::vector<dReal> _vtrajdata;
     mutable std::vector<dReal> _vaccumtime, _vdeltainvtime;
-    mutable bool _bChanged;
+    mutable bool _bChanged, _bSamplingVerified;
 };
 
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput)

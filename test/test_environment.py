@@ -40,7 +40,10 @@ class TestEnvironment(EnvironmentSetup):
         bodies = dict([(b,b.GetEnvironmentId()) for b in env.GetBodies()])
         assert(env.GetBodies()[0] in bodies)
         assert(bodies[env.GetBodies()[0]] == env.GetBodies()[0].GetEnvironmentId())
-
+        s = 'this is a test string'
+        env.SetUserData(s)
+        assert(env.GetUserData()==s)
+            
     def test_uri(self):
         env=self.env
         xml="""<environment>

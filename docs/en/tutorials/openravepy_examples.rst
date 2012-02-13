@@ -18,10 +18,10 @@ Loads up an environment, attaches a viewer, loads a scene, and requests informat
   robot = env.GetRobots()[0] # get the first robot
 
   with env: # lock the environment since robot will be used
-      print "Robot ",robot.GetName()," has ",robot.GetDOF()," joints with values:\\n",robot.GetDOFValues()
+      raveLogInfo("Robot "+robot.GetName()+" has "+repr(robot.GetDOF())+" joints with values:\\n"+repr(robot.GetDOFValues()))
       robot.SetDOFValues([0.5],[0]) # set joint 0 to value 0.5
       T = robot.GetLinks()[1].GetTransform() # get the transform of link 1
-      print "The transformation of link 1 is:\n",T
+      raveLogInfo("The transformation of link 1 is:\n"+repr(T))
 
 Rotating a Body
 ---------------
@@ -80,7 +80,7 @@ Use a planner to get a collision free path to a configuration space goal.
   RaveSetDebugLevel(DebugLevel.Debug) # set output level to debug
   
   manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
-  res = manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19]) # call motion planner with goal joint angles
+  manipprob.MoveManipulator(goal=[-0.75,1.24,-0.064,2.33,-1.16,-1.548,1.19]) # call motion planner with goal joint angles
   robot.WaitForController(0) # wait
 
 Inverse Kinematics: Transform6D
@@ -111,7 +111,7 @@ Shows how to get all 6D IK solutions
           env.UpdatePublishedBodies() # allow viewer to update new robot
           raw_input('press any key')
 
-      print Tee
+      raveLogInfo('Tee is: '+repr(Tee))
 
 Inverse Kinematics: Translation3D
 ---------------------------------
@@ -144,7 +144,7 @@ Moves a robot in a random position, gets the end effector transform, and calls I
           env.UpdatePublishedBodies() # allow viewer to update new robot
           raw_input('press any key')
 
-  print robot.GetDOFValues() # robot state is restored to original
+  raveLogInfo('restored dof values: '+repr(robot.GetDOFValues())) # robot state is restored to original
 
 
 Plan to End Effector Position
@@ -233,7 +233,7 @@ Set a custom IK filter to abort computation after 100ms.
 
           handle=manip.GetIkSolver().RegisterCustomFilter(0,timeoutfilter)
           success = manip.FindIKSolution(manip.GetIkParameterization(IkParameterization.Type.Transform6D),IkFilterOptions.CheckEnvCollisions)
-          print 'in collision: %d, real success: %d, time passed: %f'%(incollision,success is not None,time.time()-starttime)
+          raveLogInfo('in collision: %d, real success: %d, time passed: %f'%(incollision,success is not None,time.time()-starttime))
 
 Sending Torques to a Physics Engine
 -----------------------------------
@@ -292,10 +292,10 @@ Loads the grasping model and moves the robot to the first grasp found
   taskmanip.CloseFingers()
   robot.WaitForController(0)
 
-Verifying a Trajectory
+Returning a Trajectory
 ----------------------
 
-Verify a trajectory to a grasp without executing anything.
+Get a trajectory to a grasp before executing it.
 
 .. code-block:: python
 
@@ -316,10 +316,41 @@ Verify a trajectory to a grasp without executing anything.
       grasp = validgrasps[0]
       gmodel.setPreshape(grasp)
       T = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-      trajdata = basemanip.MoveToHandPosition(matrices=[T],execute=False,outputtraj=True)
-      traj = RaveCreateTrajectory(env,'').deserialize(trajdata)
-      
-  print 'traj has %d waypoints, last waypoint is: %s'%(traj.GetNumWaypoints(),repr(traj.GetWaypoint(-1)))
+      traj = basemanip.MoveToHandPosition(matrices=[T],execute=False,outputtrajobj=True)
+
+  raveLogInfo('traj has %d waypoints, last waypoint is: %s'%(traj.GetNumWaypoints(),repr(traj.GetWaypoint(-1))))
+  robot.GetController().SetPath(traj)
+  robot.WaitForController(0)
+
+Using Link Statistics
+---------------------
+
+Speed-up planning and increase precision by using link statistics
+
+.. code-block:: python
+
+  from openravepy import *
+  import time
+  env = Environment() # create the environment
+  env.SetViewer('qtcoin') # start the viewer
+  env.Load('data/pr2test1.env.xml') # load a scene
+  robot = env.GetRobots()[0] # get the first robot
+  robot.SetActiveManipulator('leftarm_torso')
+  goal = [ 0.24865706, 0.09362862, 0, 2.21558089, -1.00901245, -1.18879056, -0.74486442, 0]
+  # normal planning
+  manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
+  starttime = time.time()
+  manipprob.MoveManipulator(goal=goal,execute=False)
+  raveLogInfo('non-linkstatistics planning time: %fs'%(time.time()-starttime))
+  # using link statistics
+  lmodel=databases.linkstatistics.LinkStatisticsModel(robot)
+  if not lmodel.load():
+      lmodel.autogenerate()
+  lmodel.setRobotResolutions(0.01) # set resolution given smallest object is 0.01m
+  lmodel.setRobotWeights() # set the weights for planning
+  starttime = time.time()
+  traj=manipprob.MoveManipulator(goal=goal,execute=False,outputtrajobj=True)
+  raveLogInfo('linkstatistics planning time: %fs'%(time.time()-starttime))
   robot.GetController().SetPath(traj)
   robot.WaitForController(0)
 
@@ -359,7 +390,8 @@ Start and stop recording videos using the Python API.
   recorder = RaveCreateModule(env,'viewerrecorder')
   env.AddModule(recorder,'')
   filename = 'openrave.mpg'
-  recorder.SendCommand('Start 640 480 30 codec 13 timing realtime filename %s\nviewer %s'%(filename,env.GetViewer().GetName()))
+  codec = 13 # mpeg2
+  recorder.SendCommand('Start 640 480 30 codec %d timing realtime filename %s\nviewer %s'%(codec,filename,env.GetViewer().GetName()))
 
 
 Logging

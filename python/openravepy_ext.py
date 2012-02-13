@@ -19,11 +19,6 @@ try:
 except:
     import pickle
 
-try:
-    from itertools import izip
-except ImportError:
-    pass
-
 import logging
 log = logging.getLogger('openravepy')
 

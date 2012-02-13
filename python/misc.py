@@ -18,7 +18,10 @@ import openravepy_int
 import openravepy_ext
 import os.path
 import numpy
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    pass
 
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])

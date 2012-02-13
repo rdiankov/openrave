@@ -171,12 +171,65 @@ class TestTrajectory(EnvironmentSetup):
         env = self.env
         self.LoadEnv('data/katanatable.env.xml')
         robot=env.GetRobots()[0]
-        robot.SetActiveDOFs(range(5))
-        traj = RaveCreateTrajectory(env,'')
-        traj.Init(robot.GetActiveConfigurationSpecification())
-        traj.Insert(0,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347, 2.437978870810338, -0.4588760200376995, -1.425257530151644, 1.257459103400449, 2.274410109574348])
-        planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
-        self.RunTrajectory(robot,traj)
+        with env:
+            robot.SetActiveDOFs(range(5))
+            traj = RaveCreateTrajectory(env,'')
+            origvalues = robot.GetActiveDOFValues()
+
+            lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
+            if not lmodel.load():
+                lmodel.autogenerate()
+            lmodel.setRobotWeights()
+            lmodel.setRobotResolutions(xyzdelta=0.001) # the pegs are really thin
+
+            # this fails by grazing an obstacle
+#             traj.Init(robot.GetActiveConfigurationSpecification())
+#             traj.Insert(0,origvalues)
+#             traj.Insert(1,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347])
+#             planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+#             self.RunTrajectory(robot,traj)
+
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347, 2.437978870810338, -0.4588760200376995, -1.425257530151644, 1.257459103400449, 2.274410109574348])
+            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            self.RunTrajectory(robot,traj)
+
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,origvalues)
+            traj.Insert(1,[ 2.299995  , -0.43290472, -1.34459131,  1.18628988,  2.14568385])
+            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            self.RunTrajectory(robot,traj)
+
+            # test resampling
+            spec = traj.GetConfigurationSpecification()
+            stepsize=0.1
+            curtime = 0
+            trajdata = traj.Sample(0)
+            for i in range(traj.GetNumWaypoints()-1):
+                print curtime
+                start = traj.GetWaypoint(i)
+                end = traj.GetWaypoint(i+1)
+                enddeltatime = spec.ExtractDeltaTime(end)
+                if enddeltatime > stepsize:
+                    for t in reversed(arange(curtime+enddeltatime,curtime,-stepsize)):
+                        print t
+                        newdata = traj.Sample(t)
+                        spec.InsertDeltaTime(newdata,t-curtime)
+                        curtime = t
+                        trajdata = r_[trajdata,newdata]
+                else:
+                    trajdata = r_[trajdata,end]
+                    curtime += spec.ExtractDeltaTime(end)
+
+            traj2 = RaveCreateTrajectory(env,traj.GetXMLId())
+            traj2.Init(spec)
+            traj2.Insert(0,trajdata)
+
+            assert(abs(traj2.GetDuration()-traj.GetDuration()) <= g_epsilon)
+            for t in arange(0,traj.GetDuration(),stepsize*0.5):
+                data1 = traj.Sample(t)
+                data2 = traj2.Sample(t)
+                assert( transdist(data1,data2) <= g_epsilon)
 
     def test_simpleretiming(self):
         env=self.env
@@ -371,9 +424,29 @@ class TestTrajectory(EnvironmentSetup):
             assert(transdist(robotvalues,trajvalues) <= g_epsilon)
             trajvalues=traj.Sample(0,door.GetActiveConfigurationSpecification())
             assert(transdist(trajvalues,door.GetDOFValues()) <= g_epsilon)
-
             robot.GetController().SetPath(traj)
             door.GetController().SetPath(traj)
             while not robot.GetController().IsDone():
                 self.env.StepSimulation(0.01)
                 
+
+    def test_badinterpolation(self):
+        self.log.info('test bad interpolation')
+        env=self.env
+        robot=self.LoadRobot('robots/pr2-beta-static.zae')
+        with env:
+            robot.SetActiveDOFs([0])
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,[0,1])
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,1,plannername='parabolictrajectoryretimer')
+            self.RunTrajectory(robot,traj)
+            data = traj.GetWaypoint(1)
+            data[1] *= 2 # increase velocity by 2
+            traj.Insert(1,data,True)
+            try:
+                self.RunTrajectory(robot,traj)
+                raise ValueError('bad trajectory should throw an exception!')
+            except openrave_exception,e:
+                pass
+            

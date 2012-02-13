@@ -219,6 +219,15 @@ class TestKinematics(EnvironmentSetup):
             self.env.AddKinBody(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
 
+    def test_misc(self):
+        env=self.env
+        body=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
+        env.AddKinBody(body)
+        with env:
+            s = 'this is a test string'
+            body.SetUserData(s)
+            assert(body.GetUserData()==s)
+        
     def test_geometrychange(self):
         self.log.info('change geometry and test if changes are updated')
         env=self.env

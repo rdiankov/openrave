@@ -331,6 +331,7 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     }
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        RobotBase::RobotStateSaver saver(probot);
         planningutils::VerifyTrajectory(params,traj);
     }
 }
