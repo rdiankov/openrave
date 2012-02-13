@@ -4730,16 +4730,16 @@ boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
 {
     OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParser<dReal>());
     // register commonly used functions
-    parser->AddFunction("polyroots2",fparser_polyroots2,3);
-    parser->AddFunction("polyroots3",fparser_polyroots<3>,4);
-    parser->AddFunction("polyroots4",fparser_polyroots<4>,5);
-    parser->AddFunction("polyroots5",fparser_polyroots<5>,6);
-    parser->AddFunction("polyroots6",fparser_polyroots<6>,7);
-    parser->AddFunction("polyroots7",fparser_polyroots<7>,8);
-    parser->AddFunction("polyroots8",fparser_polyroots<8>,9);
-    parser->AddFunction("SSSA",fparser_sssa,3);
-    parser->AddFunction("SASA",fparser_sasa,3);
-    parser->AddFunction("SASS",fparser_sass,3);
+    parser->AddBoostFunction("polyroots2",fparser_polyroots2,3);
+    parser->AddBoostFunction("polyroots3",fparser_polyroots<3>,4);
+    parser->AddBoostFunction("polyroots4",fparser_polyroots<4>,5);
+    parser->AddBoostFunction("polyroots5",fparser_polyroots<5>,6);
+    parser->AddBoostFunction("polyroots6",fparser_polyroots<6>,7);
+    parser->AddBoostFunction("polyroots7",fparser_polyroots<7>,8);
+    parser->AddBoostFunction("polyroots8",fparser_polyroots<8>,9);
+    parser->AddBoostFunction("SSSA",fparser_sssa,3);
+    parser->AddBoostFunction("SASA",fparser_sasa,3);
+    parser->AddBoostFunction("SASS",fparser_sass,3);
     return parser;
 }
 

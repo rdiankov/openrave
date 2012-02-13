@@ -48,6 +48,12 @@ To show the manipulator and IK results do:
 
   openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --show
 
+It is also possible to test the IK on a scene:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=data/pr2test1.env.xml --manipname=leftarm --show
+  
 Description
 -----------
 

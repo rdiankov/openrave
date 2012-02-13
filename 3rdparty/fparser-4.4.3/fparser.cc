@@ -1,6 +1,6 @@
 /***************************************************************************\
 |* Function Parser for C++ v4.4.3                                          *|
-|*|*|*-------------------------------------------------------------------------*|
+|*|*|*|*|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen, Joel Yliluoma                                 *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -534,8 +534,8 @@ inline std::complex<long double> fp_parseLiteral<std::complex<long double> >
 // -----------------------------------------------------------------------
 inline int testXdigit(unsigned c)
 {
-    if((c-'0') < 10u) return c&15;                                      // 0..9
-    if(((c|0x20)-'a') < 6u) return 9+(c&15);                                                // A..F or a..f
+    if((c-'0') < 10u) return c&15;                                                                                                              // 0..9
+    if(((c|0x20)-'a') < 6u) return 9+(c&15);                                                                                                                                            // A..F or a..f
     return -1; // Not a hex digit
 }
 
@@ -2059,7 +2059,7 @@ const char*
 FunctionParserBase<Value_t>::CompilePossibleUnit(const char* function)
 {
     unsigned nameLength = readIdentifier<Value_t>(function);
-    if(nameLength & 0x80000000U) return function;                                                     // built-in function name
+    if(nameLength & 0x80000000U) return function;                                                                                                                                                           // built-in function name
     if(nameLength != 0)
     {
         NamePtr name(function, nameLength);
@@ -2927,9 +2927,9 @@ Value_t FunctionParserBase<Value_t>::Eval(const Value_t* Vars)
             const unsigned params = mData->mFuncPtrs[index].mParams;
             const Value_t retVal =
                 mData->mFuncPtrs[index].mRawFuncPtr ?
-                mData->mFuncPtrs[index].mRawFuncPtr(&Stack[SP-params+1]).at(0) :
+                mData->mFuncPtrs[index].mRawFuncPtr(&Stack[SP-params+1]) :
                 mData->mFuncPtrs[index].mFuncWrapperPtr->callFunction
-                    (&Stack[SP-params+1]).at(0);
+                    (&Stack[SP-params+1]);
             SP -= int(params)-1;
             Stack[SP] = retVal;
             break;

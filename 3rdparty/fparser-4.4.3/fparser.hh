@@ -1,6 +1,6 @@
 /***************************************************************************\
 |* Function Parser for C++ v4.4.3                                          *|
-|*|*-------------------------------------------------------------------------*|
+|*|*|*|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen, Joel Yliluoma                                 *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -59,7 +59,7 @@ public:
     bool AddConstant(const std::string& name, Value_t value);
     bool AddUnit(const std::string& name, Value_t value);
 
-    typedef std::vector<Value_t> (*FunctionPtr)(const Value_t*);
+    typedef Value_t (*FunctionPtr)(const Value_t*);
 
     bool AddFunction(const std::string& name,
                      FunctionPtr, unsigned paramsAmount);
@@ -210,7 +210,7 @@ public:
         return *this;
     }
 
-    virtual std::vector<Value_t> callFunction(const Value_t*) = 0;
+    virtual Value_t callFunction(const Value_t*) = 0;
 };
 
 template<typename Value_t>

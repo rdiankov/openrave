@@ -104,6 +104,33 @@ public:
     using FunctionParserBase<Value_t>::NO_FUNCTION_PARSED_YET;
     using FunctionParserBase<Value_t>::FP_NO_ERROR;
 
+    typedef boost::function<std::vector<Value_t>(const Value_t*)> BoostFunction;
+    class BoostFunctionWrapper : public FunctionParserBase<Value_t>::FunctionWrapper
+    {
+public:
+        BoostFunctionWrapper() : FunctionParserBase<Value_t>::FunctionWrapper() {
+        }
+        BoostFunctionWrapper(const BoostFunction& fn) : FunctionParserBase<Value_t>::FunctionWrapper(), _fn(fn) {
+        }
+        virtual ~BoostFunctionWrapper() {
+        }
+        BoostFunctionWrapper& operator=(const BoostFunctionWrapper& r) {
+            _fn = r._fn;
+            return *this;
+        }
+
+        virtual Value_t callFunction(const Value_t* params) {
+            return _fn(params).at(0);
+        }
+
+        BoostFunction _fn;
+    };
+
+    bool AddBoostFunction(const std::string& name, const BoostFunction& fn, unsigned paramsAmount)
+    {
+        return addFunctionWrapperPtr(name, new BoostFunctionWrapper(fn), paramsAmount);
+    }
+
 //===========================================================================
 // Function evaluation
 //===========================================================================
@@ -478,8 +505,20 @@ public:
                         }
                     }
                     if( docall ) {
-                        r = mData->mFuncPtrs[index].mRawFuncPtr ? mData->mFuncPtrs[index].mRawFuncPtr(&vparams.at(0)) : mData->mFuncPtrs[index].mFuncWrapperPtr->callFunction(&vparams.at(0));
-                        //r = mData->mFuncPtrs[index].mFuncPtr(&vparams.at(0));
+                        if( !mData->mFuncPtrs[index].mRawFuncPtr ) {
+                            BoostFunctionWrapper* pboostfn = dynamic_cast<BoostFunctionWrapper*>(mData->mFuncPtrs[index].mFuncWrapperPtr);
+                            if( !pboostfn ) {
+                                r.resize(1);
+                                r[0] = mData->mFuncPtrs[index].mFuncWrapperPtr->callFunction(&vparams.at(0));
+                            }
+                            else {
+                                r = pboostfn->_fn(&vparams.at(0));
+                            }
+                        }
+                        else {
+                            r.resize(1);
+                            r[0] = mData->mFuncPtrs[index].mRawFuncPtr(&vparams.at(0));
+                        }
                         retVal.insert(retVal.end(),r.begin(),r.end());
                     }
                     // go to the next parameter
