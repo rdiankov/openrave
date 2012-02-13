@@ -238,7 +238,9 @@ import __builtin__
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
+    from openravepy import axisAngleFromRotationMatrix
 except:
+    axisAngleFromRotationMatrix = None
     class AutoReloader:
         pass
 
@@ -1161,6 +1163,11 @@ class IKFastSolver(AutoReloader):
         return M
 
     def numpyMatrixToSympy(self,T):
+        if axisAngleFromRotationMatrix is not None:
+            axisangle = axisAngleFromRotationMatrix(T)
+            angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
+            axisangle /= angle
+            log.debug('rotation angle: %f, axis=[%f,%f,%f]', (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
         return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
 
     def numpyVectorToSympy(self,v,precision=None):
@@ -1245,6 +1252,7 @@ class IKFastSolver(AutoReloader):
                     TLeftjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
                     TRightjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
                     axissign = -S.One
+                #print i,TLeftjoint,TRightjoint
                 if joint.IsStatic():
                     Tright = self.affineSimplify(Tright * TLeftjoint * TRightjoint)
                 else:
@@ -1274,6 +1282,12 @@ class IKFastSolver(AutoReloader):
                             raise ValueError('failed to process joint %s'%joint.GetName())
                         
                         Tjoints.append(Tj)
+
+                    if axisAngleFromRotationMatrix is not None:
+                        axisangle = axisAngleFromRotationMatrix(numpy.array(numpy.array(Tright * TLeftjoint),numpy.float64))
+                        angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
+                        axisangle /= angle
+                        log.debug('rotation angle of Links[%d]: %f, axis=[%f,%f,%f]', len(Links), (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
                     Links.append(Tright * TLeftjoint)
                     for Tj in Tjoints:
                         jointinds.append(len(Links))

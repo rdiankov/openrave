@@ -387,10 +387,35 @@ public:
     }
     PyUserData(UserDataPtr handle) : _handle(handle) {
     }
-    void close() {
+    virtual ~PyUserData() {
+    }
+    virtual void close() {
         _handle.reset();
     }
     UserDataPtr _handle;
+};
+
+class PySerializableData : public PyUserData
+{
+public:
+    PySerializableData() {
+    }
+    PySerializableData(SerializableDataPtr handle) : _handle(handle) {
+    }
+    void close() {
+        _handle.reset();
+    }
+    object Serialize(int options) {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        _handle->Serialize(ss,options);
+        return object(ss.str());
+    }
+    void Deserialize(const std::string& s) {
+        std::stringstream ss(s);
+        _handle->Deserialize(ss);
+    }
+    SerializableDataPtr _handle;
 };
 
 class PyUserObject : public UserData
@@ -466,15 +491,7 @@ public:
     void SetUserData(object o) {
         _pbase->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
-    object GetUserData() const {
-        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_pbase->GetUserData());
-        if( !po ) {
-            return object(PyUserData(_pbase->GetUserData()));
-        }
-        else {
-            return po->_o;
-        }
-    }
+    object GetUserData() const;
 
     class PythonThreadSaver
     {
@@ -527,6 +544,8 @@ protected:
 
 namespace openravepy
 {
+
+object GetUserData(UserDataPtr pdata);
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
 void LockEnvironment(PyEnvironmentBasePtr);

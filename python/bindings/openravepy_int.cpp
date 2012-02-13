@@ -31,6 +31,10 @@ PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr py
     CHECK_POINTER(_pyenv);
 }
 
+object PyInterfaceBase::GetUserData() const {
+    return openravepy::GetUserData(_pbase->GetUserData());
+}
+
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 #if BOOST_VERSION < 103500
@@ -1101,13 +1105,7 @@ public:
         _penv->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
     object GetUserData() const {
-        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_penv->GetUserData());
-        if( !po ) {
-            return object(PyUserData(_penv->GetUserData()));
-        }
-        else {
-            return po->_o;
-        }
+        return openravepy::GetUserData(_penv->GetUserData());
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1143,6 +1141,23 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 
 namespace openravepy
 {
+
+object GetUserData(UserDataPtr pdata)
+{
+    boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(pdata);
+    if( !!po ) {
+        return po->_o;
+    }
+    else {
+        SerializableDataPtr pserializable = boost::dynamic_pointer_cast<SerializableData>(pdata);
+        if( !!pserializable ) {
+            return object(PySerializableData(pserializable));
+        }
+        else {
+            return object(PyUserData(pdata));
+        }
+    }
+}
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr pyenv)
 {

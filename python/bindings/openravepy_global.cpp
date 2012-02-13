@@ -432,6 +432,22 @@ public:
         return _param.GetType();
     }
 
+    int GetDOF() {
+        return _param.GetDOF();
+    }
+
+    int GetDOF(object o) {
+        extract<PyIkParameterization*> pyik(o);
+        if( pyik.check() ) {
+            return ((PyIkParameterization*)pyik)->_param.GetDOF();
+        }
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
+        if( pyikptr.check() ) {
+            return ((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetDOF();
+        }
+        return IkParameterization::GetDOF((IkParameterizationType)extract<IkParameterizationType>(o));
+    }
+
     void SetTransform6D(object o) {
         _param.SetTransform6D(ExtractTransform(o));
     }
@@ -1190,6 +1206,10 @@ void init_openravepy_global()
     class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
     .def("close",&PyUserData::close,"force releasing the user handle point.")
     ;
+    class_<PySerializableData, boost::shared_ptr<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData), no_init)
+    .def("Serialize",&PySerializableData::Serialize,args("options"), DOXY_FN(SerializableData, Serialize))
+    .def("Deserialize",&PySerializableData::Deserialize,args("data"), DOXY_FN(SerializableData, Deserialize))
+    ;
 
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(args("pos","dir")))
@@ -1269,7 +1289,9 @@ void init_openravepy_global()
     openravepy::spec_from_group();
 
     {
-        int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;
+        int (PyIkParameterization::*getdof1)() = &PyIkParameterization::GetDOF;
+        int (PyIkParameterization::*getdof2)(object) = &PyIkParameterization::GetDOF;
+        int (*getdofstatic)(IkParameterizationType) = IkParameterization::GetDOF;
         int (*getnumberofvalues1)(IkParameterizationType) = &IkParameterization::GetNumberOfValues;
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
@@ -1307,12 +1329,13 @@ void init_openravepy_global()
                                    .def("GetTranslationXAxisAngleZNorm4D",&PyIkParameterization::GetTranslationXAxisAngleZNorm4D, DOXY_FN(IkParameterization,GetTranslationXAxisAngleZNorm4D))
                                    .def("GetTranslationYAxisAngleXNorm4D",&PyIkParameterization::GetTranslationYAxisAngleXNorm4D, DOXY_FN(IkParameterization,GetTranslationYAxisAngleXNorm4D))
                                    .def("GetTranslationZAxisAngleYNorm4D",&PyIkParameterization::GetTranslationZAxisAngleYNorm4D, DOXY_FN(IkParameterization,GetTranslationZAxisAngleYNorm4D))
-                                   .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
-                                   .staticmethod("GetDOF")
+                                   .def("GetDOF", getdof1, DOXY_FN(IkParameterization,GetDOF))
+                                   .def("GetDOF", getdof2, args("type"), DOXY_FN(IkParameterization,GetDOF))
+                                   .def("GetDOFFromType", getdofstatic,args("type"), DOXY_FN(IkParameterization,GetDOF))
+                                   .staticmethod("GetDOFStatic")
                                    .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
                                    .staticmethod("GetNumberOfValues")
                                    .def_pickle(IkParameterization_pickle_suite())
-
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
                                    .def("Transform",&PyIkParameterization::Transform,"Transforms the IK parameterization by this (T * ik)")
                                    // deprecated

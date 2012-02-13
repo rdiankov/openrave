@@ -167,7 +167,6 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 elif allowkinbody:
                     robot = env.GetBodies()[0]
                 assert(robot is not None)
-                robot.SetTransform(eye(4))
                 if hasattr(options,'manipname') and robot.IsRobot():
                     if options.manipname is None:
                         # prioritize manipulators with ik solvers

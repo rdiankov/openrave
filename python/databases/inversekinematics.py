@@ -342,7 +342,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik type is not set')
         
         freeindices = []
-        dofexpected = IkParameterization.GetDOF(self.iktype)
+        dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
             for i in range(len(remainingindices) - dofexpected):
@@ -381,7 +381,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 break
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
-            dofexpected = IkParameterization.GetDOF(self.iktype)
+            dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             if allfreeindices is None:
                 allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
@@ -435,7 +435,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
-            dofexpected = IkParameterization.GetDOF(self.iktype)
+            dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             allfreeindices = [f for f in self.ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
                 break
@@ -636,7 +636,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             raise ValueError('bad type')
 
-        dofexpected = IkParameterization.GetDOF(self.iktype)
+        dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
             self.freeindices = freeindices
         if self.freeindices is None:

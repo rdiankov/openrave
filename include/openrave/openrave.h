@@ -234,6 +234,22 @@ public:
 typedef boost::shared_ptr<UserData> UserDataPtr;
 typedef boost::weak_ptr<UserData> UserDataWeakPtr;
 
+/// \brief user data that can serialize/deserialize itself
+class OPENRAVE_API SerializableData : public UserData
+{
+public:
+    virtual ~SerializableData() {
+    }
+
+    /// \brief output the data of the object
+    virtual void Serialize(std::ostream& O, int options=0) const = 0;
+
+    /// \brief initialize the object
+    virtual void Deserialize(std::istream& I) = 0;
+};
+typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
+typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
+
 // terminal attributes
 //#define RESET           0
 //#define BRIGHT          1

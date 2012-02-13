@@ -21,6 +21,8 @@ Core
 
 * Added :meth:`.RaveClone`
 
+* Added :class:`.SerializableData` that derives from :class:`.UserData` allowing C++ user data to be saved and transferred.
+
 Planning
 --------
 
