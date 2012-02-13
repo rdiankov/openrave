@@ -104,13 +104,13 @@ public:
     using FunctionParserBase<Value_t>::NO_FUNCTION_PARSED_YET;
     using FunctionParserBase<Value_t>::FP_NO_ERROR;
 
-    typedef boost::function<std::vector<Value_t>(const Value_t*)> BoostFunction;
+    typedef boost::function<void (std::vector<Value_t>&, const std::vector<Value_t>&)> BoostFunction;
     class BoostFunctionWrapper : public FunctionParserBase<Value_t>::FunctionWrapper
     {
 public:
-        BoostFunctionWrapper() : FunctionParserBase<Value_t>::FunctionWrapper() {
+        BoostFunctionWrapper() : FunctionParserBase<Value_t>::FunctionWrapper(), _paramsAmount(0) {
         }
-        BoostFunctionWrapper(const BoostFunction& fn) : FunctionParserBase<Value_t>::FunctionWrapper(), _fn(fn) {
+        BoostFunctionWrapper(const BoostFunction& fn, int paramsAmount) : FunctionParserBase<Value_t>::FunctionWrapper(), _fn(fn), _paramsAmount(paramsAmount) {
         }
         virtual ~BoostFunctionWrapper() {
         }
@@ -120,15 +120,24 @@ public:
         }
 
         virtual Value_t callFunction(const Value_t* params) {
-            return _fn(params).at(0);
+            std::vector<Value_t> vresult;
+            if( _paramsAmount > 0 ) {
+                std::vector<Value_t> vparams(params,params+_paramsAmount);
+                _fn(vresult,vparams);
+            }
+            else {
+                _fn(vresult,std::vector<Value_t>());
+            }
+            return vresult.at(0);
         }
 
         BoostFunction _fn;
+        int _paramsAmount;
     };
 
     bool AddBoostFunction(const std::string& name, const BoostFunction& fn, unsigned paramsAmount)
     {
-        return addFunctionWrapperPtr(name, new BoostFunctionWrapper(fn), paramsAmount);
+        return addFunctionWrapperPtr(name, new BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
     }
 
 //===========================================================================
@@ -512,7 +521,7 @@ public:
                                 r[0] = mData->mFuncPtrs[index].mFuncWrapperPtr->callFunction(&vparams.at(0));
                             }
                             else {
-                                r = pboostfn->_fn(&vparams.at(0));
+                                pboostfn->_fn(r,vparams);
                             }
                         }
                         else {

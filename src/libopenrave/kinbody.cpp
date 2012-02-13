@@ -4679,51 +4679,48 @@ UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::functio
     return pdata;
 }
 
-static std::vector<dReal> fparser_polyroots2(const dReal* rawcoeffs)
+static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
+    BOOST_ASSERT(rawcoeffs.size()==3);
     int numroots=0;
-    std::vector<dReal> rawroots(2);
-    polyroots2<dReal>(rawcoeffs,&rawroots[0],numroots);
+    rawroots.resize(2);
+    polyroots2<dReal>(&rawcoeffs[0],&rawroots[0],numroots);
     rawroots.resize(numroots);
-    return rawroots;
 }
 
 template <int D>
-static std::vector<dReal> fparser_polyroots(const dReal* rawcoeffs)
+static void fparser_polyroots(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
+    BOOST_ASSERT(rawcoeffs.size()==D+1);
     int numroots=0;
-    std::vector<dReal> rawroots(D);
-    polyroots<dReal,D>(rawcoeffs,&rawroots[0],numroots);
+    rawroots.resize(D);
+    polyroots<dReal,D>(&rawcoeffs[0],&rawroots[0],numroots);
     rawroots.resize(numroots);
-    return rawroots;
 }
 
 // take triangle 3 sides and compute the angle opposite the first side
-static std::vector<dReal> fparser_sssa(const dReal* coeffs)
+static void fparser_sssa(std::vector<dReal>& res, const vector<dReal>& coeffs)
 {
-    std::vector<dReal> res;
-    dReal a = coeffs[0], b = coeffs[1], c = coeffs[2];
+    dReal a = coeffs.at(0), b = coeffs.at(1), c = coeffs.at(2);
     dReal f = (a*a+b*b-c*c)/(2*b);
-    res.push_back(RaveAtan2(RaveSqrt(a*a-f*f),b-f));
-    return res;
+    res.resize(1);
+    res[0] = RaveAtan2(RaveSqrt(a*a-f*f),b-f);
 }
 
 /// take triangle 2 sides and an angle and compute the missing angle
-static std::vector<dReal> fparser_sasa(const dReal* coeffs)
+static void fparser_sasa(std::vector<dReal>& res, const vector<dReal>& coeffs)
 {
-    std::vector<dReal> res;
     dReal a = coeffs[0], gamma = coeffs[1], b = coeffs[2];
-    res.push_back(RaveAtan2(a*RaveSin(gamma),b-a*RaveCos(gamma)));
-    return res;
+    res.resize(1);
+    res[0] = RaveAtan2(a*RaveSin(gamma),b-a*RaveCos(gamma));
 }
 
 /// take triangle 2 sides and an angle and compute the missing side
-static std::vector<dReal> fparser_sass(const dReal* coeffs)
+static void fparser_sass(std::vector<dReal>& res, const vector<dReal>& coeffs)
 {
-    std::vector<dReal> res;
     dReal a = coeffs[0], gamma = coeffs[1], b = coeffs[2];
-    res.push_back(RaveSqrt(a*a+b*b-2*a*b*RaveCos(gamma)));
-    return res;
+    res.resize(1);
+    res[0] = RaveSqrt(a*a+b*b-2*a*b*RaveCos(gamma));
 }
 
 boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
