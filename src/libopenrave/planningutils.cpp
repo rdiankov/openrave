@@ -242,7 +242,7 @@ public:
                     }
                     PlannerBase::ConfigurationList::iterator itprevconfig = configs->begin();
                     PlannerBase::ConfigurationList::iterator itcurconfig = ++configs->begin();
-                    FOREACH(itcurconfig, *configs) {
+                    for(; itcurconfig != configs->end(); ++itcurconfig) {
                         BOOST_ASSERT( (int)itcurconfig->size() == _parameters->GetDOF());
                         for(size_t i = 0; i < itcurconfig->size(); ++i) {
                             deltaq.at(i) = itcurconfig->at(i) - itprevconfig->at(i);
@@ -255,7 +255,7 @@ public:
                         else {
                             dReal fprevdist = _parameters->_distmetricfn(*itprevconfig,vtemp);
                             dReal fcurdist = _parameters->_distmetricfn(*itcurconfig,vtemp);
-                            OPENRAVE_ASSERT_OP_FORMAT(fprevdist, <=, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
+                            OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
                         }
                         itprevconfig=itcurconfig;
                     }
