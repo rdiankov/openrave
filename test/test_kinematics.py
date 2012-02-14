@@ -99,12 +99,12 @@ class TestKinematics(EnvironmentSetup):
                                 if dot(worldquat,newquat) < 0:
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
-                                assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
-                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
-                                raveLogDebug(repr(dofvaluesnew))
-                                raveLogDebug(repr(deltavalues))
-                                self.log.debug('angledist=%f, thresh=%f, armlength=%f',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength)
-                                assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
+                                if transdist(dot(Jtrans,deltavalues),deltatrans) > thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName, link.GetName, dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
+                                if transdist(dot(Jquat,deltavalues)+worldquat,newquat) > 2*thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName, link.GetName, dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
+                                if axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) > 2*thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f, armlength=%f'%(body.GetName, link.GetName, dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength))
 
     def test_bodyvelocities(self):
         self.log.info('check physics/dynamics properties')
