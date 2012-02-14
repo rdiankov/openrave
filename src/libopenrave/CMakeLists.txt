@@ -10,7 +10,9 @@ if( HAS_LOG2 )
   add_definitions("-DHAS_LOG2")
 endif()
 
-include_directories(${FPARSER_INCLUDE_DIR})
+link_directories(${OPENRAVE_LINK_DIRS} ${FPARSER_LIBRARY_DIRS})
+
+include_directories(${FPARSER_INCLUDE_DIRS})
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
 add_dependencies(libopenrave interfacehashes_target openrave-md5)
 if( CRLIBM_FOUND )
@@ -20,9 +22,9 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBR
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
-                                  LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARY})
+                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
+                                  LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
+target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
 if( MSVC )
   install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 else()
@@ -48,10 +50,10 @@ if( OPT_STATIC )
                                            SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                            VERSION ${OPENRAVE_VERSION}
                                            CLEAN_DIRECT_OUTPUT 1
-                                           COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS}"
-                                           LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
+                                           COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS}"
+                                           LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
   
-  target_link_libraries(libopenrave_static ${openrave_libraries})
+  target_link_libraries(libopenrave_static ${openrave_libraries} ${FPARSER_LIBRARIES})
   add_dependencies(libopenrave_static interfacehashes_target openrave-md5)
   if( CRLIBM_FOUND )
     add_dependencies(libopenrave_static check_libm_accuracy) # forces check to be run before libopenrave is compilde
