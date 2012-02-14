@@ -477,12 +477,19 @@ protected:
     void _InterpolateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
         size_t offset= ipoint*_spec.GetDOF();
-        int derivoffset = _vderivoffsets[g.offset];
-        for(int i = 0; i < g.dof; ++i) {
-            // coeff*t^2 + deriv0*t + pos0
-            dReal deriv0 = _vtrajdata[offset+derivoffset+i];
-            dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
-            data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+        if( deltatime > g_fEpsilon ) {
+            int derivoffset = _vderivoffsets[g.offset];
+            for(int i = 0; i < g.dof; ++i) {
+                // coeff*t^2 + deriv0*t + pos0
+                dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
+                data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+            }
+        }
+        else {
+            for(int i = 0; i < g.dof; ++i) {
+                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+            }
         }
     }
 
@@ -510,22 +517,28 @@ protected:
                 dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
                 dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
                 dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i] - expected);
-                OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                if( RaveFabs(error-2*PI) > 10*g_fEpsilon ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                }
             }
         }
     }
 
     void _ValidateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        size_t offset= ipoint*_spec.GetDOF();
-        int derivoffset = _vderivoffsets[g.offset];
-        for(int i = 0; i < g.dof; ++i) {
-            // coeff*t^2 + deriv0*t + pos0
-            dReal deriv0 = _vtrajdata[offset+derivoffset+i];
-            dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
-            dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
-            dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]-expected);
-            OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+        if( deltatime > 0 ) {
+            size_t offset= ipoint*_spec.GetDOF();
+            int derivoffset = _vderivoffsets[g.offset];
+            for(int i = 0; i < g.dof; ++i) {
+                // coeff*t^2 + deriv0*t + pos0
+                dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
+                dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+                dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]-expected);
+                if( RaveFabs(error-2*PI) > 10*g_fEpsilon ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                }
+            }
         }
     }
 
