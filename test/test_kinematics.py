@@ -36,18 +36,18 @@ class TestKinematics(EnvironmentSetup):
                         assert( transdist(T,_T) <= g_epsilon )
                         body.SetLinkTransformations(Tallold)
                         _Tallold = body.GetLinkTransformations()
-                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
                         Tallnew = [randtrans() for j in range(len(Tallold))]
                         body.SetLinkTransformations(Tallnew)
                         _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         for link, T in izip(body.GetLinks(),Tallold):
                             link.SetTransform(T)
                         _Tallold = body.GetLinkTransformations()
-                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
                         # dof
                         _dofvaluesold = body.GetDOFValues()
-                        assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon )
+                        assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon*len(dofvaluesold) )
                         dofvaluesnew = randlimits(*body.GetDOFLimits())
                         body.SetDOFValues(dofvaluesnew)
                         _dofvaluesnew = body.GetDOFValues()
@@ -55,14 +55,14 @@ class TestKinematics(EnvironmentSetup):
                         Tallnew = body.GetLinkTransformations()
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
                         _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         _dofvaluesnew = body.GetDOFValues()
                         assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
                         
                         # do it again
                         body.SetDOFValues(dofvaluesnew)
                         _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         for joint in body.GetJoints():
                             _dofvaluesnew = joint.GetValues()
                             assert( all(abs(joint.SubtractValues(dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())], _dofvaluesnew)) <= g_epsilon) )
@@ -70,7 +70,7 @@ class TestKinematics(EnvironmentSetup):
                         for link,T in izip(body.GetLinks(),Tallnew2):
                             link.SetTransform(T)
                         _Tallnew2 = body.GetLinkTransformations()
-                        assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon )
+                        assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon*len(Tallnew2) )
                         body.SetLinkTransformations(Tallnew)
                         for idir in range(20):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
