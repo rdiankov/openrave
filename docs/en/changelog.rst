@@ -49,6 +49,8 @@ Misc
 
 * Fixed :meth:`.planningutils.RetimeActiveDOFTrajectory` and :meth:`.planningutils.RetimeAffineTrajectory` when trajectories have timestamps.
 
+* Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with find_package.
+
 Version 0.6.2
 =============
 

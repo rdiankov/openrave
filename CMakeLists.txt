@@ -660,15 +660,10 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(fparser 4.4.3)
+find_package(FPARSER 4.4.3)
 if( NOT FPARSER_FOUND )
+  message(STATUS "compiling local fparser library")
   add_subdirectory(3rdparty/fparser-4.4.3)
-  set(FPARSER_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.4.3")
-  set(FPARSER_LIBRARY_DIRS)
-  set(FPARSER_LIBRARIES fparser)
-  set(FPARSER_CXX_FLAGS)
-  set(FPARSER_LINK_FLAGS)
-  set(FPARSER_FOUND 1)
 endif()
 
 message(STATUS "compiling local convexdecomposition library")

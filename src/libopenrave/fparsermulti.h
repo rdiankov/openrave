@@ -17,10 +17,10 @@
 #ifndef OPENRAVE_FPARSER_EXTENSIONS
 #define OPENRAVE_FPARSER_EXTENSIONS
 
-#include <fpconfig.hh>
-#include <fparser.hh>
-#include <extrasrc/fptypes.hh>
-#include <extrasrc/fpaux.hh>
+#include <fparser/fpconfig.hh>
+#include <fparser/fparser.hh>
+#include <fparser/fptypes.hh>
+#include <fparser/fpaux.hh>
 #include <sstream>
 #include <cstdio>
 
@@ -112,6 +112,8 @@ public:
         }
         BoostFunctionWrapper(const BoostFunction& fn, int paramsAmount) : FunctionParserBase<Value_t>::FunctionWrapper(), _fn(fn), _paramsAmount(paramsAmount) {
         }
+        BoostFunctionWrapper(const BoostFunctionWrapper& r) : _fn(r._fn), _paramsAmount(r._paramsAmount) {
+        }
         virtual ~BoostFunctionWrapper() {
         }
         BoostFunctionWrapper& operator=(const BoostFunctionWrapper& r) {
@@ -137,7 +139,7 @@ public:
 
     bool AddBoostFunction(const std::string& name, const BoostFunction& fn, unsigned paramsAmount)
     {
-        return addFunctionWrapperPtr(name, new BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
+        return AddFunctionWrapper(name, BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
     }
 
 //===========================================================================
