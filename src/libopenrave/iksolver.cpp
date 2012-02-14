@@ -76,7 +76,7 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             else {
                 fdiff = RaveFabs(vtestsolution.at(dofindex) - solution.at(i));
             }
-            if( fdiff > 1000*g_fEpsilon ) {
+            if( fdiff > g_fEpsilonJointLimit ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
             }
         }
@@ -97,7 +97,7 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     vtestsolution.at(manipulator->GetArmIndices()[i]) = solution.at(i);
                 }
                 for(size_t i = 0; i < vtestsolution.size(); ++i) {
-                    if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > 1000*g_fEpsilon ) {
+                    if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > g_fEpsilonJointLimit ) {
                         throw OPENRAVE_EXCEPTION_FORMAT("one of the filters set on robot %s manip %s did not restore the robot configuraiton. config dof %d (%f -> %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%i%vtestsolution.at(i)%vtestsolution2.at(i), ORE_InconsistentConstraints);
                     }
                 }

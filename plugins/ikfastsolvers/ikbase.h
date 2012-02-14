@@ -867,7 +867,7 @@ private:
                 }
             }
             // due to error propagation, give error bounds for lower and upper limits
-            if( vravesol[j] < _qlower[j]-10*g_fEpsilon || vravesol[j] > _qupper[j]+10*g_fEpsilon ) {
+            if( vravesol[j] < _qlower[j]-g_fEpsilonJointLimit || vravesol[j] > _qupper[j]+g_fEpsilonJointLimit ) {
                 return false;
             }
         }

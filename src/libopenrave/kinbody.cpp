@@ -2891,7 +2891,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
                         }
                         else if( *iteval < pjoint->_vlowerlimit[i] ) {
-                            if(*iteval >= pjoint->_vlowerlimit[i]-g_fEpsilon*1000 ) {
+                            if(*iteval >= pjoint->_vlowerlimit[i]-g_fEpsilonJointLimit ) {
                                 *iteval = pjoint->_vlowerlimit[i];
                             }
                             else {
@@ -2899,7 +2899,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             }
                         }
                         else if( *iteval > pjoint->_vupperlimit[i] ) {
-                            if(*iteval <= pjoint->_vupperlimit[i]+g_fEpsilon*1000 ) {
+                            if(*iteval <= pjoint->_vupperlimit[i]+g_fEpsilonJointLimit ) {
                                 *iteval = pjoint->_vupperlimit[i];
                             }
                             else {
@@ -2920,11 +2920,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                             if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
                                 veval.push_back(*iteval);
                             }
-                            else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilon*100000 ) {
+                            else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
                                 veval.push_back(pjoint->_vlowerlimit[i]);
                                 RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
                             }
-                            else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilon*100000 ) {
+                            else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
                                 veval.push_back(pjoint->_vupperlimit[i]);
                                 RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
                             }

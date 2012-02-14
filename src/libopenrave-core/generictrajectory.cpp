@@ -20,6 +20,9 @@
 
 namespace OpenRAVE {
 
+static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
+static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.7);
+
 class GenericTrajectory : public TrajectoryBase
 {
     std::map<string,int> _maporder;
@@ -517,8 +520,8 @@ protected:
                 dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
                 dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
                 dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i] - expected);
-                if( RaveFabs(error-2*PI) > 10*g_fEpsilon ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                if( RaveFabs(error-2*PI) > g_fEpsilonLinear ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,g_fEpsilonLinear, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
                 }
             }
         }
@@ -535,8 +538,8 @@ protected:
                 dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
                 dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
                 dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]-expected);
-                if( RaveFabs(error-2*PI) > 10*g_fEpsilon ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,10*g_fEpsilon, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                if( RaveFabs(error-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,g_fEpsilonQuadratic, "trajectory segment for group %s interpolation %s points %d-%d dof %d is invalid", g.name%g.interpolation%ipoint%(ipoint+1)%i, ORE_InvalidState);
                 }
             }
         }

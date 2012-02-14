@@ -384,7 +384,7 @@ protected:
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
             dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
             // note that ikp might be a little off from vsolution due to the ik solver!
-            if( middist2 > 100*g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+            if( middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
                 return IKFR_Reject;
             }
