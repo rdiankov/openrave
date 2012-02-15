@@ -21,7 +21,7 @@
 namespace OpenRAVE {
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
-static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.7);
+static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.7); // should be 0.7
 
 class GenericTrajectory : public TrajectoryBase
 {

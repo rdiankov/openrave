@@ -520,7 +520,7 @@ protected:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')>")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
+        return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());

@@ -258,7 +258,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')>")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName());
@@ -476,7 +476,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')>")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName());
@@ -534,7 +534,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()>")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName());
         }
         string __str__() {
             KinBody::LinkPtr plink = _pdata->GetOffsetLink();
@@ -1350,7 +1350,7 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s')>")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
+        return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash());
@@ -1663,7 +1663,7 @@ public:
             return _pmanip->GetKinematicsStructureHash();
         }
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')>")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName());
@@ -1724,7 +1724,7 @@ public:
             return _pattached->GetStructureHash();
         }
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')>")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName());
@@ -2222,7 +2222,7 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s')>")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
+        return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash());

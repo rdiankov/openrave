@@ -819,7 +819,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config fparser-dev)
   # developer tools for devs
   set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} python-scipy ipython)
   # add once infinite precision computations are enabled:

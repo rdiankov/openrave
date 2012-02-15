@@ -660,10 +660,13 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     int dof = sourcetraj->GetConfigurationSpecification().GetDOF();
     vector<uint8_t> velocitydofs(dof,0);
     int timeoffset = -1;
+    vector<uint8_t> velocitynextinterp(dof,0);
     FOREACHC(itgroup, sourcetraj->GetConfigurationSpecification()._vgroups) {
         if( itgroup->name.find("_velocities") != string::npos ) {
+            bool bnext = itgroup->interpolation == "next";
             for(int i = 0; i < itgroup->dof; ++i) {
                 velocitydofs.at(itgroup->offset+i) = 1;
+                velocitynextinterp.at(itgroup->offset+i) = bnext;
             }
         }
         else if( itgroup->name == "deltatime" ) {
@@ -678,7 +681,17 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
         vector<dReal>::iterator itsource = sourcedata.begin()+(numpoints-i-1)*dof;
         for(int j = 0; j < dof; ++j) {
             if( velocitydofs[j] ) {
-                *(ittarget+j) = -*(itsource+j);
+                if( velocitynextinterp[j] ) {
+                    if( i < numpoints-1 ) {
+                        *(ittarget+j+dof) = -*(itsource+j);
+                    }
+                    else {
+                        targetdata.at(j) = 0;
+                    }
+                }
+                else {
+                    *(ittarget+j) = -*(itsource+j);
+                }
             }
             else {
                 *(ittarget+j) = *(itsource+j);

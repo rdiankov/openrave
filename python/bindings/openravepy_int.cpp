@@ -1115,7 +1115,7 @@ public:
         return !p || _penv!=p->_penv;
     }
     string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d)>")%RaveGetEnvironmentId(_penv));
+        return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
     }
     string __str__() {
         return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));

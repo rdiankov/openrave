@@ -30,6 +30,8 @@ Planning
 
 * Fixed bug in retiming/smoothing planners taking in inconsistent trajectory configurations.
 
+* Fixed :meth:`.planningutils.ReverseTrajectory` for linearly interpolated trajectories.
+
 Python
 ------
 

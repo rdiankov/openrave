@@ -58,13 +58,14 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<PlannerParameters(dof=%d)>")%_paramsread->GetDOF());
-        }
-        string __str__() {
             stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
-            ss << *_paramsread << endl;
+            ss << "Planner.PlannerParameters(\"\"\"";
+            ss << *_paramsread << "\"\"\")" << endl;
             return ss.str();
+        }
+        string __str__() {
+            return boost::str(boost::format("<PlannerParameters, dof=%d>")%_paramsread->GetDOF());
         }
         object __unicode__() {
             return ConvertStringToUnicode(__str__());
