@@ -2548,7 +2548,12 @@ void QtCoinViewer::_VideoFrame()
         return;
     }
     FOREACH(itcallback,listViewerImageCallbacks) {
-        (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+        try {
+            (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+	}
+	catch(const std::exception& e) {
+            RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
+        }
     }
 }
 

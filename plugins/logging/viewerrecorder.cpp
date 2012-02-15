@@ -77,6 +77,12 @@ static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 
 class ViewerRecorder : public ModuleBase
 {
+    inline boost::shared_ptr<ViewerRecorder> shared_module() {
+        return boost::static_pointer_cast<ViewerRecorder>(shared_from_this());
+    }
+    inline boost::shared_ptr<ViewerRecorder const> shared_module_const() const {
+        return boost::static_pointer_cast<ViewerRecorder const>(shared_from_this());
+    }
     struct VideoFrame
     {
         VideoFrame() : _timestamp(0), _bProcessed(false) {
@@ -212,7 +218,7 @@ protected:
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
             _frametime = (uint64_t)(1000000/_framerate);
-            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3,_4));
+            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             return !!_callback;
         }
@@ -256,8 +262,12 @@ protected:
 
     void _ViewerImageCallback(const uint8_t* memory, int width, int height, int pixeldepth)
     {
-        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
         boost::mutex::scoped_lock lock(_mutex);
+        if( !GetEnv() || !_callback ) {
+            // recorder already destroyed and this thread is just remaining
+            return;
+        }
+        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
         boost::shared_ptr<VideoFrame> frame;
 
         if( _listAddFrames.size() > 0 ) {

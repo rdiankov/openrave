@@ -55,6 +55,8 @@ Misc
 
 * Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with find_package.
 
+* Fixed race condition with video recorder.
+
 Version 0.6.2
 =============
 
