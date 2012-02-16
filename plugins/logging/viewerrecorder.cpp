@@ -157,6 +157,10 @@ public:
         _threadrecord->join();
     }
 
+    virtual void Destroy() {
+      _Reset();
+    }
+
 protected:
     bool _StartCommand(ostream& sout, istream& sinput)
     {
