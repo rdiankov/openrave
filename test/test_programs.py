@@ -20,7 +20,7 @@ import shutil
 from openravepy import examples
 
 class RunExample(object):
-        def __init__(self,name,docname,args=[]):
+    def __init__(self,name,docname,args=[]):
         self.name=name
         self.args=args
         self.description = 'test_programs.example.%s.%s'%(name,docname)
