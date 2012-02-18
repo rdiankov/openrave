@@ -13,7 +13,7 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestRobot(EnvironmentSetup):
+class RunRobot(EnvironmentSetup):
     def __init__(self,collisioncheckername):
         self.collisioncheckername = collisioncheckername
     def setup(self):
