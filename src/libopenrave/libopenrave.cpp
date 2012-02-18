@@ -399,7 +399,7 @@ public:
         const char* delim = ":";
 #endif
         _vdbdirectories.clear();
-        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS");
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_DATABASE");
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, _vdbdirectories);
         }
