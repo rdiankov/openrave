@@ -44,6 +44,11 @@ Python
 
 * Added GetCode to python openrave_exception class
 
+Physics
+-------
+
+* fixed many bugs with bullet physics, static links are supported
+
 Examples
 --------
 

@@ -13,11 +13,12 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestCollision(EnvironmentSetup):
+class RunCollision(EnvironmentSetup):
+    def __init__(self,collisioncheckername):
+        self.collisioncheckername = collisioncheckername
     def setup(self):
         EnvironmentSetup.setup(self)
-        # select collision engine here
-        #self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,'bullet'))
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
 
     def test_basic(self):
         env=self.env
@@ -160,3 +161,5 @@ class TestCollision(EnvironmentSetup):
         robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
         assert(env.CheckCollision(robot))
         
+
+generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])

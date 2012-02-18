@@ -14,6 +14,12 @@
 from common_test_openrave import *
 
 class TestRobot(EnvironmentSetup):
+    def __init__(self,collisioncheckername):
+        self.collisioncheckername = collisioncheckername
+    def setup(self):
+        EnvironmentSetup.setup(self)
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
+
     def test_dualarm_grabbing(self):
         with self.env:
             robot = self.LoadRobot('robots/schunk-lwa3-dual.robot.xml')
@@ -348,3 +354,5 @@ class TestRobot(EnvironmentSetup):
 #     print sol
 #     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
 #     print linalg.norm(target - ikmodel.manip.GetEndEffectorTransform()[0:3,3])
+
+generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])

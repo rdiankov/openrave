@@ -19,42 +19,41 @@ import shutil
 
 from openravepy import examples
 
-def run_example(name,args=[]):
-    __doc__='testing example '+name
-    example = getattr(examples,name)
-    example.run(args=args+['--testmode',"--viewer="])
+class RunExample(object):
+        def __init__(self,name,docname,args=[]):
+        self.name=name
+        self.args=args
+        self.description = 'test_programs.example.%s.%s'%(name,docname)
+            
+    def __call__(self):
+        example = getattr(examples,self.name)
+        example.run(args=self.args+['--testmode',"--viewer="])
 
-# def test_examples():
-#     print "test if all the examples run"
-#     yield run_example, 'hanoi', []
-#     yield run_example, 'calibrationviews', ['--noshowsensor']
-#     #yield run_example, 'graspplanning', []
+def test_examples():
+    yield RunExample('hanoi', 'default',[])
+    yield RunExample('calibrationviews', 'default',['--noshowsensor'])
+    yield RunExample('graspplanning', 'default', [])
 
-
-#     for name in dir(examples):
-#         if not name.startswith('__'):
-#             try:
-#                 m=__import__('openravepy.examples.'+name)
-#                 if type(m) is ModuleType:
-#                     yield run_example, name
-#             except ImportError:
-#                 pass
-
-def run_database(name,docname,args=[]):
-    __doc__='database.%s.%s'%(name,docname)
-    database = getattr(databases,name)
-    database.run(args=args+["--viewer="])
+class RunDatabase(object):
+    def __init__(self,name,docname,args=[]):
+        self.name=name
+        self.args=args
+        self.description = 'test_programs.database.%s.%s'%(name,docname)
+            
+    def __call__(self):
+        database = getattr(databases,self.name)
+        database.run(args=args+["--viewer="])
 
 def test_databases():
     """test if all the databases run on default parameters"""
-    yield run_database, 'kinematicreachability', 'wam', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2']
-    yield run_database, 'kinematicreachability', 'pr2', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4']
-    yield run_database, 'convexdecomposition', 'hironx', ['--robot=robots/kawada-hironx.zae']
-    yield run_database, 'linkstatistics', 'hironx', ['--robot=robots/kawada-hironx.zae']
-    yield run_database, 'linkstatistics', 'pr2', ['--robot=robots/pr2-beta-static.zae']
-    yield run_database, 'grasping', 'barrett', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1']
-    yield run_database, 'grasping', 'barrett_multi', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2']
-    yield run_database, 'inversekinematics', 'wam', ['--robot=robots/barrettwam.robot.xml','--iktests=100']
+    yield RunDatabase('kinematicreachability', 'wam', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2'])
+    yield RunDatabase('kinematicreachability', 'pr2', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4'])
+    yield RunDatabase('convexdecomposition', 'hironx', ['--robot=robots/kawada-hironx.zae'])
+    yield RunDatabase('linkstatistics', 'hironx', ['--robot=robots/kawada-hironx.zae'])
+    yield RunDatabase('linkstatistics', 'pr2', ['--robot=robots/pr2-beta-static.zae'])
+    yield RunDatabase('grasping', 'barrett', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1'])
+    yield RunDatabase('grasping', 'barrett_multi', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2'])
+    yield RunDatabase('inversekinematics', 'wam', ['--robot=robots/barrettwam.robot.xml','--iktests=100'])
         
 #     yield run_database, 'inversereachability', ['--robot=robots/barrettwam.robot.xml']
 #     yield run_database, 'grasping', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--target=data/box_frootloops.kinbody.xml','--boxdelta=0.05']

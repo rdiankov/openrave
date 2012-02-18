@@ -206,8 +206,8 @@ public:
         virtual bool needsCollision(btCollisionObject* co0, btCollisionObject* co1)
         {
             if( btCollisionDispatcher::needsCollision(co0, co1) ) {
-                KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)co0->getUserPointer();
-                KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)co1->getUserPointer();
+                KinBody::LinkPtr plink0 = GetLinkFromCollision(co0);
+                KinBody::LinkPtr plink1 = GetLinkFromCollision(co1);
                 OpenRAVEFilterCallback* popenravefilt = dynamic_cast<OpenRAVEFilterCallback*>(_poverlapfilt);
                 if( !!popenravefilt && !popenravefilt->CheckLinks(plink0,plink1) ) {
                     return false;
@@ -250,7 +250,7 @@ public:
         //: btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld), _pbodyonly(pbodyonly) {}
 
         virtual bool needsCollision (btBroadphaseProxy *proxy0) const {
-            KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(proxy0->m_clientObject)->getUserPointer();
+            KinBody::LinkPtr plink = GetLinkFromProxy(proxy0);
             if( !!_pbodyonly &&( _pbodyonly != plink->GetParent()) ) {
                 return false;
             }
@@ -267,7 +267,7 @@ public:
         virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult,bool normalInWorldSpace) {
             //caller already does the filter on the m_closestHitFraction
             if(rayResult.m_hitFraction <= m_closestHitFraction) {
-                KinBody::LinkPtr plink = *(KinBody::LinkPtr*)static_cast<btCollisionObject*>(rayResult.m_collisionObject)->getUserPointer();
+                KinBody::LinkPtr plink = GetLinkFromCollision(rayResult.m_collisionObject);
                 if( !plink->IsEnabled() || (!!_pbodyonly &&( _pbodyonly != plink->GetParent()) ) ) {
                     return m_closestHitFraction;
                 }
@@ -319,8 +319,8 @@ public:
             btCollisionObject* obA = static_cast<btCollisionObject*>(contactManifold->getBody0());
             btCollisionObject* obB = static_cast<btCollisionObject*>(contactManifold->getBody1());
 
-            KinBody::LinkPtr plink0 = *(KinBody::LinkPtr*)obA->getUserPointer();
-            KinBody::LinkPtr plink1 = *(KinBody::LinkPtr*)obB->getUserPointer();
+            KinBody::LinkPtr plink0 = GetLinkFromCollision(obA);
+            KinBody::LinkPtr plink1 = GetLinkFromCollision(obB);
 
             if( numContacts == 0 ) {
                 continue;
@@ -611,7 +611,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
@@ -680,7 +680,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
@@ -744,7 +744,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = *(KinBody::LinkPtr*)rayCallback.m_collisionObject->getUserPointer();
+                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);

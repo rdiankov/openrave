@@ -154,3 +154,29 @@ class EnvironmentSetup(object):
             # need to throw exceptions so test fails
             robot.GetController().SendCommand('SetThrowExceptions 1')
             
+def generate_classes(BaseClass, namespace, data):
+    """Used to generate test classes inside a namespace since nose generators do not support classes
+
+    Create the test classes using something like this:
+
+generate_classes(Base, globals(), [
+    ("Test1", expr1),
+    ("Test2", expr2),
+    ("Test3", expr3),
+]) 
+    """
+    for args in data:
+        test_name = args[0]
+        args = args[1:]
+        class DummyClass(BaseClass):
+            def __init__(self, methodName=None):
+                BaseClass.__init__(self, *args)
+
+        # Set the name for this class, and place it into the namespace
+        class_name = "test_" + test_name
+        DummyClass.__name__ = class_name
+
+        if class_name in namespace:
+            raise ValueError("namespace already contains a '%s' object" %class_name)
+        namespace[class_name] = DummyClass
+        

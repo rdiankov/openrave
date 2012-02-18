@@ -222,6 +222,11 @@ The possible properties that can be set are: ";
         _listcallbacks.clear();
         _report.reset();
         _odespace->DestroyEnvironment();
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            SetPhysicsData(*itbody,OpenRAVE::UserDataPtr());
+        }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)

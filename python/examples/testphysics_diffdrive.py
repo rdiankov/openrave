@@ -35,9 +35,9 @@ def main(env,options):
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
-        physics.SetGravity(array((0,0,-9.8)))
 
     with env:
+        env.GetPhysicsEngine().SetGravity(array((0,0,-9.8)))
         robot = env.GetRobots()[0]
         robot.SetController(RaveCreateController(env,'odevelocity'),range(robot.GetDOF()),0)
         env.StopSimulation()

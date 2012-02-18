@@ -23,9 +23,12 @@ class TestDatabases(EnvironmentSetup):
         self.LoadEnv('robots/neuronics-katana.zae')
         robot=env.GetRobots()[0]
         manip=robot.GetActiveManipulator()
+        manip.SetIkSolver(None)
         ikmodule = RaveCreateModule(env,'ikfast')
         env.AddModule(ikmodule,'')
         out=ikmodule.SendCommand('LoadIKFastSolver %s %d 1'%(robot.GetName(),IkParameterizationType.TranslationDirection5D))
         assert(out is not None)
         assert(manip.GetIkSolver() is not None)
+        
+    def test_database_paths(self):
         
