@@ -26,6 +26,8 @@ class RunExample(object):
         self.description = 'test_programs.example.%s.%s'%(name,docname)
             
     def __call__(self):
+        # turn off trajectory validation for now
+        RaveSetDebugLevel(RaveGetDebugLevel())
         example = getattr(examples,self.name)
         example.run(args=self.args+['--testmode',"--viewer="])
 
