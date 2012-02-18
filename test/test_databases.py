@@ -13,10 +13,6 @@
 # limitations under the License.
 from common_test_openrave import *
 
-def test_linkstatistics():
-    # test with pr2-beta-static.zae
-    pass
-
 class TestDatabases(EnvironmentSetup):
     def test_ikmodulegeneration(self):
         env=self.env
@@ -30,5 +26,5 @@ class TestDatabases(EnvironmentSetup):
         assert(out is not None)
         assert(manip.GetIkSolver() is not None)
         
-    def test_database_paths(self):
-        
+#     def test_database_paths(self):
+#         pass
