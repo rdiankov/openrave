@@ -32,6 +32,11 @@ Planning
 
 * Fixed :meth:`.planningutils.ReverseTrajectory` for linearly interpolated trajectories.
 
+Grasping
+--------
+
+* Fixed grasp planner bug in returning no solution when last point is in collision.
+
 Python
 ------
 

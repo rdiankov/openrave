@@ -190,7 +190,8 @@ class VisibilityGrasping:
     def starttrajectory(self,trajdata):
         if trajdata is not None and len(trajdata) > 0:
             self.trajectorylog.append(trajdata)
-            self.basemanip.TrajFromData(trajdata)
+            traj = RaveCreateTrajectory(self.robotreal.GetEnv(),'').deserialize(trajdata)
+            self.robotreal.GetController().SetPath(traj)
             self.waitrobot()
             if self.robot is not None:
                 self.robot.GetController().SetDesired(self.robotreal.GetDOFValues())

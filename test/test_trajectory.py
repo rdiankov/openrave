@@ -450,3 +450,25 @@ class TestTrajectory(EnvironmentSetup):
             except openrave_exception,e:
                 pass
             
+
+    def test_reverse(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        with robot:
+            basemanip = interfaces.BaseManipulation(robot)
+            originalvalues = robot.GetConfigurationValues()
+            robot.SetActiveDOFs([3,5])
+            goal = [pi/2,pi/2]
+            traj1 = basemanip.MoveActiveJoints(goal,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj1)
+            assert( transdist(robot.GetActiveDOFValues(),goal) <= g_epsilon )
+            
+            traj2 = basemanip.MoveHandStraight(direction=[0,0,-1],stepsize=0.01,maxsteps=20,minsteps=20,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj2)
+            rtraj2 = planningutils.ReverseTrajectory(traj2)
+            self.RunTrajectory(robot,rtraj2)
+            assert( transdist(robot.GetActiveDOFValues(),goal) <= g_epsilon )
+            rtraj1 = planningutils.ReverseTrajectory(traj1)
+            self.RunTrajectory(robot,rtraj1)
+            assert( transdist(originalvalues, robot.GetConfigurationValues()) <= g_epsilon)

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rplanners.h"
 
+static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
+
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:
@@ -77,15 +79,12 @@ Planner Parameters\n\
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
                     dReal diff = RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j));
                     // this is necessary in case robot's have limits like [-100,100] for revolute joints (pa10 arm)
-                    if( _robot->GetJoints().at(_manip->GetArmIndices().at(j))->GetType() == KinBody::Joint::JointRevolute ) {
-                        if( diff > PI ) {
-                            diff -= 2*PI;
-                        }
-                        if( diff < -PI ) {
-                            diff += 2*PI;
-                        }
+                    int dofindex = _manip->GetArmIndices().at(j);
+                    KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(dofindex);
+                    if( pjoint->IsCircular(dofindex-pjoint->GetDOFIndex()) ) {
+                        diff = utils::NormalizeCircularAngle(diff,-PI,PI);
                     }
-                    if( diff > 2*g_fEpsilon ) {
+                    if( diff > g_fEpsilonLinear ) {
                         RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
                         return false;
                     }

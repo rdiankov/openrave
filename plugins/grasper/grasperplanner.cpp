@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -21,12 +21,14 @@ class GrasperPlanner :  public PlannerBase
 {
     enum CollisionType
     {
-        CT_None = 0,
         CT_AvoidLinkHit = 1,
         CT_SelfCollision = 2,
         CT_TargetCollision = 4,
         CT_EnvironmentCollision = 8,
         CT_RegularCollision = (CT_TargetCollision|CT_EnvironmentCollision),
+        CT_CollisionMask = 0x000000ff,
+        CT_LinkMask = 0xff000000,
+        CT_LinkMaskShift = 24,
     };
 
 public:
@@ -204,7 +206,7 @@ public:
             }
         }
 
-        int ncollided = 0;     ///number of links that have collided with an obstacle
+        int nLinksCollideObstacle = 0;     ///number of links that have collided with an obstacle
 
         std::vector<dReal> dofvals;
         _robot->GetActiveDOFValues(dofvals);
@@ -379,7 +381,7 @@ public:
                 // not a real joint, so skip
                 continue;
             }
-            int nDOFIndex = _robot->GetActiveDOFIndices()[ifing];
+            int nDOFIndex = _robot->GetActiveDOFIndices().at(ifing);
             dReal fmult = 1;
             KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(nDOFIndex);
             if( pjoint->IsPrismatic(nDOFIndex-pjoint->GetDOFIndex()) ) {
@@ -393,74 +395,76 @@ public:
             if( num_iters <= 1 ) {
                 num_iters = 2; // need at least 2 iterations because of coarse/fine step tuning
             }
-            bool bMoved = false;
+            _robot->SetActiveDOFValues(dofvals,true);
+            _robot->GetActiveDOFValues(dofvals);
+            int ct = _CheckCollision(pjoint,KinBodyPtr());
+            if( ct&CT_CollisionMask ) {
+                RAVELOG_DEBUG(str(boost::format("gripper initially in collision: %s\n")%_report->__str__()));
+                if( _parameters->bavoidcontact ) {
+                    RAVELOG_WARN(str(boost::format("gripper in collision without moving and bavoidcontact==False: %s\n")%_report->__str__()));
+                    return PS_Failed;
+                }
+                continue;
+            }
+
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
-                if( (( vclosingdir[ifing] > 0) &&( dofvals[ifing] > vupperlim[ifing]+step_size) ) || (( vclosingdir[ifing] < 0) &&( dofvals[ifing] < vlowerlim[ifing]-step_size) ) ) {
+                if( (vclosingdir[ifing] > 0 && dofvals[ifing] > vupperlim[ifing]+step_size ) || ( vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size ) ) {
                     break;
                 }
+
+                dofvals[ifing] += vclosingdir[ifing] * step_size;
                 _robot->SetActiveDOFValues(dofvals,true);
                 _robot->GetActiveDOFValues(dofvals);
+                ct = _CheckCollision(pjoint,KinBodyPtr());
+                if( ct&CT_CollisionMask ) {
+                    if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
+                        RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
+                        return PS_Failed;
+                    }
+                    if(coarse_pass) {
+                        //coarse step collided, back up and shrink step
+                        coarse_pass = false;
+                        // move back one step before switching to smaller step size
+                        dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                        num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
+                        step_size = _parameters->ffinestep*fmult;
 
-                for(int q = 0; q < (int)_vlinks.size(); q++) {
-                    int ct;
-                    if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  &&((ct = _CheckCollision(_vlinks[q], KinBodyPtr())) != CT_None) ) {
-                        if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
-                            RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
-                            return PS_Failed;
+//                            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d) [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%_report->__str__()));
+//                                stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << ", Joint Vals: ";
+//                                for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
+//                                    ss << dofvals[vi] << " ";
+//                                }
+//                                ss << endl;
+//                                RAVELOG_VERBOSE(ss.str());
+//                            }
+//                            if( ct & CT_SelfCollision ) {
+//                                RAVELOG_WARN(str(boost::format("robot in self collision even though nothing moved: %s!")%_report->__str__()));
+//                            }
+//                            nLinksCollideObstacle++;
+//                            collision = true;
+//                            break;
+//                        }
+                    }
+                    else {
+                        int q = (ct&CT_LinkMask)>>CT_LinkMaskShift;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d), value=%f [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
+                            stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << "Joint Vals: ";
+                            for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
+                                ss << dofvals[vi] << " ";
+                            }
+                            ss << endl;
+                            RAVELOG_VERBOSE(ss.str());
                         }
-                        if(coarse_pass) {
-                            //coarse step collided, back up and shrink step
-                            coarse_pass = false;
-                            //if it didn't start in collision, move back one step before switching to smaller step size
-                            if(bMoved) {
-                                dofvals[ifing] -= vclosingdir[ifing] * step_size;
-                                _robot->SetActiveDOFValues(dofvals,true);
-                                num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
-                                step_size = _parameters->ffinestep*fmult;
-                            }
-                            else {
-                                if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                    RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d) [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%_report->__str__()));
-                                    stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << ", Joint Vals: ";
-                                    for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
-                                        ss << dofvals[vi] << " ";
-                                    }
-                                    ss << endl;
-                                    RAVELOG_VERBOSE(ss.str());
-                                }
-                                if( ct & CT_SelfCollision ) {
-                                    RAVELOG_WARN(str(boost::format("robot in self collision even though nothing moved: %s!")%_report->__str__()));
-                                }
-                                ncollided++;
-                                collision = true;
-                                break;
-                            }
-                        }
-                        else {
-                            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d), value=%f [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
-                                stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << "Joint Vals: ";
-                                for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
-                                    ss << dofvals[vi] << " ";
-                                }
-                                ss << endl;
-                                RAVELOG_VERBOSE(ss.str());
-                            }
 
-                            if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
-                                if(bMoved) {
-                                    // don't want the robot to end up in self collision, so back up
-                                    dofvals[ifing] -= vclosingdir[ifing] * step_size;
-                                }
-                                else {
-                                    RAVELOG_WARN("robot in self collision even though nothing moved!\n");
-                                }
-                            }
-                            ncollided++;
-                            collision = true;
-                            break;
+                        if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
+                            dofvals[ifing] -= vclosingdir[ifing] * step_size;
                         }
+                        nLinksCollideObstacle++;
+                        collision = true;
+                        break;
                     }
                 }
 
@@ -471,8 +475,6 @@ public:
                 if(collision) {
                     break;
                 }
-                dofvals[ifing] += vclosingdir[ifing] * step_size;
-                bMoved = true;
             }
         }
 
@@ -500,9 +502,20 @@ public:
         return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;     // only return true if there is at least one valid pose!
     }
 
-    virtual int _CheckCollision(KinBody::LinkConstPtr plink, KinBodyPtr targetbody)
+    virtual int _CheckCollision(KinBody::JointConstPtr pjoint, KinBodyPtr targetbody)
     {
         int ct = 0;
+        for(int q = 0; q < (int)_vlinks.size(); q++) {
+            if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  && ((ct = _CheckCollision(_vlinks[q], KinBodyPtr())) & CT_CollisionMask) ) {
+                break;
+            }
+        }
+        return ct;
+    }
+
+    virtual int _CheckCollision(KinBody::LinkConstPtr plink, KinBodyPtr targetbody)
+    {
+        int ct = (plink->GetIndex()<<CT_LinkMaskShift);
         bool bcollision;
         if( !!targetbody ) {
             bcollision = GetEnv()->CheckCollision(plink, KinBodyConstPtr(targetbody),_report);
