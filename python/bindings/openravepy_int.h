@@ -195,9 +195,9 @@ template <typename T>
 inline RaveTransform<T> ExtractTransformType(const object& o)
 {
     if( len(o) == 7 ) {
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), RaveVector<T>(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     }
-    TransformMatrix t;
+    RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
         t.m[4*i+0] = extract<T>(orow[0]);
@@ -212,9 +212,9 @@ template <typename T>
 inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 {
     if( len(o) == 7 ) {
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), RaveVector<T>(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     }
-    TransformMatrix t;
+    RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
         t.m[4*i+0] = extract<T>(orow[0]);
