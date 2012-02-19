@@ -793,16 +793,16 @@ def __runner(ix, testQueue, resultQueue, currentaddr, currentargs, currentstart,
         except KeyboardInterrupt:
             keyboardCaught.set()
             if len(currentaddr.value) > 0:
-                log.debug('Worker %s keyboard interrupt, failing current test %s', ix,test_addr )
+                log.exception('Worker %s keyboard interrupt, failing current test %s', ix,test_addr )
                 currentaddr.value = bytes_('')
                 failure.Failure(*sys.exc_info())(result)
                 resultQueue.put((ix, test_addr, test.tasks, batch(result)))
             else:
-                log.debug('Worker %s test %s timed out',ix,test_addr)
+                log.exception('Worker %s test %s timed out',ix,test_addr)
                 resultQueue.put((ix, test_addr, test.tasks, batch(result)))
         except SystemExit:
-            log.exception('Worker %s system exit',ix)
             currentaddr.value = bytes_('')
+            log.exception('Worker %s system exit',ix)
             raise
         except:
             log.exception("Worker %s error running test or returning results",ix)
@@ -858,8 +858,7 @@ class NoSharedFixtureContextSuite(ContextSuite):
                 log.debug("queue %d tests"%len(localtests))
                 for test in localtests:
                     if not isinstance(test,NoSharedFixtureContextSuite) and isinstance(test.test,nose.failure.Failure):
-                        # proably failed in the generator, so execute directly
-                        # to get the exception
+                        log.debug('test %s proably failed in the generator, so execute directly to get the exception'%str(test))
                         test(orig)
                     else:
                         MultiProcessTestRunner.addtask(self.testQueue, self.tasks, test)

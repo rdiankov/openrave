@@ -13,7 +13,13 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestMoving(EnvironmentSetup):
+class RunPlanning(EnvironmentSetup):
+    def __init__(self,collisioncheckername):
+        self.collisioncheckername = collisioncheckername
+    def setup(self):
+        EnvironmentSetup.setup(self)
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
+
     def test_basicplanning(self):
         env = self.env
         with env:
@@ -532,3 +538,14 @@ class TestMoving(EnvironmentSetup):
             except openrave_exception, ex:
                 assert(ex.GetCode()==ErrorCode.InvalidState)
                 
+
+#generate_classes(RunPlanning, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunPlanning):
+    def __init__(self):
+        RunPlanning.__init__(self, 'ode')
+
+class test_bullet(RunPlanning):
+    def __init__(self):
+        RunPlanning.__init__(self, 'bullet')
+        

@@ -162,4 +162,13 @@ class RunCollision(EnvironmentSetup):
         assert(env.CheckCollision(robot))
         
 
-generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])
+#generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunCollision):
+    def __init__(self):
+        RunCollision.__init__(self, 'ode')
+
+class test_bullet(RunCollision):
+    def __init__(self):
+        RunCollision.__init__(self, 'bullet')
+

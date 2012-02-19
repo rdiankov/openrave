@@ -175,7 +175,8 @@ generate_classes(Base, globals(), [
         # Set the name for this class, and place it into the namespace
         class_name = "test_" + test_name
         DummyClass.__name__ = class_name
-
+        #from sys import modules
+        #setattr(modules[BaseClass.__module__],class_name,DummyClass)
         if class_name in namespace:
             raise ValueError("namespace already contains a '%s' object" %class_name)
         namespace[class_name] = DummyClass

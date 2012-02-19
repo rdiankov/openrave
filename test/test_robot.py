@@ -355,4 +355,13 @@ class RunRobot(EnvironmentSetup):
 #     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
 #     print linalg.norm(target - ikmodel.manip.GetEndEffectorTransform()[0:3,3])
 
-generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
+#generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunRobot):
+    def __init__(self):
+        RunRobot.__init__(self, 'ode')
+
+class test_bullet(RunRobot):
+    def __init__(self):
+        RunRobot.__init__(self, 'bullet')
+

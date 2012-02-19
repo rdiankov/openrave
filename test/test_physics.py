@@ -179,4 +179,13 @@ class RunPhysics(EnvironmentSetup):
                 values = robot.GetActiveDOFValues()
                 assert(sum(abs(values-orgvalues))<1)
 
-generate_classes(RunPhysics, globals(), [('ode','ode'),('bullet','bullet')])
+#generate_classes(RunPhysics, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunPhysics):
+    def __init__(self):
+        RunPhysics.__init__(self, 'ode')
+
+class test_bullet(RunPhysics):
+    def __init__(self):
+        RunPhysics.__init__(self, 'bullet')
+        
