@@ -793,7 +793,7 @@ protected:
                 if(( simcmd == "start") ||( simcmd == "on") ) {
                     dReal fdeltatime = 0.01f;
                     *is >> fdeltatime;
-                    RAVELOG_DEBUG("starting simulation loop, timestep=%f\n", (float)fdeltatime);
+                    RAVELOG_DEBUG(str(boost::format("starting simulation loop, timestep=%f")%deltatime));
                     GetEnv()->StartSimulation(fdeltatime);
                 }
                 else {
@@ -1950,7 +1950,8 @@ protected:
         if( !probot->GetController() ) {
             return false;
         }
-        int numpoints, havetime, havetrans;
+        int numpoints;
+        bool havetime, havetrans;
         *is >> numpoints >> havetime >> havetrans;
         if( !*is ) {
             return false;
@@ -2115,7 +2116,7 @@ protected:
         CollisionReportPtr preport(new CollisionReport());
         RAY r;
         bool bcollision;
-        vector<float> info;
+        vector<dReal> info;
 
         while(!is.eof()) {
             is >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
@@ -2214,7 +2215,7 @@ protected:
         RobotBasePtr probot;
         ControllerBasePtr pcontroller;
         int timeout = -1;
-        float ftimeout;
+        dReal ftimeout;
 
         {
             EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
