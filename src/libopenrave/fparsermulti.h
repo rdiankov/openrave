@@ -23,6 +23,14 @@
 #include <fparser/fpaux.hh>
 #include <sstream>
 #include <cstdio>
+#include <utility>
+
+// visual c++ 2010 has a max defined somewhere that causes namespace conflicts.
+template <typename T>
+const T& mymax(const T& a, const T& b)
+{
+    return (a<b)?b:a;
+}
 
 // out = fn(in)
 #define EVAL_MULTI_APPLY(fn,SPout,SPin) { \
@@ -33,13 +41,14 @@
 } \
 
 #define EVAL_MULTI_COMPARE_INDICES(index0,index1) ((index0)==-1 || (index1)==-1 || (index0)==(index1))
+
 // out = fn(in0,in1): have to take the cross product, be careful since SPout can be SPin0 or SPin1
 #define EVAL_MULTI_APPLY2(fn,SPout,SPin0,SPin1) {     \
         VALUES _vtemp_; _vtemp_.reserve((SPin0).size()*(SPin1).size()); \
         for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
             for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
                 if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
-                    _vtemp_.push_back(std::make_pair(fn((SPin0)[ii].first,(SPin1)[jj].first),std::max((SPin0)[ii].second,(SPin1)[jj].second))); \
+                    _vtemp_.push_back(std::make_pair(fn((SPin0)[ii].first,(SPin1)[jj].first),mymax((SPin0)[ii].second,(SPin1)[jj].second))); \
                 } \
             } \
         } \
@@ -62,7 +71,7 @@
         for(size_t ii = 0; ii < (SPin0).size(); ++ii) { \
             for(size_t jj = 0; jj < (SPin1).size(); ++jj) { \
                 if( EVAL_MULTI_COMPARE_INDICES((SPin0)[ii].second, (SPin1)[jj].second) ) { \
-                    _vtemp_.push_back(std::make_pair((SPin0)[ii].first op (SPin1)[jj].first,std::max((SPin0)[ii].second,(SPin1)[jj].second))); \
+                    _vtemp_.push_back(std::make_pair((SPin0)[ii].first op (SPin1)[jj].first,mymax((SPin0)[ii].second,(SPin1)[jj].second))); \
                 } \
             } \
         } \
@@ -508,7 +517,7 @@ public:
                         std::pair<Value_t,int> param = Stack[SP-params+1+iparam].at(vparamindices[iparam]);
                         if( param.second == -1 || maxuniqueindexvalue == -1 || param.second == maxuniqueindexvalue ) {
                             vparams[iparam] = param.first;
-                            maxuniqueindexvalue = std::max(maxuniqueindexvalue,param.second);
+                            maxuniqueindexvalue = mymax(maxuniqueindexvalue,param.second);
                         }
                         else {
                             docall = false;
@@ -575,7 +584,7 @@ public:
                         std::pair<Value_t,int> param = Stack[SP-params+1+iparam].at(vparamindices[iparam]);
                         if( param.second == -1 || maxuniqueindexvalue == -1 || param.second == maxuniqueindexvalue ) {
                             vparams[iparam] = param.first;
-                            maxuniqueindexvalue = std::max(maxuniqueindexvalue,param.second);
+                            maxuniqueindexvalue = mymax(maxuniqueindexvalue,param.second);
                         }
                         else {
                             docall = false;
