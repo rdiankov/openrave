@@ -50,7 +50,7 @@ void MainOpenRAVEThread();
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr s_penv;
-static boost::shared_ptr<boost::thread> s_mainThread;
+//static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
@@ -269,9 +269,10 @@ int main(int argc, char ** argv)
         }
     }
 
-    s_bThreadDestroyed = false;
-    s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
-    s_mainThread->join();
+    //s_bThreadDestroyed = false;
+    //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread->join();
+    MainOpenRAVEThread();
     s_penv.reset();
     RaveDestroy();
     return 0;
@@ -372,6 +373,7 @@ void MainOpenRAVEThread()
 
 void sigint_handler(int sig)
 {
+    s_bThreadDestroyed = true;
     RaveDestroy();
     s_penv.reset();
 #ifndef _WIN32

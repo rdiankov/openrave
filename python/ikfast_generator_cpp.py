@@ -369,8 +369,8 @@ inline double IKlog(double f) { return log(f); }
 inline float IKasin(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return -IKPI_2;
-else if( f >= 1 ) return IKPI_2;
+if( f <= -1 ) return float(-IKPI_2);
+else if( f >= 1 ) return float(IKPI_2);
 return asinf(f);
 }
 inline double IKasin(double f)
@@ -402,8 +402,8 @@ inline float IKfmod(double x, double y)
 inline float IKacos(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return IKPI;
-else if( f >= 1 ) return 0;
+if( f <= -1 ) return float(IKPI);
+else if( f >= 1 ) return float(0);
 return acosf(f);
 }
 inline double IKacos(double f)
@@ -424,7 +424,7 @@ inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
         IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
-        return IKPI_2;
+        return float(IKPI_2);
     }
     else if( isnan(fx) ) {
         return 0;
@@ -444,10 +444,10 @@ inline double IKatan2(double fy, double fx) {
 
 inline float IKsign(float f) {
     if( f > 0 ) {
-        return 1.0f;
+        return float(1);
     }
     else if( f < 0 ) {
-        return -1.0f;
+        return float(-1);
     }
     return 0;
 }

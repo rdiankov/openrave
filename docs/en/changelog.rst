@@ -67,6 +67,8 @@ Misc
 
 * Fixed race condition with video recorder.
 
+* openrave.exe now creates the viewer in the main thread for Mac OSX compatibility.
+
 Version 0.6.2
 =============
 

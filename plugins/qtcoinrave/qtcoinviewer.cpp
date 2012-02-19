@@ -2550,8 +2550,8 @@ void QtCoinViewer::_VideoFrame()
     FOREACH(itcallback,listViewerImageCallbacks) {
         try {
             (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
-	}
-	catch(const std::exception& e) {
+        }
+        catch(const std::exception& e) {
             RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
         }
     }
@@ -3246,7 +3246,14 @@ void QtCoinViewer::EnvMessage::callerexecute()
     }
 
     if( bWaitForMutex ) {
-        boost::mutex::scoped_lock lock(_mutex);
+        bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+        if( bGuiThread ) {
+            // calling from gui thread, so execute directly
+            viewerexecute();
+        }
+        else {
+            boost::mutex::scoped_lock lock(_mutex);
+        }
     }
 }
 
