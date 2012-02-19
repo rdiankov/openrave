@@ -3240,18 +3240,18 @@ void QtCoinViewer::EnvMessage::callerexecute()
 {
     bool bWaitForMutex = !!_plock;
 
-    {
-        boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
-        _pviewer->_listMessages.push_back(shared_from_this());
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if( bGuiThread ) {
+        // calling from gui thread, so execute directly
+        viewerexecute();
     }
-
-    if( bWaitForMutex ) {
-        bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
-        if( bGuiThread ) {
-            // calling from gui thread, so execute directly
-            viewerexecute();
+    else {
+        {
+            boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
+            _pviewer->_listMessages.push_back(shared_from_this());
         }
-        else {
+
+        if( bWaitForMutex ) {
             boost::mutex::scoped_lock lock(_mutex);
         }
     }

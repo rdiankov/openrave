@@ -269,6 +269,7 @@ int main(int argc, char ** argv)
         }
     }
 
+    // mac osx requires the main thread to be the gui thread...
     //s_bThreadDestroyed = false;
     //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
@@ -283,7 +284,7 @@ void MainOpenRAVEThread()
 {
     EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
     ViewerBasePtr pviewer;
-    if( bDisplayGUI && (!s_viewerName ||(s_viewerName->size()>0)) ) {
+    if( bDisplayGUI && (!s_viewerName ||s_viewerName->size()>0) ) {
         // find a viewer
         if( !!s_viewerName &&(s_viewerName->size() > 0)) {
             pviewer = RaveCreateViewer(penv, *s_viewerName);
