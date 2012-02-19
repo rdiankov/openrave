@@ -793,7 +793,7 @@ protected:
                 if(( simcmd == "start") ||( simcmd == "on") ) {
                     dReal fdeltatime = 0.01f;
                     *is >> fdeltatime;
-                    RAVELOG_DEBUG(str(boost::format("starting simulation loop, timestep=%f")%deltatime));
+                    RAVELOG_DEBUG(str(boost::format("starting simulation loop, timestep=%f")%fdeltatime));
                     GetEnv()->StartSimulation(fdeltatime);
                 }
                 else {
