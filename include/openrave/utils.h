@@ -43,7 +43,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <sys/timeb.h>    // ftime(), struct timeb
-#define usleep(microseconds) Sleep((microseconds+999)/1000)
+inline void usleep(unsigned long microseconds) {
+    Sleep((microseconds+999)/1000);
+}
 #endif
 
 #include <bitset>

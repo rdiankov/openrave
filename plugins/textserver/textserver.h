@@ -14,8 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef RAVE_SERVER
-#define RAVE_SERVER
+#ifndef OPENRAVE_TEXTSERVER
+#define OPENRAVE_TEXTSERVER
 
 #include <openrave/planningutils.h>
 
@@ -23,6 +23,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#define usleep(microseconds) Sleep((microseconds+999)/1000)
 #endif
 
 #include <sstream>

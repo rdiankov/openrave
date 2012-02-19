@@ -293,7 +293,7 @@ inline numeric::array toPyArrayN(const float* pvalues, std::vector<npy_intp>& di
     if( dims.size() == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
     }
-    uint64_t totalsize = 1;
+    size_t totalsize = 1;
     FOREACH(it,dims) {
         totalsize *= *it;
     }
@@ -325,7 +325,7 @@ inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& d
     if( dims.size() == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
     }
-    uint64_t totalsize = 1;
+    size_t totalsize = 1;
     FOREACH(it,dims) {
         totalsize *= *it;
     }
@@ -344,7 +344,7 @@ inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& 
     if( dims.size() == 0 ) {
         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
     }
-    uint64_t totalsize = 1;
+    size_t totalsize = 1;
     for(size_t i = 0; i < dims.size(); ++i) {
         totalsize *= dims[i];
     }
@@ -420,7 +420,7 @@ inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
 {
     if( v.size() == 0 )
         return toPyArrayN((T*)NULL,0);
-    uint64_t totalsize = 1;
+    size_t totalsize = 1;
     FOREACH(it,dims)
     totalsize *= *it;
     BOOST_ASSERT(totalsize == v.size());

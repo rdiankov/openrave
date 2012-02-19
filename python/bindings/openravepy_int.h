@@ -144,21 +144,21 @@ inline RaveVector<float> ExtractFloat3(const object& o)
 }
 
 template <typename T>
-inline Vector ExtractVector2Type(const object& o)
+inline RaveVector<T> ExtractVector2Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]),0);
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]),0);
 }
 
 template <typename T>
-inline Vector ExtractVector3Type(const object& o)
+inline RaveVector<T> ExtractVector3Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
 }
 
 template <typename T>
-inline Vector ExtractVector4Type(const object& o)
+inline RaveVector<T> ExtractVector4Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
 }
 
 inline Vector ExtractVector2(const object& oraw)
@@ -192,7 +192,7 @@ inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
 }
 
 template <typename T>
-inline Transform ExtractTransformType(const object& o)
+inline RaveTransform<T> ExtractTransformType(const object& o)
 {
     if( len(o) == 7 ) {
         return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
@@ -209,7 +209,7 @@ inline Transform ExtractTransformType(const object& o)
 }
 
 template <typename T>
-inline TransformMatrix ExtractTransformMatrixType(const object& o)
+inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 {
     if( len(o) == 7 ) {
         return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
