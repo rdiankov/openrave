@@ -291,7 +291,7 @@ public:
         }
 
         _WriteTrajectory(ptraj,newspec, data);
-        RAVELOG_DEBUG(str(boost::format("%s path length=%fs")%GetXMLId()%ptraj->GetDuration()));
+        RAVELOG_DEBUG(str(boost::format("%s path duration=%fs")%GetXMLId()%ptraj->GetDuration()));
         return PS_HasSolution;
     }
 

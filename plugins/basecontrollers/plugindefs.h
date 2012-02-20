@@ -59,4 +59,6 @@
 using namespace std;
 using namespace OpenRAVE;
 
+static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
+
 #endif

@@ -32,10 +32,12 @@ Planning
 
 * Fixed :meth:`.planningutils.ReverseTrajectory` for linearly interpolated trajectories.
 
+* Fixed grasp offsets and trajectory combining in :ref:`module-taskmanipulation-graspplanning` and :meth:`.planningutils.InsertActiveDOFWaypointWithRetiming`.
+
 Grasping
 --------
 
-* Fixed grasp planner bug in returning no solution when last point is in collision.
+* Fixed several grasperplanner bugs: one in returning no solution when last point is in collision.
 
 Python
 ------
@@ -67,7 +69,7 @@ Misc
 
 * Fixed race condition with video recorder.
 
-* openrave.exe now creates the viewer in the main thread for Mac OSX compatibility.
+* Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
 
 Version 0.6.2
 =============

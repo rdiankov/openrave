@@ -297,9 +297,8 @@ class GraspPlanning:
             istartgrasp = graspindex+1
             grasp = gmodel.grasps[graspindex]
             Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-            
-            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             self.waitrobot(robot)
+            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             
             if approachoffset != 0:
                 print 'moving hand'

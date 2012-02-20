@@ -202,11 +202,7 @@ public:
             _parameters->_diffstatefn(vdiff,vdata);
             for(size_t i = 0; i < vdiff.size(); ++i) {
                 if( !(RaveFabs(vdiff.at(i)) <= 0.001 * _parameters->_vConfigResolution[i]) ) {
-                    string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
-                    ofstream f(filename.c_str());
-                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-                    trajectory->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f, wrote trajectory to %s",ipoint%i%vdata.at(i)%newq.at(i)%filename,ORE_InconsistentConstraints);
+                    throw OPENRAVE_EXCEPTION_FORMAT("setstate/getstate inconsistent configuration %d dof %d: %f != %f, wrote trajectory to %s",ipoint%i%vdata.at(i)%newq.at(i)%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                 }
             }
             if( !!_parameters->_neighstatefn ) {
@@ -627,14 +623,9 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         }
     }
     else {
-        // overwrite 1st and insert last N-1
-        vwaypointstart.resize(targetdof);
-        std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vwaypointstart.begin());
-        traj->Insert(waypointindex-1,vwaypointstart,true);
+        // insert last N-1
         vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
-        if( vtargetvalues.size() > 0 ) {
-            traj->Insert(waypointindex,vtargetvalues,false);
-        }
+        traj->Insert(waypointindex,vtargetvalues,false);
     }
 }
 

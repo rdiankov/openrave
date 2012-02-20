@@ -27,6 +27,7 @@ class GrasperPlanner :  public PlannerBase
         CT_EnvironmentCollision = 8,
         CT_RegularCollision = (CT_TargetCollision|CT_EnvironmentCollision),
         CT_CollisionMask = 0x000000ff,
+        CT_NothingHit = 0x100,
         CT_LinkMask = 0xff000000,
         CT_LinkMaskShift = 24,
     };
@@ -136,10 +137,17 @@ public:
                 }
 
                 // find furthest point from origin of body and rotate around center
-                AABB ab = _parameters->targetbody->ComputeAABB();
+                AABB ab;
+                {
+                    // have to compute in the target's coordinate system since aabb extents change
+                    KinBody::KinBodyStateSaver saver(_parameters->targetbody);
+                    _parameters->targetbody->SetTransform(Transform());
+                    ab = _parameters->targetbody->ComputeAABB();
+                }
                 dReal fmaxradius = RaveSqrt(ab.extents.lengthsqr3());
                 tTargetOffset.rot = quatFromAxisAngle(vrandaxis,RaveRandomFloat()*_parameters->fgraspingnoise*frotratio*fmaxradius);
-                tTargetOffset.trans = tTargetOffset.rotate(-ab.pos)+ab.pos+vrandtrans;
+                Vector abposglobal = _parameters->targetbody->GetTransform()*ab.pos;
+                tTargetOffset.trans = tTargetOffset.rotate(-abposglobal)+abposglobal+vrandtrans;
             }
         }
 
@@ -255,6 +263,10 @@ public:
 
         if( _robot->GetAffineDOF() ) {
             int ct = _MoveStraight(ptraj, vapproachdir, dofvals, CT_RegularCollision);
+            if( ct & CT_NothingHit ) {
+                RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
+                return PS_Failed;
+            }
 
             if( _parameters->fstandoff > 0 ) {
                 dReal* pX = NULL, *pY = NULL, *pZ = NULL;
@@ -552,6 +564,7 @@ protected:
             targetbody = _parameters->targetbody;
         }
 
+        bool bMoved = false;
         Vector v = vapproachdir * (_parameters->fcoarsestep*_parameters->ftranslationstepmult);
         int ct = 0;
         while(1) {
@@ -580,13 +593,17 @@ protected:
                 *pZ += v.z;
             }
             _robot->SetActiveDOFValues(dofvals);
+            bMoved = true;
 
             // check if robot is already past all objects
             AABB abRobot = _robot->ComputeAABB();
             if( vapproachdir.dot(abRobot.pos-_vTargetCenter) > _fTargetRadius + RaveSqrt(abRobot.extents.lengthsqr3()) ) {
-                RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
-                return false;
+                return CT_NothingHit;
             }
+        }
+
+        if( !bMoved ) {
+            return ct;
         }
 
         // move back and try again with a finer step
@@ -599,20 +616,9 @@ protected:
         if( pZ != NULL ) {
             *pZ -= v.z;
         }
-        _robot->SetActiveDOFValues(dofvals);
-
+        // know the robot is not in collision at this point
         v = vapproachdir * (_parameters->ffinestep*_parameters->ftranslationstepmult);
         while(1) {
-            ct = 0;
-            for(int q = 0; q < (int)_vlinks.size(); q++) {
-                ct = _CheckCollision(_vlinks[q], targetbody);
-                if( ct&checkcollisions ) {
-                    break;
-                }
-            }
-            if( ct&checkcollisions ) {
-                break;
-            }
             if( pX != NULL ) {
                 *pX += v.x;
             }
@@ -626,6 +632,17 @@ protected:
 
             if(_parameters->breturntrajectory) {
                 ptraj->Insert(ptraj->GetNumWaypoints(),dofvals, _robot->GetActiveConfigurationSpecification());
+            }
+
+            ct = 0;
+            for(int q = 0; q < (int)_vlinks.size(); q++) {
+                ct = _CheckCollision(_vlinks[q], targetbody);
+                if( ct&checkcollisions ) {
+                    break;
+                }
+            }
+            if( ct&checkcollisions ) {
+                break;
             }
         }
 

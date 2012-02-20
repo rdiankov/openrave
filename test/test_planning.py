@@ -433,11 +433,14 @@ class RunPlanning(EnvironmentSetup):
         with env:
             basemanip = interfaces.BaseManipulation(robot)
             taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
-            target = env.GetKinBody('mug1')
+            robot.SetDOFValues(array([-1.04058615, -1.66533689,  1.38425976,  2.01136615, -0.60557912, -1.19215041,  1.96465159,  0.        ,  0.        ,  0.        , 1.57079633]))
             approachoffset = 0.02
-            dests = ComputeDestinations(target,env.GetKinBody('table'))
+            dests = ComputeDestinations(gmodel.target,env.GetKinBody('table'))
+            Ttarget = gmodel.target.GetTransform()
             goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            assert(transdist(Ttarget,gmodel.target.GetTransform()) <= g_epsilon)
             self.RunTrajectory(robot,traj)
+            assert(transdist(Ttarget,gmodel.target.GetTransform()) <= g_epsilon)
             grasp = gmodel.grasps[graspindex]
             direction=gmodel.getGlobalApproachDir(grasp)
             Tcurgrasp = gmodel.manip.GetTransform()
@@ -457,6 +460,17 @@ class RunPlanning(EnvironmentSetup):
             self.RunTrajectory(robot,traj)
             Tcurgrasp = gmodel.manip.GetTransform()
             assert(transdist(Tgoalgrasp,Tcurgrasp) <= g_epsilon )
+
+            gmodel.target.Enable(False)
+            
+            # try another
+            gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug2'))
+            gmodel.load()
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
+            # should be able to solve it again
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
             
     def test_releasefingers(self):
         env=self.env

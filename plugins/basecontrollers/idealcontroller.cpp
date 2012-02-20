@@ -35,7 +35,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "If set, will check if the robot gets into a collision during movement");
         RegisterCommand("SetThrowExceptions",boost::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
-        fTime = 0;
+        _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
     }
@@ -109,7 +109,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( values.size() != _dofindices.size() ) {
             throw openrave_exception(str(boost::format("wrong desired dimensions %d!=%d")%values.size()%_dofindices.size()),ORE_InvalidArguments);
         }
-        fTime = 0;
+        _fCommandTime = 0;
         _ptraj.reset();
         // do not set done to true here! let it be picked up by the simulation thread.
         // this will also let it have consistent mechanics as SetPath
@@ -143,7 +143,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _bIsDone = true;
             return false;
         }
-        fTime = 0;
+        _fCommandTime = 0;
         _bIsDone = true;
         _vecdesired.resize(0);
 
@@ -205,7 +205,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
             vector<dReal> sampledata;
-            ptraj->Sample(sampledata,fTime,_samplespec);
+            ptraj->Sample(sampledata,_fCommandTime,_samplespec);
 
             // first process all grab info
             list<KinBodyPtr> listrelease;
@@ -234,14 +234,14 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( _bTrajHasTransform && _nControlTransformation ) {
                 _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
                 if( vdofvalues.size() > 0 ) {
-                    _SetDOFValues(vdofvalues,t, fTime > 0 ? fTimeElapsed : 0);
+                    _SetDOFValues(vdofvalues,t, _fCommandTime > 0 ? fTimeElapsed : 0);
                 }
                 else {
                     _probot->SetTransform(t);
                 }
             }
             else if( vdofvalues.size() > 0 ) {
-                _SetDOFValues(vdofvalues, fTime > 0 ? fTimeElapsed : 0);
+                _SetDOFValues(vdofvalues, _fCommandTime > 0 ? fTimeElapsed : 0);
             }
 
             // always release after setting dof values
@@ -249,12 +249,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _probot->Release(*itbody);
             }
 
-            if( fTime > ptraj->GetDuration() ) {
-                fTime = ptraj->GetDuration();
+            if( _fCommandTime > ptraj->GetDuration() ) {
+                _fCommandTime = ptraj->GetDuration();
                 _bIsDone = true;
             }
             else {
-                fTime += _fSpeed * fTimeElapsed;
+                _fCommandTime += _fSpeed * fTimeElapsed;
             }
         }
 
@@ -273,7 +273,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         return _bIsDone;
     }
     virtual dReal GetTime() const {
-        return fTime;
+        return _fCommandTime;
     }
     virtual RobotBasePtr GetRobot() const {
         return _probot;
@@ -358,11 +358,11 @@ private:
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
-                if( curvalues.at(i) < _vlower[0][i]-5e-5f ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %f < %f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]));
+                if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %f < %f, time=%f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
                 }
-                if( curvalues.at(i) > _vupper[0][i]+5e-5f ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %f > %f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]));
+                if( curvalues.at(i) > _vupper[0][i]+g_fEpsilonJointLimit ) {
+                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %f > %f, time=%f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
                 }
             }
         }
@@ -370,9 +370,9 @@ private:
             vector<dReal> vdiff = curvalues;
             _probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
-                dReal maxallowed = timeelapsed * _vupper[1][i]+5e-5f;
+                dReal maxallowed = timeelapsed * _vupper[1][i]+g_fEpsilonJointLimit;
                 if( RaveFabs(vdiff.at(i)) > maxallowed ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed));
+                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f, time=%f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
                 }
             }
         }
@@ -382,16 +382,23 @@ private:
     {
         if( _bCheckCollision ) {
             if( GetEnv()->CheckCollision(KinBodyConstPtr(_probot),_report) ) {
-                _ReportError(str(boost::format("collsion in trajectory: %s\n")%_report->__str__()));
+                _ReportError(str(boost::format("collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
             }
             if( _probot->CheckSelfCollision(_report) ) {
-                _ReportError(str(boost::format("self collsion in trajectory: %s\n")%_report->__str__()));
+                _ReportError(str(boost::format("self collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
             }
         }
     }
 
     void _ReportError(const std::string& s)
     {
+        if( !!_ptraj ) {
+            string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            ofstream f(filename.c_str());
+            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+            _ptraj->serialize(f);
+            RAVELOG_DEBUG(str(boost::format("trajectory dumped to %s")%filename));
+        }
         if( _bThrowExceptions ) {
             throw openrave_exception(s,ORE_Assert);
         }
@@ -405,7 +412,7 @@ private:
     TrajectoryBasePtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;
     vector< pair<int, int> > _vgrablinks; /// (data offset, link index) pairs
-    dReal fTime;
+    dReal _fCommandTime;
 
     std::vector<dReal> _vecdesired;         ///< desired values of the joints
     Transform _tdesired;
