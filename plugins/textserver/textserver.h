@@ -24,8 +24,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #else
+// for some reason there's a clash between winsock.h and winsock2.h, so don't include winsockX directly
 #define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
+#include <windows.h>
 #define usleep(microseconds) Sleep((microseconds+999)/1000)
 #endif
 

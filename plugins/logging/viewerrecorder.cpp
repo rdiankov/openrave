@@ -221,7 +221,7 @@ protected:
             }
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
-            _frametime = (uint64_t)(1000000/_framerate);
+            _frametime = (uint64_t)(1000000.0f/_framerate);
             _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             return !!_callback;
@@ -397,7 +397,7 @@ protected:
             boost::mutex::scoped_lock lock(_mutex);
             _nFrameCount = 0;
             _nVideoWidth = _nVideoHeight = 0;
-            _framerate = 30000.0f/1001.0;
+            _framerate = 30000.0f/1001.0f;
             _starttime = 0;
             _callback.reset();
             _bUseSimulationTime = true;

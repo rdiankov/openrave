@@ -2598,14 +2598,14 @@ float RaveRandomFloat(IntervalType interval)
 {
     std::vector<dReal> sample;
     RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample,1,interval);
-    return sample.at(0);
+    return float(sample.at(0));
 }
 
 double RaveRandomDouble(IntervalType interval)
 {
     std::vector<dReal> sample;
     RaveGlobal::instance()->GetDefaultSampler()->SampleSequence(sample,1,interval);
-    return sample.at(0);
+    return double(sample.at(0));
 }
 
 namespace LocalXML {

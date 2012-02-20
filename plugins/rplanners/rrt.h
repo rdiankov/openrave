@@ -170,7 +170,7 @@ public:
             return false;
         }
 
-        _fGoalBiasProb = 0.01;
+        _fGoalBiasProb = dReal(0.01);
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -447,7 +447,7 @@ public:
 protected:
     RRTParametersPtr _parameters;
     SpatialTree< RrtPlanner<SimpleNode>, SimpleNode > _treeBackward;
-    float _fGoalBiasProb;
+    dReal _fGoalBiasProb;
     std::vector< std::vector<dReal> > _vecGoals;
 };
 
@@ -457,7 +457,7 @@ public:
     BasicRrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
     {
         __description = "Rosen's BiRRT planner";
-        _fGoalBiasProb = 0.05f;
+        _fGoalBiasProb = dReal(0.05);
         _bOneStep = false;
     }
     virtual ~BasicRrtPlanner() {
@@ -626,7 +626,7 @@ public:
 
 protected:
     boost::shared_ptr<BasicRRTParameters> _parameters;
-    float _fGoalBiasProb;
+    dReal _fGoalBiasProb;
     bool _bOneStep;
     std::vector< std::vector<dReal> > _vecGoals;
 };

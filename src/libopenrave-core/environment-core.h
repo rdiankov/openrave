@@ -598,15 +598,15 @@ public:
         return Remove(InterfaceBasePtr(pbody));
     }
 
-    virtual bool Remove(InterfaceBasePtr interface)
+    virtual bool Remove(InterfaceBasePtr pinterface)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::mutex::scoped_lock lock(_mutexInterfaces);
-        CHECK_INTERFACE(interface);
-        switch(interface->GetInterfaceType()) {
+        CHECK_INTERFACE(pinterface);
+        switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
         case PT_Robot: {
-            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(interface);
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             vector<KinBodyPtr>::iterator it = std::find(_vecbodies.begin(), _vecbodies.end(), pbody);
             if( it == _vecbodies.end() ) {
                 return false;
@@ -633,7 +633,7 @@ public:
             return true;
         }
         case PT_Sensor: {
-            SensorBasePtr psensor = RaveInterfaceCast<SensorBase>(interface);
+            SensorBasePtr psensor = RaveInterfaceCast<SensorBase>(pinterface);
             list<SensorBasePtr>::iterator it = std::find(_listSensors.begin(), _listSensors.end(), psensor);
             if( it != _listSensors.end() ) {
                 (*it)->Configure(SensorBase::CC_PowerOff);
@@ -643,7 +643,7 @@ public:
             break;
         }
         case PT_Module: {
-            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(interface);
+            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(pinterface);
             list<ModuleBasePtr>::iterator itmodule = find(_listModules.begin(), _listModules.end(), prob);
             if( itmodule != _listModules.end() ) {
                 (*itmodule)->Destroy();
@@ -653,7 +653,7 @@ public:
             break;
         }
         case PT_Viewer: {
-            ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(interface);
+            ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(pinterface);
             list<ViewerBasePtr>::iterator itviewer = find(_listViewers.begin(), _listViewers.end(), pviewer);
             if( itviewer != _listViewers.end() ) {
                 (*itviewer)->quitmainloop();
@@ -663,7 +663,7 @@ public:
             break;
         }
         default:
-            RAVELOG_WARN(str(boost::format("unmanaged interfaces of type %s cannot be removed\n")%RaveGetInterfaceName(interface->GetInterfaceType())));
+            RAVELOG_WARN(str(boost::format("unmanaged interfaces of type %s cannot be removed\n")%RaveGetInterfaceName(pinterface->GetInterfaceType())));
             break;
         }
         return false;

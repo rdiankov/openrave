@@ -210,7 +210,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // first process all grab info
             list<KinBodyPtr> listrelease;
             FOREACH(itgrabinfo,_vgrablinks) {
-                int bodyid = std::floor(sampledata.at(itgrabinfo->first)+0.5);
+                int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
                     KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
                     if( bodyid < 0 ) {

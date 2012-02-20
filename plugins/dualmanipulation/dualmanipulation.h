@@ -456,7 +456,7 @@ protected:
 
             size_t j = 0;
             for(; j < point.q.size(); j++) {
-                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2) {
+                if(RaveFabs(point.q[j] - vPrevValues[j]) > 0.2) {
                     RAVELOG_DEBUG("Breaking here %d\n",j);
                     break;
                 }

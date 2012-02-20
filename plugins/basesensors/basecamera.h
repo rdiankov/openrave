@@ -382,7 +382,7 @@ protected:
 
     Transform _trans;
     dReal _fTimeToImage;
-    int framerate;
+    float framerate;
     int _numchannels;
     GraphHandlePtr _graphgeometry;
     ViewerBasePtr _dataviewer;
