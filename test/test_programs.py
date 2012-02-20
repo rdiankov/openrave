@@ -31,31 +31,31 @@ class RunExample(object):
         example = getattr(examples,self.name)
         example.run(args=self.args+['--testmode',"--viewer="])
 
-def test_examples():
-    yield RunExample('hanoi', 'default',[])
-    yield RunExample('calibrationviews', 'default',['--noshowsensor'])
-    yield RunExample('graspplanning', 'default', [])
-
-class RunDatabase(object):
-    def __init__(self,name,docname,args=[]):
-        self.name=name
-        self.args=args
-        self.description = 'test_programs.database.%s.%s'%(name,docname)
-            
-    def __call__(self):
-        database = getattr(databases,self.name)
-        database.run(args=args+["--viewer="])
-
-def test_databases():
-    """test if all the databases run on default parameters"""
-    yield RunDatabase('kinematicreachability', 'wam', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2'])
-    yield RunDatabase('kinematicreachability', 'pr2', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4'])
-    yield RunDatabase('convexdecomposition', 'hironx', ['--robot=robots/kawada-hironx.zae'])
-    yield RunDatabase('linkstatistics', 'hironx', ['--robot=robots/kawada-hironx.zae'])
-    yield RunDatabase('linkstatistics', 'pr2', ['--robot=robots/pr2-beta-static.zae'])
-    yield RunDatabase('grasping', 'barrett', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1'])
-    yield RunDatabase('grasping', 'barrett_multi', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2'])
-    yield RunDatabase('inversekinematics', 'wam', ['--robot=robots/barrettwam.robot.xml','--iktests=100'])
+# def test_examples():
+#     yield RunExample('hanoi', 'default',[])
+#     yield RunExample('calibrationviews', 'default',['--noshowsensor'])
+#     yield RunExample('graspplanning', 'default', [])
+# 
+# class RunDatabase(object):
+#     def __init__(self,name,docname,args=[]):
+#         self.name=name
+#         self.args=args
+#         self.description = 'test_programs.database.%s.%s'%(name,docname)
+#             
+#     def __call__(self):
+#         database = getattr(databases,self.name)
+#         database.run(args=args+["--viewer="])
+# 
+# def test_databases():
+#     """test if all the databases run on default parameters"""
+#     yield RunDatabase('kinematicreachability', 'wam', ['--robot=robots/barrettwam.robot.xml','--quatdelta=1','--xyzdelta=0.2'])
+#     yield RunDatabase('kinematicreachability', 'pr2', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--quatdelta=1','--xyzdelta=0.4'])
+#     yield RunDatabase('convexdecomposition', 'hironx', ['--robot=robots/kawada-hironx.zae'])
+#     yield RunDatabase('linkstatistics', 'hironx', ['--robot=robots/kawada-hironx.zae'])
+#     yield RunDatabase('linkstatistics', 'pr2', ['--robot=robots/pr2-beta-static.zae'])
+#     yield RunDatabase('grasping', 'barrett', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1'])
+#     yield RunDatabase('grasping', 'barrett_multi', ['--robot=robots/barrettwam.robot.xml','--target=data/mug2.kinbody.xml','--boxdelta=0.1','--numthreads=2'])
+#     yield RunDatabase('inversekinematics', 'wam', ['--robot=robots/barrettwam.robot.xml','--iktests=100'])
         
 #     yield run_database, 'inversereachability', ['--robot=robots/barrettwam.robot.xml']
 #     yield run_database, 'grasping', ['--robot=robots/pr2-beta-static.zae','--manipname=leftarm','--target=data/box_frootloops.kinbody.xml','--boxdelta=0.05']
@@ -67,28 +67,41 @@ def GetRunCommand():
 def GetPythonCommand():
     return '' if sys.platform.startswith('win') or platform.system().lower() == 'windows' else 'python '
 
-def CompileProject(cmakedir):
+def CompileProject(cmakedir,cmakebuilddir=None):
     """will compile the cmake project and run testfn
     """
     cmakeoptions = ''
-    makecommand = 'make %s'
-    programdir = 'build'
+    cmakedir = os.path.abspath(cmakedir)
+    cmakename = os.path.split(cmakedir)[1]
+    makecommand = 'make '
+    if cmakebuilddir is None:
+        cmakebuilddir = cmakename+'_build'
+    programdir = cmakebuilddir
     if openravepyCompilerVersion().startswith('msvc'):
         cmakeoptions += '-G "Visual Studio 10" '
-        makecommand = '"C:\\Program Files\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" x86 && msbuild %s.sln /p:Configuration=RelWithDebInfo /maxcpucount:1'
+        makecommand = '"C:\\Program Files\\Microsoft Visual Studio 10.0\\VC\\vcvarsall.bat" x86 && msbuild %s.sln /p:Configuration=RelWithDebInfo /maxcpucount:1'%cmakename
     if sys.platform.startswith('win') or platform.system().lower() == 'windows':
-        programdir = 'build\\RelWithDebInfo'
-    os.chdir(cmakedir)
-    os.mkdir('build')
-    os.chdir('build')
-    assert(os.system('cmake %s ..'%cmakeoptions) == 0)
-    assert(os.system(makecommand%cmakedir) == 0)
-    os.chdir('..')
-    if programdir != 'build':
-        dllfilename = os.path.join(programdir,cmakedir+'.dll')
-        if os.path.exists(dllfilename):
-            shutil.copyfile(dllfilename,'build/'+cmakedir+'.dll')
-    return programdir
+        programdir += '\\RelWithDebInfo'
+
+    try:
+        os.mkdir(cmakebuilddir)
+        
+    except OSError,e:
+        pass
+
+    curdir = os.getcwd()
+    try:
+        os.chdir(cmakebuilddir)
+        assert(os.system('cmake %s %s'%(cmakeoptions,cmakedir)) == 0)
+        assert(os.system(makecommand) == 0)
+        if openravepyCompilerVersion().startswith('msvc'):
+            dllfilename = os.path.join(programdir,cmakename+'.dll')
+            if os.path.exists(dllfilename):
+                shutil.copyfile(dllfilename,cmakebuilddir+'/'+cmakename+'.dll')
+        return programdir
+
+    finally:
+        os.chdir(curdir)
 
 def CompileRunCPP(name,cppdata):
     curdir = os.getcwd()
@@ -117,7 +130,15 @@ install(TARGETS %(name)s DESTINATION .)
     finally:
         os.chdir(curdir)
         shutil.rmtree(name)
+        shutil.rmtree(programdir)
 
+def test_cppexamples():
+    try:
+        programdir = CompileProject(os.path.join('..','src','cppexamples'))
+        
+    finally:
+        shutil.rmtree(programdir)
+        
 def test_cppgeometry_standalone():
     cppdata="""#include <openrave/geometry.h>
 using namespace OpenRAVE::geometry;
@@ -152,20 +173,22 @@ def test_createplugin():
 
     try:
         assert(os.system('openrave-createplugin.py myplugin --module=MyTestModule') == 0)
-        programdir=CompileProject('myplugin')
+        programdir=CompileProject('myplugin',os.path.join('myplugin','build'))
+        os.chdir('myplugin')
         assert(os.system(GetPythonCommand()+'testplugin.py') == 0)
     finally:
         os.chdir(curdir)
         shutil.rmtree('myplugin')
-
+        
     try:
         shutil.rmtree('myprogram')
     except:
         pass
     try:
         assert(os.system('openrave-createplugin.py myprogram --usecore') == 0)
-        programdir=CompileProject('myprogram')
-        assert(os.system(GetRunCommand()+os.path.join(programdir,'myprogram')) == 0)
+        programdir=CompileProject('myprogram',os.path.join('myprogram','build'))
+        os.chdir('myprogram')
+        assert(os.system(GetRunCommand()+os.path.join('build','myprogram')) == 0)
     finally:
         os.chdir(curdir)
         shutil.rmtree('myprogram')
