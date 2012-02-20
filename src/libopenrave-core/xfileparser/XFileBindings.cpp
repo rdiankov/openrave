@@ -144,7 +144,7 @@ protected:
         _prefix = "";
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -159,7 +159,7 @@ protected:
                 _prefix = itatt->second;
             }
             else if( itatt->first == "flipyz" ) {
-                _bFlipYZ = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bFlipYZ = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "name" ) {
                 pbody->SetName(itatt->second);

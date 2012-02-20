@@ -391,7 +391,7 @@ inline float IKfmod(float x, float y)
 }
 
 // return positive value in [0,y)
-inline float IKfmod(double x, double y)
+inline double IKfmod(double x, double y)
 {
     while(x < 0) {
         x += y;

@@ -199,6 +199,9 @@ public:
             RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const std::exception& ex) {
+            stringstream sdesc; sdesc << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            sdesc << "robot: " << _probot->GetTransform();
+            ptraj->SetDescription(sdesc.str());
             string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
             ofstream f(filename.c_str());

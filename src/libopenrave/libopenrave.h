@@ -96,11 +96,11 @@
 
 #ifdef _WIN32
 #elif defined(__APPLE_CC__)
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 #else
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 
 #endif
 
@@ -321,7 +321,7 @@ inline const char *strcasestr(const char *s, const char *find)
                     return (NULL);
                 }
             } while ((char)tolower((unsigned char)sc) != c);
-        } while (strnicmp(s, find, len) != 0);
+        } while (_strnicmp(s, find, len) != 0);
         s--;
     }
     return ((char *) s);

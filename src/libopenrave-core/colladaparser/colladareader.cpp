@@ -178,7 +178,7 @@ public:
         _bSkipGeometry = false;
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);

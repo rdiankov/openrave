@@ -207,7 +207,7 @@ public:
                 return false;
             }
             FOREACH(it,itregisterednames->second) {
-                if(( name.size() >= it->size()) &&( strnicmp(name.c_str(),it->c_str(),it->size()) == 0) ) {
+                if(( name.size() >= it->size()) &&( _strnicmp(name.c_str(),it->c_str(),it->size()) == 0) ) {
                     return true;
                 }
             }
@@ -496,7 +496,7 @@ protected:
             FOREACH(it, listRegisteredInterfaces) {
                 RegisteredInterfacePtr registration = it->lock();
                 if( !!registration ) {
-                    if(( nInterfaceNameLength >= registration->_name.size()) &&( strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
+                    if(( nInterfaceNameLength >= registration->_name.size()) &&( _strnicmp(name.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
                         std::stringstream sinput(name);
                         std::string interfacename;
                         sinput >> interfacename;
@@ -672,7 +672,7 @@ protected:
         FOREACHC(it,_listRegisteredInterfaces) {
             RegisteredInterfacePtr registration = it->lock();
             if( !!registration ) {
-                if(( interfacename.size() >= registration->_name.size()) &&( strnicmp(interfacename.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
+                if(( interfacename.size() >= registration->_name.size()) &&( _strnicmp(interfacename.c_str(),registration->_name.c_str(),registration->_name.size()) == 0) ) {
                     return true;
                 }
             }

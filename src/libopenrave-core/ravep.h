@@ -283,11 +283,11 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 
 #ifdef _WIN32
 #elif defined(__APPLE_CC__)
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 #else
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 #endif
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
