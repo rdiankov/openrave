@@ -228,7 +228,7 @@ public:
 
         RAVELOG_DEBUG("resetting raveviewer\n");
         FOREACH(itviewer, listViewers) {
-            (*itviewer)->Reset();
+            // don't reset the viewer since it can already be dead
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();

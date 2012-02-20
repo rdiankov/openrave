@@ -71,6 +71,8 @@ Misc
 
 * Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
 
+* Introduced a simple framework for the C++ examples in cppexamples/orexample.h (class OpenRAVEExample). Most C++ examples now use it.
+
 Version 0.6.2
 =============
 

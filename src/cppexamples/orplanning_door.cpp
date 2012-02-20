@@ -13,27 +13,14 @@
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
-#include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 
 #include <openrave/planningutils.h>
 
+#include "orexample.h"
+
 using namespace OpenRAVE;
 using namespace std;
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <winsock2.h>
-#define usleep(micro) Sleep(micro/1000)
-#endif
-
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
-{
-    ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AddViewer(viewer);
-    viewer->main(true);
-}
 
 /// \brief builds up the configuration space of a robot and a door
 class DoorConfiguration : public boost::enable_shared_from_this<DoorConfiguration>
@@ -232,135 +219,132 @@ public:
 
 typedef boost::shared_ptr<DoorConfiguration> DoorConfigurationPtr;
 
-int main(int argc, char ** argv)
+class PlanningDoorExample : public OpenRAVEExample
 {
-    string scenefilename = "data/wam_cabinet.env.xml";
-    string viewername = "qtcoin";
-    RaveInitialize(true);
-    EnvironmentBasePtr penv = RaveCreateEnvironment();
-    RaveSetDebugLevel(Level_Debug);
+public:
+    virtual void demothread(int argc, char ** argv) {
+        string scenefilename = "data/wam_cabinet.env.xml";
+        RaveSetDebugLevel(Level_Debug);
+        penv->Load(scenefilename);
 
-    boost::thread thviewer(boost::bind(SetViewer,penv,viewername)); // create the viewer
-    usleep(200000); // wait for the viewer to init
-    penv->Load(scenefilename);
-    usleep(100000); // wait for the viewer to init
-
-    RobotBasePtr probot = penv->GetRobot("BarrettWAM");
-    // find the longest manipulator chain to move
-    RobotBase::ManipulatorPtr pmanip = probot->GetManipulators().at(0);
-    for(size_t i = 1; i < probot->GetManipulators().size(); ++i) {
-        if( pmanip->GetArmIndices().size() < probot->GetManipulators()[i]->GetArmIndices().size() ) {
-            pmanip = probot->GetManipulators()[i];
+        RobotBasePtr probot = penv->GetRobot("BarrettWAM");
+        // find the longest manipulator chain to move
+        RobotBase::ManipulatorPtr pmanip = probot->GetManipulators().at(0);
+        for(size_t i = 1; i < probot->GetManipulators().size(); ++i) {
+            if( pmanip->GetArmIndices().size() < probot->GetManipulators()[i]->GetArmIndices().size() ) {
+                pmanip = probot->GetManipulators()[i];
+            }
         }
-    }
-    RAVELOG_INFO(str(boost::format("planning with manipulator %s\n")%pmanip->GetName()));
+        RAVELOG_INFO(str(boost::format("planning with manipulator %s\n")%pmanip->GetName()));
 
-    RobotBasePtr target = penv->GetRobot("Cabinet");
-    KinBody::JointPtr pdoorjoint = target->GetJoint("J_right");
+        RobotBasePtr target = penv->GetRobot("Cabinet");
+        KinBody::JointPtr pdoorjoint = target->GetJoint("J_right");
 
-    std::vector<dReal> vpreshape(4);
-    vpreshape[0] = 2.3; vpreshape[1] = 2.3; vpreshape[2] = 0.8; vpreshape[3] = 0;
+        std::vector<dReal> vpreshape(4);
+        vpreshape[0] = 2.3; vpreshape[1] = 2.3; vpreshape[2] = 0.8; vpreshape[3] = 0;
 
-    // create the configuration space
-    DoorConfigurationPtr doorconfig(new DoorConfiguration(pmanip,pdoorjoint));
-    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-    Transform trobotorig;
-    {
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
-
-        probot->SetActiveDOFs(pmanip->GetGripperIndices());
-        probot->SetActiveDOFValues(vpreshape);
-
-        doorconfig->SetPlannerParameters(params);
-        params->_nMaxIterations = 150; // max iterations before failure
-
-        trobotorig = probot->GetTransform();
-    }
-
-    PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
-    TrajectoryBasePtr ptraj;
-    int iter = 0;
-
-    while(1) {
-        iter += 1;
-        GraphHandlePtr pgraph;
+        // create the configuration space
+        DoorConfigurationPtr doorconfig(new DoorConfiguration(pmanip,pdoorjoint));
+        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+        Transform trobotorig;
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
-            if( (iter%5) == 0 ) {
-                RAVELOG_INFO("find a new position for the robot\n");
-                for(int i = 0; i < 100; ++i) {
-                    Transform tnew = trobotorig;
-                    tnew.trans.x += 0.5*(RaveRandomFloat()-0.5);
-                    tnew.trans.y += 0.5*(RaveRandomFloat()-0.5);
-                    probot->SetTransform(tnew);
+            probot->SetActiveDOFs(pmanip->GetGripperIndices());
+            probot->SetActiveDOFValues(vpreshape);
 
-                    try {
-                        params->_getstatefn(params->vinitialconfig);
-                        params->_setstatefn(params->vinitialconfig);
-                        params->_getstatefn(params->vinitialconfig);
+            doorconfig->SetPlannerParameters(params);
+            params->_nMaxIterations = 150; // max iterations before failure
 
-                        params->vgoalconfig = params->vinitialconfig;
-                        params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
-                        params->_setstatefn(params->vgoalconfig);
-                        params->_getstatefn(params->vgoalconfig);
-                        break;
-                    }
-                    catch(const openrave_exception& ex) {
-                        probot->SetTransform(trobotorig);
-                    }
-                }
-            }
-            else {
-                params->_getstatefn(params->vinitialconfig);
-                params->_setstatefn(params->vinitialconfig);
-                params->_getstatefn(params->vinitialconfig);
-
-                params->vgoalconfig = params->vinitialconfig;
-                params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
-                params->_setstatefn(params->vgoalconfig);
-                params->_getstatefn(params->vgoalconfig);
-            }
-
-            //params->_sPostProcessingPlanner = "lineartrajectoryretimer";
-            ptraj = RaveCreateTrajectory(penv,"");
-            if( !planner->InitPlan(probot,params) ) {
-                RAVELOG_WARN("plan failed to init\n");
-                continue;
-            }
-
-            // create a new output trajectory
-            if( !planner->PlanPath(ptraj) ) {
-                RAVELOG_WARN("plan failed, trying again\n");
-                continue;
-            }
-
-            // draw the end effector of the trajectory
-            {
-                RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
-                vector<RaveVector<float> > vpoints;
-                vector<dReal> vtrajdata;
-                for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
-                    ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
-                    probot->SetActiveDOFValues(vtrajdata);
-                    vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
-                }
-                pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
-            }
-
-            // send the trajectory to the robot
-            probot->GetController()->SetPath(ptraj);
-            target->GetController()->SetPath(ptraj);
+            trobotorig = probot->GetTransform();
         }
 
+        PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
+        TrajectoryBasePtr ptraj;
+        int iter = 0;
 
-        // wait for the robot to finish
-        while(!probot->GetController()->IsDone()) {
-            usleep(1000);
+        while(IsOk()) {
+            iter += 1;
+            GraphHandlePtr pgraph;
+            {
+                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+
+                if( (iter%5) == 0 ) {
+                    RAVELOG_INFO("find a new position for the robot\n");
+                    for(int i = 0; i < 100; ++i) {
+                        Transform tnew = trobotorig;
+                        tnew.trans.x += 0.5*(RaveRandomFloat()-0.5);
+                        tnew.trans.y += 0.5*(RaveRandomFloat()-0.5);
+                        probot->SetTransform(tnew);
+
+                        try {
+                            params->_getstatefn(params->vinitialconfig);
+                            params->_setstatefn(params->vinitialconfig);
+                            params->_getstatefn(params->vinitialconfig);
+
+                            params->vgoalconfig = params->vinitialconfig;
+                            params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
+                            params->_setstatefn(params->vgoalconfig);
+                            params->_getstatefn(params->vgoalconfig);
+                            break;
+                        }
+                        catch(const openrave_exception& ex) {
+                            probot->SetTransform(trobotorig);
+                        }
+                    }
+                }
+                else {
+                    params->_getstatefn(params->vinitialconfig);
+                    params->_setstatefn(params->vinitialconfig);
+                    params->_getstatefn(params->vinitialconfig);
+
+                    params->vgoalconfig = params->vinitialconfig;
+                    params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
+                    params->_setstatefn(params->vgoalconfig);
+                    params->_getstatefn(params->vgoalconfig);
+                }
+
+                //params->_sPostProcessingPlanner = "lineartrajectoryretimer";
+                ptraj = RaveCreateTrajectory(penv,"");
+                if( !planner->InitPlan(probot,params) ) {
+                    RAVELOG_WARN("plan failed to init\n");
+                    continue;
+                }
+
+                // create a new output trajectory
+                if( !planner->PlanPath(ptraj) ) {
+                    RAVELOG_WARN("plan failed, trying again\n");
+                    continue;
+                }
+
+                // draw the end effector of the trajectory
+                {
+                    RobotBase::RobotStateSaver saver(probot); // save the state of the robot since will be setting joint values
+                    vector<RaveVector<float> > vpoints;
+                    vector<dReal> vtrajdata;
+                    for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
+                        ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
+                        probot->SetActiveDOFValues(vtrajdata);
+                        vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
+                    }
+                    pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
+                }
+
+                // send the trajectory to the robot
+                probot->GetController()->SetPath(ptraj);
+                target->GetController()->SetPath(ptraj);
+            }
+
+            // wait for the robot to finish
+            while(!probot->GetController()->IsDone() && IsOk()) {
+                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+            }
         }
     }
+};
 
-    thviewer.join(); // wait for the viewer thread to exit
-    penv->Destroy(); // destroy
-    return 0;
+int main(int argc, char ** argv)
+{
+    PlanningDoorExample example;
+    return example.main(argc,argv);
 }

@@ -1078,8 +1078,9 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexMessages);
-        FOREACH(it,_listMessages)
+        FOREACH(it,_listMessages) {
             (*it)->releasemutex();
+        }
         _listMessages.clear();
     }
 }
@@ -2095,7 +2096,10 @@ int QtCoinViewer::main(bool bShow)
 
 void QtCoinViewer::quitmainloop()
 {
-    SetEnvironmentSync(false);
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if( !bGuiThread ) {
+        SetEnvironmentSync(false);
+    }
     SoQt::exitMainLoop();
 }
 
