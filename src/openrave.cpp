@@ -41,7 +41,7 @@ void MainOpenRAVEThread();
 #define usleep(micro) Sleep((micro)/1000)
 #else
 #define _strnicmp strncasecmp
-#define __stricmp strcasecmp
+#define _stricmp strcasecmp
 #include <sys/time.h>
 #endif
 

@@ -387,7 +387,8 @@ public:
             if( ct&CT_CollisionMask ) {
                 RAVELOG_DEBUG(str(boost::format("gripper initially in collision: %s\n")%_report->__str__()));
                 if( _parameters->bavoidcontact ) {
-                    RAVELOG_WARN(str(boost::format("gripper in collision without moving and bavoidcontact==False: %s\n")%_report->__str__()));
+                    string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
+                    RAVELOG_WARN(str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__()));
                     return PS_Failed;
                 }
                 continue;
