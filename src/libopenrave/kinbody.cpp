@@ -618,6 +618,7 @@ void KinBody::Link::Enable(bool bEnable)
         }
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _bIsEnabled = bEnable;
+        //GetParent()->_ParametersChanged(Prop_Links);
     }
 }
 
@@ -4334,6 +4335,7 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
 
 void KinBody::Enable(bool bEnable)
 {
+    bool bchanged = false;
     CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
     FOREACH(it, _veclinks) {
         if( (*it)->_bIsEnabled != bEnable ) {
@@ -4342,7 +4344,11 @@ void KinBody::Enable(bool bEnable)
             }
             (*it)->_bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
+            bchanged = true;
         }
+    }
+    if( bchanged ) {
+        //_ParametersChanged(Prop_Links);
     }
 }
 

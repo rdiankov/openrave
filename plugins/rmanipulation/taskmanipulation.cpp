@@ -815,12 +815,12 @@ protected:
                 {
                     RobotBase::RobotStateSaver linksaver(_robot,KinBody::Save_LinkEnable);
                     _robot->Enable(false);     // remove robot from target collisions
-                    bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget));
+                    bTargetCollision = GetEnv()->CheckCollision(KinBodyConstPtr(ptarget),report);
                 }
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
-                    RAVELOG_VERBOSE("target collision at dest\n");
+                    RAVELOG_VERBOSE(str(boost::format("target collision at dest %d: %s")%vdestpermuation[idestperm]%report->__str__()));
                     continue;
                 }
 

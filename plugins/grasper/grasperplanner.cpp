@@ -67,19 +67,6 @@ public:
         RobotBase::RobotStateSaver saver(_robot);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
 
-        _trajspec._vgroups.resize(2);
-        stringstream ss;
-        _trajspec._vgroups[0].name = str(boost::format("affine_transform %s %d")%_robot->GetName()%DOF_Transform);
-        _trajspec._vgroups[0].dof = RaveGetAffineDOF(DOF_Transform);
-        _trajspec._vgroups[0].offset = 0;
-        ss << "joint_values " << _robot->GetName();
-        FOREACHC(it,_robot->GetActiveDOFIndices()) {
-            ss << " " << *it;
-        }
-        _trajspec._vgroups[1].name = ss.str();
-        _trajspec._vgroups[1].dof = _robot->GetActiveDOFIndices().size();
-        _trajspec._vgroups[1].offset = _trajspec._vgroups[0].dof;
-
         {
             // need full 6D transform or otherwise data will be lost
             // do not clear the trajectory because the user might want to append the grasp point to it
@@ -143,8 +130,9 @@ public:
                 Vector vrandaxis;
                 while(1) {
                     vrandaxis = Vector(2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f, 2.0f*RaveRandomFloat()-1.0f);
-                    if(( vrandaxis.lengthsqr3() > 0) &&( vrandaxis.lengthsqr3() <= 1) )
+                    if( vrandaxis.lengthsqr3() > 0 && vrandaxis.lengthsqr3() <= 1 ) {
                         break;
+                    }
                 }
 
                 // find furthest point from origin of body and rotate around center
@@ -206,14 +194,10 @@ public:
             }
         }
 
-        int nLinksCollideObstacle = 0;     ///number of links that have collided with an obstacle
+        int nLinksCollideObstacle = 0;     // number of links that have collided with an obstacle
 
         std::vector<dReal> dofvals;
         _robot->GetActiveDOFValues(dofvals);
-
-        vector<dReal> trajpoint(_trajspec.GetDOF());
-        RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
-        std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
 
         if( !_parameters->targetbody ) {
             vector<KinBodyPtr> vbodies;
@@ -257,7 +241,6 @@ public:
                 RAVELOG_WARN("no objects in environment\n");
                 _vTargetCenter = pmanip->GetTransform().trans;
                 _fTargetRadius = 0;
-                //return false;
             }
             else {
                 _vTargetCenter = 0.5f * (vmin+vmax);
@@ -337,16 +320,21 @@ public:
                     }
                     _robot->SetActiveDOFValues(dofvals);
                 }
+                // check that anything that should be avoided is not hit
+                ct = 0;
+                for(int q = 0; q < (int)_vlinks.size(); q++) {
+                    ct = _CheckCollision(_vlinks[q], KinBodyPtr());
+                    if( ct&CT_AvoidLinkHit ) {
+                        break;
+                    }
+                }
             }
 
             // check that anything that should be avoided is not hit
-            ct = 0;
-            for(int q = 0; q < (int)_vlinks.size(); q++) {
-                ct = _CheckCollision(_vlinks[q], KinBodyPtr());
-                if( ct&CT_AvoidLinkHit ) {
-                    RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided %s: %s\n")%_vlinks.at(q)->GetName()%_report->__str__()));
-                    return PS_Failed;
-                }
+            if( ct&CT_AvoidLinkHit ) {
+                string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
+                RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname));
+                return PS_Failed;
             }
         }
 
@@ -372,8 +360,6 @@ public:
                 }
             }
         }
-
-        RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
 
         //close the fingers one by one
         for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
@@ -418,10 +404,6 @@ public:
                 _robot->GetActiveDOFValues(dofvals);
                 ct = _CheckCollision(pjoint,KinBodyPtr());
                 if( ct&CT_CollisionMask ) {
-                    if( !coarse_pass && (ct & CT_AvoidLinkHit) ) {
-                        RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
-                        return PS_Failed;
-                    }
                     if(coarse_pass) {
                         //coarse step collided, back up and shrink step
                         coarse_pass = false;
@@ -429,29 +411,19 @@ public:
                         dofvals[ifing] -= vclosingdir[ifing] * step_size;
                         num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
                         step_size = _parameters->ffinestep*fmult;
-
-//                            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-//                                RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d) [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%_report->__str__()));
-//                                stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << ", Joint Vals: ";
-//                                for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
-//                                    ss << dofvals[vi] << " ";
-//                                }
-//                                ss << endl;
-//                                RAVELOG_VERBOSE(ss.str());
-//                            }
-//                            if( ct & CT_SelfCollision ) {
-//                                RAVELOG_WARN(str(boost::format("robot in self collision even though nothing moved: %s!")%_report->__str__()));
-//                            }
-//                            nLinksCollideObstacle++;
-//                            collision = true;
-//                            break;
-//                        }
+                        continue;
                     }
                     else {
-                        int q = (ct&CT_LinkMask)>>CT_LinkMaskShift;
+                        if( ct & CT_AvoidLinkHit ) {
+                            RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
+                            return PS_Failed;
+                        }
+
+                        int linkindex = (ct&CT_LinkMask)>>CT_LinkMaskShift;
+                        KinBody::LinkPtr plink = _robot->GetLinks().at(linkindex);
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            RAVELOG_VERBOSE(str(boost::format("Collision (%d) of link %s using joint %s(%d), value=%f [%s]\n")%ct%_vlinks.at(q)->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
-                            stringstream ss; ss << "Transform: " << _vlinks.at(q)->GetTransform() << "Joint Vals: ";
+                            RAVELOG_VERBOSE(str(boost::format("Collision (0x%x) of link %s using joint %s(%d), value=%f [%s]\n")%ct%plink->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
+                            stringstream ss; ss << "Transform: " << plink->GetTransform() << "Joint Vals: ";
                             for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
                                 ss << dofvals[vi] << " ";
                             }
@@ -461,16 +433,15 @@ public:
 
                         if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
                             dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                            break;
                         }
                         nLinksCollideObstacle++;
                         collision = true;
-                        break;
                     }
                 }
 
-                std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
                 if(_parameters->breturntrajectory) {
-                    ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint,_trajspec);
+                    ptraj->Insert(ptraj->GetNumWaypoints(),dofvals,_robot->GetActiveConfigurationSpecification());
                 }
                 if(collision) {
                     break;
@@ -480,25 +451,26 @@ public:
 
         bool bAddLastPoint = true;
         _robot->SetActiveDOFValues(dofvals,true);
+        _robot->GetActiveDOFValues(dofvals);
         for(int q = 0; q < (int)_vlinks.size(); q++) {
             int ct = _CheckCollision(_vlinks[q], KinBodyPtr());
             if( ct & CT_AvoidLinkHit ) {
+                RAVELOG_VERBOSE("grasp planner hit link that needed to be avoided\n");
                 return PS_Failed;
             }
             if( ct & CT_SelfCollision ) {
+                RAVELOG_VERBOSE("grasp planner ignoring last point\n");
                 bAddLastPoint = false;
             }
         }
 
-        if( bAddLastPoint ) {
+        if( bAddLastPoint && !_parameters->breturntrajectory ) {
             // don't forget the final point!, it is most likely in collision
             _robot->GetActiveDOFValues(dofvals);
-            std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
-            if(!_parameters->breturntrajectory) {
-                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint,_trajspec);
-            }
+            ptraj->Insert(ptraj->GetNumWaypoints(),dofvals,_robot->GetActiveConfigurationSpecification());
         }
 
+        RAVELOG_VERBOSE("grasp planner finishing\n");
         return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;     // only return true if there is at least one valid pose!
     }
 
@@ -506,7 +478,7 @@ public:
     {
         int ct = 0;
         for(int q = 0; q < (int)_vlinks.size(); q++) {
-            if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  && ((ct = _CheckCollision(_vlinks[q], KinBodyPtr())) & CT_CollisionMask) ) {
+            if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  && ((ct = _CheckCollision(_vlinks[q], targetbody)) & CT_CollisionMask) ) {
                 break;
             }
         }
@@ -578,8 +550,7 @@ protected:
         if( !(checkcollisions & CT_EnvironmentCollision) && (checkcollisions&CT_TargetCollision) ) {
             targetbody = _parameters->targetbody;
         }
-        vector<dReal> trajpoint(_trajspec.GetDOF(),0);
-        std::copy(dofvals.begin(),dofvals.begin()+_robot->GetActiveDOFIndices().size(),trajpoint.begin()+_trajspec._vgroups[1].offset);
+
         Vector v = vapproachdir * (_parameters->fcoarsestep*_parameters->ftranslationstepmult);
         int ct = 0;
         while(1) {
@@ -595,8 +566,7 @@ protected:
             }
 
             if(_parameters->breturntrajectory) {
-                RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
-                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint);
+                ptraj->Insert(ptraj->GetNumWaypoints(),dofvals, _robot->GetActiveConfigurationSpecification());
             }
 
             if( pX != NULL ) {
@@ -654,10 +624,10 @@ protected:
             _robot->SetActiveDOFValues(dofvals);
 
             if(_parameters->breturntrajectory) {
-                RaveGetAffineDOFValuesFromTransform(trajpoint.begin(),_robot->GetTransform(),DOF_Transform);
-                ptraj->Insert(ptraj->GetNumWaypoints(),trajpoint);
+                ptraj->Insert(ptraj->GetNumWaypoints(),dofvals, _robot->GetActiveConfigurationSpecification());
             }
         }
+
         return ct;
     }
     CollisionReportPtr _report;
@@ -667,7 +637,6 @@ protected:
     std::vector<KinBody::LinkPtr> _vlinks;
     Vector _vTargetCenter;
     dReal _fTargetRadius;
-    ConfigurationSpecification _trajspec;
 };
 
 PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput)

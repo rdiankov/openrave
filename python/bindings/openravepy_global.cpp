@@ -556,7 +556,7 @@ public:
         return _param.ComputeDistanceSqr(pyikparam->_param);
     }
 
-    object Transform(object otrans)
+    object Transform(object otrans) const
     {
         return toPyIkParameterization(ExtractTransform(otrans) * _param);
     }

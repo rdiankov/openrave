@@ -40,7 +40,7 @@ public:
     Environment() : EnvironmentBase()
     {
         _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG("setting openrave cache directory to %s\n",_homedirectory.c_str());
+        RAVELOG_DEBUG(str(boost::format("setting openrave home directory to %s")%_homedirectory));
 
         _nBodiesModifiedStamp = 0;
         _nEnvironmentIndex = 1;

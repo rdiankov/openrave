@@ -50,6 +50,26 @@ class RobotStateSaver:
     def __exit__(self, type, value, traceback):
         self.handle.close()
 
+class CollisionOptionsStateSaver:
+    """Saves/restores the state of the collision checker options
+    """
+    def __init__(self,checker,options=None,required=True):
+        self.checker=checker
+        self.oldoptions = None
+        self.newoptions=options
+        self.required = required
+    def __enter__(self):
+        if self.newoptions is not None:
+            self.oldoptions = self.checker.GetCollisionOptions()
+            success = self.checker.SetCollisionOptions(self.newoptions)
+            if not success and self.required:
+                self.checker.SetCollisionOptions(self.oldoptions)
+                raise openrave_exception('Failed to set options 0x%x on checker %s'%(self.newoptions,str(self.checker.GetXMLId())))
+            
+    def __exit__(self, type, value, traceback):
+        if self.oldoptions is not None:
+            self.checker.SetCollisionOptions(self.oldoptions)
+    
 def with_destroy(fn):
     """a decorator that always calls openravepy_int.RaveDestroy at the function end"""
     def newfn(*args,**kwargs):

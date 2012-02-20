@@ -33,8 +33,16 @@ inline Real Rand() {
     return OpenRAVE::RaveRandomFloat();
 }
 
-inline bool IsInf(Real x) {
-    return x==Inf;
+inline int IsInf(Real x) {
+    if (x>=Inf) {
+        return 1;
+    }
+    else if(x <=-Inf) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
 }
 
 inline bool IsFinite(Real x) {

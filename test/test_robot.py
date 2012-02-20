@@ -112,35 +112,25 @@ class RunRobot(EnvironmentSetup):
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))        
 
-    def test_badtrajectory(self):
-        self.log.info('create a discontinuous trajectory and check if robot throws exception')
-        env=self.env
-        robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
-        with env:
-            orgvalues = robot.GetActiveDOFValues()
-            lower,upper = robot.GetDOFLimits()
-            traj=RaveCreateTrajectory(env,'')
-            traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,r_[orgvalues,upper+0.1])
-            assert(traj.GetNumWaypoints()==2)
-            try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
-                self.RunTrajectory(robot,traj)
-                raise ValueError('controller did not throw limit expected exception!')
-            
-            except Exception, e:
-                pass
-
-            traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,r_[lower,upper])
-            assert(traj.GetNumWaypoints()==2)
-            try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
-                self.RunTrajectory(robot,traj)
-                raise ValueError('controller did not throw velocity limit expected exception!')
-            
-            except Exception, e:
-                pass
+#     def test_grabcollision_dynamic(self):
+#         self.log.info('test if can handle grabbed bodies being enabled/disabled')
+#         env=self.env
+#         robot = self.LoadRobot('robots/barrettwam.robot.xml')
+#         with env:
+#             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+#             env.AddKinBody(target,True)
+#             manip=robot.GetActiveManipulator()
+#             target.SetTransform(manip.GetEndEffector().GetTransform())
+#             assert(env.CheckCollision(robot,target))
+#             target.Enable(False)
+#             robot.Grab(target,manip.GetEndEffector())
+#             assert(not robot.CheckSelfCollision())
+#             target.Enable(True)
+#             assert(not robot.CheckSelfCollision())
+#             target.Enable(False)
+#             assert(not robot.CheckSelfCollision())
+#             target.GetLinks()[0].Enable(True)
+#             assert(not robot.CheckSelfCollision())
             
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
@@ -232,6 +222,36 @@ class RunRobot(EnvironmentSetup):
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             assert(not manip.CheckEndEffectorCollision(Tmanip))
 
+    def test_badtrajectory(self):
+        self.log.info('create a discontinuous trajectory and check if robot throws exception')
+        env=self.env
+        robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
+        with env:
+            orgvalues = robot.GetActiveDOFValues()
+            lower,upper = robot.GetDOFLimits()
+            traj=RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[orgvalues,upper+0.1])
+            assert(traj.GetNumWaypoints()==2)
+            try:
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                self.RunTrajectory(robot,traj)
+                raise ValueError('controller did not throw limit expected exception!')
+            
+            except Exception, e:
+                pass
+
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[lower,upper])
+            assert(traj.GetNumWaypoints()==2)
+            try:
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                self.RunTrajectory(robot,traj)
+                raise ValueError('controller did not throw velocity limit expected exception!')
+            
+            except Exception, e:
+                pass
+            
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()
