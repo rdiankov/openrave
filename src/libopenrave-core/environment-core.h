@@ -1759,7 +1759,7 @@ protected:
                 SetCollisionChecker(p);
             }
             catch(const std::exception& ex) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetCollisionChecker()->GetXMLId(),ORE_InvalidPlugin);
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
             }
         }
 
@@ -1867,7 +1867,7 @@ protected:
                     SetPhysicsEngine(p);
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetPhysicsEngine()->GetXMLId(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
             _bEnableSimulation = r->_bEnableSimulation;

@@ -1409,15 +1409,15 @@ public:
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
-                    int k=vertexoffset;
-                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                    domUint k = vertexoffset;
+                    domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t itri = 0; itri < triRef->getCount(); ++itri) {
                         if(k+2*triangleIndexStride < indexArray.getCount() ) {
                             for (int j=0; j<3; j++) {
-                                domUint index0 = indexArray.get(k)*vertexStride;
-                                domFloat fl0 = listFloats.get(index0);
-                                domFloat fl1 = listFloats.get(index0+1);
-                                domFloat fl2 = listFloats.get(index0+2);
+                                domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                                domFloat fl0 = listFloats.get(size_t(index0));
+                                domFloat fl1 = listFloats.get(size_t(index0+1));
+                                domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
                                 trimesh.indices.push_back(trimesh.vertices.size());
                                 trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
@@ -1504,12 +1504,12 @@ public:
                         if( trimesh.vertices.capacity() < trimesh.vertices.size()+indexArray.getCount() ) {
                             trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
                         }
-                        domUint startoffset = domUint(trimesh.vertices.size());
+                        size_t startoffset = trimesh.vertices.size();
                         while(k < indexArray.getCount() ) {
-                            domUint index0 = indexArray.get(k)*vertexStride;
-                            domFloat fl0 = listFloats.get(index0);
-                            domFloat fl1 = listFloats.get(index0+1);
-                            domFloat fl2 = listFloats.get(index0+2);
+                            domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                            domFloat fl0 = listFloats.get(size_t(index0));
+                            domFloat fl1 = listFloats.get(size_t(index0+1));
+                            domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
@@ -1556,7 +1556,7 @@ public:
         domUint triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (domUint w=0; w<triRef->getInput_array().getCount(); w++) {
+        for (size_t w=0; w<triRef->getInput_array().getCount(); w++) {
             domUint offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
@@ -1589,7 +1589,7 @@ public:
                         const domList_of_floats& listFloats = flArray->getValue();
                         domUint k=vertexoffset;
                         domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
-                        domUint usedindices = 3*(indexArray.getCount()-2);
+                        size_t usedindices = 3*(size_t(indexArray.getCount())-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
                         }
@@ -1599,10 +1599,10 @@ public:
 
                         size_t startoffset = trimesh.vertices.size();
                         while(k < indexArray.getCount() ) {
-                            domUint index0 = indexArray.get(k)*vertexStride;
-                            domFloat fl0 = listFloats.get(index0);
-                            domFloat fl1 = listFloats.get(index0+1);
-                            domFloat fl2 = listFloats.get(index0+2);
+                            domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                            domFloat fl0 = listFloats.get(size_t(index0));
+                            domFloat fl1 = listFloats.get(size_t(index0+1));
+                            domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
@@ -1649,7 +1649,7 @@ public:
             }
         }
 
-        size_t triangleIndexStride = 0,vertexoffset = -1;
+        domUint triangleIndexStride = 0,vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
         for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
             domUint offset = triRef->getInput_array()[w]->getOffset();
@@ -1676,17 +1676,17 @@ public:
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
-                    size_t k=vertexoffset;
-                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                    domUint k=vertexoffset;
+                    domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t ipoly = 0; ipoly < triRef->getVcount()->getValue().getCount(); ++ipoly) {
                         domUint numverts = triRef->getVcount()->getValue()[ipoly];
                         if(( numverts > 0) &&( k+(numverts-1)*triangleIndexStride < indexArray.getCount()) ) {
                             size_t startoffset = trimesh.vertices.size();
                             for (size_t j=0; j<numverts; j++) {
-                                domUint index0 = indexArray.get(k)*vertexStride;
-                                domFloat fl0 = listFloats.get(index0);
-                                domFloat fl1 = listFloats.get(index0+1);
-                                domFloat fl2 = listFloats.get(index0+2);
+                                domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                                domFloat fl0 = listFloats.get(size_t(index0));
+                                domFloat fl1 = listFloats.get(size_t(index0+1));
+                                domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
                                 trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                             }
