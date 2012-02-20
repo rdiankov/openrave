@@ -989,7 +989,7 @@ public:
                         grasp_params->volume = analysis.volume;
                     }
                     catch(const openrave_exception& ex) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed")%grasp_params->id));
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed: %s")%grasp_params->id%ex.what()));
                         continue;     // failed
                     }
                 }

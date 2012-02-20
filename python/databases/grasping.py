@@ -402,7 +402,7 @@ class GraspingModel(DatabaseGenerator):
         print 'grasping finished in %fs'%(time.time()-starttime)
 
 
-    def generatepcg(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None):
+    def generatepcg(self,preshapes=None,standoffs=None,rolls=None,approachrays=None, graspingnoise=None,forceclosure=True,forceclosurethreshold=1e-9,checkgraspfn=None,manipulatordirections=None,translationstepmult=None,finestep=None,friction=None,avoidlinks=None,plannername=None,boxdelta=None,spheredelta=None,normalanglerange=None):
         """Generates a grasp set by searching space and evaluating contact points.
 
         All grasp parameters have to be in the bodies's coordinate system (ie: approachrays).
@@ -414,7 +414,12 @@ class GraspingModel(DatabaseGenerator):
             avoidlinks = []
         self.init(friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         if approachrays is None:
-            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
+            if boxdelta is not None:
+                approachrays = self.computeBoxApproachRays(delta=boxdelta,normalanglerange=normalanglerange)
+            elif spheredelta is not None:
+                approachrays = self.computeSphereApproachRays(delta=spheredelta,normalanglerange=normalanglerange)
+            else:
+                approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if preshapes is None:
             # should disable everything but the robot
             with self.target:
@@ -522,7 +527,12 @@ class GraspingModel(DatabaseGenerator):
         print 'Generating Grasp Set for %s:%s:%s'%(self.robot.GetName(),self.manip.GetName(),self.target.GetName())
         translate = True
         if approachrays is None:
-            approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
+            if boxdelta is not None:
+                approachrays = self.computeBoxApproachRays(delta=boxdelta,normalanglerange=normalanglerange)
+            elif spheredelta is not None:
+                approachrays = self.computeSphereApproachRays(delta=spheredelta,normalanglerange=normalanglerange)
+            else:
+                approachrays = self.computeBoxApproachRays(delta=0.02,normalanglerange=0)
         if friction is None:
             friction = 0.3
         if preshapes is None:
