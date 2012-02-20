@@ -40,8 +40,14 @@ def setup_module(module):
     dbdir = os.path.join(os.getcwd(),'.openravetest')
     os.environ['OPENRAVE_DATABASE'] = dbdir
     os.environ['OPENRAVE_HOME'] = dbdir
+    if hasattr(os,'putenv'):
+        os.putenv('OPENRAVE_DATABASE',dbdir)
+        os.putenv('OPENRAVE_HOME',dbdir)
     RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
-    assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
+    if hasattr(os.path,'samefile'):
+        assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
+    else:
+        assert(RaveGetHomeDirectory()==dbdir)
     log.setLevel(logging.INFO)
     try:
         colorize=__import__('logutils.colorize',fromlist=['colorize'])

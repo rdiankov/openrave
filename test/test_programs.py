@@ -94,10 +94,11 @@ def CompileProject(cmakedir,cmakebuilddir=None):
         os.chdir(cmakebuilddir)
         assert(os.system('cmake %s %s'%(cmakeoptions,cmakedir)) == 0)
         assert(os.system(makecommand) == 0)
+        os.chdir(curdir)
         if openravepyCompilerVersion().startswith('msvc'):
             dllfilename = os.path.join(programdir,cmakename+'.dll')
             if os.path.exists(dllfilename):
-                shutil.copyfile(dllfilename,cmakebuilddir+'/'+cmakename+'.dll')
+                shutil.copyfile(dllfilename,os.path.join(cmakebuilddir,cmakename+'.dll'))
         return programdir
 
     finally:
@@ -125,13 +126,12 @@ target_link_libraries(%(name)s ${OpenRAVE_LIBRARIES})
 install(TARGETS %(name)s DESTINATION .)
 """%{'name':name}
         open(os.path.join(name,'CMakeLists.txt'),'w').write(CMakeLists)
-        programdir = CompileProject(name)
+        programdir = CompileProject(name,os.path.join(name,'build'))
         assert(os.system(GetRunCommand()+os.path.join(programdir,name)) == 0)
     finally:
         os.chdir(curdir)
         shutil.rmtree(name)
-        shutil.rmtree(programdir)
-
+        
 def test_cppexamples():
     try:
         programdir = CompileProject(os.path.join('..','src','cppexamples'))
@@ -188,7 +188,7 @@ def test_createplugin():
         assert(os.system('openrave-createplugin.py myprogram --usecore') == 0)
         programdir=CompileProject('myprogram',os.path.join('myprogram','build'))
         os.chdir('myprogram')
-        assert(os.system(GetRunCommand()+os.path.join('build','myprogram')) == 0)
+        assert(os.system(GetRunCommand()+os.path.join(os.path.relpath(programdir,'myprogram'),'myprogram')) == 0)
     finally:
         os.chdir(curdir)
         shutil.rmtree('myprogram')
