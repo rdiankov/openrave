@@ -48,7 +48,6 @@ def setup_module(module):
         assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
     else:
         assert(RaveGetHomeDirectory()==dbdir)
-    log.setLevel(logging.INFO)
     try:
         colorize=__import__('logutils.colorize',fromlist=['colorize'])
         handler = colorize.ColorizingStreamHandler()
@@ -62,7 +61,10 @@ def setup_module(module):
         raveLogVerbose('python logutils not present so cannot colorize python output.')
 
     handler.setFormatter(logging.Formatter('%(name)s.%(funcName)s: %(message)s'))
+    log.setLevel(logging.INFO)
     log.addHandler(handler)
+    logging.getLogger('openravepy').setLevel(logging.INFO)
+    logging.getLogger('openravepy').addHandler(handler)
     
 def teardown_module(module):
     RaveDestroy()

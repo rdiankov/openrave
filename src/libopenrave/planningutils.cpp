@@ -698,6 +698,7 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     TrajectoryBasePtr traj = RaveCreateTrajectory(sourcetraj->GetEnv(),sourcetraj->GetXMLId());
     traj->Init(sourcetraj->GetConfigurationSpecification());
     traj->Insert(0,targetdata);
+    traj->SetDescription(sourcetraj->GetDescription());
     return traj;
 }
 
@@ -755,7 +756,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
 
     // need to find all waypoints
     vector<dReal> vtemp, vnewdata;
-
+    stringstream sdesc;
     int deltatimeoffset = spec.GetGroupFromName("deltatime").offset;
     FOREACHC(ittraj,listtrajectories) {
         vector<ConfigurationSpecification::Group>::const_iterator itwaypointgrouptraj = (*ittraj)->GetConfigurationSpecification().FindCompatibleGroup("iswaypoint",true);
@@ -784,6 +785,8 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
             }
             ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);
         }
+
+        sdesc << (*ittraj)->GetDescription() << endl;
     }
 
     vnewdata.at(deltatimeoffset) = vtimes[0];
@@ -797,6 +800,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
         }
     }
     presulttraj->Insert(0,vnewdata);
+    presulttraj->SetDescription(sdesc.str());
     return presulttraj;
 }
 

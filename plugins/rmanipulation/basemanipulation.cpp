@@ -552,6 +552,7 @@ protected:
         string cmd;
         dReal jitter = 0.03;
         dReal jitterikparam = 0;
+        dReal goalsampleprob = 0.1;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -681,6 +682,9 @@ protected:
             else if( cmd == "jitterikparam" || cmd == "jittergoal" ) {
                 sinput >> jitterikparam;
             }
+            else if( cmd == "goalsampleprob" ) {
+                sinput >> goalsampleprob;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -739,7 +743,7 @@ protected:
                 --nSeedIkSolutions;
             }
         }
-        goalsampler.SetSamplingProb(0.05);
+        goalsampler.SetSamplingProb(goalsampleprob);
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {

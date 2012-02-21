@@ -88,4 +88,27 @@ class TestIkSolver(EnvironmentSetup):
             sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0.03)
             assert(sampler.Sample() is not None)
 
+    def test_jointlimitsfilter(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
 
+        def filtertest(sol,manip,ikparam):
+            return IkFilterReturn.Success
+
+        handle1 = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
+
+        orgvalues = robot.GetDOFValues()
+        joint=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+        joint.SetLimits([-pi+1e-5],[pi-1e-5])
+        robot.SetDOFValues([pi/4,pi/4,pi],[1,5,joint.GetDOFIndex()],False)
+        assert(not env.CheckCollision(robot))
+        T = ikmodel.manip.GetTransform()
+        robot.SetDOFValues(orgvalues)
+        sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)
+
+        joint.SetLimits([-pi],[pi])
+        sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)

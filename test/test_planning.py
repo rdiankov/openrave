@@ -37,7 +37,7 @@ class RunPlanning(EnvironmentSetup):
                 parameters.SetRobotActiveJoints(robot)
                 planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
-            
+
     def test_ikplanning(self):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
@@ -551,7 +551,39 @@ class RunPlanning(EnvironmentSetup):
                 raise ValueError('let static link pass')
             except openrave_exception, ex:
                 assert(ex.GetCode()==ErrorCode.InvalidState)
-                
+
+    def test_multipath(self):
+        env = self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot = env.GetRobots()[0]
+        with env:            
+            manip = robot.GetActiveManipulator()
+            basemanip = interfaces.BaseManipulation(robot)
+            basemanip.prob.SendCommand('SetMinimumGoalPaths 6')
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
+            if not lmodel.load():
+                lmodel.autogenerate()
+            lmodel.setRobotWeights()
+            lmodel.setRobotResolutions(xyzdelta=0.005)
+
+            startpose = array([  4.75570553e-01,  -3.09601285e-16,   8.79677582e-01, -5.55111505e-17,   2.80273561e-01,   1.40000001e-01, 8.88603999e-01])
+            sol = manip.FindIKSolution(startpose, IkFilterOptions.CheckEnvCollisions)
+            robot.SetActiveDOFValues(sol)
+            goalpose = array([ 0.42565319, -0.30998409,  0.60514354, -0.59710177,  0.06460554, 0.386792  ,  1.22894527])
+            ikgoal = IkParameterization(matrixFromPose(goalpose),IkParameterizationType.Transform6D)
+            basemanip.prob.SendCommand('SetMinimumGoalPaths 1')
+            traj1 = basemanip.MoveToHandPosition(ikparams=[ikgoal],maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
+            traj2 = basemanip.MoveToHandPosition(ikparams=[ikgoal],maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True,goalsampleprob=0.4,minimumgoalpaths=40)
+            
+            # there is a small probability that this check will fail..
+            assert(traj2.GetDuration() < traj1.GetDuration())
+            self.RunTrajectory(robot,traj1)
+            self.RunTrajectory(robot,traj2)
+            
 
 #generate_classes(RunPlanning, globals(), [('ode','ode'),('bullet','bullet')])
 

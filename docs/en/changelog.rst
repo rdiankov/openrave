@@ -97,6 +97,8 @@ Planning
 
 * Parabolic Smoother updates (thanks to Kris Hauser)
 
+* rplanners RRTs now track initial configuration indices
+
 Sampling
 --------
 
