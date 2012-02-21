@@ -179,8 +179,18 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
     SerializeRound(o,t.trans);
 }
 
+inline int CountCircularBranches(dReal angle)
+{
+    if( angle >= PI ) {
+        return static_cast<int>((angle+PI)/(2*PI));
+    }
+    else if( angle < -PI ) {
+        return static_cast<int>((angle-PI)/(2*PI));
+    }
+    return 0;
+}
 
-inline static dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();
     dReal e2 = (t1.rot+t2.rot).lengthsqr4();

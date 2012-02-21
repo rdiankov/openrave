@@ -1003,7 +1003,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_voffsets[0]+f);
+            pValues.push_back(_voffsets[0]+f+(_dofbranches[0]*2*PI));
             vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -1014,7 +1014,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_voffsets[1]+f);
+            pValues.push_back(_voffsets[1]+f+(_dofbranches[1]*2*PI));
             break;
         }
         case JointSpherical: {
@@ -1061,7 +1061,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                pValues.push_back(_voffsets[i]+f);
+                pValues.push_back(_voffsets[i]+f+(_dofbranches[i]*2*PI));
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
@@ -1095,7 +1095,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _voffsets[0]+f;
+                return _voffsets[0]+f+(_dofbranches[0]*2*PI);
             }
             else if( iaxis == 1 ) {
                 vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
@@ -1108,7 +1108,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _voffsets[1]+f;
+                return _voffsets[1]+f+(_dofbranches[1]*2*PI);
             }
             break;
         }
@@ -1151,7 +1151,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            return _voffsets[0]+f;
+            return _voffsets[0]+f+(_dofbranches[0]*2*PI);
         }
 
         // chain of revolute and prismatic joints
@@ -1178,7 +1178,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     f -= 2*PI;
                 }
                 if( i == iaxis ) {
-                    return _voffsets[i]+f;
+                    return _voffsets[i]+f+(_dofbranches[i]*2*PI);
                 }
             }
             else { // prismatic
@@ -2615,7 +2615,9 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
 
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
-    RAVELOG_VERBOSE("GetLinkTransformations should be called with dofbranches\n");
+    if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+        RAVELOG_VERBOSE("GetLinkTransformations should be called with dofbranches\n");
+    }
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
     vector<LinkPtr>::const_iterator itlink;
@@ -2724,12 +2726,22 @@ Vector KinBody::GetCenterOfMass() const
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
-    RAVELOG_VERBOSE("SetLinkTransformations should be called with dofbranches\n");
+    if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+        RAVELOG_WARN("SetLinkTransformations should be called with dofbranches, setting all branches to 0\n");
+    }
+    else {
+        RAVELOG_DEBUG("SetLinkTransformations should be called with dofbranches, setting all branches to 0\n");
+    }
     OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "not enough links %d<%d", vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink) {
         (*itlink)->SetTransform(*it);
+    }
+    FOREACH(itjoint,_vecjoints) {
+        for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
+            (*itjoint)->_dofbranches[i] = 0;
+        }
     }
     _nUpdateStampId++;
 }
@@ -2742,13 +2754,11 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, c
     for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
         (*itlink)->SetTransform(*it);
     }
-
     FOREACH(itjoint,_vecjoints) {
         for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
             (*itjoint)->_dofbranches[i] = dofbranches.at((*itjoint)->GetDOFIndex()+i);
         }
     }
-
     _nUpdateStampId++;
 }
 
@@ -2769,7 +2779,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     for(size_t i = 1; i < _veclinks.size(); ++i) {
         _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
     }
-
     SetDOFValues(vJointValues,bCheckLimits);
 }
 
@@ -2928,7 +2937,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
 
                     if( veval.empty() ) {
                         FORIT(iteval,vevalcopy) {
-                            if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
+                            if( !bCheckLimits || pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
                                 veval.push_back(*iteval);
                             }
                             else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
@@ -2989,6 +2998,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                 Transform tsecond;
                 tsecond.rot = quatFromAxisAngle(tfirst.rotate(pjoint->GetInternalHierarchyAxis(1)), pvalues[1]);
                 tjoint = tsecond * tfirst;
+                pjoint->_dofbranches[0] = CountCircularBranches(pvalues[0]-pjoint->GetWrapOffset(0));
+                pjoint->_dofbranches[1] = CountCircularBranches(pvalues[1]-pjoint->GetWrapOffset(1));
                 break;
             }
             case Joint::JointSpherical: {
@@ -3008,6 +3019,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
         else {
             if( pjoint->GetType() == Joint::JointRevolute ) {
                 tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
+                pjoint->_dofbranches[0] = CountCircularBranches(pvalues[0]-pjoint->GetWrapOffset(0));
             }
             else if( pjoint->GetType() == Joint::JointPrismatic ) {
                 tjoint.trans = pjoint->GetInternalHierarchyAxis(0) * pvalues[0];
@@ -3017,6 +3029,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                     Transform tdelta;
                     if( pjoint->IsRevolute(iaxis) ) {
                         tdelta.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(iaxis), pvalues[iaxis]);
+                        pjoint->_dofbranches[iaxis] = CountCircularBranches(pvalues[iaxis]-pjoint->GetWrapOffset(iaxis));
                     }
                     else {
                         tdelta.trans = pjoint->GetInternalHierarchyAxis(iaxis) * pvalues[iaxis];

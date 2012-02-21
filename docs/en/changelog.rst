@@ -25,6 +25,8 @@ Core
 
 * Set better epsilon limits throughout the code
 
+* dofbranches are now used to set/get joint values greater than 2*pi range. openravepy KinBody.XLinkTransformations 
+
 Planning
 --------
 

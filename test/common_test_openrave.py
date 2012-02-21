@@ -60,7 +60,7 @@ def setup_module(module):
         handler = logging.StreamHandler()
         raveLogVerbose('python logutils not present so cannot colorize python output.')
 
-    handler.setFormatter(logging.Formatter('%(name)s.%(funcName)s: %(message)s'))
+    handler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (pid='+str(os.getpid())+'): %(message)s'))
     log.setLevel(logging.INFO)
     log.addHandler(handler)
     logging.getLogger('openravepy').setLevel(logging.INFO)

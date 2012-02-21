@@ -975,18 +975,22 @@ public:
         return ReturnTransform(_pbody->GetTransform());
     }
 
-    object GetLinkTransformations() const
+    object GetLinkTransformations(bool returndofbranches=false) const
     {
-        boost::python::list transforms;
+        boost::python::list otransforms;
         vector<Transform> vtransforms;
-        _pbody->GetLinkTransformations(vtransforms);
+        std::vector<int> vdofbranches;
+        _pbody->GetLinkTransformations(vtransforms,vdofbranches);
         FOREACHC(it, vtransforms) {
-            transforms.append(ReturnTransform(*it));
+            otransforms.append(ReturnTransform(*it));
         }
-        return transforms;
+        if( returndofbranches ) {
+            return boost::python::make_tuple(otransforms, toPyArray(vdofbranches));
+        }
+        return otransforms;
     }
 
-    void SetLinkTransformations(object transforms)
+    void SetLinkTransformations(object transforms, object odofbranches=object())
     {
         size_t numtransforms = len(transforms);
         if( numtransforms != _pbody->GetLinks().size() ) {
@@ -996,7 +1000,12 @@ public:
         for(size_t i = 0; i < numtransforms; ++i) {
             vtransforms[i] = ExtractTransform(transforms[i]);
         }
-        _pbody->SetLinkTransformations(vtransforms);
+        if( odofbranches == object() ) {
+            _pbody->SetLinkTransformations(vtransforms);
+        }
+        else {
+            _pbody->SetLinkTransformations(vtransforms, ExtractArray<int>(odofbranches));
+        }
     }
 
     void SetLinkVelocities(object ovelocities)
@@ -2262,6 +2271,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
 
 namespace openravepy
 {
@@ -2451,9 +2462,9 @@ void init_openravepy_kinbody()
                         .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
                         .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
                         .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
-                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
+                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, GetLinkTransformations_overloads(args("returndofbranches"), DOXY_FN(KinBody,GetLinkTransformations)))
                         .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
-                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
+                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,SetLinkTransformations_overloads(args("transforms","dofbranches"), DOXY_FN(KinBody,SetLinkTransformations)))
                         .def("SetBodyTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
                         .def("SetLinkVelocities",&PyKinBody::SetLinkVelocities,args("velocities"), DOXY_FN(KinBody,SetLinkVelocities))
                         .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))

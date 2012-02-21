@@ -28,50 +28,52 @@ class TestKinematics(EnvironmentSetup):
                         body.GetLinks()[0].SetStatic((i%2)>0)
                         
                         Told = body.GetTransform()
-                        Tallold = body.GetLinkTransformations()
+                        Tallold,dofbranchesold = body.GetLinkTransformations(True)
                         dofvaluesold = body.GetDOFValues()
                         T = randtrans()
                         body.SetTransform(T)
                         _T = body.GetTransform()
                         assert( transdist(T,_T) <= g_epsilon )
-                        body.SetLinkTransformations(Tallold)
-                        _Tallold = body.GetLinkTransformations()
+                        body.SetLinkTransformations(Tallold,dofbranchesold)
+                        _Tallold,_dofbranchesold = body.GetLinkTransformations(True)
                         assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
+                        assert( transdist(dofbranchesold,_dofbranchesold) == 0 )
                         Tallnew = [randtrans() for j in range(len(Tallold))]
-                        body.SetLinkTransformations(Tallnew)
-                        _Tallnew = body.GetLinkTransformations()
+                        body.SetLinkTransformations(Tallnew,zeros(body.GetDOF()))
+                        _Tallnew,_dofbranchesnew = body.GetLinkTransformations(True)
                         assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         for link, T in izip(body.GetLinks(),Tallold):
                             link.SetTransform(T)
-                        _Tallold = body.GetLinkTransformations()
+                        _Tallold,_dofbranchesold = body.GetLinkTransformations(True)
                         assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
                         # dof
-                        _dofvaluesold = body.GetDOFValues()
-                        assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon*len(dofvaluesold) )
+                        # cannot compre dofvaluesold, and _dofvaluesold since branches are not set!
+                        #assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon*len(dofvaluesold) )
                         dofvaluesnew = randlimits(*body.GetDOFLimits())
                         body.SetDOFValues(dofvaluesnew)
                         _dofvaluesnew = body.GetDOFValues()
                         assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
-                        Tallnew = body.GetLinkTransformations()
+                        Tallnew,dofbranchesnew = body.GetLinkTransformations(True)
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
-                        _Tallnew = body.GetLinkTransformations()
+                        _Tallnew,dofbranchesnew = body.GetLinkTransformations(True)
                         assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         _dofvaluesnew = body.GetDOFValues()
                         assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
                         
                         # do it again
                         body.SetDOFValues(dofvaluesnew)
-                        _Tallnew = body.GetLinkTransformations()
+                        _Tallnew,_dofbranchesnew = body.GetLinkTransformations(True)
                         assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
+                        assert( transdist(dofbranchesnew,_dofbranchesnew) == 0 )
                         for joint in body.GetJoints():
                             _dofvaluesnew = joint.GetValues()
                             assert( all(abs(joint.SubtractValues(dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())], _dofvaluesnew)) <= g_epsilon) )
                         Tallnew2 = [randtrans() for link in body.GetLinks()]
                         for link,T in izip(body.GetLinks(),Tallnew2):
                             link.SetTransform(T)
-                        _Tallnew2 = body.GetLinkTransformations()
+                        _Tallnew2,_dofbranchesnew2 = body.GetLinkTransformations(True)
                         assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon*len(Tallnew2) )
-                        body.SetLinkTransformations(Tallnew)
+                        body.SetLinkTransformations(Tallnew,dofbranchesnew)
                         for idir in range(20):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
                             localtrans = randtrans()
@@ -247,7 +249,7 @@ class TestKinematics(EnvironmentSetup):
         robot = self.LoadRobot(g_robotfiles[0])
         s = robot.serialize(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
-        robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()])
+        robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()],zeros(robot.GetDOF()))
         hash1 = robot.GetKinematicsGeometryHash()
         assert( hash0 == hash1 )
 
@@ -280,14 +282,15 @@ class TestKinematics(EnvironmentSetup):
 
                 zerovalues = zeros(body.GetDOF())
                 body.SetDOFValues(zerovalues)
-                Tlinks = body.GetLinkTransformations()
+                Tlinks,dofbranches = body.GetLinkTransformations(True)
                 limits = body.GetDOFLimits()
                 limits = [numpy.maximum(-3*ones(body.GetDOF()),limits[0]), numpy.minimum(3*ones(body.GetDOF()),limits[1])]
                 for myiter in range(10):
                     # todo set the first link to static
-                    body.SetLinkTransformations(Tlinks)
+                    body.SetLinkTransformations(Tlinks,dofbranches)
                     body.SetZeroConfiguration()
                     assert( transdist(Tlinks,body.GetLinkTransformations()) <= g_epsilon )
+                    assert( transdist(dofbranches,body.GetLinkTransformations(True)[1]) == 0 )
                     body.GetLinks()[0].SetStatic(myiter%2)
                     offsets = randlimits(*limits)
                     raveLogDebug(repr(offsets))
