@@ -42,6 +42,7 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __pUserData = preference->__pUserData;
     __struri = preference->__struri;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
+    __description = preference->__description;
 }
 
 bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
