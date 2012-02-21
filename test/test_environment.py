@@ -169,7 +169,8 @@ class TestEnvironment(EnvironmentSetup):
             robot0.SetName('__dummy__')
             self.LoadEnv('test.dae')
             robot1=env.GetRobot(oldname)
-            assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= 1e-4 ) # for now have to use this precision until collada-dom can store doubles
+            # for now have to use this precision until collada-dom can store doubles
+            assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= robot0.GetDOF()*1e-4 )
 
     def test_unicode(self):
         env=self.env
