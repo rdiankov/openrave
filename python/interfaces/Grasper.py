@@ -56,7 +56,8 @@ class Grasper:
             cmd += 'direction %.15e %.15e %.15e '%(direction[0],direction[1],direction[2])
         if transformrobot:
             cmd += 'roll %.15e position %.15e %.15e %.15e manipulatordirection %.15e %.15e %.15e '%(roll,position[0],position[1],position[2],manipulatordirection[0],manipulatordirection[1],manipulatordirection[2])
-        cmd += 'standoff %.15e '%standoff
+        if standoff is not None:
+            cmd += 'standoff %.15e '%standoff
         if target is not None:
             cmd += 'target %s '%target.GetName()
         cmd += 'stablecontacts %d forceclosure %d transformrobot %d onlycontacttarget %d tightgrasp %d outputfinal %d '%(stablecontacts,forceclosure,transformrobot,onlycontacttarget,tightgrasp,outputfinal)
