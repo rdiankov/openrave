@@ -960,26 +960,20 @@ protected:
         TrajectoryBasePtr ptrajfinal = RaveCreateTrajectory(GetEnv(),"");
         ptrajfinal->Init(specfinal);
 
-        _robot->SetDOFValues(vCurRobotValues);
-
         if( vinsertconfiguration.size() > 0 ) {
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
-
-            TrajectoryBasePtr pstarttraj = RaveCreateTrajectory(GetEnv(),"");
-            pstarttraj->Init(_robot->GetActiveConfigurationSpecification());
+            _robot->SetDOFValues(vinsertconfiguration);
+            _robot->GetActiveDOFValues(vtrajdata);
 
             vector<int> vindices(_robot->GetDOF());
             for(size_t i = 0; i < vindices.size(); ++i) {
                 vindices[i] = i;
             }
-            ConfigurationSpecification specdof = _robot->GetConfigurationSpecificationIndices(vindices);
-            pstarttraj->Insert(0,vCurRobotValues,specdof);
-            pstarttraj->Insert(0,vinsertconfiguration,specdof);
-            planningutils::RetimeActiveDOFTrajectory(pstarttraj, _robot, false, _fMaxVelMult);
-            // add
-            pstarttraj->GetWaypoints(0,pstarttraj->GetNumWaypoints(),vtrajdata,specfinal);
-            ptrajfinal->Insert(0,vtrajdata);
+            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(vindices));
+            planningutils::InsertActiveDOFWaypointWithRetiming(0, vtrajdata, std::vector<dReal>(), ptrajfinal, _robot, _fMaxVelMult);
         }
+
+        _robot->SetDOFValues(vCurRobotValues);
 
         if( bCombinePreShapeTraj ) {     // add the preshape
             RAVELOG_DEBUG(str(boost::format("combine preshape trajectory, duration=%f")%itpreshapetraj->second->GetDuration()));
@@ -1004,13 +998,6 @@ protected:
             sout << *itdest << " ";
         }
         sout << goalFound.graspindex << " " << (float)nSearchTime/1000000.0f << " ";
-
-        // set the trajectory
-        vector<int> indices(_robot->GetDOF());
-        for(int i = 0; i < _robot->GetDOF(); ++i) {
-            indices[i] = i;
-        }
-        _robot->SetActiveDOFs(indices);
         CM::SetActiveTrajectory(_robot,ptrajfinal, bExecute, strtrajfilename, pOutputTrajStream);
         return true;
     }
