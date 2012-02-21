@@ -38,8 +38,9 @@ import cubeassembly
 import dualarmdemo_schunk
 import fastgrasping
 import fastgraspingthreaded
-import hanoi
 import graspplanning
+import hanoi
+import inversekinematicspick
 import movehandstraight
 
 try:
