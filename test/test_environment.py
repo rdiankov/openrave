@@ -163,7 +163,13 @@ class TestEnvironment(EnvironmentSetup):
             robot0=self.LoadRobot(g_robotfiles[0])
             robot0.SetTransform(eye(4))
             lower,upper = robot0.GetDOFLimits()
-            robot0.SetDOFValues(lower+random.rand(robot0.GetDOF())*(upper-lower))
+            # try to limit circular joints since they throw off precision
+            values = lower+random.rand(robot0.GetDOF())*(upper-lower)
+            for j in robot0.GetJoints():
+                if j.IsCircular(0):
+                    values[j.GetDOFIndex()] = (random.rand()-pi)*2*pi
+            robot0.SetDOFValues(values)
+            
             env.Save('test.dae')
             oldname = robot0.GetName()
             robot0.SetName('__dummy__')
