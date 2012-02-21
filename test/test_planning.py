@@ -564,11 +564,6 @@ class RunPlanning(EnvironmentSetup):
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
-            lmodel = databases.linkstatistics.LinkStatisticsModel(robot)
-            if not lmodel.load():
-                lmodel.autogenerate()
-            lmodel.setRobotWeights()
-            lmodel.setRobotResolutions(xyzdelta=0.005)
 
             startpose = array([  4.75570553e-01,  -3.09601285e-16,   8.79677582e-01, -5.55111505e-17,   2.80273561e-01,   1.40000001e-01, 8.88603999e-01])
             sol = manip.FindIKSolution(startpose, IkFilterOptions.CheckEnvCollisions)

@@ -181,7 +181,7 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 
 inline int CountCircularBranches(dReal angle)
 {
-    if( angle >= PI ) {
+    if( angle > PI ) {
         return static_cast<int>((angle+PI)/(2*PI));
     }
     else if( angle < -PI ) {

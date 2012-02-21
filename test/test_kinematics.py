@@ -26,6 +26,14 @@ class TestKinematics(EnvironmentSetup):
                     for body in env.GetBodies():
                         # change the staticness of the first link (shouldn't affect anything)
                         body.GetLinks()[0].SetStatic((i%2)>0)
+
+                        lowerlimit,upperlimit = body.GetDOFLimits()
+                        body.SetDOFValues(lowerlimit)
+                        dofvalues = body.GetDOFValues()
+                        assert( transdist(lowerlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))
+                        body.SetDOFValues(upperlimit)
+                        dofvalues = body.GetDOFValues()
+                        assert( transdist(upperlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))
                         
                         Told = body.GetTransform()
                         Tallold,dofbranchesold = body.GetLinkTransformations(True)
