@@ -966,8 +966,15 @@ protected:
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
 
             TrajectoryBasePtr pstarttraj = RaveCreateTrajectory(GetEnv(),"");
-            pstarttraj->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecification());
-            pstarttraj->Insert(0,vinsertconfiguration,_robot->GetConfigurationSpecification());
+            pstarttraj->Init(_robot->GetActiveConfigurationSpecification());
+
+            vector<int> vindices(_robot->GetDOF());
+            for(size_t i = 0; i < vindices.size(); ++i) {
+                vindices[i] = i;
+            }
+            ConfigurationSpecification specdof = _robot->GetConfigurationSpecificationIndices(vindices);
+            pstarttraj->Insert(0,vCurRobotValues,specdof);
+            pstarttraj->Insert(0,vinsertconfiguration,specdof);
             planningutils::RetimeActiveDOFTrajectory(pstarttraj, _robot, false, _fMaxVelMult);
             // add
             pstarttraj->GetWaypoints(0,pstarttraj->GetNumWaypoints(),vtrajdata,specfinal);

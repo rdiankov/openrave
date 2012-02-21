@@ -100,13 +100,13 @@ public:
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
                 if( vdiffdata.at(i+j) < lower ) {
                     if( vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
                     }
                     vdiffdata.at(i+j) = lower;
                 }
                 else if( vdiffdata.at(i+j) > upper ) {
                     if( vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
                     }
                     vdiffdata.at(i+j) = upper;
                 }
