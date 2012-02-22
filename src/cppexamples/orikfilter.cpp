@@ -6,6 +6,7 @@
     <b>Full Example Code:</b>
  */
 #include <openrave-core.h>
+#include <openrave/utils.h>
 #include <vector>
 #include <sstream>
 #include <boost/thread/thread.hpp>
@@ -14,40 +15,10 @@
 using namespace OpenRAVE;
 using namespace std;
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-inline static uint32_t GetMilliTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
-}
-#else
-
-inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
-{
-    struct timeval timeofday;
-    gettimeofday(&timeofday,NULL);
-    sec  = timeofday.tv_sec;
-    nsec = timeofday.tv_usec * 1000;
-}
-
-inline static uint32_t GetMilliTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
-}
-
-#endif
-
 // quit after 100 milliseconds
 IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&, uint32_t starttime)
 {
-    if( GetMilliTime()-starttime > 100 ) {
+    if( utils::GetMilliTime()-starttime > 100 ) {
         RAVELOG_INFO("quitting\n");
         return IKFR_Quit;
     }
@@ -97,10 +68,10 @@ int main(int argc, char ** argv)
             probot->SetActiveDOFValues(v);
             bool bincollision = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
 
-            uint32_t starttime = GetMilliTime();
+            uint32_t starttime = utils::GetMilliTime();
             UserDataPtr filterhandle = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
             bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IKP_Transform6D),v,IKFO_CheckEnvCollisions);
-            RAVELOG_INFO("in collision: %d, real success %d, time passed: %d\n",bincollision,bsuccess,GetMilliTime()-starttime);
+            RAVELOG_INFO("in collision: %d, real success %d, time passed: %d\n",bincollision,bsuccess,utils::GetMilliTime()-starttime);
         }
     }
 

@@ -25,7 +25,7 @@ Core
 
 * Set better epsilon limits throughout the code
 
-* dofbranches are now used to set/get joint values greater than 2*pi range. openravepy KinBody.XLinkTransformations 
+* dofbranches are now used to set/get joint values greater than 2*pi range. Added support in openravepy KinBody.XLinkTransformations 
 
 Planning
 --------
@@ -56,7 +56,11 @@ Physics
 Examples
 --------
 
-* Added orplanning_door example to show how to plan with robot+door at same time.
+* Added orplanning_door C++ example to show how to plan with robot+door at same time.
+
+* Added :mod:`.examples.inversekinematicspick` python example to show IK picking.
+
+* Introduced a simple framework for the C++ examples in cppexamples/orexample.h (class OpenRAVEExample). Most C++ examples now use it.
 
 Misc
 ----
@@ -67,13 +71,11 @@ Misc
 
 * Fixed :meth:`.planningutils.RetimeActiveDOFTrajectory` and :meth:`.planningutils.RetimeAffineTrajectory` when trajectories have timestamps.
 
-* Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with find_package.
+* Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with cmake's find_package.
 
 * Fixed race condition with video recorder, viewer exiting, and other threads.
 
 * Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
-
-* Introduced a simple framework for the C++ examples in cppexamples/orexample.h (class OpenRAVEExample). Most C++ examples now use it.
 
 Version 0.6.2
 =============

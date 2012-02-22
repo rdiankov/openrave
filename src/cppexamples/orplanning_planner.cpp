@@ -16,6 +16,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 class PlanningPlannerExample : public OpenRAVEExample
 {
 public:
@@ -105,10 +107,11 @@ public:
     }
 };
 
+} // end namespace cppexamples
 
 int main(int argc, char ** argv)
 {
-    PlanningPlannerExample example;
+    cppexamples::PlanningPlannerExample example;
     return example.main(argc,argv);
 }
 

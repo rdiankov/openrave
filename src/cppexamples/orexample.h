@@ -11,6 +11,8 @@
 
 #include <signal.h>
 
+namespace cppexamples {
+
 /** \brief A simple framework for running C++ examples.
 
     It makes sure OpenRAVE cleans itself up by registering itself into the sighandler. In order to use, derive from it:
@@ -115,3 +117,4 @@ private:
     }
 };
 
+} // end namespace cppexamples

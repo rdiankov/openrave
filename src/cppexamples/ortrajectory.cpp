@@ -46,6 +46,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 class TrajectoryExample : public OpenRAVEExample
 {
 public:
@@ -89,8 +91,10 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 int main(int argc, char ** argv)
 {
-    TrajectoryExample example;
+    cppexamples::TrajectoryExample example;
     return example.main(argc,argv);
 }

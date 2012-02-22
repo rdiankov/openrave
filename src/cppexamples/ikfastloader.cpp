@@ -81,6 +81,6 @@ int main(int argc, char ** argv)
         }
     }
 
-    penv->Destroy(); // destroy
+    RaveDestroy(); // destroy
     return 0;
 }

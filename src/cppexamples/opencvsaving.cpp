@@ -17,6 +17,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 class OpenRAVECamera
 {
 public:
@@ -89,8 +91,10 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 int main(int argc, char ** argv)
 {
-    OpenCVExample example;
+    cppexamples::OpenCVExample example;
     return example.main(argc,argv);
 }

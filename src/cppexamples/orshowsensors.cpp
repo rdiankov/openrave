@@ -19,6 +19,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 class ShowSensorsExample : public OpenRAVEExample
 {
 public:
@@ -39,8 +41,10 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 int main(int argc, char ** argv)
 {
-    ShowSensorsExample example;
+    cppexamples::ShowSensorsExample example;
     return example.main(argc,argv);
 }

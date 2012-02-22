@@ -44,6 +44,8 @@
 using namespace std;
 using namespace OpenRAVE;
 
+namespace cppexamples {
+
 class MyModule : public ModuleBase
 {
 public:
@@ -83,10 +85,12 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    if((type == PT_Module)&&(interfacename == "mymodule")) {
-        return InterfaceBasePtr(new MyModule(penv));
+    if( type == PT_Module && interfacename == "mymodule" ) {
+        return InterfaceBasePtr(new cppexamples::MyModule(penv));
     }
     return InterfaceBasePtr();
 }

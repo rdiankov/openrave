@@ -129,7 +129,8 @@ def main(env,options):
                     if sol is not None:
                         robot.SetDOFValues(sol,manip.GetArmIndices())
                         # have to update all other pickers since two manipulators can be connected to the same joints (torso)
-                        for picker2,manip2 in pickers:
+                        for ipicker2, (picker2,manip2) in enumerate(pickers):
+                            Tpickers[ipicker2] = manip2.GetTransform()
                             picker2.SetTransform(manip2.GetTransform())
                     # changing color produces bugs with qtcoin
 #                     for igeom,geom in enumerate(picker.GetLinks()[0].GetGeometries()):

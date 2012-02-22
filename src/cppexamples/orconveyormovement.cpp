@@ -17,6 +17,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 /// Holds a registered set of bodies, at every time step creates new bodies and moves them along a trajectory.
 class ConveyorBeltModule : public ModuleBase
 {
@@ -143,8 +145,10 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 int main(int argc, char ** argv)
 {
-    ConveyorExample example;
+    cppexamples::ConveyorExample example;
     return example.main(argc,argv);
 }

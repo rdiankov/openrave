@@ -22,6 +22,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 /// \brief builds up the configuration space of a robot and a door
 class DoorConfiguration : public boost::enable_shared_from_this<DoorConfiguration>
 {
@@ -343,8 +345,10 @@ public:
     }
 };
 
+} // end namespace cppexamples
+
 int main(int argc, char ** argv)
 {
-    PlanningDoorExample example;
+    cppexamples::PlanningDoorExample example;
     return example.main(argc,argv);
 }
