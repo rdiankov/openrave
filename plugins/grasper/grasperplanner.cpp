@@ -335,7 +335,7 @@ public:
                 // check that anything that should be avoided is not hit
                 ct = 0;
                 for(int q = 0; q < (int)_vlinks.size(); q++) {
-                    ct = _CheckCollision(_vlinks[q], KinBodyPtr());
+		    ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
                     if( ct&CT_AvoidLinkHit ) {
                         break;
                     }
@@ -395,7 +395,7 @@ public:
             }
             _robot->SetActiveDOFValues(dofvals,true);
             _robot->GetActiveDOFValues(dofvals);
-            int ct = _CheckCollision(pjoint,KinBodyPtr());
+            int ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
             if( ct&CT_CollisionMask ) {
                 RAVELOG_DEBUG(str(boost::format("gripper initially in collision: %s\n")%_report->__str__()));
                 if( _parameters->bavoidcontact ) {
@@ -415,7 +415,7 @@ public:
                 dofvals[ifing] += vclosingdir[ifing] * step_size;
                 _robot->SetActiveDOFValues(dofvals,true);
                 _robot->GetActiveDOFValues(dofvals);
-                ct = _CheckCollision(pjoint,KinBodyPtr());
+                ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
                 if( ct&CT_CollisionMask ) {
                     if(coarse_pass) {
                         //coarse step collided, back up and shrink step
@@ -466,7 +466,7 @@ public:
         _robot->SetActiveDOFValues(dofvals,true);
         _robot->GetActiveDOFValues(dofvals);
         for(int q = 0; q < (int)_vlinks.size(); q++) {
-            int ct = _CheckCollision(_vlinks[q], KinBodyPtr());
+            int ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
             if( ct & CT_AvoidLinkHit ) {
                 RAVELOG_VERBOSE("grasp planner hit link that needed to be avoided\n");
                 return PS_Failed;
@@ -491,7 +491,7 @@ public:
     {
         int ct = 0;
         for(int q = 0; q < (int)_vlinks.size(); q++) {
-            if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  && ((ct = _CheckCollision(_vlinks[q], targetbody)) & CT_CollisionMask) ) {
+            if(_robot->DoesAffect(pjoint->GetJointIndex(),_vlinks[q]->GetIndex())  && ((ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), targetbody)) & CT_CollisionMask) ) {
                 break;
             }
         }
@@ -570,7 +570,7 @@ protected:
         while(1) {
             ct = 0;
             for(int q = 0; q < (int)_vlinks.size(); q++) {
-                ct = _CheckCollision(_vlinks[q], targetbody);
+                ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), targetbody);
                 if( ct&checkcollisions ) {
                     break;
                 }
@@ -636,7 +636,7 @@ protected:
 
             ct = 0;
             for(int q = 0; q < (int)_vlinks.size(); q++) {
-                ct = _CheckCollision(_vlinks[q], targetbody);
+                ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), targetbody);
                 if( ct&checkcollisions ) {
                     break;
                 }
