@@ -158,7 +158,7 @@ public:
     }
 
     virtual void Destroy() {
-      _Reset();
+        _Reset();
     }
 
 protected:

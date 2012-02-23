@@ -2188,7 +2188,7 @@ class IKFastSolver(AutoReloader):
         for imode in range(2):
             for i in range(len(ilinks)-2):
                 if i in usedindices:
-                        continue
+                    continue
                 startindex = ilinks[i]
                 endindex = ilinks[i+2]+1
                 p0 = self.multiplyMatrix(Links[ilinks[i]:ilinks[i+1]])[0:3,3]

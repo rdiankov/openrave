@@ -46,6 +46,7 @@ from enthought.traits.api import (HasTraits, Property, Bool,  on_trait_change, c
 
 from openravepy import *
 import numpy
+
 import struct, ctypes
 
 def GID2Tuple(gid):
