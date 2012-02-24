@@ -47,21 +47,24 @@ def mkdir_recursive(newdir):
                 # race conditions could still lead to such errors...
                 pass
 
-def myrelpath(path, start=os.path.curdir):
-    """Return a relative version of a path"""
-    if not path:
-        raise ValueError("no path specified")
-
-    start_list = os.path.abspath(start).split(os.path.sep)
-    path_list = os.path.abspath(path).split(os.path.sep)
-
-    # Work out how much of the filepath is shared by start and path.
-    i = len(os.path.commonprefix([start_list, path_list]))
-
-    rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
-    if not rel_list:
-        return os.path.curdir
-    return os.path.join(*rel_list)
+try:
+    from os.path import relpath
+    
+except ImportError:
+    # relpath is not present in python 2.5 and below, so hold an implementation of it.
+    from posixpath import curdir, sep, pardir, join, abspath, commonprefix
+    
+    def relpath(path, start=curdir):
+        """Return a relative version of a path"""
+        if not path:
+            raise ValueError("no path specified")
+        
+        start_list = abspath(start).split(sep)
+        path_list = abspath(path).split(sep)
+        # Work out how much of the filepath is shared by start and path.
+        i = len(commonprefix([start_list, path_list]))
+        rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
+        return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
@@ -219,6 +222,19 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
             newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
         triindices = newindices
     return radius*numpy.array(vertices),triindices
+
+def DrawAxes(env,target,dist=1.0,linewidth=1):
+    """draws xyz coordinate system around target.
+
+    target can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
+    """
+    if isinstance(target,basestring):
+        T = self.env.GetKinBody(target).GetTransform()
+    elif len(target) == 7:
+        T = openravepy_int.matrixFromPose(target)
+    else:
+        T = numpy.array(target)
+    return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]]))
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""

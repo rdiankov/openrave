@@ -152,7 +152,7 @@ else:
 from ..openravepy_ext import openrave_exception, RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
 from . import DatabaseGenerator
-from ..misc import mkdir_recursive, myrelpath, TSP
+from ..misc import mkdir_recursive, relpath, TSP
 import time,platform,shutil,sys
 import os.path
 from os import getcwd, remove
@@ -702,7 +702,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 try:
                    output_dir = os.path.relpath('/',getcwd())
                 except AttributeError: # python 2.5 does not have os.path.relpath
-                   output_dir = myrelpath('/',getcwd())
+                   output_dir = relpath('/',getcwd())
 
                 platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
                 shutil.copyfile(sourcefilename, platformsourcefilename)
