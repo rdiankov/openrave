@@ -661,6 +661,7 @@ public:
             listGeometries.push_back(KinBody::Link::GEOMPROPERTIES(KinBody::LinkPtr()));
             KinBody::Link::GEOMPROPERTIES& g = listGeometries.back();
             g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+            g.vRenderScale = scale;
             aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
             g.collisionmesh.vertices.resize(input_mesh->mNumVertices);
             for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
@@ -740,6 +741,7 @@ public:
         g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
         g.diffuseColor=Vector(1,0.5f,0.5f,1);
         g.ambientColor=Vector(0.1,0.0f,0.0f,0);
+        g.vRenderScale = vscale;
         if( !CreateTriMeshData(penv,filename,vscale,g.collisionmesh,g.diffuseColor,g.ambientColor,g.ftransparency) ) {
             return false;
         }

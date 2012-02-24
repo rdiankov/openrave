@@ -67,14 +67,19 @@ class TestEnvironment(EnvironmentSetup):
             ab2=body2.ComputeAABB()
             assert( transdist(ab1.pos()*scalefactor,ab2.pos()) <= g_epsilon )
             assert( transdist(ab1.extents()*scalefactor,ab2.extents()) <= g_epsilon )
-
+            for link in body2.GetLinks():
+                for geom in link.GetGeometries():
+                    assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
             if len(body1.GetLinks()) == 1:
                 body3 = env.ReadKinBodyURI(renderfilename,{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
                 env.AddKinBody(body3,True)
                 body3.SetTransform(eye(4))
-                ab3=body2.ComputeAABB()
+                ab3=body3.ComputeAABB()
                 assert( transdist(ab3.pos(),ab2.pos()) <= g_epsilon )
                 assert( transdist(ab3.extents(),ab2.extents()) <= g_epsilon )
+                for link in body3.GetLinks():
+                    for geom in link.GetGeometries():
+                        assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
 
     def test_collada(self):
         self.log.info('test that collada import/export works')

@@ -77,6 +77,8 @@ Misc
 
 * Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
 
+* Fixed render scale when non-xml file is loaded as a kinbody.
+
 Version 0.6.2
 =============
 
