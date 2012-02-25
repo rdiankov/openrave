@@ -53,15 +53,16 @@ __license__ = 'Apache License, Version 2.0'
 import time,bisect
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..openravepy_int import RaveFindDatabaseFile, RaveCreateRobot, IkParameterization, rotationMatrixFromAxisAngle, poseFromMatrix, matrixFromPose, matrixFromQuat, matrixFromAxisAngle, poseMult, quatFromAxisAngle, IkFilterOptions
+from ..openravepy_ext import quatArrayTMult, quatArrayTDist, poseMultArrayT, normalizeZRotation
 from . import DatabaseGenerator
 from .. import pyANN
-import kinematicreachability, linkstatistics, inversekinematics
+from . import kinematicreachability, linkstatistics, inversekinematics
+
 import numpy
 import os.path
 from optparse import OptionParser
@@ -106,9 +107,9 @@ class InverseReachabilityModel(DatabaseGenerator):
     @staticmethod
     def classnormalizationconst(classstd):
         """normalization const for the equation exp(dot(-0.5/bandwidth**2,r_[arccos(x[0])**2,x[1:]**2]))"""
-        gaussconst = -0.5*(len(classstd)-1)*log(pi)-0.5*log(prod(classstd[1:]))
+        gaussconst = -0.5*(len(classstd)-1)*numpy.log(pi)-0.5*numpy.log(prod(classstd[1:]))
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
-        quatconst = log(1.0/classstd[0]**2+0.3334)
+        quatconst = numpy.log(1.0/classstd[0]**2+0.3334)
         return quatconst+gaussconst
     
     def preprocess(self):
@@ -642,8 +643,9 @@ class InverseReachabilityModel(DatabaseGenerator):
             self.env.AddRobot(self.robot)
 
     def show(self,options=None):
-        if len(self.env.GetViewer().GetXMLId()) == 0:
+        if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         maxnumber=20 if options is None else options.show_maxnumber
         transparency=0.8 if options is None else options.show_transparency
         with self.env:
@@ -655,7 +657,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     for geom in link.GetGeometries():
                         geom.SetTransparency(transparency)
                 newrobots.append(newrobot)
-            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetJointLimits()]
+            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetDOFLimits()]
         while True:
             # find a random position
             with self.robot:

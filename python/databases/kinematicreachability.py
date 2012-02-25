@@ -54,16 +54,18 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..openravepy_int import RaveFindDatabaseFile, IkParameterization, rotationMatrixFromQArray, poseFromMatrix
+from ..openravepy_ext import transformPoints, quatArrayTDist
 from .. import metaclass, pyANN
 from ..misc import SpaceSamplerExtra
 from . import DatabaseGenerator
-import convexdecomposition,inversekinematics
+from . import convexdecomposition, inversekinematics
+
+import numpy
 import time
 import os.path
 from heapq import nsmallest # for nth smallest element
@@ -244,7 +246,7 @@ class ReachabilityModel(DatabaseGenerator):
             for i,ind in enumerate(insideinds):
                 T[0:3,3] = allpoints[ind]+baseanchor
                 if mod(i,1000)==0:
-                    raveLogInfo('%s/%d'%(i,len(insideinds)))
+                    log.info('%s/%d', i,len(insideinds))
                 yield ind,T
         def consumer(ind,T):
             with self.env:
