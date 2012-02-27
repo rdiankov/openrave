@@ -226,14 +226,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
 
 import inversekinematics
 import grasping
-
+import convexdecomposition
+import linkstatistics
+import kinematicreachability
+import inversereachability
+    
 # python 2.5 raises 'import *' not allowed with 'from .'
 from sys import version_info
 if version_info[0:3]>=(2,6,0):
-    import convexdecomposition
-    import linkstatistics
-    import kinematicreachability
-    import inversereachability
     import visibilitymodel
 else:
     log.warn('some openravepy.datbases cannot be used python versions < 2.6')

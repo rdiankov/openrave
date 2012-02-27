@@ -169,7 +169,7 @@ else:
 
 import numpy
 from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints
-from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
 from .. import interfaces
