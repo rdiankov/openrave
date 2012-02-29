@@ -27,6 +27,8 @@ Core
 
 * dofbranches are now used to set/get joint values greater than 2*pi range. Added support in openravepy KinBody.XLinkTransformations 
 
+* The rigidly attached links of grabbed links of a robot are now always ignored, collision is never checked between them.
+
 Planning
 --------
 

@@ -334,7 +334,7 @@ protected:
         }
 
         if( params->workspacetraj->GetDuration() == 0 ) {
-            RAVELOG_WARN("workspace traj has is empty\n");
+            RAVELOG_WARN("workspace traj is empty\n");
             return false;
         }
 

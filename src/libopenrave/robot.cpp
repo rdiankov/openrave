@@ -1955,23 +1955,33 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     g.plinkrobot = plink;
     g.troot = plink->GetTransform().inverse() * pbody->GetTransform();
 
+    std::vector<LinkPtr > vattachedlinks;
+    plink->GetRigidlyAttachedLinks(vattachedlinks);
+
     {
         CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
         // check collision with all links to see which are valid
         FOREACH(itlink, _veclinks) {
-            if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                g.vCollidingLinks.push_back(*itlink);
-            }
-            else {
-                g.vNonCollidingLinks.push_back(*itlink);
+            if( find(vattachedlinks.begin(),vattachedlinks.end(), *itlink) == vattachedlinks.end() ) {
+                if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                    g.vNonCollidingLinks.push_back(*itlink);
+                }
             }
         }
+
+        std::vector<LinkPtr > vbodyattachedlinks;
         FOREACH(itgrabbed, _vGrabbedBodies) {
+            bool bsamelink = find(vattachedlinks.begin(),vattachedlinks.end(), itgrabbed->plinkrobot) != vattachedlinks.end();
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+            if( bsamelink ) {
+                pgrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
+            }
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                        g.vCollidingLinks.push_back(*itlink);
+                    if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
+                    }
+                    else if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                        g.vNonCollidingLinks.push_back(*itlink);
                     }
                 }
             }
@@ -1997,28 +2007,36 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     g.plinkrobot = pRobotLinkToGrabWith;
     g.troot = pRobotLinkToGrabWith->GetTransform().inverse() * pbody->GetTransform();
 
+    std::vector<LinkPtr > vattachedlinks;
+    pRobotLinkToGrabWith->GetRigidlyAttachedLinks(vattachedlinks);
+
     {
         CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
 
         // check collision with all links to see which are valid
         FOREACH(itlink, _veclinks) {
-            if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) != setRobotLinksToIgnore.end() ) {
-                continue;
-            }
-            if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                g.vCollidingLinks.push_back(*itlink);
-            }
-            else {
-                g.vNonCollidingLinks.push_back(*itlink);
+            if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
+                if( find(vattachedlinks.begin(),vattachedlinks.end(), *itlink) == vattachedlinks.end() ) {
+                    if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                        g.vNonCollidingLinks.push_back(*itlink);
+                    }
+                }
             }
         }
 
+        std::vector<LinkPtr > vbodyattachedlinks;
         FOREACH(itgrabbed, _vGrabbedBodies) {
+            bool bsamelink = find(vattachedlinks.begin(),vattachedlinks.end(), itgrabbed->plinkrobot) != vattachedlinks.end();
             KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+            if( bsamelink ) {
+                pgrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
+            }
             if( pgrabbedbody != pbody ) {
                 FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                    if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                        g.vCollidingLinks.push_back(*itlink);
+                    if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
+                    }
+                    else if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                        g.vNonCollidingLinks.push_back(*itlink);
                     }
                 }
             }
@@ -2060,27 +2078,35 @@ void RobotBase::ReleaseAllGrabbed()
 void RobotBase::RegrabAll()
 {
     CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+    std::vector<LinkPtr > vattachedlinks;
     FOREACH(itbody, _vGrabbedBodies) {
         KinBodyPtr pbody(itbody->pbody);
         if( !!pbody ) {
             // check collision with all links to see which are valid
-            itbody->vCollidingLinks.resize(0);
             itbody->vNonCollidingLinks.resize(0);
             _RemoveAttachedBody(pbody);
+            itbody->plinkrobot->GetRigidlyAttachedLinks(vattachedlinks);
             FOREACH(itlink, _veclinks) {
-                if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                    itbody->vCollidingLinks.push_back(*itlink);
-                }
-                else {
-                    itbody->vNonCollidingLinks.push_back(*itlink);
+                if( find(vattachedlinks.begin(),vattachedlinks.end(), *itlink) == vattachedlinks.end() ) {
+                    if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                        itbody->vNonCollidingLinks.push_back(*itlink);
+                    }
                 }
             }
+
+            std::vector<LinkPtr > vbodyattachedlinks;
             FOREACH(itgrabbed, _vGrabbedBodies) {
+                bool bsamelink = find(vattachedlinks.begin(),vattachedlinks.end(), itgrabbed->plinkrobot) != vattachedlinks.end();
                 KinBodyConstPtr pgrabbedbody(itgrabbed->pbody);
+                if( bsamelink ) {
+                    pgrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
+                }
                 if( pgrabbedbody != pbody ) {
                     FOREACHC(itlink, pgrabbedbody->GetLinks()) {
-                        if( GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
-                            itbody->vCollidingLinks.push_back(*itlink);
+                        if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
+                        }
+                        else if( !GetEnv()->CheckCollision(LinkConstPtr(*itlink), KinBodyConstPtr(pbody)) ) {
+                            itbody->vNonCollidingLinks.push_back(*itlink);
                         }
                     }
                 }
@@ -2191,9 +2217,9 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                 }
                 FOREACHC(itlink2, pbody2->GetLinks()) {
                     // make sure the two bodies were not initially colliding
-                    if( find(itbody->vCollidingLinks.begin(),itbody->vCollidingLinks.end(),*itlink2) == itbody->vCollidingLinks.end() ) {
+                    if( find(itbody->vNonCollidingLinks.begin(),itbody->vNonCollidingLinks.end(),*itlink2) != itbody->vNonCollidingLinks.end() ) {
                         FOREACHC(itlink, pbody->GetLinks()) {
-                            if( find(itbody2->vCollidingLinks.begin(),itbody2->vCollidingLinks.end(),*itlink) == itbody2->vCollidingLinks.end() ) {
+                            if( find(itbody2->vNonCollidingLinks.begin(),itbody2->vNonCollidingLinks.end(),*itlink) != itbody2->vNonCollidingLinks.end() ) {
                                 if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
                                     bCollision = true;
                                     break;

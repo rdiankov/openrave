@@ -344,7 +344,7 @@ private:
 public:
         KinBodyWeakPtr pbody;         ///< the grabbed body
         LinkPtr plinkrobot;         ///< robot link that is grabbing the body
-        std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks;         ///< robot links that already collide with the body
+        std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
         Transform troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     };
 
