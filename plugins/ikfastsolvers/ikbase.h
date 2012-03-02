@@ -75,6 +75,10 @@ public:
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         probot->GetActiveDOFLimits(_qlower,_qupper);
+        _qmid.resize(_qlower.size());
+        for(size_t i = 0; i < _qmid.size(); ++i) {
+            _qmid[i] = 0.5*(_qlower[i]*_qupper[i]);
+        }
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
             if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
@@ -315,6 +319,7 @@ protected:
         if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),boost::ref(stateCheck))) == SR_Quit ) {
             return false;
         }
+        _SortSolutions(probot, qSolutions);
         return qSolutions.size()>0;
     }
 
@@ -362,6 +367,7 @@ protected:
         if( _SolveAll(param,vfree,filteroptions,qSolutions,stateCheck) == SR_Quit ) {
             return false;
         }
+        _SortSolutions(probot, qSolutions);
         return qSolutions.size()>0;
     }
 
@@ -575,7 +581,7 @@ private:
         throw openrave_exception(str(boost::format("don't support ik parameterization 0x%x")%param.GetType()),ORE_InvalidArguments);
     }
 
-    static bool SortSolutionDistances(const pair<int,dReal>& p1, const pair<int,dReal>& p2)
+    static bool SortSolutionDistances(const pair<size_t,dReal>& p1, const pair<size_t,dReal>& p2)
     {
         return p1.second < p2.second;
     }
@@ -599,7 +605,7 @@ private:
         vector<int> vsolutionorder(vsolutions.size());
         if( vravesol.size() == q0.size() ) {
             // sort the solutions from closest to farthest
-            vector<pair<int,dReal> > vdists; vdists.reserve(vsolutions.size());
+            vector<pair<size_t,dReal> > vdists; vdists.reserve(vsolutions.size());
             FOREACH(itsol, vsolutions) {
                 BOOST_ASSERT(itsol->Validate());
                 vsolfree.resize(itsol->GetFree().size());
@@ -610,10 +616,10 @@ private:
                 for(int i = 0; i < (int)sol.size(); ++i) {
                     vravesol[i] = (dReal)sol[i];
                 }
-                vdists.push_back(make_pair((int)vdists.size(),_configdist2(probot,vravesol,q0)));
+                vdists.push_back(make_pair(vdists.size(),_configdist2(probot,vravesol,q0)));
             }
 
-            std::sort(vdists.begin(),vdists.end(),SortSolutionDistances);
+            std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
             for(size_t i = 0; i < vsolutionorder.size(); ++i) {
                 vsolutionorder[i] = vdists[i].first;
             }
@@ -887,6 +893,43 @@ private:
         return dist;
     }
 
+    void _SortSolutions(RobotBasePtr probot, std::vector< std::vector<dReal> >& qSolutions)
+    {
+        // sort with respect to how far it is from limits
+        vector< pair<size_t, dReal> > vdists; vdists.resize(qSolutions.size());
+        vector<dReal> v;
+        vector<dReal> viweights; viweights.reserve(probot->GetActiveDOF());
+        FOREACHC(it, probot->GetActiveDOFIndices()) {
+            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
+            viweights.push_back(1/pjoint->GetWeight(*it-pjoint->GetDOFIndex()));
+        }
+
+        for(size_t i = 0; i < vdists.size(); ++i) {
+            v = qSolutions[i];
+            probot->SubtractActiveDOFValues(v,_qlower);
+            dReal distlower = 1e30;
+            for(size_t i = 0; i < v.size(); ++i) {
+                distlower = min(distlower, RaveFabs(v[i])*viweights[i]);
+            }
+            v = qSolutions[i];
+            probot->SubtractActiveDOFValues(v,_qupper);
+            dReal distupper = 1e30;
+            for(size_t i = 0; i < v.size(); ++i) {
+                distupper = min(distupper, RaveFabs(v[i])*viweights[i]);
+            }
+            vdists[i].first = i;
+            vdists[i].second = -min(distupper,distlower);
+        }
+
+        std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
+        for(size_t i = 0; i < vdists.size(); ++i) {
+            if( i != vdists[i].first )  {
+                std::swap(qSolutions[i], qSolutions[vdists[i].first]);
+                std::swap(vdists[i], vdists[vdists[i].first]);
+            }
+        }
+    }
+
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
@@ -896,7 +939,7 @@ private:
     IkFn _pfnik;
     std::vector<dReal> _vFreeInc;
     int _nTotalDOF;
-    std::vector<dReal> _qlower, _qupper;
+    std::vector<dReal> _qlower, _qupper, _qmid;
     IkParameterizationType _iktype;
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;

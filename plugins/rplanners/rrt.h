@@ -431,13 +431,18 @@ public:
 
         while(itnext != vecnodes.end()) {
             //goalpath.length += _parameters->_distmetricfn((*itprev)->q,(*itnext)->q);
-            for(int i = 0; i < dof; ++i) {
-                goalpath.length += RaveFabs((*itprev)->q[i]-(*itnext)->q[i])*vivel[i];
-            }
+//            for(int i = 0; i < dof; ++i) {
+//                goalpath.length += RaveFabs((*itprev)->q[i]-(*itnext)->q[i])*vivel[i];
+//            }
             std::copy((*itnext)->q.begin(), (*itnext)->q.begin()+dof, itq);
             itprev=itnext;
             ++itnext;
             itq += dof;
+        }
+
+        // take distance with the last point only since rrt paths can initially be very complex but simplify down to something simpler
+        for(int i = 0; i < dof; ++i) {
+            goalpath.length += RaveFabs(goalpath.qall[i]-goalpath.qall[goalpath.qall.size()-dof+i])*vivel[i];
         }
     }
 
