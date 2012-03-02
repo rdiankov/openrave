@@ -81,6 +81,8 @@ Misc
 
 * Fixed render scale when non-xml file is loaded as a kinbody.
 
+* Returned ik solutions from :meth:`.Robot.Manipulator.FindIKSolutions` are prioritized by minimum distance from joint limits.
+
 Version 0.6.2
 =============
 

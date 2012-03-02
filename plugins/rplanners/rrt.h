@@ -430,19 +430,18 @@ public:
         }
 
         while(itnext != vecnodes.end()) {
-            //goalpath.length += _parameters->_distmetricfn((*itprev)->q,(*itnext)->q);
-//            for(int i = 0; i < dof; ++i) {
-//                goalpath.length += RaveFabs((*itprev)->q[i]-(*itnext)->q[i])*vivel[i];
-//            }
             std::copy((*itnext)->q.begin(), (*itnext)->q.begin()+dof, itq);
             itprev=itnext;
             ++itnext;
             itq += dof;
         }
 
-        // take distance with the last point only since rrt paths can initially be very complex but simplify down to something simpler
-        for(int i = 0; i < dof; ++i) {
-            goalpath.length += RaveFabs(goalpath.qall[i]-goalpath.qall[goalpath.qall.size()-dof+i])*vivel[i];
+        // take distance scaled with respect to velocities with the first and last points only!
+        // this is because rrt paths can initially be very complex but simplify down to something simpler.
+        std::vector<dReal> vdiff = vecnodes.front()->q;
+        _parameters->_diffstatefn(vdiff, vecnodes.back()->q);
+        for(size_t i = 0; i < vdiff.size(); ++i) {
+            goalpath.length += RaveFabs(vdiff.at(i))*vivel.at(i);
         }
     }
 
