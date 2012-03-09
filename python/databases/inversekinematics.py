@@ -152,7 +152,7 @@ else:
 from ..openravepy_ext import openrave_exception, RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
 from . import DatabaseGenerator
-from ..misc import mkdir_recursive, relpath, TSP
+from ..misc import relpath, TSP
 import time,platform,shutil,sys
 import os.path
 from os import getcwd, remove
@@ -254,7 +254,11 @@ class InverseKinematicsModel(DatabaseGenerator):
     
     def save(self):
         statsfilename=self.getstatsfilename(False)
-        mkdir_recursive(os.path.split(statsfilename)[0])
+        try:
+            os.makedirs(os.path.split(statsfilename)[0])
+        except OSError:
+            pass
+        
         pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
@@ -668,7 +672,11 @@ class InverseKinematicsModel(DatabaseGenerator):
 
         if forceikbuild or not os.path.isfile(sourcefilename):
             log.info('creating ik file %s',sourcefilename)
-            mkdir_recursive(os.path.split(sourcefilename)[0])
+            try:
+                os.makedirs(os.path.split(sourcefilename)[0])
+            except OSError:
+                pass
+            
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
             if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D or self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
                 solver.useleftmultiply = False

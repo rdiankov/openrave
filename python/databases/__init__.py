@@ -30,10 +30,9 @@ except:
 
 from .. import openravepy_int
 from .. import metaclass
-from ..misc import mkdir_recursive
 from ..misc import OpenRAVEGlobalArguments
 import os.path
-from os import getenv
+from os import getenv, makedirs
 import time
 
 import logging
@@ -81,7 +80,11 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def save(self,params):
         filename=self.getfilename(False)
         log.info('saving model to %s',filename)
-        mkdir_recursive(os.path.split(filename)[0])
+        try:
+            makedirs(os.path.split(filename)[0])
+            
+        except OSError:
+            pass
         pickle.dump((self.getversion(),params), open(filename, 'w'))
     def generate(self):
         raise NotImplementedError()

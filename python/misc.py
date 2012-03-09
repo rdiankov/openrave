@@ -27,25 +27,12 @@ import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 def mkdir_recursive(newdir):
-    """works the way a good mkdir should :)
-        - already exists, silently complete
-        - regular file in the way, raise an exception
-        - parent directory(ies) does not exist, make them as well
-    """
-    if os.path.isdir(newdir):
+    log.warn('openravepy.misc.mkdir_recursive is deprecated, please use os.makedirs')
+    from os import makedirs
+    try:
+        makedirs(newdir)
+    except OSError:
         pass
-    elif os.path.isfile(newdir):
-        raise OSError("a file with the same name as the desired dir, '%s', already exists." % newdir)
-    else:
-        head, tail = os.path.split(newdir)
-        if head and not os.path.isdir(head):
-            mkdir_recursive(head)
-        if tail:
-            try:
-                os.mkdir(newdir)
-            except OSError:
-                # race conditions could still lead to such errors...
-                pass
 
 try:
     from os.path import relpath
