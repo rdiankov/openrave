@@ -58,8 +58,8 @@ int main(int argc, char ** argv)
         ssin << "LoadIKFastSolver " << probot->GetName() << " " << iktype;
         // if necessary, add free inc for degrees of freedom
         //ssin << " " << 0.04f;
-        // set the active manipulator
-        probot->SetActiveManipulator(probot->GetManipulators().at(0)->GetName());
+        // get the active manipulator
+        RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
         if( !pikfast->SendCommand(ssout,ssin) ) {
             RAVELOG_ERROR("failed to load iksolver\n");
             penv->Destroy();
@@ -67,17 +67,23 @@ int main(int argc, char ** argv)
         }
 
         RAVELOG_INFO("testing random ik\n");
-        vector<dReal> vsolution;
-        if( !probot->GetActiveManipulator()->FindIKSolution(IkParameterization(probot->GetActiveManipulator()->GetEndEffectorTransform()),vsolution,true) ) {
-            RAVELOG_INFO("failed to get solution\n");
-        }
-        else {
-            stringstream ss; ss << "solution is: ";
-            for(size_t i = 0; i < vsolution.size(); ++i) {
-                ss << vsolution[i] << " ";
+        while(1) {
+            Transform trans;
+            trans.rot = quatFromAxisAngle(Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5));
+            trans.trans = Vector(RaveRandomFloat()-0.5,RaveRandomFloat()-0.5,RaveRandomFloat()-0.5)*2;
+
+            vector<dReal> vsolution;
+            if( pmanip->FindIKSolution(IkParameterization(trans),vsolution,IKFO_CheckEnvCollisions) ) {
+                stringstream ss; ss << "solution is: ";
+                for(size_t i = 0; i < vsolution.size(); ++i) {
+                    ss << vsolution[i] << " ";
+                }
+                ss << endl;
+                RAVELOG_INFO(ss.str());
             }
-            ss << endl;
-            RAVELOG_INFO(ss.str());
+            else {
+                // could fail due to collisions, etc
+            }
         }
     }
 
