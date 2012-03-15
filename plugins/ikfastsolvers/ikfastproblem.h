@@ -407,6 +407,7 @@ public:
             else {
                 IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
                 if( !iksolver ) {
+                    RAVELOG_WARN(str(boost::format("failed to create ik solver %s!")%ikfastname));
                     bsuccess = false;
                 }
                 else {

@@ -54,7 +54,6 @@ public:
 
             ptraj->deserialize(ssout);
             RAVELOG_INFO("trajectory duration %fs\n",ptraj->GetDuration());
-            break;
         }
 
         pclondedenv->Destroy();
@@ -100,6 +99,11 @@ public:
 
         while(IsOk()) {
             boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        }
+
+        // wait for threads to finish
+        for(size_t i = 0; i < vthreads.size(); ++i) {
+            vthreads[i]->join();
         }
     }
 };
