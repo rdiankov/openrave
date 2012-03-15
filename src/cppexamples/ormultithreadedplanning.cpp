@@ -38,26 +38,26 @@ public:
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(pclondedenv,"");
 
+        EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
         while(IsOk()) {
-            {
-                EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
+            // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
+            Transform t = pmanip->GetEndEffectorTransform();
+            t.trans += Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f);
+            t.rot = quatMultiply(t.rot,quatFromAxisAngle(Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f)*0.2f));
 
-                // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
-                Transform t = pmanip->GetEndEffectorTransform();
-                t.trans += Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f);
-                t.rot = quatMultiply(t.rot,quatFromAxisAngle(Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f)*0.2f));
-
-                stringstream ssin,ssout;
-                ssin << "MoveToHandPosition execute 0 outputtraj pose " << t;
-                // start the planner and run the robot
-                if( !pbasemanip->SendCommand(ssout,ssin) ) {
-                    continue;
-                }
-
-                ptraj->deserialize(ssout);
-                RAVELOG_INFO("trajectory duration %fs\n",ptraj->GetDuration());
+            stringstream ssin,ssout;
+            ssin << "MoveToHandPosition execute 0 outputtraj pose " << t;
+            // start the planner and run the robot
+            if( !pbasemanip->SendCommand(ssout,ssin) ) {
+                continue;
             }
+
+            ptraj->deserialize(ssout);
+            RAVELOG_INFO("trajectory duration %fs\n",ptraj->GetDuration());
+            break;
         }
+
+        pclondedenv->Destroy();
     }
 
     virtual void demothread(int argc, char ** argv) {
