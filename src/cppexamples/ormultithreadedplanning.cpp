@@ -38,8 +38,10 @@ public:
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(pclondedenv,"");
 
-        EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
+
         while(IsOk()) {
+            EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
+
             // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
             Transform t = pmanip->GetEndEffectorTransform();
             t.trans += Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f);
@@ -56,6 +58,7 @@ public:
             RAVELOG_INFO("trajectory duration %fs\n",ptraj->GetDuration());
         }
 
+        RAVELOG_INFO("destroying cloned environment...\n");
         pclondedenv->Destroy();
     }
 
@@ -101,10 +104,11 @@ public:
             boost::this_thread::sleep(boost::posix_time::milliseconds(1));
         }
 
-        // wait for threads to finish
+        RAVELOG_INFO("wait for threads to finish\n");
         for(size_t i = 0; i < vthreads.size(); ++i) {
             vthreads[i]->join();
         }
+        RAVELOG_INFO("threads finished\n");
     }
 };
 
