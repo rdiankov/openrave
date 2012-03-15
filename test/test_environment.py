@@ -237,3 +237,16 @@ class TestEnvironment(EnvironmentSetup):
             while not robot.GetController().IsDone():
                 env2.StepSimulation(0.01)
             env2.Destroy()
+
+    def test_clone_basic(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load(checkforloaded=False):
+            ikmodel.autogenerate()
+
+        clonedenv = env.CloneSelf(CloningOptions.Bodies)
+        clonedrobot = clonedenv.GetRobot(robot.GetName())
+        assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
+        

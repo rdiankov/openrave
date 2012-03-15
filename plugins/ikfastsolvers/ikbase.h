@@ -908,14 +908,14 @@ private:
             v = qSolutions[i];
             probot->SubtractActiveDOFValues(v,_qlower);
             dReal distlower = 1e30;
-            for(size_t i = 0; i < v.size(); ++i) {
-                distlower = min(distlower, RaveFabs(v[i])*viweights[i]);
+            for(size_t j = 0; j < v.size(); ++j) {
+                distlower = min(distlower, RaveFabs(v[j])*viweights[j]);
             }
             v = qSolutions[i];
             probot->SubtractActiveDOFValues(v,_qupper);
             dReal distupper = 1e30;
-            for(size_t i = 0; i < v.size(); ++i) {
-                distupper = min(distupper, RaveFabs(v[i])*viweights[i]);
+            for(size_t j = 0; j < v.size(); ++j) {
+                distupper = min(distupper, RaveFabs(v[j])*viweights[j]);
             }
             vdists[i].first = i;
             vdists[i].second = -min(distupper,distlower);

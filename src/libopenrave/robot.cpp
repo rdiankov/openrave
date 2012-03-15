@@ -47,6 +47,7 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipu
     _pIkSolver.reset();
     if( _strIkSolver.size() > 0 ) {
         _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
+        // cannot call _pIkSolver->Init since this is the constructor...
     }
 }
 
@@ -83,6 +84,9 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
     _pIkSolver = iksolver;
     if( !!_pIkSolver ) {
         _strIkSolver = _pIkSolver->GetXMLId();
+        if( _strIkSolver.size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
+        }
         return _pIkSolver->Init(shared_from_this());
     }
     return true;
@@ -2520,6 +2524,9 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vecManipulators.clear();
     FOREACHC(itmanip, r->_vecManipulators) {
         _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
+        if( !!_vecManipulators.back()->GetIkSolver() ) {
+            _vecManipulators.back()->SetIkSolver(_vecManipulators.back()->GetIkSolver());
+        }
     }
 
     _vecSensors.clear();

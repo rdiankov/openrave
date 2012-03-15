@@ -57,7 +57,7 @@ if(SOQT_CONFIG_EXECUTABLE)
   string(REGEX REPLACE "(^| )-L" "" _soqtconfig_ldirs2 "${_soqtconfig_ldirs2}")
 
   string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _soqtconfig_libs "${_soqtconfig_libs}")
-  string(REGEX REPLACE "(^| )-l" "" _soqtconfig_libs "${_soqtconfig_libs}")  
+  string(REGEX REPLACE "(^| )-l" "" _soqtconfig_libs "${_soqtconfig_libs}")
 
   string(REGEX REPLACE "(^| )-l([./+-_\\a-zA-Z]*)" " " _soqtconfig_ldflags "${_soqtconfig_ldflags}")
   string(REGEX REPLACE "(^| )-L([./+-_\\a-zA-Z]*)" " " _soqtconfig_ldflags "${_soqtconfig_ldflags}")

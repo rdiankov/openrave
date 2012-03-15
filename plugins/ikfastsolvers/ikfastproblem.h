@@ -405,7 +405,7 @@ public:
                 bsuccess = false;
             }
             else {
-                IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), vector<dReal>());
+                IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
                 if( !iksolver ) {
                     bsuccess = false;
                 }

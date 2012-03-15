@@ -83,6 +83,10 @@ Misc
 
 * Returned ik solutions from :meth:`.Robot.Manipulator.FindIKSolutions` are prioritized by minimum distance from joint limits.
 
+* Fixed environment cloning of iksolvers set by LoadIKFastSolver.
+
+* Added multi-threading C++ example **ormultithreadedplanning**.
+
 Version 0.6.2
 =============
 
