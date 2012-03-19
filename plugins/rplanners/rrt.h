@@ -49,7 +49,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
-            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%params->vinitialconfig.size()));
+            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d %% %d != 0\n")%params->vinitialconfig.size()%params->GetDOF()));
             return false;
         }
 
@@ -257,6 +257,8 @@ public:
 
         list<GOALPATH> listgoalpaths;
         bool bSampleGoal = true;
+        PlannerProgress progress;
+        PlannerAction callbackaction=PA_None;
         while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
             RAVELOG_VERBOSE("iter: %d\n", iter);
             ++iter;
@@ -360,6 +362,17 @@ public:
             if( iter > 3*_parameters->_nMaxIterations ) {
                 RAVELOG_WARN("iterations exceeded\n");
                 break;
+            }
+
+            progress._iteration = iter/3;
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction ==  PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( listgoalpaths.size() > 0 ) {
+                    break;
+                }
             }
         }
 
@@ -563,6 +576,8 @@ public:
         RobotBase::RobotStateSaver savestate(_robot);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
+        PlannerAction callbackaction = PA_None;
+        PlannerProgress progress;
         int iter = 0;
         _goalindex = -1;
         _startindex = -1;
@@ -621,6 +636,17 @@ public:
             if( iter > _parameters->_nMaxIterations ) {
                 RAVELOG_WARN("iterations exceeded %d\n", _parameters->_nMaxIterations);
                 break;
+            }
+
+            progress._iteration = iter;
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction ==  PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( bSuccess ) {
+                    break;
+                }
             }
         }
 

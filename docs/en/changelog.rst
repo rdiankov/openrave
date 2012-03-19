@@ -38,6 +38,8 @@ Planning
 
 * Fixed grasp offsets and trajectory combining in :ref:`module-taskmanipulation-graspplanning` and :meth:`.planningutils.InsertActiveDOFWaypointWithRetiming`.
 
+* The rplanners RRTs now respect the PA_Interrupt actions from the PlanCallbacks. The callbacks are also transferred to the post-process planners.
+
 Grasping
 --------
 

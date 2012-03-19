@@ -399,6 +399,16 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
             return PS_Failed;
         }
     }
+
+    // transfer the callbacks?
+    list<UserDataPtr> listhandles;
+    FOREACHC(it,__listRegisteredCallbacks) {
+        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
+        if( !!pitdata) {
+            listhandles.push_back(planner->RegisterPlanCallback(pitdata->_callbackfn));
+        }
+    }
+
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
     params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;

@@ -125,9 +125,20 @@ public:
                 *it *= parameters->_pointtolerance;
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
+
+            PlannerProgress progress; progress._iteration=0;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+
             int numshortcuts=0;
             if( !!_parameters->_setstatefn ) {
                 dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this);
+            }
+
+            progress._iteration=1;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return PS_Interrupted;
             }
 
             ConfigurationSpecification oldspec = _parameters->_configurationspecification;

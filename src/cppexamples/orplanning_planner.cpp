@@ -21,6 +21,13 @@ namespace cppexamples {
 class PlanningPlannerExample : public OpenRAVEExample
 {
 public:
+
+    PlannerAction PlanCallback(const PlannerBase::PlannerProgress& progress)
+    {
+        // plan callback
+        return PA_None;
+    }
+
     virtual void demothread(int argc, char ** argv) {
         string scenefilename = "data/hanoi_complex2.env.xml";
         RaveSetDebugLevel(Level_Debug);
@@ -39,11 +46,10 @@ public:
         RAVELOG_INFO(str(boost::format("planning with manipulator %s\n")%pmanip->GetName()));
 
         // create the planner parameters
-        PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->_nMaxIterations = 4000; // max iterations before failure
-        params->SetRobotActiveJoints(probot); // set planning configuration space to current active dofs
-        params->vgoalconfig.resize(probot->GetActiveDOF());
         PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
+
+        // register an optional function to be called for every planner iteration
+        UserDataPtr handle = planner->RegisterPlanCallback(boost::bind(&PlanningPlannerExample::PlanCallback,this,_1));
 
         while(IsOk()) {
             GraphHandlePtr pgraph;
@@ -51,6 +57,12 @@ public:
                 EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
                 probot->SetActiveDOFs(pmanip->GetArmIndices());
+
+                PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+                params->_nMaxIterations = 4000; // max iterations before failure
+                params->SetRobotActiveJoints(probot); // set planning configuration space to current active dofs
+                params->vgoalconfig.resize(probot->GetActiveDOF());
+
                 vector<dReal> vlower,vupper;
                 probot->GetActiveDOFLimits(vlower,vupper);
 

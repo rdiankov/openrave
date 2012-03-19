@@ -17,6 +17,21 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+class PyPlannerProgress
+{
+public:
+    PyPlannerProgress() : _iteration(0) {
+    }
+    PyPlannerProgress(const PlannerBase::PlannerProgress& progress) {
+        _iteration = progress._iteration;
+    }
+    string __str__() {
+        return boost::str(boost::format("<PlannerProgress: iter=%d>")%_iteration);
+    }
+
+    int _iteration;
+};
+
 class PyPlannerBase : public PyInterfaceBase
 {
 protected:
@@ -111,6 +126,42 @@ public:
         return PyPlannerParametersPtr(new PyPlannerParameters(params));
     }
 
+    static PlannerAction _PlanCallback(object fncallback, PyEnvironmentBasePtr pyenv, const PlannerBase::PlannerProgress& progress)
+    {
+        object res;
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        try {
+            boost::shared_ptr<PyPlannerProgress> pyprogress(new PyPlannerProgress(progress));
+            res = fncallback(object(pyprogress));
+        }
+        catch(...) {
+            RAVELOG_ERROR("exception occured in _PlanCallback:\n");
+            PyErr_Print();
+        }
+        PyGILState_Release(gstate);
+        if(( res == object()) || !res ) {
+            return PA_None;
+        }
+        extract<PlannerAction> xb(res);
+        if( xb.check() ) {
+            return (PlannerAction)xb;
+        }
+        RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
+        return PA_None;
+    }
+
+    object RegisterPlanCallback(object fncallback)
+    {
+        if( !fncallback ) {
+            throw openrave_exception("callback not specified");
+        }
+        UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
+        if( !p ) {
+            throw openrave_exception("no registration callback returned");
+        }
+        return toPyUserData(p);
+    }
+
     PlannerBasePtr GetPlanner()
     {
         return _pplanner;
@@ -149,6 +200,22 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 
 void init_openravepy_planner()
 {
+    object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
+                           .value("Failed",PS_Failed)
+                           .value("HasSolution",PS_HasSolution)
+                           .value("Interrupted",PS_Interrupted)
+                           .value("InterruptedWithSolution",PS_InterruptedWithSolution)
+    ;
+
+    object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
+                           .value("None",PA_None)
+                           .value("Interrupt",PA_Interrupt)
+                           .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
+    ;
+    class_<PyPlannerProgress, boost::shared_ptr<PyPlannerProgress> >("PlannerProgress", DOXY_CLASS(PlannerBase::PlannerProgress))
+    .def_readwrite("_iteration",&PyPlannerProgress::_iteration)
+    ;
+
     {
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
@@ -170,13 +237,6 @@ void init_openravepy_planner()
         .def("__ne__",&PyPlannerBase::PyPlannerParameters::__ne__)
         ;
     }
-
-    object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
-                           .value("Failed",PS_Failed)
-                           .value("HasSolution",PS_HasSolution)
-                           .value("Interrupted",PS_Interrupted)
-                           .value("InterruptedWithSolution",PS_InterruptedWithSolution)
-    ;
 
     def("RaveCreatePlanner",openravepy::RaveCreatePlanner,args("env","name"),DOXY_FN1(RaveCreatePlanner));
 }
