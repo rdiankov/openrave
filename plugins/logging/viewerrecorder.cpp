@@ -219,6 +219,7 @@ protected:
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }
+            RAVELOG_INFO("video filename: %s\n",_filename.c_str());
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
             _frametime = (uint64_t)(1000000.0f/_framerate);
@@ -634,10 +635,8 @@ protected:
 
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
-        if( bits != 24 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("START_AVI only supports 24bits",ORE_InvalidArguments);
-        }
-
+        OPENRAVE_ASSERT_OP_FORMAT0(bits,==,24,"START_AVI only supports 24bits",ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT0(filename.size(),>,0,"filename needs to be valid",ORE_InvalidArguments);
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 

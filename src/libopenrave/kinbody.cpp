@@ -1442,12 +1442,8 @@ void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std:
         _vupperlimit[i] = vUpperLimit.at(i);
         if( IsRevolute(i) && !IsCircular(i) ) {
             if( _vlowerlimit[i] < -PI || _vupperlimit[i] > PI) {
+                // TODO, necessary?
                 SetWrapOffset(0.5f * (_vlowerlimit.at(i) + _vupperlimit.at(i)),i);
-                if( _vupperlimit[i] - _voffsets.at(i) > PI ) {
-                    RAVELOG_WARN(str(boost::format("joint %s (axis %d), cannot allow joint ranges of more than 360 degrees\n")%GetName()%i));
-                    _vupperlimit[i] = _voffsets[i] + PI - 1e-5;
-                    _vlowerlimit[i] = _voffsets[i] - PI + 1e-5;
-                }
             }
         }
     }

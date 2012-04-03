@@ -489,7 +489,7 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)
-
+    
     def test_closedlinkage(self):
         self.log.info('check a very complex closed linkage model')
         env=self.env

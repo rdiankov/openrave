@@ -251,7 +251,25 @@ class RunRobot(EnvironmentSetup):
             
             except Exception, e:
                 pass
-            
+
+    def test_bigrange(self):
+        env=self.env
+        robot=self.LoadRobot('robots/kuka-kr5-r650.zae')
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+        lower,upper = j.GetLimits()
+        assert( upper-lower > 3*pi )
+        robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
+        assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
+        
+        robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
+        ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
+        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+        assert(len(sols)==8)
+        
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()

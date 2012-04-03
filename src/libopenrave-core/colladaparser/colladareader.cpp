@@ -1162,12 +1162,8 @@ public:
                             pjoint->_vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
                             if( pjoint->IsRevolute(ic) ) {
                                 if(( pjoint->_vlowerlimit.at(ic) < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
+                                    // TODO, necessary?
                                     pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit.at(ic) + pjoint->_vupperlimit[ic]);
-                                    if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit.at(ic)%pjoint->_vupperlimit[ic]));
-                                        pjoint->_vupperlimit.at(ic) = pjoint->_voffsets[ic] + PI - 1e-5;
-                                        pjoint->_vlowerlimit.at(ic) = pjoint->_voffsets[ic] - PI + 1e-5;
-                                    }
                                 }
                             }
                         }
@@ -1182,12 +1178,8 @@ public:
                         pjoint->_vupperlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
                         if( pjoint->IsRevolute(ic) ) {
                             if(( pjoint->_vlowerlimit[ic] < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
+                                // TODO, necessary?
                                 pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
-                                if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
-                                    RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
-                                    pjoint->_vupperlimit[ic] = pjoint->_voffsets[ic] + PI - 1e-5;
-                                    pjoint->_vlowerlimit[ic] = pjoint->_voffsets[ic] - PI + 1e-5;
-                                }
                             }
                         }
                     }
