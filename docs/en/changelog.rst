@@ -29,6 +29,13 @@ Core
 
 * The rigidly attached links of grabbed links of a robot are now always ignored, collision is never checked between them.
 
+Inverse Kinematics
+------------------
+
+* All IK solutions returned for revolute joints with ranges greater than 2*pi radians by adding +- 2*pi until limits reached.
+
+* Fixed ManipulatorIKGoalSampler for returning original ik indices.
+
 Planning
 --------
 

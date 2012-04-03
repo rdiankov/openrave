@@ -1001,6 +1001,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
 
 ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob)
 {
+    _tempikindex = -1;
     _fjittermaxdist = 0;
     _probot = _pmanip->GetRobot();
     _pindexsampler = RaveCreateSpaceSampler(_probot->GetEnv(),"mt19937");
@@ -1031,6 +1032,10 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
     if( _viksolutions.size() > 0 ) {
         vgoal = _viksolutions.back();
         _viksolutions.pop_back();
+        _listreturnedsamples.push_back(_tempikindex);
+        if( _viksolutions.size() == 0 ) {
+            _tempikindex = -1;
+        }
         return true;
     }
 
@@ -1101,11 +1106,13 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         }
 
         if( bsuccess ) {
-            for(size_t j = 0; j < _viksolutions.size(); ++j) {
-                _listreturnedsamples.push_back(orgindex);
-            }
+            _tempikindex = orgindex;
+            _listreturnedsamples.push_back(orgindex);
             vgoal = _viksolutions.back();
             _viksolutions.pop_back();
+            if( _viksolutions.size() == 0 ) {
+                _tempikindex = -1;
+            }
             return true;
         }
     }

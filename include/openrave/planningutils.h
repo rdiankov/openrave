@@ -197,6 +197,7 @@ protected:
     std::vector< std::vector<dReal> > _viksolutions;
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
+    int _tempikindex; ///< if _viksolutions.size() > 0, points to the original ik index of those solutions
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
