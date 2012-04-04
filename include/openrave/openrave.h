@@ -1143,6 +1143,26 @@ OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecificatio
 typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
 typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
 
+template <typename T>
+inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
+{
+    if (theta < min) {
+        T range = max-min;
+        theta += range;
+        while (theta < min) {
+            theta += range;
+        }
+    }
+    else if (theta > max) {
+        T range = max-min;
+        theta -= range;
+        while (theta > max) {
+            theta -= range;
+        }
+    }
+    return theta;
+}
+
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
@@ -1446,27 +1466,39 @@ public:
         }
         case IKP_TranslationXAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationYAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationZAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationXAxisAngleZNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         case IKP_TranslationYAxisAngleXNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         case IKP_TranslationZAxisAngleYNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         default:
             BOOST_ASSERT(0);
