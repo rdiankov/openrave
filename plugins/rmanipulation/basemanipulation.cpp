@@ -56,6 +56,8 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("SetMinimumGoalPaths",boost::bind(&BaseManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
+        RegisterCommand("SetPostProcessing",boost::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
+                        "Sets post processing parameters.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
 - cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
@@ -444,6 +446,9 @@ protected:
         }
         RobotBase::RobotStateSaver saver(robot);
         params->SetRobotActiveJoints(robot);
+        if( _sPostProcessingParameters.size() > 0 ) {
+            params->_sPostProcessingParameters = _sPostProcessingParameters;
+        }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -700,6 +705,9 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
+        if( _sPostProcessingParameters.size() > 0 ) {
+            params->_sPostProcessingParameters = _sPostProcessingParameters;
+        }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -1110,6 +1118,14 @@ protected:
         return !!sinput;
     }
 
+    bool SetPostProcessingCommand(ostream& sout, istream& sinput)
+    {
+        if( !getline(sinput, _sPostProcessingParameters) ) {
+            return false;
+        }
+        return !!sinput;
+    }
+
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
         if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
@@ -1122,6 +1138,7 @@ protected:
     string _strRRTPlannerName;
     dReal _fMaxVelMult;
     int _minimumgoalpaths;
+    string _sPostProcessingParameters;
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {

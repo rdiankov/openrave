@@ -96,6 +96,8 @@ Misc
 
 * Added multi-threading C++ example **ormultithreadedplanning**.
 
+* Fixed bug in IkParameterization::ComputeDistanceSqr
+
 Version 0.6.2
 =============
 
