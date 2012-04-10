@@ -393,6 +393,29 @@ Start and stop recording videos using the Python API.
   codec = 13 # mpeg2
   recorder.SendCommand('Start 640 480 30 codec %d timing realtime filename %s\nviewer %s'%(codec,filename,env.GetViewer().GetName()))
 
+Parabolic Retiming 
+------------------
+
+Do parabolic segment retiming to a goal position without checking collisions.
+
+.. code-block:: python
+
+  from openravepy import *
+  env = Environment() # create openrave environment
+  env.SetViewer('qtcoin')
+  env.Load('robots/barrettwam.robot.xml') # load a simple scene
+  robot=env.GetRobots()[0]
+  with env:  
+      lower,upper = robot.GetActiveDOFLimits()
+      goalvalues = random.rand(len(lower))*(upper-lower)+lower
+      traj = RaveCreateTrajectory(env,'')
+      traj.Init(robot.GetActiveConfigurationSpecification())
+      traj.Insert(0,robot.GetActiveDOFValues())
+      traj.Insert(1,goalvalues)
+      planningutils.RetimeActiveDOFTrajectory(traj,robot,hastimestamps=False,maxvelmult=1,plannername='ParabolicTrajectoryRetimer')
+      print 'duration',traj.GetDuration()
+  robot.GetController().SetPath(traj)
+  robot.WaitForController(0)
 
 Logging
 -------
