@@ -313,6 +313,9 @@ protected:
             uint64_t numstores=0;
             {
                 boost::mutex::scoped_lock lock(_mutex);
+                if( !_bContinueThread ) {
+                    return;
+                }
                 if( _listAddFrames.size() == 0 ) {
                     _condnewframe.wait(lock);
                     if( _listAddFrames.size() == 0 ) {
@@ -339,6 +342,9 @@ protected:
                         if(( itbest == _listAddFrames.end()) ||( bestdist > dist) ) {
                             itbest = itframe;
                             bestdist = dist;
+                        }
+                        if( !_bContinueThread ) {
+                            return;
                         }
                         ++itframe;
                     }
@@ -395,6 +401,7 @@ protected:
     void _Reset()
     {
         {
+            RAVELOG_DEBUG("ViewerRecorder _Reset\n");
             boost::mutex::scoped_lock lock(_mutex);
             _nFrameCount = 0;
             _nVideoWidth = _nVideoHeight = 0;
@@ -408,6 +415,7 @@ protected:
             _filename = "";
         }
         {
+            RAVELOG_DEBUG("ViewerRecorder _ResetLibrary\n");
             boost::mutex::scoped_lock lock(_mutexlibrary);
             _ResetLibrary();
         }

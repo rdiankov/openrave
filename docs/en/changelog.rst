@@ -86,7 +86,7 @@ Misc
 
 * Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with cmake's find_package.
 
-* Fixed race condition with video recorder, viewer exiting, and other threads.
+* Fixed several race condition with video recording (VideoRecorder interface), viewer exiting, and other threads.
 
 * Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
 
