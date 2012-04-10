@@ -2093,17 +2093,19 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromPositions(T1links,T1linksinv,solvejointvars,self.freejointvars,uselength=True)
         transvars = [v for v in solvejointvars if self.has_any_symbols(T0,v)]
         self.checkSolvability(AllEquations,transvars,self.freejointvars)
-        transtree = self.solveAllEquations(AllEquations,curvars=transvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
+        dirtree = []
+        newendbranchtree = [AST.SolverSequence([dirtree])]
+        transtree = self.solveAllEquations(AllEquations,curvars=transvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=newendbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
         rotvars = [v for v in solvejointvars if self.has_any_symbols(D,v)]
         solsubs = self.freevarsubs[:]
         for v in transvars:
             solsubs += self.Variable(v).subs
-        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],jointvars,uselength=False)
+        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)
         self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
-        dirtree = self.solveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
-        dirtree = self.verifyAllEquations(AllEquations,rotvars,solsubs,dirtree)
-        return transtree+dirtree
+        localdirtree = self.solveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
+        dirtree += self.verifyAllEquations(AllEquations,rotvars,solsubs,localdirtree)
+        return transtree
 
     def solveFullIK_6D(self, LinksRaw, jointvars, isolvejointvars,Tgripperraw=eye(4)):
         """Solves the full 6D translatio + rotation IK
@@ -3079,16 +3081,30 @@ class IKFastSolver(AutoReloader):
         dummysubs2 = []
         dummyvars = []
         usedvars = []
-        for i in range(0,len(symbols),2):
+        hassinglevariable = False
+        i = 0
+        while i < len(symbols):
             dummy = Symbol('ht%s'%symbols[i].name[1:])
-            # [0] - cos, [1] - sin
-            dummys.append(dummy)
-            dummysubs += [(symbols[i],(1-dummy**2)/(1+dummy**2)),(symbols[i+1],2*dummy/(1+dummy**2))]
-            var = symbols[i].subs(self.invsubs).args[0]
-            dummysubs2.append((var,2*atan(dummy)))
-            dummyvars.append((dummy,tan(0.5*var)))
-            if not var in usedvars:
-                usedvars.append(var)
+            var = symbols[i].subs(self.invsubs)
+            if not isinstance(var,Symbol):
+                # [0] - cos, [1] - sin
+                var = var.args[0]
+                dummys.append(dummy)
+                dummysubs += [(symbols[i],(1-dummy**2)/(1+dummy**2)),(symbols[i+1],2*dummy/(1+dummy**2))]
+                dummysubs2.append((var,2*atan(dummy)))
+                dummyvars.append((dummy,tan(0.5*var)))
+                if not var in usedvars:
+                    usedvars.append(var)
+                i += 2
+            else:
+                hassinglevariable = True
+                # most likely a single variable
+                dummys.append(var)
+                dummysubs += [(var,var)]
+                dummysubs2.append((var,var))
+                if not var in usedvars:
+                    usedvars.append(var)                    
+                i += 1
 
         newreducedeqs = []
         for peq in RightEquations:
@@ -3099,7 +3115,7 @@ class IKFastSolver(AutoReloader):
             eqnew = S.Zero
             for c,monoms in peq.iter_terms():
                 term = c
-                for i in range(len(symbols)):
+                for i in range(len(dummysubs)):
                     num,denom = fraction(dummysubs[i][1])
                     term *= num**monoms[i]
                 # the denoms for 0,1 and 2,3 are the same
@@ -3109,6 +3125,19 @@ class IKFastSolver(AutoReloader):
                 eqnew += term
             newreducedeqs.append(Poly(eqnew,*dummys))
 
+#         from IPython.Shell import IPShellEmbed
+#         ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+#         ipshell(local_ns=locals())
+                
+        # check for equations with a single variable
+        if hassinglevariable:
+            try:
+                AllEquations = [eq.subs(self.invsubs) for eq in newreducedeqs]
+                tree = self.solveAllEquations(AllEquations,curvars=dummys,othersolvedvars=[],solsubs=self.freevarsubs,endbranchtree=endbranchtree)
+                return raghavansolutiontree+tree,usedvars
+            except self.CannotSolveError:
+                pass
+        
         # choose which leftvar can determine the singularity of the following equations!
         ileftvar = 0
         leftvar = dummys[ileftvar]
@@ -3675,6 +3704,9 @@ class IKFastSolver(AutoReloader):
         origmonoms = set()
         maxdegree = 0
         for peq in newreducedeqs:
+            if peq.degree == 0:
+                log.warn('solveDialytically: polynomial %s degree is 0',peq)
+                continue
             for m in peq.iter_monoms():
                 mlist = list(m)
                 maxdegree=max(maxdegree,mlist.pop(ileftvar))

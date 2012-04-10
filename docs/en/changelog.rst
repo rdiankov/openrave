@@ -36,6 +36,8 @@ Inverse Kinematics
 
 * Fixed ManipulatorIKGoalSampler for returning original ik indices.
 
+* Fixed ikfast bug in solve5DIntersectingAxes
+
 Planning
 --------
 

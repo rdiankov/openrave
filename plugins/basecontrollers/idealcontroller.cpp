@@ -136,6 +136,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
+        OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
         boost::mutex::scoped_lock lock(_mutex);
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot start trajectories when paused\n");
