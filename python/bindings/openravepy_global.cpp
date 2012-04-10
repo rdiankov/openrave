@@ -1045,6 +1045,60 @@ object pyMergeTrajectories(object pytrajectories)
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
 }
 
+class PyDHParameter
+{
+public:
+    PyDHParameter() : parentindex(-1), transform(ReturnTransform(Transform())), d(0), a(0), theta(0), alpha(0) {
+    }
+    PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(boost::const_pointer_cast<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
+    }
+    PyDHParameter(object joint, int parentindex, object transform, dReal d, dReal a, dReal theta, dReal alpha) : joint(joint), parentindex(parentindex), transform(transform), d(d), a(a), theta(theta), alpha(alpha) {
+    }
+    virtual ~PyDHParameter() {
+    }
+    string __repr__() {
+        return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(joint)%parentindex%d%a%theta%alpha);
+    }
+    string __str__() {
+        TransformMatrix tm = ExtractTransformMatrix(transform);
+        return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(joint)%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
+    object joint;
+    int parentindex;
+    object transform;
+    dReal d, a, theta, alpha;
+};
+
+object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv)
+{
+    return object(boost::shared_ptr<PyDHParameter>(new PyDHParameter(p,pyenv)));
+}
+
+class DHParameter_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyDHParameter& p)
+    {
+        return boost::python::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
+    }
+};
+
+boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
+{
+    boost::python::list oparameters;
+    std::vector<OpenRAVE::planningutils::DHParameter> vparameters;
+    OpenRAVE::planningutils::GetDHParameters(vparameters,openravepy::GetKinBody(pybody));
+    PyEnvironmentBasePtr pyenv = toPyEnvironment(pybody);
+    FOREACH(itp,vparameters) {
+        oparameters.append(toPyDHParameter(*itp,pyenv));
+    }
+    return oparameters;
+}
+
 class PyManipulatorIKGoalSampler
 {
 public:
@@ -1307,12 +1361,12 @@ void init_openravepy_global()
                                    .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
                                    .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
                                    .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
-                                   .def("SetTranslationXAxisAngle4D",&PyIkParameterization::SetTranslationXAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationXAxisAngle4D))
-                                   .def("SetTranslationYAxisAngle4D",&PyIkParameterization::SetTranslationYAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationYAxisAngle4D))
-                                   .def("SetTranslationZAxisAngle4D",&PyIkParameterization::SetTranslationZAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationZAxisAngle4D))
-                                   .def("SetTranslationXAxisAngleZNorm4D",&PyIkParameterization::SetTranslationXAxisAngleZNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationXAxisAngleZNorm4D))
-                                   .def("SetTranslationYAxisAngleXNorm4D",&PyIkParameterization::SetTranslationYAxisAngleXNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationYAxisAngleXNorm4D))
-                                   .def("SetTranslationZAxisAngleYNorm4D",&PyIkParameterization::SetTranslationZAxisAngleYNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationZAxisAngleYNorm4D))
+                                   .def("SetTranslationXAxisAngle4D",&PyIkParameterization::SetTranslationXAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationXAxisAngle4D))
+                                   .def("SetTranslationYAxisAngle4D",&PyIkParameterization::SetTranslationYAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationYAxisAngle4D))
+                                   .def("SetTranslationZAxisAngle4D",&PyIkParameterization::SetTranslationZAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationZAxisAngle4D))
+                                   .def("SetTranslationXAxisAngleZNorm4D",&PyIkParameterization::SetTranslationXAxisAngleZNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationXAxisAngleZNorm4D))
+                                   .def("SetTranslationYAxisAngleXNorm4D",&PyIkParameterization::SetTranslationYAxisAngleXNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationYAxisAngleXNorm4D))
+                                   .def("SetTranslationZAxisAngleYNorm4D",&PyIkParameterization::SetTranslationZAxisAngleYNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationZAxisAngleYNorm4D))
                                    .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
                                    .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
                                    .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
@@ -1378,7 +1432,25 @@ void init_openravepy_global()
                   .staticmethod("RetimeAffineTrajectory")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
+                  .def("GetDHParameters",planningutils::pyGetDHParameters,args("body"),DOXY_FN1(GetDHParameters))
+                  .staticmethod("GetDHParameters")
         ;
+
+        class_<planningutils::PyDHParameter, boost::shared_ptr<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(DHParameter))
+        .def(init<>())
+        .def(init<object, int, object, dReal, dReal, dReal, dReal>(args("joint","parentindex","transform","d","a","theta","alpha")))
+        .def_readwrite("joint",&planningutils::PyDHParameter::joint)
+        .def_readwrite("transform",&planningutils::PyDHParameter::transform)
+        .def_readwrite("d",&planningutils::PyDHParameter::d)
+        .def_readwrite("a",&planningutils::PyDHParameter::a)
+        .def_readwrite("theta",&planningutils::PyDHParameter::theta)
+        .def_readwrite("alpha",&planningutils::PyDHParameter::alpha)
+        .def("__str__",&planningutils::PyDHParameter::__str__)
+        .def("__unicode__",&planningutils::PyDHParameter::__unicode__)
+        .def("__repr__",&planningutils::PyDHParameter::__repr__)
+        .def_pickle(planningutils::DHParameter_pickle_suite())
+        ;
+
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))

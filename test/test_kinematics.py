@@ -489,7 +489,36 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)
-    
+
+    def test_dh(self):
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        dhs=planningutils.GetDHParameters(robot)
+        gooddhs = [planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Yaw'), parentindex=-1, d=0.346000, a=0.260768, theta=0.566729, alpha=0.000000,transform=array([[ 0.84366149, -0.53687549,  0.        ,  0.22      ],[ 0.53687549,  0.84366149,  0.        ,  0.14      ], [ 0.        ,  0.        ,  1.        ,  0.346     ], [ 0.        ,  0.        ,  0.        ,  1.        ]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Pitch'), parentindex=0, d=0.000000, a=0.000000, theta=-0.566729, alpha=-1.570796,transform=array([[  1.00000000e+00,  -2.46519033e-32,  -1.11022302e-16, 2.20000000e-01], [  1.11022302e-16,   2.22044605e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   2.22044605e-16, 3.46000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Roll'), parentindex=1, d=0.000000, a=0.000000, theta=0.000000, alpha=1.570796,transform=array([[  1.00000000e+00,  -1.11022302e-16,  -6.16297582e-32, 2.20000000e-01], [  1.11022302e-16,   1.00000000e+00,   5.55111512e-16, 1.40000000e-01], [  0.00000000e+00,  -5.55111512e-16,   1.00000000e+00, 3.46000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Elbow'), parentindex=2, d=0.550000, a=0.045000, theta=0.000000, alpha=-1.570796,transform=array([[  1.00000000e+00,  -2.46519033e-32,  -1.11022302e-16, 2.65000000e-01], [  1.11022302e-16,   2.22044605e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   2.22044605e-16, 8.96000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Yaw'), parentindex=3, d=-0.000000, a=-0.045000, theta=0.000000, alpha=1.570796,transform=array([[  1.00000000e+00,  -1.11022302e-16,  -4.93038066e-32, 2.20000000e-01], [  1.11022302e-16,   1.00000000e+00,   4.44089210e-16, 1.40000000e-01], [  0.00000000e+00,  -4.44089210e-16,   1.00000000e+00, 8.96000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Pitch'), parentindex=4, d=0.300000, a=-0.000000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -4.93038066e-32,  -1.11022302e-16,
+          2.20000000e-01], [  1.11022302e-16,   4.44089210e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   4.44089210e-16,           1.19600000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Roll'), parentindex=5, d=-0.000000, a=0.000000, theta=0.000000, alpha=1.570796, transform=array([[  1.00000000e+00,  -1.11022302e-16,  -4.93038066e-32,
+          2.20000000e-01],[  1.11022302e-16,   1.00000000e+00,   4.44089210e-16, 1.40000000e-01], [  0.00000000e+00,  -4.44089210e-16,   1.00000000e+00, 1.19600000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF3'), parentindex=6, d=0.151500, a=-0.050000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -4.93038066e-32,  -1.11022302e-16,
+          1.70000000e-01], [  1.11022302e-16,   4.44089210e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   4.44089210e-16, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF4'), parentindex=6, d=0.151500, a=-0.000000, theta=0.000000, alpha=-3.141593, transform=array([[  1.00000000e+00,   1.11022302e-16,  -1.35963107e-32,
+          2.20000000e-01], [  1.11022302e-16,  -1.00000000e+00,   1.22464680e-16, 1.40000000e-01], [  0.00000000e+00,  -1.22464680e-16,  -1.00000000e+00, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF1'), parentindex=8, d=0.000000, a=0.050000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -2.46519033e-32,   1.11022302e-16,
+          2.70000000e-01], [  1.11022302e-16,   2.22044605e-16,  -1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,   1.00000000e+00,   2.22044605e-16, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]]))]
+
+        for i,gooddh in enumerate(gooddhs):
+            dh=dhs[i]
+            assert(transdist(dh.transform,gooddh.transform) <= 1e-6)
+            assert(dh.joint == gooddh.joint)
+            assert(abs(dh.a-gooddh.a) <= 1e-6)
+            assert(abs(dh.d-gooddh.d) <= 1e-6)
+            assert(abs(dh.alpha-gooddh.alpha) <= 1e-6)
+            assert(abs(dh.theta-gooddh.theta) <= 1e-6)
+
     def test_closedlinkage(self):
         self.log.info('check a very complex closed linkage model')
         env=self.env

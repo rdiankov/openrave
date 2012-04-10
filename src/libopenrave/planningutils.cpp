@@ -809,6 +809,67 @@ void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr par
     throw OPENRAVE_EXCEPTION_FORMAT0("SetPlannerParametersFromSpecification not implemented",ORE_NotImplemented);
 }
 
+void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody)
+{
+    Transform tbaseinv = pbody->GetTransform().inverse();
+    vparameters.resize(pbody->GetDependencyOrderedJoints().size());
+    std::vector<DHParameter>::iterator itdh = vparameters.begin();
+    FOREACHC(itjoint,pbody->GetDependencyOrderedJoints()) {
+        OPENRAVE_ASSERT_FORMAT((*itjoint)->GetType() == KinBody::Joint::JointHinge || (*itjoint)->GetType() == KinBody::Joint::JointSlider, "joint type 0x%x not supported for DH parameters", (*itjoint)->GetType(), ORE_Assert);
+        KinBody::LinkConstPtr plink = (*itjoint)->GetHierarchyParentLink();
+        Transform tparent, tparentinv;
+        itdh->joint = *itjoint;
+        itdh->parentindex = -1;
+        if( !!plink ) {
+            for(size_t iparent = 0; iparent < pbody->GetDependencyOrderedJoints().size(); ++iparent) {
+                if( pbody->GetDependencyOrderedJoints()[iparent]->GetHierarchyChildLink() == plink ) {
+                    itdh->parentindex = iparent;
+                    tparent = vparameters.at(iparent).transform;
+                    tparentinv = tparent.inverse();
+                    break;
+                }
+            }
+        }
+        Vector vlocalanchor = tparentinv*(tbaseinv*(*itjoint)->GetAnchor());
+        Vector vlocalaxis = tparentinv.rotate(tbaseinv.rotate((*itjoint)->GetAxis(0)));
+        Vector vlocalx(-vlocalaxis.y,vlocalaxis.x,0);
+        dReal fsinalpha = RaveSqrt(vlocalx.lengthsqr3());
+        itdh->alpha = RaveAtan2(fsinalpha, vlocalaxis.z);
+        if( itdh->alpha < 10*g_fEpsilon ) {
+            // axes are parallel
+            if( vlocalanchor.lengthsqr2() > 10*g_fEpsilon*g_fEpsilon ) {
+                vlocalx.x = vlocalanchor.x;
+                vlocalx.y = vlocalanchor.y;
+                vlocalx.normalize3();
+            }
+            else {
+                vlocalx = Vector(1,0,0);
+            }
+        }
+        else {
+            vlocalx /= fsinalpha;
+        }
+        itdh->d = vlocalanchor.z;
+        itdh->theta = RaveAtan2(vlocalx.y,vlocalx.x);
+        itdh->a = vlocalanchor.dot3(vlocalx);
+        // normalize if theta is closer to PI
+        if( itdh->theta > 0.5*PI ) {
+            itdh->alpha = -itdh->alpha;
+            itdh->theta -= PI;
+            itdh->a = -itdh->a;
+        }
+        else if( itdh->theta < -0.5*PI ) {
+            itdh->alpha = -itdh->alpha;
+            itdh->theta += PI;
+            itdh->a = -itdh->a;
+        }
+        Transform Z_i(quatFromAxisAngle(Vector(0,0,1),itdh->theta), Vector(0,0,itdh->d));
+        Transform X_i(quatFromAxisAngle(Vector(1,0,0),itdh->alpha), Vector(itdh->a,0,0));
+        itdh->transform = tparent*Z_i*X_i;
+        ++itdh;
+    }
+}
+
 LineCollisionConstraint::LineCollisionConstraint()
 {
     _report.reset(new CollisionReport());

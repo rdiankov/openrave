@@ -122,6 +122,37 @@ OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseC
  */
 OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec);
 
+/** \brief represents the DH parameters for one joint
+
+   T = Z_1 X_1 Z_2 X_2 ... X_n Z_n
+
+   where
+   Z_i = [cos(theta) -sin(theta) 0 0; sin(theta) cos(theta) 0 0; 0 0 1 d]
+   X_i = [1 0 0 a; 0 cos(alpha) -sin(alpha) 0; 0 sin(alpha) cos(alpha) 0]
+
+   http://en.wikipedia.org/wiki/Denavit%E2%80%93Hartenberg_parameters
+ */
+struct DHParameter
+{
+    KinBody::JointConstPtr joint; ///< pointer to joint
+    int parentindex; ///< index into dh parameter array for getting cooreainte system of parent joint. If -1, no parent.
+    Transform transform; ///< the computed coordinate system of this joint, this can be automatically computed from DH parameters
+    dReal d; ///< distance along previous z
+    dReal a; ///< orthogonal distance from previous z axis to current z
+    dReal theta; ///< rotation of previous x around previous z to current x
+    dReal alpha; ///< rotation of previous z to current z
+};
+
+/** \brief returns the Denavit-Hartenberg parameters of the kinematics structure of the body.
+
+    If the robot has joints that cannot be represented by DH, will throw an exception.
+    \note{The coordinate systems computed from the DH parameters do not match the OpenRAVE link coordinate systems.}
+
+    \param vparameters One set of parameters are returned for each joint, passive joints are ignored. Joints are ordered by hierarchy dependency.  order\see DHParameter.
+    \param tstart the initial transform in the body coordinate system to the first joint
+ */
+OPENRAVE_API void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody);
+
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
 {

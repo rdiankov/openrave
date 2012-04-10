@@ -1533,44 +1533,54 @@ public:
         object FindIKSolutions(object oparam, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
-            boost::python::list solutions;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
                 if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
-                    return solutions;
+                    return numeric::array(boost::python::list());
                 }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
-                return solutions;
+                return numeric::array(boost::python::list());
             }
+
+            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
             FOREACH(itsol,vsolutions) {
-                solutions.append(toPyArray(*itsol));
+                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                std::copy(itsol->begin(),itsol->end(),ppos);
+                ppos += itsol->size();
             }
-            return solutions;
+            return static_cast<numeric::array>(handle<>(pysolutions));
         }
 
         object FindIKSolutions(object oparam, object freeparams, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
-            boost::python::list solutions;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
                 if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
-                    return solutions;
+                    return numeric::array(boost::python::list());
                 }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
-                return solutions;
+                return numeric::array(boost::python::list());
             }
+
+            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
             FOREACH(itsol,vsolutions) {
-                solutions.append(toPyArray(*itsol));
+                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                std::copy(itsol->begin(),itsol->end(),ppos);
+                ppos += itsol->size();
             }
-            return solutions;
+            return static_cast<numeric::array>(handle<>(pysolutions));
         }
 
         object GetIkParameterization(IkParameterizationType iktype)
@@ -2282,6 +2292,11 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     return object(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,pyenv)));
 }
 
+object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
+{
+    return object(PyKinBody::PyJointPtr(new PyKinBody::PyJoint(pjoint,pyenv)));
+}
+
 KinBody::LinkPtr GetKinBodyLink(object o)
 {
     extract<PyKinBody::PyLinkPtr> pylink(o);
@@ -2309,6 +2324,24 @@ KinBody::JointPtr GetKinBodyJoint(object o)
     return KinBody::JointPtr();
 }
 
+std::string reprPyKinBodyJoint(object o)
+{
+    extract<PyKinBody::PyJointPtr> pyjoint(o);
+    if( pyjoint.check() ) {
+        return ((PyKinBody::PyJointPtr)pyjoint)->__repr__();
+    }
+    return std::string();
+}
+
+std::string strPyKinBodyJoint(object o)
+{
+    extract<PyKinBody::PyJointPtr> pyjoint(o);
+    if( pyjoint.check() ) {
+        return ((PyKinBody::PyJointPtr)pyjoint)->__str__();
+    }
+    return std::string();
+}
+
 KinBodyPtr GetKinBody(object o)
 {
     extract<PyKinBodyPtr> pykinbody(o);
@@ -2321,6 +2354,11 @@ KinBodyPtr GetKinBody(object o)
 KinBodyPtr GetKinBody(PyKinBodyPtr pykinbody)
 {
     return !pykinbody ? KinBodyPtr() : pykinbody->GetBody();
+}
+
+PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
+{
+    return pykinbody->GetEnv();
 }
 
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)

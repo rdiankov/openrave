@@ -100,6 +100,8 @@ Misc
 
 * Fixed bug in IkParameterization::ComputeDistanceSqr
 
+* Added conversion to DH parameters with :meth:`.planningutils.GetDHParameters`
+
 Version 0.6.2
 =============
 
