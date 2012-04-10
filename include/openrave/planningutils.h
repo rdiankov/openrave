@@ -132,8 +132,9 @@ OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerPara
 
    http://en.wikipedia.org/wiki/Denavit%E2%80%93Hartenberg_parameters
  */
-struct DHParameter
+class DHParameter
 {
+public:
     KinBody::JointConstPtr joint; ///< pointer to joint
     int parentindex; ///< index into dh parameter array for getting cooreainte system of parent joint. If -1, no parent.
     Transform transform; ///< the computed coordinate system of this joint, this can be automatically computed from DH parameters

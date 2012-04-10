@@ -1436,7 +1436,7 @@ void init_openravepy_global()
                   .staticmethod("GetDHParameters")
         ;
 
-        class_<planningutils::PyDHParameter, boost::shared_ptr<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(DHParameter))
+        class_<planningutils::PyDHParameter, boost::shared_ptr<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
         .def(init<object, int, object, dReal, dReal, dReal, dReal>(args("joint","parentindex","transform","d","a","theta","alpha")))
         .def_readwrite("joint",&planningutils::PyDHParameter::joint)
@@ -1452,7 +1452,7 @@ void init_openravepy_global()
         ;
 
 
-        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(ManipulatorIKGoalSampler), no_init)
+        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample))
         ;
