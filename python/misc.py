@@ -56,9 +56,12 @@ except ImportError:
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
 
-def InitOpenRAVELogging(logginglevel):
+def InitOpenRAVELogging():
+    """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
+    """
+    levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
     log=logging.getLogger('openravepy')
-    log.setLevel(logginglevel)
+    log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()])
     if len(log.handlers) == 0:
         try:
             colorize=__import__('logutils.colorize',fromlist=['colorize'])
@@ -105,16 +108,13 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
-        logginglevel = logging.INFO
         if options._level is not None:
-            levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
             for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
-                    logginglevel = levelmap[debugname]
                     break
 
-        InitOpenRAVELogging(logginglevel)
+        InitOpenRAVELogging()
         
     @staticmethod
     def parseEnvironment(options,env,defaultviewer=False,returnviewer=False,**kwargs):

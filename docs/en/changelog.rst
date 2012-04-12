@@ -61,6 +61,8 @@ Python
 
 * Added GetCode to python openrave_exception class
 
+* Added :meth:`.misc.InitOpenRAVELogging` to setup global python logging handlers.
+
 Physics
 -------
 
