@@ -55,7 +55,27 @@ except ImportError:
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
-    
+
+def InitOpenRAVELogging(logginglevel):
+    log=logging.getLogger('openravepy')
+    log.setLevel(logginglevel)
+    if len(log.handlers) == 0:
+        try:
+            colorize=__import__('logutils.colorize',fromlist=['colorize'])
+            handler = colorize.ColorizingStreamHandler()
+            handler.level_map[logging.DEBUG] =(None, 'green', False)
+            handler.level_map[logging.INFO] = (None, None, False)
+            handler.level_map[logging.WARNING] = (None, 'yellow', False)
+            handler.level_map[logging.ERROR] = (None, 'red', False)
+            handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
+
+        except ImportError:
+            handler = logging.StreamHandler()
+            openravepy_int.raveLogVerbose('python logutils not present so cannot colorize python output.')
+
+        handler.setFormatter(logging.Formatter('%(name)s: %(funcName)s, %(message)s'))
+        log.addHandler(handler)
+
 class OpenRAVEGlobalArguments:
     """manages a global set of command-line options applicable to all openrave environments"""
     @staticmethod
@@ -94,25 +114,8 @@ class OpenRAVEGlobalArguments:
                     logginglevel = levelmap[debugname]
                     break
 
-        log=logging.getLogger('openravepy')
-        log.setLevel(logginglevel)
-        if len(log.handlers) == 0:
-            try:
-                colorize=__import__('logutils.colorize',fromlist=['colorize'])
-                handler = colorize.ColorizingStreamHandler()
-                handler.level_map[logging.DEBUG] =(None, 'green', False)
-                handler.level_map[logging.INFO] = (None, None, False)
-                handler.level_map[logging.WARNING] = (None, 'yellow', False)
-                handler.level_map[logging.ERROR] = (None, 'red', False)
-                handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
-                
-            except ImportError:
-                handler = logging.StreamHandler()
-                openravepy_int.raveLogVerbose('python logutils not present so cannot colorize python output.')
-                
-            handler.setFormatter(logging.Formatter('%(name)s: %(funcName)s, %(message)s'))
-            log.addHandler(handler)
-    
+        InitOpenRAVELogging(logginglevel)
+        
     @staticmethod
     def parseEnvironment(options,env,defaultviewer=False,returnviewer=False,**kwargs):
         """Parses all options that affect the environment. If returnviewer is set, will return the viewer to set instead of setting it"""
