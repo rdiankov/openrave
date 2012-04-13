@@ -323,11 +323,11 @@ class TestTrajectory(EnvironmentSetup):
                 assert(ikparam1.ComputeDistanceSqr(ikparams[-1]) <= g_epsilon)
                 gvel=traj.GetConfigurationSpecification().GetGroupFromName('ikparam_velocities')
                 assert(sum(abs(traj.GetWaypoint(0,gvel)))<=g_epsilon)
-                assert(sum(abs(traj.GetWaypoint(-1,gvel)))<=g_epsilon)
                 if degree == 1:
                     p, residuals, rank, singular_values, rcond = polyfit(times,c_[angledelta,transdelta],degree,full=True)
                     assert(all(residuals < 1e-5)) # make sure it matches the degree
                 elif degree == 2:
+                    assert(sum(abs(traj.GetWaypoint(-1,gvel)))<=g_epsilon)
                     startindex = int(round(maxvel/(maxaccel*sampletime)))
                     endindex = len(times)-startindex
                     p, residuals, rank, singular_values, rcond = polyfit(times[:startindex],c_[angledelta[:startindex],transdelta[:startindex]],2,full=True)

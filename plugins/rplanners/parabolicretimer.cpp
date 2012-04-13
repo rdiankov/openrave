@@ -152,7 +152,7 @@ protected:
                 dReal maxvel = info->_vConfigVelocityLimit[i]+ParabolicRamp::EpsilonV;
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
-                    if(RaveFabs(ramp[j].a1) > maxaccel || RaveFabs(ramp[j].a2) > maxaccel || RaveFabs(ramp[j].v) > maxvel) {
+                    if(RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 || RaveFabs(ramp[j].v) > maxvel+1e-5) {
                         throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
                     }
 
@@ -450,10 +450,10 @@ protected:
                 dReal maxvel = vmaxvel[i]+ParabolicRamp::EpsilonV;
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
-                    if(RaveFabs(ramp[j].v) > maxvel) {
+                    if(RaveFabs(ramp[j].v) > maxvel+1e-5) {
                         throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f",RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
                     }
-//                    if( RaveFabs(ramp[j].a1) > maxaccel || RaveFabs(ramp[j].a2) > maxaccel ) {
+//                    if( RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 ) {
 //                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel, ORE_InconsistentConstraints);
 //                    }
 
