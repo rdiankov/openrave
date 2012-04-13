@@ -185,7 +185,7 @@ class test_ode(RunPhysics):
     def __init__(self):
         RunPhysics.__init__(self, 'ode')
 
-class test_bullet(RunPhysics):
-    def __init__(self):
-        RunPhysics.__init__(self, 'bullet')
-        
+# class test_bullet(RunPhysics):
+#     def __init__(self):
+#         RunPhysics.__init__(self, 'bullet')
+#         

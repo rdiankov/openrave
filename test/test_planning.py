@@ -585,8 +585,8 @@ class RunPlanning(EnvironmentSetup):
 class test_ode(RunPlanning):
     def __init__(self):
         RunPlanning.__init__(self, 'ode')
-
-class test_bullet(RunPlanning):
-    def __init__(self):
-        RunPlanning.__init__(self, 'bullet')
-        
+# 
+# class test_bullet(RunPlanning):
+#     def __init__(self):
+#         RunPlanning.__init__(self, 'bullet')
+#         
