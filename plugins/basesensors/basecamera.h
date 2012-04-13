@@ -366,7 +366,7 @@ protected:
                 pstart[i] = pstart[3+i] = pstart[6+i] = xaxis[i];
                 pstart[9+i] = pstart[12+i] = yaxis[i];
             }
-            _graphgeometry = GetEnv()->drawlinestrip(viconpoints[0], viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
+            _graphgeometry = GetEnv()->drawlinestrip(&viconpoints[0].x, viconpoints.size(), sizeof(viconpoints[0]), 1, &vcolors[0]);
         }
         if( !!_graphgeometry ) {
             _graphgeometry->SetTransform(_trans);

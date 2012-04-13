@@ -59,12 +59,12 @@ public:
             else if((name == "minangle")||(name == "min_angle")) {
                 ss >> _psensor->_pgeom->min_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;                                                                                                                                    // convert to radians
+                    _psensor->_pgeom->min_angle[0] *= PI/180.0f;                                                                                                                                                                                                      // convert to radians
             }
             else if((name == "maxangle")||(name == "max_angle")) {
                 ss >> _psensor->_pgeom->max_angle[0];
                 if( !!ss )
-                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;                                                                                                                                    // convert to radians
+                    _psensor->_pgeom->max_angle[0] *= PI/180.0f;                                                                                                                                                                                                      // convert to radians
             }
             else if((name == "maxrange")||(name == "max_range")) {
                 ss >> _psensor->_pgeom->max_range;
@@ -286,7 +286,7 @@ public:
                 listhandles.push_back(GetEnv()->plot3(&vpoints[0].x, N, sizeof(vpoints[0]), 5.0f, _vColor));
 
                 _vColor.w = 0.01f;
-                listhandles.push_back(GetEnv()->drawtrimesh(vpoints[0], sizeof(vpoints[0]), &vindices[0], vindices.size()/3, _vColor));
+                listhandles.push_back(GetEnv()->drawtrimesh(&vpoints[0].x, sizeof(vpoints[0]), &vindices[0], vindices.size()/3, _vColor));
 
                 _listGraphicsHandles.swap(listhandles);
 
@@ -415,7 +415,7 @@ protected:
             RaveVector<float> vcolor = _vColor*0.5f;
             vcolor.w = 0.7f;
 
-            _graphgeometry = GetEnv()->drawtrimesh(viconpoints[0], sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
+            _graphgeometry = GetEnv()->drawtrimesh(&viconpoints[0].x, sizeof(viconpoints[0]), &viconindices[0], 6, vcolor);
         }
         if( !!_graphgeometry ) {
             _graphgeometry->SetTransform(t);

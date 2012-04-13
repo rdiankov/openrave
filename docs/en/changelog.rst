@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 Version 0.6.4
 =============
 
-Subversion Revision: r3188
+Subversion Revision: r3191
 
 Initial Release: 2012/04/13
 
@@ -37,6 +37,8 @@ Core
 * The rigidly attached links of grabbed links of a robot are now always ignored, collision is never checked between them.
 
 * Fixed trajectory sampling/interpolation for IkParameterization
+
+* Removed operator T*() from geometry::RaveVector, **could break existing code**.
 
 Inverse Kinematics
 ------------------

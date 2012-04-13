@@ -207,8 +207,8 @@ void KinBodyItem::Load()
 
                 // set a diffuse color
                 SoMaterial* mtrl = new SoMaterial;
-                mtrl->diffuseColor = SbColor(itgeom->GetDiffuseColor());
-                mtrl->ambientColor = SbColor(itgeom->GetAmbientColor());
+                mtrl->diffuseColor = SbColor(&itgeom->GetDiffuseColor().x);
+                mtrl->ambientColor = SbColor(&itgeom->GetAmbientColor().x);
                 mtrl->setOverride(true);
                 mtrl->transparency = itgeom->GetTransparency();
                 if((_viewmode == VG_RenderCollision)&& (bSucceeded || !itgeom->IsVisible()) ) {

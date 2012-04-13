@@ -133,15 +133,9 @@ public:
     T operator[] (int i) const {
         return (&x)[i];
     }
-    T& operator[] (int i)             {
+    T& operator[] (int i) {
         return (&x)[i];
     }
-
-    // casting operators
-    operator T* () {
-        return &x;
-    }
-    operator const T* () const { return (const T*)&x; }
 
     template <typename U>
     RaveVector<T>& operator=(const RaveVector<U>&r) {
