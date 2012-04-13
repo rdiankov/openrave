@@ -278,7 +278,7 @@ class TestTrajectory(EnvironmentSetup):
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,[0, -2.220446049250314e-16, 0, 1.047197551200003, 0.5, 0.5, 0.5, 1.0471975512])
-            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<forcemaxaccel>1</forcemaxaccel>')
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<multidofinterp>1</multidofinterp>')
             
     def test_ikparamretiming(self):
         self.log.info('retime workspace ikparam')

@@ -87,7 +87,7 @@ protected:
             }
         }
         _ramps.resize(info->gpos.dof);
-        dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_forcemaxaccel);
+        dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
         BOOST_ASSERT(mintime>=0);
         return mintime;
     }
@@ -137,14 +137,8 @@ protected:
                 RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
             }
 
-            if( _parameters->_forcemaxaccel ) {
-                bool success = ParabolicRamp::SolveMaxAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps);
-                BOOST_ASSERT(success);
-            }
-            else {
-                bool success = ParabolicRamp::SolveMinAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps);
-                BOOST_ASSERT(success);
-            }
+            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+            BOOST_ASSERT(success);
 
             vector<dReal> vswitchtimes;
             if( info->ptraj->GetNumWaypoints() == 0 ) {
@@ -441,14 +435,8 @@ protected:
                 vupper[i] = 1000+_v1pos[i];
             }
 
-            if( _parameters->_forcemaxaccel ) {
-                bool success = ParabolicRamp::SolveMaxAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps);
-                BOOST_ASSERT(success);
-            }
-            else {
-                bool success = ParabolicRamp::SolveMinAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxvel, vlower, vupper, _ramps);
-                BOOST_ASSERT(success);
-            }
+            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+            BOOST_ASSERT(success);
 
             vector<dReal> vswitchtimes;
             if( info->ptraj->GetNumWaypoints() == 0 ) {

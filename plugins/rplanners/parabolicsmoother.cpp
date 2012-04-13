@@ -116,7 +116,7 @@ public:
         try {
             ParabolicRamp::DynamicPath dynamicpath;
             dynamicpath.Init(parameters->_vConfigVelocityLimit,parameters->_vConfigAccelerationLimit);
-            dynamicpath._forcemaxaccel = _parameters->_forcemaxaccel;
+            dynamicpath._multidofinterp = _parameters->_multidofinterp;
             dynamicpath.SetJointLimits(parameters->_vConfigLowerLimit,parameters->_vConfigUpperLimit);
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f")%path.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance));

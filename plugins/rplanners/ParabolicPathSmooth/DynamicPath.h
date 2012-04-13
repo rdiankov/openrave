@@ -143,7 +143,7 @@ public:
     Vector xMin,xMax,velMax,accMax;
     /// The path is stored as a series of ramps
     std::vector<ParabolicRampND> ramps;
-    bool _forcemaxaccel; ///< if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
+    int _multidofinterp; ///< if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
 };
 
 } //namespace ParabolicRamp

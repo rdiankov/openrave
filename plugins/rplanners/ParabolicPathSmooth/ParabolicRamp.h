@@ -66,6 +66,8 @@ public:
     void SolveBraking(Real amax);
     /// Solves for the ramp given max the exact time
     bool SolveFixedTime(Real amax,Real vmax,Real endTime);
+    /// solves for the ramp given fixed switch times and end time
+    bool SolveFixedSwitchTime(Real amax,Real vmax);
     /// Evaluates the trajectory
     Real Evaluate(Real t) const;
     /// Evaluates the derivative of the trajectory
@@ -158,10 +160,10 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,
 
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
-/// \param forcemaxaccel if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
+/// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
 Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                          const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                         std::vector<std::vector<ParabolicRamp1D> >& ramps, bool forcemaxaccel);
+                         std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
 /// Vector version of above.
 /// Returns true if successful.
@@ -169,9 +171,10 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
                           Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                           std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
-bool SolveMaxAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
-                          Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                          std::vector<std::vector<ParabolicRamp1D> >& ramps);
+/// if 0 - SolveAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
+bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
+                       Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
+                       std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
