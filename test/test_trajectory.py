@@ -303,7 +303,7 @@ class TestTrajectory(EnvironmentSetup):
                 traj.Init(ikparam0.GetConfigurationSpecification())
                 traj.Insert(0,ikparam0.GetValues())
                 traj.Insert(1,ikparam1.GetValues())
-                planningutils.RetimeAffineTrajectory(traj,maxvelocities=tile(maxvel,ikparam0.GetNumberOfValues()),maxaccelerations=tile(maxaccel,ikparam0.GetNumberOfValues()),hastimestamps=False,plannername=plannername)
+                planningutils.RetimeAffineTrajectory(traj,maxvelocities=tile(maxvel,ikparam0.GetNumberOfValues()),maxaccelerations=tile(maxaccel,ikparam0.GetNumberOfValues()),hastimestamps=False,plannername=plannername,plannerparameters='<multidofinterp>1</multidofinterp>')
                 assert(abs(traj.GetDuration()-expectedduration) < 0.01)
                 ikparams = []
                 angledelta = []
@@ -325,7 +325,7 @@ class TestTrajectory(EnvironmentSetup):
                 assert(sum(abs(traj.GetWaypoint(0,gvel)))<=g_epsilon)
                 if degree == 1:
                     p, residuals, rank, singular_values, rcond = polyfit(times,c_[angledelta,transdelta],degree,full=True)
-                    assert(all(residuals < 1e-5)) # make sure it matches the degree
+                    assert(all(residuals < 5e-5)) # make sure it matches the degree
                 elif degree == 2:
                     assert(sum(abs(traj.GetWaypoint(-1,gvel)))<=g_epsilon)
                     startindex = int(round(maxvel/(maxaccel*sampletime)))
