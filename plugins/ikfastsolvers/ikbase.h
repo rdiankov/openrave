@@ -704,7 +704,7 @@ private:
             if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
                 // if all the solutions are worse than the best, then ignore everything
                 vravesols2.resize(0); vravesols2.reserve(vravesols.size());
-                FOREACHC(itravesol, vravesols) {
+                FOREACH(itravesol, vravesols) {
                     d = _configdist2(probot,itravesol->first,boost::get<1>(freeq0check));
                     if( !(bestdist <= d) ) {
                         vravesols2.push_back(*itravesol);
@@ -737,7 +737,7 @@ private:
                 }
             }
             vravesols2.resize(0);
-            FOREACHC(itravesol, vravesols) {
+            FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
                     *it += maxsolutions * itravesol->second;
@@ -816,7 +816,7 @@ private:
         }
 
         // solution is valid, so replace the best
-        FOREACHC(itravesol, vravesols) {
+        FOREACH(itravesol, vravesols) {
             if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
                 d = _configdist2(probot,itravesol->first,boost::get<1>(freeq0check));
                 if( !(bestdist <= d) ) {
@@ -900,7 +900,7 @@ private:
                 }
             }
             vravesols2.resize(0);
-            FOREACHC(itravesol, vravesols) {
+            FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
                     *it += maxsolutions * itravesol->second;
