@@ -159,11 +159,18 @@ importing anything. For example:
   __builtins__.__openravepy_version__ = '0.4'
   import openravepy
 
-Output Levels
--------------
+Logging
+-------
 
-It is possible to set the output levels using the DebugLevel enum:
+It is possible to set the logging levels of internal OpenRAVE using the DebugLevel enum:
 
 .. code-block:: python
   
   RaveSetDebugLevel(DebugLevel.Verbose)
+
+A lot of the OpenRAVE Python bindings use the python logging module directly. In order to initialize it with the correct output handles and have it sync with the internal OpenRAVE logging level, use the following command:
+
+.. code-block:: python
+
+  from openravepy.misc import InitOpenRAVELogging
+  InitOpenRAVELogging()

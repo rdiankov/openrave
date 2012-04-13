@@ -29,6 +29,8 @@ Core
 
 * The rigidly attached links of grabbed links of a robot are now always ignored, collision is never checked between them.
 
+* Fixed trajectory sampling/interpolation for IkParameterization
+
 Inverse Kinematics
 ------------------
 
@@ -48,6 +50,10 @@ Planning
 * Fixed grasp offsets and trajectory combining in :ref:`module-taskmanipulation-graspplanning` and :meth:`.planningutils.InsertActiveDOFWaypointWithRetiming`.
 
 * The rplanners RRTs now respect the PA_Interrupt actions from the PlanCallbacks. The callbacks are also transferred to the post-process planners.
+
+* Added parabolic retiming of IkParameterization
+
+* Added planner parameters option to force max acceleration
 
 Grasping
 --------

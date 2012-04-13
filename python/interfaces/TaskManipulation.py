@@ -104,7 +104,7 @@ class TaskManipulation:
         goals = []
         for i in range(numgoals):
             # get the number of values
-            numvalues = 1+IkParameterization.GetNumberOfValues(IkParameterization.Type(int(resvalues[0])))
+            numvalues = 1+IkParameterization.GetNumberOfValuesFromType(IkParameterization.Type(int(resvalues[0])))
             goals.append(IkParameterization(' '.join(resvalues[0:numvalues])))
             resvalues = resvalues[numvalues:]
         graspindex = int(resvalues.pop(0))

@@ -213,18 +213,20 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _outputaccelchanges(true), _fToolAccelerationLimit(0), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _outputaccelchanges(true), _forcemaxaccel(false), _fToolAccelerationLimit(0), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("toolaccelerationlimit");
+        _vXMLParameters.push_back("forcemaxaccel");
     }
 
     string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
     bool _hastimestamps;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
+    bool _forcemaxaccel; ///< if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
     dReal _fToolAccelerationLimit; ///< if non-zero then the timer shoulld consdier the max acceleration limit of the tool.
 
 protected:
@@ -238,6 +240,7 @@ protected:
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << endl;
+        O << "<forcemaxaccel>" << _forcemaxaccel << "</forcemaxaccel>" << endl;
         O << "<toolaccelerationlimit>" << _fToolAccelerationLimit << "</toolaccelerationlimit>" << endl;
         return !!O;
     }
@@ -253,7 +256,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit" || name=="forcemaxaccel";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -271,6 +274,9 @@ protected:
             }
             else if( name == "outputaccelchanges" ) {
                 _ss >> _outputaccelchanges;
+            }
+            else if( name == "forcemaxaccel" ) {
+                _ss >> _forcemaxaccel;
             }
             else if( name == "toolaccelerationlimit" ) {
                 _ss >> _fToolAccelerationLimit;

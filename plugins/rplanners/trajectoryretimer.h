@@ -32,6 +32,7 @@ public:
         int degree;
         const ConfigurationSpecification::Group& gpos, &gvel;
         int orgposoffset, orgveloffset;
+        vector<dReal> _vConfigVelocityLimit, _vConfigAccelerationLimit, _vConfigLowerLimit, _vConfigUpperLimit;
     };
     typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
     typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
@@ -166,6 +167,11 @@ public:
                 BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
                 _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
                 _listgroupinfo.back()->orgposoffset = orgposoffset;
+                _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigAccelerationLimit = std::vector<dReal>(_parameters->_vConfigAccelerationLimit.begin()+itgroup->offset, _parameters->_vConfigAccelerationLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigLowerLimit = std::vector<dReal>(_parameters->_vConfigLowerLimit.begin()+itgroup->offset, _parameters->_vConfigLowerLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigUpperLimit = std::vector<dReal>(_parameters->_vConfigUpperLimit.begin()+itgroup->offset, _parameters->_vConfigUpperLimit.begin()+itgroup->offset+itgroup->dof);
+
                 itgroup = oldspec.FindCompatibleGroup(*itvelgroup);
                 if( itgroup != oldspec._vgroups.end() ) {
                     // velocity is optional

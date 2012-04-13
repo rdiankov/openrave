@@ -64,6 +64,8 @@ public:
     Real SolveMinAccel2(Real endTime,Real vmax);
     /// Solves for the minimum-time braking trajectory starting from x0,dx0
     void SolveBraking(Real amax);
+    /// Solves for the ramp given max the exact time
+    bool SolveFixedTime(Real amax,Real vmax,Real endTime);
     /// Evaluates the trajectory
     Real Evaluate(Real t) const;
     /// Evaluates the derivative of the trajectory
@@ -150,16 +152,25 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,
                           Real endTime,Real vmax,Real xmin,Real xmax,
                           std::vector<ParabolicRamp1D>& ramps);
 
+bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,
+                          Real endTime, Real amax, Real vmax,Real xmin,Real xmax,
+                          std::vector<ParabolicRamp1D>& ramps);
+
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
+/// \param forcemaxaccel if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
 Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                          const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                         std::vector<std::vector<ParabolicRamp1D> >& ramps);
+                         std::vector<std::vector<ParabolicRamp1D> >& ramps, bool forcemaxaccel);
 
 /// Vector version of above.
 /// Returns true if successful.
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                           Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax,
+                          std::vector<std::vector<ParabolicRamp1D> >& ramps);
+
+bool SolveMaxAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
+                          Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                           std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps

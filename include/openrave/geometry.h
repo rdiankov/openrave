@@ -878,9 +878,7 @@ inline RaveVector<T> quatMultiply(const RaveVector<T>& quat0, const RaveVector<T
                     quat0.x*quat1.y + quat0.y*quat1.x + quat0.z*quat1.w - quat0.w*quat1.z,
                     quat0.x*quat1.z + quat0.z*quat1.x + quat0.w*quat1.y - quat0.y*quat1.w,
                     quat0.x*quat1.w + quat0.w*quat1.x + quat0.y*quat1.z - quat0.z*quat1.y);
-    T fnorm = q.lengthsqr4(); // normalize the quaternion
-    MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f ); // catches multi-threading errors
-    q.normalize4();
+    // do not normalize since some quaternion math (like derivatives) do not correspond to unit quaternions
     return q;
 }
 

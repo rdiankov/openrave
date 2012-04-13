@@ -254,6 +254,7 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer')
             planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
+            
             self.log.info('try with timestamps')
             spec = robot.GetActiveConfigurationSpecification()
             timeoffset=spec.AddDeltaTimeGroup()
@@ -272,7 +273,82 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
             assert( transdist(robot.GetActiveDOFValues(),finalvalues) <= g_epsilon)
+
+            robot.SetActiveDOFs(range(7,11))
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,[0, -2.220446049250314e-16, 0, 1.047197551200003, 0.5, 0.5, 0.5, 1.0471975512])
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<forcemaxaccel>1</forcemaxaccel>')
             
+    def test_ikparamretiming(self):
+        self.log.info('retime workspace ikparam')
+        env=self.env
+        env.Load('robots/barrettwam.robot.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            manip = robot.GetActiveManipulator()
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            robot.SetActiveDOFValues(zeros(len(manip.GetArmIndices())))
+            ikparam0 = manip.GetIkParameterization(IkParameterizationType.Transform6D)
+            robot.SetActiveDOFValues(ones(len(manip.GetArmIndices())))
+            ikparam1 = manip.GetIkParameterization(ikparam0.GetType())
+            assert(ikparam0.GetNumberOfValues()==7 and ikparam0.GetDOF()==6)
+            assert(ikparam1.GetNumberOfValues(ikparam1.GetType())==7 and ikparam1.GetDOF(ikparam1.GetType())==6)
+            traj = RaveCreateTrajectory(env,'')
+            plannerinfo = [('LinearTrajectoryRetimer',1,1.9851930205965249), ('ParabolicTrajectoryRetimer', 2,2.2014092368127409)]
+            maxvel = 0.8
+            maxaccel = 3.7
+            sampletime = 0.005
+            for plannername, degree, expectedduration in plannerinfo:
+                traj.Init(ikparam0.GetConfigurationSpecification())
+                traj.Insert(0,ikparam0.GetValues())
+                traj.Insert(1,ikparam1.GetValues())
+                planningutils.RetimeAffineTrajectory(traj,maxvelocities=tile(maxvel,ikparam0.GetNumberOfValues()),maxaccelerations=tile(maxaccel,ikparam0.GetNumberOfValues()),hastimestamps=False,plannername=plannername)
+                assert(abs(traj.GetDuration()-expectedduration) < 0.01)
+                ikparams = []
+                angledelta = []
+                transdelta = []
+                times = arange(0,traj.GetDuration()+sampletime,sampletime)
+                for t in times:
+                    ikparam = IkParameterization()
+                    ikparam.SetValues(traj.Sample(t,ikparam0.GetConfigurationSpecification()),ikparam0.GetType())
+                    ikparams.append(ikparam)
+                    # compute the change in angle, also check if valid transform can be extracted
+                    T=ikparam.GetTransform6D()
+                    angledelta.append(linalg.norm(axisAngleFromRotationMatrix(dot(linalg.inv(ikparam0.GetTransform()),T))))
+                    transdelta.append(linalg.norm(T[0:3,3]-ikparam0.GetTransform()[0:3,3]))
+                angledelta = array(angledelta)
+                transdelta = array(transdelta)
+                assert(ikparam0.ComputeDistanceSqr(ikparams[0]) <= g_epsilon)
+                assert(ikparam1.ComputeDistanceSqr(ikparams[-1]) <= g_epsilon)
+                gvel=traj.GetConfigurationSpecification().GetGroupFromName('ikparam_velocities')
+                assert(sum(abs(traj.GetWaypoint(0,gvel)))<=g_epsilon)
+                assert(sum(abs(traj.GetWaypoint(-1,gvel)))<=g_epsilon)
+                if degree == 1:
+                    p, residuals, rank, singular_values, rcond = polyfit(times,c_[angledelta,transdelta],degree,full=True)
+                    assert(all(residuals < 1e-5)) # make sure it matches the degree
+                elif degree == 2:
+                    startindex = int(round(maxvel/(maxaccel*sampletime)))
+                    endindex = len(times)-startindex
+                    p, residuals, rank, singular_values, rcond = polyfit(times[:startindex],c_[angledelta[:startindex],transdelta[:startindex]],2,full=True)
+                    assert(all(residuals < 5e-5)) # make sure it matches the degree
+                    p, residuals, rank, singular_values, rcond = polyfit(times[startindex:endindex],c_[angledelta[startindex:endindex],transdelta[startindex:endindex]],1,full=True)
+                    assert(all(residuals < 5e-5)) # make sure it matches the degree
+                    p, residuals, rank, singular_values, rcond = polyfit(times[endindex:],c_[angledelta[endindex:],transdelta[endindex:]],2,full=True)
+                    assert(all(residuals < 5e-5)) # make sure it matches the degree
+                    
+    def drawhandles():
+        handles = [misc.DrawAxes(env,ikparam.GetTransform6D()) for ikparam in ikparams]
+        import matplotlib.pyplot as plt
+        ax = plt.subplot(121)
+        ax.plot(times, angledelta,'r')
+        ax.plot(times, transdelta,'b')
+        ax = plt.subplot(122)
+        deltatimes = times[1:]-times[:-1]
+        ax.plot(times[1:], (angledelta[1:]-angledelta[:-1])/deltatimes,'r')
+        ax.plot(times[1:], (transdelta[1:]-transdelta[:-1])/deltatimes,'b')
+        plt.show()
+        
     def test_smoothwithcircular(self):
         self.log.info('test smoothing with circular joints')
         env=self.env

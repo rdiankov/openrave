@@ -95,12 +95,28 @@ public:
                     _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                 }
                 else if( interpolation == "linear" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                        stringstream ss(_spec._vgroups[i].name.substr(14));
+                        int niktype=0;
+                        ss >> niktype;
+                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                    }
+                    else {
+                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    }
                     _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 2;
                 }
                 else if( interpolation == "quadratic" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                        stringstream ss(_spec._vgroups[i].name.substr(14));
+                        int niktype=0;
+                        ss >> niktype;
+                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                    }
+                    else {
+                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    }
                     _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                     nNeedDerivatives = 3;
                 }
@@ -434,7 +450,7 @@ protected:
 
     void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        size_t offset= ipoint*_spec.GetDOF()+g.offset;
+        size_t offset = ipoint*_spec.GetDOF()+g.offset;
         if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
             // if point is so close the previous, then choose the next
             dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
@@ -450,7 +466,7 @@ protected:
         if( (ipoint+1)*_spec.GetDOF() < _vtrajdata.size() ) {
             ipoint += 1;
         }
-        size_t offset= ipoint*_spec.GetDOF() + g.offset;
+        size_t offset = ipoint*_spec.GetDOF() + g.offset;
         if( deltatime <= g_fEpsilon && ipoint > 0 ) {
             // if point is so close the previous, then choose the previous
             offset -= _spec.GetDOF();
@@ -460,7 +476,7 @@ protected:
 
     void _InterpolateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        size_t offset= ipoint*_spec.GetDOF();
+        size_t offset = ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
         if( derivoffset < 0 ) {
             // expected derivative offset, interpolation can be wrong for circular joints
@@ -477,9 +493,48 @@ protected:
         }
     }
 
+    void _InterpolateLinearIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data, IkParameterizationType iktype)
+    {
+        _InterpolateLinear(g,ipoint,deltatime,data);
+        if( deltatime > g_fEpsilon ) {
+            size_t offset = ipoint*_spec.GetDOF();
+            dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
+            switch(iktype) {
+            case IKP_Rotation3D:
+            case IKP_Transform6D: {
+                Vector q0, q1;
+                q0.Set4(&_vtrajdata[offset+g.offset]);
+                q1.Set4(&_vtrajdata[_spec.GetDOF()+offset+g.offset]);
+                Vector q = quatSlerp(q0,q1,f);
+                data[g.offset+0] = q[0];
+                data[g.offset+1] = q[1];
+                data[g.offset+2] = q[2];
+                data[g.offset+3] = q[3];
+                break;
+            }
+            case IKP_TranslationDirection5D: {
+                Vector dir0(_vtrajdata[offset+g.offset+0],_vtrajdata[offset+g.offset+1],_vtrajdata[offset+g.offset+2]);
+                Vector dir1(_vtrajdata[_spec.GetDOF()+offset+g.offset+0],_vtrajdata[_spec.GetDOF()+offset+g.offset+1],_vtrajdata[_spec.GetDOF()+offset+g.offset+2]);
+                Vector axisangle = dir0.cross(dir1);
+                dReal fsinangle = RaveSqrt(axisangle.lengthsqr3());
+                if( fsinangle > g_fEpsilon ) {
+                    axisangle *= f*RaveAsin(min(dReal(1),fsinangle))/fsinangle;
+                    Vector newdir = quatRotate(quatFromAxisAngle(axisangle),dir0);
+                    data[g.offset+0] = newdir[0];
+                    data[g.offset+1] = newdir[1];
+                    data[g.offset+2] = newdir[2];
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+    }
+
     void _InterpolateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        size_t offset= ipoint*_spec.GetDOF();
+        size_t offset = ipoint*_spec.GetDOF();
         if( deltatime > g_fEpsilon ) {
             int derivoffset = _vderivoffsets[g.offset];
             for(int i = 0; i < g.dof; ++i) {
@@ -492,6 +547,54 @@ protected:
         else {
             for(int i = 0; i < g.dof; ++i) {
                 data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+            }
+        }
+    }
+
+    void _InterpolateQuadraticIk(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data, IkParameterizationType iktype)
+    {
+        _InterpolateQuadratic(g, ipoint, deltatime, data);
+        if( deltatime > g_fEpsilon ) {
+            int derivoffset = _vderivoffsets[g.offset];
+            size_t offset = ipoint*_spec.GetDOF();
+            Vector q0, q0vel, q1, q1vel;
+            switch(iktype) {
+            case IKP_Rotation3D:
+            case IKP_Transform6D: {
+                q0.Set4(&_vtrajdata[offset+g.offset]);
+                q0vel.Set4(&_vtrajdata[offset+derivoffset]);
+                q1.Set4(&_vtrajdata[_spec.GetDOF()+offset+g.offset]);
+                q1vel.Set4(&_vtrajdata[_spec.GetDOF()+offset+derivoffset]);
+                Vector angularvelocity0 = quatMultiply(q0vel,quatInverse(q0))*2;
+                Vector angularvelocity1 = quatMultiply(q1vel,quatInverse(q1))*2;
+                Vector coeff = (angularvelocity1-angularvelocity0)*(0.5*_vdeltainvtime.at(ipoint+1));
+                Vector vtotaldelta = angularvelocity0*deltatime + coeff*(deltatime*deltatime);
+                Vector q = quatMultiply(quatFromAxisAngle(Vector(vtotaldelta.y,vtotaldelta.z,vtotaldelta.w)),q0);
+                data[g.offset+0] = q[0];
+                data[g.offset+1] = q[1];
+                data[g.offset+2] = q[2];
+                data[g.offset+3] = q[3];
+                break;
+            }
+            case IKP_TranslationDirection5D: {
+                Vector dir0, dir1, angularvelocity0, angularvelocity1;
+                dir0.Set3(&_vtrajdata[offset+g.offset]);
+                dir1.Set3(&_vtrajdata[_spec.GetDOF()+offset+g.offset]);
+                Vector axisangle = dir0.cross(dir1);
+                if( axisangle.lengthsqr3() > g_fEpsilon ) {
+                    angularvelocity0.Set3(&_vtrajdata[offset+derivoffset]);
+                    angularvelocity1.Set3(&_vtrajdata[_spec.GetDOF()+offset+derivoffset]);
+                    Vector coeff = (angularvelocity1-angularvelocity0)*(0.5*_vdeltainvtime.at(ipoint+1));
+                    Vector vtotaldelta = angularvelocity0*deltatime + coeff*(deltatime*deltatime);
+                    Vector newdir = quatRotate(quatFromAxisAngle(vtotaldelta),dir0);
+                    data[g.offset+0] = newdir[0];
+                    data[g.offset+1] = newdir[1];
+                    data[g.offset+2] = newdir[2];
+                }
+                break;
+            }
+            default:
+                break;
             }
         }
     }
@@ -513,7 +616,7 @@ protected:
 
     void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        size_t offset= ipoint*_spec.GetDOF();
+        size_t offset = ipoint*_spec.GetDOF();
         int derivoffset = _vderivoffsets[g.offset];
         if( derivoffset >= 0 ) {
             for(int i = 0; i < g.dof; ++i) {
@@ -530,7 +633,7 @@ protected:
     void _ValidateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
         if( deltatime > 0 ) {
-            size_t offset= ipoint*_spec.GetDOF();
+            size_t offset = ipoint*_spec.GetDOF();
             int derivoffset = _vderivoffsets[g.offset];
             for(int i = 0; i < g.dof; ++i) {
                 // coeff*t^2 + deriv0*t + pos0

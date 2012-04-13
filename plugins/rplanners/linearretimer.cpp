@@ -98,7 +98,7 @@ protected:
                 qnext[i] = *(itdata+info->gpos.offset+index+i);
                 qprev[i] = *(itdataprev+info->gpos.offset+index+i);
             }
-            dReal mintime = RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(info->orgposoffset+index);
+            dReal mintime = 2.0*RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(info->orgposoffset+index);
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_Rotation3D ) {
@@ -139,16 +139,16 @@ protected:
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         IkParameterization ikparamprev, ikparam;
-        ikparamprev.Set(itdataprev,iktype);
-        ikparam.Set(itdata,iktype);
+        ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+        ikparam.Set(itdata+info->gpos.offset,iktype);
         switch(iktype) {
         case IKP_Transform6D: {
-            dReal quatmintime = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(info->orgposoffset+0);
+            dReal quatmintime = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(info->orgposoffset+0);
             dReal transmintime = RaveSqrt((ikparamprev.GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3())*_vimaxvel.at(info->orgposoffset+4);
             return max(quatmintime,transmintime);
         }
         case IKP_Rotation3D:
-            return RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(info->orgposoffset+0);
+            return 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(info->orgposoffset+0);
         case IKP_Translation3D:
             return RaveSqrt((ikparamprev.GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3())*_vimaxvel.at(info->orgposoffset);
         case IKP_Direction3D: {
