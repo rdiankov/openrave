@@ -3,12 +3,19 @@
 ChangeLog
 #########
 
-Version 0.6.3 Development
+Version 0.7.0 Development
 =========================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.6.4
+=============
+
+Subversion Revision: r3188
+
+Initial Release: 2012/04/13
 
 Core
 ----
