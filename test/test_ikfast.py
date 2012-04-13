@@ -98,7 +98,8 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             compiletime = ikmodel.statistics.get('generationtime',0)
             if ikmodel.ikfeasibility is not None:
                 # nothing more to do than print the text
-                print ikmodel.ikfeasibility # will repeat text if just generated
+                # will repeat text if just generated
+                print ikmodel.ikfeasibility
                 globalstats.append([robotfilename,manip.GetName(),iktypestr,freeindices,description,None,None,None,None,None])
                 return
 
@@ -306,7 +307,7 @@ if __name__ == "__main__":
     argv=['nosetests','-v','--with-xunitmp','--xunit-file=test_ikfast.xml','--xunit-header=%s'%header,'--processes=%d'%options.numprocesses,'--process-timeout=%f'%options.timeout,'--process-restartworker','--with-callableclass','test_ikfast.py']
     plugins=[capture.Capture(),multiprocess.MultiProcess(),xunitmultiprocess.Xunitmp(),callableclass.CallableClass()]
     prog=nose.core.TestProgram(argv=argv,plugins=plugins,exit=False)
-    print 'processing the global stats'
+    log.info('processing the global stats')
     stats = []
     while len(test_ikfast.globalstats) > 0:
         stat = test_ikfast.globalstats.pop(0)

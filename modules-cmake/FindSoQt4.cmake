@@ -35,12 +35,29 @@ if(SOQT_CONFIG_EXECUTABLE)
     COMMAND ${SOQT_CONFIG_EXECUTABLE} --libs
     OUTPUT_VARIABLE _soqtconfig_libs
     RESULT_VARIABLE _soqtconfig_failed)
-  
-  string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _soqtconfig_libs "${_soqtconfig_libs}")
-  string(REGEX REPLACE "(^| )-l" "" _soqtconfig_libs "${_soqtconfig_libs}")  
 
   string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _soqtconfig_ldirs "${_soqtconfig_ldflags}")
   string(REGEX REPLACE "(^| )-L" "" _soqtconfig_ldirs "${_soqtconfig_ldirs}")
+  
+  # on Mac OSX -L is in both ldflags and libs:
+  # $ soqt-config --libs
+  # -lSoQt -L/opt/local/lib -lQtOpenGL -lQtGui -lQtCore -lCoin -lpthread
+  # $ soqt-config --ldflags
+  # -L/usr/local/lib -Wl,-framework,OpenGL -Wl,-multiply_defined,suppress
+  # $ ls /opt/local/lib/ | grep "QtO"
+  # libQtOpenGL.4.7.4.dylib
+  # libQtOpenGL.4.7.dylib
+  # libQtOpenGL.4.dylib
+  # libQtOpenGL.dylib
+  # libQtOpenGL.la
+  # libQtOpenGL.prl
+  # $ ls /usr/local/lib/ | grep "QtO"
+  # QtOpenGL.framework
+  string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _soqtconfig_ldirs2 "${_soqtconfig_libs}")
+  string(REGEX REPLACE "(^| )-L" "" _soqtconfig_ldirs2 "${_soqtconfig_ldirs2}")
+
+  string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _soqtconfig_libs "${_soqtconfig_libs}")
+  string(REGEX REPLACE "(^| )-l" "" _soqtconfig_libs "${_soqtconfig_libs}")
 
   string(REGEX REPLACE "(^| )-l([./+-_\\a-zA-Z]*)" " " _soqtconfig_ldflags "${_soqtconfig_ldflags}")
   string(REGEX REPLACE "(^| )-L([./+-_\\a-zA-Z]*)" " " _soqtconfig_ldflags "${_soqtconfig_ldflags}")
@@ -50,7 +67,7 @@ if(SOQT_CONFIG_EXECUTABLE)
   set( SOQT_CXXFLAGS "${_soqtconfig_cppflags}" )
   set( SOQT_LINK_FLAGS "${_soqtconfig_ldflags}" )
   set( SOQT_INCLUDE_DIRS ${_soqtconfig_includedir})
-  set( SOQT_LINK_DIRS ${_soqtconfig_ldirs})
+  set( SOQT_LINK_DIRS ${_soqtconfig_ldirs} ${_soqtconfig_ldirs2})
   set( SOQT_LIBRARY ${_soqtconfig_libs})
   set( SOQT_LIBRARY_RELEASE ${SOQT_LIBRARY})
   set( SOQT_LIBRARY_DEBUG ${SOQT_LIBRARY})

@@ -661,6 +661,7 @@ public:
             listGeometries.push_back(KinBody::Link::GEOMPROPERTIES(KinBody::LinkPtr()));
             KinBody::Link::GEOMPROPERTIES& g = listGeometries.back();
             g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+            g.vRenderScale = scale;
             aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
             g.collisionmesh.vertices.resize(input_mesh->mNumVertices);
             for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
@@ -740,6 +741,7 @@ public:
         g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
         g.diffuseColor=Vector(1,0.5f,0.5f,1);
         g.ambientColor=Vector(0.1,0.0f,0.0f,0);
+        g.vRenderScale = vscale;
         if( !CreateTriMeshData(penv,filename,vscale,g.collisionmesh,g.diffuseColor,g.ambientColor,g.ftransparency) ) {
             return false;
         }
@@ -772,7 +774,7 @@ public:
             }
             else if( itatt->first == "type" ) {
                 bStaticSet = true;
-                if( stricmp(itatt->second.c_str(), "static") == 0 ) {
+                if( _stricmp(itatt->second.c_str(), "static") == 0 ) {
                     bStatic = true;
                 }
             }
@@ -780,7 +782,7 @@ public:
                 linkfilename = itatt->second;
             }
             else if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -903,10 +905,10 @@ public:
                 }
                 else if( itatt->first == "render" ) {
                     // set draw to false only if atts[i]==false
-                    bVisible = stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
+                    bVisible = _stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
                 }
                 else if( itatt->first == "modifiable" ) {
-                    bModifiable = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                    bModifiable = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
                 }
             }
 
@@ -916,16 +918,16 @@ public:
             }
 
             _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES(_plink));
-            if( stricmp(type.c_str(), "box") == 0 ) {
+            if( _stricmp(type.c_str(), "box") == 0 ) {
                 _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomBox;
             }
-            else if( stricmp(type.c_str(), "sphere") == 0 ) {
+            else if( _stricmp(type.c_str(), "sphere") == 0 ) {
                 _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomSphere;
             }
-            else if( stricmp(type.c_str(), "cylinder") == 0 ) {
+            else if( _stricmp(type.c_str(), "cylinder") == 0 ) {
                 _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomCylinder;
             }
-            else if( stricmp(type.c_str(), "trimesh") == 0 ) {
+            else if( _stricmp(type.c_str(), "trimesh") == 0 ) {
                 _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
             }
             else {
@@ -945,16 +947,16 @@ public:
             _masstype = MT_Sphere;
             FOREACHC(itatt,atts) {
                 if( itatt->first == "type") {
-                    if( stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
+                    if( _stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
                         _masstype = MT_MimicGeom;
                     }
-                    else if( stricmp(itatt->second.c_str(), "box") == 0 ) {
+                    else if( _stricmp(itatt->second.c_str(), "box") == 0 ) {
                         _masstype = MT_Box;
                     }
-                    else if( stricmp(itatt->second.c_str(), "sphere") == 0 ) {
+                    else if( _stricmp(itatt->second.c_str(), "sphere") == 0 ) {
                         _masstype = MT_Sphere;
                     }
-                    else if( stricmp(itatt->second.c_str(), "custom") == 0 ) {
+                    else if( _stricmp(itatt->second.c_str(), "custom") == 0 ) {
                         _masstype = MT_Custom;
                     }
                     break;
@@ -1426,19 +1428,19 @@ public:
                 _pjoint->_name = itatt->second;
             }
             else if( itatt->first == "type" ) {
-                if( stricmp(itatt->second.c_str(), "hinge") == 0 ) {
+                if( _stricmp(itatt->second.c_str(), "hinge") == 0 ) {
                     _pjoint->_type = KinBody::Joint::JointHinge;
                 }
-                else if( stricmp(itatt->second.c_str(), "slider") == 0 ) {
+                else if( _stricmp(itatt->second.c_str(), "slider") == 0 ) {
                     _pjoint->_type = KinBody::Joint::JointSlider;
                 }
-                else if( stricmp(itatt->second.c_str(), "universal") == 0 ) {
+                else if( _stricmp(itatt->second.c_str(), "universal") == 0 ) {
                     _pjoint->_type = KinBody::Joint::JointUniversal;
                 }
-                else if( stricmp(itatt->second.c_str(), "hinge2") == 0 ) {
+                else if( _stricmp(itatt->second.c_str(), "hinge2") == 0 ) {
                     _pjoint->_type = KinBody::Joint::JointHinge2;
                 }
-                else if( stricmp(itatt->second.c_str(), "spherical") == 0 ) {
+                else if( _stricmp(itatt->second.c_str(), "spherical") == 0 ) {
                     _pjoint->_type = KinBody::Joint::JointSpherical;
                 }
                 else {
@@ -1447,7 +1449,7 @@ public:
                 }
             }
             else if( itatt->first == "enable" ) {
-                _pjoint->_bActive = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                _pjoint->_bActive = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
             }
             else if( itatt->first == "mimic" ) {
                 RAVELOG_WARN("mimic attribute on <joint> tag is deprecated! Use mimic_pos, mimic_vel, and mimic_accel\n");
@@ -1481,7 +1483,7 @@ public:
                 _pjoint->_vmimic[0]->_equations[2] = itatt->second;
             }
             else if( itatt->first == "circular" ) {
-                _pjoint->_bIsCircular[0] = !(stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                _pjoint->_bIsCircular[0] = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
                 for(int i = 1; i < _pjoint->GetDOF(); ++i) {
                     _pjoint->_bIsCircular[i] = _pjoint->_bIsCircular[0];
                 }
@@ -1567,12 +1569,8 @@ public:
             if(( _pjoint->_type == KinBody::Joint::JointUniversal) ||( _pjoint->_type == KinBody::Joint::JointHinge2) ||( _pjoint->_type == KinBody::Joint::JointHinge) ) {
                 for(int i = 0; i < numindices; ++i) {
                     if(( _pjoint->_vlowerlimit[i] < -PI) ||( _pjoint->_vupperlimit[i] > PI) ) {
+                        // TODO, necessary?
                         _pjoint->_voffsets[i] = 0.5f * (_pjoint->_vlowerlimit[i] + _pjoint->_vupperlimit[i]);
-                        if( _pjoint->_vupperlimit[i] - _pjoint->_voffsets[i] > PI ) {
-                            RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint ranges of more than 360 degrees\n")%_pjoint->GetName()));
-                            _pjoint->_vupperlimit[i] = _pjoint->_voffsets[i] + PI - 1e-5;
-                            _pjoint->_vlowerlimit[i] = _pjoint->_voffsets[i] - PI + 1e-5;
-                        }
                     }
                 }
             }
@@ -1610,7 +1608,7 @@ public:
             _ss >> linkname;
 
             FOREACHC(itlink, _pparent->GetLinks()) {
-                if( stricmp((*itlink)->GetName().c_str(), linkname.c_str()) == 0 ) {
+                if( _stricmp((*itlink)->GetName().c_str(), linkname.c_str()) == 0 ) {
                     bQuery = !(*itlink)->IsStatic();
                     attachedbodies[index] = *itlink;
                     break;
@@ -2063,7 +2061,7 @@ public:
                 _bMakeJoinedLinksAdjacent = atoi(itatt->second.c_str())!=0;
             }
             else if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -2207,13 +2205,13 @@ public:
             _masstype = MT_Sphere;
             FOREACHC(itatt, atts) {
                 if( itatt->first == "type" ) {
-                    if( stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
+                    if( _stricmp(itatt->second.c_str(), "mimicgeom") == 0 ) {
                         _masstype = MT_MimicGeom;
                     }
-                    else if( stricmp(itatt->second.c_str(), "box") == 0 ) {
+                    else if( _stricmp(itatt->second.c_str(), "box") == 0 ) {
                         _masstype = MT_Box;
                     }
-                    else if( stricmp(itatt->second.c_str(), "sphere") == 0 ) {
+                    else if( _stricmp(itatt->second.c_str(), "sphere") == 0 ) {
                         _masstype = MT_Sphere;
                     }
 
@@ -2638,7 +2636,7 @@ public:
                         list<ModuleBasePtr> listModules;
                         boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetModules(listModules);
                         FOREACHC(itprob, listModules) {
-                            if( stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
+                            if( _stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                 pIKFastLoader = *itprob;
                                 break;
                             }
@@ -2906,7 +2904,7 @@ public:
                 _prefix = itatt->second;
             }
             else if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -3109,7 +3107,7 @@ public:
                         if( (*itjoint2)->IsMimic(idof) ) {
                             for(int ieq = 0; ieq < 3; ++ieq) {
                                 string neweq;
-                                SearchAndReplace(neweq,(*itjoint2)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                                utils::SearchAndReplace(neweq,(*itjoint2)->_vmimic[idof]->_equations[ieq],jointnamepairs);
                                 (*itjoint2)->_vmimic[idof]->_equations[ieq] = neweq;
                             }
                         }

@@ -1078,8 +1078,9 @@ void QtCoinViewer::SetEnvironmentSync(bool bUpdate)
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexMessages);
-        FOREACH(it,_listMessages)
+        FOREACH(it,_listMessages) {
             (*it)->releasemutex();
+        }
         _listMessages.clear();
     }
 }
@@ -2095,7 +2096,10 @@ int QtCoinViewer::main(bool bShow)
 
 void QtCoinViewer::quitmainloop()
 {
-    SetEnvironmentSync(false);
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if( !bGuiThread ) {
+        SetEnvironmentSync(false);
+    }
     SoQt::exitMainLoop();
 }
 
@@ -2548,7 +2552,12 @@ void QtCoinViewer::_VideoFrame()
         return;
     }
     FOREACH(itcallback,listViewerImageCallbacks) {
-        (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+        try {
+            (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+        }
+        catch(const std::exception& e) {
+            RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
+        }
     }
 }
 
@@ -3235,13 +3244,20 @@ void QtCoinViewer::EnvMessage::callerexecute()
 {
     bool bWaitForMutex = !!_plock;
 
-    {
-        boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
-        _pviewer->_listMessages.push_back(shared_from_this());
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if( bGuiThread ) {
+        // calling from gui thread, so execute directly
+        viewerexecute();
     }
+    else {
+        {
+            boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
+            _pviewer->_listMessages.push_back(shared_from_this());
+        }
 
-    if( bWaitForMutex ) {
-        boost::mutex::scoped_lock lock(_mutex);
+        if( bWaitForMutex ) {
+            boost::mutex::scoped_lock lock(_mutex);
+        }
     }
 }
 

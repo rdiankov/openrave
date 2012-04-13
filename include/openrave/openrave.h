@@ -20,7 +20,7 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
-#ifndef RAVE_DISABLE_ASSERT_HANDLER
+#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
 #endif
 
@@ -99,7 +99,7 @@ typedef float dReal;
 #endif
 
 /// \brief openrave constant for PI, could be replaced by accurate precision number depending on choice of dReal.
-static const dReal PI = (dReal)3.14159265358979323846;
+static const dReal PI = dReal(3.14159265358979323846);
 
 /// Wrappers of common basic math functions, allows OpenRAVE to control the precision requirements.
 /// \ingroup affine_math
@@ -137,15 +137,36 @@ OPENRAVE_API dReal RaveFabs(dReal f);
 /// %OpenRAVE error codes
 enum OpenRAVEErrorCode {
     ORE_Failed=0,
-    ORE_InvalidArguments=1,
+    ORE_InvalidArguments=1, ///< passed in input arguments are not valid
     ORE_EnvironmentNotLocked=2,
     ORE_CommandNotSupported=3, ///< string command could not be parsed or is not supported
     ORE_Assert=4,
     ORE_InvalidPlugin=5, ///< shared object is not a valid plugin
     ORE_InvalidInterfaceHash=6, ///< interface hashes do not match between plugins
     ORE_NotImplemented=7, ///< function is not implemented by the interface.
-    ORE_InconsistentConstraints=8, ///< return solutions or trajectories do not follow the constraints of the planner/module
+    ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
+    ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
+    ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
 };
+
+inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
+{
+    switch(error) {
+    case ORE_Failed: return "Failed";
+    case ORE_InvalidArguments: return "InvalidArguments";
+    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
+    case ORE_CommandNotSupported: return "CommandNotSupported";
+    case ORE_Assert: return "Assert";
+    case ORE_InvalidPlugin: return "InvalidPlugin";
+    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
+    case ORE_NotImplemented: return "NotImplemented";
+    case ORE_InconsistentConstraints: return "InconsistentConstraints";
+    case ORE_NotInitialized: return "NotInitialized";
+    case ORE_InvalidState: return "InvalidState";
+    }
+    // should throw an exception?
+    return "";
+}
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
 class OPENRAVE_API openrave_exception : public std::exception
@@ -156,19 +177,7 @@ public:
     openrave_exception(const std::string& s, OpenRAVEErrorCode error=ORE_Failed) : std::exception() {
         _error = error;
         _s = "openrave (";
-        switch(_error) {
-        case ORE_Failed: _s += "Failed"; break;
-        case ORE_InvalidArguments: _s += "InvalidArguments"; break;
-        case ORE_EnvironmentNotLocked: _s += "EnvironmentNotLocked"; break;
-        case ORE_CommandNotSupported: _s += "CommandNotSupported"; break;
-        case ORE_Assert: _s += "Assert"; break;
-        case ORE_InvalidPlugin: _s += "InvalidPlugin"; break;
-        case ORE_InvalidInterfaceHash: _s += "InvalidInterfaceHash"; break;
-        case ORE_NotImplemented: _s += "NotImplemented"; break;
-        default:
-            _s += boost::str(boost::format("%8.8x")%static_cast<int>(_error));
-            break;
-        }
+        _s += GetErrorCodeString(_error);
         _s += "): ";
         _s += s;
     }
@@ -224,6 +233,22 @@ public:
 };
 typedef boost::shared_ptr<UserData> UserDataPtr;
 typedef boost::weak_ptr<UserData> UserDataWeakPtr;
+
+/// \brief user data that can serialize/deserialize itself
+class OPENRAVE_API SerializableData : public UserData
+{
+public:
+    virtual ~SerializableData() {
+    }
+
+    /// \brief output the data of the object
+    virtual void Serialize(std::ostream& O, int options=0) const = 0;
+
+    /// \brief initialize the object
+    virtual void Deserialize(std::istream& I) = 0;
+};
+typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
+typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
 
 // terminal attributes
 //#define RESET           0
@@ -509,8 +534,8 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
+#define RAVELOG_LEVELW(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
+#define RAVELOG_LEVELA(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
 
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
 #define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
@@ -538,6 +563,17 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 /// adds the function name and line number to an openrave exception
 #define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+
+#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%args),errorcode); } }
+
+#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)),errorcode); } }
+
+// note that expr1 and expr2 will be evaluated twice if not equal
+#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%args),errorcode); } }
+
+#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),errorcode); } }
+
+#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s!=%s, (eval %s!=%s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 
@@ -1107,6 +1143,26 @@ OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecificatio
 typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
 typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
 
+template <typename T>
+inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
+{
+    if (theta < min) {
+        T range = max-min;
+        theta += range;
+        while (theta < min) {
+            theta += range;
+        }
+    }
+    else if (theta > max) {
+        T range = max-min;
+        theta -= range;
+        while (theta > max) {
+            theta -= range;
+        }
+    }
+    return theta;
+}
+
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
@@ -1410,27 +1466,39 @@ public:
         }
         case IKP_TranslationXAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationXAxisAngle4D(), p1 = ikparam.GetTranslationXAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationYAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationYAxisAngle4D(), p1 = ikparam.GetTranslationYAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationZAxisAngle4D: {
             std::pair<Vector,dReal> p0 = GetTranslationZAxisAngle4D(), p1 = ikparam.GetTranslationZAxisAngle4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            // dot product with axis is always in [0,pi]
+            dReal angle0 = RaveFabs(NormalizeCircularAnglePrivate(p0.second, -PI, PI));
+            dReal angle1 = RaveFabs(NormalizeCircularAnglePrivate(p1.second, -PI, PI));
+            return (p0.first-p1.first).lengthsqr3() + (angle0-angle1)*(angle0-angle1);
         }
         case IKP_TranslationXAxisAngleZNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationXAxisAngleZNorm4D(), p1 = ikparam.GetTranslationXAxisAngleZNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         case IKP_TranslationYAxisAngleXNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationYAxisAngleXNorm4D(), p1 = ikparam.GetTranslationYAxisAngleXNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         case IKP_TranslationZAxisAngleYNorm4D: {
             std::pair<Vector,dReal> p0 = GetTranslationZAxisAngleYNorm4D(), p1 = ikparam.GetTranslationZAxisAngleYNorm4D();
-            return (p0.first-p1.first).lengthsqr3() + (p0.second-p1.second)*(p0.second-p1.second);
+            dReal anglediff = NormalizeCircularAnglePrivate(p0.second-p1.second, -PI, PI);
+            return (p0.first-p1.first).lengthsqr3() + anglediff*anglediff;
         }
         default:
             BOOST_ASSERT(0);
@@ -1935,7 +2003,20 @@ OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::st
 /// \brief Return an empty trajectory instance.
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
 
+/// \deprecated (11/10/01)
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof) RAVE_DEPRECATED;
+
+/// \brief returned a fully cloned interface
+template <typename T>
+inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions)
+{
+    InterfaceBasePtr pcloned = RaveCreateInterface(preference->GetEnv(), preference->GetInterfaceType(), preference->GetXMLId());
+    OPENRAVE_ASSERT_FORMAT(!!pcloned, "Failed to clone interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
+    boost::shared_ptr<T> pclonedcast = boost::dynamic_pointer_cast<T>(pcloned);
+    OPENRAVE_ASSERT_FORMAT(!!pclonedcast, "Interface created but failed to cast interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
+    pclonedcast->Clone(preference,cloningoptions);
+    return pclonedcast;
+}
 
 /** \brief Registers a function to create an interface, this allows the interface to be created by other modules.
 
@@ -1985,7 +2066,9 @@ OPENRAVE_API float RaveRandomFloat(IntervalType interval=IT_Closed);
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
 OPENRAVE_API double RaveRandomDouble(IntervalType interval=IT_Closed);
 
-/// \brief separates the directories from a string and returns them in a vector
+/// \deprecated (12/02/06) see \ref OpenRAVE::utils::TokenizeString
+bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs) RAVE_DEPRECATED;
+
 inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vdirs)
 {
     vdirs.resize(0);
@@ -2041,7 +2124,7 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if !defined(RAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
+#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
 /// Modifications controlling %boost library behavior.
 namespace boost
 {

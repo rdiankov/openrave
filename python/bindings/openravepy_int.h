@@ -144,21 +144,21 @@ inline RaveVector<float> ExtractFloat3(const object& o)
 }
 
 template <typename T>
-inline Vector ExtractVector2Type(const object& o)
+inline RaveVector<T> ExtractVector2Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]),0);
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]),0);
 }
 
 template <typename T>
-inline Vector ExtractVector3Type(const object& o)
+inline RaveVector<T> ExtractVector3Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]));
 }
 
 template <typename T>
-inline Vector ExtractVector4Type(const object& o)
+inline RaveVector<T> ExtractVector4Type(const object& o)
 {
-    return Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
+    return RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3]));
 }
 
 inline Vector ExtractVector2(const object& oraw)
@@ -192,12 +192,12 @@ inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
 }
 
 template <typename T>
-inline Transform ExtractTransformType(const object& o)
+inline RaveTransform<T> ExtractTransformType(const object& o)
 {
     if( len(o) == 7 ) {
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), RaveVector<T>(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     }
-    TransformMatrix t;
+    RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
         t.m[4*i+0] = extract<T>(orow[0]);
@@ -209,12 +209,12 @@ inline Transform ExtractTransformType(const object& o)
 }
 
 template <typename T>
-inline TransformMatrix ExtractTransformMatrixType(const object& o)
+inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 {
     if( len(o) == 7 ) {
-        return Transform(Vector(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), Vector(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(extract<T>(o[0]), extract<T>(o[1]), extract<T>(o[2]), extract<T>(o[3])), RaveVector<T>(extract<T>(o[4]), extract<T>(o[5]), extract<T>(o[6])));
     }
-    TransformMatrix t;
+    RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
         object orow = o[i];
         t.m[4*i+0] = extract<T>(orow[0]);
@@ -387,10 +387,35 @@ public:
     }
     PyUserData(UserDataPtr handle) : _handle(handle) {
     }
-    void close() {
+    virtual ~PyUserData() {
+    }
+    virtual void close() {
         _handle.reset();
     }
     UserDataPtr _handle;
+};
+
+class PySerializableData : public PyUserData
+{
+public:
+    PySerializableData() {
+    }
+    PySerializableData(SerializableDataPtr handle) : _handle(handle) {
+    }
+    void close() {
+        _handle.reset();
+    }
+    object Serialize(int options) {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        _handle->Serialize(ss,options);
+        return object(ss.str());
+    }
+    void Deserialize(const std::string& s) {
+        std::stringstream ss(s);
+        _handle->Deserialize(ss);
+    }
+    SerializableDataPtr _handle;
 };
 
 class PyUserObject : public UserData
@@ -466,15 +491,7 @@ public:
     void SetUserData(object o) {
         _pbase->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
-    object GetUserData() const {
-        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_pbase->GetUserData());
-        if( !po ) {
-            return object(PyUserData(_pbase->GetUserData()));
-        }
-        else {
-            return po->_o;
-        }
-    }
+    object GetUserData() const;
 
     class PythonThreadSaver
     {
@@ -503,13 +520,16 @@ protected:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')>")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
+        return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
     virtual boost::python::object __unicode__() {
         return ConvertStringToUnicode(__str__());
+    }
+    virtual int __hash__() {
+        return static_cast<int>(uintptr_t(_pbase.get()));
     }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();
@@ -524,6 +544,8 @@ protected:
 
 namespace openravepy
 {
+
+object GetUserData(UserDataPtr pdata);
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
 void LockEnvironment(PyEnvironmentBasePtr);
@@ -552,7 +574,10 @@ PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
 object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
 KinBody::LinkPtr GetKinBodyLink(object);
 KinBody::LinkConstPtr GetKinBodyLinkConst(object);
+object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);
 KinBody::JointPtr GetKinBodyJoint(object);
+std::string reprPyKinBodyJoint(object);
+std::string strPyKinBodyJoint(object);
 void init_openravepy_module();
 ModuleBasePtr GetModule(PyModuleBasePtr);
 PyInterfaceBasePtr toPyModule(ModuleBasePtr, PyEnvironmentBasePtr);
@@ -582,6 +607,7 @@ void init_openravepy_trajectory();
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
 PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
+PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr);
 void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);

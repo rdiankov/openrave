@@ -105,7 +105,7 @@ except:
 
 
 class GraspPlanning:
-    def __init__(self,robot,randomize=False,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
+    def __init__(self,robot,randomize=True,dests=None,nodestinations=False,switchpatterns=None,plannername=None,minimumgoalpaths=1):
         self.envreal = robot.GetEnv()
         self.robot = robot
         self.plannername=plannername
@@ -122,11 +122,12 @@ class GraspPlanning:
                 self.ikmodel.autogenerate()
 
         self.lmodel = databases.linkstatistics.LinkStatisticsModel(self.robot)
-        if self.lmodel.load():
-            self.lmodel.setRobotWeights()
-            self.lmodel.setRobotResolutions(xyzdelta=0.005)
-            print 'robot resolutions: ',robot.GetDOFResolutions()
-            print 'robot weights: ',robot.GetDOFWeights()
+        if not self.lmodel.load():
+            self.lmodel.autogenerate()
+        self.lmodel.setRobotWeights()
+        self.lmodel.setRobotResolutions(xyzdelta=0.005)
+        print 'robot resolutions: ',robot.GetDOFResolutions()
+        print 'robot weights: ',robot.GetDOFWeights()
 
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
@@ -151,7 +152,8 @@ class GraspPlanning:
                         gmodel.autogenerate()
                         self.graspables = self.getGraspables(dests=dests)
 
-            if randomize:
+            self.randomize=randomize
+            if self.randomize:
                 self.randomizeObjects()
 
             if dests is None and not self.nodestinations:
@@ -291,13 +293,12 @@ class GraspPlanning:
         target = gmodel.target
         stepsize = 0.001
         while istartgrasp < len(gmodel.grasps):
-            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps[istartgrasp:], target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=True,randomdests=True,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep)
+            goals,graspindex,searchtime,trajdata = self.taskmanip.GraspPlanning(gmodel=gmodel,grasps=gmodel.grasps[istartgrasp:], approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=self.randomize,randomdests=self.randomize)
             istartgrasp = graspindex+1
             grasp = gmodel.grasps[graspindex]
             Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
-            
-            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             self.waitrobot(robot)
+            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
             
             if approachoffset != 0:
                 print 'moving hand'
@@ -413,7 +414,12 @@ class GraspPlanning:
                     graspables = self.graspables[:]
                 else:
                     break
-            i=random.randint(len(graspables))
+
+            if self.randomize:
+                i=random.randint(len(graspables))
+            else:
+                i = 0
+                
             try:
                 print 'grasping object %s'%graspables[i][0].target.GetName()
                 with self.envreal:

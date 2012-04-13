@@ -17,6 +17,8 @@
 #include <openrave/planningutils.h>
 #include "ParabolicPathSmooth/ParabolicRamp.h"
 
+namespace ParabolicRamp = ParabolicRampInternal;
+
 class ParabolicTrajectoryRetimer : public TrajectoryRetimer
 {
 public:
@@ -34,7 +36,7 @@ public:
 
     ParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing without modifying any of the points. This assumes all waypoints have velocity 0. Overwrites the velocities and timestamps of input trajectory.";
+        __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
@@ -85,7 +87,7 @@ protected:
             }
         }
         _ramps.resize(info->gpos.dof);
-        dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigLowerLimit,_parameters->_vConfigUpperLimit, _ramps);
+        dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
         BOOST_ASSERT(mintime>=0);
         return mintime;
     }
@@ -120,7 +122,22 @@ protected:
             }
             _ramps.resize(info->gpos.dof);
             dReal deltatime = *(itdata+_timeoffset);
-            bool success = ParabolicRamp::SolveMinAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, _parameters->_vConfigVelocityLimit, _parameters->_vConfigLowerLimit,_parameters->_vConfigUpperLimit, _ramps);
+            if( deltatime == 0 ) {
+                if( info->ptraj->GetNumWaypoints() == 0 ) {
+                    // add the first point, copy all the data rather than just this group
+                    _vtrajpoints.resize(info->ptraj->GetConfigurationSpecification().GetDOF());
+                    std::copy(itdata,itdata+_vtrajpoints.size(),_vtrajpoints.begin());
+                    _vtrajpoints.at(info->waypointindex) = 1;
+                    info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
+                }
+                return;
+            }
+            OPENRAVE_ASSERT_OP(deltatime,>,0);
+            if( deltatime < ParabolicRamp::EpsilonT ) {
+                RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
+            }
+
+            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
             BOOST_ASSERT(success);
 
             vector<dReal> vswitchtimes;
@@ -131,11 +148,11 @@ protected:
             vswitchtimes.push_back(deltatime);
             for(size_t i=0; i < _ramps.size(); ++i) {
                 std::vector<ParabolicRamp::ParabolicRamp1D>& ramp = _ramps[i];
-                dReal maxaccel = _parameters->_vConfigAccelerationLimit[i]+ParabolicRamp::EpsilonA;
-                dReal maxvel = _parameters->_vConfigVelocityLimit[i]+ParabolicRamp::EpsilonV;
+                dReal maxaccel = info->_vConfigAccelerationLimit[i]+ParabolicRamp::EpsilonA;
+                dReal maxvel = info->_vConfigVelocityLimit[i]+ParabolicRamp::EpsilonV;
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
-                    if(RaveFabs(ramp[j].a1) > maxaccel || RaveFabs(ramp[j].a2) > maxaccel || RaveFabs(ramp[j].v) > maxvel) {
+                    if(RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 || RaveFabs(ramp[j].v) > maxvel+1e-5) {
                         throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
                     }
 
@@ -203,16 +220,366 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
 
+    // speed of rotations is always the speed of the angle along the minimum rotation
+    // speed of translations is always the combined xyz speed
+    // TODO ParabolicRamp::SolveMinTimeBounded can only consider max vel/accel per dimension rather than combined together....
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeMinimumTimeIk not implemented", ORE_NotImplemented);
+        ParabolicRamp::ParabolicRamp1D ramp;
+        IkParameterization ikparamprev, ikparam;
+        ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+        ikparam.Set(itdata+info->gpos.offset,iktype);
+        Vector transdelta;
+        int transoffset = -1;
+        dReal mintime = -1;
+
+        switch(iktype) {
+        case IKP_Transform6D: {
+            dReal angledelta = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))));
+            Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetTransform6D().rot))*2;
+            dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+            Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
+            dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
+            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            mintime = ramp.EndTime();
+            transdelta = ikparam.GetTransform6D().trans-ikparamprev.GetTransform6D().trans;
+            transoffset = 4;
+            break;
+        }
+        case IKP_Rotation3D: {
+            dReal angledelta = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))));
+            Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetRotation3D()))*2;
+            dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+            Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
+            dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
+            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            mintime = ramp.EndTime();
+            break;
+        }
+        case IKP_Translation3D:
+            transdelta = ikparam.GetTranslation3D()-ikparamprev.GetTranslation3D();
+            transoffset = 0;
+            break;
+        case IKP_TranslationDirection5D: {
+            dReal angledelta = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTranslationDirection5D().dir.dot3(ikparam.GetTranslationDirection5D().dir))));
+            Vector angularvelocityprev(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2));
+            dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+            Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
+            dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
+            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            mintime = ramp.EndTime();
+            transdelta = ikparam.GetTranslationDirection5D().pos-ikparamprev.GetTranslationDirection5D().pos;
+            transoffset = 3;
+            break;
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
+            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
+            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            mintime = ramp.EndTime();
+            transdelta = ikparam.GetTranslationXAxisAngleZNorm4D().first-ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
+            transoffset = 1;
+            break;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+        }
+
+        if( transoffset >= 0 ) {
+            dReal xyzdelta = RaveSqrt(transdelta.lengthsqr3());
+            dReal xyzvelprev = RaveSqrt(utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+2)));
+            dReal xyzvel = RaveSqrt(utils::Sqr(*(itdata+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+2)));
+            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,xyzvelprev,xyzdelta,xyzvel, info->_vConfigAccelerationLimit.at(transoffset), info->_vConfigVelocityLimit.at(transoffset), -1000,xyzdelta+1000, ramp);
+            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for xyz",ORE_Assert);
+            dReal xyzmintime = ramp.EndTime();
+            mintime = max(mintime,xyzmintime);
+        }
+        OPENRAVE_ASSERT_OP_FORMAT0(mintime,>=,0,"minimum computed time",ORE_Assert);
+        return mintime;
     }
 
     void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesIk not implemented", ORE_NotImplemented);
+        if( info->orgveloffset >= 0 ) {
+            for(int i=0; i < info->gvel.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = *(itorgdiff+info->orgveloffset+i);
+            }
+        }
+        else {
+            for(int i=0; i < info->gvel.dof; ++i) {
+                *(itdata+info->gvel.offset+i) = 0;
+            }
+        }
     }
 
-    void _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_WriteIk not implemented", ORE_NotImplemented);
+    void _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+        ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
+        if( _parameters->_outputaccelchanges ) {
+            dReal deltatime = *(itdata+_timeoffset);
+            if( deltatime == 0 ) {
+                if( info->ptraj->GetNumWaypoints() == 0 ) {
+                    // add the first point, copy all the data rather than just this group
+                    _vtrajpoints.resize(info->ptraj->GetConfigurationSpecification().GetDOF());
+                    std::copy(itdata,itdata+_vtrajpoints.size(),_vtrajpoints.begin());
+                    _vtrajpoints.at(info->waypointindex) = 1;
+                    info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
+                }
+                return;
+            }
+            OPENRAVE_ASSERT_OP(deltatime,>,0);
+            if( deltatime < ParabolicRamp::EpsilonT ) {
+                RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
+            }
+
+            IkParameterization ikparamprev, ikparam;
+            ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+            ikparam.Set(itdata+info->gpos.offset,iktype);
+            _v0pos.resize(0); _v0vel.resize(0); _v1pos.resize(0); _v1vel.resize(0);
+            Vector transdelta, axisangle;
+            int transoffset = -1, transindex = -1;
+            vector<dReal> vmaxvel, vmaxaccel, vlower, vupper;
+
+            switch(iktype) {
+            case IKP_Transform6D: {
+                _v0pos.resize(2); _v0vel.resize(2); _v1pos.resize(2); _v1vel.resize(2); vmaxvel.resize(2); vmaxaccel.resize(2);
+                axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetTransform6D().rot), ikparam.GetTransform6D().rot));
+                if( axisangle.lengthsqr3() > g_fEpsilon ) {
+                    axisangle.normalize3();
+                }
+                _v0pos[0] = 0;
+                _v1pos[0] = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))));
+                Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetTransform6D().rot))*2;
+                _v0vel[0] = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+                Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
+                _v1vel[0] = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                transdelta = ikparam.GetTransform6D().trans-ikparamprev.GetTransform6D().trans;
+                transoffset = 4;
+                transindex = 1;
+                break;
+            }
+            case IKP_Rotation3D: {
+                _v0pos.resize(1); _v0vel.resize(1); _v1pos.resize(1); _v1vel.resize(1); vmaxvel.resize(1); vmaxaccel.resize(1);
+                axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetRotation3D()), ikparam.GetRotation3D()));
+                if( axisangle.lengthsqr3() > g_fEpsilon ) {
+                    axisangle.normalize3();
+                }
+                _v0pos[0] = 0;
+                _v1pos[0] = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))));
+                Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetRotation3D()))*2;
+                _v0vel[0] = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+                Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
+                _v1vel[0] = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                break;
+            }
+            case IKP_Translation3D:
+                _v0pos.resize(1); _v0vel.resize(1); _v1pos.resize(1); _v1vel.resize(1); vmaxvel.resize(1); vmaxaccel.resize(1);
+                transdelta = ikparam.GetTranslation3D()-ikparamprev.GetTranslation3D();
+                transoffset = 0;
+                transindex = 0;
+                break;
+            case IKP_TranslationDirection5D: {
+                _v0pos.resize(2); _v0vel.resize(2); _v1pos.resize(2); _v1vel.resize(2); vmaxvel.resize(2); vmaxaccel.resize(2);
+                axisangle = ikparamprev.GetTranslationDirection5D().dir.cross(ikparam.GetTranslationDirection5D().dir);
+                if( axisangle.lengthsqr3() > g_fEpsilon ) {
+                    axisangle.normalize3();
+                }
+                _v0pos[0] = 0;
+                _v1pos[0] = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTranslationDirection5D().dir.dot3(ikparam.GetTranslationDirection5D().dir))));
+                Vector angularvelocityprev(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2));
+                _v0vel[0] = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
+                Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
+                _v1vel[0] = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                transdelta = ikparam.GetTranslationDirection5D().pos-ikparamprev.GetTranslationDirection5D().pos;
+                transoffset = 3;
+                transindex = 1;
+                break;
+            }
+            case IKP_TranslationXAxisAngleZNorm4D: {
+                _v0pos.resize(2); _v0vel.resize(2); _v1pos.resize(2); _v1vel.resize(2); vmaxvel.resize(2); vmaxaccel.resize(2);
+                _v0pos[0] = 0;
+                _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
+                _v0vel[0] = *(itdataprev+info->gvel.offset+0);
+                _v1vel[0] = *(itdata+info->gvel.offset+0);
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                transdelta = ikparam.GetTranslationXAxisAngleZNorm4D().first-ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
+                transoffset = 1;
+                transindex = 1;
+                break;
+            }
+            default:
+                throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+            }
+
+            if( transoffset >= 0 ) {
+                _v0pos.at(transindex) = 0;
+                _v1pos.at(transindex) = RaveSqrt(transdelta.lengthsqr3());
+                _v0vel.at(transindex) = RaveSqrt(utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+2)));
+                _v1vel.at(transindex) = RaveSqrt(utils::Sqr(*(itdata+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+2)));
+                vmaxvel.at(transindex) = info->_vConfigVelocityLimit.at(transoffset);
+                vmaxaccel.at(transindex) = info->_vConfigAccelerationLimit.at(transoffset);
+            }
+
+            _ramps.resize(_v0pos.size());
+            vlower.resize(_v0pos.size());
+            vupper.resize(_v0pos.size());
+            for(size_t i = 0; i < vlower.size(); ++i) {
+                vlower[i] = -1000;
+                vupper[i] = 1000+_v1pos[i];
+            }
+
+            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+            BOOST_ASSERT(success);
+
+            vector<dReal> vswitchtimes;
+            if( info->ptraj->GetNumWaypoints() == 0 ) {
+                // add initial point of the segment only for the first point in the trajectory
+                vswitchtimes.push_back(0);
+            }
+            vswitchtimes.push_back(deltatime);
+            for(size_t i=0; i < _ramps.size(); ++i) {
+                std::vector<ParabolicRamp::ParabolicRamp1D>& ramp = _ramps[i];
+                //dReal maxaccel = info->_vConfigAccelerationLimit[i]+ParabolicRamp::EpsilonA;
+                dReal maxvel = vmaxvel[i]+ParabolicRamp::EpsilonV;
+                dReal curtime = 0;
+                for(size_t j=0; j < ramp.size(); j++) {
+                    if(RaveFabs(ramp[j].v) > maxvel+1e-5) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f",RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
+                    }
+//                    if( RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 ) {
+//                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel, ORE_InconsistentConstraints);
+//                    }
+
+                    vector<dReal>::iterator it;
+                    dReal tswitch1 = curtime+ramp[j].tswitch1;
+                    dReal tswitch2 = curtime+ramp[j].tswitch2;
+                    if( tswitch1 != 0 ) {
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch1);
+                        if( *it != tswitch1) {
+                            vswitchtimes.insert(it,tswitch1);
+                        }
+                    }
+                    if( tswitch1 != tswitch2 && tswitch2 != 0 ) {
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch2);
+                        if( *it != tswitch2 ) {
+                            vswitchtimes.insert(it,tswitch2);
+                        }
+                    }
+
+                    curtime += ramp[j].ttotal;
+                }
+            }
+
+            int dof = info->ptraj->GetConfigurationSpecification().GetDOF();
+            _vtrajpoints.resize(dof*vswitchtimes.size());
+            vector<dReal>::iterator ittargetdata = _vtrajpoints.begin();
+            dReal prevtime = 0;
+            vector<dReal> vpos(_v0pos.size()), vvel(_v0pos.size());
+            FOREACHC(itswitchtime, vswitchtimes) {
+                for(size_t j = 0; j < _ramps.size(); ++j) {
+                    dReal curtime = *itswitchtime;
+                    for(size_t iramp = 0; iramp < _ramps.at(j).size(); ++iramp) {
+                        if( curtime > _ramps[j][iramp].ttotal ) {
+                            curtime -= _ramps[j][iramp].ttotal;
+                        }
+                        else {
+                            vpos[j] = _ramps[j][iramp].Evaluate(curtime);
+                            vvel[j] = _ramps[j][iramp].Derivative(curtime);
+                            break;
+                        }
+                    }
+                }
+
+                Vector translation;
+                // fill (ittargetdata + info->posindex) and (ittargetdata + info->velindex)
+                switch(iktype) {
+                case IKP_Transform6D: {
+                    dReal t = _v1pos.at(0) > 0 ? (vpos.at(0)/_v1pos.at(0)) : 0;
+                    Vector q = quatSlerp(ikparamprev.GetTransform6D().rot, ikparam.GetTransform6D().rot, t);
+                    // quaternion derivative of slerp, note that the angular velocity is wrong
+                    // qslerpdot = 0.5 * angularvel * q
+                    // oldangularvel = 2*norm(qslerpdot * q^-1)
+                    // vvel[0]/oldangularvel * qdot
+                    Vector qslerpdot = quatMultiply(q,Vector(0,axisangle.x,axisangle.y,axisangle.z));
+                    //Vector angularvel = quatMultiply(qslerpdot, quatInverse(q));
+                    //BOOST_ASSERT(RaveFabs(angularvel[0]) < 100*g_fEpsilon);
+                    Vector qvel = qslerpdot * vvel.at(0) * 0.5; // axisangle already normalized so just need to multiply by vvel
+                    for(size_t j = 0; j < 4; ++j) {
+                        *(ittargetdata + info->posindex + j) = q[j];
+                        *(ittargetdata + info->velindex + j) = qvel[j];
+                    }
+                    translation = ikparamprev.GetTransform6D().trans;
+                    break;
+                }
+                case IKP_Rotation3D: {
+                    dReal t = _v1pos.at(0) > 0 ? (vpos.at(0)/_v1pos.at(0)) : 0;
+                    Vector q = quatSlerp(ikparamprev.GetRotation3D(), ikparam.GetRotation3D(), t);
+                    // quaternion derivative of slerp, note that the angular velocity is wrong
+                    // qslerpdot = 0.5 * angularvel * q
+                    // oldangularvel = 2*norm(qslerpdot * q^-1)
+                    // vvel[0]/oldangularvel * qdot
+                    Vector qslerpdot = quatMultiply(q,Vector(0,axisangle.x,axisangle.y,axisangle.z));
+                    //Vector angularvel = quatMultiply(qslerpdot, quatInverse(q));
+                    //BOOST_ASSERT(RaveFabs(angularvel[0]) < 100*g_fEpsilon);
+                    Vector qvel = qslerpdot * vvel.at(0) * 0.5; // axisangle already normalized so just need to multiply by vvel
+                    for(size_t j = 0; j < 4; ++j) {
+                        *(ittargetdata + info->posindex + j) = q[j];
+                        *(ittargetdata + info->velindex + j) = qvel[j];
+                    }
+                    break;
+                }
+                case IKP_Translation3D: {
+                    translation = ikparamprev.GetTranslation3D();
+                    break;
+                }
+                case IKP_TranslationDirection5D: {
+                    Vector angularvel = axisangle*vvel.at(0);
+                    Vector newdir =  quatRotate(quatFromAxisAngle(axisangle*vpos.at(0)),ikparamprev.GetTranslationDirection5D().dir);
+                    for(size_t j = 0; j < 3; ++j) {
+                        *(ittargetdata + info->posindex + j) = newdir[j];
+                        *(ittargetdata + info->velindex + j) = angularvel[j];
+                    }
+                    translation = ikparamprev.GetTranslationDirection5D().pos;
+                    break;
+                }
+                case IKP_TranslationXAxisAngleZNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationXAxisAngleZNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    translation = ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
+                    break;
+                }
+                default:
+                    throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+                }
+                if( transoffset >= 0 ) {
+                    vpos.at(transindex);
+                    dReal t = _v1pos.at(transindex) > 0 ? (vpos.at(transindex)/_v1pos.at(transindex)) : 0;
+                    dReal fvelocity = vvel.at(transindex)/_v1pos.at(transindex);
+                    for(size_t j = 0; j < 3; ++j) {
+                        *(ittargetdata + info->posindex + transoffset + j) = transdelta[j]*t + translation[j];
+                        *(ittargetdata + info->velindex + transoffset + j) = transdelta[j] * fvelocity;
+                    }
+                }
+
+                *(ittargetdata+info->timeindex) = *itswitchtime-prevtime;
+                *(ittargetdata+info->waypointindex) = 0;
+                ittargetdata += dof;
+                prevtime = *itswitchtime;
+            }
+            if( vswitchtimes.front() == 0 ) {
+                _vtrajpoints.at(info->waypointindex) = 1;
+            }
+            _vtrajpoints.at(_vtrajpoints.size()-dof+info->waypointindex) = 1;
+            info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
+
+        }
     }
 
     void _WriteTrajectory(TrajectoryBasePtr ptraj, const ConfigurationSpecification& newspec, const std::vector<dReal>& data) {

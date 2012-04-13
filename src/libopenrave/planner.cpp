@@ -39,7 +39,7 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </PlannerParameters> in %s",buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,null_deleter()), pbuf.c_str(), ppsize);
+        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
     }
 
     return I;
@@ -67,7 +67,7 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _diffstatefn = subtractstates;
     _neighstatefn = addstates;
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
-    _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>200</_nmaxiterations></_postprocessing>";
+    _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>100</_nmaxiterations></_postprocessing>";
     _vXMLParameters.reserve(20);
     _vXMLParameters.push_back("configuration");
     _vXMLParameters.push_back("_vinitialconfig");
@@ -313,6 +313,16 @@ std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& 
 
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
+    // check if any of the links affected by the dofs beside the base link are static
+    FOREACHC(itlink, robot->GetLinks()) {
+        if( (*itlink)->IsStatic() ) {
+            FOREACHC(itdof, robot->GetActiveDOFIndices()) {
+                KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(*itdof);
+                OPENRAVE_ASSERT_FORMAT(!robot->DoesAffect(pjoint->GetJointIndex(),(*itlink)->GetIndex()),"robot %s link %s is static when it is affected by active joint %s", robot->GetName()%(*itlink)->GetName()%pjoint->GetName(), ORE_InvalidState);
+            }
+        }
+    }
+
     using namespace planningutils;
     _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
@@ -389,6 +399,16 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
             return PS_Failed;
         }
     }
+
+    // transfer the callbacks?
+    list<UserDataPtr> listhandles;
+    FOREACHC(it,__listRegisteredCallbacks) {
+        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
+        if( !!pitdata) {
+            listhandles.push_back(planner->RegisterPlanCallback(pitdata->_callbackfn));
+        }
+    }
+
     PlannerParametersPtr params(new PlannerParameters());
     params->copy(GetParameters());
     params->_sExtraParameters += GetParameters()->_sPostProcessingParameters;

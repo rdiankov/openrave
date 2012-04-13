@@ -13,7 +13,13 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestMoving(EnvironmentSetup):
+class RunPlanning(EnvironmentSetup):
+    def __init__(self,collisioncheckername):
+        self.collisioncheckername = collisioncheckername
+    def setup(self):
+        EnvironmentSetup.setup(self)
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
+
     def test_basicplanning(self):
         env = self.env
         with env:
@@ -31,7 +37,7 @@ class TestMoving(EnvironmentSetup):
                 parameters.SetRobotActiveJoints(robot)
                 planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
-            
+
     def test_ikplanning(self):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
@@ -61,7 +67,7 @@ class TestMoving(EnvironmentSetup):
         env.StartSimulation(0.01,False)
         robot.WaitForController(0)
         with env:
-            print 'test_ikplanning:',transdist(Tee,ikmodel.manip.GetEndEffectorTransform())
+            self.log.info('Tee dist=%f',transdist(Tee,ikmodel.manip.GetEndEffectorTransform()))
             assert(transdist(Tee,ikmodel.manip.GetEndEffectorTransform()) <= g_epsilon)
             
     def test_constraintpr2(self):
@@ -85,18 +91,18 @@ class TestMoving(EnvironmentSetup):
         self.LoadEnv('data/lab1.env.xml')
         robot=env.GetRobots()[0]
 
-        print 'test_constraintwam: ikmodel'
+        self.log.debug('generating ikmodel')
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
             ikmodel.autogenerate()
-        print 'test_constraintwam: gmodel'
+        self.log.debug('generating gmodel')
         gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
         if not gmodel.load():
             # don't do multithreaded yet since ode on some ubuntu distors does not support it
             gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
-        print 'test_constraintwam: planning'
+        self.log.debug('planning')
         with env:
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
@@ -106,7 +112,7 @@ class TestMoving(EnvironmentSetup):
             T = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
             sol = gmodel.manip.FindIKSolution(T,IkFilterOptions.CheckEnvCollisions)
             robot.SetActiveDOFValues(sol)
-            robot.Grab(gmodel.target)            
+            robot.Grab(gmodel.target)
             xyzconstraints = array([1,2],int)
             constraintfreedoms = array([1,0,1,1,0,0]) # rotation xyz, translation xyz
             localrotaxis = array([0,1,0])
@@ -119,7 +125,7 @@ class TestMoving(EnvironmentSetup):
             assert(solgoal is not None)
             traj = basemanip.MoveToHandPosition(matrices=[Tgoal],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix,constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
-            print 'test_constraintwam: make sure it starts at the initial configuration'
+            self.log.debug('make sure it starts at the initial configuration')
             assert(transdist(soltraj,sol) <= g_epsilon)
             self.RunTrajectory(robot,traj)
                 
@@ -160,7 +166,7 @@ class TestMoving(EnvironmentSetup):
             sol = robot.GetActiveDOFValues()
             traj = basemanip.MoveManipulator(orgvalues,outputtrajobj=True,execute=False,jitter=0.05)
             soltraj = traj.Sample(0,robot.GetActiveConfigurationSpecification())
-            print 'test_wamgraspfromcollision: make sure it starts at the initial configuration'
+            self.log.debug('make sure it starts at the initial configuration')
             assert(transdist(soltraj,sol) <= g_epsilon)
             self.RunTrajectory(robot,traj)
                 
@@ -306,7 +312,7 @@ class TestMoving(EnvironmentSetup):
             robot.SetDOFValues([0.187],[robot.GetJoint('l_shoulder_lift_joint').GetDOFIndex()])
             assert(env.CheckCollision(robot))
             
-            print 'test_planwithcollision: environment collision'
+            self.log.debug('environment collision')
             ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
             if not ikmodel.load():
                 ikmodel.autogenerate()
@@ -319,7 +325,7 @@ class TestMoving(EnvironmentSetup):
             ret = basemanip.MoveToHandPosition([Tnew],execute=False)
             assert(ret is not None)
 
-            print 'test_planwithcollision: self collision'
+            self.log.debug('self collision')
             robot.SetDOFValues(defaultvalues)
             robot.SetDOFValues([ 1.34046301,  0.94535038,  3.03934583, -1.30743665, 0 , 0 ,  0], robot.GetManipulator('leftarm').GetArmIndices())
             assert(robot.CheckSelfCollision())
@@ -426,12 +432,15 @@ class TestMoving(EnvironmentSetup):
             
         with env:
             basemanip = interfaces.BaseManipulation(robot)
-            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)            
-            target = env.GetKinBody('mug1')
+            taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
+            robot.SetDOFValues(array([-1.04058615, -1.66533689,  1.38425976,  2.01136615, -0.60557912, -1.19215041,  1.96465159,  0.        ,  0.        ,  0.        , 1.57079633]))
             approachoffset = 0.02
-            dests = ComputeDestinations(target,env.GetKinBody('table'))
-            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(graspindices=gmodel.graspindices,grasps=gmodel.grasps, target=target,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,grasptranslationstepmult=gmodel.translationstepmult,graspfinestep=gmodel.finestep,execute=False,outputtrajobj=True)
+            dests = ComputeDestinations(gmodel.target,env.GetKinBody('table'))
+            Ttarget = gmodel.target.GetTransform()
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            assert(transdist(Ttarget,gmodel.target.GetTransform()) <= g_epsilon)
             self.RunTrajectory(robot,traj)
+            assert(transdist(Ttarget,gmodel.target.GetTransform()) <= g_epsilon)
             grasp = gmodel.grasps[graspindex]
             direction=gmodel.getGlobalApproachDir(grasp)
             Tcurgrasp = gmodel.manip.GetTransform()
@@ -451,6 +460,17 @@ class TestMoving(EnvironmentSetup):
             self.RunTrajectory(robot,traj)
             Tcurgrasp = gmodel.manip.GetTransform()
             assert(transdist(Tgoalgrasp,Tcurgrasp) <= g_epsilon )
+
+            gmodel.target.Enable(False)
+            
+            # try another
+            gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug2'))
+            gmodel.load()
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
+            # should be able to solve it again
+            goals,graspindex,searchtime,traj = taskmanip.GraspPlanning(gmodel=gmodel,approachoffset=approachoffset,destposes=dests, seedgrasps = 3,seeddests=8,seedik=1,maxiter=1000, randomgrasps=False,randomdests=False,execute=False,outputtrajobj=True)
+            self.RunTrajectory(robot,traj)
             
     def test_releasefingers(self):
         env=self.env
@@ -510,3 +530,63 @@ class TestMoving(EnvironmentSetup):
         robot.SetDOFValues(array([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00]))
         assert(env.CheckCollision(robot))
         
+    def test_invalidactive(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            manip=robot.GetActiveManipulator()
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            manip.GetEndEffector().SetStatic(True)
+            basemanip=interfaces.BaseManipulation(robot)
+            try:
+                basemanip.MoveActiveJoints(goal=robot.GetActiveDOFValues())
+                raise ValueError('let static link pass')
+            except openrave_exception, ex:
+                assert(ex.GetCode()==ErrorCode.InvalidState)
+                
+            try:
+                params=Planner.PlannerParameters()
+                params.SetRobotActiveJoints(robot)
+                raise ValueError('let static link pass')
+            except openrave_exception, ex:
+                assert(ex.GetCode()==ErrorCode.InvalidState)
+
+    def test_multipath(self):
+        env = self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot = env.GetRobots()[0]
+        with env:            
+            manip = robot.GetActiveManipulator()
+            basemanip = interfaces.BaseManipulation(robot)
+            basemanip.prob.SendCommand('SetMinimumGoalPaths 6')
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+
+            startpose = array([  4.75570553e-01,  -3.09601285e-16,   8.79677582e-01, -5.55111505e-17,   2.80273561e-01,   1.40000001e-01, 8.88603999e-01])
+            sol = manip.FindIKSolution(startpose, IkFilterOptions.CheckEnvCollisions)
+            robot.SetActiveDOFValues(sol)
+            goalpose = array([ 0.42565319, -0.30998409,  0.60514354, -0.59710177,  0.06460554, 0.386792  ,  1.22894527])
+            ikgoal = IkParameterization(matrixFromPose(goalpose),IkParameterizationType.Transform6D)
+            basemanip.prob.SendCommand('SetMinimumGoalPaths 1')
+            traj1 = basemanip.MoveToHandPosition(ikparams=[ikgoal],maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
+            traj2 = basemanip.MoveToHandPosition(ikparams=[ikgoal],maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True,goalsampleprob=0.4,minimumgoalpaths=40)
+            
+            # there is a small probability that this check will fail..
+            assert(traj2.GetDuration() < traj1.GetDuration())
+            self.RunTrajectory(robot,traj1)
+            self.RunTrajectory(robot,traj2)
+            
+
+#generate_classes(RunPlanning, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunPlanning):
+    def __init__(self):
+        RunPlanning.__init__(self, 'ode')
+# 
+# class test_bullet(RunPlanning):
+#     def __init__(self):
+#         RunPlanning.__init__(self, 'bullet')
+#         

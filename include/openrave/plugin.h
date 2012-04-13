@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   plugin.h
     \brief  Provides helper functions for creating plugins. Defines all the necessary functions to export.
+
+    This file is optional and not automatically included with openrave.h
  */
 #ifndef OPENRAVE_PLUGIN_H
 #define OPENRAVE_PLUGIN_H

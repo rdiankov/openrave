@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file spacesampler.h
     \brief Sampling definitions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_SPACESAMPLER_H
 #define OPENRAVE_SPACESAMPLER_H

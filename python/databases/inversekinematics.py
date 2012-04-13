@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2011 Rosen Diankov (rosen.diankov@gmail.com)
+# Copyright (C) 2009-2012 Rosen Diankov (rosen.diankov@gmail.com)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,12 @@ To show the manipulator and IK results do:
 
   openrave.py --database inversekinematics --robot=robots/pr2-beta-static.zae --manipname=leftarm --show
 
+It is also possible to test the IK on a scene:
+
+.. code-block:: bash
+
+  openrave.py --database inversekinematics --robot=data/pr2test1.env.xml --manipname=leftarm --show
+  
 Description
 -----------
 
@@ -135,7 +141,7 @@ Class Definitions
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
@@ -146,12 +152,11 @@ else:
 from ..openravepy_ext import openrave_exception, RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
 from . import DatabaseGenerator
-from ..misc import mkdir_recursive, myrelpath, TSP
+from ..misc import relpath, TSP
 import time,platform,shutil,sys
 import os.path
 from os import getcwd, remove
 import distutils
-import logging
 from distutils import ccompiler
 from optparse import OptionParser
 
@@ -160,12 +165,8 @@ try:
 except:
     import pickle
 
-log = logging.getLogger(__name__)
-format = logging.Formatter('%(name)s: %(message)s')
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(format)
-log.addHandler(handler)
-log.setLevel(logging.INFO)
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
@@ -209,8 +210,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if rigidlyattached.IsStatic():
                     raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
         self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
-        self.ikfast.log.addHandler(handler)
-        self.ikfast.log.setLevel(logging.INFO)
+        for handler in log.handlers:
+            self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.AddModule(self.ikfastproblem,'')
@@ -253,7 +254,11 @@ class InverseKinematicsModel(DatabaseGenerator):
     
     def save(self):
         statsfilename=self.getstatsfilename(False)
-        mkdir_recursive(os.path.split(statsfilename)[0])
+        try:
+            os.makedirs(os.path.split(statsfilename)[0])
+        except OSError:
+            pass
+        
         pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
 
@@ -347,7 +352,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik type is not set')
         
         freeindices = []
-        dofexpected = IkParameterization.GetDOF(self.iktype)
+        dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
             for i in range(len(remainingindices) - dofexpected):
@@ -386,7 +391,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 break
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
-            dofexpected = IkParameterization.GetDOF(self.iktype)
+            dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             if allfreeindices is None:
                 allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
@@ -440,7 +445,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
-            dofexpected = IkParameterization.GetDOF(self.iktype)
+            dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             allfreeindices = [f for f in self.ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
                 break
@@ -641,7 +646,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             raise ValueError('bad type')
 
-        dofexpected = IkParameterization.GetDOF(self.iktype)
+        dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
             self.freeindices = freeindices
         if self.freeindices is None:
@@ -667,7 +672,11 @@ class InverseKinematicsModel(DatabaseGenerator):
 
         if forceikbuild or not os.path.isfile(sourcefilename):
             log.info('creating ik file %s',sourcefilename)
-            mkdir_recursive(os.path.split(sourcefilename)[0])
+            try:
+                os.makedirs(os.path.split(sourcefilename)[0])
+            except OSError:
+                pass
+            
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
             if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D or self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
                 solver.useleftmultiply = False
@@ -701,7 +710,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 try:
                    output_dir = os.path.relpath('/',getcwd())
                 except AttributeError: # python 2.5 does not have os.path.relpath
-                   output_dir = myrelpath('/',getcwd())
+                   output_dir = relpath('/',getcwd())
 
                 platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
                 shutil.copyfile(sourcefilename, platformsourcefilename)
@@ -776,6 +785,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     def show(self,delay=0.1,options=None,forceclosure=True):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         with RobotStateSaver(self.robot):
             with self.ArmVisibility(self.manip,0.95):
                 time.sleep(3) # let viewer load
@@ -875,8 +885,12 @@ class InverseKinematicsModel(DatabaseGenerator):
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices)
                 if not ikmodel.load():
                     raise ValueError('failed to load ik')
+                
                 if options.iktests is not None:
-                    successrate = ikmodel.testik(iktests=options.iktests)
+                    successrate, wrongrate = ikmodel.testik(iktests=options.iktests)
+                    if wrongrate > 0:
+                        raise ValueError('wrong rate %f > 0!'%wrongrate)
+                    
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))
                     log.info('running time mean: %fs, median: %fs, min: %fs, max: %fs', mean(results),median(results),min(results),max(results))

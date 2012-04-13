@@ -13,19 +13,18 @@
 # limitations under the License.
 from common_test_openrave import *
 
-def test_linkstatistics():
-    # test with pr2-beta-static.zae
-    pass
-
 class TestDatabases(EnvironmentSetup):
     def test_ikmodulegeneration(self):
         env=self.env
         self.LoadEnv('robots/neuronics-katana.zae')
         robot=env.GetRobots()[0]
         manip=robot.GetActiveManipulator()
+        manip.SetIkSolver(None)
         ikmodule = RaveCreateModule(env,'ikfast')
         env.AddModule(ikmodule,'')
         out=ikmodule.SendCommand('LoadIKFastSolver %s %d 1'%(robot.GetName(),IkParameterizationType.TranslationDirection5D))
         assert(out is not None)
         assert(manip.GetIkSolver() is not None)
         
+#     def test_database_paths(self):
+#         pass

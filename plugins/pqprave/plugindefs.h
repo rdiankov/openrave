@@ -49,6 +49,8 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
@@ -57,17 +59,6 @@
 #include <boost/bind.hpp>
 
 using namespace std;
-
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
-{
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
 using namespace OpenRAVE;
 
 #endif

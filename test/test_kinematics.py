@@ -15,10 +15,10 @@ from common_test_openrave import *
 
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
-        print "check if the joint-link set-get functions are consistent along with jacobians"
+        self.log.info('check if the joint-link set-get functions are consistent along with jacobians')
         env=self.env
         with env:
-            for envfile in g_envfiles:
+            for envfile in g_envfiles+['testdata/bobcat.robot.xml']:
                 env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
@@ -26,52 +26,62 @@ class TestKinematics(EnvironmentSetup):
                     for body in env.GetBodies():
                         # change the staticness of the first link (shouldn't affect anything)
                         body.GetLinks()[0].SetStatic((i%2)>0)
+
+                        lowerlimit,upperlimit = body.GetDOFLimits()
+                        body.SetDOFValues(lowerlimit)
+                        dofvalues = body.GetDOFValues()
+                        assert( transdist(lowerlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))
+                        body.SetDOFValues(upperlimit)
+                        dofvalues = body.GetDOFValues()
+                        assert( transdist(upperlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))
                         
                         Told = body.GetTransform()
-                        Tallold = body.GetLinkTransformations()
+                        Tallold,dofbranchesold = body.GetLinkTransformations(True)
                         dofvaluesold = body.GetDOFValues()
                         T = randtrans()
                         body.SetTransform(T)
                         _T = body.GetTransform()
                         assert( transdist(T,_T) <= g_epsilon )
-                        body.SetLinkTransformations(Tallold)
-                        _Tallold = body.GetLinkTransformations()
-                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
+                        body.SetLinkTransformations(Tallold,dofbranchesold)
+                        _Tallold,_dofbranchesold = body.GetLinkTransformations(True)
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
+                        assert( transdist(dofbranchesold,_dofbranchesold) == 0 )
                         Tallnew = [randtrans() for j in range(len(Tallold))]
-                        body.SetLinkTransformations(Tallnew)
-                        _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        body.SetLinkTransformations(Tallnew,zeros(body.GetDOF()))
+                        _Tallnew,_dofbranchesnew = body.GetLinkTransformations(True)
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         for link, T in izip(body.GetLinks(),Tallold):
                             link.SetTransform(T)
-                        _Tallold = body.GetLinkTransformations()
-                        assert( transdist(Tallold,_Tallold) <= g_epsilon )
+                        _Tallold,_dofbranchesold = body.GetLinkTransformations(True)
+                        assert( transdist(Tallold,_Tallold) <= g_epsilon*len(Tallold) )
                         # dof
-                        _dofvaluesold = body.GetDOFValues()
-                        assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon )
+                        # cannot compre dofvaluesold, and _dofvaluesold since branches are not set!
+                        #assert( transdist(dofvaluesold,_dofvaluesold) <= g_epsilon*len(dofvaluesold) )
                         dofvaluesnew = randlimits(*body.GetDOFLimits())
                         body.SetDOFValues(dofvaluesnew)
                         _dofvaluesnew = body.GetDOFValues()
                         assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
-                        Tallnew = body.GetLinkTransformations()
+                        Tallnew,dofbranchesnew = body.GetLinkTransformations(True)
                         body.SetTransformWithDOFValues(body.GetTransform(),dofvaluesnew)
-                        _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        _Tallnew,dofbranchesnew = body.GetLinkTransformations(True)
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
                         _dofvaluesnew = body.GetDOFValues()
                         assert( all(abs(body.SubtractDOFValues(dofvaluesnew,_dofvaluesnew)) <= g_epsilon) )
                         
                         # do it again
                         body.SetDOFValues(dofvaluesnew)
-                        _Tallnew = body.GetLinkTransformations()
-                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon )
+                        _Tallnew,_dofbranchesnew = body.GetLinkTransformations(True)
+                        assert( transdist(Tallnew,_Tallnew) <= g_epsilon*len(Tallnew) )
+                        assert( transdist(dofbranchesnew,_dofbranchesnew) == 0 )
                         for joint in body.GetJoints():
                             _dofvaluesnew = joint.GetValues()
                             assert( all(abs(joint.SubtractValues(dofvaluesnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())], _dofvaluesnew)) <= g_epsilon) )
                         Tallnew2 = [randtrans() for link in body.GetLinks()]
                         for link,T in izip(body.GetLinks(),Tallnew2):
                             link.SetTransform(T)
-                        _Tallnew2 = body.GetLinkTransformations()
-                        assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon )
-                        body.SetLinkTransformations(Tallnew)
+                        _Tallnew2,_dofbranchesnew2 = body.GetLinkTransformations(True)
+                        assert( transdist(Tallnew2, _Tallnew2) <= g_epsilon*len(Tallnew2) )
+                        body.SetLinkTransformations(Tallnew,dofbranchesnew)
                         for idir in range(20):
                             deltavalues0 = array([g_jacobianstep*(random.randint(3)-1) for j in range(body.GetDOF())])
                             localtrans = randtrans()
@@ -99,15 +109,15 @@ class TestKinematics(EnvironmentSetup):
                                 if dot(worldquat,newquat) < 0:
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
-                                assert( transdist(dot(Jtrans,deltavalues),deltatrans) <= thresh )
-                                assert( transdist(dot(Jquat,deltavalues)+worldquat,newquat) <= 2*thresh )
-                                raveLogDebug(repr(dofvaluesnew))
-                                raveLogDebug(repr(deltavalues))
-                                #print 'angle dist: ',axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength
-                                assert( axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) <= 2*thresh )
+                                if transdist(dot(Jtrans,deltavalues),deltatrans) > thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
+                                if transdist(dot(Jquat,deltavalues)+worldquat,newquat) > 2*thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
+                                if axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) > 2*thresh:
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f, armlength=%f'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength))
 
     def test_bodyvelocities(self):
-        print "check physics/dynamics properties"
+        self.log.info('check physics/dynamics properties')
         with self.env:
             for envfile in g_envfiles:
                 self.env.Reset()
@@ -148,7 +158,7 @@ class TestKinematics(EnvironmentSetup):
                         # test consistency with kinematics
 
     def test_hierarchy(self):
-        print "tests the kinematics hierarchy"
+        self.log.info('tests the kinematics hierarchy')
         with self.env:
             for robotfile in g_robotfiles:
                 self.env.Reset()
@@ -203,7 +213,7 @@ class TestKinematics(EnvironmentSetup):
                 #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
 
     def test_initkinbody(self):
-        print "tests initializing a kinematics body"
+        self.log.info('tests initializing a kinematics body')
         with self.env:
             k = RaveCreateKinBody(self.env,'')
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
@@ -219,8 +229,17 @@ class TestKinematics(EnvironmentSetup):
             self.env.AddKinBody(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
 
+    def test_misc(self):
+        env=self.env
+        body=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
+        env.AddKinBody(body)
+        with env:
+            s = 'this is a test string'
+            body.SetUserData(s)
+            assert(body.GetUserData()==s)
+        
     def test_geometrychange(self):
-        print "change geometry and test if changes are updated"
+        self.log.info('change geometry and test if changes are updated')
         env=self.env
         with env:
             self.LoadEnv(g_envfiles[0])
@@ -238,7 +257,7 @@ class TestKinematics(EnvironmentSetup):
         robot = self.LoadRobot(g_robotfiles[0])
         s = robot.serialize(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
-        robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()])
+        robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()],zeros(robot.GetDOF()))
         hash1 = robot.GetKinematicsGeometryHash()
         assert( hash0 == hash1 )
 
@@ -271,14 +290,15 @@ class TestKinematics(EnvironmentSetup):
 
                 zerovalues = zeros(body.GetDOF())
                 body.SetDOFValues(zerovalues)
-                Tlinks = body.GetLinkTransformations()
+                Tlinks,dofbranches = body.GetLinkTransformations(True)
                 limits = body.GetDOFLimits()
                 limits = [numpy.maximum(-3*ones(body.GetDOF()),limits[0]), numpy.minimum(3*ones(body.GetDOF()),limits[1])]
                 for myiter in range(10):
                     # todo set the first link to static
-                    body.SetLinkTransformations(Tlinks)
+                    body.SetLinkTransformations(Tlinks,dofbranches)
                     body.SetZeroConfiguration()
                     assert( transdist(Tlinks,body.GetLinkTransformations()) <= g_epsilon )
+                    assert( transdist(dofbranches,body.GetLinkTransformations(True)[1]) == 0 )
                     body.GetLinks()[0].SetStatic(myiter%2)
                     offsets = randlimits(*limits)
                     raveLogDebug(repr(offsets))
@@ -469,3 +489,92 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)
+
+    def test_dh(self):
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        dhs=planningutils.GetDHParameters(robot)
+        gooddhs = [planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Yaw'), parentindex=-1, d=0.346000, a=0.260768, theta=0.566729, alpha=0.000000,transform=array([[ 0.84366149, -0.53687549,  0.        ,  0.22      ],[ 0.53687549,  0.84366149,  0.        ,  0.14      ], [ 0.        ,  0.        ,  1.        ,  0.346     ], [ 0.        ,  0.        ,  0.        ,  1.        ]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Pitch'), parentindex=0, d=0.000000, a=0.000000, theta=-0.566729, alpha=-1.570796,transform=array([[  1.00000000e+00,  -2.46519033e-32,  -1.11022302e-16, 2.20000000e-01], [  1.11022302e-16,   2.22044605e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   2.22044605e-16, 3.46000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Shoulder_Roll'), parentindex=1, d=0.000000, a=0.000000, theta=0.000000, alpha=1.570796,transform=array([[  1.00000000e+00,  -1.11022302e-16,  -6.16297582e-32, 2.20000000e-01], [  1.11022302e-16,   1.00000000e+00,   5.55111512e-16, 1.40000000e-01], [  0.00000000e+00,  -5.55111512e-16,   1.00000000e+00, 3.46000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Elbow'), parentindex=2, d=0.550000, a=0.045000, theta=0.000000, alpha=-1.570796,transform=array([[  1.00000000e+00,  -2.46519033e-32,  -1.11022302e-16, 2.65000000e-01], [  1.11022302e-16,   2.22044605e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   2.22044605e-16, 8.96000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Yaw'), parentindex=3, d=-0.000000, a=-0.045000, theta=0.000000, alpha=1.570796,transform=array([[  1.00000000e+00,  -1.11022302e-16,  -4.93038066e-32, 2.20000000e-01], [  1.11022302e-16,   1.00000000e+00,   4.44089210e-16, 1.40000000e-01], [  0.00000000e+00,  -4.44089210e-16,   1.00000000e+00, 8.96000000e-01], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Pitch'), parentindex=4, d=0.300000, a=-0.000000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -4.93038066e-32,  -1.11022302e-16,
+          2.20000000e-01], [  1.11022302e-16,   4.44089210e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   4.44089210e-16,           1.19600000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('Wrist_Roll'), parentindex=5, d=-0.000000, a=0.000000, theta=0.000000, alpha=1.570796, transform=array([[  1.00000000e+00,  -1.11022302e-16,  -4.93038066e-32,
+          2.20000000e-01],[  1.11022302e-16,   1.00000000e+00,   4.44089210e-16, 1.40000000e-01], [  0.00000000e+00,  -4.44089210e-16,   1.00000000e+00, 1.19600000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF3'), parentindex=6, d=0.151500, a=-0.050000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -4.93038066e-32,  -1.11022302e-16,
+          1.70000000e-01], [  1.11022302e-16,   4.44089210e-16,   1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,  -1.00000000e+00,   4.44089210e-16, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF4'), parentindex=6, d=0.151500, a=-0.000000, theta=0.000000, alpha=-3.141593, transform=array([[  1.00000000e+00,   1.11022302e-16,  -1.35963107e-32,
+          2.20000000e-01], [  1.11022302e-16,  -1.00000000e+00,   1.22464680e-16, 1.40000000e-01], [  0.00000000e+00,  -1.22464680e-16,  -1.00000000e+00, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]])),
+                  planningutils.DHParameter(joint=robot.GetJoint('JF1'), parentindex=8, d=0.000000, a=0.050000, theta=0.000000, alpha=-1.570796, transform=array([[  1.00000000e+00,  -2.46519033e-32,   1.11022302e-16,
+          2.70000000e-01], [  1.11022302e-16,   2.22044605e-16,  -1.00000000e+00, 1.40000000e-01], [  0.00000000e+00,   1.00000000e+00,   2.22044605e-16, 1.34750000e+00], [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 1.00000000e+00]]))]
+        
+        for i,gooddh in enumerate(gooddhs):
+            dh=dhs[i]
+            assert(transdist(dh.transform,gooddh.transform) <= 1e-6)
+            assert(dh.joint == gooddh.joint)
+            assert(abs(dh.a-gooddh.a) <= 1e-6)
+            assert(abs(dh.d-gooddh.d) <= 1e-6)
+            assert(abs(dh.alpha-gooddh.alpha) <= 1e-6)
+            assert(abs(dh.theta-gooddh.theta) <= 1e-6)
+
+    def test_closedlinkage(self):
+        self.log.info('check a very complex closed linkage model')
+        env=self.env
+        self.LoadEnv('testdata/bobcat.robot.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            Ajoint = robot.GetJoint('A')
+            Ljoint = robot.GetJoint('L')
+            assert(Ajoint.GetDOF() == 1 and Ljoint.GetDOF() == 1)
+            dofindices = [Ajoint.GetDOFIndex(), Ljoint.GetDOFIndex()]
+            robot.SetActiveDOFs(dofindices)
+            linkdata = [[ [0,0], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                         [  1.00000000e+00,   0.00000000e+00,   1.66533454e-16, 2.46519033e-32,   1.25704890e-01,  -2.48984221e-32, -4.36358840e-01],
+                                         [  6.85227643e-01,   6.85227643e-01,   1.74536749e-01, -1.74536749e-01,   3.69363050e-01,   1.68017796e-18, -1.17973100e-01],
+                                         [  9.84549793e-01,   4.84676144e-27,   1.75104840e-01, -6.20658774e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                         [  9.84549793e-01,   4.84676144e-27,   1.75104840e-01, -6.20658774e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                         [  9.54793018e-01,   8.25093916e-18,   2.97271412e-01, 1.25474580e-18,  -8.44224080e-01,   0.00000000e+00, 1.68398220e-01],
+                                         [  1.00000000e+00,   5.20417043e-17,  -4.32015615e-06, -4.16333634e-17,   9.30169191e-01,  -2.75764047e-17, -4.80552929e-01],
+                                         [  1.00000000e+00,   5.20417043e-17,  -4.32015615e-06, -4.16333634e-17,   1.33400753e+00,  -2.04263127e-17, -8.72316290e-01],
+                                         [  5.31460156e-01,   5.31460156e-01,  -4.66422665e-01, 4.66422665e-01,   1.33400414e+00,   1.50396600e-16, -1.05231978e+00],
+                                         [  6.86988988e-01,   6.86988988e-01,  -1.67469790e-01, 1.67469790e-01,   1.38471499e+00,   7.72830067e-18, -5.97523487e-01]])],
+                         [ [0.2,0.15], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                            [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                              [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                              [  9.88182137e-01,   0.00000000e+00,   1.53284259e-01, 2.77555756e-17,   1.49435915e-01,  -2.80331312e-17, -2.83371348e-01],
+                                              [  7.06794528e-01,   7.06794528e-01,   2.10117950e-02, -2.10117950e-02,   2.10279270e-01,   1.22666523e-18, 4.76223716e-01],
+                                              [  9.95574100e-01,   1.73472348e-18,   9.39798451e-02, -6.93889390e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                              [  9.95574100e-01,   1.73472348e-18,   9.39798451e-02, -6.93889390e-18,  -7.28094440e-01,  -2.54446008e-17, -6.90052885e-01],
+                                              [  9.99520409e-01,   6.93889390e-18,   3.09669378e-02, -2.77555756e-17,  -9.82177231e-01,   7.63757772e-19, 2.16000404e-01],
+                                              [  9.67858375e-01,  -2.60208521e-18,  -2.51495859e-01, -1.21430643e-17,   8.72051279e-01,  -7.74527579e-17, 3.86638746e-01],
+                                              [  9.67858375e-01,  -2.60208521e-18,  -2.51495859e-01, -1.21430643e-17,   1.56045196e+00,  -9.43376201e-17, 2.02355294e-01],
+                                              [  6.23592186e-01,   6.23592186e-01,  -3.33365844e-01, 3.33365844e-01,   1.48074579e+00,  -3.52546462e-17, 4.09640579e-02],
+                                              [  7.07073309e-01,   7.07073309e-01,  -6.88009992e-03, 6.88009992e-03,   1.72761367e+00,   1.03884658e-16, 4.26278877e-01]])],
+                         [ [0.6,0.3], array([[  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, -6.50000000e-01],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,   6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   7.69000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                             [  1.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,  -2.61000000e-01,  -6.20000000e-01, -1.01100000e+00],
+                                             [  8.63508551e-01,   0.00000000e+00,   5.04334197e-01, 1.11022302e-16,   3.82601401e-01,  -8.40993932e-17, 3.49301605e-03],
+                                             [  6.60498754e-01,   6.60498754e-01,  -2.52470583e-01, 2.52470583e-01,   8.54405236e-02,  -2.38637001e-16, 1.25541132e+00],
+                                             [  9.83185295e-01,  -2.16840434e-19,   1.82610721e-01, -2.16840434e-18,  -7.65520000e-01,   0.00000000e+00, -8.86520000e-01],
+                                             [  9.83185295e-01,  -2.16840434e-19,   1.82610721e-01, -2.16840434e-18,  -5.50071789e-01,  -7.36981434e-17, -3.26536011e-01],
+                                             [  9.72102789e-01,   1.04083409e-17,   2.34555254e-01, -1.04083409e-17,  -8.74679979e-01,   5.97978576e-17, 1.86574033e-01],
+                                             [  8.41280342e-01,  -7.63278329e-17,  -5.40599100e-01, -1.11022302e-16,   6.15005480e-01,  -4.15705803e-16, 1.66226340e+00],
+                                             [  8.41280342e-01,  -7.63278329e-17,  -5.40599100e-01, -1.11022302e-16,   1.41851038e+00,  -6.29478324e-16, 1.97615467e+00],
+                                             [  6.71448444e-01,   6.71448444e-01,  -2.21713751e-01, 2.21713751e-01,   1.28904974e+00,  -4.73379676e-16, 1.85111343e+00],
+                                             [  6.97817029e-01,   6.97817029e-01,   1.14242700e-01, -1.14242700e-01,   1.65140668e+00,  -3.55752435e-16, 2.13059278e+00]])],
+                         ]
+
+            for dofvalues, linkposes in linkdata:
+                robot.SetActiveDOFValues(dofvalues)
+                curposes = poseFromMatrices(robot.GetLinkTransformations())
+                assert( transdist(linkposes,curposes) <= 1e-6 )

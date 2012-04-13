@@ -64,23 +64,27 @@ Class Definitions
 """
 from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
-__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
+from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh
+from ..openravepy_ext import transformPoints
 from . import DatabaseGenerator
 from .. import convexdecompositionpy
-from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
+
 import time
 import os.path
 from optparse import OptionParser
 from itertools import izip
+
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
@@ -131,13 +135,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         self.convexparams = kwargs
         if padding is None:
             padding = 0.0
-        print 'Generating Convex Decomposition: ',self.convexparams
+        log.info('Generating Convex Decomposition: %r',self.convexparams)
         starttime = time.time()
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
             for il,link in enumerate(links):
-                print 'link %d/%d'%(il,len(links))
+                log.info('link %d/%d',il,len(links))
                 geoms = []
                 for ig,geom in enumerate(link.GetGeometries()):
                     if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh:
@@ -149,7 +153,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                                 orghulls = [self.padMesh(hull[0],hull[1],padding) for hull in orghulls]
                             geoms.append((ig,[(hull[0],hull[1],self.computeHullPlanes(hull)) for hull in orghulls]))
                 self.linkgeometry.append(geoms)
-        print 'all convex decomposition finished in %fs'%(time.time()-starttime)
+        log.info('all convex decomposition finished in %fs',time.time()-starttime)
     @staticmethod
     def padMesh(vertices,indices,padding):
         M = mean(vertices,0)
@@ -275,7 +279,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         self.env.SetViewer('qtcoin')
         self.env.UpdatePublishedBodies()
         T = self.env.Triangulate(self.robot)
-        print 'total vertices: %d, total triangles: %d'%(len(T.vertices),len(T.indices)/3)
+        log.info('total vertices: %d, total triangles: %d',len(T.vertices),len(T.indices)/3)
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))
         handles = []
         jointvalues = None

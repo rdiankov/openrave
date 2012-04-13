@@ -88,19 +88,20 @@ def main(env,options):
         # no physics engine set, so set one
         physics = RaveCreatePhysicsEngine(env,'ode')
         env.SetPhysicsEngine(physics)
-    env.GetPhysicsEngine().SetGravity([0,0,-9.81])
-    bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
-    numbodies = 0
-    env.StopSimulation()
-    env.StartSimulation(timestep=options.timestep)
-    starttime = time.time()
+    with env:
+        env.GetPhysicsEngine().SetGravity([0,0,-1])
+        env.StopSimulation()
+        env.StartSimulation(timestep=options.timestep)
+        starttime = time.time()
     while True:
+        bodynames = ['data/lego2.kinbody.xml', 'data/lego4.kinbody.xml', 'data/mug1.kinbody.xml']
+        numbodies = 0
         if numbodies < 40:
             with env:
                 body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
                 body.SetName('body%d'%numbodies)
                 numbodies += 1
-                env.AddKinBody(body)
+                env.AddKinBody(body,True)
                 T = eye(4)
                 T[0:3,3] = array((-0.5,-0.5,2))+0.4*random.rand(3)
                 body.SetTransform(T)

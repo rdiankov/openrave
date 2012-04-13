@@ -18,47 +18,67 @@ import openravepy_int
 import openravepy_ext
 import os.path
 import numpy
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    pass
+
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 def mkdir_recursive(newdir):
-    """works the way a good mkdir should :)
-        - already exists, silently complete
-        - regular file in the way, raise an exception
-        - parent directory(ies) does not exist, make them as well
-    """
-    if os.path.isdir(newdir):
+    log.warn('openravepy.misc.mkdir_recursive is deprecated, please use os.makedirs')
+    from os import makedirs
+    try:
+        makedirs(newdir)
+    except OSError:
         pass
-    elif os.path.isfile(newdir):
-        raise OSError("a file with the same name as the desired dir, '%s', already exists." % newdir)
-    else:
-        head, tail = os.path.split(newdir)
-        if head and not os.path.isdir(head):
-            mkdir_recursive(head)
-        if tail:
-            try:
-                os.mkdir(newdir)
-            except OSError:
-                # race conditions could still lead to such errors...
-                pass
 
-def myrelpath(path, start=os.path.curdir):
-    """Return a relative version of a path"""
-    if not path:
-        raise ValueError("no path specified")
-
-    start_list = os.path.abspath(start).split(os.path.sep)
-    path_list = os.path.abspath(path).split(os.path.sep)
-
-    # Work out how much of the filepath is shared by start and path.
-    i = len(os.path.commonprefix([start_list, path_list]))
-
-    rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
-    if not rel_list:
-        return os.path.curdir
-    return os.path.join(*rel_list)
+try:
+    from os.path import relpath
+    
+except ImportError:
+    # relpath is not present in python 2.5 and below, so hold an implementation of it.
+    from posixpath import curdir, sep, pardir, join, abspath, commonprefix
+    
+    def relpath(path, start=curdir):
+        """Return a relative version of a path"""
+        if not path:
+            raise ValueError("no path specified")
+        
+        start_list = abspath(start).split(sep)
+        path_list = abspath(path).split(sep)
+        # Work out how much of the filepath is shared by start and path.
+        i = len(commonprefix([start_list, path_list]))
+        rel_list = [pardir] * (len(start_list)-i) + path_list[i:]
+        return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
-    
+
+def InitOpenRAVELogging():
+    """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
+    """
+    levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
+    log=logging.getLogger('openravepy')
+    log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()])
+    if len(log.handlers) == 0:
+        try:
+            colorize=__import__('logutils.colorize',fromlist=['colorize'])
+            handler = colorize.ColorizingStreamHandler()
+            handler.level_map[logging.DEBUG] =(None, 'green', False)
+            handler.level_map[logging.INFO] = (None, None, False)
+            handler.level_map[logging.WARNING] = (None, 'yellow', False)
+            handler.level_map[logging.ERROR] = (None, 'red', False)
+            handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
+
+        except ImportError:
+            handler = logging.StreamHandler()
+            openravepy_int.raveLogVerbose('python logutils not present so cannot colorize python output.')
+
+        handler.setFormatter(logging.Formatter('%(name)s: %(funcName)s, %(message)s'))
+        log.addHandler(handler)
+
 class OpenRAVEGlobalArguments:
     """manages a global set of command-line options applicable to all openrave environments"""
     @staticmethod
@@ -77,6 +97,8 @@ class OpenRAVEGlobalArguments:
                           help='server to use (default=None).')
         ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
                           help='port to load server on (default=%default).')
+        ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
+                          help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
                           help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
         if testmode:
@@ -91,7 +113,9 @@ class OpenRAVEGlobalArguments:
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
                     break
-    
+
+        InitOpenRAVELogging()
+        
     @staticmethod
     def parseEnvironment(options,env,defaultviewer=False,returnviewer=False,**kwargs):
         """Parses all options that affect the environment. If returnviewer is set, will return the viewer to set instead of setting it"""
@@ -101,21 +125,28 @@ class OpenRAVEGlobalArguments:
                 if cc is not None:
                     env.SetCollisionChecker(cc)
         except openrave_exception, e:
-            print e
+            log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
         except openrave_exception, e:
-            print e
+            log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.AddModule(sr,'%d'%options._serverport)
         except openrave_exception, e:
-            print e
+            log.warn(e)
+        for name,args in options._modules:
+            try:
+                module = openravepy_int.RaveCreateModule(env,name)
+                if module is not None:
+                    env.AddModule(module,args)
+            except openrave_exception, e:
+                log.warn(e)
         try:
             viewer=None
             if options._viewer is not None:
@@ -128,7 +159,8 @@ class OpenRAVEGlobalArguments:
             elif viewer is not None:
                 env.SetViewer(viewer)
         except openrave_exception, e:
-            print e
+            log.warn(e)
+            
     @staticmethod
     def parseAndCreate(options,createenv=openravepy_int.Environment,**kwargs):
         """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""
@@ -180,6 +212,19 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
             newindices += [[tri[0],inds[0],inds[2]],[inds[0],tri[1],inds[1]],[inds[2],inds[0],inds[1]],[inds[2],inds[1],tri[2]]]
         triindices = newindices
     return radius*numpy.array(vertices),triindices
+
+def DrawAxes(env,target,dist=1.0,linewidth=1):
+    """draws xyz coordinate system around target.
+
+    target can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
+    """
+    if isinstance(target,basestring):
+        T = self.env.GetKinBody(target).GetTransform()
+    elif len(target) == 7:
+        T = openravepy_int.matrixFromPose(target)
+    else:
+        T = numpy.array(target)
+    return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]]))
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""

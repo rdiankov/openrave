@@ -46,6 +46,8 @@
 using namespace OpenRAVE;
 using namespace std;
 
+namespace cppexamples {
+
 class FunctionUserData : public UserData
 {
 public:
@@ -112,8 +114,10 @@ void Init(UserDataPtr globalstate)
     }
 }
 
+} // end namespace cppexamples
+
 BOOST_PYTHON_MODULE(orpythonbinding)
 {
-    boost::python::def("Init", Init, boost::python::args("globalstate"), "initializes the python bindings with the openrave global state");
-    boost::python::def("RegisterSimulationFunction", RegisterSimulationFunction, boost::python::args("environmentid","simulationfn"));
+    boost::python::def("Init", cppexamples::Init, boost::python::args("globalstate"), "initializes the python bindings with the openrave global state");
+    boost::python::def("RegisterSimulationFunction", cppexamples::RegisterSimulationFunction, boost::python::args("environmentid","simulationfn"));
 };

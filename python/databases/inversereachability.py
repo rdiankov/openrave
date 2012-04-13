@@ -53,15 +53,16 @@ __license__ = 'Apache License, Version 2.0'
 import time,bisect
 
 if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
     from numpy import *
 else:
     from numpy import array
 
+from ..openravepy_int import RaveFindDatabaseFile, RaveCreateRobot, IkParameterization, rotationMatrixFromAxisAngle, poseFromMatrix, matrixFromPose, matrixFromQuat, matrixFromAxisAngle, poseMult, quatFromAxisAngle, IkFilterOptions
+from ..openravepy_ext import quatArrayTMult, quatArrayTDist, poseMultArrayT, normalizeZRotation
 from . import DatabaseGenerator
 from .. import pyANN
-import kinematicreachability, linkstatistics, inversekinematics
+from . import kinematicreachability, linkstatistics, inversekinematics
+
 import numpy
 import os.path
 from optparse import OptionParser
@@ -69,6 +70,9 @@ try:
     from scipy.optimize import leastsq
 except ImportError:
     pass
+
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
@@ -103,9 +107,9 @@ class InverseReachabilityModel(DatabaseGenerator):
     @staticmethod
     def classnormalizationconst(classstd):
         """normalization const for the equation exp(dot(-0.5/bandwidth**2,r_[arccos(x[0])**2,x[1:]**2]))"""
-        gaussconst = -0.5*(len(classstd)-1)*log(pi)-0.5*log(prod(classstd[1:]))
+        gaussconst = -0.5*(len(classstd)-1)*numpy.log(pi)-0.5*numpy.log(prod(classstd[1:]))
         # normalization for the weights so that integrated volume is 1. this is necessary when comparing across different distributions?
-        quatconst = log(1.0/classstd[0]**2+0.3334)
+        quatconst = numpy.log(1.0/classstd[0]**2+0.3334)
         return quatconst+gaussconst
     
     def preprocess(self):
@@ -191,7 +195,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 self.rmodel.autogenerate()
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            print "Generating Inverse Reachability",heightthresh,quatthresh
+            log.info("Generating Inverse Reachability, heightthresh=%f, quatthresh=%f",heightthresh,quatthresh)
             self.robot.SetDOFValues(*self.necessaryjointstate())
             # get base of link manipulator with respect to base link
             Tbase = dot(linalg.inv(self.robot.GetTransform()),self.manip.GetBase().GetTransform())
@@ -247,7 +251,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                                     c_[-zangles,equivalenttransinv,equivalenttrans[:,7:]])
                 self.equivalenceclasses.append(equivalenceclass)
                 basetrans = basetrans[flatnonzero(foundindices==False),:]
-                print 'new equivalence class outliers: %d/%d, left over trans: %d'%(self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
+                log.info('new equivalence class outliers: %d/%d, left over trans: %d',self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         finally:
             statesaver.close()
             for b,enable in bodies:
@@ -295,7 +299,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
         bestindex = argmax(logll)
         if logll[bestindex] < logllthresh:
-            print 'inversereachability: could not find base distribution: ',logll[bestindex]
+            log.info('inversereachability: could not find base distribution: index=%d',logll[bestindex])
             return None,None,None
 
         # transform the equivalence class to the global coord system and create a kdtree for faster retrieval
@@ -385,7 +389,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             weights = r_[weights,equivalenceclass[2][:,3]*normalizationconst]
 
         if len(points) == 0:
-            print 'inversereachability: could not find base distribution, logllthresh too high?', highestlogll
+            log.info('inversereachability: could not find base distribution, logllthresh too high? logll=%f', highestlogll)
             return None,None,None
         
         # transform points by the base pose
@@ -528,7 +532,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         if self.manip.FindIKSolution(eye(4),0) is None:
                             #print 'pose failed: ',pose
                             failures += 1
-                    print 'height %f, failures: %d'%(height,failures)
+                    log.info('height %f, failures: %d',height,failures)
                     allfailures.append(failures)
                 else:
                     allfailures.append(inf)
@@ -568,7 +572,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         # split it into chunks to avoid memory overflow
         probs = zeros(len(poses))
         for i in range(0,len(poses),500000):
-            print '%d/%d'%(i,len(poses))
+            log.info('%d/%d',i,len(poses))
             probs[i:(i+500000)] = densityfn(poses[i:(i+500000),:]);
         if marginalizeangle:
             probsxy = mean(reshape(probs,(A.shape[0],A.shape[1]*A.shape[2])),axis=0)
@@ -617,7 +621,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.robot.SetDOFValues(solution,self.manip.GetArmIndices())
                     robotlocs.append((self.robot.GetTransform(),self.robot.GetDOFValues()))
         try:
-            print 'number of locations: ',len(robotlocs)
+            log.info('number of locations %d',len(robotlocs))
             with self.env:
                 self.env.Remove(self.robot)
                 newrobots = []
@@ -639,8 +643,9 @@ class InverseReachabilityModel(DatabaseGenerator):
             self.env.AddRobot(self.robot)
 
     def show(self,options=None):
-        if len(self.env.GetViewer().GetXMLId()) == 0:
+        if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         maxnumber=20 if options is None else options.show_maxnumber
         transparency=0.8 if options is None else options.show_transparency
         with self.env:
@@ -652,7 +657,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     for geom in link.GetGeometries():
                         geom.SetTransparency(transparency)
                 newrobots.append(newrobot)
-            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetJointLimits()]
+            lower,upper = [v[self.manip.GetArmIndices()] for v in self.robot.GetDOFLimits()]
         while True:
             # find a random position
             with self.robot:
@@ -664,7 +669,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             with self.env:
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,logllthresh=1.0)
                 if densityfn is None:
-                    print 'no distribution exists'
+                    log.warn('no distribution exists')
                     continue
                 goals = []
                 while len(goals) < maxnumber:
@@ -680,7 +685,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                             if len(goals) >= maxnumber:
                                 break
                         else:
-                            print 'failed to sample'
+                            log.warn('failed to sample')
             try:
                 h=self.env.plot3(Tgrasp[0:3,3],20.0)
                 with self.env:

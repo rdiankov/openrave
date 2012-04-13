@@ -1,15 +1,15 @@
 /***************************************************************************\
-|* Function Parser for C++ v4.3                                            *|
+|* Function Parser for C++ v4.4.3                                          *|
 |*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen                                                *|
 \***************************************************************************/
 
-#ifndef ONCE_FPARSER_MPFR_H_
-#define ONCE_FPARSER_MPFR_H_
+#ifndef ONCE_FPARSER_GMPINT_H_
+#define ONCE_FPARSER_GMPINT_H_
 
 #include "fparser.hh"
-#include "mpfr/MpfrFloat.hh"
+#include "mpfr/GmpInt.hh"
 
-class FunctionParser_mpfr: public FunctionParserBase<MpfrFloat> {};
+class FunctionParser_gmpint: public FunctionParserBase<GmpInt> {};
 
 #endif

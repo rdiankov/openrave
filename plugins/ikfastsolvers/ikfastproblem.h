@@ -355,7 +355,7 @@ public:
             }
             int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
-                Sleep(100);
+                usleep(100000);
                 RAVELOG_DEBUG("failed to close pipe\n");
             }
             boost::trim(hasik);
@@ -367,7 +367,7 @@ public:
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
                 //int generateexit = MYPCLOSE(pipe);
                 if( generateexit != 0 ) {
-                    Sleep(100);
+                    usleep(100000);
                     RAVELOG_DEBUG("failed to close pipe\n");
                 }
             }
@@ -389,7 +389,7 @@ public:
         }
         int generateexit = MYPCLOSE(pipe);
         if( generateexit != 0 ) {
-            Sleep(100);
+            usleep(100000);
             RAVELOG_DEBUG("failed to close pipe\n");
         }
 
@@ -405,8 +405,9 @@ public:
                 bsuccess = false;
             }
             else {
-                IkSolverBasePtr iksolver = lib->CreateSolver(GetEnv(), vector<dReal>());
+                IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
                 if( !iksolver ) {
+                    RAVELOG_WARN(str(boost::format("failed to create ik solver %s!")%ikfastname));
                     bsuccess = false;
                 }
                 else {
@@ -484,12 +485,12 @@ public:
         vector<T> vsolutions; vsolutions.reserve(32);
         vector<typename T::IKReal> vjoints(lib->getNumJoints()), vfree(lib->getNumFreeParameters());
         typename T::IKReal eerot[9],eetrans[3];
-        uint32_t runstarttimems = GetMilliTime();
+        uint32_t runstarttimems = utils::GetMilliTime();
         uint32_t runmaxtimems = (uint32_t)(1000*maxtime);
         size_t i = 0;
         for(i = 0; i < vtimes.size(); ++i) {
             // don't want to slow down the tests too much with polling
-            if(( (i%100) == 0) &&( (GetMilliTime() - runstarttimems) > runmaxtimems) ) {
+            if(( (i%100) == 0) &&( (utils::GetMilliTime() - runstarttimems) > runmaxtimems) ) {
                 break;
             }
             for(size_t j = 0; j < vjoints.size(); ++j) {
@@ -501,11 +502,11 @@ public:
             fkfn(&vjoints[0],eetrans,eerot);
             vsolutions.resize(0);
             uint64_t numtoaverage=10;
-            uint64_t starttime = GetNanoPerformanceTime();
+            uint64_t starttime = utils::GetNanoPerformanceTime();
             for(uint64_t j = 0; j < numtoaverage; ++j) {
                 ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
             }
-            vtimes[i] = (GetNanoPerformanceTime()-starttime)/numtoaverage;
+            vtimes[i] = (utils::GetNanoPerformanceTime()-starttime)/numtoaverage;
         }
         while(i-- > 0) {
             sout << vtimes[i] << " ";
@@ -726,7 +727,7 @@ public:
             fsfile >> num_itrs;
         }
 
-        RaveInitRandomGeneration(GetMilliTime());     // have to seed a new number
+        RaveInitRandomGeneration(utils::GetMilliTime());     // have to seed a new number
 
         IkParameterization twrist, twrist_out;
         vector<dReal> vfreeparameters_real, vfreeparameters, vfreeparameters_out;
@@ -773,9 +774,9 @@ public:
                             }
                             else {
                                 switch(RaveRandomInt()%3) {
-                                case 0: vrealsolution[j] = CLAMP_ON_RANGE(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                                case 2: vrealsolution[j] = CLAMP_ON_RANGE(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                                default: vrealsolution[j] = CLAMP_ON_RANGE(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
+                                case 0: vrealsolution[j] = utils::ClampOnRange(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                                case 2: vrealsolution[j] = utils::ClampOnRange(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                                default: vrealsolution[j] = utils::ClampOnRange(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
                                 }
                             }
                         }

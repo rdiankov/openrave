@@ -1,0 +1,118 @@
+<!--
+ *
+ * CSIRO Autonomous Systems Laboratory
+ * Queensland Centre for Advanced Technologies
+ * PO Box 883, Kenmore, QLD 4069, Australia
+ * http://www.ict.csiro.au/
+ *  
+ * Copyright (c) CSIRO 2010
+ *
+ * Nick Hillier
+ *
+ * Simplified version of the bobcat chassis and wheels definition.
+ * Note: if this file is changed, then files that reference common bodies,
+ * (for example the chassis section in "bucket_with_arm.robot.xml")
+ * may also need updating
+-->
+<Robot name="chassis_and_wheels">
+    <KinBody name="car">
+        <Body name="chassis" type="dynamic">
+            <mass type="custom">
+                <total>1475</total>
+                <com>0.0 0 0.0</com>
+                <inertia>374 -1.3 63 1.3 845 -3 63 3 698</inertia>
+            </mass>
+            <geom type="box">
+              <extents>0.001 0.001 0.001</extents>
+            </geom>
+<!--             <Geom type="trimesh">
+                <Render>bobcat_arm_vrml/bobcat_base_model2.wrl.or</Render>
+                <data>bobcat_arm_vrml/bobcat_base_model2.wrl.or</data>
+            </Geom> -->
+        </Body>
+        <Body name="front_left_wheel" type="dynamic">
+            <mass>
+                <total>20</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation> 0.769 0.62 -0.361 </Translation>
+            <Geom type="cylinder">
+                  <radius>0.375</radius>
+                  <height>0.24</height>
+                  <diffuseColor>0.05 0.05 0.05</diffuseColor>
+            </Geom>
+        </Body>
+        <Body name="rear_left_wheel" type="dynamic">
+            <mass>
+                <total>20</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation> -0.261 0.62 -0.361 </Translation>
+            <Geom type="cylinder">
+                  <radius>0.375</radius>
+                  <height>0.24</height>
+                  <diffuseColor>0.05 0.05 0.05</diffuseColor>
+            </Geom>
+        </Body>
+        <Body name="front_right_wheel" type="dynamic">
+            <mass>
+                <total>20</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation> 0.769 -0.62 -0.361 </Translation>
+            <Geom type="cylinder">
+                  <radius>0.375</radius>
+                  <height>0.24</height>
+                  <diffuseColor>0.05 0.05 0.05</diffuseColor>
+            </Geom>
+        </Body>
+        <Body name="rear_right_wheel" type="dynamic">
+            <mass>
+                <total>20</total>
+            </mass>
+            <offsetfrom>chassis</offsetfrom>
+            <Translation> -0.261 -0.62 -0.361 </Translation>
+            <Geom type="cylinder">
+                  <radius>0.375</radius>
+                  <height>0.24</height>
+                  <diffuseColor>0.05 0.05 0.05</diffuseColor>
+            </Geom>
+        </Body>        
+        <Joint name="joint_flwheel_chassis" type="hinge" circular="true">
+            <Body>chassis</Body>
+            <Body>front_left_wheel</Body>
+            <offsetfrom>front_left_wheel</offsetfrom>
+            <Anchor> 0 0 0</Anchor>
+            <axis> 0 1 0 </axis>
+            <maxtorque> 200000 </maxtorque>
+        </Joint>
+        <Joint name="joint_rlwheel_chassis" type="hinge" circular="true">
+            <Body>chassis</Body>
+            <Body>rear_left_wheel</Body>
+            <offsetfrom>rear_left_wheel</offsetfrom>
+            <Anchor> 0 0 0</Anchor>
+            <axis> 0 1 0 </axis>
+            <maxtorque> 200000 </maxtorque>
+        </Joint>
+        <Joint name="joint_rrwheel_chassis" type="hinge" circular="true">
+            <Body>chassis</Body>
+            <Body>rear_right_wheel</Body>
+            <offsetfrom>rear_right_wheel</offsetfrom>
+            <Anchor> 0 0 0</Anchor>
+            <axis> 0 1 0 </axis>
+            <maxtorque> 200000 </maxtorque>
+        </Joint>
+        <Joint name="joint_frwheel_chassis" type="hinge" circular="true">
+            <Body>chassis</Body>
+            <Body>front_right_wheel</Body>
+            <offsetfrom>front_right_wheel</offsetfrom>
+            <Anchor> 0 0 0</Anchor>
+            <axis> 0 1 0 </axis>
+            <maxtorque> 200000 </maxtorque>
+        </Joint>
+    </KinBody>      
+</Robot>
+
+
+
+ 	  	 

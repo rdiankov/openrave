@@ -47,7 +47,7 @@ inline std::string InitializeLanguageCode()
             return "ja";
         }
     }
-    catch(const std::exception& e) {
+    catch(const std::exception&) {
     }
     return "en";
 }

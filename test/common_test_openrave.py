@@ -25,6 +25,8 @@ import fnmatch
 import time
 import os
 import cPickle as pickle
+import logging
+
 _multiprocess_can_split_ = True
 
 g_epsilon = 1e-7
@@ -32,12 +34,37 @@ g_jacobianstep = 0.01
 g_envfiles = ['data/lab1.env.xml','data/pr2wam_test1.env.xml','data/hanoi_complex.env.xml']
 g_robotfiles = ['robots/pr2-beta-static.zae','robots/barrettsegway.robot.xml','robots/neuronics-katana.zae','robots/pa10schunk.robot.xml','robots/barrettwam-dual.robot.xml']
 
+log=logging.getLogger('openravepytest')
+    
 def setup_module(module):
     dbdir = os.path.join(os.getcwd(),'.openravetest')
     os.environ['OPENRAVE_DATABASE'] = dbdir
     os.environ['OPENRAVE_HOME'] = dbdir
+    if hasattr(os,'putenv'):
+        os.putenv('OPENRAVE_DATABASE',dbdir)
+        os.putenv('OPENRAVE_HOME',dbdir)
     RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
-    assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
+    if hasattr(os.path,'samefile'):
+        assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
+    else:
+        assert(RaveGetHomeDirectory()==dbdir)
+    try:
+        colorize=__import__('logutils.colorize',fromlist=['colorize'])
+        handler = colorize.ColorizingStreamHandler()
+        handler.level_map[logging.DEBUG] =(None, 'green', False)
+        handler.level_map[logging.INFO] = (None, None, False)
+        handler.level_map[logging.WARNING] = (None, 'yellow', False)
+        handler.level_map[logging.ERROR] = (None, 'red', False)
+        handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
+    except ImportError:
+        handler = logging.StreamHandler()
+        raveLogVerbose('python logutils not present so cannot colorize python output.')
+
+    handler.setFormatter(logging.Formatter('%(name)s.%(funcName)s (pid='+str(os.getpid())+'): %(message)s'))
+    log.setLevel(logging.INFO)
+    log.addHandler(handler)
+    logging.getLogger('openravepy').setLevel(logging.INFO)
+    logging.getLogger('openravepy').addHandler(handler)
     
 def teardown_module(module):
     RaveDestroy()
@@ -92,21 +119,23 @@ class EnvironmentSetup(object):
     def setup(self):
         self.env=Environment()
         self.env.StopSimulation()
+        self.log = logging.getLogger('openravepytest.'+self.__class__.__name__)
+        
     def teardown(self):
         self.env.Destroy()
         self.env=None
     def LoadDataEnv(self,*args,**kwargs):
-        print 'LoadDataEnv'
+        self.log.info('LoadDataEnv')
         assert(self.env.LoadData(*args,**kwargs))
         self._PreprocessEnv()
     
     def LoadEnv(self,*args,**kwargs):
-        print 'LoadEnv',args,kwargs
+        self.log.info('%r, %r',args,kwargs)
         assert(self.env.Load(*args,**kwargs))
         self._PreprocessEnv()
 
     def LoadRobot(self,*args,**kwargs):
-        print 'LoadRobot',args,kwargs
+        self.log.info('%r, %r',args,kwargs)
         robot=self.env.ReadRobotURI(*args,**kwargs)
         self.env.AddRobot(robot,True)
         self._PreprocessRobot(robot)
@@ -133,3 +162,30 @@ class EnvironmentSetup(object):
             # need to throw exceptions so test fails
             robot.GetController().SendCommand('SetThrowExceptions 1')
             
+def generate_classes(BaseClass, namespace, data):
+    """Used to generate test classes inside a namespace since nose generators do not support classes
+
+    Create the test classes using something like this:
+
+generate_classes(Base, globals(), [
+    ("Test1", expr1),
+    ("Test2", expr2),
+    ("Test3", expr3),
+]) 
+    """
+    for args in data:
+        test_name = args[0]
+        args = args[1:]
+        class DummyClass(BaseClass):
+            def __init__(self, methodName=None):
+                BaseClass.__init__(self, *args)
+
+        # Set the name for this class, and place it into the namespace
+        class_name = "test_" + test_name
+        DummyClass.__name__ = class_name
+        #from sys import modules
+        #setattr(modules[BaseClass.__module__],class_name,DummyClass)
+        if class_name in namespace:
+            raise ValueError("namespace already contains a '%s' object" %class_name)
+        namespace[class_name] = DummyClass
+        

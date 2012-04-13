@@ -258,7 +258,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')>")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName());
@@ -476,7 +476,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')>")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName());
@@ -534,7 +534,7 @@ public:
         }
 
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()>")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName());
         }
         string __str__() {
             KinBody::LinkPtr plink = _pdata->GetOffsetLink();
@@ -975,18 +975,22 @@ public:
         return ReturnTransform(_pbody->GetTransform());
     }
 
-    object GetLinkTransformations() const
+    object GetLinkTransformations(bool returndofbranches=false) const
     {
-        boost::python::list transforms;
+        boost::python::list otransforms;
         vector<Transform> vtransforms;
-        _pbody->GetLinkTransformations(vtransforms);
+        std::vector<int> vdofbranches;
+        _pbody->GetLinkTransformations(vtransforms,vdofbranches);
         FOREACHC(it, vtransforms) {
-            transforms.append(ReturnTransform(*it));
+            otransforms.append(ReturnTransform(*it));
         }
-        return transforms;
+        if( returndofbranches ) {
+            return boost::python::make_tuple(otransforms, toPyArray(vdofbranches));
+        }
+        return otransforms;
     }
 
-    void SetLinkTransformations(object transforms)
+    void SetLinkTransformations(object transforms, object odofbranches=object())
     {
         size_t numtransforms = len(transforms);
         if( numtransforms != _pbody->GetLinks().size() ) {
@@ -996,7 +1000,12 @@ public:
         for(size_t i = 0; i < numtransforms; ++i) {
             vtransforms[i] = ExtractTransform(transforms[i]);
         }
-        _pbody->SetLinkTransformations(vtransforms);
+        if( odofbranches == object() ) {
+            _pbody->SetLinkTransformations(vtransforms);
+        }
+        else {
+            _pbody->SetLinkTransformations(vtransforms, ExtractArray<int>(odofbranches));
+        }
     }
 
     void SetLinkVelocities(object ovelocities)
@@ -1350,7 +1359,7 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d).GetKinBody('%s')>")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
+        return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash());
@@ -1524,44 +1533,54 @@ public:
         object FindIKSolutions(object oparam, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
-            boost::python::list solutions;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
                 if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
-                    return solutions;
+                    return numeric::array(boost::python::list());
                 }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
-                return solutions;
+                return numeric::array(boost::python::list());
             }
+
+            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
             FOREACH(itsol,vsolutions) {
-                solutions.append(toPyArray(*itsol));
+                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                std::copy(itsol->begin(),itsol->end(),ppos);
+                ppos += itsol->size();
             }
-            return solutions;
+            return static_cast<numeric::array>(handle<>(pysolutions));
         }
 
         object FindIKSolutions(object oparam, object freeparams, int filteroptions) const
         {
             std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
-            boost::python::list solutions;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
                 if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
-                    return solutions;
+                    return numeric::array(boost::python::list());
                 }
             }
             // assume transformation matrix
             else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
-                return solutions;
+                return numeric::array(boost::python::list());
             }
+
+            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
             FOREACH(itsol,vsolutions) {
-                solutions.append(toPyArray(*itsol));
+                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                std::copy(itsol->begin(),itsol->end(),ppos);
+                ppos += itsol->size();
             }
-            return solutions;
+            return static_cast<numeric::array>(handle<>(pysolutions));
         }
 
         object GetIkParameterization(IkParameterizationType iktype)
@@ -1663,7 +1682,7 @@ public:
             return _pmanip->GetKinematicsStructureHash();
         }
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')>")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName());
@@ -1724,7 +1743,7 @@ public:
             return _pattached->GetStructureHash();
         }
         string __repr__() {
-            return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')>")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName());
@@ -2222,7 +2241,7 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d).GetRobot('%s')>")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
+        return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
     }
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash());
@@ -2262,6 +2281,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
 
 namespace openravepy
 {
@@ -2269,6 +2290,11 @@ namespace openravepy
 object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
 {
     return object(PyKinBody::PyLinkPtr(new PyKinBody::PyLink(plink,pyenv)));
+}
+
+object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
+{
+    return object(PyKinBody::PyJointPtr(new PyKinBody::PyJoint(pjoint,pyenv)));
 }
 
 KinBody::LinkPtr GetKinBodyLink(object o)
@@ -2298,6 +2324,24 @@ KinBody::JointPtr GetKinBodyJoint(object o)
     return KinBody::JointPtr();
 }
 
+std::string reprPyKinBodyJoint(object o)
+{
+    extract<PyKinBody::PyJointPtr> pyjoint(o);
+    if( pyjoint.check() ) {
+        return ((PyKinBody::PyJointPtr)pyjoint)->__repr__();
+    }
+    return std::string();
+}
+
+std::string strPyKinBodyJoint(object o)
+{
+    extract<PyKinBody::PyJointPtr> pyjoint(o);
+    if( pyjoint.check() ) {
+        return ((PyKinBody::PyJointPtr)pyjoint)->__str__();
+    }
+    return std::string();
+}
+
 KinBodyPtr GetKinBody(object o)
 {
     extract<PyKinBodyPtr> pykinbody(o);
@@ -2310,6 +2354,11 @@ KinBodyPtr GetKinBody(object o)
 KinBodyPtr GetKinBody(PyKinBodyPtr pykinbody)
 {
     return !pykinbody ? KinBodyPtr() : pykinbody->GetBody();
+}
+
+PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
+{
+    return pykinbody->GetEnv();
 }
 
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
@@ -2451,9 +2500,9 @@ void init_openravepy_kinbody()
                         .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
                         .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
                         .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
-                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
+                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, GetLinkTransformations_overloads(args("returndofbranches"), DOXY_FN(KinBody,GetLinkTransformations)))
                         .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
-                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
+                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,SetLinkTransformations_overloads(args("transforms","dofbranches"), DOXY_FN(KinBody,SetLinkTransformations)))
                         .def("SetBodyTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
                         .def("SetLinkVelocities",&PyKinBody::SetLinkVelocities,args("velocities"), DOXY_FN(KinBody,SetLinkVelocities))
                         .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))

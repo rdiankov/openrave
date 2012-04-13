@@ -1,7 +1,7 @@
 /** \example orloadviewer.cpp
     \author Rosen Diankov
 
-    Shows how to load a robot into the openrave environment and start a viewer.
+    Shows how to load a robot into the openrave environment and start a viewer in a separate thread.
 
     Usage:
     \verbatim
@@ -37,10 +37,9 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
     // attach it to the environment:
     penv->AddViewer(viewer);
 
-    // finally you call the viewer's infinite loop (this is why you need a separate thread):
+    // finally call the viewer's infinite loop (this is why a separate thread is needed)
     bool showgui = true;
     viewer->main(showgui);
-
 }
 
 int main(int argc, char ** argv)

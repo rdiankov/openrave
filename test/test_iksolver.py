@@ -77,6 +77,10 @@ class TestIkSolver(EnvironmentSetup):
             robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
             manip = robot.GetActiveManipulator()
             ikparam=manip.GetIkParameterization(IkParameterizationType.Transform6D)
+            assert(ikparam.GetDOF()==6)
+            assert(ikparam.GetDOF(IkParameterizationType.Transform6D)==6)
+            assert(IkParameterization.GetDOFFromType(IkParameterizationType.Transform6D)==6)
+            assert(IkParameterization.GetDOFFromType(ikparam.GetType())==6)
             assert(manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions) is None)
             assert(manip.FindIKSolution(ikparam,0) is not None)
             sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0)
@@ -84,4 +88,27 @@ class TestIkSolver(EnvironmentSetup):
             sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0.03)
             assert(sampler.Sample() is not None)
 
+    def test_jointlimitsfilter(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
 
+        def filtertest(sol,manip,ikparam):
+            return IkFilterReturn.Success
+
+        handle1 = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
+
+        orgvalues = robot.GetDOFValues()
+        joint=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+        joint.SetLimits([-pi+1e-5],[pi-1e-5])
+        robot.SetDOFValues([pi/4,pi/4,pi],[1,5,joint.GetDOFIndex()],False)
+        assert(not env.CheckCollision(robot))
+        T = ikmodel.manip.GetTransform()
+        robot.SetDOFValues(orgvalues)
+        sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)
+
+        joint.SetLimits([-pi],[pi])
+        sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)

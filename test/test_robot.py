@@ -13,7 +13,13 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestRobot(EnvironmentSetup):
+class RunRobot(EnvironmentSetup):
+    def __init__(self,collisioncheckername):
+        self.collisioncheckername = collisioncheckername
+    def setup(self):
+        EnvironmentSetup.setup(self)
+        self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
+
     def test_dualarm_grabbing(self):
         with self.env:
             robot = self.LoadRobot('robots/schunk-lwa3-dual.robot.xml')
@@ -96,7 +102,7 @@ class TestRobot(EnvironmentSetup):
             assert(not robot.CheckSelfCollision())
             assert(not env.CheckCollision(robot))
 
-            print 'Now changing arm joint angles so that the two mugs collide. The checkSelfCollision returns:'
+            self.log.debug('Now changing arm joint angles so that the two mugs collide. The checkSelfCollision returns:')
             collisionJointAngles = array([ -2.38418579e-07,   0.00000000e+00,  -2.96873480e-01, -1.65527940e+00,  -3.82479293e-08,  -1.23165381e-10, 1.35525272e-20]);
             robot.SetDOFValues(collisionJointAngles,rightarm.GetArmIndices())
             robot.SetDOFValues(collisionJointAngles,leftarm.GetArmIndices())
@@ -106,38 +112,28 @@ class TestRobot(EnvironmentSetup):
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))        
 
-    def test_badtrajectory(self):
-        print 'create a discontinuous trajectory and check if robot throws exception'
-        env=self.env
-        robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
-        with env:
-            orgvalues = robot.GetActiveDOFValues()
-            lower,upper = robot.GetDOFLimits()
-            traj=RaveCreateTrajectory(env,'')
-            traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,r_[orgvalues,upper+0.1])
-            assert(traj.GetNumWaypoints()==2)
-            try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
-                self.RunTrajectory(robot,traj)
-                raise ValueError('controller did not throw limit expected exception!')
-            
-            except Exception, e:
-                pass
-
-            traj.Init(robot.GetActiveConfigurationSpecification())
-            traj.Insert(0,r_[lower,upper])
-            assert(traj.GetNumWaypoints()==2)
-            try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
-                self.RunTrajectory(robot,traj)
-                raise ValueError('controller did not throw velocity limit expected exception!')
-            
-            except Exception, e:
-                pass
+#     def test_grabcollision_dynamic(self):
+#         self.log.info('test if can handle grabbed bodies being enabled/disabled')
+#         env=self.env
+#         robot = self.LoadRobot('robots/barrettwam.robot.xml')
+#         with env:
+#             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+#             env.AddKinBody(target,True)
+#             manip=robot.GetActiveManipulator()
+#             target.SetTransform(manip.GetEndEffector().GetTransform())
+#             assert(env.CheckCollision(robot,target))
+#             target.Enable(False)
+#             robot.Grab(target,manip.GetEndEffector())
+#             assert(not robot.CheckSelfCollision())
+#             target.Enable(True)
+#             assert(not robot.CheckSelfCollision())
+#             target.Enable(False)
+#             assert(not robot.CheckSelfCollision())
+#             target.GetLinks()[0].Enable(True)
+#             assert(not robot.CheckSelfCollision())
             
     def test_ikcollision(self):
-        print 'test if can solve IK during collisions'
+        self.log.info('test if can solve IK during collisions')
         env=self.env
         with env:
             robot = self.LoadRobot('robots/pr2-beta-static.zae')
@@ -157,7 +153,8 @@ class TestRobot(EnvironmentSetup):
             robot.SetActiveDOFs(manip.GetArmIndices())
             assert(not manip.CheckEndEffectorCollision(manip.GetTransform()))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
-            
+
+            # with bullet, robot gets into self-collision when first angle reaches 0.5
             robot.SetActiveDOFValues([0.678, 0, 1.75604762, -1.74228108, 0, 0, 0])
             assert(not robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
@@ -226,6 +223,54 @@ class TestRobot(EnvironmentSetup):
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             assert(not manip.CheckEndEffectorCollision(Tmanip))
 
+    def test_badtrajectory(self):
+        self.log.info('create a discontinuous trajectory and check if robot throws exception')
+        env=self.env
+        robot=self.LoadRobot('robots/mitsubishi-pa10.zae')
+        with env:
+            orgvalues = robot.GetActiveDOFValues()
+            lower,upper = robot.GetDOFLimits()
+            traj=RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[orgvalues,upper+0.1])
+            assert(traj.GetNumWaypoints()==2)
+            try:
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                self.RunTrajectory(robot,traj)
+                raise ValueError('controller did not throw limit expected exception!')
+            
+            except Exception, e:
+                pass
+
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,r_[lower,upper])
+            assert(traj.GetNumWaypoints()==2)
+            try:
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                self.RunTrajectory(robot,traj)
+                raise ValueError('controller did not throw velocity limit expected exception!')
+            
+            except Exception, e:
+                pass
+
+    def test_bigrange(self):
+        env=self.env
+        robot=self.LoadRobot('robots/kuka-kr5-r650.zae')
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+        lower,upper = j.GetLimits()
+        assert( upper-lower > 3*pi )
+        robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
+        assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
+        
+        robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
+        ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
+        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+        assert(len(sols)==8)
+        
 # def test_ikgeneration():
 #     import inversekinematics
 #     env = Environment()
@@ -348,3 +393,14 @@ class TestRobot(EnvironmentSetup):
 #     print sol
 #     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
 #     print linalg.norm(target - ikmodel.manip.GetEndEffectorTransform()[0:3,3])
+
+#generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunRobot):
+    def __init__(self):
+        RunRobot.__init__(self, 'ode')
+
+# class test_bullet(RunRobot):
+#     def __init__(self):
+#         RunRobot.__init__(self, 'bullet')
+# 

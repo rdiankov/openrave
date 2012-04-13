@@ -38,9 +38,12 @@ Details
 Every trajectory has a :class:`.ConfigurationSpecification` that defines what is stored in each
 point. This allows points to hold any type of custom information and to synchronize better with the
 configuration spaces of the planners. Use the :meth:`.Trajectory.GetConfigurationSpecification` to
-get the details of what data is in the trajectory and its dimensions. Every point should have a
-**deltatime** value that specifies the time it takes to go to it given the previous point. With this
-convention, the first point's deltatime should be 0.
+get the details of what data is in the trajectory and its dimensions.
+
+Playback
+~~~~~~~~
+
+Every point should have a **deltatime** value that specifies the time it takes to go to it given the previous point, and **velocity** information for each data point. The first point's deltatime should be 0. In order to playback a set of waypoints within the robot's velocity and acceleration limits, use the :meth:`.planningutils.RetimeActiveDOFTrajectory` or :meth:`.planningutils.RetimeAffineTrajectory`. If your configuraiton already has time data, but not velocities, you can specify **hastimestamps=True** to the parameters.
 
 .. _arch_trajectory_format:
 

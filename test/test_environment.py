@@ -21,7 +21,7 @@ class TestEnvironment(EnvironmentSetup):
         self.LoadEnv('../src/models/WAM/wam0.iv')
         
         for fullfilename in locate('*.xml','../src/data'):
-            print 'loading: ',fullfilename
+            self.log.info('loading: %s',fullfilename)
             env.Reset()
             self.LoadEnv(fullfilename)
             
@@ -34,8 +34,16 @@ class TestEnvironment(EnvironmentSetup):
         assert(len(trimesh.vertices)==0)
         
     def test_misc(self):
-        assert(self.env.plot3([0,0,0],10)==None) # no viewer attached
-
+        env=self.env
+        assert(env.plot3([0,0,0],10)==None) # no viewer attached
+        self.LoadEnv('data/lab1.env.xml')
+        bodies = dict([(b,b.GetEnvironmentId()) for b in env.GetBodies()])
+        assert(env.GetBodies()[0] in bodies)
+        assert(bodies[env.GetBodies()[0]] == env.GetBodies()[0].GetEnvironmentId())
+        s = 'this is a test string'
+        env.SetUserData(s)
+        assert(env.GetUserData()==s)
+            
     def test_uri(self):
         env=self.env
         xml="""<environment>
@@ -59,17 +67,22 @@ class TestEnvironment(EnvironmentSetup):
             ab2=body2.ComputeAABB()
             assert( transdist(ab1.pos()*scalefactor,ab2.pos()) <= g_epsilon )
             assert( transdist(ab1.extents()*scalefactor,ab2.extents()) <= g_epsilon )
-
+            for link in body2.GetLinks():
+                for geom in link.GetGeometries():
+                    assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
             if len(body1.GetLinks()) == 1:
                 body3 = env.ReadKinBodyURI(renderfilename,{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
                 env.AddKinBody(body3,True)
                 body3.SetTransform(eye(4))
-                ab3=body2.ComputeAABB()
+                ab3=body3.ComputeAABB()
                 assert( transdist(ab3.pos(),ab2.pos()) <= g_epsilon )
                 assert( transdist(ab3.extents(),ab2.extents()) <= g_epsilon )
+                for link in body3.GetLinks():
+                    for geom in link.GetGeometries():
+                        assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
 
     def test_collada(self):
-        print "test that collada import/export works"
+        self.log.info('test that collada import/export works')
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
         env=self.env
         with env:
@@ -155,13 +168,20 @@ class TestEnvironment(EnvironmentSetup):
             robot0=self.LoadRobot(g_robotfiles[0])
             robot0.SetTransform(eye(4))
             lower,upper = robot0.GetDOFLimits()
-            robot0.SetDOFValues(lower+random.rand(robot0.GetDOF())*(upper-lower))
+            # try to limit circular joints since they throw off precision
+            values = lower+random.rand(robot0.GetDOF())*(upper-lower)
+            for j in robot0.GetJoints():
+                if j.IsCircular(0):
+                    values[j.GetDOFIndex()] = (random.rand()-pi)*2*pi
+            robot0.SetDOFValues(values)
+            
             env.Save('test.dae')
             oldname = robot0.GetName()
             robot0.SetName('__dummy__')
             self.LoadEnv('test.dae')
             robot1=env.GetRobot(oldname)
-            assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= 1e-4 ) # for now have to use this precision until collada-dom can store doubles
+            # for now have to use this precision until collada-dom can store doubles
+            assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= robot0.GetDOF()*1e-4 )
 
     def test_unicode(self):
         env=self.env
@@ -217,3 +237,16 @@ class TestEnvironment(EnvironmentSetup):
             while not robot.GetController().IsDone():
                 env2.StepSimulation(0.01)
             env2.Destroy()
+
+    def test_clone_basic(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+        if not ikmodel.load(checkforloaded=False):
+            ikmodel.autogenerate()
+
+        clonedenv = env.CloneSelf(CloningOptions.Bodies)
+        clonedrobot = clonedenv.GetRobot(robot.GetName())
+        assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
+        

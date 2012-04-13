@@ -42,7 +42,6 @@ except ImportError:
     import openravepy
 
 from openravepy import *
-from openravepy.misc import mkdir_recursive
 
 if __name__ == "__main__":
     parser = OptionParser(usage='usage: %prog pluginname [options] ', description='Sets up a project directory and initial files for creating OpenRAVE plugins and executables.')
@@ -201,14 +200,29 @@ make
 python testplugin.py
 """
 
-    mkdir_recursive(plugindir)
+    try:
+        os.makedirs(plugindir)
+        
+    except OSError:
+        pass
     open(os.path.join(plugindir,pluginname.lower()+'.cpp'),'w').write(code_cpp)
     open(os.path.join(plugindir,'CMakeLists.txt'),'w').write(CMakeLists_txt)
     if not iswindows:
         open(os.path.join(plugindir,'Makefile'),'w').write(Makefile)
-    mkdir_recursive(os.path.join(plugindir,'scenes'))
+
+    try:
+        os.makedirs(os.path.join(plugindir,'scenes'))
+        
+    except OSError:
+        pass
+
     open(os.path.join(plugindir,'scenes','myscene.env.xml'),'w').write(scene_xml)
-    mkdir_recursive(os.path.join(plugindir,'robots'))
+    try:
+        os.makedirs(os.path.join(plugindir,'robots'))
+        
+    except OSError:
+        pass
+    
     open(os.path.join(plugindir,'robots','myrobot.robot.xml'),'w').write(robot_xml)
     open(os.path.join(plugindir,'FindOpenRAVE.cmake'),'w').write("""@FindOpenRAVE@""")
     

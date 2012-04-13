@@ -5,7 +5,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 6)
-set (OPENRAVE_VERSION_PATCH 2)
+set (OPENRAVE_VERSION_PATCH 4)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -660,10 +660,11 @@ endif()
 #endif()
 
 # function expression parser library
-add_subdirectory(3rdparty/fparser-4.3)
-set(FPARSER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/fparser-4.3")
-set(FPARSER_LIBRARY fparser)
-set(FPARSER_FOUND 1)
+find_package(FPARSER 4.4.3)
+if( NOT FPARSER_FOUND )
+  message(STATUS "compiling local fparser library")
+  add_subdirectory(3rdparty/fparser-4.4.3)
+endif()
 
 message(STATUS "compiling local convexdecomposition library")
 add_subdirectory(3rdparty/convexdecomposition)
@@ -769,6 +770,9 @@ if( UNIX OR CYGWIN)
       install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${BASH_COMPLETION_ABSOLUTE_DIR})" COMPONENT openrave)
     endif()
   endif()
+  # don't need symlinks
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.bash" IMMEDIATE @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.bash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
@@ -815,7 +819,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config fparser-dev)
   # developer tools for devs
   set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} python-scipy ipython)
   # add once infinite precision computations are enabled:

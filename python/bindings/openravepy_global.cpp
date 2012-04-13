@@ -108,7 +108,7 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("<AABB([%f,%f,%f],[%f,%f,%f])>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+        return boost::str(boost::format("AABB([%f,%f,%f],[%f,%f,%f])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
     virtual string __str__() {
         return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
@@ -365,7 +365,7 @@ public:
 
     string __repr__() {
         std::stringstream ss;
-        ss << _spec;
+        ss << "ConfigurationSpecification(\"\"\"" << _spec << "\"\"\")";
         return ss.str();
     }
     string __str__() {
@@ -430,6 +430,59 @@ public:
 
     IkParameterizationType GetType() {
         return _param.GetType();
+    }
+
+    int GetDOF() {
+        return _param.GetDOF();
+    }
+
+    int GetDOF(object o) {
+        extract<PyIkParameterization*> pyik(o);
+        if( pyik.check() ) {
+            return ((PyIkParameterization*)pyik)->_param.GetDOF();
+        }
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
+        if( pyikptr.check() ) {
+            return ((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetDOF();
+        }
+        return IkParameterization::GetDOF((IkParameterizationType)extract<IkParameterizationType>(o));
+    }
+
+    int GetNumberOfValues() {
+        return _param.GetNumberOfValues();
+    }
+
+    int GetNumberOfValues(object o) {
+        extract<PyIkParameterization*> pyik(o);
+        if( pyik.check() ) {
+            return ((PyIkParameterization*)pyik)->_param.GetNumberOfValues();
+        }
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
+        if( pyikptr.check() ) {
+            return ((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetNumberOfValues();
+        }
+        return IkParameterization::GetNumberOfValues((IkParameterizationType)extract<IkParameterizationType>(o));
+    }
+
+    PyConfigurationSpecificationPtr GetConfigurationSpecification() {
+        return openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification());
+    }
+
+    PyConfigurationSpecificationPtr GetConfigurationSpecification(object o) {
+        extract<PyIkParameterization*> pyik(o);
+        if( pyik.check() ) {
+            return openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification());
+        }
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
+        if( pyikptr.check() ) {
+            return openravepy::toPyConfigurationSpecification(((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification());
+        }
+        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)extract<IkParameterizationType>(o)));
+    }
+
+    static PyConfigurationSpecificationPtr GetConfigurationSpecificationFromType(IkParameterizationType iktype)
+    {
+        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype));
     }
 
     void SetTransform6D(object o) {
@@ -540,18 +593,29 @@ public:
         return _param.ComputeDistanceSqr(pyikparam->_param);
     }
 
-    object Transform(object otrans)
+    object Transform(object otrans) const
     {
         return toPyIkParameterization(ExtractTransform(otrans) * _param);
     }
 
-    IkParameterization _param;
+    object GetValues() const
+    {
+        vector<dReal> values(_param.GetNumberOfValues());
+        _param.GetValues(values.begin());
+        return toPyArray(values);
+    }
+
+    void SetValues(object ovalues, IkParameterizationType iktype)
+    {
+        vector<dReal> vsetvalues = ExtractArray<dReal>(ovalues);
+        _param.Set(vsetvalues.begin(),iktype);
+    }
 
     string __repr__() {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
-        return boost::str(boost::format("<IkParameterization('%s')>")%ss.str());
+        return boost::str(boost::format("IkParameterization('%s')")%ss.str());
     }
     string __str__() {
         std::stringstream ss;
@@ -562,6 +626,8 @@ public:
     object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
+
+    IkParameterization _param;
 };
 
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
@@ -746,6 +812,27 @@ object RaveGetLoadedInterfaces()
     return ointerfacenames;
 }
 
+PyInterfaceBasePtr RaveClone(PyInterfaceBasePtr pyreference, int cloningoptions)
+{
+    InterfaceBasePtr pclone = OpenRAVE::RaveClone<InterfaceBase>(pyreference->GetInterfaceBase(), cloningoptions);
+    switch(pclone->GetInterfaceType()) {
+    case PT_Planner: return toPyPlanner(RaveInterfaceCast<PlannerBase>(pclone), pyreference->GetEnv());
+    case PT_Robot: return toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyreference->GetEnv());
+    case PT_SensorSystem: return toPySensorSystem(RaveInterfaceCast<SensorSystemBase>(pclone), pyreference->GetEnv());
+    case PT_Controller: return toPyController(RaveInterfaceCast<ControllerBase>(pclone), pyreference->GetEnv());
+    case PT_Module: return toPyModule(RaveInterfaceCast<ModuleBase>(pclone), pyreference->GetEnv());
+    case PT_InverseKinematicsSolver: return toPyIkSolver(RaveInterfaceCast<IkSolverBase>(pclone), pyreference->GetEnv());
+    case PT_KinBody: return toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyreference->GetEnv());
+    case PT_PhysicsEngine: return toPyPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(pclone), pyreference->GetEnv());
+    case PT_Sensor: return toPySensor(RaveInterfaceCast<SensorBase>(pclone), pyreference->GetEnv());
+    case PT_CollisionChecker: return toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyreference->GetEnv());
+    case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyreference->GetEnv());
+    case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyreference->GetEnv());
+    case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyreference->GetEnv());
+    }
+    throw openrave_exception("invalid interface type",ORE_InvalidArguments);
+}
+
 object quatFromAxisAngle1(object oaxis)
 {
     return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis)));
@@ -907,9 +994,14 @@ object normalizeAxisRotation(object axis, object quat)
     return boost::python::make_tuple(res.first,toPyVector4(res.second));
 }
 
-object quatMult(object oquat1, object oquat2)
+object quatMultiply(object oquat1, object oquat2)
 {
-    return toPyVector4(quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
+    return toPyVector4(OpenRAVE::geometry::quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
+}
+
+object quatInverse(object oquat)
+{
+    return toPyVector4(OpenRAVE::geometry::quatInverse(ExtractVector4(oquat)));
 }
 
 object poseMult(object opose1, object opose2)
@@ -970,24 +1062,24 @@ void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal s
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
-void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="")
+void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername);
+    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername,plannerparameters);
 }
 
-void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="")
+void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername);
+    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
 }
 
-void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="")
+void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername);
+    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername,plannerparameters);
 }
 
-void pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="")
+void pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername);
+    OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
 }
 
 object pyMergeTrajectories(object pytrajectories)
@@ -1006,6 +1098,60 @@ object pyMergeTrajectories(object pytrajectories)
         listtrajectories.push_back(openravepy::GetTrajectory(pytrajectory));
     }
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
+}
+
+class PyDHParameter
+{
+public:
+    PyDHParameter() : parentindex(-1), transform(ReturnTransform(Transform())), d(0), a(0), theta(0), alpha(0) {
+    }
+    PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(boost::const_pointer_cast<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
+    }
+    PyDHParameter(object joint, int parentindex, object transform, dReal d, dReal a, dReal theta, dReal alpha) : joint(joint), parentindex(parentindex), transform(transform), d(d), a(a), theta(theta), alpha(alpha) {
+    }
+    virtual ~PyDHParameter() {
+    }
+    string __repr__() {
+        return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(joint)%parentindex%d%a%theta%alpha);
+    }
+    string __str__() {
+        TransformMatrix tm = ExtractTransformMatrix(transform);
+        return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(joint)%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
+    object joint;
+    int parentindex;
+    object transform;
+    dReal d, a, theta, alpha;
+};
+
+object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv)
+{
+    return object(boost::shared_ptr<PyDHParameter>(new PyDHParameter(p,pyenv)));
+}
+
+class DHParameter_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyDHParameter& p)
+    {
+        return boost::python::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
+    }
+};
+
+boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
+{
+    boost::python::list oparameters;
+    std::vector<OpenRAVE::planningutils::DHParameter> vparameters;
+    OpenRAVE::planningutils::GetDHParameters(vparameters,openravepy::GetKinBody(pybody));
+    PyEnvironmentBasePtr pyenv = toPyEnvironment(pybody);
+    FOREACH(itp,vparameters) {
+        oparameters.append(toPyDHParameter(*itp,pyenv));
+    }
+    return oparameters;
 }
 
 class PyManipulatorIKGoalSampler
@@ -1041,13 +1187,26 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
-BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 5)
-BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
-BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 5)
-BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 5)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 
 void init_openravepy_global()
 {
+    enum_<OpenRAVEErrorCode>("ErrorCode" DOXY_ENUM(OpenRAVEErrorCode))
+    .value("Failed",ORE_Failed)
+    .value("InvalidArguments",ORE_InvalidArguments)
+    .value("EnvironmentNotLocked",ORE_EnvironmentNotLocked)
+    .value("CommandNotSupported",ORE_CommandNotSupported)
+    .value("Assert",ORE_Assert)
+    .value("InvalidPlugin",ORE_InvalidPlugin)
+    .value("InvalidInterfaceHash",ORE_InvalidInterfaceHash)
+    .value("NotImplemented",ORE_NotImplemented)
+    .value("InconsistentConstraints",ORE_InconsistentConstraints)
+    .value("NotInitialized",ORE_NotInitialized)
+    .value("InvalidState",ORE_InvalidState)
+    ;
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
     .value("Fatal",Level_Fatal)
     .value("Error",Level_Error)
@@ -1156,6 +1315,10 @@ void init_openravepy_global()
     class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
     .def("close",&PyUserData::close,"force releasing the user handle point.")
     ;
+    class_<PySerializableData, boost::shared_ptr<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData), no_init)
+    .def("Serialize",&PySerializableData::Serialize,args("options"), DOXY_FN(SerializableData, Serialize))
+    .def("Deserialize",&PySerializableData::Deserialize,args("data"), DOXY_FN(SerializableData, Deserialize))
+    ;
 
     class_<PyRay, boost::shared_ptr<PyRay> >("Ray", DOXY_CLASS(geometry::ray))
     .def(init<object,object>(args("pos","dir")))
@@ -1235,8 +1398,14 @@ void init_openravepy_global()
     openravepy::spec_from_group();
 
     {
-        int (*getdof1)(IkParameterizationType) = &IkParameterization::GetDOF;
-        int (*getnumberofvalues1)(IkParameterizationType) = &IkParameterization::GetNumberOfValues;
+        int (PyIkParameterization::*getdof1)() = &PyIkParameterization::GetDOF;
+        int (PyIkParameterization::*getdof2)(object) = &PyIkParameterization::GetDOF;
+        int (*getdofstatic)(IkParameterizationType) = IkParameterization::GetDOF;
+        int (PyIkParameterization::*getnumberofvalues1)() = &PyIkParameterization::GetNumberOfValues;
+        int (PyIkParameterization::*getnumberofvalues2)(object) = &PyIkParameterization::GetNumberOfValues;
+        int (*getnumberofvaluesstatic)(IkParameterizationType) = IkParameterization::GetNumberOfValues;
+        PyConfigurationSpecificationPtr (PyIkParameterization::*GetConfigurationSpecification1)() = &PyIkParameterization::GetConfigurationSpecification;
+        PyConfigurationSpecificationPtr (PyIkParameterization::*GetConfigurationSpecification2)(object) = &PyIkParameterization::GetConfigurationSpecification;
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
@@ -1251,12 +1420,12 @@ void init_openravepy_global()
                                    .def("SetTranslationXY2D",&PyIkParameterization::SetTranslationXY2D,args("pos"), DOXY_FN(IkParameterization,SetTranslationXY2D))
                                    .def("SetTranslationXYOrientation3D",&PyIkParameterization::SetTranslationXYOrientation3D,args("posangle"), DOXY_FN(IkParameterization,SetTranslationXYOrientation3D))
                                    .def("SetTranslationLocalGlobal6D",&PyIkParameterization::SetTranslationLocalGlobal6D,args("localpos","pos"), DOXY_FN(IkParameterization,SetTranslationLocalGlobal6D))
-                                   .def("SetTranslationXAxisAngle4D",&PyIkParameterization::SetTranslationXAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationXAxisAngle4D))
-                                   .def("SetTranslationYAxisAngle4D",&PyIkParameterization::SetTranslationYAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationYAxisAngle4D))
-                                   .def("SetTranslationZAxisAngle4D",&PyIkParameterization::SetTranslationZAxisAngle4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationZAxisAngle4D))
-                                   .def("SetTranslationXAxisAngleZNorm4D",&PyIkParameterization::SetTranslationXAxisAngleZNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationXAxisAngleZNorm4D))
-                                   .def("SetTranslationYAxisAngleXNorm4D",&PyIkParameterization::SetTranslationYAxisAngleXNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationYAxisAngleXNorm4D))
-                                   .def("SetTranslationZAxisAngleYNorm4D",&PyIkParameterization::SetTranslationZAxisAngleYNorm4D,args("quat"), DOXY_FN(IkParameterization,SetTranslationZAxisAngleYNorm4D))
+                                   .def("SetTranslationXAxisAngle4D",&PyIkParameterization::SetTranslationXAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationXAxisAngle4D))
+                                   .def("SetTranslationYAxisAngle4D",&PyIkParameterization::SetTranslationYAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationYAxisAngle4D))
+                                   .def("SetTranslationZAxisAngle4D",&PyIkParameterization::SetTranslationZAxisAngle4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationZAxisAngle4D))
+                                   .def("SetTranslationXAxisAngleZNorm4D",&PyIkParameterization::SetTranslationXAxisAngleZNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationXAxisAngleZNorm4D))
+                                   .def("SetTranslationYAxisAngleXNorm4D",&PyIkParameterization::SetTranslationYAxisAngleXNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationYAxisAngleXNorm4D))
+                                   .def("SetTranslationZAxisAngleYNorm4D",&PyIkParameterization::SetTranslationZAxisAngleYNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationZAxisAngleYNorm4D))
                                    .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
                                    .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
                                    .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
@@ -1273,14 +1442,26 @@ void init_openravepy_global()
                                    .def("GetTranslationXAxisAngleZNorm4D",&PyIkParameterization::GetTranslationXAxisAngleZNorm4D, DOXY_FN(IkParameterization,GetTranslationXAxisAngleZNorm4D))
                                    .def("GetTranslationYAxisAngleXNorm4D",&PyIkParameterization::GetTranslationYAxisAngleXNorm4D, DOXY_FN(IkParameterization,GetTranslationYAxisAngleXNorm4D))
                                    .def("GetTranslationZAxisAngleYNorm4D",&PyIkParameterization::GetTranslationZAxisAngleYNorm4D, DOXY_FN(IkParameterization,GetTranslationZAxisAngleYNorm4D))
-                                   .def("GetDOF", getdof1,args("type"), DOXY_FN(IkParameterization,GetDOF))
-                                   .staticmethod("GetDOF")
-                                   .def("GetNumberOfValues",getnumberofvalues1,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
-                                   .staticmethod("GetNumberOfValues")
-                                   .def_pickle(IkParameterization_pickle_suite())
-
+                                   .def("GetDOF", getdof1, DOXY_FN(IkParameterization,GetDOF))
+                                   .def("GetDOF", getdof2, args("type"), DOXY_FN(IkParameterization,GetDOF))
+                                   .def("GetDOFFromType", getdofstatic,args("type"), DOXY_FN(IkParameterization,GetDOF))
+                                   .staticmethod("GetDOFFromType")
+                                   .def("GetNumberOfValues", getnumberofvalues1, DOXY_FN(IkParameterization,GetNumberOfValues))
+                                   .def("GetNumberOfValues", getnumberofvalues2, args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
+                                   .def("GetNumberOfValuesFromType", getnumberofvaluesstatic,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
+                                   .staticmethod("GetNumberOfValuesFromType")
+                                   .def("GetConfigurationSpecification", GetConfigurationSpecification1, DOXY_FN(IkParameterization,GetConfigurationSpecification))
+                                   .def("GetConfigurationSpecification", GetConfigurationSpecification2, args("type"), DOXY_FN(IkParameterization,GetConfigurationSpecification))
+                                   .def("GetConfigurationSpecificationFromType", PyIkParameterization::GetConfigurationSpecificationFromType,args("type"), DOXY_FN(IkParameterization,GetConfigurationSpecification))
+                                   .staticmethod("GetConfigurationSpecificationFromType")
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
                                    .def("Transform",&PyIkParameterization::Transform,"Transforms the IK parameterization by this (T * ik)")
+                                   .def("GetValues",&PyIkParameterization::GetValues, DOXY_FN(IkParameterization,GetValues))
+                                   .def("SetValues",&PyIkParameterization::SetValues, args("values","type"), DOXY_FN(IkParameterization,SetValues))
+                                   .def("__str__",&PyIkParameterization::__str__)
+                                   .def("__unicode__",&PyIkParameterization::__unicode__)
+                                   .def("__repr__",&PyIkParameterization::__repr__)
+                                   .def_pickle(IkParameterization_pickle_suite())
                                    // deprecated
                                    .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
@@ -1296,9 +1477,6 @@ void init_openravepy_global()
                                    .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
                                    .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
                                    .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
-                                   .def("__str__",&PyIkParameterization::__str__)
-                                   .def("__unicode__",&PyIkParameterization::__unicode__)
-                                   .def("__repr__",&PyIkParameterization::__repr__)
         ;
         ikparameterization.attr("Type") = iktype;
     }
@@ -1311,19 +1489,37 @@ void init_openravepy_global()
                   .staticmethod("ReverseTrajectory")
                   .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))
                   .staticmethod("VerifyTrajectory")
-                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername"),DOXY_FN1(SmoothActiveDOFTrajectory)))
+                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername","plannerparameters"),DOXY_FN1(SmoothActiveDOFTrajectory)))
                   .staticmethod("SmoothActiveDOFTrajectory")
-                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername"),DOXY_FN1(SmoothAffineTrajectory)))
+                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters"),DOXY_FN1(SmoothAffineTrajectory)))
                   .staticmethod("SmoothAffineTrajectory")
-                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername"),DOXY_FN1(RetimeActiveDOFTrajectory)))
+                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername","plannerparameters"),DOXY_FN1(RetimeActiveDOFTrajectory)))
                   .staticmethod("RetimeActiveDOFTrajectory")
-                  .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername"),DOXY_FN1(RetimeAffineTrajectory)))
+                  .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters"),DOXY_FN1(RetimeAffineTrajectory)))
                   .staticmethod("RetimeAffineTrajectory")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
+                  .def("GetDHParameters",planningutils::pyGetDHParameters,args("body"),DOXY_FN1(GetDHParameters))
+                  .staticmethod("GetDHParameters")
         ;
 
-        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(ManipulatorIKGoalSampler), no_init)
+        class_<planningutils::PyDHParameter, boost::shared_ptr<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
+        .def(init<>())
+        .def(init<object, int, object, dReal, dReal, dReal, dReal>(args("joint","parentindex","transform","d","a","theta","alpha")))
+        .def_readwrite("joint",&planningutils::PyDHParameter::joint)
+        .def_readwrite("transform",&planningutils::PyDHParameter::transform)
+        .def_readwrite("d",&planningutils::PyDHParameter::d)
+        .def_readwrite("a",&planningutils::PyDHParameter::a)
+        .def_readwrite("theta",&planningutils::PyDHParameter::theta)
+        .def_readwrite("alpha",&planningutils::PyDHParameter::alpha)
+        .def("__str__",&planningutils::PyDHParameter::__str__)
+        .def("__unicode__",&planningutils::PyDHParameter::__unicode__)
+        .def("__repr__",&planningutils::PyDHParameter::__repr__)
+        .def_pickle(planningutils::DHParameter_pickle_suite())
+        ;
+
+
+        class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample))
         ;
@@ -1348,6 +1544,7 @@ void init_openravepy_global()
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin,args("filename"),DOXY_FN1(RaveLoadPlugins));
     def("RaveHasInterface",OpenRAVE::RaveHasInterface,args("type","name"),DOXY_FN1(RaveHasInterface));
     def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    def("RaveClone",openravepy::RaveClone,args("ref","cloningoptions"), DOXY_FN1(RaveClone));
 
     def("raveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
@@ -1378,8 +1575,9 @@ void init_openravepy_global()
     def("poseFromMatrices",openravepy::poseFromMatrices, args("transforms"), "Converts an array/list of 4x4 matrices to a Nx7 array where each row is quaternion+translation representation.\n\n:param transforms: list of 3x4 or 4x4 affine matrices\n");
     def("invertPoses",openravepy::invertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"), DOXY_FN1(quatRotateDirection));
-    def("quatMult",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
-    def("quatMultiply",openravepy::quatMult,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("quatMult",openravepy::quatMultiply,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("quatMultiply",openravepy::quatMultiply,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("quatInverse",openravepy::quatInverse,args("quat"),DOXY_FN1(quatInverse));
     def("poseMult",openravepy::poseMult,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
     def("poseTransformPoints",openravepy::poseTransformPoints,args("pose","points"),"left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
     def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");

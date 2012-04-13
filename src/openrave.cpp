@@ -40,8 +40,8 @@ void MainOpenRAVEThread();
 #ifdef _WIN32
 #define usleep(micro) Sleep((micro)/1000)
 #else
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 #include <sys/time.h>
 #endif
 
@@ -50,7 +50,7 @@ void MainOpenRAVEThread();
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr s_penv;
-static boost::shared_ptr<boost::thread> s_mainThread;
+//static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
@@ -89,7 +89,7 @@ int main(int argc, char ** argv)
     // parse command line arguments
     int i = 1;
     while(i < argc) {
-        if((stricmp(argv[i], "-h") == 0)||(stricmp(argv[i], "-?") == 0)||(stricmp(argv[i], "/?") == 0)||(stricmp(argv[i], "--help") == 0)||(stricmp(argv[i], "-help") == 0)) {
+        if((_stricmp(argv[i], "-h") == 0)||(_stricmp(argv[i], "-?") == 0)||(_stricmp(argv[i], "/?") == 0)||(_stricmp(argv[i], "--help") == 0)||(_stricmp(argv[i], "-help") == 0)) {
             RAVELOG_INFO("OpenRAVE Usage\n"
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
@@ -109,43 +109,43 @@ int main(int argc, char ** argv)
                          "-f [scene]         Load a openrave environment file\n\n");
             return 0;
         }
-        else if((stricmp(argv[i], "--loadplugin") == 0)||(stricmp(argv[i], "-loadplugin") == 0)) {
+        else if((_stricmp(argv[i], "--loadplugin") == 0)||(_stricmp(argv[i], "-loadplugin") == 0)) {
             listLoadPlugins.push_back(argv[i+1]);
             i += 2;
         }
-        else if((stricmp(argv[i], "--listplugins") == 0)||(stricmp(argv[i], "-listplugins") == 0)) {
+        else if((_stricmp(argv[i], "--listplugins") == 0)||(_stricmp(argv[i], "-listplugins") == 0)) {
             bListPlugins = true;
             i++;
         }
-        else if( stricmp(argv[i], "--version") == 0 ) {
+        else if( _stricmp(argv[i], "--version") == 0 ) {
             printf("%s\n",OPENRAVE_VERSION_STRING);
             return 0;
         }
-        else if( stricmp(argv[i], "-f") == 0 ) {
+        else if( _stricmp(argv[i], "-f") == 0 ) {
             s_sceneFile = argv[i+1];
             i += 2;
         }
-        else if( stricmp(argv[i], "-save") == 0 ) {
+        else if( _stricmp(argv[i], "-save") == 0 ) {
             s_saveScene = argv[i+1];
             i += 2;
         }
-        else if((stricmp(argv[i], "--collision") == 0)||(stricmp(argv[i], "-collision") == 0)) {
+        else if((_stricmp(argv[i], "--collision") == 0)||(_stricmp(argv[i], "-collision") == 0)) {
             collisionchecker = argv[i+1];
             i += 2;
         }
-        else if((stricmp(argv[i], "--viewer") == 0)||(stricmp(argv[i], "-viewer") == 0)) {
+        else if((_stricmp(argv[i], "--viewer") == 0)||(_stricmp(argv[i], "-viewer") == 0)) {
             s_viewerName.reset(new string(argv[i+1]));
             i += 2;
         }
-        else if((stricmp(argv[i], "--physics") == 0)||(stricmp(argv[i], "-physics") == 0)) {
+        else if((_stricmp(argv[i], "--physics") == 0)||(_stricmp(argv[i], "-physics") == 0)) {
             physicsengine = argv[i+1];
             i += 2;
         }
-        else if((stricmp(argv[i],"--server") == 0)||(stricmp(argv[i],"-server") == 0)) {
+        else if((_stricmp(argv[i],"--server") == 0)||(_stricmp(argv[i],"-server") == 0)) {
             servername = argv[i+1];
             i += 2;
         }
-        else if((stricmp(argv[i], "--module") == 0)||(stricmp(argv[i], "-problem") == 0)) {
+        else if((_stricmp(argv[i], "--module") == 0)||(_stricmp(argv[i], "-problem") == 0)) {
             s_listModules.push_back(pair<string, string>(argv[i+1], ""));
             i += 2;
 
@@ -155,30 +155,30 @@ int main(int argc, char ** argv)
                 i++;
             }
         }
-        else if((stricmp(argv[i], "--nogui") == 0)||(stricmp(argv[i], "-nogui") == 0)) {
+        else if((_stricmp(argv[i], "--nogui") == 0)||(_stricmp(argv[i], "-nogui") == 0)) {
             bDisplayGUI = false;
             i++;
         }
-        else if((stricmp(argv[i], "--hidegui") == 0)||(stricmp(argv[i], "-hidegui") == 0)) {
+        else if((_stricmp(argv[i], "--hidegui") == 0)||(_stricmp(argv[i], "-hidegui") == 0)) {
             bShowGUI = false;
             i++;
         }
-        else if( stricmp(argv[i], "-d") == 0 ) {
+        else if( _stricmp(argv[i], "-d") == 0 ) {
             debuglevel = (DebugLevel)atoi(argv[i+1]);
             i += 2;
         }
-        else if( stricmp(argv[i], "-wdims") == 0 ) {
+        else if( _stricmp(argv[i], "-wdims") == 0 ) {
             s_WindowWidth = atoi(argv[i+1]);
             s_WindowHeight = atoi(argv[i+2]);
             i += 3;
         }
-        else if( stricmp(argv[i], "-wpos") == 0 ) {
+        else if( _stricmp(argv[i], "-wpos") == 0 ) {
             s_WindowPosX = atoi(argv[i+1]);
             s_WindowPosY = atoi(argv[i+2]);
             s_bSetWindowPosition = true;
             i += 3;
         }
-        else if((stricmp(argv[i], "--serverport") == 0)||(stricmp(argv[i], "-serverport") == 0)) {
+        else if((_stricmp(argv[i], "--serverport") == 0)||(_stricmp(argv[i], "-serverport") == 0)) {
             nServPort = atoi(argv[i+1]);
             i += 2;
         }
@@ -269,9 +269,11 @@ int main(int argc, char ** argv)
         }
     }
 
-    s_bThreadDestroyed = false;
-    s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
-    s_mainThread->join();
+    // mac osx requires the main thread to be the gui thread...
+    //s_bThreadDestroyed = false;
+    //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread->join();
+    MainOpenRAVEThread();
     s_penv.reset();
     RaveDestroy();
     return 0;
@@ -282,7 +284,7 @@ void MainOpenRAVEThread()
 {
     EnvironmentBasePtr penv = s_penv; // need to do this since s_penv can be reset at any time
     ViewerBasePtr pviewer;
-    if( bDisplayGUI && (!s_viewerName ||(s_viewerName->size()>0)) ) {
+    if( bDisplayGUI && (!s_viewerName ||s_viewerName->size()>0) ) {
         // find a viewer
         if( !!s_viewerName &&(s_viewerName->size() > 0)) {
             pviewer = RaveCreateViewer(penv, *s_viewerName);
@@ -372,6 +374,7 @@ void MainOpenRAVEThread()
 
 void sigint_handler(int sig)
 {
+    s_bThreadDestroyed = true;
     RaveDestroy();
     s_penv.reset();
 #ifndef _WIN32

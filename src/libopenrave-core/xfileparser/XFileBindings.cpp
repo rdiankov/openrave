@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2011-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 #include "XFileHelper.h"
 #include "XFileParser.h"
 
-using namespace OpenRAVE;
-using namespace std;
+#include <boost/lexical_cast.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -29,6 +28,30 @@ using namespace std;
 
 class XFileReader
 {
+    class JointData : public SerializableData
+    {
+public:
+        virtual void Serialize(std::ostream& O, int options=0) const {
+            O << _mapjoints.size() << endl;
+            FOREACHC(it,_mapjoints) {
+                O << it->first << " = " << it->second << endl;
+            }
+        }
+
+        virtual void Deserialize(std::istream& I) {
+            _mapjoints.clear();
+            int num = 0;
+            I >> num;
+            for(int i = 0; i < num; ++i) {
+                std::string name,equals,jointindex;
+                I >> name >> equals >> jointindex;
+                _mapjoints[name] = boost::lexical_cast<int>(jointindex);
+            }
+        }
+
+        std::map<std::string,int > _mapjoints; ///< original joint index
+    };
+
 public:
     XFileReader(EnvironmentBasePtr penv) : _penv(penv) {
     }
@@ -121,7 +144,7 @@ protected:
         _prefix = "";
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -136,7 +159,7 @@ protected:
                 _prefix = itatt->second;
             }
             else if( itatt->first == "flipyz" ) {
-                _bFlipYZ = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bFlipYZ = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "name" ) {
                 pbody->SetName(itatt->second);
@@ -154,13 +177,27 @@ protected:
             t = parent->GetTransform();
         }
         _Read(pbody, parent, scene->mRootNode, t, 0);
-        // remove any mimic properties from the main joints
-        FOREACH(itjoint,pbody->_vecjoints) {
-            (*itjoint)->_vmimic[0].reset();
+
+        // remove any NULL joints or mimic properties from the main joints...?
+        int ijoint = 0;
+        vector<KinBody::JointPtr> vecjoints; vecjoints.reserve(pbody->_vecjoints.size());
+        vecjoints.swap(pbody->_vecjoints);
+        boost::shared_ptr<JointData> jointdata(new JointData());
+        FOREACH(itjoint,vecjoints) {
+            if( !!*itjoint ) {
+                if( !!(*itjoint)->_vmimic[0] ) {
+                    RAVELOG_WARN(str(boost::format("joint %s had mimic set!\n")%(*itjoint)->GetName()));
+                    (*itjoint)->_vmimic[0].reset();
+                }
+                jointdata->_mapjoints[(*itjoint)->GetName()] = ijoint;
+                pbody->_vecjoints.push_back(*itjoint);
+            }
+            ++ijoint;
         }
+        pbody->SetUserData(UserDataPtr(jointdata));
     }
 
-    void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform& transparent, int level)
+    void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform &transparent, int level)
     {
         BOOST_ASSERT(!!node);
         Transform tnode = transparent * ExtractTransform(node->mTrafoMatrix);
@@ -313,7 +350,7 @@ protected:
         }
     }
 
-    Transform ExtractTransform(const aiMatrix4x4& aimatrix)
+    Transform ExtractTransform(const aiMatrix4x4 &aimatrix)
     {
         TransformMatrix tmnode;
         tmnode.m[0] = aimatrix.a1; tmnode.m[1] = aimatrix.a2; tmnode.m[2] = aimatrix.a3; tmnode.trans[0] = aimatrix.a4*_vScaleGeometry.x;
@@ -330,7 +367,7 @@ protected:
     bool _bSkipGeometry;
 };
 
-bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts)
+bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList &atts)
 {
     if( !ppbody ) {
         ppbody = RaveCreateKinBody(penv,"");
@@ -341,7 +378,7 @@ bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
     return true;
 }
 
-bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts)
+bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList &atts)
 {
     if( !pprobot ) {
         pprobot = RaveCreateRobot(penv,"GenericRobot");
@@ -352,7 +389,7 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts)
+bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList &atts)
 {
     if( !ppbody ) {
         ppbody = RaveCreateKinBody(penv,"");
@@ -362,7 +399,7 @@ bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts)
+bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList &atts)
 {
     if( !pprobot ) {
         pprobot = RaveCreateRobot(penv,"GenericRobot");

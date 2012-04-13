@@ -17,16 +17,18 @@
 #include "plannerparameters.h"
 #include <fstream>
 
-#include "ParabolicPathSmooth/DynamicPath.h"
-
 #include <openrave/planningutils.h>
 
-class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomSamplerBase
+#include "ParabolicPathSmooth/DynamicPath.h"
+
+namespace ParabolicRamp = ParabolicRampInternal;
+
+class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
 public:
     ParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nInterfae to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n";
+        __description = ":Interface Author: Rosen Diankov\n\nInterfae to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -72,7 +74,7 @@ public:
             statesaver.reset(new RobotBase::RobotStateSaver(_probot));
         }
 
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
@@ -114,31 +116,37 @@ public:
         try {
             ParabolicRamp::DynamicPath dynamicpath;
             dynamicpath.Init(parameters->_vConfigVelocityLimit,parameters->_vConfigAccelerationLimit);
+            dynamicpath._multidofinterp = _parameters->_multidofinterp;
             dynamicpath.SetJointLimits(parameters->_vConfigLowerLimit,parameters->_vConfigUpperLimit);
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
-            RAVELOG_DEBUG(str(boost::format("initial path size %d, duration: %f")%path.size()%dynamicpath.GetTotalTime()));
+            RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f")%path.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance));
 
             ParabolicRamp::Vector tol = parameters->_vConfigResolution;
             FOREACH(it,tol) {
                 *it *= parameters->_pointtolerance;
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
-            int numshortcuts=0;
-            if( !!_parameters->_setstatefn ) {
-                dynamicpath.Shortcut(parameters->_nMaxIterations,checker);
+
+            PlannerProgress progress; progress._iteration=0;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return PS_Interrupted;
             }
 
-            ConfigurationSpecification oldspec = ptraj->GetConfigurationSpecification();
+            int numshortcuts=0;
+            if( !!_parameters->_setstatefn ) {
+                dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this);
+            }
+
+            progress._iteration=1;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+
+            ConfigurationSpecification oldspec = _parameters->_configurationspecification;
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddVelocityGroups(true);
-            int waypointoffset = newspec.GetDOF();
-            ConfigurationSpecification::Group gwaypoint;
-            gwaypoint.offset = waypointoffset;
-            gwaypoint.dof = 1;
-            gwaypoint.name = "iswaypoint";
-            gwaypoint.interpolation = "next";
-            newspec._vgroups.push_back(gwaypoint);
+            int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
 
             int timeoffset=-1;
             FOREACH(itgroup,newspec._vgroups) {
@@ -203,6 +211,9 @@ public:
             RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const std::exception& ex) {
+            stringstream sdesc; sdesc << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            sdesc << "robot: " << _probot->GetTransform();
+            ptraj->SetDescription(sdesc.str());
             string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
             ofstream f(filename.c_str());
@@ -210,7 +221,7 @@ public:
             ptraj->serialize(f);
             return PS_Failed;
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return PS_HasSolution;
     }
 
@@ -249,7 +260,7 @@ public:
         return true;
     }
 
-    virtual dReal Rand()
+    virtual ParabolicRamp::Real Rand()
     {
         std::vector<dReal> vsamples;
         _puniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);

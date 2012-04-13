@@ -18,6 +18,18 @@
 - \subpage installation_windows
 - \subpage installation_macosx
 
+If using bash shell and installing openrave to a local folder other than /usr or /usr/local, can execute the following script in \b ~/.bashrc to set all necessary paths to use openrave:
+
+\verbatim
+source /my/openraveinstall/share/openrave-x.y/openrave.bash
+\endverbatim
+
+A more general method independent of openrave versions is
+
+\verbatim
+source `/my/openraveinstall/bin/openrave-config --share-dir`/openrave.bash
+\endverbatim
+
 \en  \section installation_cmake CMake Options
 \ja \section installation_cmake CMakeを行う際のオプション設定について
 

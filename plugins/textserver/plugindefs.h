@@ -49,44 +49,11 @@
 
 #endif
 
+#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
+
 #include <stdint.h>
 #include <fstream>
 #include <iostream>
-
-using namespace std;
-
-#include <sys/timeb.h>    // ftime(), struct timeb
-
-#ifndef _WIN32
-#include <sys/time.h>
-#define Sleep(milli) usleep(1000*milli)
-#else
-#include <windows.h>
-#endif
-
-template<class T>
-inline T CLAMP_ON_RANGE(T value, T min, T max)
-{
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
-#define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
-
-inline uint64_t GetMicroTime()
-{
-#ifdef _WIN32
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-#else
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uint64_t)t.tv_sec*1000000+t.tv_usec;
-#endif
-}
 
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
@@ -97,12 +64,7 @@ inline uint64_t GetMicroTime()
 #include <boost/tuple/tuple.hpp>
 #include <boost/assert.hpp>
 
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
-
+using namespace std;
 using namespace OpenRAVE;
 
 #endif

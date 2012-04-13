@@ -20,3 +20,4 @@ def test_pluginloading():
     assert(RaveLoadPlugin('libikfastsolvers'))
     env=Environment()
     assert(RaveCreateProblem(env,'ikfast') is not None)
+

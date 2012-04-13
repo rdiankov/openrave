@@ -23,6 +23,7 @@
 #define RAVE_LIBOPENRAVE_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/utils.h>
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
@@ -91,93 +92,15 @@
 #include <crlibm.h> // robust/accurate math
 #endif
 
-#include <time.h>
-
-#ifndef _WIN32
-#if POSIX_TIMERS <= 0 && _POSIX_TIMERS <= 0
-#include <sys/time.h>
-#endif
-#define Sleep(milli) usleep(1000*milli)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <sys/timeb.h>    // ftime(), struct timeb
-#endif
-
-#ifdef _WIN32
-inline static uint32_t GetMilliTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (uint32_t)((count.QuadPart * 1000) / freq.QuadPart);
-}
-
-inline static uint64_t GetMicroTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000) / freq.QuadPart;
-}
-
-inline static uint64_t GetNanoTime()
-{
-    LARGE_INTEGER count, freq;
-    QueryPerformanceCounter(&count);
-    QueryPerformanceFrequency(&freq);
-    return (count.QuadPart * 1000000000) / freq.QuadPart;
-}
-
-#else
-
-inline static void getWallTime(uint32_t& sec, uint32_t& nsec)
-{
-#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0)
-    struct timespec start;
-    clock_gettime(CLOCK_REALTIME, &start);
-    sec  = start.tv_sec;
-    nsec = start.tv_nsec;
-#else
-    struct timeval timeofday;
-    gettimeofday(&timeofday,NULL);
-    sec  = timeofday.tv_sec;
-    nsec = timeofday.tv_usec * 1000;
-#endif
-}
-
-inline static uint64_t GetNanoTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000000 + (uint64_t)nsec;
-}
-
-inline static uint64_t GetMicroTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000000 + (uint64_t)nsec/1000;
-}
-
-inline static uint32_t GetMilliTime()
-{
-    uint32_t sec,nsec;
-    getWallTime(sec,nsec);
-    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
-}
-
-#endif
-
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
 #ifdef _WIN32
 #elif defined(__APPLE_CC__)
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 #else
-#define strnicmp strncasecmp
-#define stricmp strcasecmp
+#define _strnicmp strncasecmp
+#define _stricmp strcasecmp
 
 #endif
 
@@ -189,6 +112,9 @@ inline static uint32_t GetMilliTime()
 #endif
 
 namespace OpenRAVE {
+
+static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
+static const dReal g_fEpsilonEvalJointLimit = RavePow(g_fEpsilon,0.7);
 
 template <typename T>
 class TransformSaver
@@ -207,34 +133,6 @@ private:
     T _plink;
     Transform _t;
 };
-
-struct null_deleter
-{
-    void operator()(void const *) const {
-    }
-};
-
-template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
-{
-    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
-}
-
-
-// returns a lower case version of the string
-inline std::string tolowerstring(const std::string & s)
-{
-    std::string d = s;
-    std::transform(d.begin(), d.end(), d.begin(), ::tolower);
-    return d;
-}
-
-OPENRAVE_API std::string GetMD5HashString(const std::string& s);
-OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
-
-/// \brief search and replace strings for all pairs. Internally first checks the longest strings before the shortest
-///
-/// \return returns a reference to the out string
-OPENRAVE_API std::string& SearchAndReplace(std::string& out, const std::string& in, const std::vector< std::pair<std::string, std::string> >& pairs);
 
 #define SERIALIZATION_PRECISION 4
 template<typename T>
@@ -281,42 +179,18 @@ inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
     SerializeRound(o,t.trans);
 }
 
-template <typename T>
-inline T NORMALIZE_ANGLE(T theta, T min, T max)
+inline int CountCircularBranches(dReal angle)
 {
-    if (theta < min) {
-        theta += T(2*PI);
-        while (theta < min) {
-            theta += T(2*PI);
-        }
+    if( angle > PI ) {
+        return static_cast<int>((angle+PI)/(2*PI));
     }
-    else if (theta > max) {
-        theta -= T(2*PI);
-        while (theta > max) {
-            theta -= T(2*PI);
-        }
+    else if( angle < -PI ) {
+        return static_cast<int>((angle-PI)/(2*PI));
     }
-    return theta;
+    return 0;
 }
 
-template <typename T>
-inline T ANGLE_DIFF(T f0, T f1)
-{
-    return NORMALIZE_ANGLE(f0-f1, T(-PI), T(PI));
-}
-
-template <typename T>
-inline T ANGLE_INTERPOLATION(T start, T end, T fraction, T lowerLimit, T upperLimit)
-{
-    return NORMALIZE_ANGLE(start + fraction * ANGLE_DIFF(end,start), lowerLimit, upperLimit);
-}
-
-template <typename T>
-inline T Sqr(T t) {
-    return t*t;
-}
-
-inline static dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();
     dReal e2 = (t1.rot+t2.rot).lengthsqr4();
@@ -325,51 +199,6 @@ inline static dReal TransformDistanceFast(const Transform& t1, const Transform& 
 }
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
-
-// if modifying check modify ravep.h too!
-inline bool IsValidCharInName(char c) {
-    return c < 0 || c >= 33; //isalnum(c) || c == '_' || c == '-' || c == '.' || c == '/';
-}
-inline bool IsValidName(const std::string& s) {
-    if( s.size() == 0 )
-        return false;
-    return std::count_if(s.begin(), s.end(), IsValidCharInName) == (int)s.size();
-}
-
-template<typename T>
-struct index_cmp
-{
-    index_cmp(const T arr) : arr(arr) {
-    }
-    bool operator()(const size_t a, const size_t b) const
-    {
-        return arr[a] < arr[b];
-    }
-    const T arr;
-};
-
-template<class P>
-struct smart_pointer_deleter
-{
-private:
-    P p_;
-    boost::function<void(void const*)> _deleterfn;
-public:
-    smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn) : p_(p), _deleterfn(deleterfn)
-    {
-    }
-
-    void operator()(void const * x)
-    {
-        _deleterfn(x);
-        p_.reset();
-    }
-
-    P const & get() const
-    {
-        return p_;
-    }
-};
 
 template <typename IKReal>
 inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
@@ -397,15 +226,16 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
     using std::complex;
     BOOST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[D];
-    const int maxsteps = 50;
+    const int maxsteps = 110;
     for(int i = 0; i < D; ++i) {
         coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
     }
     complex<IKReal> roots[D];
     IKReal err[D];
     roots[0] = complex<IKReal>(1,0);
-    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity is works
+    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity works
     err[0] = 1.0;
     err[1] = 1.0;
     for(int i = 2; i < D; ++i) {
@@ -437,10 +267,29 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
             break;
         }
     }
+
     numroots = 0;
+    bool visited[D] = {false};
     for(int i = 0; i < D; ++i) {
-        if( RaveFabs(imag(roots[i])) < std::numeric_limits<IKReal>::epsilon() ) {
-            rawroots[numroots++] = real(roots[i]);
+        if( !visited[i] ) {
+            // might be a multiple root, in which case it will have more error than the other roots
+            // find any neighboring roots, and take the average
+            complex<IKReal> newroot=roots[i];
+            int n = 1;
+            for(int j = i+1; j < D; ++j) {
+                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
+                    newroot += roots[j];
+                    n += 1;
+                    visited[j] = true;
+                }
+            }
+            if( n > 1 ) {
+                newroot /= n;
+            }
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
+            if( RaveFabs(imag(newroot)) < tolsqrt ) {
+                rawroots[numroots++] = real(newroot);
+            }
         }
     }
 }
@@ -482,7 +331,7 @@ inline const char *strcasestr(const char *s, const char *find)
                     return (NULL);
                 }
             } while ((char)tolower((unsigned char)sc) != c);
-        } while (strnicmp(s, find, len) != 0);
+        } while (_strnicmp(s, find, len) != 0);
         s--;
     }
     return ((char *) s);

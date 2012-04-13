@@ -19,7 +19,7 @@ class TestSampling(EnvironmentSetup):
         for type in SampleDataType.values.values():
             if sp.Supports(type):
                 for dim in [1,5]:
-                    print samplername,type,dim
+                    self.log.debug('name=%s, type=%s, dim=%d',samplername,type,dim)
                     sp.SetSpaceDOF(dim)
                     lower,upper = sp.GetLimits(type)
                     assert(len(lower)==dim and len(upper) == dim)

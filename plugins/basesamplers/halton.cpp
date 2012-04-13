@@ -11,13 +11,13 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# include <cstdlib>
-# include <cmath>
-# include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
 
 using namespace std;
 
-# include "halton.h"
+#include "halton.h"
 
 char HaltonSampler::digit_to_ch ( int i )
 
@@ -151,256 +151,7 @@ int HaltonSampler::get_seed ( )
     return seed;
 # undef I4_MAX
 }
-//****************************************************************************80
 
-bool HaltonSampler::halham_dim_num_check ( int dim_num )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALHAM_DIM_NUM_CHECK checks DIM_NUM for a Halton or Hammersley sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//    DIM_NUM must be positive.
-//
-//    Output, bool HALHAM_DIM_NUM_CHECK, is true if DIM_NUM is legal.
-//
-{
-    bool value;
-
-    if ( dim_num < 1 )
-    {
-        cout << "\n";
-        cout << "HALHAM_DIM_NUM_CHECK - Fatal error!\n";
-        cout << "  DIM_NUM < 0.";
-        cout << "  DIM_NUM = " << dim_num << "\n";
-        value = false;
-    }
-    else
-    {
-        value = true;
-    }
-
-    return value;
-}
-//****************************************************************************80
-
-bool HaltonSampler::halham_leap_check ( int dim_num, int leap[] )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALHAM_LEAP_CHECK checks LEAP for a Halton or Hammersley sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int LEAP[DIM_NUM], the successive jumps in the sequence.
-//    Each entry must be greater than 0.
-//
-//    Output, bool HALHAM_LEAP_CHECK, is true if LEAP is legal.
-//
-{
-    int i;
-    bool value;
-
-    value = true;
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-        if ( leap[i] < 1 )
-        {
-            cout << "\n";
-            cout << "HALHAM_LEAP_CHECK - Fatal error!\n";
-            cout << "  Leap entries must be greater than 0.\n";
-            cout << "  leap[" << i << "] = " << leap[i] << "\n";
-            value = false;
-            break;
-        }
-    }
-
-    return value;
-}
-//****************************************************************************80
-
-bool HaltonSampler::halham_n_check ( int n )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALHAM_N_CHECK checks N for a Halton or Hammersley sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int N, the number of elements of the subsequence.
-//    N must be positive.
-//
-//    Output, bool HALHAM_N_CHECK, is true if N is legal.
-//
-{
-    bool value;
-
-    if ( n < 1 )
-    {
-        cout << "\n";
-        cout << "HALHAM_N_CHECK - Fatal error!\n";
-        cout << "  N < 0.";
-        cout << "  N = " << n << "\n";
-        value = false;
-    }
-    else
-    {
-        value = true;
-    }
-
-    return value;
-}
-//****************************************************************************80
-
-bool HaltonSampler::halham_seed_check ( int dim_num, int seed[] )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALHAM_SEED_CHECK checks SEED for a Halton or Hammersley sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int SEED[DIM_NUM], the sequence index
-//    corresponding to STEP = 0.  Each entry must be 0 or greater.
-//
-//    Output, bool HALHAM_SEED_CHECK, is true if SEED is legal.
-//
-{
-    int i;
-    bool value;
-
-    value = true;
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-        if ( seed[i] < 0 )
-        {
-            cout << "\n";
-            cout << "HALHAM_SEED_CHECK - Fatal error!\n";
-            cout << "  SEED entries must be nonnegative.\n";
-            cout << "  seed[" << i << "] = " << seed[i] << "\n";
-            value = false;
-            break;
-        }
-    }
-
-    return value;
-}
-//****************************************************************************80
-
-bool HaltonSampler::halham_step_check ( int step )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALHAM_STEP_CHECK checks STEP for a Halton or Hammersley sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 September 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int STEP, the index of the subsequence element.
-//    STEP must be 1 or greater.
-//
-//    Output, bool HALHAM_STEP_CHECK, is true if STEP is legal.
-//
-{
-    //int i;
-    bool value;
-
-    if ( step < 0 )
-    {
-        cout << "\n";
-        cout << "HALHAM_STEP_CHECK - Fatal error!\n";
-        cout << "  STEP < 0.";
-        cout << "  STEP = " << step << "\n";
-        value = false;
-    }
-    else
-    {
-        value = true;
-    }
-
-    return value;
-}
-//****************************************************************************80
-
-
-//****************************************************************************80
 
 void HaltonSampler::halton ( dReal r[] )
 
@@ -546,57 +297,7 @@ void HaltonSampler::halton ( dReal r[] )
 
     return;
 }
-//****************************************************************************80
 
-bool HaltonSampler::halton_base_check ( int dim_num, int base[] )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    HALTON_BASE_CHECK checks BASE for a Halton sequence.
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    16 July 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int DIM_NUM, the spatial dimension.
-//
-//    Input, int BASE[DIM_NUM], the bases.
-//
-//    Output, bool HALTON_BASE_CHECK, is true if BASE is legal.
-//
-{
-    int i;
-    bool value;
-
-    value = true;
-
-    for ( i = 0; i < dim_num; i++ )
-    {
-        if ( base[i] <= 1 )
-        {
-            cout << "\n";
-            cout << "HALTON_BASE_CHECK - Fatal error!\n";
-            cout << "  Bases must be greater than 1.\n";
-            cout << "  base[" << i << "] = " << base[i] << "\n";
-            value = false;
-            break;
-        }
-    }
-
-    return value;
-}
 //****************************************************************************80
 
 int *HaltonSampler::halton_base_get ( ) const
@@ -654,19 +355,12 @@ void HaltonSampler::halton_base_set ( int base[] )
 //    Each base must be greater than 1.
 //
 {
-    int i;
-
-    if ( !halton_base_check ( halton_DIM_NUM, base ) )
-    {
-        exit ( 1 );
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
+        OPENRAVE_ASSERT_OP(base[i],>,1);
     }
-
-    for ( i = 0; i < halton_DIM_NUM; i++ )
-    {
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
         halton_BASE[i] = base[i];
     }
-
-    return;
 }
 //****************************************************************************80
 
@@ -726,19 +420,12 @@ void HaltonSampler::halton_leap_set ( int leap[] )
 //    Each entry must be greater than 0.
 //
 {
-    int i;
-
-    if ( !halham_leap_check ( halton_DIM_NUM, leap ) )
-    {
-        exit ( 1 );
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
+        OPENRAVE_ASSERT_OP(leap[i],>=,1);
     }
-
-    for ( i = 0; i < halton_DIM_NUM; i++ )
-    {
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
         halton_LEAP[i] = leap[i];
     }
-
-    return;
 }
 //****************************************************************************80
 
@@ -798,14 +485,8 @@ void HaltonSampler::halton_dim_num_set ( int dim_num )
 //
 {
     int i;
-
-    if ( !halham_dim_num_check ( dim_num ) )
-    {
-        exit ( 1 );
-    }
-
-    if ((halton_DIM_NUM != dim_num)&&(0 < halton_DIM_NUM))
-    {
+    OPENRAVE_ASSERT_OP(dim_num,>=,1);
+    if ((halton_DIM_NUM != dim_num)&&(0 < halton_DIM_NUM)) {
         delete [] halton_BASE;
         delete [] halton_LEAP;
         delete [] halton_SEED;
@@ -892,19 +573,12 @@ void HaltonSampler::halton_seed_set ( int seed[] )
 //    corresponding to STEP = 0.  Each entry must be 0 or greater.
 //
 {
-    int i;
-
-    if ( !halham_seed_check ( halton_DIM_NUM, seed ) )
-    {
-        exit ( 1 );
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
+        OPENRAVE_ASSERT_OP(seed[i], >=, 0 )
     }
-
-    for ( i = 0; i < halton_DIM_NUM; i++ )
-    {
+    for (int i = 0; i < halton_DIM_NUM; i++ ) {
         halton_SEED[i] = seed[i];
     }
-
-    return;
 }
 //****************************************************************************80
 
@@ -1122,16 +796,8 @@ void HaltonSampler::halton_step_set ( int step )
 //    STEP must be 1 or greater.
 //
 {
-    //int i;
-
-    if ( !halham_step_check ( step ) )
-    {
-        exit ( 1 );
-    }
-
+    OPENRAVE_ASSERT_OP(step,>=,0);
     halton_STEP = step;
-
-    return;
 }
 //****************************************************************************80
 
@@ -1319,30 +985,14 @@ void HaltonSampler::i4_to_halton ( int dim_num, int step, int seed[], int leap[]
     //
     //  Check the input.
     //
-    if ( !halham_dim_num_check ( dim_num ) )
-    {
-        exit ( 1 );
+    OPENRAVE_ASSERT_OP(dim_num,>=,1);
+    OPENRAVE_ASSERT_OP(step,>=,0);
+    for (int i = 0; i < dim_num; i++ ) {
+        OPENRAVE_ASSERT_OP(seed[i], >=, 0 )
+        OPENRAVE_ASSERT_OP(leap[i],>=,1);
+        OPENRAVE_ASSERT_OP(base[i],>,1);
     }
 
-    if ( !halham_step_check ( step ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halham_seed_check ( dim_num, seed ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halham_leap_check ( dim_num, leap ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halton_base_check ( dim_num, base ) )
-    {
-        exit ( 1 );
-    }
     //
     //  Calculate the data.
     //
@@ -1461,35 +1111,15 @@ void HaltonSampler::i4_to_halton_sequence ( int dim_num, int n, int step, int se
     //
     //  Check the input.
     //
-    if ( !halham_dim_num_check ( dim_num ) )
-    {
-        exit ( 1 );
+    OPENRAVE_ASSERT_OP(dim_num,>=,1);
+    OPENRAVE_ASSERT_OP(n,>=,1);
+    OPENRAVE_ASSERT_OP(step,>=,0);
+    for (int i = 0; i < dim_num; i++ ) {
+        OPENRAVE_ASSERT_OP(seed[i], >=, 0 )
+        OPENRAVE_ASSERT_OP(leap[i],>=,1);
+        OPENRAVE_ASSERT_OP(base[i],>,1);
     }
 
-    if ( !halham_n_check ( n ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halham_step_check ( step ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halham_seed_check ( dim_num, seed ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halham_leap_check ( dim_num, leap ) )
-    {
-        exit ( 1 );
-    }
-
-    if ( !halton_base_check ( dim_num, base ) )
-    {
-        exit ( 1 );
-    }
     //
     //  Calculate the data.
     //
@@ -1620,92 +1250,6 @@ char *HaltonSampler::i4_to_s ( int i )
     j = j + 1;
 
     return s;
-}
-//****************************************************************************80
-
-void HaltonSampler::i4vec_transpose_print ( int n, int a[], char *title )
-
-//****************************************************************************80
-//
-//  Purpose:
-//
-//    I4VEC_TRANSPOSE_PRINT prints an I4VEC "transposed".
-//
-//  Example:
-//
-//    A = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
-//    TITLE = "My vector:  "
-//
-//    My vector:      1    2    3    4    5
-//                    6    7    8    9   10
-//                   11
-//
-//  Licensing:
-//
-//    This code is distributed under the GNU LGPL license.
-//
-//  Modified:
-//
-//    03 July 2004
-//
-//  Author:
-//
-//    John Burkardt
-//
-//  Parameters:
-//
-//    Input, int N, the number of components of the vector.
-//
-//    Input, int A[N], the vector to be printed.
-//
-//    Input, char *TITLE, a title to be printed first.
-//    TITLE may be blank or NULL.
-//
-{
-    int i;
-    int ihi;
-    int ilo;
-    int title_len;
-
-    if ( 0 < s_len_trim ( title ) )
-    {
-        title_len = strlen ( title );
-
-        for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
-        {
-            ihi = i4_min ( ilo + 5 - 1, n );
-            if ( ilo == 1 )
-            {
-                cout << title;
-            }
-            else
-            {
-                for ( i = 1; i <= title_len; i++ )
-                {
-                    cout << " ";
-                }
-            }
-            for ( i = ilo; i <= ihi; i++ )
-            {
-                cout << setw(12) << a[i-1];
-            }
-            cout << "\n";
-        }
-    }
-    else
-    {
-        for ( ilo = 1; ilo <= n; ilo = ilo + 5 )
-        {
-            ihi = i4_min ( ilo + 5 - 1, n );
-            for ( i = ilo; i <= ihi; i++ )
-            {
-                cout << setw(12) << a[i-1];
-            }
-            cout << "\n";
-        }
-    }
-
-    return;
 }
 //****************************************************************************80
 
@@ -1930,16 +1474,9 @@ int HaltonSampler::prime ( int n )
     {
         return 1;
     }
-    else if ( n <= PRIME_MAX )
-    {
+    else {
+        OPENRAVE_ASSERT_OP(n, <=, PRIME_MAX);
         return npvec[n-1];
-    }
-    else
-    {
-        cout << "\n";
-        cout << "PRIME - Fatal error!\n";
-        cout << "  Unexpected input value of n = " << n << "\n";
-        exit ( 1 );
     }
 
     return 0;

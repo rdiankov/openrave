@@ -33,7 +33,7 @@
 
 #include "ParabolicRamp.h"
 
-namespace ParabolicRamp {
+namespace ParabolicRampInternal {
 
 /** @brief A base class for a feasibility checker.
  */
@@ -68,32 +68,42 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
 
 /// Checks whether the ramp is feasible using a piecewise linear approximation
 /// with tolerance tol
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const ParabolicRamp::Vector& tol);
+bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol);
 
 
 class RampFeasibilityChecker
 {
 public:
-    RampFeasibilityChecker(FeasibilityCheckerBase* feas,const ParabolicRamp::Vector& tol);
+    RampFeasibilityChecker(FeasibilityCheckerBase* feas,const Vector& tol);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
     bool Check(const ParabolicRampND& x);
 
     FeasibilityCheckerBase* feas;
-    ParabolicRamp::Vector tol;
+    Vector tol;
     DistanceCheckerBase* distance;
     int maxiters;
 };
 
 
-class RandomSamplerBase
+/** @brief A custom random number generator that can be provided to
+ * DynamicPath::Shortcut()
+ */
+class RandomNumberGeneratorBase
 {
 public:
-    // Returns a random number in [0,1)
-    virtual Real Rand() = 0;
+    virtual Real Rand() {
+        return ::ParabolicRampInternal::Rand();
+    }
 };
 
 /** @brief A bounded-velocity, bounded-acceleration trajectory consisting
  * of parabolic ramps.
+ *
+ * Optionally, joint limits xMin and xMax may be specified as well.  If so,
+ * then the XXXBounded functions are used for smoothing.
+ *
+ * The Shortcut and OnlineShortcut methods can optionally take a
+ * custom random number generator (may be useful for multithreading).
  */
 class DynamicPath
 {
@@ -120,22 +130,20 @@ public:
     void Split(Real t,DynamicPath& before,DynamicPath& after) const;
     bool TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check);
     int Shortcut(int numIters,RampFeasibilityChecker& check);
+    int Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
     int ShortCircuit(RampFeasibilityChecker& check);
     /// leadTime: the amount of time before this path should be executable
     /// padTime: an approximate bound on the time it takes to check a shortcut
     int OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check);
+    int OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
 
     bool IsValid() const;
 
-    void SetRandomSampler(RandomSamplerBase* sampler) {
-        this->sampler = sampler;
-    }
-
-    /// The velocity and acceleration bounds
+    /// The joint limits (optional), velocity bounds, and acceleration bounds
     Vector xMin,xMax,velMax,accMax;
     /// The path is stored as a series of ramps
     std::vector<ParabolicRampND> ramps;
-    RandomSamplerBase* sampler;
+    int _multidofinterp; ///< if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
 };
 
 } //namespace ParabolicRamp

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com), Stefan Ulbrich, Gustavo Rodriguez
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>, Stefan Ulbrich, Gustavo Rodriguez
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,9 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
-
-using namespace OpenRAVE;
-using namespace std;
 
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
@@ -181,7 +178,7 @@ public:
         _bSkipGeometry = false;
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
-                _bSkipGeometry = stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
+                _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "scalegeometry" ) {
                 stringstream ss(itatt->second);
@@ -457,7 +454,7 @@ public:
                 if( (*itjoint)->IsMimic(idof) ) {
                     for(int ieq = 0; ieq < 3; ++ieq) {
                         string neweq;
-                        SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
+                        utils::SearchAndReplace(neweq,(*itjoint)->_vmimic[idof]->_equations[ieq],jointnamepairs);
                         (*itjoint)->_vmimic[idof]->_equations[ieq] = neweq;
                     }
                 }
@@ -1165,12 +1162,8 @@ public:
                             pjoint->_vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
                             if( pjoint->IsRevolute(ic) ) {
                                 if(( pjoint->_vlowerlimit.at(ic) < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
+                                    // TODO, necessary?
                                     pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit.at(ic) + pjoint->_vupperlimit[ic]);
-                                    if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit.at(ic)%pjoint->_vupperlimit[ic]));
-                                        pjoint->_vupperlimit.at(ic) = pjoint->_voffsets[ic] + PI - 1e-5;
-                                        pjoint->_vlowerlimit.at(ic) = pjoint->_voffsets[ic] - PI + 1e-5;
-                                    }
                                 }
                             }
                         }
@@ -1185,12 +1178,8 @@ public:
                         pjoint->_vupperlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
                         if( pjoint->IsRevolute(ic) ) {
                             if(( pjoint->_vlowerlimit[ic] < -PI) ||( pjoint->_vupperlimit[ic] > PI) ) {
+                                // TODO, necessary?
                                 pjoint->_voffsets[ic] = 0.5f * (pjoint->_vlowerlimit[ic] + pjoint->_vupperlimit[ic]);
-                                if( pjoint->_vupperlimit[ic] - pjoint->_voffsets[ic] > PI ) {
-                                    RAVELOG_WARN(str(boost::format("joint %s, cannot allow joint range [%f,%f] of more than 2*pi radians\n")%pjoint->GetName()%pjoint->_vlowerlimit[ic]%pjoint->_vupperlimit[ic]));
-                                    pjoint->_vupperlimit[ic] = pjoint->_voffsets[ic] + PI - 1e-5;
-                                    pjoint->_vlowerlimit[ic] = pjoint->_voffsets[ic] - PI + 1e-5;
-                                }
                             }
                         }
                     }
@@ -1381,11 +1370,11 @@ public:
             }
         }
 
-        size_t triangleIndexStride = 0, vertexoffset = -1;
+        domUint triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
         for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
-            size_t offset = triRef->getInput_array()[w]->getOffset();
+            domUint offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1398,8 +1387,8 @@ public:
         triangleIndexStride++;
 
         const domList_of_uints& indexArray =triRef->getP()->getValue();
-        trimesh.indices.reserve(triRef->getCount()*3);
-        trimesh.vertices.reserve(triRef->getCount()*3);
+        trimesh.indices.reserve(size_t(triRef->getCount())*3);
+        trimesh.vertices.reserve(size_t(triRef->getCount())*3);
         for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
@@ -1412,15 +1401,15 @@ public:
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
-                    int k=vertexoffset;
-                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                    domUint k = vertexoffset;
+                    domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t itri = 0; itri < triRef->getCount(); ++itri) {
                         if(k+2*triangleIndexStride < indexArray.getCount() ) {
                             for (int j=0; j<3; j++) {
-                                int index0 = indexArray.get(k)*vertexStride;
-                                domFloat fl0 = listFloats.get(index0);
-                                domFloat fl1 = listFloats.get(index0+1);
-                                domFloat fl2 = listFloats.get(index0+2);
+                                domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                                domFloat fl0 = listFloats.get(size_t(index0));
+                                domFloat fl1 = listFloats.get(size_t(index0+1));
+                                domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
                                 trimesh.indices.push_back(trimesh.vertices.size());
                                 trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
@@ -1464,11 +1453,11 @@ public:
             }
         }
 
-        size_t triangleIndexStride = 0, vertexoffset = -1;
+        domUint triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
         for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
-            size_t offset = triRef->getInput_array()[w]->getOffset();
+            domUint offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1479,7 +1468,7 @@ public:
             }
         }
         triangleIndexStride++;
-        size_t primitivecount = triRef->getCount();
+        domUint primitivecount = triRef->getCount();
         if( primitivecount > triRef->getP_array().getCount() ) {
             RAVELOG_WARN("trifans has incorrect count\n");
             primitivecount = triRef->getP_array().getCount();
@@ -1498,8 +1487,8 @@ public:
                     const domFloat_arrayRef flArray = node->getFloat_array();
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
-                        int k=vertexoffset;
-                        int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                        domUint k=vertexoffset;
+                        domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                         size_t usedindices = 3*(indexArray.getCount()-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
@@ -1507,12 +1496,12 @@ public:
                         if( trimesh.vertices.capacity() < trimesh.vertices.size()+indexArray.getCount() ) {
                             trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
                         }
-                        size_t startoffset = (int)trimesh.vertices.size();
-                        while(k < (int)indexArray.getCount() ) {
-                            int index0 = indexArray.get(k)*vertexStride;
-                            domFloat fl0 = listFloats.get(index0);
-                            domFloat fl1 = listFloats.get(index0+1);
-                            domFloat fl2 = listFloats.get(index0+2);
+                        size_t startoffset = trimesh.vertices.size();
+                        while(k < indexArray.getCount() ) {
+                            domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                            domFloat fl0 = listFloats.get(size_t(index0));
+                            domFloat fl1 = listFloats.get(size_t(index0+1));
+                            domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
@@ -1556,11 +1545,11 @@ public:
                 FillGeometryColor(itmat->second,geom);
             }
         }
-        size_t triangleIndexStride = 0, vertexoffset = -1;
+        domUint triangleIndexStride = 0, vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
 
-        for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
-            size_t offset = triRef->getInput_array()[w]->getOffset();
+        for (size_t w=0; w<triRef->getInput_array().getCount(); w++) {
+            domUint offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1571,7 +1560,7 @@ public:
             }
         }
         triangleIndexStride++;
-        size_t primitivecount = triRef->getCount();
+        domUint primitivecount = triRef->getCount();
         if( primitivecount > triRef->getP_array().getCount() ) {
             RAVELOG_WARN("tristrips has incorrect count\n");
             primitivecount = triRef->getP_array().getCount();
@@ -1590,9 +1579,9 @@ public:
                     const domFloat_arrayRef flArray = node->getFloat_array();
                     if (!!flArray) {
                         const domList_of_floats& listFloats = flArray->getValue();
-                        int k=vertexoffset;
-                        int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
-                        size_t usedindices = 3*(indexArray.getCount()-2);
+                        domUint k=vertexoffset;
+                        domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                        size_t usedindices = 3*(size_t(indexArray.getCount())-2);
                         if( trimesh.indices.capacity() < trimesh.indices.size()+usedindices ) {
                             trimesh.indices.reserve(trimesh.indices.size()+usedindices);
                         }
@@ -1600,12 +1589,12 @@ public:
                             trimesh.vertices.reserve(trimesh.vertices.size()+indexArray.getCount());
                         }
 
-                        size_t startoffset = (int)trimesh.vertices.size();
-                        while(k < (int)indexArray.getCount() ) {
-                            int index0 = indexArray.get(k)*vertexStride;
-                            domFloat fl0 = listFloats.get(index0);
-                            domFloat fl1 = listFloats.get(index0+1);
-                            domFloat fl2 = listFloats.get(index0+2);
+                        size_t startoffset = trimesh.vertices.size();
+                        while(k < indexArray.getCount() ) {
+                            domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                            domFloat fl0 = listFloats.get(size_t(index0));
+                            domFloat fl1 = listFloats.get(size_t(index0+1));
+                            domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
                             trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
@@ -1652,10 +1641,10 @@ public:
             }
         }
 
-        size_t triangleIndexStride = 0,vertexoffset = -1;
+        domUint triangleIndexStride = 0,vertexoffset = -1;
         domInput_local_offsetRef indexOffsetRef;
         for (unsigned int w=0; w<triRef->getInput_array().getCount(); w++) {
-            size_t offset = triRef->getInput_array()[w]->getOffset();
+            domUint offset = triRef->getInput_array()[w]->getOffset();
             daeString str = triRef->getInput_array()[w]->getSemantic();
             if (!strcmp(str,"VERTEX")) {
                 indexOffsetRef = triRef->getInput_array()[w];
@@ -1679,17 +1668,17 @@ public:
                 const domFloat_arrayRef flArray = node->getFloat_array();
                 if (!!flArray) {
                     const domList_of_floats& listFloats = flArray->getValue();
-                    size_t k=vertexoffset;
-                    int vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
+                    domUint k=vertexoffset;
+                    domUint vertexStride = 3;     //instead of hardcoded stride, should use the 'accessor'
                     for(size_t ipoly = 0; ipoly < triRef->getVcount()->getValue().getCount(); ++ipoly) {
-                        size_t numverts = triRef->getVcount()->getValue()[ipoly];
+                        domUint numverts = triRef->getVcount()->getValue()[ipoly];
                         if(( numverts > 0) &&( k+(numverts-1)*triangleIndexStride < indexArray.getCount()) ) {
                             size_t startoffset = trimesh.vertices.size();
                             for (size_t j=0; j<numverts; j++) {
-                                int index0 = indexArray.get(k)*vertexStride;
-                                domFloat fl0 = listFloats.get(index0);
-                                domFloat fl1 = listFloats.get(index0+1);
-                                domFloat fl2 = listFloats.get(index0+2);
+                                domUint index0 = indexArray.get(size_t(k))*vertexStride;
+                                domFloat fl0 = listFloats.get(size_t(index0));
+                                domFloat fl1 = listFloats.get(size_t(index0+1));
+                                domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
                                 trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                             }
@@ -1811,7 +1800,7 @@ public:
                                         dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
                                         const domFloat_arrayRef flArray = node->getFloat_array();
                                         if (!!flArray) {
-                                            vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
+                                            vconvexhull.reserve(vconvexhull.size()+size_t(flArray->getCount()));
                                             const domList_of_floats& listFloats = flArray->getValue();
                                             for (size_t k=0; k+2<flArray->getCount(); k+=3) {
                                                 domFloat fl0 = listFloats.get(k);
@@ -1842,7 +1831,7 @@ public:
                         const domFloat_arrayRef flArray = node->getFloat_array();
                         if (!!flArray) {
                             const domList_of_floats& listFloats = flArray->getValue();
-                            vconvexhull.reserve(vconvexhull.size()+flArray->getCount());
+                            vconvexhull.reserve(vconvexhull.size()+size_t(flArray->getCount()));
                             for (size_t k=0; k+2<flArray->getCount(); k+=3) {
                                 domFloat fl0 = listFloats.get(k);
                                 domFloat fl1 = listFloats.get(k+1);
@@ -2109,7 +2098,7 @@ public:
         elt->getChildren(children);
         AttributesList atts;
         for (size_t i = 0; i < children.getCount(); i++) {
-            string xmltag = tolowerstring(children[i]->getElementName());
+            string xmltag = utils::ConvertToLowerCase(children[i]->getElementName());
             daeTArray<daeElement::attr> domatts;
             children[i]->getAttributes(domatts);
             atts.clear();
@@ -3090,7 +3079,11 @@ private:
         if( name.size() == 0 ) {
             return str(boost::format("__dummy%d")%_nGlobalIndex++);
         }
-        return ConvertToOpenRAVEName(name);
+        std::string newname = utils::ConvertToOpenRAVEName(name);
+        if( name != newname ) {
+            RAVELOG_WARN(boost::str(boost::format("name '%s' is not a valid OpenRAVE name, converting to '%s'")%name%newname));
+        }
+        return newname;
     }
 
     inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rplanners.h"
 
+static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
+
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:
@@ -77,15 +79,12 @@ Planner Parameters\n\
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
                     dReal diff = RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j));
                     // this is necessary in case robot's have limits like [-100,100] for revolute joints (pa10 arm)
-                    if( _robot->GetJoints().at(_manip->GetArmIndices().at(j))->GetType() == KinBody::Joint::JointRevolute ) {
-                        if( diff > PI ) {
-                            diff -= 2*PI;
-                        }
-                        if( diff < -PI ) {
-                            diff += 2*PI;
-                        }
+                    int dofindex = _manip->GetArmIndices().at(j);
+                    KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(dofindex);
+                    if( pjoint->IsCircular(dofindex-pjoint->GetDOFIndex()) ) {
+                        diff = utils::NormalizeCircularAngle(diff,-PI,PI);
                     }
-                    if( diff > 2*g_fEpsilon ) {
+                    if( diff > g_fEpsilonLinear ) {
                         RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
                         return false;
                     }
@@ -139,7 +138,7 @@ Planner Parameters\n\
         }
 
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        uint32_t basetime = GetMilliTime();
+        uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -274,7 +273,7 @@ Planner Parameters\n\
             return PS_Failed;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(GetMilliTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
         return PS_HasSolution;
     }
 
@@ -380,10 +379,11 @@ protected:
 
             IkParameterization ikmidest;
             ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
-            const dReal ikmidpointmaxdist2mult = 0.5;
+            const dReal ikmidpointmaxdist2mult = 0.25;
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
             dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
-            if( middist2 > g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+            // note that ikp might be a little off from vsolution due to the ik solver!
+            if( middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
                 return IKFR_Reject;
             }

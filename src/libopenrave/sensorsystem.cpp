@@ -74,7 +74,7 @@ bool SimpleSensorSystem::SimpleXMLReader::endElement(const std::string& name)
     else if( name == "prequat") {
         ss >> _pdata->transPreOffset.rot;
     }
-    else if( name == tolowerstring(_pdata->GetXMLId()) ) {
+    else if( name == utils::ConvertToLowerCase(_pdata->GetXMLId()) ) {
         return true;
     }
     if( !ss ) {
@@ -151,7 +151,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, XMLReada
     }
 
     boost::shared_ptr<BodyData> b = CreateBodyData(pbody, pdata);
-    b->lastupdated = GetMicroTime();
+    b->lastupdated = utils::GetMicroTime();
     _mapbodies[pbody->GetEnvironmentId()] = b;
     RAVELOG_VERBOSE(str(boost::format("system adding body %s (%s), total: %d\n")%pbody->GetName()%pbody->GetURI()%_mapbodies.size()));
     SetManageData(pbody,b);
@@ -219,7 +219,7 @@ boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyDa
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)
 {
     EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex()); // always lock environment to preserve mutex order
-    uint64_t curtime = GetMicroTime();
+    uint64_t curtime = utils::GetMicroTime();
     if( listbodies.size() > 0 ) {
 
         FOREACH(it, listbodies) {
@@ -282,7 +282,7 @@ void SimpleSensorSystem::_UpdateBodiesThread()
         {
             _UpdateBodies(listbodies);
         }
-        Sleep(10); // 10ms
+        usleep(10000); // 10ms
     }
 }
 

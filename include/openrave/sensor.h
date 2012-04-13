@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file sensor.h
     \brief Sensor and sensing related defintions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_SENSOR_H
 #define OPENRAVE_SENSOR_H

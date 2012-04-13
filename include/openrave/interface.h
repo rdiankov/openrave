@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   interface.h
     \brief  Base interface definition that all exported interfaces derive from.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE

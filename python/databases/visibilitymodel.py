@@ -84,6 +84,9 @@ from . import DatabaseGenerator
 import inversekinematics, kinematicreachability
 from .. import interfaces
 
+import logging
+log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
 class VisibilityModel(DatabaseGenerator):
     class GripperVisibility:
         """Used to hide links not beloning to gripper.

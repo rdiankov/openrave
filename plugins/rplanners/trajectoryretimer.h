@@ -19,8 +19,6 @@
 #include "plugindefs.h"
 #include "plannerparameters.h"
 
-static const dReal g_fLimitThresh = g_fEpsilon*100000;
-
 class TrajectoryRetimer : public PlannerBase
 {
 protected:
@@ -34,6 +32,7 @@ public:
         int degree;
         const ConfigurationSpecification::Group& gpos, &gvel;
         int orgposoffset, orgveloffset;
+        vector<dReal> _vConfigVelocityLimit, _vConfigAccelerationLimit, _vConfigLowerLimit, _vConfigUpperLimit;
     };
     typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
     typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
@@ -85,9 +84,14 @@ public:
     {
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
+        std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
+        if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
+            RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
+            return PS_Failed;
+        }
         size_t numpoints = ptraj->GetNumWaypoints();
         const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
-        ConfigurationSpecification newspec = ptraj->GetConfigurationSpecification();
+        ConfigurationSpecification newspec = oldspec;
         newspec.AddVelocityGroups(true);
         vector<dReal> vdiffdata, data;
         ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
@@ -96,14 +100,14 @@ public:
             for(int j = 0; j < oldspec.GetDOF(); ++j) {
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
                 if( vdiffdata.at(i+j) < lower ) {
-                    if( vdiffdata.at(i+j) < lower-g_fLimitThresh ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                    if( vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
                     }
                     vdiffdata.at(i+j) = lower;
                 }
                 else if( vdiffdata.at(i+j) > upper ) {
-                    if( vdiffdata.at(i+j) > upper+g_fLimitThresh ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%f < %f)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                    if( vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
                     }
                     vdiffdata.at(i+j) = upper;
                 }
@@ -163,6 +167,11 @@ public:
                 BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
                 _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
                 _listgroupinfo.back()->orgposoffset = orgposoffset;
+                _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigAccelerationLimit = std::vector<dReal>(_parameters->_vConfigAccelerationLimit.begin()+itgroup->offset, _parameters->_vConfigAccelerationLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigLowerLimit = std::vector<dReal>(_parameters->_vConfigLowerLimit.begin()+itgroup->offset, _parameters->_vConfigLowerLimit.begin()+itgroup->offset+itgroup->dof);
+                _listgroupinfo.back()->_vConfigUpperLimit = std::vector<dReal>(_parameters->_vConfigUpperLimit.begin()+itgroup->offset, _parameters->_vConfigUpperLimit.begin()+itgroup->offset+itgroup->dof);
+
                 itgroup = oldspec.FindCompatibleGroup(*itvelgroup);
                 if( itgroup != oldspec._vgroups.end() ) {
                     // velocity is optional
@@ -182,7 +191,8 @@ public:
                     iktype = static_cast<IkParameterizationType>(niktype);
                 }
 
-                if( !_parameters->_hastimestamps ) {
+                {
+                    // if _parameters->_hastimestamps, then use this for double checking that times are feasible
                     if( igrouptype == 0 ) {
                         listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
                     }
@@ -231,6 +241,11 @@ public:
                 }
             }
 
+            if( _parameters->_hastimestamps ) {
+                vector<dReal> vdeltatimes;
+                ptraj->GetWaypoints(0,numpoints,vdeltatimes,*itoldgrouptime);
+                ConfigurationSpecification::ConvertData(data.begin(),newspec,vdeltatimes.begin(),*itoldgrouptime,numpoints,GetEnv(),false);
+            }
             try {
                 std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
                 std::vector<dReal>::iterator itdataprev = itdata;
@@ -247,7 +262,8 @@ public:
                     if( _parameters->_hastimestamps ) {
                         if( *(itdata+_timeoffset) < mintime ) {
                             RAVELOG_WARN(str(boost::format("point %d has unreachable minimum time %f > %f, changing...")%i%(*(itdata+_timeoffset))%mintime));
-                            *(itdata+_timeoffset) = mintime;
+                            //*(itdata+_timeoffset) = mintime;
+                            return PS_Failed;
                         }
                     }
                     else {
@@ -280,9 +296,8 @@ public:
             }
         }
 
-        // finally initialize the output trajectory
         _WriteTrajectory(ptraj,newspec, data);
-        RAVELOG_DEBUG(str(boost::format("%s path length=%fs")%GetXMLId()%ptraj->GetDuration()));
+        RAVELOG_DEBUG(str(boost::format("%s path duration=%fs")%GetXMLId()%ptraj->GetDuration()));
         return PS_HasSolution;
     }
 

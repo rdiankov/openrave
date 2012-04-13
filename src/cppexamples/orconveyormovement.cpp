@@ -11,17 +11,13 @@
 #include <openrave-core.h>
 #include <vector>
 #include <sstream>
-#include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+
+#include "orexample.h"
 
 using namespace OpenRAVE;
 using namespace std;
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#define usleep(micro) Sleep(micro/1000)
-#endif
+namespace cppexamples {
 
 /// Holds a registered set of bodies, at every time step creates new bodies and moves them along a trajectory.
 class ConveyorBeltModule : public ModuleBase
@@ -125,36 +121,34 @@ private:
     list<InstancedBody> _listinstances;
 };
 
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+class ConveyorExample : public OpenRAVEExample
 {
-    ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
-    penv->AddViewer(viewer);
-    viewer->main(true);
-}
+public:
+    virtual void demothread(int argc, char ** argv) {
+        boost::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt",OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH,ConveyorBeltModule::create);
+
+        // load the environment
+        string scenefilename = "robots/pr2-beta-static.zae";
+        penv->Load(scenefilename);
+
+        // create the conveyor module and add a couple of bodies for simulation
+        ModuleBasePtr p = RaveCreateModule(penv,"conveyorbelt");
+        penv->AddModule(p,"");
+        stringstream sout, sin("registerbody data/mug1.kinbody.xml 0.6");
+        p->SendCommand(sout,sin);
+        sin.clear();
+        sin.str("registerbody data/ketchup.kinbody.xml 0.3");
+        p->SendCommand(sout,sin);
+        while(IsOk()) {
+            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        }
+    }
+};
+
+} // end namespace cppexamples
 
 int main(int argc, char ** argv)
 {
-    // initialize openrave and register the conveyor module
-    RaveInitialize(true);
-    boost::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt",OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH,ConveyorBeltModule::create);
-    EnvironmentBasePtr penv = RaveCreateEnvironment();
-
-    // load the environment
-    string scenefilename = "robots/pr2-beta-static.zae";
-    string viewername = "qtcoin";
-    boost::thread thviewer(boost::bind(SetViewer,penv,viewername)); // create the viewer
-    penv->Load(scenefilename);
-
-    // create the conveyor module and add a couple of bodies for simulation
-    ModuleBasePtr p = RaveCreateModule(penv,"conveyorbelt");
-    penv->AddModule(p,"");
-    stringstream sout, sin("registerbody data/mug1.kinbody.xml 0.6");
-    p->SendCommand(sout,sin);
-    sin.clear();
-    sin.str("registerbody data/ketchup.kinbody.xml 0.3");
-    p->SendCommand(sout,sin);
-
-    thviewer.join(); // wait for the viewer thread to exit
-    penv->Destroy(); // destroy
-    return 0;
+    cppexamples::ConveyorExample example;
+    return example.main(argc,argv);
 }

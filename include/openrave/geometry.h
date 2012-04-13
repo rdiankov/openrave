@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,15 +16,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file   geometry.h
     \brief  Basic gemoetric primitives and affine math functions on them.
+
+    This file can be used stand-alone without \ref openrave.h .
  */
 #ifndef OPENRAVE_GEOMETRY_H
 #define OPENRAVE_GEOMETRY_H
 
 #include <cmath>
-#include <iostream>
+#include <vector>
+#include <string>
 #include <limits>
 #include <utility> // for std::pair
-#include <cstring>
 #include <cstdlib>
 
 #ifndef RAVE_DEPRECATED
@@ -131,15 +133,9 @@ public:
     T operator[] (int i) const {
         return (&x)[i];
     }
-    T& operator[] (int i)             {
+    T& operator[] (int i) {
         return (&x)[i];
     }
-
-    // casting operators
-    operator T* () {
-        return &x;
-    }
-    operator const T* () const { return (const T*)&x; }
 
     template <typename U>
     RaveVector<T>& operator=(const RaveVector<U>&r) {
@@ -158,7 +154,7 @@ public:
     }
     inline RaveVector<T>& normalize4() {
         T f = x*x+y*y+z*z+w*w;
-        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
+        if(( f < T(1)-std::numeric_limits<T>::epsilon()) ||( f > T(1)+std::numeric_limits<T>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             // yes it is faster to multiply by (1/f), but with 4 divides we gain precision (which is more important in robotics)
             f = MATH_SQRT(f);
@@ -168,7 +164,7 @@ public:
     }
     inline RaveVector<T>& normalize3() {
         T f = x*x+y*y+z*z;
-        if(( f < T(1)-std::numeric_limits<dReal>::epsilon()) ||( f > T(1)+std::numeric_limits<dReal>::epsilon()) ) {
+        if(( f < T(1)-std::numeric_limits<T>::epsilon()) ||( f > T(1)+std::numeric_limits<T>::epsilon()) ) {
             MATH_ASSERT( f > 0 );
             f = MATH_SQRT(f);
             x /= f; y /= f; z /= f;
@@ -416,9 +412,9 @@ public:
     }
     template <typename U> RaveTransformMatrix(const RaveTransformMatrix<U>& t) {
         // don't memcpy!
-        m[0] = t.m[0]; m[1] = t.m[1]; m[2] = t.m[2]; m[3] = t.m[3];
-        m[4] = t.m[4]; m[5] = t.m[5]; m[6] = t.m[6]; m[7] = t.m[7];
-        m[8] = t.m[8]; m[9] = t.m[9]; m[10] = t.m[10]; m[11] = t.m[11];
+        m[0] = T(t.m[0]); m[1] = T(t.m[1]); m[2] = T(t.m[2]); m[3] = T(t.m[3]);
+        m[4] = T(t.m[4]); m[5] = T(t.m[5]); m[6] = T(t.m[6]); m[7] = T(t.m[7]);
+        m[8] = T(t.m[8]); m[9] = T(t.m[9]); m[10] = T(t.m[10]); m[11] = T(t.m[11]);
         trans = t.trans;
     }
     inline RaveTransformMatrix(const RaveTransform<T>&t);
@@ -795,9 +791,9 @@ template <typename T> inline RaveVector<T> quatFromMatrix(const RaveTransformMat
 template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVector<T>& quat)
 {
     // should normalize the quaternion first
-    dReal length2 = quat.lengthsqr4();
-    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    dReal ilength2 = 2/length2;
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
     RaveTransformMatrix<T> t;
     T qq1 = ilength2*quat[1]*quat[1];
     T qq2 = ilength2*quat[2]*quat[2];
@@ -825,9 +821,9 @@ template <typename T> inline RaveTransformMatrix<T> matrixFromQuat(const RaveVec
 template <typename T> void matrixFromQuat(RaveTransformMatrix<T>& rotation, const RaveVector<T>& quat)
 {
     // should normalize the quaternion first
-    dReal length2 = quat.lengthsqr4();
-    BOOST_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
-    dReal ilength2 = 2/length2;
+    T length2 = quat.lengthsqr4();
+    MATH_ASSERT(length2 > 0.99 && length2 < 1.01); // make sure it is at least close
+    T ilength2 = 2/length2;
     T qq1 = ilength2*quat[1]*quat[1];
     T qq2 = ilength2*quat[2]*quat[2];
     T qq3 = ilength2*quat[3]*quat[3];
@@ -876,9 +872,7 @@ inline RaveVector<T> quatMultiply(const RaveVector<T>& quat0, const RaveVector<T
                     quat0.x*quat1.y + quat0.y*quat1.x + quat0.z*quat1.w - quat0.w*quat1.z,
                     quat0.x*quat1.z + quat0.z*quat1.x + quat0.w*quat1.y - quat0.y*quat1.w,
                     quat0.x*quat1.w + quat0.w*quat1.x + quat0.y*quat1.z - quat0.z*quat1.y);
-    T fnorm = q.lengthsqr4(); // normalize the quaternion
-    MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f ); // catches multi-threading errors
-    q.normalize4();
+    // do not normalize since some quaternion math (like derivatives) do not correspond to unit quaternions
     return q;
 }
 
@@ -1007,8 +1001,8 @@ template<typename T>
 std::pair<T, RaveVector<T> > normalizeAxisRotation(const RaveVector<T>& axis, const RaveVector<T>& quat)
 {
     T axislen = MATH_SQRT(axis.lengthsqr3());
-    dReal angle = MATH_ATAN2(-quat.w*axis.z-quat.z*axis.y-quat.y*axis.x,quat.x*axislen);
-    dReal sinangle2 = MATH_SIN(angle)/axislen, cosangle2 = MATH_COS(angle);
+    T angle = MATH_ATAN2(-quat.w*axis.z-quat.z*axis.y-quat.y*axis.x,quat.x*axislen);
+    T sinangle2 = MATH_SIN(angle)/axislen, cosangle2 = MATH_COS(angle);
     RaveVector<T> normalizingquat = RaveVector<T>(cosangle2,axis.x*sinangle2,axis.y*sinangle2,axis.z*sinangle2);
     return std::make_pair(2*angle,quatMultiply(normalizingquat,quat));
 }

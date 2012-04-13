@@ -98,7 +98,7 @@ protected:
                 qnext[i] = *(itdata+info->gpos.offset+index+i);
                 qprev[i] = *(itdataprev+info->gpos.offset+index+i);
             }
-            dReal mintime = RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(info->orgposoffset+index);
+            dReal mintime = 2.0*RaveAcos(min(dReal(1),RaveFabs(qprev.dot(qnext))))*_vimaxvel.at(info->orgposoffset+index);
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_Rotation3D ) {
@@ -139,16 +139,16 @@ protected:
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         IkParameterization ikparamprev, ikparam;
-        ikparamprev.Set(itdataprev,iktype);
-        ikparam.Set(itdata,iktype);
+        ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+        ikparam.Set(itdata+info->gpos.offset,iktype);
         switch(iktype) {
         case IKP_Transform6D: {
-            dReal quatmintime = RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(info->orgposoffset+0);
+            dReal quatmintime = 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetTransform6D().rot.dot(ikparam.GetTransform6D().rot))))*_vimaxvel.at(info->orgposoffset+0);
             dReal transmintime = RaveSqrt((ikparamprev.GetTransform6D().trans-ikparam.GetTransform6D().trans).lengthsqr3())*_vimaxvel.at(info->orgposoffset+4);
             return max(quatmintime,transmintime);
         }
         case IKP_Rotation3D:
-            return RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(info->orgposoffset+0);
+            return 2.0*RaveAcos(min(dReal(1),RaveFabs(ikparamprev.GetRotation3D().dot(ikparam.GetRotation3D()))))*_vimaxvel.at(info->orgposoffset+0);
         case IKP_Translation3D:
             return RaveSqrt((ikparamprev.GetTranslation3D()-ikparam.GetTranslation3D()).lengthsqr3())*_vimaxvel.at(info->orgposoffset);
         case IKP_Direction3D: {
@@ -171,7 +171,7 @@ protected:
         case IKP_TranslationXY2D:
             return RaveSqrt((ikparamprev.GetTranslationXY2D()-ikparam.GetTranslationXY2D()).lengthsqr2())*_vimaxvel.at(info->orgposoffset+0);
         case IKP_TranslationXYOrientation3D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXYOrientation3D().z,ikparamprev.GetTranslationXYOrientation3D().z)*_vimaxvel.at(info->orgposoffset+2);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationXYOrientation3D().z,ikparamprev.GetTranslationXYOrientation3D().z)*_vimaxvel.at(info->orgposoffset+2);
             dReal transmintime = RaveSqrt((ikparamprev.GetTranslationXYOrientation3D()-ikparam.GetTranslationXYOrientation3D()).lengthsqr2())*_vimaxvel.at(info->orgposoffset+0);
             return max(angmintime,transmintime);
         }
@@ -181,32 +181,32 @@ protected:
             return max(transmintime0,transmintime1);
         }
         case IKP_TranslationXAxisAngle4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXAxisAngle4D().second,ikparamprev.GetTranslationXAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngle4D().second,ikparamprev.GetTranslationXAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationXAxisAngle4D().first-ikparamprev.GetTranslationXAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationYAxisAngle4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationYAxisAngle4D().second,ikparamprev.GetTranslationYAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngle4D().second,ikparamprev.GetTranslationYAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationYAxisAngle4D().first-ikparamprev.GetTranslationYAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationZAxisAngle4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationZAxisAngle4D().second,ikparamprev.GetTranslationZAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngle4D().second,ikparamprev.GetTranslationZAxisAngle4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationZAxisAngle4D().first-ikparamprev.GetTranslationZAxisAngle4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationXAxisAngleZNorm4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationXAxisAngleZNorm4D().first-ikparamprev.GetTranslationXAxisAngleZNorm4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationYAxisAngleXNorm4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationYAxisAngleXNorm4D().first-ikparamprev.GetTranslationYAxisAngleXNorm4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }
         case IKP_TranslationZAxisAngleYNorm4D: {
-            dReal angmintime = ANGLE_DIFF(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second)*_vimaxvel.at(info->orgposoffset);
+            dReal angmintime = utils::SubtractCircularAngle(ikparam.GetTranslationZAxisAngleYNorm4D().second,ikparamprev.GetTranslationZAxisAngleYNorm4D().second)*_vimaxvel.at(info->orgposoffset);
             dReal transmintime = RaveSqrt((ikparam.GetTranslationZAxisAngleYNorm4D().first-ikparamprev.GetTranslationZAxisAngleYNorm4D().first).lengthsqr3())*_vimaxvel.at(info->orgposoffset+1);
             return max(angmintime,transmintime);
         }

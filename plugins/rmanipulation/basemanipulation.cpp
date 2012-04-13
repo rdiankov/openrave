@@ -56,6 +56,8 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Jitters the active DOF for a collision-free position.");
         RegisterCommand("SetMinimumGoalPaths",boost::bind(&BaseManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
+        RegisterCommand("SetPostProcessing",boost::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
+                        "Sets post processing parameters.");
         RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
                         "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
 - cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
@@ -185,7 +187,7 @@ protected:
         char sep = ' ';
         if( filename == "sep" ) {
             sinput >> sep;
-            filename = getfilename_withseparator(sinput,sep);
+            filename = utils::GetFilenameUntilSeparator(sinput,sep);
         }
 
         if( filename == "stream" ) {
@@ -247,7 +249,7 @@ protected:
                 sinput >> minsteps;
             }
             else if( cmd == "outputtraj") {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
@@ -334,7 +336,7 @@ protected:
         }
 
         if( params->workspacetraj->GetDuration() == 0 ) {
-            RAVELOG_WARN("workspace traj has is empty\n");
+            RAVELOG_WARN("workspace traj is empty\n");
             return false;
         }
 
@@ -411,7 +413,7 @@ protected:
                 }
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxiter" ) {
                 sinput >> params->_nMaxIterations;
@@ -444,6 +446,9 @@ protected:
         }
         RobotBase::RobotStateSaver saver(robot);
         params->SetRobotActiveJoints(robot);
+        if( _sPostProcessingParameters.size() > 0 ) {
+            params->_sPostProcessingParameters = _sPostProcessingParameters;
+        }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -552,6 +557,7 @@ protected:
         string cmd;
         dReal jitter = 0.03;
         dReal jitterikparam = 0;
+        dReal goalsampleprob = 0.1;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -572,7 +578,7 @@ protected:
                 listgoals.back().SetRotation3D(q);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "matrix" ) {
                 TransformMatrix m;
@@ -681,6 +687,9 @@ protected:
             else if( cmd == "jitterikparam" || cmd == "jittergoal" ) {
                 sinput >> jitterikparam;
             }
+            else if( cmd == "goalsampleprob" ) {
+                sinput >> goalsampleprob;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -696,6 +705,9 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
+        if( _sPostProcessingParameters.size() > 0 ) {
+            params->_sPostProcessingParameters = _sPostProcessingParameters;
+        }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
@@ -739,7 +751,7 @@ protected:
                 --nSeedIkSolutions;
             }
         }
-        goalsampler.SetSamplingProb(0.05);
+        goalsampler.SetSamplingProb(goalsampleprob);
         params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
 
         if( params->vgoalconfig.size() == 0 ) {
@@ -808,7 +820,7 @@ protected:
                 rrtplanner->SendCommand(soutput,sinput);
             }
             catch(const openrave_exception& ex) {
-                RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose!\n")%rrtplanner->GetXMLId()));
+                RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
             }
         }
 
@@ -840,7 +852,7 @@ protected:
                 sinput >> strsavetraj;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "handjoints" ) {
                 int dof = 0;
@@ -881,7 +893,7 @@ protected:
         }
 
         RobotBase::RobotStateSaver saver(robot);
-        uint32_t starttime = GetMilliTime();
+        uint32_t starttime = utils::GetMilliTime();
         if( planningutils::JitterActiveDOF(robot,nMaxJitterIterations) == 0 ) {
             RAVELOG_WARN("failed to jitter robot out of collision\n");
         }
@@ -903,7 +915,7 @@ protected:
 
         bool bExecuted = CM::SetActiveTrajectory(robot, ptraj, bExecute, strsavetraj, pOutputTrajStream,_fMaxVelMult);
         sout << (int)bExecuted << " ";
-        sout << (GetMilliTime()-starttime)/1000.0f << " ";
+        sout << (utils::GetMilliTime()-starttime)/1000.0f << " ";
         vector<dReal> q;
         ptraj->GetWaypoint(-1,q,robot->GetActiveConfigurationSpecification());
         FOREACH(it, q) {
@@ -937,7 +949,7 @@ protected:
                 sinput >> fJitter;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1106,6 +1118,14 @@ protected:
         return !!sinput;
     }
 
+    bool SetPostProcessingCommand(ostream& sout, istream& sinput)
+    {
+        if( !getline(sinput, _sPostProcessingParameters) ) {
+            return false;
+        }
+        return !!sinput;
+    }
+
     IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
     {
         if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
@@ -1118,6 +1138,7 @@ protected:
     string _strRRTPlannerName;
     dReal _fMaxVelMult;
     int _minimumgoalpaths;
+    string _sPostProcessingParameters;
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {

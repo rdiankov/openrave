@@ -13,7 +13,20 @@
 # limitations under the License.
 from common_test_openrave import *
 
-class TestPhysics(EnvironmentSetup):
+class RunPhysics(EnvironmentSetup):
+    def __init__(self,physicsenginename):
+        self.physicsenginename = physicsenginename
+    def setup(self):
+        EnvironmentSetup.setup(self)
+        self.env.SetPhysicsEngine(RaveCreatePhysicsEngine(self.env,self.physicsenginename))
+
+    def test_basic(self):
+        scene = 'data/hanoi.env.xml'
+        self.LoadEnv(scene)
+        self.env.SetPhysicsEngine(RaveCreatePhysicsEngine(self.env,self.physicsenginename))
+        self.env.SetPhysicsEngine(RaveCreatePhysicsEngine(self.env,self.physicsenginename))
+        self.env.GetPhysicsEngine().SetGravity([0,0,-9.81])
+        
     def test_static(self):
         env=self.env
         scene = 'data/hanoi.env.xml'
@@ -21,8 +34,6 @@ class TestPhysics(EnvironmentSetup):
         with env:
             robot=env.GetRobots()[0]
             Trobot = robot.GetTransform()
-            physics = RaveCreatePhysicsEngine(env,'ode')
-            env.SetPhysicsEngine(physics)
             env.GetPhysicsEngine().SetGravity([0,0,-9.81])
 
             assert(not robot.GetLinks()[0].IsStatic())
@@ -49,8 +60,6 @@ class TestPhysics(EnvironmentSetup):
 
     def test_simtime(self):
         env=self.env
-        physics = RaveCreatePhysicsEngine(env,'ode')
-        env.SetPhysicsEngine(physics)
         env.GetPhysicsEngine().SetGravity([0,0,-9.81])
 
         with env:
@@ -92,7 +101,7 @@ class TestPhysics(EnvironmentSetup):
             env.StepSimulation(0.01)
         with env:
             T3 = body.GetTransform()
-            print (T[2,3]-Tinit[2,3]),(T3[2,3]-T2[2,3])
+            self.log.info('differences: %f, %f', (T[2,3]-Tinit[2,3]),(T3[2,3]-T2[2,3]))
             assert( abs((T[2,3]-Tinit[2,3]) - (T3[2,3]-T2[2,3])) < 0.001)
         assert(abs(1e-6*env.GetSimulationTime()-simtime1-(simtime0-starttime)) < g_epsilon)
 
@@ -103,8 +112,38 @@ class TestPhysics(EnvironmentSetup):
                 break
         env.StopSimulation()
 
-    def test_rotationaxis(self):
+    def test_kinematics(self):
+        log.info("test that physics kinematics are consistent")
         env=self.env
+        with env:
+            for robotfilename in g_robotfiles+['testdata/bobcat.robot.xml']:
+                env.Reset()
+                self.LoadEnv(robotfilename,{'skipgeometry':'1'})
+                robot=self.env.GetRobots()[0]
+                robot.GetLinks()[0].SetStatic(True)
+                for i in range(1000):
+                    env.StepSimulation(0.001)
+                curvalues = robot.GetDOFValues()
+                curlinks = robot.GetLinkTransformations()
+                robot.SetDOFValues(curvalues)
+                newlinks = robot.GetLinkTransformations()
+                assert(transdist(curlinks,newlinks) <= g_epsilon)
+    
+    def test_rotationaxis(self):
+        if self.physicsenginename != 'ode':
+            return
+        
+        env=self.env
+        if self.physicsenginename == 'ode':
+            properties = """<odeproperties>
+              <friction>3.5</friction>
+              <selfcollision>1</selfcollision>
+              <erp>0.6</erp>
+              <cfm>0.00000001</cfm>
+            </odeproperties>"""
+        else:
+            properties = ''
+            
         xmldata = """<environment>
           <Robot file="robots/diffdrive_caster.robot.xml">
             <Translation>4 6 0.1</Translation>
@@ -123,21 +162,16 @@ class TestPhysics(EnvironmentSetup):
           </KinBody>
 
 
-          <physicsengine type="ode">
-            <odeproperties>
-              <friction>3.5</friction>
-              <gravity>0 0 -9.8</gravity>
-              <selfcollision>1</selfcollision>
-              <erp>0.6</erp>
-              <cfm>0.00000001</cfm>
-            </odeproperties>
+          <physicsengine type="%s">
+            %s
           </physicsengine>
         </environment>
-
-        """
+        """%(self.physicsenginename,properties)
         self.LoadDataEnv(xmldata)
         robot = env.GetRobots()[0]
+                    
         with env:
+            env.GetPhysicsEngine().SetGravity([0,0,-9.8])
             robot.SetActiveDOFs([], DOFAffine.X | DOFAffine.Y | DOFAffine.RotationAxis,[0,0,1])
             orgvalues = robot.GetActiveDOFValues()
             for i in range(100):
@@ -145,3 +179,13 @@ class TestPhysics(EnvironmentSetup):
                 values = robot.GetActiveDOFValues()
                 assert(sum(abs(values-orgvalues))<1)
 
+#generate_classes(RunPhysics, globals(), [('ode','ode'),('bullet','bullet')])
+
+class test_ode(RunPhysics):
+    def __init__(self):
+        RunPhysics.__init__(self, 'ode')
+
+# class test_bullet(RunPhysics):
+#     def __init__(self):
+#         RunPhysics.__init__(self, 'bullet')
+#         

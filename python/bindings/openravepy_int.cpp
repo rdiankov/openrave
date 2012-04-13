@@ -31,6 +31,10 @@ PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr py
     CHECK_POINTER(_pyenv);
 }
 
+object PyInterfaceBase::GetUserData() const {
+    return openravepy::GetUserData(_pbase->GetUserData());
+}
+
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 #if BOOST_VERSION < 103500
@@ -1101,13 +1105,7 @@ public:
         _penv->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
     object GetUserData() const {
-        boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(_penv->GetUserData());
-        if( !po ) {
-            return object(PyUserData(_penv->GetUserData()));
-        }
-        else {
-            return po->_o;
-        }
+        return openravepy::GetUserData(_penv->GetUserData());
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1117,7 +1115,7 @@ public:
         return !p || _penv!=p->_penv;
     }
     string __repr__() {
-        return boost::str(boost::format("<RaveGetEnvironment(%d)>")%RaveGetEnvironmentId(_penv));
+        return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
     }
     string __str__() {
         return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));
@@ -1143,6 +1141,23 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 
 namespace openravepy
 {
+
+object GetUserData(UserDataPtr pdata)
+{
+    boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(pdata);
+    if( !!po ) {
+        return po->_o;
+    }
+    else {
+        SerializableDataPtr pserializable = boost::dynamic_pointer_cast<SerializableData>(pdata);
+        if( !!pserializable ) {
+            return object(PySerializableData(pserializable));
+        }
+        else {
+            return object(PyUserData(pdata));
+        }
+    }
+}
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr pyenv)
 {
@@ -1212,6 +1227,11 @@ object get_openrave_exception_unicode(openrave_exception* p)
     return ConvertStringToUnicode(s);
 }
 
+std::string get_openrave_exception_repr(openrave_exception* p)
+{
+    return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
 #if BOOST_VERSION >= 103500
@@ -1232,8 +1252,10 @@ BOOST_PYTHON_MODULE(openravepy_int)
     .def( init<const std::string&>() )
     .def( init<const openrave_exception&>() )
     .def( "message", &openrave_exception::message, return_copy_const_ref() )
+    .def("GetCode", &openrave_exception::GetCode )
     .def( "__str__", &openrave_exception::message, return_copy_const_ref() )
     .def( "__unicode__", get_openrave_exception_unicode)
+    .def( "__repr__", get_openrave_exception_repr)
     ;
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();
@@ -1264,6 +1286,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)
+        .def("__hash__",&PyInterfaceBase::__hash__)
         .def("__eq__",&PyInterfaceBase::__eq__)
         .def("__ne__",&PyInterfaceBase::__ne__)
         ;

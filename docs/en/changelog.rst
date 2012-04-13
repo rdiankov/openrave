@@ -3,12 +3,121 @@
 ChangeLog
 #########
 
-Version 0.6.3 Unstable
-======================
+Version 0.7.0 Development
+=========================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.6.4
+=============
+
+Subversion Revision: r3191
+
+Initial Release: 2012/04/13
+
+Core
+----
+
+* Added more :ref:`.ErrorCode` error codes and many new types of OPENRAVE_ASSERT_X macros.
+
+* Added **openrave/utils.h** file for common programming constructs not related to the OpenRAVE API.
+
+* Fixed bug in closed-chain kinematics when static links are present.
+
+* Added :meth:`.RaveClone`
+
+* Added :class:`.SerializableData` that derives from :class:`.UserData` allowing C++ user data to be saved and transferred.
+
+* Set better epsilon limits throughout the code
+
+* dofbranches are now used to set/get joint values greater than 2*pi range. Added support in openravepy KinBody.XLinkTransformations 
+
+* The rigidly attached links of grabbed links of a robot are now always ignored, collision is never checked between them.
+
+* Fixed trajectory sampling/interpolation for IkParameterization
+
+* Removed operator T*() from geometry::RaveVector, **could break existing code**.
+
+Inverse Kinematics
+------------------
+
+* All IK solutions returned for revolute joints with ranges greater than 2*pi radians by adding +- 2*pi until limits reached.
+
+* Fixed ManipulatorIKGoalSampler for returning original ik indices.
+
+* Fixed ikfast bug in solve5DIntersectingAxes
+
+Planning
+--------
+
+* Fixed bug in retiming/smoothing planners taking in inconsistent trajectory configurations.
+
+* Fixed :meth:`.planningutils.ReverseTrajectory` for linearly interpolated trajectories.
+
+* Fixed grasp offsets and trajectory combining in :ref:`module-taskmanipulation-graspplanning` and :meth:`.planningutils.InsertActiveDOFWaypointWithRetiming`.
+
+* The rplanners RRTs now respect the PA_Interrupt actions from the PlanCallbacks. The callbacks are also transferred to the post-process planners.
+
+* Added parabolic retiming of IkParameterization
+
+* Added planner parameters option to force max acceleration
+
+Grasping
+--------
+
+* Fixed several grasperplanner bugs: one in returning no solution when last point is in collision.
+
+Python
+------
+
+* Setup openravepy logging hierarchy, colorized logging output with logutils library.
+
+* Added GetCode to python openrave_exception class
+
+* Added :meth:`.misc.InitOpenRAVELogging` to setup global python logging handlers.
+
+Physics
+-------
+
+* fixed many bugs with bullet physics, static links are supported
+
+Examples
+--------
+
+* Added orplanning_door C++ example to show how to plan with robot+door at same time.
+
+* Added :mod:`.examples.inversekinematicspick` python example to show IK picking.
+
+* Introduced a simple framework for the C++ examples in cppexamples/orexample.h (class OpenRAVEExample). Most C++ examples now use it.
+
+Misc
+----
+
+* Removed isosurface computation from linkstatistics since it was buggy. Now forcing linkstatistics generation of all planning models. Also fixed bug with cross-section computation.
+
+* Installing **openrave.bash** to share folder to allow users to easy set paths for openrave runtimes.
+
+* Fixed :meth:`.planningutils.RetimeActiveDOFTrajectory` and :meth:`.planningutils.RetimeAffineTrajectory` when trajectories have timestamps.
+
+* Starting with FParser 4.4.3, can use the library without local modifications. Also check for installations with cmake's find_package.
+
+* Fixed several race condition with video recording (VideoRecorder interface), viewer exiting, and other threads.
+
+* Mac OSX compatibility: openrave executable now creates the viewer in the main thread.
+
+* Fixed render scale when non-xml file is loaded as a kinbody.
+
+* Returned ik solutions from :meth:`.Robot.Manipulator.FindIKSolutions` are prioritized by minimum distance from joint limits.
+
+* Fixed environment cloning of iksolvers set by LoadIKFastSolver.
+
+* Added multi-threading C++ example **ormultithreadedplanning**.
+
+* Fixed bug in IkParameterization::ComputeDistanceSqr
+
+* Added conversion to DH parameters with :meth:`.planningutils.GetDHParameters`
 
 Version 0.6.2
 =============
@@ -33,6 +142,8 @@ Planning
 * Task GraspPlanning now respects approach offset distance
 
 * Parabolic Smoother updates (thanks to Kris Hauser)
+
+* rplanners RRTs now track initial configuration indices
 
 Sampling
 --------

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file iksolver.h
     \brief Inverse kinematics related definitions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_IKSOLVER_H
 #define OPENRAVE_IKSOLVER_H
@@ -35,7 +37,7 @@ enum IkFilterOptions
 {
     IKFO_CheckEnvCollisions=1, ///< will check environment collisions with the robot (not checked by default)
     IKFO_IgnoreSelfCollisions=2, ///< will not check the self-collision of the robot (checked by default)
-    IKFO_IgnoreJointLimits=4, ///< will not check the joint limits of the robot (checked by default)
+    IKFO_IgnoreJointLimits=4, ///< will not check the joint limits of the robot (checked by default). This has the side effect of only returning solutions within 360 degrees for revolute joints, even if they have a range > 360.
     IKFO_IgnoreCustomFilters=8, ///< will not use the custom filter, even if one is set
     IKFO_IgnoreEndEffectorCollisions=16, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
 };

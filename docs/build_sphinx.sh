@@ -11,7 +11,8 @@ python build_interfaces.py --outdir=$1
 if [ "$?" -ne 0 ]; then echo "build_interfaces.py failed"; exit 1; fi 
 mkdir -p $1/openravepy
 ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-python sphinx-autopackage-script/generate_modules.py --dest-dir=$1/openravepy --suffix=rst --maxdepth=3 --no-toc --sep-files `pwd`/openravepy pyflann
+export PYTHONPATH=`pwd`:$PYTHONPATH
+python sphinx-autopackage-script/generate_modules.py --dest-dir=$1/openravepy --suffix=rst --maxdepth=3 --no-toc --sep-files `pwd`/openravepy
 rm openravepy
 if [ "$?" -ne 0 ]; then echo "build_interfaces.py failed"; exit 1; fi 
 python build_ikdatabase.py --lang=$1 --ikfaststats=ikfaststats.pp

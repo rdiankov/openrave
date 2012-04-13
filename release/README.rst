@@ -7,6 +7,8 @@ Every release comes with:
 
 * **X-win32-vcX-setup.exe** - Windows Installers compiled for VS2008 (vc90) and VS2010 (vc100). 
 
+**Windows 7 x64 Users**: If programs crash using the VS2010 package, please try VS2008 package.
+
 For x.y.z releases, official releases are when **y** and **z** are both even numbers.
 
 Files are generated and uploaded using the scripts in the **release** source folder. See `Developer's Guide <http://openrave.org/en/main/devel/releases.html>`_ for more information.

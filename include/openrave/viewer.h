@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /** \file viewer.h
     \brief Graphical interface functions.
+
+    Automatically included with \ref openrave.h
  */
 #ifndef OPENRAVE_VIEWER_H
 #define OPENRAVE_VIEWER_H

@@ -39,7 +39,6 @@ public:
         }
     };
 
-
     inline boost::shared_ptr<BulletPhysicsEngine> shared_physics() {
         return boost::static_pointer_cast<BulletPhysicsEngine>(shared_from_this());
     }
@@ -52,8 +51,8 @@ public:
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
     {
         __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-        _solver_iterations = 10;
-        _margin_depth = 0.001;
+        _solver_iterations = 100;
+        _margin_depth = 0.0001;
         _linear_damping = 0.2;
         _rotation_damping = 0.9;
         _global_contact_force_mixing = 0;
@@ -67,6 +66,9 @@ public:
         _space->SetSynchornizationCallback(boost::bind(&BulletPhysicsEngine::_SyncCallback, shared_physics(),_1));
 
         _broadphase.reset(new btDbvtBroadphase());
+        //btVector3 worldMin(-1000,-1000,-1000);
+        //btVector3 worldMax(1000,1000,1000);
+        //_broadphase.reset(new btAxisSweep3(worldMin,worldMax));
 
         // allowes configuration of collision detection
         _collisionConfiguration.reset(new btDefaultCollisionConfiguration());
@@ -82,7 +84,7 @@ public:
         _dynamicsWorld->getPairCache()->setOverlapFilterCallback(_filterCallback.get());
 
         btContactSolverInfo& solverInfo = _dynamicsWorld->getSolverInfo();
-        RAVELOG_DEBUG(str(boost::format("bullet dynamics: m_numIterations=%d, m_globalCfm=%f")%_solver_iterations%_global_contact_force_mixing));
+        RAVELOG_DEBUG(str(boost::format("bullet dynamics: m_numIterations=%d, m_globalCfm=%e")%_solver_iterations%_global_contact_force_mixing));
         solverInfo.m_numIterations = _solver_iterations;
         solverInfo.m_globalCfm = _global_contact_force_mixing;
 
@@ -101,6 +103,11 @@ public:
 
     virtual void DestroyEnvironment()
     {
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            SetPhysicsData(*itbody,UserDataPtr());
+        }
         RAVELOG_VERBOSE("destroy bullet physics environment\n");
         _space->DestroyEnvironment();
         _dynamicsWorld.reset();
@@ -122,6 +129,9 @@ public:
         SetPhysicsData(pbody, pinfo);
         if( !!pinfo ) {
             FOREACH(itlink,pinfo->vlinks) {
+                (*itlink)->_rigidbody->setDamping(0.05, 0.85);
+                (*itlink)->_rigidbody->setDeactivationTime(0.8);
+                (*itlink)->_rigidbody->setSleepingThresholds(1.6, 2.5);
                 (*itlink)->_rigidbody->setFriction(_global_friction);
                 (*itlink)->_rigidbody->setRestitution(_global_restitution);
             }
@@ -146,12 +156,28 @@ public:
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
-        RAVELOG_DEBUG("SetLinkVelocity not supported\n");
+        BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(plink->GetParent());
+        boost::shared_ptr<btRigidBody> rigidbody(pinfo->vlinks.at(plink->GetIndex())->_rigidbody);
+        if( !rigidbody ) {
+            RAVELOG_DEBUG(str(boost::format("link %s does not have rigid body")%plink->GetName()));
+        }
+        rigidbody->setLinearVelocity(BulletSpace::GetBtVector(linearvel));
+        rigidbody->setAngularVelocity(BulletSpace::GetBtVector(angularvel));
         return false;
     }
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        RAVELOG_DEBUG("SetLinkVelocities not supported\n");
+        BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(pbody);
+        FOREACH(itlink, pinfo->vlinks) {
+            if( !!(*itlink)->_rigidbody ) {
+                int index = (*itlink)->plink->GetIndex();
+                (*itlink)->_rigidbody->setLinearVelocity(BulletSpace::GetBtVector(velocities.at(index).first));
+                (*itlink)->_rigidbody->setAngularVelocity(BulletSpace::GetBtVector(velocities.at(index).second));
+            }
+            else {
+                RAVELOG_DEBUG(str(boost::format("link %s does not have rigid body")%(*itlink)->plink->GetName()));
+            }
+        }
         return false;
     }
 
@@ -306,8 +332,8 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed)
     {
         _space->Synchronize();
-        int maxSubSteps = 0;
-        _dynamicsWorld->applyGravity();
+        int maxSubSteps = 2;
+        //_dynamicsWorld->applyGravity();
         _dynamicsWorld->stepSimulation(fTimeElapsed,maxSubSteps);
 
         vector<KinBodyPtr> vbodies;
@@ -315,21 +341,12 @@ public:
         FOREACHC(itbody, vbodies) {
             BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             FOREACH(itlink, pinfo->vlinks) {
-                Transform t;
-                btQuaternion btquat = (*itlink)->_rigidbody->getCenterOfMassTransform().getRotation();
-                t.rot.x = btquat.w();
-                t.rot.y = btquat.x();
-                t.rot.z = btquat.y();
-                t.rot.w = btquat.z();
-                btVector3 bttrans = (*itlink)->_rigidbody->getCenterOfMassTransform().getOrigin();
-                t.trans.x = bttrans.x();
-                t.trans.y = bttrans.y();
-                t.trans.z = bttrans.z();
+                Transform t = BulletSpace::GetTransform((*itlink)->_rigidbody->getCenterOfMassTransform());
                 (*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
-        _dynamicsWorld->clearForces();
+        //_dynamicsWorld->clearForces();
     }
 
 private:

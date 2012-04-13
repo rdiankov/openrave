@@ -61,9 +61,9 @@ To load a simple robot into the scene type:
 openrave robots/puma.robot.xml
 \endverbatim
 
-If a plugin declares a ProblemInsance named \b MyProblem, then to launch the problem at startup type
+If a plugin declares a Module named \b MyModule, then to launch the module at startup type
 \verbatim
-openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
+openrave robots/puma.robot.xml -module MyModule 'myarguments'
 \endverbatim
 
 The \openrave_py{openrave.py} program is similar to \c openrave, but supports much more
@@ -82,9 +82,9 @@ xmlファイルで定義されたロボットをOpenRAVE環境に読み出すに
 openrave robots/puma.robot.xml
 \endverbatim
 
-プラグインが<b>MyProblem</b>という問題例を定義している場合，次のコマンドで起動することができます．
+プラグインが<b>MyModule</b>という問題例を定義している場合，次のコマンドで起動することができます．
 \verbatim
-openrave robots/puma.robot.xml -problem MyProblem 'myarguments'
+openrave robots/puma.robot.xml -module MyModule 'myarguments'
 \endverbatim
 
 openraveと似たコマンドに\openrave_py{openrave.py}というコマンドがあります．こちらはPythonで書かれているためOpenRAVEで提供されているすべてのモジュールにアクセスすることが可能で非常に機能的です．一方，openraveコマンドは既にC++でコンパイルされているため，Pythonがインストールされている開発環境でなくても実行することが可能です．
@@ -109,17 +109,18 @@ plugins through the environment's \ref env_plugin_functionality "interface query
 
 \section writing_plugins_example Making a Simple Interface
 
-Example \ref plugincpp.cpp "plugincpp.cpp" creates a \ref OpenRAVE::ProblemInstance interface named \b MyProblem and have it offer two commands: \b numbodies and \b load.
+Example \ref plugincpp.cpp "plugincpp.cpp" creates a \ref OpenRAVE::ModuleBase interface named \b MyModule and have it offer two commands: \b numbodies and \b load.
 
 \dontinclude plugincpp.cpp
 
 The first \#include the compiler sees has to be \ref openrave/openrave.h. Then for the main C++ file, we include \ref openrave/plugin.h for several helper functions.
 
 \until {
+\until {
 
-Now register the two commands of the problem. \c boost::bind is necessary for specifying member functions as callbacks.
+Now register the two commands of the module. \c boost::bind is necessary for specifying member functions as callbacks.
 
-\skipline MyProblemInstance(
+\skipline MyModule(
 \until }
 
 Provide the implementations for the member functions:
@@ -130,7 +131,7 @@ It is recommend to plugin authors to include \ref openrave/plugin.h in their mai
 file, this will provide implementations for the export functions and ask the user to provide a new
 set of functions \ref CreateInterfaceValidated and \ref GetPluginAttributesValidated.
 
-Providing \b MyProblem would look like:
+Providing \b MyModule would look like:
 
 \skipline InterfaceBasePtr
 \until }
@@ -202,7 +203,7 @@ Once the plugin is loaded, we can create the interface and call its commands to 
 
 \b C++
 \code
-ProblemInstancePtr prob = RaveCreateProblem(env,"MyProblem");
+ModuleBasePtr prob = RaveCreateModule(env,"MyModule");
 env->AddModule(prob,"");
 stringstream sinput, sout;
 // input the load command
@@ -222,7 +223,7 @@ else {
 
 \b Python
 \verbatim
-prob = RaveCreateProblem(env,'MyProblem')
+prob = RaveCreateModule(env,'MyModule')
 env.AddModule(prob,args='')
 cmdout = prob.SendCommand('load data/lab1.env.xml')
 if cmdout is None:
@@ -234,7 +235,7 @@ else:
 
 \b Octave (only simple commands possible)
 \verbatim
-prob = orEnvCreateProblem('MyProblem');
+prob = orEnvCreateProblem('MyModule');
 orProblemSendCommand('load data/lab1.env.xml',prob);
 numbodies = orProblemSendCommand('numbodies',prob);
 disp(['number of bodies are: ' num2str(numbodies)])
@@ -284,10 +285,9 @@ helper functions are offered in \ref openrave/plugin.h, which all plugin authors
 
 All C++ examples are stored in \c $OPENRAVE_SHARE_DIR/cppexamples. Use the \c CMakeLists.txt file to build the examples by:
 \verbatim
-cd `openrave-config --share-dir`/cppexamples
-mkdir build
-cd build
-cmake ..
+mkdir cppexamplesbuild
+cd cppexamplesbuild
+cmake `openrave-config --share-dir`/cppexamples
 make
 \endverbatim
 
@@ -309,6 +309,7 @@ make
 - \ref orloadviewer.cpp
 - \ref orshowsensors.cpp
 - \ref ormulticontrol.cpp
+- \ref orplanning_door.cpp
 - \ref orplanning_ik.cpp
 - \ref orplanning_planner.cpp
 - \ref orplanning_module.cpp

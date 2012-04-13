@@ -77,6 +77,12 @@ static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 
 class ViewerRecorder : public ModuleBase
 {
+    inline boost::shared_ptr<ViewerRecorder> shared_module() {
+        return boost::static_pointer_cast<ViewerRecorder>(shared_from_this());
+    }
+    inline boost::shared_ptr<ViewerRecorder const> shared_module_const() const {
+        return boost::static_pointer_cast<ViewerRecorder const>(shared_from_this());
+    }
     struct VideoFrame
     {
         VideoFrame() : _timestamp(0), _bProcessed(false) {
@@ -151,6 +157,10 @@ public:
         _threadrecord->join();
     }
 
+    virtual void Destroy() {
+        _Reset();
+    }
+
 protected:
     bool _StartCommand(ostream& sout, istream& sinput)
     {
@@ -209,10 +219,11 @@ protected:
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }
+            RAVELOG_INFO("video filename: %s\n",_filename.c_str());
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
-            _frametime = (uint64_t)(1000000/_framerate);
-            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,this,_1,_2,_3,_4));
+            _frametime = (uint64_t)(1000000.0f/_framerate);
+            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             return !!_callback;
         }
@@ -256,8 +267,12 @@ protected:
 
     void _ViewerImageCallback(const uint8_t* memory, int width, int height, int pixeldepth)
     {
-        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : GetMicroTime();
         boost::mutex::scoped_lock lock(_mutex);
+        if( !GetEnv() || !_callback ) {
+            // recorder already destroyed and this thread is just remaining
+            return;
+        }
+        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
         boost::shared_ptr<VideoFrame> frame;
 
         if( _listAddFrames.size() > 0 ) {
@@ -298,6 +313,9 @@ protected:
             uint64_t numstores=0;
             {
                 boost::mutex::scoped_lock lock(_mutex);
+                if( !_bContinueThread ) {
+                    return;
+                }
                 if( _listAddFrames.size() == 0 ) {
                     _condnewframe.wait(lock);
                     if( _listAddFrames.size() == 0 ) {
@@ -324,6 +342,9 @@ protected:
                         if(( itbest == _listAddFrames.end()) ||( bestdist > dist) ) {
                             itbest = itframe;
                             bestdist = dist;
+                        }
+                        if( !_bContinueThread ) {
+                            return;
                         }
                         ++itframe;
                     }
@@ -380,10 +401,11 @@ protected:
     void _Reset()
     {
         {
+            RAVELOG_DEBUG("ViewerRecorder _Reset\n");
             boost::mutex::scoped_lock lock(_mutex);
             _nFrameCount = 0;
             _nVideoWidth = _nVideoHeight = 0;
-            _framerate = 30000.0f/1001.0;
+            _framerate = 30000.0f/1001.0f;
             _starttime = 0;
             _callback.reset();
             _bUseSimulationTime = true;
@@ -393,6 +415,7 @@ protected:
             _filename = "";
         }
         {
+            RAVELOG_DEBUG("ViewerRecorder _ResetLibrary\n");
             boost::mutex::scoped_lock lock(_mutexlibrary);
             _ResetLibrary();
         }
@@ -620,10 +643,8 @@ protected:
 
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
     {
-        if( bits != 24 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("START_AVI only supports 24bits",ORE_InvalidArguments);
-        }
-
+        OPENRAVE_ASSERT_OP_FORMAT0(bits,==,24,"START_AVI only supports 24bits",ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT0(filename.size(),>,0,"filename needs to be valid",ORE_InvalidArguments);
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 

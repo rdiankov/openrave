@@ -14,7 +14,7 @@
 from common_test_openrave import *
 
 def test_transformations():
-    print 'tests basic math transformations'
+    log.info('tests basic math transformations')
     for i in range(20):
         axisangle0 = (random.rand(3)-0.5)*1.99*pi/sqrt(3) # cannot have mag more than pi
         trans = random.rand(3)-0.5
@@ -69,55 +69,10 @@ def test_transformations():
         # slightly unnormalized pose
         T = matrixFromPose([ 0.00422863, 0.00522595, 0.707, 0.707182, 0.204229, 0.628939, 1.40061])
         assert(abs(linalg.det(T[0:3,0:3])-1) <= g_epsilon )
+
+def test_quatRotateDirection():
+    pairs = [ [[1,0,0], [0,1,0]], [[1,0,0], [1,0,0]], [[1,1,0], [0,1,1]] ]
+    for sourcedir, targetdir in pairs:
+        T = matrixFromQuat(quatRotateDirection(sourcedir,targetdir))
+        assert( transdist(dot(T[0:3,0:3],sourcedir),targetdir) <= g_epsilon )
         
-def test_fitcircle():
-    print 'fits 2d and 3d circles to a set of points'
-    perturbation = 0.001
-    for i in range(1000):
-        T = randtrans()
-        radius = random.rand()*5+0.3
-        angles = random.rand(5)*2*pi
-        points = c_[radius*cos(angles)+perturbation*(random.rand(len(angles))-0.5),radius*sin(angles)+perturbation*(random.rand(len(angles))-0.5),perturbation*(random.rand(len(angles))-0.5)]
-        M = mean(points,0)
-        Z=dot(transpose(points-M),points-M)
-        eigvals = sort(linalg.eigvals(Z))
-        if min(sqrt(eigvals[1]),sqrt(eigvals[2])) < 0.5*radius:
-            # badly condition points, try again
-            continue
-
-        newpoints = transformPoints(T,points)
-        newcenter, newradius, error = fitCircle(newpoints)
-        assert( sum(abs(T[0:3,3]-newcenter)) <= perturbation*4 )
-        assert( sum(abs(radius-newradius)) <= perturbation*4 )
-        assert( error <= perturbation*4 )
-        newpoints2d = points[:,0:2] + T[0:2,3]
-        newcenter2d, newradius2d, error = fitCircle(newpoints2d)
-        assert( sum(abs(T[0:2,3]-newcenter2d)) <= perturbation*4 )
-        assert( sum(abs(radius-newradius2d)) <= perturbation*4 )
-        assert( error <= perturbation*4 )
-
-def test_segments():
-    print 'test segment intersection'
-    for i in range(100):
-        center = random.rand(3)-0.5
-        d0 = random.rand(3)-0.5
-        d1 = random.rand(3)-0.5
-        if linalg.norm(d0) < 0.001 or linalg.norm(d1) < 0.001:
-            continue
-        randdists = random.rand(4)-0.5
-        newcenter, newdist = intersectSegments([center+d0*randdists[0],center+d0*randdists[1]],[center+d1*randdists[2],center+d1*randdists[3]])
-        assert( transdist(center,newcenter) <= g_epsilon )
-        assert( abs(newdist) <= g_epsilon )
-
-    for i in range(100):
-        points = random.rand(4,3)-0.5
-        d0 = points[1]-points[0]
-        d1 = points[3]-points[2]
-        if linalg.norm(d0) < 0.001 or linalg.norm(d1) < 0.001:
-            continue
-        d0 /= linalg.norm(d0)
-        d1 /= linalg.norm(d1)
-        center,dist = intersectSegments(points[0:2],points[2:4])
-        assert( linalg.norm(cross(d0,center-points[0]))<=0.51*abs(dist))
-        assert( linalg.norm(cross(d1,center-points[2]))<=0.51*abs(dist))
-    

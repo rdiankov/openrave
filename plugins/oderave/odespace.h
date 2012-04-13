@@ -318,7 +318,7 @@ private:
 
                 // set the transformation
                 RaveTransform<dReal> t = itgeom->GetTransform();
-                dGeomSetQuaternion(geom,t.rot);
+                dGeomSetQuaternion(geom,&t.rot[0]);
                 dGeomSetPosition(geom,t.trans.x, t.trans.y, t.trans.z);
 
                 // finally set the geom to the ode body
@@ -362,7 +362,7 @@ private:
             RaveTransform<dReal> t = (*itlink)->GetTransform();
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
-            dBodySetQuaternion(link->body,t.rot);
+            dBodySetQuaternion(link->body,&t.rot[0]);
             dBodySetData(link->body, &link->plink);     // so that the link can be retreived from the body
         }
 
@@ -459,9 +459,9 @@ private:
             }
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
         if( _bUsingPhysics ) {
-            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
         }
 
         Synchronize(pinfo);
@@ -585,7 +585,7 @@ private:
         for(size_t i = 0; i < vtrans.size(); ++i) {
             RaveTransform<dReal> t = vtrans[i];
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
-            dBodySetQuaternion(pinfo->vlinks[i]->body, t.rot);
+            dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
             dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
         }
         if( !!_synccallback ) {

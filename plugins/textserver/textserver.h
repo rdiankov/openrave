@@ -14,8 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef RAVE_SERVER
-#define RAVE_SERVER
+#ifndef OPENRAVE_TEXTSERVER
+#define OPENRAVE_TEXTSERVER
 
 #include <openrave/planningutils.h>
 
@@ -23,6 +23,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#else
+// for some reason there's a clash between winsock.h and winsock2.h, so don't include winsockX directly. Also cannot define WIN32_LEAN_AND_MEAN for vc100
+#undef WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#define usleep(microseconds) Sleep((microseconds+999)/1000)
 #endif
 
 #include <sstream>
@@ -216,7 +221,7 @@ public:
                 else {
                     if( failed < 10 ) {
                         failed++;
-                        Sleep(1);
+                        usleep(1000);
                         continue;
                     }
                     perror("failed to read line");
@@ -454,7 +459,7 @@ public:
         // wait for worker thread to stop
         while(_bWorking) {
             _condWorker.notify_all();
-            Sleep(1);
+            usleep(1000);
         }
     }
 
@@ -538,7 +543,7 @@ private:
 
             // finally initialize the socket
             if( !psocket->Accept(server_sockfd) ) {
-                Sleep(100);
+                usleep(100000);
                 continue;
             }
 
@@ -556,7 +561,6 @@ private:
         string cmd, line;
         stringstream sout;
         while(!bCloseThread) {
-            //Sleep(100);
             if( psocket->ReadLine(line) && line.length() ) {
 
                 if( !!flog &&( GetEnv()->GetDebugLevel()>0) ) {
@@ -636,7 +640,7 @@ private:
             else if( !psocket->IsInit() ) {
                 break;
             }
-            Sleep(1);
+            usleep(1000);
         }
 
         RAVELOG_VERBOSE("Closing socket connection\n");
@@ -790,7 +794,7 @@ protected:
                 if(( simcmd == "start") ||( simcmd == "on") ) {
                     dReal fdeltatime = 0.01f;
                     *is >> fdeltatime;
-                    RAVELOG_DEBUG("starting simulation loop, timestep=%f\n", (float)fdeltatime);
+                    RAVELOG_DEBUG(str(boost::format("starting simulation loop, timestep=%f")%fdeltatime));
                     GetEnv()->StartSimulation(fdeltatime);
                 }
                 else {
@@ -1947,7 +1951,8 @@ protected:
         if( !probot->GetController() ) {
             return false;
         }
-        int numpoints, havetime, havetrans;
+        int numpoints;
+        bool havetime, havetrans;
         *is >> numpoints >> havetime >> havetrans;
         if( !*is ) {
             return false;
@@ -2112,7 +2117,7 @@ protected:
         CollisionReportPtr preport(new CollisionReport());
         RAY r;
         bool bcollision;
-        vector<float> info;
+        vector<dReal> info;
 
         while(!is.eof()) {
             is >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
@@ -2211,7 +2216,7 @@ protected:
         RobotBasePtr probot;
         ControllerBasePtr pcontroller;
         int timeout = -1;
-        float ftimeout;
+        dReal ftimeout;
 
         {
             EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -2230,7 +2235,7 @@ protected:
 
         if( !!pcontroller ) {
             while( !pcontroller->IsDone() ) {
-                Sleep(1);
+                usleep(1000);
                 if( timeout > 0 ) {
                     if( --timeout == 0 )
                         break;

@@ -215,7 +215,7 @@ protected:
                 sinput >> *it;
             }
             else if( cmd == "outputtraj" )
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxiter" )
                 sinput >> params->_nMaxIterations;
             else if( cmd == "execute" )
@@ -355,7 +355,7 @@ protected:
             if( cmd == "minsteps" )
                 sinput >> minsteps;
             else if( cmd == "outputtraj")
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,null_deleter());
+                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxsteps")
                 sinput >> maxsteps;
             else if( cmd == "stepsize")
@@ -456,7 +456,7 @@ protected:
 
             size_t j = 0;
             for(; j < point.q.size(); j++) {
-                if(fabsf(point.q[j] - vPrevValues[j]) > 0.2) {
+                if(RaveFabs(point.q[j] - vPrevValues[j]) > 0.2) {
                     RAVELOG_DEBUG("Breaking here %d\n",j);
                     break;
                 }

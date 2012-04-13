@@ -40,14 +40,14 @@ public:
     Environment() : EnvironmentBase()
     {
         _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG("setting openrave cache directory to %s\n",_homedirectory.c_str());
+        RAVELOG_DEBUG(str(boost::format("setting openrave home directory to %s")%_homedirectory));
 
         _nBodiesModifiedStamp = 0;
         _nEnvironmentIndex = 1;
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
@@ -59,7 +59,15 @@ public:
 
         {
             bool bExists=false;
-            RaveParseDirectories(getenv("OPENRAVE_DATA"), _vdatadirs);
+#ifdef _WIN32
+            const char* delim = ";";
+#else
+            const char* delim = ":";
+#endif
+            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA");
+            if( pOPENRAVE_DATA != NULL ) {
+                utils::TokenizeString(pOPENRAVE_DATA, delim, _vdatadirs);
+            }
             string installdir = OPENRAVE_DATA_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
             if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
@@ -134,7 +142,7 @@ public:
 
         _fDeltaSimTime = 0.01f;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _bRealTime = true;
         _bEnableSimulation = true;     // need to start by default
 
@@ -220,7 +228,7 @@ public:
 
         RAVELOG_DEBUG("resetting raveviewer\n");
         FOREACH(itviewer, listViewers) {
-            (*itviewer)->Reset();
+            // don't reset the viewer since it can already be dead
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();
@@ -502,7 +510,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
-        if( !IsValidName(pbody->GetName()) ) {
+        if( !utils::IsValidName(pbody->GetName()) ) {
             throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%pbody->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
@@ -511,7 +519,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 pbody->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(pbody), false) ) {
                     break;
                 }
             }
@@ -534,7 +542,7 @@ public:
         if( !robot->IsRobot() ) {
             throw openrave_exception(str(boost::format("kinbody \"%s\" is not a robot")%robot->GetName()));
         }
-        if( !IsValidName(robot->GetName()) ) {
+        if( !utils::IsValidName(robot->GetName()) ) {
             throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%robot->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
@@ -543,7 +551,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 robot->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(KinBodyConstPtr(robot),false) ) {
                     break;
                 }
             }
@@ -564,7 +572,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
-        if( !IsValidName(psensor->GetName()) ) {
+        if( !utils::IsValidName(psensor->GetName()) ) {
             throw openrave_exception(str(boost::format("sensor name: \"%s\" is not valid")%psensor->GetName()));
         }
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor),!bAnonymous) ) {
@@ -573,7 +581,7 @@ public:
             for(int i = 0;; ++i) {
                 newname = str(boost::format("%s%d")%oldname%i);
                 psensor->SetName(newname);
-                if( IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
+                if( utils::IsValidName(newname) && _CheckUniqueName(SensorBaseConstPtr(psensor),false) ) {
                     break;
                 }
             }
@@ -590,15 +598,15 @@ public:
         return Remove(InterfaceBasePtr(pbody));
     }
 
-    virtual bool Remove(InterfaceBasePtr interface)
+    virtual bool Remove(InterfaceBasePtr pinterface)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::mutex::scoped_lock lock(_mutexInterfaces);
-        CHECK_INTERFACE(interface);
-        switch(interface->GetInterfaceType()) {
+        CHECK_INTERFACE(pinterface);
+        switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
         case PT_Robot: {
-            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(interface);
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             vector<KinBodyPtr>::iterator it = std::find(_vecbodies.begin(), _vecbodies.end(), pbody);
             if( it == _vecbodies.end() ) {
                 return false;
@@ -625,7 +633,7 @@ public:
             return true;
         }
         case PT_Sensor: {
-            SensorBasePtr psensor = RaveInterfaceCast<SensorBase>(interface);
+            SensorBasePtr psensor = RaveInterfaceCast<SensorBase>(pinterface);
             list<SensorBasePtr>::iterator it = std::find(_listSensors.begin(), _listSensors.end(), psensor);
             if( it != _listSensors.end() ) {
                 (*it)->Configure(SensorBase::CC_PowerOff);
@@ -635,7 +643,7 @@ public:
             break;
         }
         case PT_Module: {
-            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(interface);
+            ModuleBasePtr prob = RaveInterfaceCast<ModuleBase>(pinterface);
             list<ModuleBasePtr>::iterator itmodule = find(_listModules.begin(), _listModules.end(), prob);
             if( itmodule != _listModules.end() ) {
                 (*itmodule)->Destroy();
@@ -645,7 +653,7 @@ public:
             break;
         }
         case PT_Viewer: {
-            ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(interface);
+            ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(pinterface);
             list<ViewerBasePtr>::iterator itviewer = find(_listViewers.begin(), _listViewers.end(), pviewer);
             if( itviewer != _listViewers.end() ) {
                 (*itviewer)->quitmainloop();
@@ -655,7 +663,7 @@ public:
             break;
         }
         default:
-            RAVELOG_WARN(str(boost::format("unmanaged interfaces of type %s cannot be removed\n")%RaveGetInterfaceName(interface->GetInterfaceType())));
+            RAVELOG_WARN(str(boost::format("unmanaged interfaces of type %s cannot be removed\n")%RaveGetInterfaceName(pinterface->GetInterfaceType())));
             break;
         }
         return false;
@@ -1049,10 +1057,10 @@ public:
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
-                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        robot->SetName(utils::ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
                         boost::filesystem::path pfilename(filename, boost::filesystem::native);
-                        robot->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        robot->SetName(utils::ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
                         robot->SetName("object");
@@ -1167,10 +1175,10 @@ public:
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
-                        body->SetName(ConvertToOpenRAVEName(pfilename.stem().string()));
+                        body->SetName(utils::ConvertToOpenRAVEName(pfilename.stem().string()));
 #else
                         boost::filesystem::path pfilename(filename, boost::filesystem::native);
-                        body->SetName(ConvertToOpenRAVEName(pfilename.stem()));
+                        body->SetName(utils::ConvertToOpenRAVEName(pfilename.stem()));
 #endif
 #else
                         body->SetName("object");
@@ -1638,7 +1646,7 @@ public:
         _fDeltaSimTime = fDeltaTime;
         _bRealTime = bRealTime;
         //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
-        _nSimStartTime = GetMicroTime()-_nCurSimTime;
+        _nSimStartTime = utils::GetMicroTime()-_nCurSimTime;
     }
 
     virtual bool IsSimulationRunning() const {
@@ -1721,7 +1729,7 @@ protected:
         _homedirectory = r->_homedirectory;
         _fDeltaSimTime = r->_fDeltaSimTime;
         _nCurSimTime = 0;
-        _nSimStartTime = GetMicroTime();
+        _nSimStartTime = utils::GetMicroTime();
         _nEnvironmentIndex = r->_nEnvironmentIndex;
         _bRealTime = r->_bRealTime;
 
@@ -1751,7 +1759,7 @@ protected:
                 SetCollisionChecker(p);
             }
             catch(const std::exception& ex) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetCollisionChecker()->GetXMLId(),ORE_InvalidPlugin);
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
             }
         }
 
@@ -1859,7 +1867,7 @@ protected:
                     SetPhysicsEngine(p);
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s",r->GetPhysicsEngine()->GetXMLId(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
             _bEnableSimulation = r->_bEnableSimulation;
@@ -1946,8 +1954,8 @@ protected:
 
     void _SimulationThread()
     {
-        uint64_t nLastUpdateTime = GetMicroTime();
-        uint64_t nLastSleptTime = GetMicroTime();
+        uint64_t nLastUpdateTime = utils::GetMicroTime();
+        uint64_t nLastSleptTime = utils::GetMicroTime();
         while( _bInit ) {
             bool bNeedSleep = true;
 
@@ -1961,15 +1969,15 @@ protected:
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
                 }
-                uint64_t passedtime = GetMicroTime()-_nSimStartTime;
+                uint64_t passedtime = utils::GetMicroTime()-_nSimStartTime;
                 int64_t sleeptime = _nCurSimTime-passedtime;
                 if( _bRealTime ) {
                     if(( sleeptime > 2*deltasimtime) &&( sleeptime > 2000) ) {
                         lockenv.unlock();
                         // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                        Sleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2)/1000,1) );
+                        usleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2),1000) );
                         //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
-                        nLastSleptTime = GetMicroTime();
+                        nLastSleptTime = utils::GetMicroTime();
                     }
                     else if( sleeptime < -3*deltasimtime ) {
                         // simulation is getting late, so catch up
@@ -1978,25 +1986,26 @@ protected:
                     }
                 }
                 else {
-                    nLastSleptTime = GetMicroTime();
+                    nLastSleptTime = utils::GetMicroTime();
                 }
 
-                //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(GetMicroTime()-_nSimStartTime)*1e-6f);
+                //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
             }
 
-            if( GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
-                Sleep(1); bNeedSleep = false;
-                nLastSleptTime = GetMicroTime();
+            if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
+                usleep(1000);
+                bNeedSleep = false;
+                nLastSleptTime = utils::GetMicroTime();
             }
 
-            if( GetMicroTime()-nLastUpdateTime > 10000 ) {
+            if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
                 EnvironmentMutex::scoped_lock lockenv(GetMutex());
-                nLastUpdateTime = GetMicroTime();
+                nLastUpdateTime = utils::GetMicroTime();
                 UpdatePublishedBodies();
             }
 
             if( bNeedSleep ) {
-                Sleep(1);
+                usleep(1000);
             }
         }
     }

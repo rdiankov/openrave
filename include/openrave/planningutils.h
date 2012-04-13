@@ -17,6 +17,8 @@
 
 /** \file planningutils.h
     \brief Planning related utilities likes samplers, distance metrics, etc.
+
+    This file is optional and not automatically included with openrave.h
  */
 #ifndef OPENRAVE_PLANNINGUTILS_H
 #define OPENRAVE_PLANNINGUTILS_H
@@ -52,8 +54,9 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
  */
-OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
+OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smooth the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -63,8 +66,9 @@ OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
     \param maxaccelerations the max acceleration of each dof
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
  */
-OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
+OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retime the trajectory points consisting of active dofs. <b>[multi-thread safe]</b>
 
@@ -73,8 +77,9 @@ OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vect
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
  */
-OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="");
+OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retime the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -84,8 +89,9 @@ OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
     \param maxaccelerations the max acceleration of each dof
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
  */
-OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="");
+OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. <b>[multi-thread safe]</b>
 
@@ -119,6 +125,39 @@ OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseC
     Attempt to set default values for all parameters
  */
 OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec);
+
+/** \brief represents the DH parameters for one joint
+
+   T = Z_1 X_1 Z_2 X_2 ... X_n Z_n
+
+   where
+   Z_i = [cos(theta) -sin(theta) 0 0; sin(theta) cos(theta) 0 0; 0 0 1 d]
+   X_i = [1 0 0 a; 0 cos(alpha) -sin(alpha) 0; 0 sin(alpha) cos(alpha) 0]
+
+   http://en.wikipedia.org/wiki/Denavit%E2%80%93Hartenberg_parameters
+ */
+class DHParameter
+{
+public:
+    KinBody::JointConstPtr joint; ///< pointer to joint
+    int parentindex; ///< index into dh parameter array for getting cooreainte system of parent joint. If -1, no parent.
+    Transform transform; ///< the computed coordinate system of this joint, this can be automatically computed from DH parameters
+    dReal d; ///< distance along previous z
+    dReal a; ///< orthogonal distance from previous z axis to current z
+    dReal theta; ///< rotation of previous x around previous z to current x
+    dReal alpha; ///< rotation of previous z to current z
+};
+
+/** \brief returns the Denavit-Hartenberg parameters of the kinematics structure of the body.
+
+    If the robot has joints that cannot be represented by DH, will throw an exception.
+    Passive joints are ignored. Joints are ordered by hierarchy dependency.
+    By convention N joints give N-1 DH parameters, but GetDHParameters returns N parameters. The reason is because the first parameter is used to define the coordinate system of the first axis relative to the robot origin.
+    \note The coordinate systems computed from the DH parameters do not match the OpenRAVE link coordinate systems.
+    \param vparameters One set of parameters are returned for each joint. \see DHParameter.
+    \param tstart the initial transform in the body coordinate system to the first joint
+ */
+OPENRAVE_API void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody);
 
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
@@ -195,6 +234,7 @@ protected:
     std::vector< std::vector<dReal> > _viksolutions;
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
+    int _tempikindex; ///< if _viksolutions.size() > 0, points to the original ik index of those solutions
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;

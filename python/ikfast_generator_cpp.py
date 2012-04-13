@@ -369,8 +369,8 @@ inline double IKlog(double f) { return log(f); }
 inline float IKasin(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return -IKPI_2;
-else if( f >= 1 ) return IKPI_2;
+if( f <= -1 ) return float(-IKPI_2);
+else if( f >= 1 ) return float(IKPI_2);
 return asinf(f);
 }
 inline double IKasin(double f)
@@ -391,7 +391,7 @@ inline float IKfmod(float x, float y)
 }
 
 // return positive value in [0,y)
-inline float IKfmod(double x, double y)
+inline double IKfmod(double x, double y)
 {
     while(x < 0) {
         x += y;
@@ -402,8 +402,8 @@ inline float IKfmod(double x, double y)
 inline float IKacos(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return IKPI;
-else if( f >= 1 ) return 0;
+if( f <= -1 ) return float(IKPI);
+else if( f >= 1 ) return float(0);
 return acosf(f);
 }
 inline double IKacos(double f)
@@ -424,7 +424,7 @@ inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
         IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
-        return IKPI_2;
+        return float(IKPI_2);
     }
     else if( isnan(fx) ) {
         return 0;
@@ -444,10 +444,10 @@ inline double IKatan2(double fy, double fx) {
 
 inline float IKsign(float f) {
     if( f > 0 ) {
-        return 1.0f;
+        return float(1);
     }
     else if( f < 0 ) {
-        return -1.0f;
+        return float(-1);
     }
     return 0;
 }
@@ -1884,7 +1884,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
     using std::complex;
     IKFAST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
-    const IKReal tolsqrt = 8*sqrt(std::numeric_limits<IKReal>::epsilon());
+    const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
     complex<IKReal> coeffs[%d];
     const int maxsteps = 110;
     for(int i = 0; i < %d; ++i) {
@@ -1935,7 +1935,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             complex<IKReal> newroot=roots[i];
             int n = 1;
             for(int j = i+1; j < %d; ++j) {
-                if( abs(roots[i]-roots[j]) < tolsqrt ) {
+                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;
@@ -1945,7 +1945,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 newroot /= n;
             }
             // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
-            if( IKabs(imag(newroot)) < sqrt(std::numeric_limits<IKReal>::epsilon()) ) {
+            if( IKabs(imag(newroot)) < tolsqrt ) {
                 rawroots[numroots++] = real(newroot);
             }
         }

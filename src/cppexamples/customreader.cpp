@@ -11,6 +11,8 @@
 using namespace std;
 using namespace OpenRAVE;
 
+namespace cppexamples {
+
 class CustomController : public ControllerBase
 {
 public:
@@ -139,18 +141,20 @@ protected:
     int _nControlTransformation;
 };
 
+} // end namespace cppexamples
+
 static boost::shared_ptr<void> s_RegisteredReader;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     if( !s_RegisteredReader ) {
         /// as long as this pointer is valid, the reader will remain registered
-        s_RegisteredReader = RaveRegisterXMLReader(PT_Controller,"piddata",CustomController::CreateXMLReader);
+        s_RegisteredReader = RaveRegisterXMLReader(PT_Controller,"piddata",cppexamples::CustomController::CreateXMLReader);
     }
     switch(type) {
     case PT_Controller:
         if( interfacename == "customcontroller")
-            return InterfaceBasePtr(new CustomController(penv));
+            return InterfaceBasePtr(new cppexamples::CustomController(penv));
         break;
     default:
         break;
