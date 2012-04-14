@@ -586,11 +586,6 @@ public:
         /// \brief \see GetLimits
         virtual void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
 
-        /// \deprecated (11/1/1)
-        virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper) RAVE_DEPRECATED {
-            SetLimits(lower,upper);
-        }
-
         /** \brief Returns the max velocities of the joint
 
             \param[out] the max velocity
@@ -648,10 +643,6 @@ public:
 
         /// \brief \see GetWrapOffset
         virtual void SetWrapOffset(dReal offset, int iaxis=0);
-        /// \deprecated (11/1/16)
-        virtual void SetOffset(dReal offset, int iaxis=0) RAVE_DEPRECATED {
-            SetWrapOffset(offset,iaxis);
-        }
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -661,8 +652,6 @@ public:
         virtual LinkPtr GetHierarchyParentLink() const;
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
-        /// \deprecated (11/1/27)
-        virtual Vector GetInternalHierarchyAnchor() const RAVE_DEPRECATED;
         /// \brief The axis of the joint in local coordinates.
         virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
@@ -941,11 +930,6 @@ private:
 
     virtual void Destroy();
 
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLFile
-    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLData
-    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
-
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///
     /// \param boxes the array of aligned bounding boxes that will comprise of the body
@@ -1046,9 +1030,6 @@ private:
         return _vPassiveJoints;
     }
 
-    /// \deprecated \see Link::GetRigidlyAttachedLinks (10/12/12)
-    virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const RAVE_DEPRECATED;
-
     /// \brief Returns the joints in hierarchical order starting at the base link.
     ///
     /// In the case of closed loops, the joints are returned in the order closest to the root.
@@ -1110,21 +1091,10 @@ private:
     /// Takes into account joint limits and wrapping of circular joints.
     virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
-    /// \deprecated (01/01/11)
-    virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const RAVE_DEPRECATED {
-        SubtractDOFValues(q1,q2);
-    }
-
-
     /// \brief Adds a torque to every joint.
     ///
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
     virtual void SetDOFTorques(const std::vector<dReal>& torques, bool add);
-
-    /// \deprecated (11/06/17)
-    virtual void SetJointTorques(const std::vector<dReal>& torques, bool add) RAVE_DEPRECATED {
-        SetDOFTorques(torques,add);
-    }
 
     /// \brief Returns all the rigid links of the body.
     virtual const std::vector<LinkPtr>& GetLinks() const {
@@ -1198,11 +1168,6 @@ private:
 
     /// \brief Enables or disables all the links.
     virtual void Enable(bool enable);
-
-    /// \deprecated (10/09/08)
-    virtual void EnableLink(LinkPtr plink, bool bEnable) RAVE_DEPRECATED {
-        plink->Enable(bEnable);
-    }
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
@@ -1374,14 +1339,6 @@ private:
     /// such models in the OPENRAVE_HOME directory (usually ~/.openrave), indexed by the particular robot/body hashes.
     /// \return md5 hash string of kinematics/geometry
     virtual const std::string& GetKinematicsGeometryHash() const;
-
-    /// \deprecated (10/11/18)
-    virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities) RAVE_DEPRECATED {
-        SetDOFVelocities(pJointVelocities);
-    }
-
-    /// \deprecated (10/11/18)
-    virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const RAVE_DEPRECATED;
 
     /// \brief Sets the joint offsets so that the current configuration becomes the new zero state of the robot.
     ///

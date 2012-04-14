@@ -1350,53 +1350,6 @@ public:
         return std::make_pair(_transform.trans,_transform.rot.x);
     }
 
-    /// \deprecated (11/02/15)
-    //@{
-    inline void SetTransform(const Transform& t) RAVE_DEPRECATED {
-        SetTransform6D(t);
-    }
-    inline void SetRotation(const Vector& quaternion) RAVE_DEPRECATED {
-        SetRotation3D(quaternion);
-    }
-    inline void SetTranslation(const Vector& trans) RAVE_DEPRECATED {
-        SetTranslation3D(trans);
-    }
-    inline void SetDirection(const Vector& dir) RAVE_DEPRECATED {
-        SetDirection3D(dir);
-    }
-    inline void SetRay(const RAY& ray) RAVE_DEPRECATED {
-        SetRay4D(ray);
-    }
-    inline void SetLookat(const Vector& trans) RAVE_DEPRECATED {
-        SetLookat3D(trans);
-    }
-    inline void SetTranslationDirection(const RAY& ray) RAVE_DEPRECATED {
-        SetTranslationDirection5D(ray);
-    }
-    inline const Transform& GetTransform() const RAVE_DEPRECATED {
-        return _transform;
-    }
-    inline const Vector& GetRotation() const RAVE_DEPRECATED {
-        return _transform.rot;
-    }
-    inline const Vector& GetTranslation() const RAVE_DEPRECATED {
-        return _transform.trans;
-    }
-    inline const Vector& GetDirection() const RAVE_DEPRECATED {
-        return _transform.rot;
-    }
-    inline const Vector& GetLookat() const RAVE_DEPRECATED {
-        return _transform.trans;
-    }
-    inline const RAY GetRay() const RAVE_DEPRECATED {
-        return RAY(_transform.trans,_transform.rot);
-    }
-    inline const RAY GetTranslationDirection() const RAVE_DEPRECATED {
-        return RAY(_transform.trans,_transform.rot);
-    }
-    //@}
-
-
     /// \brief Computes the distance squared between two IK parmaeterizations.
     inline dReal ComputeDistanceSqr(const IkParameterization& ikparam) const
     {

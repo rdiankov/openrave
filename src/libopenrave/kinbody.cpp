@@ -1401,11 +1401,6 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
     return _attachedbodies[1];
 }
 
-Vector KinBody::Joint::GetInternalHierarchyAnchor() const
-{
-    return _tLeftNoOffset.trans;
-}
-
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
     return _vaxes.at(iaxis);
@@ -2023,26 +2018,6 @@ void KinBody::Destroy()
     _ResetInternalCollisionCache();
 }
 
-bool KinBody::InitFromFile(const std::string& filename, const AttributesList& atts)
-{
-    bool bSuccess = GetEnv()->ReadKinBodyURI(shared_kinbody(), filename, atts)==shared_kinbody();
-    if( !bSuccess ) {
-        Destroy();
-        return false;
-    }
-    return true;
-}
-
-bool KinBody::InitFromData(const std::string& data, const AttributesList& atts)
-{
-    bool bSuccess = GetEnv()->ReadKinBodyData(shared_kinbody(), data, atts)==shared_kinbody();
-    if( !bSuccess ) {
-        Destroy();
-        return false;
-    }
-    return true;
-}
-
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -2599,11 +2574,6 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool ch
     return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
 }
 
-void KinBody::GetVelocity(Vector& linearvel, Vector& angularvel) const
-{
-    GetEnv()->GetPhysicsEngine()->GetLinkVelocity(_veclinks.at(0), linearvel, angularvel);
-}
-
 void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
 {
     GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),velocities);
@@ -3055,11 +3025,6 @@ KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
         }
     }
     return LinkPtr();
-}
-
-void KinBody::GetRigidlyAttachedLinks(int linkindex, std::vector<KinBody::LinkPtr>& vattachedlinks) const
-{
-    _veclinks.at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
 }
 
 const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() const

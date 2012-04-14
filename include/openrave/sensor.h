@@ -367,14 +367,6 @@ public:
         _name = newname;
     }
 
-    /// \deprecated (11/03/28)
-    virtual bool Init(const std::string&) RAVE_DEPRECATED {
-        RAVELOG_WARN("SensorBase::Init has been deprecated\n"); return Configure(CC_PowerOn)>0;
-    }
-    virtual void Reset(int) RAVE_DEPRECATED {
-        RAVELOG_WARN("SensorBase::Reset has been deprecated\n"); Configure(CC_PowerOff);
-    }
-
 protected:
     std::string _name;     ///< name of the sensor
 

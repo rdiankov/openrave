@@ -210,7 +210,7 @@ protected:
 
         if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
+            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, _fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( !robot->GetController()->SetPath(ptraj) ) {

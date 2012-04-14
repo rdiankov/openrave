@@ -40,21 +40,6 @@ public:
         return PT_Controller;
     }
 
-    /// \brief Initializes the controller
-    /// \param robot the robot that uses the controller
-    /// \param args extra arguments that the controller takes.
-    /// \return true on successful initialization
-    virtual bool Init(RobotBasePtr robot, const std::string& args) RAVE_DEPRECATED {
-        if( !robot ) {
-            return false;
-        }
-        std::vector<int> dofindices;
-        for(int i = 0; i < robot->GetDOF(); ++i) {
-            dofindices.push_back(i);
-        }
-        return Init(robot,dofindices,true);
-    }
-
     /// \brief initializes the controller and specifies the controlled dof
     /// \param robot the robot that uses the controller
     /// \param dofindices the indices that controller will have exclusive access to

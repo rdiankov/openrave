@@ -68,12 +68,6 @@ public:
             return _pIkSolver;
         }
 
-        /// \deprecated (11/02/08) use GetIkSolver()->GetNumFreeParameters()
-        virtual int GetNumFreeParameters() const RAVE_DEPRECATED;
-
-        /// \deprecated (11/02/08) use GetIkSolver()->GetFreeParameters()
-        virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const RAVE_DEPRECATED;
-
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
             return _pBase;
@@ -342,10 +336,13 @@ private:
     class OPENRAVE_API Grabbed
     {
 public:
-        KinBodyWeakPtr pbody;         ///< the grabbed body
-        LinkPtr plinkrobot;         ///< robot link that is grabbing the body
-        std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
-        Transform troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
+        KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
+        LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
+        std::vector<LinkConstPtr> _vNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
+        Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
+
+        /// \brief check collision with all links to see which are valid
+        void _ProcessCollidingLinks();
     };
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
@@ -376,11 +373,6 @@ private:
     }
 
     virtual void Destroy();
-
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLFile
-    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLData
-    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() {
@@ -706,15 +698,6 @@ private:
     /// \param args - the argument list to pass when initializing the controller
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
 
-    /// \deprecated (10/11/16)
-    virtual bool SetController(ControllerBasePtr controller, const std::string& args) RAVE_DEPRECATED {
-        std::vector<int> dofindices;
-        for(int i = 0; i < GetDOF(); ++i) {
-            dofindices.push_back(i);
-        }
-        return SetController(controller,dofindices,1);
-    }
-
     /// \deprecated (11/10/04)
     void GetFullTrajectoryFromActive(TrajectoryBasePtr pfulltraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms=true) RAVE_DEPRECATED;
 
@@ -787,6 +770,7 @@ private:
 #endif
 #endif
     friend class RaveDatabase;
+    friend class Grabbed;
 };
 
 } // end namespace OpenRAVE

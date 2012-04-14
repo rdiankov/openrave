@@ -1763,20 +1763,20 @@ public:
     {
 public:
         PyGrabbed(const RobotBase::Grabbed& grabbed, PyEnvironmentBasePtr pyenv) {
-            grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
-            linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
+            grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed._pgrabbedbody),pyenv));
+            linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed._plinkrobot),pyenv));
 
-            FOREACHC(it, grabbed.vCollidingLinks) {
-                validColLinks.append(PyLinkPtr(new PyLink(boost::const_pointer_cast<KinBody::Link>(*it),pyenv)));
+            FOREACHC(it, grabbed._vNonCollidingLinks) {
+                nonCollidingLinks.append(PyLinkPtr(new PyLink(boost::const_pointer_cast<KinBody::Link>(*it),pyenv)));
             }
-            troot = ReturnTransform(grabbed.troot);
+            troot = ReturnTransform(grabbed._troot);
         }
         virtual ~PyGrabbed() {
         }
 
         PyKinBodyPtr grabbedbody;
         PyLinkPtr linkrobot;
-        boost::python::list validColLinks;
+        boost::python::list nonCollidingLinks;
         object troot;
     };
 
@@ -2927,7 +2927,7 @@ void init_openravepy_kinbody()
         class_<PyRobotBase::PyGrabbed, boost::shared_ptr<PyRobotBase::PyGrabbed> >("Grabbed", DOXY_CLASS(RobotBase::Grabbed),no_init)
         .def_readwrite("grabbedbody",&PyRobotBase::PyGrabbed::grabbedbody)
         .def_readwrite("linkrobot",&PyRobotBase::PyGrabbed::linkrobot)
-        .def_readwrite("validColLinks",&PyRobotBase::PyGrabbed::validColLinks)
+        .def_readwrite("nonCollidingLinks",&PyRobotBase::PyGrabbed::nonCollidingLinks)
         .def_readwrite("troot",&PyRobotBase::PyGrabbed::troot)
         ;
     }

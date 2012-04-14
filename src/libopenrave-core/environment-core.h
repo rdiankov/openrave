@@ -1820,22 +1820,17 @@ protected:
 
             // process grabbed bodies
             FOREACH(itrobot, _vecrobots) {
-                FOREACH(itgrab, (*itrobot)->_vGrabbedBodies) {
-                    KinBodyPtr pbody(itgrab->pbody);
+                FOREACH(itgrabbed, (*itrobot)->_vGrabbedBodies) {
+                    KinBodyPtr pbody(itgrabbed->_pgrabbedbody);
                     BOOST_ASSERT( !!pbody && _mapBodies.find(pbody->GetEnvironmentId()) != _mapBodies.end());
-                    itgrab->pbody = _mapBodies[pbody->GetEnvironmentId()];
-                    itgrab->plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrab->plinkrobot)->GetIndex());
+                    itgrabbed->_pgrabbedbody = _mapBodies[pbody->GetEnvironmentId()];
+                    itgrabbed->_plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrabbed->_plinkrobot)->GetIndex());
 
                     vector<KinBody::LinkConstPtr> vnew;
-                    FOREACH(itlink, itgrab->vCollidingLinks) {
+                    FOREACH(itlink, itgrabbed->_vNonCollidingLinks) {
                         vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
                     }
-                    itgrab->vCollidingLinks = vnew;
-                    vnew.resize(0);
-                    FOREACH(itlink, itgrab->vNonCollidingLinks) {
-                        vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
-                    }
-                    itgrab->vNonCollidingLinks = vnew;
+                    itgrabbed->_vNonCollidingLinks = vnew;
                 }
             }
             FOREACH(itbody,_vecbodies) {

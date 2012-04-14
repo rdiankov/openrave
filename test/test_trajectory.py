@@ -153,8 +153,8 @@ class TestTrajectory(EnvironmentSetup):
             traj.Insert(0,basevalues)
             traj.Insert(1,basevalues+delta*ones(robot.GetActiveDOF()))
             for plannername in ['parabolicsmoother','shortcut_linear']:
-                planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
-                planningutils.SmoothActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                planningutils.SmoothActiveDOFTrajectory(traj,robot,maxvelmult=1,maxaccelmult=1,plannername=plannername)
+                planningutils.SmoothActiveDOFTrajectory(traj,robot,maxvelmult=1,maxaccelmult=1,plannername=plannername)
                 self.RunTrajectory(robot,traj)
                 self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
             traj.Init(robot.GetActiveConfigurationSpecification())
@@ -162,8 +162,8 @@ class TestTrajectory(EnvironmentSetup):
             traj.Insert(1,robot.GetActiveDOFValues()+delta*ones(robot.GetActiveDOF()))
             self.log.debug('retiming')
             for plannername in ['parabolictrajectoryretimer', 'lineartrajectoryretimer']:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername=plannername)
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername=plannername)
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername=plannername)
                 self.RunTrajectory(robot,traj)
                 self.RunTrajectory(robot,RaveCreateTrajectory(env,traj.GetXMLId()).deserialize(traj.serialize(0)))
                 
@@ -186,18 +186,18 @@ class TestTrajectory(EnvironmentSetup):
 #             traj.Init(robot.GetActiveConfigurationSpecification())
 #             traj.Insert(0,origvalues)
 #             traj.Insert(1,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347])
-#             planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+#             planningutils.SmoothActiveDOFTrajectory(traj,robot)
 #             self.RunTrajectory(robot,traj)
 
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,[2.437978870810338, -0.4588760200376995, -1.425257530151645, 1.257459103400449, 2.274410109574347, 2.437978870810338, -0.4588760200376995, -1.425257530151644, 1.257459103400449, 2.274410109574348])
-            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            planningutils.SmoothActiveDOFTrajectory(traj,robot)
             self.RunTrajectory(robot,traj)
 
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,origvalues)
             traj.Insert(1,[ 2.299995  , -0.43290472, -1.34459131,  1.18628988,  2.14568385])
-            planningutils.SmoothActiveDOFTrajectory(traj,robot,False)
+            planningutils.SmoothActiveDOFTrajectory(traj,robot)
             self.RunTrajectory(robot,traj)
 
             # test resampling
@@ -245,13 +245,13 @@ class TestTrajectory(EnvironmentSetup):
             traj.Insert(0,zeros(robot.GetActiveDOF()))
             traj.Insert(1,finalvalues)
             try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,plannername='parabolictrajectoryretimer')
+                planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
                 raise ValueError('expected failure')
             
             except openrave_exception,e:
                 pass
             
-            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer')
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
             planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
             
@@ -268,7 +268,7 @@ class TestTrajectory(EnvironmentSetup):
             g.dof=1
             traj.Insert(1,[3.0],g,True)
             assert(traj.GetNumWaypoints()==2 and traj.GetDuration()==3)
-            planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,plannername='parabolictrajectoryretimer')
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,True,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
             assert(traj.GetDuration()==3)
             planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
@@ -278,7 +278,7 @@ class TestTrajectory(EnvironmentSetup):
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,[0, -2.220446049250314e-16, 0, 1.047197551200003, 0.5, 0.5, 0.5, 1.0471975512])
-            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<multidofinterp>1</multidofinterp>')
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<multidofinterp>1</multidofinterp>')
             
     def test_ikparamretiming(self):
         self.log.info('retime workspace ikparam')
@@ -385,7 +385,7 @@ class TestTrajectory(EnvironmentSetup):
                 self.log.debug('planner=%s',plannername)
                 traj2 = RaveCreateTrajectory(env,traj.GetXMLId())
                 traj2.Clone(traj,0)
-                planningutils.RetimeActiveDOFTrajectory(traj2,robot,False,maxvelmult=1,plannername=plannername)
+                planningutils.RetimeActiveDOFTrajectory(traj2,robot,False,maxvelmult=1,maxaccelmult=1,plannername=plannername)
                 assert(traj2.GetDuration()<20)
                 with robot:
                     planningutils.VerifyTrajectory(parameters,traj2,samplingstep=0.002)
@@ -436,7 +436,7 @@ class TestTrajectory(EnvironmentSetup):
                     traj2.Clone(traj,0)
                     for itraj in range(2):
                         T=robot.GetTransform()
-                        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],False,plannername=plannername)
+                        planningutils.SmoothAffineTrajectory(traj2,[2,2,1],[5,5,5],plannername=plannername)
                         assert(transdist(robot.GetTransform(),T) <= g_epsilon)
                         for i in [0,-1]:
                             waypoint0=traj.GetWaypoint(i,robot.GetActiveConfigurationSpecification())
@@ -515,7 +515,7 @@ class TestTrajectory(EnvironmentSetup):
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,[0,1])
-            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,1,plannername='parabolictrajectoryretimer')
+            planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer')
             self.RunTrajectory(robot,traj)
             data = traj.GetWaypoint(1)
             data[1] *= 2 # increase velocity by 2

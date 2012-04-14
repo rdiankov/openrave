@@ -290,7 +290,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     v.VerifyTrajectory(trajectory,samplingstep);
 }
 
-void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& interpolation, bool bsmooth, const std::string& plannerparameters)
+void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& interpolation, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -309,6 +309,9 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
+    }
+    FOREACH(it,params->_vConfigAccelerationLimit) {
+        *it *= fmaxaccelmult;
     }
     if( !bsmooth ) {
         params->_setstatefn.clear();
@@ -497,17 +500,17 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
     }
 }
 
-void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& plannerparameters)
+void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
-    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", "", true,plannerparameters);
+    _PlanActiveDOFTrajectory(traj,robot,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", "", true,plannerparameters);
 }
 
-void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
+void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
-    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "parabolicsmoother", "", true, plannerparameters);
+    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", "", true, plannerparameters);
 }
 
-void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& plannerparameters)
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     std::string newplannername = plannername;
     std::string interpolation;
@@ -533,7 +536,7 @@ void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool 
             newplannername = "lineartrajectoryretimer";
         }
     }
-    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,newplannername, interpolation, false,plannerparameters);
+    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,fmaxaccelmult,newplannername, interpolation, false,plannerparameters);
 }
 
 void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
@@ -541,7 +544,7 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
     _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", false,plannerparameters);
 }
 
-void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, const std::string& plannername)
+void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -601,7 +604,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             throw OPENRAVE_EXCEPTION_FORMAT("currently do not support retiming for %s interpolations",interpolation,ORE_InvalidArguments);
         }
     }
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,newplannername);
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername);
 
     // retiming is done, now merge the two trajectories
     size_t targetdof = vtargetvalues.size();

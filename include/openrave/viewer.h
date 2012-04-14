@@ -170,9 +170,6 @@ public:
         return RegisterItemSelectionCallback(fncallback);
     }
 
-    /// \deprecated (11/03/02) Any type of model should be added through the openrave environment instead of viewer directly.
-    virtual bool LoadModel(const std::string& pfilename) RAVE_DEPRECATED OPENRAVE_DUMMY_IMPLEMENTATION;
-
 protected:
     virtual void SetViewerData(KinBodyPtr body, UserDataPtr data) {
         body->SetViewerData(data);
