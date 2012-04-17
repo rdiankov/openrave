@@ -15,6 +15,9 @@
 #include "qtcoin.h"
 #include "qtcameraviewer.h"
 #include <openrave/plugin.h>
+#ifdef HAVE_X11_XLIB_H
+#include "X11/Xlib.h"
+#endif
 
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
@@ -25,6 +28,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     static int s_SoQtArgc = 0; // has to be static!!
     switch(type) {
     case PT_Viewer:
+#ifdef HAVE_X11_XLIB_H
+        // always check viewers since DISPLAY could change
+        if ( XOpenDisplay( NULL ) == NULL ) {
+            RAVELOG_WARN("no display detected, so cannot load viewer");
+            return InterfaceBasePtr();
+        }
+#endif
         if( interfacename == "qtcoin" ) {
             boost::mutex::scoped_lock lock(g_mutexsoqt);
             SoDBWriteLock dblock;
