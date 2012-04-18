@@ -47,7 +47,8 @@ def collisioncallback(report,fromphysics):
     return CollisionAction.DefaultAction
 
 def main(env,options):
-    "Main example code."
+    """Main example code.
+    """
     env.Load('robots/barrettwam.robot.xml')
     # register an optional collision callback
     handle = env.RegisterCollisionCallback(collisioncallback)

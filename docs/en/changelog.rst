@@ -10,6 +10,11 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Viewer
+------
+
+* Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
+
 Version 0.6.4
 =============
 

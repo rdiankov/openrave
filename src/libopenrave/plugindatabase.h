@@ -82,7 +82,7 @@ protected:
     typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
-    class Plugin : public boost::enable_shared_from_this<Plugin>
+    class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
     {
 public:
         Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false) {

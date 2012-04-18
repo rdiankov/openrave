@@ -722,7 +722,7 @@ public:
     object GetModules()
     {
         std::list<ModuleBasePtr> listModules;
-        boost::shared_ptr<void> lock = _penv->GetModules(listModules);
+        _penv->GetModules(listModules);
         boost::python::list modules;
         FOREACHC(itprob, listModules) {
             modules.append(openravepy::toPyModule(*itprob,shared_from_this()));
@@ -738,16 +738,16 @@ public:
         return object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
     }
 
-    PyVoidHandle RegisterCollisionCallback(object fncallback)
+    object RegisterCollisionCallback(object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
+        UserDataPtr p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
         if( !p ) {
             throw openrave_exception("registration handle is NULL");
         }
-        return PyVoidHandle(p);
+        return openravepy::GetUserData(p);
     }
 
     void StepSimulation(dReal timeStep) {

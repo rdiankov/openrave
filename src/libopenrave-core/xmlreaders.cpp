@@ -2634,7 +2634,7 @@ public:
                     ModuleBasePtr pIKFastLoader;
                     {
                         list<ModuleBasePtr> listModules;
-                        boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetModules(listModules);
+                        _probot->GetEnv()->GetModules(listModules);
                         FOREACHC(itprob, listModules) {
                             if( _stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                 pIKFastLoader = *itprob;

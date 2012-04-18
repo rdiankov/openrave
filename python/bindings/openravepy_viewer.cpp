@@ -79,28 +79,28 @@ public:
         return _pviewer->GetName();
     }
 
-    PyVoidHandle RegisterCallback(object properties, object fncallback)
+    object RegisterCallback(object properties, object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
             throw openrave_exception("no registration callback returned");
         }
-        return PyVoidHandle(p);
+        return openravepy::GetUserData(p);
     }
 
-    PyVoidHandle RegisterItemSelectionCallback(object fncallback)
+    object RegisterItemSelectionCallback(object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
             throw openrave_exception("no registration callback returned");
         }
-        return PyVoidHandle(p);
+        return openravepy::GetUserData(p);
     }
 
     void EnvironmentSync() {

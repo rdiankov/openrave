@@ -35,6 +35,8 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
+            // have to lock the environment?
+            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
             pbody->_listRegisteredCallbacks.erase(_iterator);
         }
     }

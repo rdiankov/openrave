@@ -222,6 +222,7 @@ void init_python_bindings()
     stdstring_from_python_str();
 
     class_<PyVoidHandle, boost::shared_ptr<PyVoidHandle> >("VoidHandle")
-    .def("close",&PyVoidHandle::close)
+    .def("close",&PyVoidHandle::Close,"deprecated")
+    .def("Close",&PyVoidHandle::Close)
     ;
 }

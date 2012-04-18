@@ -70,7 +70,7 @@ public:
     }
     PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     boost::shared_ptr<void> _handle;
@@ -83,7 +83,7 @@ public:
     }
     PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     boost::shared_ptr<void const> _handle;

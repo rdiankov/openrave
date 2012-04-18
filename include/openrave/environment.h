@@ -123,9 +123,14 @@ public:
     /// The callback should return an action specifying how the collision should be handled:
     /// <b>action = callback(CollisionReport,bool IsCalledFromPhysicsEngine)</b>
     /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
-    virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
+    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
     virtual bool HasRegisteredCollisionCallbacks() const = 0;
+
+    /// \brief return all the collision callbacks, the environment must be locked!
+    ///
+    /// \param listcallbacks filled with the user callbacks. Once the environment is unlocked, the list becomes invalid.
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
+
     //@}
 
     /// \name Physics and Simulation
@@ -415,17 +420,14 @@ public:
         return AddModule(module,cmdargs);
     }
 
-    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
-    virtual bool RemoveProblem(ModuleBasePtr prob) RAVE_DEPRECATED = 0;
-
-    /// \brief Returns a list of loaded problems with a pointer to a lock preventing the list from being modified.
+    /// \brief Fills a list with the loaded modules in the environment.
     ///
-    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
+    /// If the environment is locked, the modules are guaranteed to stay loaded in the environment.
+    virtual void GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
 
-    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {
-        return GetModules(listModules);
+    /// \deprecated (12/01/30)
+    virtual void GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {
+        GetModules(listModules);
     }
 
     /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
@@ -459,9 +461,8 @@ public:
 
     /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
     ///
-    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
+    /// If the environment is locked, the viewers are guaranteed to stay loaded in the environment.
+    virtual void GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
 
     /// \brief Plot a point cloud with one color. <b>[multi-thread safe]</b>
     ///

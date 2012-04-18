@@ -116,7 +116,7 @@ public:
     /// \brief registers a function with the viewer that gets called everytime mouse button is clicked
     ///
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
-    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief callback function for item selection
     /// callback(imagememory,width,height,pixeldepth)
@@ -127,7 +127,7 @@ public:
     /// \brief registers a function with the viewer that gets called for every new image rendered.
     ///
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
-    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief controls whether the viewer synchronizes with the newest environment automatically
     virtual void SetEnvironmentSync(bool bUpdate) OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -165,7 +165,7 @@ public:
     /// \deprecated (11/06/10)
     typedef ItemSelectionCallbackFn ViewerCallbackFn RAVE_DEPRECATED;
     /// \deprecated (11/06/10)
-    virtual boost::shared_ptr<void> RegisterCallback(int properties, const ItemSelectionCallbackFn& fncallback) RAVE_DEPRECATED
+    virtual UserDataPtr RegisterCallback(int properties, const ItemSelectionCallbackFn& fncallback) RAVE_DEPRECATED
     {
         return RegisterItemSelectionCallback(fncallback);
     }

@@ -261,7 +261,7 @@ public:
                     }
                     if( _parameters->_hastimestamps ) {
                         if( *(itdata+_timeoffset) < mintime ) {
-                            RAVELOG_WARN(str(boost::format("point %d has unreachable minimum time %f > %f, changing...")%i%(*(itdata+_timeoffset))%mintime));
+                            RAVELOG_WARN(str(boost::format("point %d/%d has unreachable minimum time %f > %f, changing...")%i%numpoints%(*(itdata+_timeoffset))%mintime));
                             //*(itdata+_timeoffset) = mintime;
                             return PS_Failed;
                         }

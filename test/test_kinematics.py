@@ -471,7 +471,7 @@ class TestKinematics(EnvironmentSetup):
         m = body.GetLink('box').GetMass()
         assert(abs(m-48*massdensity) <= g_epsilon)
         assert(transdist(body.GetLink('box').GetLocalMassFrame(),eye(4)) <= g_epsilon)
-        inertia = m/12*array([4+9,1+9,1+4])
+        inertia = m/3*array([4+9,1+9,1+4])
         assert(transdist(body.GetLink('box').GetPrincipalMomentsOfInertia(),inertia) <= g_epsilon)
 
         m = body.GetLink('rbox').GetMass()

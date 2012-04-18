@@ -155,11 +155,8 @@ public:
 
     virtual void customEvent(QEvent * e);
 
-    static void _UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit);
-    virtual boost::shared_ptr<void> RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
-
-    static void _UnregisterViewerImageCallback(ViewerBaseWeakPtr pweakviewer, std::list<ViewerImageCallbackFn>::iterator* pit);
-    virtual boost::shared_ptr<void> RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
+    virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
+    virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
     virtual void _DeleteItemCallback(Item* pItem)
     {
         boost::mutex::scoped_lock lock(_mutexItems);
@@ -259,10 +256,10 @@ public:
     };
 
     inline QtCoinViewerPtr shared_viewer() {
-        return boost::static_pointer_cast<QtCoinViewer>(shared_from_this());
+        return boost::dynamic_pointer_cast<QtCoinViewer>(shared_from_this());
     }
     inline QtCoinViewerConstPtr shared_viewer_const() const {
-        return boost::static_pointer_cast<QtCoinViewer const>(shared_from_this());
+        return boost::dynamic_pointer_cast<QtCoinViewer const>(shared_from_this());
     }
 
     static void mousemove_cb(void * userdata, SoEventCallback * node);
@@ -446,8 +443,8 @@ public:
     bool _bUpdateEnvironment;
     ViewGeometry _viewGeometryMode;
 
-    std::list<ItemSelectionCallbackFn> _listItemSelectionCallbacks;
-    std::list<ViewerImageCallbackFn> _listViewerImageCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;
@@ -470,6 +467,9 @@ public:
     friend class StopPlaybackTimerMessage;
     friend class SetGraphTransformMessage;
     friend class SetGraphShowMessage;
+
+    friend class ItemSelectionCallbackData;
+    friend class ViewerImageCallbackData;
 };
 
 #ifdef RAVE_REGISTER_BOOST

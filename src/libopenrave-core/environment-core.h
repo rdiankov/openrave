@@ -36,6 +36,58 @@
 
 class Environment : public EnvironmentBase
 {
+    class GraphHandleMulti : public GraphHandle
+    {
+public:
+        GraphHandleMulti() {
+        }
+        virtual ~GraphHandleMulti() {
+        }
+        void SetTransform(const RaveTransform<float>& t)
+        {
+            FOREACH(it,listhandles) {
+                (*it)->SetTransform(t);
+            }
+        }
+
+        void SetShow(bool bshow)
+        {
+            FOREACH(it,listhandles) {
+                (*it)->SetShow(bshow);
+            }
+        }
+
+        void Add(OpenRAVE::GraphHandlePtr phandle) {
+            if( !!phandle) {
+                listhandles.push_back(phandle);
+            }
+        }
+
+        list<OpenRAVE::GraphHandlePtr> listhandles;
+    };
+    typedef boost::shared_ptr<GraphHandleMulti> GraphHandleMultiPtr;
+
+    class CollisionCallbackData : public UserData
+    {
+public:
+        CollisionCallbackData(const CollisionCallbackFn& callback, boost::shared_ptr<Environment> penv) : _callback(callback), _pweakenv(penv) {
+        }
+        virtual ~CollisionCallbackData() {
+            boost::shared_ptr<Environment> penv = _pweakenv.lock();
+            if( !!penv ) {
+                EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+                penv->_listRegisteredCollisionCallbacks.erase(_iterator);
+            }
+        }
+
+        list<UserDataWeakPtr>::iterator _iterator;
+        CollisionCallbackFn _callback;
+protected:
+        boost::weak_ptr<Environment> _pweakenv;
+    };
+    friend class CollisionCallbackData;
+    typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
+
 public:
     Environment() : EnvironmentBase()
     {
@@ -349,12 +401,14 @@ public:
     virtual void OwnInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
     virtual void DisownInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.remove(pinterface);
     }
@@ -375,6 +429,7 @@ public:
             RAVELOG_WARN(str(boost::format("Error %d with executing module %s\n")%ret%module->GetXMLId()));
         }
         else {
+            EnvironmentMutex::scoped_lock lockenv(GetMutex());
             boost::mutex::scoped_lock lock(_mutexInterfaces);
             _listModules.push_back(module);
         }
@@ -382,16 +437,10 @@ public:
         return ret;
     }
 
-    bool RemoveProblem(ModuleBasePtr prob)
+    void GetModules(std::list<ModuleBasePtr>& listModules) const
     {
-        return Remove(InterfaceBasePtr(prob));
-    }
-
-    boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const
-    {
-        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexInterfaces));
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
         listModules = _listModules;
-        return plock;
     }
 
     virtual bool Load(const std::string& filename, const AttributesList& atts)
@@ -734,30 +783,25 @@ public:
         return _pPhysicsEngine;
     }
 
-    static void __erase_collision_iterator(boost::weak_ptr<Environment> pweak, std::list<CollisionCallbackFn>::iterator* pit)
-    {
-        if( !!pit ) {
-            boost::shared_ptr<Environment> penv = pweak.lock();
-            if( !!penv ) {
-                penv->_listRegisteredCollisionCallbacks.erase(*pit);
-            }
-            delete pit;
-        }
-    }
-
-    virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) {
+    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) {
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        boost::shared_ptr<Environment> penv = boost::static_pointer_cast<Environment>(shared_from_this());
-        return boost::shared_ptr<void>(new std::list<CollisionCallbackFn>::iterator(_listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),callback)), boost::bind(Environment::__erase_collision_iterator,boost::weak_ptr<Environment>(penv),_1));
+        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
+        pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
+        return pdata;
     }
     virtual bool HasRegisteredCollisionCallbacks() const
     {
         EnvironmentMutex::scoped_lock lock(GetMutex());
         return _listRegisteredCollisionCallbacks.size() > 0;
     }
+
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const {
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        listcallbacks = _listRegisteredCollisionCallbacks;
+        listcallbacks.clear();
+        FOREACHC(it, _listRegisteredCollisionCallbacks) {
+            CollisionCallbackDataPtr pdata = boost::dynamic_pointer_cast<CollisionCallbackData>(it->lock());
+            listcallbacks.push_back(pdata->_callback);
+        }
     }
 
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
@@ -1437,6 +1481,7 @@ public:
     virtual void AddViewer(ViewerBasePtr pnewviewer)
     {
         CHECK_INTERFACE(pnewviewer);
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::mutex::scoped_lock lock(_mutexInterfaces);
         BOOST_ASSERT(find(_listViewers.begin(),_listViewers.end(),pnewviewer) == _listViewers.end() );
         _CheckUniqueName(ViewerBaseConstPtr(pnewviewer),true);
@@ -1457,43 +1502,11 @@ public:
         return ViewerBasePtr();
     }
 
-    boost::shared_ptr<boost::mutex::scoped_lock>  GetViewers(std::list<ViewerBasePtr>& listViewers) const
+    void GetViewers(std::list<ViewerBasePtr>& listViewers) const
     {
-        boost::shared_ptr<boost::mutex::scoped_lock> plock(new boost::mutex::scoped_lock(_mutexInterfaces));
+        boost::mutex::scoped_lock lock(_mutexInterfaces);
         listViewers = _listViewers;
-        return plock;
     }
-
-    class GraphHandleMulti : public GraphHandle
-    {
-public:
-        GraphHandleMulti() {
-        }
-        virtual ~GraphHandleMulti() {
-        }
-        void SetTransform(const RaveTransform<float>& t)
-        {
-            FOREACH(it,listhandles) {
-                (*it)->SetTransform(t);
-            }
-        }
-
-        void SetShow(bool bshow)
-        {
-            FOREACH(it,listhandles) {
-                (*it)->SetShow(bshow);
-            }
-        }
-
-        void Add(OpenRAVE::GraphHandlePtr phandle) {
-            if( !!phandle) {
-                listhandles.push_back(phandle);
-            }
-        }
-
-        list<OpenRAVE::GraphHandlePtr> listhandles;
-    };
-    typedef boost::shared_ptr<GraphHandleMulti> GraphHandleMultiPtr;
 
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
@@ -2115,7 +2128,7 @@ protected:
 
     list<InterfaceBasePtr> _listOwnedInterfaces;
 
-    std::list<CollisionCallbackFn> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
+    std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
 
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop

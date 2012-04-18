@@ -389,7 +389,7 @@ public:
     }
     virtual ~PyUserData() {
     }
-    virtual void close() {
+    virtual void Close() {
         _handle.reset();
     }
     UserDataPtr _handle;
@@ -402,7 +402,7 @@ public:
     }
     PySerializableData(SerializableDataPtr handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     object Serialize(int options) {

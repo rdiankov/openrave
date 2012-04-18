@@ -1313,7 +1313,8 @@ void init_openravepy_global()
     ;
 
     class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
-    .def("close",&PyUserData::close,"force releasing the user handle point.")
+    .def("close",&PyUserData::Close,"deprecated")
+    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
     ;
     class_<PySerializableData, boost::shared_ptr<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData), no_init)
     .def("Serialize",&PySerializableData::Serialize,args("options"), DOXY_FN(SerializableData, Serialize))
