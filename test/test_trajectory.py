@@ -54,7 +54,7 @@ class TestTrajectory(EnvironmentSetup):
         traj1=basemanip.MoveToHandPosition(matrices=[Tgoal1],execute=False,outputtrajobj=True)
         with env:
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(body1,True)
+            env.Add(body1,True)
             body1.SetTransform(manip1.GetTransform())
             
         newspec = traj1.GetConfigurationSpecification()
@@ -86,7 +86,7 @@ class TestTrajectory(EnvironmentSetup):
 
         with env:
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(body2,True)
+            env.Add(body2,True)
             body2.SetTransform(manip2.GetTransform())
 
         newspec = traj2.GetConfigurationSpecification()
@@ -115,7 +115,7 @@ class TestTrajectory(EnvironmentSetup):
             robot=env.GetRobots()[0]
             manip1=robot.SetActiveManipulator('leftarm')
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(body1,True)
+            env.Add(body1,True)
             body1.SetTransform(manip1.GetTransform())
 
             robot.GetController().SendCommand('SetThrowExceptions 1')

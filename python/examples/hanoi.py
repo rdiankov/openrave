@@ -173,7 +173,7 @@ class HanoiPuzzle:
                         with self.env:
                             self.robot.Grab(disk)
 
-                        raveLogInfo('try to pub the disk in the destination peg')
+                        raveLogInfo('try to put the disk in the destination peg')
                         self.putblock(disk, srcpeg, destpeg, height)
                         raveLogInfo('wait for robot to complete all trajectories')
                         self.waitrobot()

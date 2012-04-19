@@ -67,15 +67,7 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             int dofindex = manipulator->GetArmIndices()[i];
             dReal fdiff = 0;
             KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex);
-            if( pjoint->GetDOF() == 1 ) {
-                // use subtract values
-                vector<dReal> v1(1), v2(1); v1[0] = vtestsolution.at(dofindex); v2[0] = solution.at(i);
-                pjoint->SubtractValues(v1,v2);
-                fdiff = RaveFabs(v1.at(0));
-            }
-            else {
-                fdiff = RaveFabs(vtestsolution.at(dofindex) - solution.at(i));
-            }
+            fdiff = pjoint->SubtractValue(vtestsolution.at(dofindex), solution.at(i), dofindex-pjoint->GetDOFIndex());
             if( fdiff > g_fEpsilonJointLimit ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
             }

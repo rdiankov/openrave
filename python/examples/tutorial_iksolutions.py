@@ -52,7 +52,7 @@ In order to render the ik solutions, create a new robot for every solution and m
   for link in newrobot.GetLinks():
       for geom in link.GetGeometries():
           geom.SetTransparency(transparency)
-  env.AddRobot(newrobot,True)
+  env.Add(newrobot,True)
   newrobot.SetTransform(robot.GetTransform())
   newrobot.SetDOFValues(solution,ikmodel.manip.GetArmIndices())
 
@@ -108,7 +108,7 @@ def main(env,options):
             for i,ind in enumerate(inds):
                 print ind
                 newrobot = newrobots[i]
-                env.AddRobot(newrobot,True)
+                env.Add(newrobot,True)
                 newrobot.SetTransform(robot.GetTransform())
                 newrobot.SetDOFValues(solutions[ind],ikmodel.manip.GetArmIndices())
 

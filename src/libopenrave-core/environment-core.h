@@ -457,14 +457,14 @@ public:
             OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
-                AddRobot(robot, true);
+                _AddRobot(robot, true);
                 return true;
             }
         }
         else if( !_IsOpenRAVEFile(filename) && _IsRigidModelFile(filename) ) {
             KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
-                AddKinBody(pbody,true);
+                _AddKinBody(pbody,true);
                 return true;
             }
         }
@@ -555,7 +555,24 @@ public:
         }
     }
 
-    virtual void AddKinBody(KinBodyPtr pbody, bool bAnonymous)
+    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+    {
+        CHECK_INTERFACE(pinterface);
+        switch(pinterface->GetInterfaceType()) {
+        case PT_Robot: _AddRobot(RaveInterfaceCast<RobotBase>(pinterface),bAnonymous); break;
+        case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface),bAnonymous); break;
+        case PT_Module: {
+            int ret = AddModule(RaveInterfaceCast<ModuleBase>(pinterface),cmdargs);
+            OPENRAVE_ASSERT_OP_FORMAT(ret,==,0,"module %s failed with args: %s",pinterface->GetXMLId()%cmdargs,ORE_InvalidArguments);
+            break;
+        }
+        case PT_Viewer: _AddViewer(RaveInterfaceCast<ViewerBase>(pinterface)); break;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("Interface %d cannot be added to the environment",pinterface->GetInterfaceType(),ORE_InvalidArguments);
+        }
+    }
+
+    virtual void _AddKinBody(KinBodyPtr pbody, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
@@ -584,7 +601,7 @@ public:
         _pPhysicsEngine->InitKinBody(pbody);
     }
 
-    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous)
+    virtual void _AddRobot(RobotBasePtr robot, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
@@ -617,7 +634,7 @@ public:
         _pPhysicsEngine->InitKinBody(robot);
     }
 
-    virtual void AddSensor(SensorBasePtr psensor, bool bAnonymous)
+    virtual void _AddSensor(SensorBasePtr psensor, bool bAnonymous)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
@@ -785,7 +802,7 @@ public:
 
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) {
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
+        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
@@ -1478,7 +1495,7 @@ public:
     }
 
 
-    virtual void AddViewer(ViewerBasePtr pnewviewer)
+    virtual void _AddViewer(ViewerBasePtr pnewviewer)
     {
         CHECK_INTERFACE(pnewviewer);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());

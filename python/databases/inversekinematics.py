@@ -214,7 +214,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
-            self.env.AddModule(self.ikfastproblem,'')
+            self.env.Add(self.ikfastproblem)
         self.iktype = iktype
         self.iksolver = None
         self.freeinc = None
@@ -245,7 +245,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         clone = DatabaseGenerator.clone(self,envother)
         clone.ikfastproblem = RaveCreateModule(envother,'ikfast')
         if clone.ikfastproblem is not None:
-            envother.AddModule(clone.ikfastproblem,'')
+            envother.Add(clone.ikfastproblem)
         if self.has():
             clone.setrobot(self.freeinc)
         return clone
@@ -879,7 +879,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             env = Environment()
             try:
                 robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices)

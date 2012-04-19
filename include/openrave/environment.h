@@ -324,26 +324,33 @@ public:
     /// \anchor env_objects
     //@{
 
-    /// \brief Add a body to the environment
-    ///
-    /// \param[in] body the pointer to an initialized body
-    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
-    /// \throw openrave_exception Throw if body is invalid or already added
-    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
+    /** \brief Add an interface to the environment
 
-    /// \brief add a robot to the environment
-    ///
-    /// \param[in] robot the pointer to an initialized robot
-    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make robot's name unique
-    /// \throw openrave_exception Throw if robot is invalid or already added
-    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
+        Depending on the type of interface, the addition behaves differently. For bodies/robots, will add them to visual/geometric environment. For modules, will call their main() method and add them officially. For viewers, will attach a viewer to the environment and start sending it data.
+        For interfaces that don't make sense to add, will throw an exception.
+        \param[in] pinterface the pointer to an initialized interface
+        \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
+        \param[in] cmdargs The command-line arguments for the module.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") = 0;
 
-    /// \brief registers the sensor with the environment and turns its power on.
-    ///
-    /// \param[in] sensor the pointer to an initialized sensor
-    /// \param[in] bAnonymous if true and there exists a sensor with the same name, will make sensor's name unique
-    /// \throw openrave_exception Throw if sensor is invalid or already added
-    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
+    /// \deprecated (12/04/18)
+    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddKinBody deprecated, please use EnvironmentBase::Add\n");
+        Add(body,bAnonymous);
+    }
+    /// \deprecated (12/04/18)
+    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddRobot deprecated, please use EnvironmentBase::Add\n");
+        Add(robot,bAnonymous);
+    }
+
+    /// \deprecated (12/04/18)
+    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddSensor deprecated, please use EnvironmentBase::Add\n");
+        Add(sensor,bAnonymous);
+    }
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
     ///
@@ -444,14 +451,15 @@ public:
     /// \deprecated (10/11/05)
     typedef OpenRAVE::GraphHandlePtr GraphHandlePtr RAVE_DEPRECATED;
 
-    /// \brief adds a viewer to the environment
-    ///
-    /// \throw openrave_exception Throw if body is invalid or already added
-    virtual void AddViewer(ViewerBasePtr pviewer) = 0;
+    /// \deprecated (12/04/18)
+    virtual void AddViewer(ViewerBasePtr pviewer) {
+        Add(pviewer);
+    }
 
     /// \deprecated (11/06/13) see AddViewer
     virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
-        AddViewer(pnewviewer); return true;
+        Add(pnewviewer);
+        return true;
     }
 
     /// \brief Return a viewer with a particular name.

@@ -219,20 +219,20 @@ class TestKinematics(EnvironmentSetup):
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
             k.InitFromBoxes(boxes,True)
             k.SetName('temp')
-            self.env.AddKinBody(k)
+            self.env.Add(k)
             assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
             k2 = RaveCreateKinBody(self.env,'')
             k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
-            self.env.AddKinBody(k2,True)
+            self.env.Add(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
 
     def test_misc(self):
         env=self.env
         body=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
-        env.AddKinBody(body)
+        env.Add(body)
         with env:
             s = 'this is a test string'
             body.SetUserData(s)
@@ -369,13 +369,13 @@ class TestKinematics(EnvironmentSetup):
 """
         with env:
 #             body = env.ReadKinBodyData(xml%'universal')
-#             env.AddKinBody(body)
+#             env.Add(body)
 #             assert(body.GetDOF()==2)
 #             assert(len(body.GetJoints())==1)
 #             assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
             env.Reset()
             body = env.ReadKinBodyData(xml%'hinge2')
-            env.AddKinBody(body)
+            env.Add(body)
             assert(body.GetDOF()==2)
             assert(len(body.GetJoints())==1)
             assert(body.GetJoints()[0].GetType()==KinBody.Joint.Type.Hinge2)
@@ -410,7 +410,7 @@ class TestKinematics(EnvironmentSetup):
 </kinbody>
 """
         body = env.ReadKinBodyData(xml)
-        env.AddKinBody(body)
+        env.Add(body)
         assert(len(body.GetJoints())==1)
         assert(len(body.GetPassiveJoints())==2)
         value = 0.5
@@ -467,7 +467,7 @@ class TestKinematics(EnvironmentSetup):
         </body>
         </kinbody>"""%{'mass':massxml}
         body = env.ReadKinBodyXMLData(xmldata)
-        env.AddKinBody(body)
+        env.Add(body)
         m = body.GetLink('box').GetMass()
         assert(abs(m-48*massdensity) <= g_epsilon)
         assert(transdist(body.GetLink('box').GetLocalMassFrame(),eye(4)) <= g_epsilon)

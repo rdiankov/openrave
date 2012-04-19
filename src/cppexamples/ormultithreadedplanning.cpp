@@ -34,7 +34,7 @@ public:
         }
 
         ModuleBasePtr pbasemanip = RaveCreateModule(pclondedenv,"basemanipulation"); // create the module
-        pclondedenv->AddModule(pbasemanip,probot->GetName()); // load the module
+        pclondedenv->Add(pbasemanip,true,probot->GetName()); // load the module
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(pclondedenv,"");
 
@@ -81,7 +81,7 @@ public:
 
         // load inverse kinematics using ikfast
         ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
-        penv->AddModule(pikfast,"");
+        penv->Add(pikfast,true,"");
         stringstream ssin,ssout;
         vector<dReal> vsolution;
         ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IKP_Transform6D;

@@ -170,7 +170,7 @@ public:
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->SetName("__visualfeedbacktest__");
-                _ptargetbox->GetEnv()->AddKinBody(_ptargetbox,true);
+                _ptargetbox->GetEnv()->Add(_ptargetbox,true);
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_vf->_target->GetTransform());
             }

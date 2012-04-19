@@ -70,9 +70,9 @@ def main(env,options):
         print e
 
     robot2 = env.ReadRobotXMLFile('robots/mitsubishi-pa10.zae')
-    env.AddRobot(robot2)
+    env.Add(robot2)
     body1 = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
-    env.AddKinBody(body1)
+    env.Add(body1)
 
     env.CheckCollision(robot1,robot2)
     env.CheckCollision(robot1,body1)

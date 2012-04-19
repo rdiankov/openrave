@@ -49,7 +49,7 @@ class FastGraspingThreaded:
             self.ikmodel.autogenerate()
         self.target=target
         self.prob = RaveCreateModule(self.env,'Grasper')
-        self.env.AddModule(self.prob,self.robot.GetName())
+        self.env.Add(self.prob,True,self.robot.GetName())
         # used for maintaining compatible grasp structures
         self.gmodel = databases.grasping.GraspingModel(self.robot,self.target)
 

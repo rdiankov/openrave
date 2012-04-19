@@ -98,7 +98,7 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
 .. code-block:: python
 
   kinbody = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
-  env.AddRobot(kinbody)
+  env.Add(kinbody)
   solver = ikfast.IKFastSolver(kinbody=kinbody)
   chaintree = solver.generateIkSolver(baselink=0,eelink=7,freeindices=[2],solvefn=ikfast.IKFastSolver.solveFullIK_6D)
   code = solver.writeIkSolver(chaintree)
@@ -5802,7 +5802,7 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
         try:
             env=openravepy.Environment()
             kinbody=env.ReadRobotXMLFile(options.robot)
-            env.AddRobot(kinbody)
+            env.Add(kinbody)
             solver = IKFastSolver(kinbody,kinbody)
             chaintree = solver.generateIkSolver(options.baselink,options.eelink,options.freeindices,solvefn=solvefn)
             code=solver.writeIkSolver(chaintree,lang=options.lang)

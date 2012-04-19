@@ -24,7 +24,7 @@ class RunRobot(EnvironmentSetup):
         with self.env:
             robot = self.LoadRobot('robots/schunk-lwa3-dual.robot.xml')
             body = self.env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
-            self.env.AddKinBody(body)
+            self.env.Add(body)
             T = eye(4)
             T[1,3] = -1.18
             T[2,3] = 0.712
@@ -118,7 +118,7 @@ class RunRobot(EnvironmentSetup):
 #         robot = self.LoadRobot('robots/barrettwam.robot.xml')
 #         with env:
 #             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-#             env.AddKinBody(target,True)
+#             env.Add(target,True)
 #             manip=robot.GetActiveManipulator()
 #             target.SetTransform(manip.GetEndEffector().GetTransform())
 #             assert(env.CheckCollision(robot,target))
@@ -138,14 +138,14 @@ class RunRobot(EnvironmentSetup):
         with env:
             robot = self.LoadRobot('robots/pr2-beta-static.zae')
             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(target,True)
+            env.Add(target,True)
             T=target.GetTransform()
             T[0:3,3] = [-0.342,0,0.8]
             target.SetTransform(T)
             floor = RaveCreateKinBody(env,'')
             floor.InitFromBoxes(array([[0,0,0,2,2,0.01]]),True)
             floor.SetName('floor')
-            env.AddKinBody(floor,True)
+            env.Add(floor,True)
             
             assert(env.CheckCollision(robot))
             manip=robot.SetActiveManipulator('leftarm')
@@ -177,7 +177,7 @@ class RunRobot(EnvironmentSetup):
             box = RaveCreateKinBody(env,'')
             box.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box.SetName('box')
-            env.AddKinBody(box,True)
+            env.Add(box,True)
             box.SetTransform(manip.GetTransform())
             robot.Grab(box)
             robot.SetActiveDOFValues([  0.5,   0.00000000e+00,   1.57, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
@@ -212,7 +212,7 @@ class RunRobot(EnvironmentSetup):
             box2 = RaveCreateKinBody(env,'')
             box2.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box2.SetName('box2')
-            env.AddKinBody(box2,True)
+            env.Add(box2,True)
             box2.SetTransform(manip2.GetTransform())
             robot.Grab(box2,grablink=manip2.GetEndEffector())
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))

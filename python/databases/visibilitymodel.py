@@ -389,7 +389,7 @@ class VisibilityModel(DatabaseGenerator):
             with env:
                 target = env.ReadKinBodyXMLFile(options.target)
                 target.SetTransform(eye(4))
-                env.AddKinBody(target)
+                env.Add(target)
             if Model is None:
                 Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
             DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)

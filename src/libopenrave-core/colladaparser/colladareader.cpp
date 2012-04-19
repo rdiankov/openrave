@@ -229,7 +229,7 @@ public:
                 RobotBasePtr probot;
                 if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], bindings) && !!probot ) {
                     RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%probot->GetName()));
-                    _penv->AddRobot(probot,true);
+                    _penv->Add(probot,true);
                     _SetDOFValues(probot,bindings);
                 }
             }
@@ -237,7 +237,7 @@ public:
                 KinBodyPtr pbody;
                 if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
                     RAVELOG_VERBOSE(str(boost::format("Kinbody %s added to the environment\n")%pbody->GetName()));
-                    _penv->AddKinBody(pbody,true);
+                    _penv->Add(pbody,true);
                     _SetDOFValues(pbody,bindings);
                 }
             }
@@ -255,7 +255,7 @@ public:
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
                 KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
                 if( !!pbody ) {
-                    _penv->AddKinBody(pbody, true);
+                    _penv->Add(pbody, true);
                 }
             }
         }

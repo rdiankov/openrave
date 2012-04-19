@@ -631,7 +631,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     for link in newrobot.GetLinks():
                         for geom in link.GetGeometries():
                             geom.SetTransparency(transparency)
-                    self.env.AddRobot(newrobot,True)
+                    self.env.Add(newrobot,True)
                     newrobot.SetTransform(T)
                     newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
@@ -640,7 +640,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         finally:
             for newrobot in newrobots:
                 self.env.Remove(newrobot)
-            self.env.AddRobot(self.robot)
+            self.env.Add(self.robot)
 
     def show(self,options=None):
         if self.env.GetViewer() is None:
@@ -692,7 +692,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.env.Remove(self.robot)
                     for i in range(len(goals)):
                         newrobot = newrobots[i]
-                        self.env.AddRobot(newrobot,True)
+                        self.env.Add(newrobot,True)
                         newrobot.SetTransform(goals[i][0])
                         newrobot.SetDOFValues(goals[i][1])
                 raw_input('press any key to continue')
@@ -700,7 +700,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 h=None
                 for newrobot in newrobots:
                     self.env.Remove(newrobot)
-                self.env.AddRobot(self.robot)
+                self.env.Add(self.robot)
 
 
     @staticmethod

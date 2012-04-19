@@ -1487,17 +1487,10 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     }
 
     // go through all active joints
-    int index = 0;
-    FOREACHC(it,_vActiveDOFIndices) {
-        JointConstPtr pjoint = _vecjoints.at(*it);
-        for(int i = 0; i < pjoint->GetDOF(); ++i, index++) {
-            if( pjoint->IsCircular(i) ) {
-                q1.at(index) = utils::SubtractCircularAngle(q1.at(index), q2.at(index));
-            }
-            else {
-                q1.at(index) -= q2.at(index);
-            }
-        }
+    size_t index = 0;
+    for(; index < _vActiveDOFIndices.size(); ++index) {
+        JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
+        q1.at(index) = pjoint->SubtractValue(q1.at(index),q2.at(index),_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {

@@ -470,6 +470,11 @@ public:
             return toPyArray(values0);
         }
 
+        dReal SubtractValue(dReal value0, dReal value1, int iaxis)
+        {
+            return _pjoint->SubtractValue(value0,value1,iaxis);
+        }
+
         void AddTorque(object otorques) {
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
             return _pjoint->AddTorque(vtorques);
@@ -1101,6 +1106,18 @@ public:
             throw openrave_exception("values do not equal to body degrees of freedom");
         }
         _pbody->SetDOFWeights(values);
+    }
+
+    void SetDOFLimits(object olower, object oupper)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> vlower = ExtractArray<dReal>(olower), vupper = ExtractArray<dReal>(oupper);
+        if( (int)vlower.size() != GetDOF() || (int)vupper.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFLimits(vlower,vupper);
     }
 
     void SetDOFVelocityLimits(object o)
@@ -2480,6 +2497,7 @@ void init_openravepy_kinbody()
                         .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
                         .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
+                        .def("SetDOFLimits",&PyKinBody::SetDOFLimits, args("lower","upper"), DOXY_FN(KinBody,SetDOFLimits))
                         .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
                         .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
                         .def("SetDOFTorqueLimits",&PyKinBody::SetDOFTorqueLimits, args("limits"), DOXY_FN(KinBody,SetDOFTorqueLimits))
@@ -2690,6 +2708,7 @@ void init_openravepy_kinbody()
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                           .def("SubtractValues",&PyKinBody::PyJoint::SubtractValues,args("values0","values1"), DOXY_FN(KinBody::Joint,SubtractValues))
+                          .def("SubtractValue",&PyKinBody::PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))
 
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)

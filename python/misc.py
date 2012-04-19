@@ -137,14 +137,14 @@ class OpenRAVEGlobalArguments:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
-                    env.AddModule(sr,'%d'%options._serverport)
+                    env.Add(sr,True,'%d'%options._serverport)
         except openrave_exception, e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
-                    env.AddModule(module,args)
+                    env.Add(module,True,args)
             except openrave_exception, e:
                 log.warn(e)
         try:

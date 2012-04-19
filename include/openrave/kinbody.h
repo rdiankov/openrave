@@ -22,10 +22,10 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
-/// declare function parser class from fparser library
-template<typename Value_t> class FunctionParserBase;
-
 namespace OpenRAVE {
+
+class OpenRAVEFunctionParserReal;
+typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
@@ -628,6 +628,11 @@ public:
         /// Takes into account joint limits and wrapping of circular joints.
         virtual void SubtractValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
+        /// \brief Returns the configuration difference value1-value2 for axis i.
+        ///
+        /// Takes into account joint limits and wrapping of circular joints.
+        virtual dReal SubtractValue(dReal value1, dReal value2, int iaxis) const;
+
         /// \brief Return internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
@@ -753,8 +758,8 @@ protected:
                 }
             };
             std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
-            boost::shared_ptr<FunctionParserBase<dReal> > _posfn;
-            std::vector<boost::shared_ptr<FunctionParserBase<dReal> > > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
+            OpenRAVEFunctionParserRealPtr _posfn;
+            std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
             boost::array< std::string, 3>  _equations;         ///< the original equations
         };
         boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
@@ -1014,6 +1019,9 @@ private:
 
     /// \brief \see GetDOFWeights
     virtual void SetDOFWeights(const std::vector<dReal>& weights);
+
+    /// \brief \see GetDOFLimits
+    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {
@@ -1424,7 +1432,7 @@ protected:
     virtual void _ResetInternalCollisionCache();
 
     /// creates the function parser connected to this body's joint values
-    virtual boost::shared_ptr<FunctionParserBase<dReal> > _CreateFunctionParser();
+    virtual OpenRAVEFunctionParserRealPtr _CreateFunctionParser();
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

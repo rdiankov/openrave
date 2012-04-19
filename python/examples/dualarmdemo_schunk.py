@@ -40,7 +40,7 @@ class Schunkplanner:
         self.probsmanip = RaveCreateModule(self.env,'dualmanipulation')
         args = self.robot.GetName()
         #args += ' planner birrt' 
-        self.env.AddModule(self.probsmanip,args)
+        self.env.Add(self.probsmanip,True,args)
         self.leftArm=self.robot.GetManipulator('leftarm')
         self.rightArm=self.robot.GetManipulator('rightarm')
         self.dualsolver = MultiManipIKSolver([self.leftArm,self.rightArm])

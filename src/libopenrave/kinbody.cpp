@@ -1434,17 +1434,26 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
 
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
 {
+    bool bChanged = false;
     for(int i = 0; i < GetDOF(); ++i) {
-        _vlowerlimit[i] = vLowerLimit.at(i);
-        _vupperlimit[i] = vUpperLimit.at(i);
-        if( IsRevolute(i) && !IsCircular(i) ) {
-            if( _vlowerlimit[i] < -PI || _vupperlimit[i] > PI) {
-                // TODO, necessary?
-                SetWrapOffset(0.5f * (_vlowerlimit.at(i) + _vupperlimit.at(i)),i);
+        if( _vlowerlimit[i] != vLowerLimit.at(i) || _vupperlimit[i] != vUpperLimit.at(i) ) {
+            bChanged = true;
+            _vlowerlimit[i] = vLowerLimit.at(i);
+            _vupperlimit[i] = vUpperLimit.at(i);
+            if( IsRevolute(i) && !IsCircular(i) ) {
+                // TODO, necessary to set wrap?
+                if( _vlowerlimit[i] < -PI || _vupperlimit[i] > PI) {
+                    SetWrapOffset(0.5f * (_vlowerlimit.at(i) + _vupperlimit.at(i)),i);
+                }
+                else {
+                    SetWrapOffset(0,i);
+                }
             }
         }
     }
-    GetParent()->_ParametersChanged(Prop_JointLimits);
+    if( bChanged ) {
+        GetParent()->_ParametersChanged(Prop_JointLimits);
+    }
 }
 
 void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend) const
@@ -1520,30 +1529,32 @@ dReal KinBody::Joint::GetWeight(int iaxis) const
 
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
 {
-    _voffsets.at(iaxis) = newoffset;
-    if( iaxis == 0 ) {
-        Transform toffset;
-        if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(_vaxes[0], newoffset);
+    if( _voffsets.at(iaxis) != newoffset ) {
+        _voffsets.at(iaxis) = newoffset;
+        if( iaxis == 0 ) {
+            Transform toffset;
+            if( IsRevolute(0) ) {
+                toffset.rot = quatFromAxisAngle(_vaxes[0], newoffset);
+            }
+            else {
+                toffset.trans = _vaxes[0]*newoffset;
+            }
+            _tLeft = _tLeftNoOffset * toffset;
+            _tinvLeft = _tLeft.inverse();
         }
-        else {
-            toffset.trans = _vaxes[0]*newoffset;
+        if(GetDOF() > 1 && iaxis==GetDOF()-1 ) {
+            _tRight = _tRightNoOffset;
+            // right multiply by the offset of the last axis, might be buggy?
+            if( IsRevolute(GetDOF()-1) ) {
+                _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], newoffset) * _tRight;
+            }
+            else {
+                _tRight.trans += _vaxes[GetDOF()-1]*newoffset;
+            }
+            _tinvRight = _tRight.inverse();
         }
-        _tLeft = _tLeftNoOffset * toffset;
-        _tinvLeft = _tLeft.inverse();
+        GetParent()->_ParametersChanged(Prop_JointOffset);
     }
-    if((GetDOF() > 1)&&(iaxis==GetDOF()-1)) {
-        _tRight = _tRightNoOffset;
-        // right multiply by the offset of the last axis, might be buggy?
-        if( IsRevolute(GetDOF()-1) ) {
-            _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], newoffset) * _tRight;
-        }
-        else {
-            _tRight.trans += _vaxes[GetDOF()-1]*newoffset;
-        }
-        _tinvRight = _tRight.inverse();
-    }
-    GetParent()->_ParametersChanged(Prop_JointOffset);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution)
@@ -1570,6 +1581,16 @@ void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dR
         else {
             q1.at(i) -= q2.at(i);
         }
+    }
+}
+
+dReal KinBody::Joint::SubtractValue(dReal value1, dReal value2, int iaxis) const
+{
+    if( IsCircular(iaxis) ) {
+        return utils::SubtractCircularAngle(value1, value2);
+    }
+    else {
+        return value1-value2;
     }
 }
 
@@ -1631,7 +1652,7 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
             }
         }
         if( itype == 0 ) {
-            boost::static_pointer_cast<OpenRAVEFunctionParserReal>(_vmimic.at(iaxis)->_posfn)->toMathML(sout,Vars);
+            _vmimic.at(iaxis)->_posfn->toMathML(sout,Vars);
             if((sout.size() > 9)&&(sout.substr(0,9) == "<csymbol>")) {
                 // due to a bug in ROS robot_model, have to return with <apply> (remove this in 2012).
                 sout = boost::str(boost::format("<apply>\n  <plus/><cn type=\"real\">0</cn>\n  %s\n  </apply>")%sout);
@@ -1641,14 +1662,14 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         else if( itype == 1 ) {
             std::string stemp;
             FOREACHC(itfn, _vmimic.at(iaxis)->_velfns) {
-                boost::static_pointer_cast<OpenRAVEFunctionParserReal>(*itfn)->toMathML(stemp,Vars);
+                (*itfn)->toMathML(stemp,Vars);
                 sout += str(mathfmt%stemp);
             }
         }
         else if( itype == 2 ) {
             std::string stemp;
             FOREACHC(itfn, _vmimic.at(iaxis)->_accelfns) {
-                boost::static_pointer_cast<OpenRAVEFunctionParserReal>(*itfn)->toMathML(stemp,Vars);
+                (*itfn)->toMathML(stemp,Vars);
                 sout += str(mathfmt%stemp);
             }
         }
@@ -1682,7 +1703,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     mimic->_equations.at(1) = veleq;
     mimic->_equations.at(2) = acceleq;
 
-    OpenRAVEFunctionParserRealPtr posfn = boost::static_pointer_cast<OpenRAVEFunctionParserReal>(parent->_CreateFunctionParser());
+    OpenRAVEFunctionParserRealPtr posfn = parent->_CreateFunctionParser();
     mimic->_posfn = posfn;
     // because openrave joint names can hold symbols like '-' and '.' can affect the equation, so first do a search and replace
     std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(parent->GetJoints().size());
@@ -1747,7 +1768,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             continue;
         }
 
-        std::vector<boost::shared_ptr<FunctionParserBase<dReal> > > vfns(resultVars.size());
+        std::vector<OpenRAVEFunctionParserRealPtr> vfns(resultVars.size());
         // extract the equations
         utils::SearchAndReplace(eq,mimic->_equations[itype],jointnamepairs);
         size_t index = eq.find('|');
@@ -1776,7 +1797,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             vector<string>::iterator itnameindex = find(resultVars.begin(),resultVars.end(),varname);
             OPENRAVE_ASSERT_FORMAT(itnameindex != resultVars.end(), "variable %s from velocity equation is not referenced in the position, skipping...", mapinvnames[varname],ORE_InvalidArguments);
 
-            boost::shared_ptr<FunctionParserBase<dReal> > fn(parent->_CreateFunctionParser());
+            OpenRAVEFunctionParserRealPtr fn = parent->_CreateFunctionParser();
             ret = fn->Parse(sequation,sVars.str());
             if( ret >= 0 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("failed to set equation '%s' on %s:%s, at %d. Error is %s", sequation%parent->GetName()%GetName()%ret%fn->ErrorMsg(),ORE_InvalidArguments);
@@ -2333,6 +2354,40 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v)
     _ParametersChanged(Prop_JointProperties);
 }
 
+void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper)
+{
+    OPENRAVE_ASSERT_OP((int)lower.size(),==,GetDOF());
+    OPENRAVE_ASSERT_OP((int)upper.size(),==,GetDOF());
+    bool bChanged = false;
+    std::vector<dReal>::const_iterator itlower = lower.begin(), itupper = upper.begin();
+    FOREACHC(it, _vDOFOrderedJoints) {
+        for(int i = 0; i < (*it)->GetDOF(); ++i) {
+            if( (*it)->_vlowerlimit.at(i) != *(itlower+i) || (*it)->_vupperlimit.at(i) != *(itupper+i) ) {
+                bChanged = true;
+                std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_vlowerlimit.begin());
+                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_vlowerlimit.begin());
+                for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                    if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
+                        // TODO, necessary to set wrap?
+                        if( (*it)->_vlowerlimit.at(i) < -PI || (*it)->_vupperlimit.at(i) > PI) {
+                            (*it)->SetWrapOffset(0.5f * ((*it)->_vlowerlimit.at(i) + (*it)->_vupperlimit.at(i)),i);
+                        }
+                        else {
+                            (*it)->SetWrapOffset(0,i);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        itlower += (*it)->GetDOF();
+        itupper += (*it)->GetDOF();
+    }
+    if( bChanged ) {
+        _ParametersChanged(Prop_JointLimits);
+    }
+}
+
 void KinBody::SetDOFVelocityLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
@@ -2868,7 +2923,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         }
                     }
                     //dummyvalues[i] = pjoint->_vmimic.at(i)->_posfn->Eval(vtempvalues.size() > 0 ? &vtempvalues[0] : NULL);
-                    boost::static_pointer_cast<OpenRAVEFunctionParserReal>(pjoint->_vmimic.at(i)->_posfn)->EvalMulti(veval, vtempvalues.empty() ? NULL : &vtempvalues[0]);
+                    pjoint->_vmimic.at(i)->_posfn->EvalMulti(veval, vtempvalues.empty() ? NULL : &vtempvalues[0]);
                     if( pjoint->_vmimic.at(i)->_posfn->EvalError() ) {
                         RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%pjoint->_vmimic.at(i)->_posfn->EvalError()));
                     }
@@ -4715,9 +4770,9 @@ static void fparser_sass(std::vector<dReal>& res, const vector<dReal>& coeffs)
     res[0] = RaveSqrt(a*a+b*b-2*a*b*RaveCos(gamma));
 }
 
-boost::shared_ptr<FunctionParserBase<dReal> > KinBody::_CreateFunctionParser()
+OpenRAVEFunctionParserRealPtr KinBody::_CreateFunctionParser()
 {
-    OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParser<dReal>());
+    OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParserReal());
     // register commonly used functions
     parser->AddBoostFunction("polyroots2",fparser_polyroots2,3);
     parser->AddBoostFunction("polyroots3",fparser_polyroots<3>,4);

@@ -70,12 +70,12 @@ if __name__ == "__main__":
         if options.dolist is not None:
             if options.dolist.startswith('manipulator'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 for manip in robot.GetManipulators():
                     print manip.GetName()
             elif options.dolist.startswith('sensor'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 for sensor in robot.GetAttachedSensors():
                     print sensor.GetName()
             elif options.dolist.startswith('link'):
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         elif options.doinfo is not None:
             if options.doinfo.startswith('manipulator'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 rows = [['name','base','end','arm-dof','gripper-dof','arm','gripper']]
                 for m in robot.GetManipulators():
                     armindices = ','.join(str(i) for i in m.GetArmIndices())
@@ -107,7 +107,7 @@ if __name__ == "__main__":
                         print '-'*(sum(colwidths)+len(colwidths)-1)
             elif options.doinfo.startswith('sensor'):
                 robot=env.ReadRobotXMLFile(args[0],atts={'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 rows = [['name','type','link']]
                 for s in robot.GetAttachedSensors():
                     rows.append([s.GetName(),str(s.GetSensor()),s.GetAttachingLink().GetName()])

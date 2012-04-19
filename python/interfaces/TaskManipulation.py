@@ -32,8 +32,7 @@ class TaskManipulation:
             self.args += ' maxvelmult %.15e '%maxvelmult
         if graspername is not None and len(graspername)>0:
             self.args += ' graspername %s '%graspername
-        if env.AddModule(self.prob,self.args) != 0:
-            raise ValueError('module failed to initialize')
+        env.Add(self.prob,True,self.args)
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
@@ -42,8 +41,7 @@ class TaskManipulation:
         clone = shallowcopy(self)
         clone.prob = RaveCreateModule(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        if envother.AddModule(clone.prob,clone.args) != 0:
-            raise ValueError('module failed to initialize')
+        envother.Add(clone.prob,True,clone.args)
         return clone
     def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None):
         """See :ref:`module-taskmanipulation-graspplanning`

@@ -93,7 +93,7 @@ class CubeAssembly(object):
                 for g in body.GetLinks()[0].GetGeometries():
                     g.SetDiffuseColor(color)
                 body.SetName('block%d'%iblock)
-                self.env.AddKinBody(body,True)
+                self.env.Add(body,True)
                 body.SetTransform(T)
 
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=body)

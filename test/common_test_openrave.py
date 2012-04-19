@@ -137,13 +137,13 @@ class EnvironmentSetup(object):
     def LoadRobot(self,*args,**kwargs):
         self.log.info('%r, %r',args,kwargs)
         robot=self.env.ReadRobotURI(*args,**kwargs)
-        self.env.AddRobot(robot,True)
+        self.env.Add(robot,True)
         self._PreprocessRobot(robot)
         return robot
 
     def LoadRobotData(self,*args,**kwargs):
         robot=self.env.ReadRobotData(*args,**kwargs)
-        self.env.AddRobot(robot,True)
+        self.env.Add(robot,True)
         self._PreprocessRobot(robot)
         return robot
 

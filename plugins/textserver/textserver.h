@@ -887,7 +887,7 @@ protected:
             return false;
         }
         robot->SetName(robotname);
-        GetEnv()->AddRobot(robot);
+        GetEnv()->Add(robot);
         os << robot->GetEnvironmentId();
         return true;
     }
@@ -977,7 +977,7 @@ protected:
         }
         body->SetName(bodyname);
 
-        GetEnv()->AddKinBody(body);
+        GetEnv()->Add(body);
         os << body->GetEnvironmentId();
         return true;
     }

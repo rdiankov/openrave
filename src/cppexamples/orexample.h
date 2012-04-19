@@ -57,7 +57,7 @@ public:
             _viewer = OpenRAVE::RaveCreateViewer(penv,_viewername);
         }
         if( !!_viewer ) {
-            penv->AddViewer(_viewer);
+            penv->Add(_viewer);
 
             // create the main openrave thread
             _bDestroyThread = false;

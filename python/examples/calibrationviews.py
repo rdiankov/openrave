@@ -243,7 +243,7 @@ class CalibrationViews:
                 else:
                     target = env.ReadKinBodyXMLFile(type)
                 if target is not None:
-                    env.AddKinBody(target,True)
+                    env.Add(target,True)
                     env.UpdatePublishedBodies()
         self = CalibrationViews(robot=robot,sensorname=sensorname,target=target)
         if target:

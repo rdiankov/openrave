@@ -55,7 +55,7 @@ def main(env,options):
 
     with env:
         robot2 = env.ReadRobotXMLFile(robot.GetXMLFilename())
-        env.AddRobot(robot2)
+        env.Add(robot2)
         T = robot.GetTransform()
         T[0,3] -= 1
         robot2.SetTransform(T)

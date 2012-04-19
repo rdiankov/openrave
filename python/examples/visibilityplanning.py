@@ -245,7 +245,7 @@ class VisibilityGrasping:
                 target = self.gettarget(self.orenvreal)
                 if target is not None:
                     self.target = self.orenv.ReadKinBodyXMLFile(targetfilename)
-                    self.orenv.AddKinBody(self.target)
+                    self.orenv.Add(self.target)
                     self.target.SetTransform(target.GetTransform())
                     break
                 time.sleep(0.1)
@@ -370,7 +370,7 @@ class PA10GraspExample(VisibilityGrasping):
                             continue
 
                         body.SetName('obstacle%d'%numcreated)
-                        self.orenvreal.AddKinBody(body)
+                        self.orenvreal.Add(body)
 
                         angs = arange(0,pi,pi/3)
                         angs = angs[random.permutation(len(angs))]

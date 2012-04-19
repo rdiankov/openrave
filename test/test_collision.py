@@ -27,12 +27,12 @@ class RunCollision(EnvironmentSetup):
             robot=env.GetRobots()[0]
             env.CheckCollision(robot)
             newobject=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(newobject,True)
+            env.Add(newobject,True)
             box=RaveCreateKinBody(env,'')
             env.CheckCollision(box)
             box.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
             box.SetName('box')
-            env.AddKinBody(box,True)
+            env.Add(box,True)
             
     def test_collisioncaching(self):
         filenames = ['robots/barrettwam.robot.xml']
@@ -41,7 +41,7 @@ class RunCollision(EnvironmentSetup):
             env.Reset()
             robot=env.ReadRobotURI(filename)
             for i in range(10):
-                env.AddRobot(robot)
+                env.Add(robot)
                 lower,upper = robot.GetDOFLimits()
                 v = random.rand()*(upper-lower)+lower
                 robot.SetDOFValues(v)

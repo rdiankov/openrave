@@ -50,10 +50,10 @@ int main(int argc, char ** argv)
             penv->Destroy();
             return 2;
         }
-        penv->AddRobot(probot);
+        penv->Add(probot);
 
         ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
-        penv->AddModule(pikfast,"");
+        penv->Add(pikfast,true,"");
         stringstream ssin,ssout;
         ssin << "LoadIKFastSolver " << probot->GetName() << " " << iktype;
         // if necessary, add free inc for degrees of freedom

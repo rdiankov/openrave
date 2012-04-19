@@ -96,7 +96,7 @@ class ConstraintPlanning:
             with self.envreal:
                 showtarget = RaveCreateKinBody(self.envreal,'')
                 showtarget.Clone(target,0)
-                self.envreal.AddKinBody(showtarget,True)
+                self.envreal.Add(showtarget,True)
                 showtarget.Enable(False)
                 for geom in showtarget.GetLinks()[0].GetGeometries():
                     geom.SetTransparency(0.7)

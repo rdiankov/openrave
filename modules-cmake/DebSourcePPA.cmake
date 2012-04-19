@@ -26,7 +26,7 @@
 # set(CPACK_DEBIAN_DISTRIBUTION_NAME ubuntu)
 # set(CPACK_DEBIAN_DISTRIBUTION_RELEASES karmic lucid maverick natty)
 # set(CPACK_DEBIAN_CHANGELOG "  * Extra change log lines")
-# set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "ipython")
+# set(CPACK_DEBIAN_PACKAGE_SUGGESTS "ipython")
 # set(CPACK_COMPONENT_X_RECOMMENDS "recommended-package")
 ##
 
@@ -122,6 +122,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
     "Package: ${CPACK_DEBIAN_PACKAGE_NAME}\n"
     "Architecture: any\n"
     "Recommends: ${CPACK_DEBIAN_PACKAGE_RECOMMENDS}\n"
+    "Suggests: ${CPACK_DEBIAN_PACKAGE_SUGGESTS}\n"
     "Depends: "
     )
 
@@ -170,6 +171,7 @@ foreach(RELEASE ${CPACK_DEBIAN_DISTRIBUTION_RELEASES})
       "Architecture: any\n"
       "Depends: ${DEPENDS}\n"
       "Recommends: ${CPACK_COMPONENT_${UPPER_COMPONENT}_RECOMMENDS}\n"
+      "Suggests: ${CPACK_COMPONENT_${UPPER_COMPONENT}_SUGGESTS}\n"
       "Description: ${CPACK_PACKAGE_DISPLAY_NAME} ${CPACK_COMPONENT_${UPPER_COMPONENT}_DISPLAY_NAME}\n"
       "${DEB_LONG_DESCRIPTION}"
       " .\n"

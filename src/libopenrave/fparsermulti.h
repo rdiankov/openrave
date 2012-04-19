@@ -29,7 +29,7 @@
 template <typename T>
 const T& mymax(const T& a, const T& b)
 {
-    return (a<b)?b:a;
+    return (a<b) ? b : a;
 }
 
 // out = fn(in)
@@ -93,6 +93,7 @@ const T& mymax(const T& a, const T& b)
         } \
 } \
 
+namespace OpenRAVE {
 
 template <typename Value_t>
 class OpenRAVEFunctionParser : public FunctionParserBase<Value_t>
@@ -1143,7 +1144,10 @@ public:
     }
 };
 
-typedef OpenRAVEFunctionParser<dReal> OpenRAVEFunctionParserReal;
-typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
+class OpenRAVEFunctionParserReal : public OpenRAVEFunctionParser<dReal>
+{
+};
+
+}
 
 #endif

@@ -86,7 +86,7 @@ def main(env,options):
                 color[igeom] = 1
                 geom.SetDiffuseColor(color)
             picker.SetName(ikmodel.manip.GetName())
-            env.AddKinBody(picker,True)
+            env.Add(picker,True)
             # have to disable since not part of collision 
             picker.Enable(False)
             picker.SetTransform(ikmodel.manip.GetTransform())

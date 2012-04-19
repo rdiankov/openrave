@@ -35,9 +35,9 @@ Load the robot and object
 .. code-block:: python
 
     robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
-    env.AddRobot(robot)
+    env.Add(robot)
     target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
-    env.AddKinBody(target)
+    env.Add(target)
 
 Move the object
 ~~~~~~~~~~~~~~~
@@ -112,7 +112,7 @@ Solution:
 Related Functions
 -----------------
 
- `Environment.ReadRobotXMLFile` , `Environment.AddRobot` , `Environment.ReadKinBodyXMLFile` , `Environment.AddKinBody` , 
+ `Environment.ReadRobotXMLFile` , `Environment.Add` , `Environment.ReadKinBodyXMLFile` , `Environment.Add` , 
  `KinBody.GetTransform` , `KinBody.SetTransform` , 
  `Robot.GetActiveDOFValues` , `Robot.SetActiveDOFValues` , `Robot.GetTransform` , `Robot.SetTransform` , `Robot.GetActiveManipulator`,
  `Robot.Manipulator.GetTransform`
@@ -158,9 +158,9 @@ class GraspTransform:
 def main(env,options):
     "Main example code."
     robot = env.ReadRobotXMLFile('robots/pr2-beta-static.zae')
-    env.AddRobot(robot)
+    env.Add(robot)
     target = env.ReadKinBodyXMLFile('data/mug2.kinbody.xml')
-    env.AddKinBody(target)
+    env.Add(target)
 
     # init target pose
     O_T_Target = array([[1,0,0,1],
