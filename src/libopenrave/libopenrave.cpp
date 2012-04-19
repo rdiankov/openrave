@@ -53,6 +53,10 @@ const char s_filesep = '/';
 
 #if defined(USE_CRLIBM)
 
+#ifdef HAS_FENV_H
+#include <fenv.h>
+#endif
+
 #ifdef LIBM_ACCURACY_RESULTS_H
 #include LIBM_ACCURACY_RESULTS_H
 #endif
@@ -427,6 +431,10 @@ public:
         _mapreaders.clear();
         _pdatabase.reset();
 #ifdef USE_CRLIBM
+
+#ifdef HAS_FENV_H
+	feclearexcept(-1); // clear any cached exceptions
+#endif
         crlibm_exit(_crlibm_fpu_state);
 #endif
     }

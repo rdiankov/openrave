@@ -10,6 +10,11 @@ if( HAS_LOG2 )
   add_definitions("-DHAS_LOG2")
 endif()
 
+check_include_file(fenv.h HAVE_FENV_H)
+if( HAVE_FENV_H )
+  add_definitions("-DHAVE_FENV_H")
+endif()
+
 link_directories(${OPENRAVE_LINK_DIRS} ${FPARSER_LIBRARY_DIRS})
 
 include_directories(${FPARSER_INCLUDE_DIRS})
