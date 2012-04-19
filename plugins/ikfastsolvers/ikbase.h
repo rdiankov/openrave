@@ -38,7 +38,9 @@ public:
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IKReal,Solution>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IKReal,Solution>::_GetSolutionIndicesCommand,this,_1,_2),
-                        "gets the indices of the current solution being considered");
+                        "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered");
+        RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IKReal,Solution>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
+                        "**Can only be called by a custom filter during a Solve function call.**. Returns 1 if the filter was called already with the same robot link positions, 0 otherwise. This is useful in saving computation. ");
     }
     virtual ~IkFastSolver() {
     }
@@ -65,6 +67,12 @@ public:
         FOREACHC(it,_vsolutionindices) {
             sout << *it << " ";
         }
+        return true;
+    }
+
+    bool _GetRobotLinkStateRepeatCountCommand(ostream& sout, istream& sinput)
+    {
+        sout << _nSameStateRepeatCount;
         return true;
     }
 
@@ -687,6 +695,7 @@ private:
             vravesol[i] = dReal(sol[i]);
         }
 
+        _nSameStateRepeatCount = 0;
         std::vector<unsigned int> vsolutionindices;
         iksol.GetSolutionIndices(vsolutionindices);
 
@@ -753,6 +762,7 @@ private:
                     vravesols2.push_back(*itravesol);
                     break;
                 }
+                _nSameStateRepeatCount++;
             }
             if( vravesols2.size() == 0 ) {
                 return SR_Continue;
@@ -869,6 +879,7 @@ private:
             vravesol[i] = (dReal)sol[i];
         }
 
+        _nSameStateRepeatCount = 0;
         std::vector< pair<std::vector<dReal>,int> > vravesols, vravesols2;
 
         // find the first valid solutino that satisfies joint constraints and collisions
@@ -916,6 +927,7 @@ private:
                     vravesols2.push_back(*itravesol);
                     break;
                 }
+                _nSameStateRepeatCount++;
             }
             if( vravesols2.size() == 0 ) {
                 return SR_Continue;
@@ -1107,6 +1119,7 @@ private:
     std::string _kinematicshash;
     dReal _ikthreshold;
     std::vector<unsigned int> _vsolutionindices; // holds the indices of the current solution, this is not multi-thread safe
+    int _nSameStateRepeatCount;
 };
 
 #endif

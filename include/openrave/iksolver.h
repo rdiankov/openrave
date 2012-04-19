@@ -83,8 +83,8 @@ public:
     /** \brief Sets an ik solution filter that is called for every ik solution.
 
         Multiple filters can be set at once, each filter will be called according to its priority; higher values get called first. The default implementation of IkSolverBase manages the filters internally. Users implementing their own IkSolverBase should call \ref _CallFilters to run the internally managed filters.
-        \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
         \param priority - The priority of the filter that controls the order in which filters get called. Higher priority filters get called first. If not certain what to set, use 0.
+        \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
         \return a managed handle to the filter. If this handle is released, then the fitler will be removed. Release operation is <b>[multi-thread safe]</b>.
      */
     virtual UserDataPtr RegisterCustomFilter(int priority, const IkFilterCallbackFn& filterfn);

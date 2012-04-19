@@ -270,6 +270,27 @@ class RunRobot(EnvironmentSetup):
         ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
         sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
         assert(len(sols)==8)
+
+        # add a filter
+        numrepeats = [0]
+        indices = []
+        def customfilter(solution, manip, ikparam):
+            out = ikmodel.manip.GetIkSolver().SendCommand('GetRobotLinkStateRepeatCount')
+            if out=='1':
+                numrepeats[0] += 1
+            out = ikmodel.manip.GetIkSolver().SendCommand('GetSolutionIndices')
+            for index in out.split()[1:]:
+                indices.append(int(index))
+
+        handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,customfilter)
+        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+        assert(numrepeats[0]==4)
+        indices.sort()
+        assert(indices == [0,3,4,7,16,19,20,23])
+        handle.Close()
+        # customfilter shouldn't be executed anymore
+        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+        assert(numrepeats[0]==4)
         
 # def test_ikgeneration():
 #     import inversekinematics

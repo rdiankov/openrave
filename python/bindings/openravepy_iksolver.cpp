@@ -22,19 +22,22 @@ class PyIkSolverBase : public PyInterfaceBase
 protected:
     IkSolverBasePtr _pIkSolver;
 
-    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
+    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, IkSolverBasePtr pIkSolver, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
     {
         object res;
         PyGILState_STATE gstate = PyGILState_Ensure();
+        std::string errmsg;
         try {
             RobotBase::ManipulatorPtr pmanip2 = boost::const_pointer_cast<RobotBase::Manipulator>(pmanip);
             res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
         }
         catch(...) {
-            RAVELOG_ERROR("exception occured in python viewer callback:\n");
-            PyErr_Print();
+            errmsg = boost::str(boost::format("exception occured in python custom filter callback of iksolver %s: %s")%pIkSolver->GetXMLId()%GetPyErrorString());
         }
         PyGILState_Release(gstate);
+        if( errmsg.size() > 0 ) {
+            throw openrave_exception(errmsg,ORE_Assert);
+        }
         if( res == object() ) {
             return IKFR_Reject;
         }
@@ -73,7 +76,7 @@ public:
         if( !fncallback ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("callback not specified",ORE_InvalidArguments);
         }
-        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_1,_2,_3)));
+        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
     }
 };
 
