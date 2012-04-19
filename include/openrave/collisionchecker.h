@@ -116,13 +116,6 @@ public:
     /// notified when a new body has been initialized in the environment
     virtual bool InitKinBody(KinBodyPtr pbody) = 0;
 
-    /// \deprecated (10/12/03) use \see EnableLink
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) RAVE_DEPRECATED = 0;
-
-    /// enables or disables a link from being considered in collisions
-    /// \return true if operation succeeded
-    virtual bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) = 0;
-
     /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
     /// \name Collision specific functions.
     /// \anchor collision_checking

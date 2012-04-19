@@ -351,13 +351,6 @@ private:
         return pinfo;
     }
 
-    bool Enable(KinBodyConstPtr pbody, bool bEnable) {
-        return true;
-    }
-    bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) {
-        return true;
-    }
-
     void Synchronize()
     {
         vector<KinBodyPtr> vbodies;

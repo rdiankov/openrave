@@ -567,6 +567,7 @@ public:
             break;
         }
         case PT_Viewer: _AddViewer(RaveInterfaceCast<ViewerBase>(pinterface)); break;
+        case PT_Sensor: _AddSensor(RaveInterfaceCast<SensorBase>(pinterface),bAnonymous); break;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("Interface %d cannot be added to the environment",pinterface->GetInterfaceType(),ORE_InvalidArguments);
         }
@@ -1795,16 +1796,11 @@ protected:
 
         if( options & Clone_Bodies ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
+            // first initialize the pointers
             FOREACHC(itrobot, r->_vecrobots) {
                 try {
                     RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
-                    pnewrobot->Clone(*itrobot, options);
                     pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
-
-                    // note that pointers will not be correct
-                    pnewrobot->_vGrabbedBodies = (*itrobot)->_vGrabbedBodies;
-                    pnewrobot->_listAttachedBodies = (*itrobot)->_listAttachedBodies;
-
                     BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
                     _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
                     _vecbodies.push_back(pnewrobot);
@@ -1820,13 +1816,7 @@ protected:
                 }
                 try {
                     KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
-                    pnewbody->Clone(*itbody,options);
                     pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
-
-                    // note that pointers will not be correct
-                    pnewbody->_listAttachedBodies = (*itbody)->_listAttachedBodies;
-
-                    // note that pointers will not be correct
                     _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                     _vecbodies.push_back(pnewbody);
                 }
@@ -1834,33 +1824,16 @@ protected:
                     RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
-
-            // process attached bodies
-            FOREACH(itbody, _vecbodies) {
-                list<KinBodyWeakPtr> listnew;
-                FOREACH(itatt, (*itbody)->_listAttachedBodies) {
-                    KinBodyPtr patt = itatt->lock();
-                    if( !!patt ) {
-                        BOOST_ASSERT( _mapBodies.find(patt->GetEnvironmentId()) != _mapBodies.end() );
-                        listnew.push_back(_mapBodies[patt->GetEnvironmentId()]);
+            // now clone
+            FOREACHC(itbody, r->_vecbodies) {
+                try {
+                    KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                    if( !!pnewbody ) {
+                        pnewbody->Clone(*itbody,options);
                     }
                 }
-                (*itbody)->_listAttachedBodies = listnew;
-            }
-
-            // process grabbed bodies
-            FOREACH(itrobot, _vecrobots) {
-                FOREACH(itgrabbed, (*itrobot)->_vGrabbedBodies) {
-                    KinBodyPtr pbody(itgrabbed->_pgrabbedbody);
-                    BOOST_ASSERT( !!pbody && _mapBodies.find(pbody->GetEnvironmentId()) != _mapBodies.end());
-                    itgrabbed->_pgrabbedbody = _mapBodies[pbody->GetEnvironmentId()];
-                    itgrabbed->_plinkrobot = (*itrobot)->GetLinks().at(KinBody::LinkPtr(itgrabbed->_plinkrobot)->GetIndex());
-
-                    vector<KinBody::LinkConstPtr> vnew;
-                    FOREACH(itlink, itgrabbed->_vNonCollidingLinks) {
-                        vnew.push_back((*itrobot)->_veclinks.at((*itlink)->GetIndex()));
-                    }
-                    itgrabbed->_vNonCollidingLinks = vnew;
+                catch(const std::exception &ex) {
+                    RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
             FOREACH(itbody,_vecbodies) {

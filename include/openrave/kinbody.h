@@ -35,17 +35,22 @@ class OPENRAVE_API KinBody : public InterfaceBase
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
     enum KinBodyProperty {
-        Prop_Joints=0x1,     ///< all properties of all joints
-        Prop_JointLimits=0x2|Prop_Joints,     ///< regular limits
-        Prop_JointOffset=0x4|Prop_Joints,
-        Prop_JointProperties=0x8|Prop_Joints,     ///< max velocity, max acceleration, resolution, max torque
-        Prop_Links=0x10,     ///< all properties of all links
+        Prop_JointMimic=0x1,     ///< joint mimic equations
+        Prop_JointLimits=0x2,     ///< regular limits
+        Prop_JointOffset=0x4,
+        Prop_JointProperties=0x8,     ///< resolution, weights
+        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + torque
+        Prop_Joints=Prop_JointMimic|Prop_JointLimits|Prop_JointOffset|Prop_JointProperties|Prop_JointAccelerationVelocityTorqueLimits, ///< all properties of all joints
+
         Prop_Name=0x20,     ///< name changed
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
-        Prop_LinkGeometry=0x80|Prop_Links,     ///< the geometry of the link changed
-        Prop_JointMimic=0x100|Prop_Joints,     ///< joint mimic equations
-        Prop_JointAccelerationVelocityTorqueLimits=0x200|Prop_Joints,     ///< velocity + acceleration + torque
-        Prop_LinkStatic=0x400|Prop_Links,     ///< static property of link changed
+        Prop_LinkGeometry=0x80,     ///< the geometry of the link changed
+        // 0x100
+        // 0x200
+        Prop_LinkStatic=0x400,     ///< static property of link changed
+        Prop_LinkEnable=0x800,     ///< static property of link changed
+        Prop_LinkDynamics=0x1000,     ///< static property of link changed
+        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         // robot only
         Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
         Prop_Manipulators = 0x00010000,

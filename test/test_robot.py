@@ -112,25 +112,25 @@ class RunRobot(EnvironmentSetup):
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))        
 
-#     def test_grabcollision_dynamic(self):
-#         self.log.info('test if can handle grabbed bodies being enabled/disabled')
-#         env=self.env
-#         robot = self.LoadRobot('robots/barrettwam.robot.xml')
-#         with env:
-#             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-#             env.Add(target,True)
-#             manip=robot.GetActiveManipulator()
-#             target.SetTransform(manip.GetEndEffector().GetTransform())
-#             assert(env.CheckCollision(robot,target))
-#             target.Enable(False)
-#             robot.Grab(target,manip.GetEndEffector())
-#             assert(not robot.CheckSelfCollision())
-#             target.Enable(True)
-#             assert(not robot.CheckSelfCollision())
-#             target.Enable(False)
-#             assert(not robot.CheckSelfCollision())
-#             target.GetLinks()[0].Enable(True)
-#             assert(not robot.CheckSelfCollision())
+    def test_grabcollision_dynamic(self):
+        self.log.info('test if can handle grabbed bodies being enabled/disabled')
+        env=self.env
+        robot = self.LoadRobot('robots/barrettwam.robot.xml')
+        with env:
+            target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(target,True)
+            manip=robot.GetActiveManipulator()
+            target.SetTransform(manip.GetEndEffector().GetTransform())
+            assert(env.CheckCollision(robot,target))
+            target.Enable(False)
+            robot.Grab(target,manip.GetEndEffector())
+            assert(not robot.CheckSelfCollision())
+            target.Enable(True)
+            assert(not robot.CheckSelfCollision())
+            target.Enable(False)
+            assert(not robot.CheckSelfCollision())
+            target.GetLinks()[0].Enable(True)
+            assert(not robot.CheckSelfCollision())
             
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')

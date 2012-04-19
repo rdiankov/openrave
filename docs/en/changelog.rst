@@ -10,6 +10,13 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Core
+----
+
+* Fixed regrabbing when enabling/disabling grabbed bodies
+
+* Added KinBody::Prop_LinkEnable that allows other objects to track enable changes for a body.
+
 Viewer
 ------
 

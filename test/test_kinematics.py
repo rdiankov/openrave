@@ -431,6 +431,22 @@ class TestKinematics(EnvironmentSetup):
         newspec=pickle.loads(s)
         assert(newspec==spec)
 
+    def test_enablelinks(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            assert(not env.CheckCollision(robot))
+            T = robot.GetTransform()
+            T[2,3] -= 0.5
+            robot.SetTransform(T)
+            link = robot.GetLinks()[0]
+            assert(env.CheckCollision(robot) and env.CheckCollision(link))
+            robot.GetLinks()[0].Enable(False)
+            assert(not env.CheckCollision(robot) and not env.CheckCollision(link))
+            robot.GetLinks()[0].Enable(True)
+            assert(env.CheckCollision(link) and env.CheckCollision(robot))
+            
     def test_inertia(self):
         env=self.env
         massdensity=2.5

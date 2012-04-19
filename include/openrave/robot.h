@@ -332,19 +332,6 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
 
-    /// \brief The information of a currently grabbed body.
-    class OPENRAVE_API Grabbed
-    {
-public:
-        KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
-        LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-        std::vector<LinkConstPtr> _vNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
-        Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-
-        /// \brief check collision with all links to see which are valid
-        void _ProcessCollidingLinks();
-    };
-
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -358,7 +345,7 @@ protected:
         int affinedofs;
         Vector rotationaxis;
         int nActiveManip;
-        std::vector<Grabbed> _vGrabbedBodies;
+        std::vector<UserDataPtr> _vGrabbedBodies;
 private:
         virtual void _RestoreRobot();
     };
@@ -635,7 +622,7 @@ private:
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
-    /** Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+    /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 
         This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
      */
@@ -711,6 +698,9 @@ protected:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
+    virtual void _Regrab(UserDataPtr pgrabbed);
+
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
 
@@ -719,7 +709,7 @@ protected:
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _ParametersChanged(int parameters);
 
-    std::vector<Grabbed> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators

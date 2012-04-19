@@ -79,7 +79,7 @@ public:
 public:
         struct LINK
         {
-            LINK() : body(NULL), geom(NULL) {
+            LINK() : body(NULL), geom(NULL), _bEnabled(false) {
             }
             virtual ~LINK() {
                 BOOST_ASSERT(listtrimeshinds.size()==0&&listvertices.size()==0&&body==NULL&&geom==NULL);
@@ -90,30 +90,43 @@ public:
 
             void Enable(bool bEnable)
             {
+                if( _bEnabled == bEnable ) {
+                    return;
+                }
+                _bEnabled = bEnable;
                 if( body ) {
-                    if( bEnable) dBodyEnable(body);
-                    else dBodyDisable(body);
+                    if( bEnable) {
+                        dBodyEnable(body);
+                    }
+                    else {
+                        dBodyDisable(body);
+                    }
                 }
 
                 dGeomID curgeom = geom;
                 while(curgeom != NULL ) {
-
-                    if( bEnable ) dGeomEnable(curgeom);
-                    else dGeomDisable(curgeom);
-
-                    if( dGeomGetClass(curgeom) == dGeomTransformClass ) {
-                        if( bEnable ) dGeomEnable(dGeomTransformGetGeom(curgeom));
-                        else dGeomDisable(dGeomTransformGetGeom(curgeom));
+                    if( bEnable ) {
+                        dGeomEnable(curgeom);
                     }
-
+                    else {
+                        dGeomDisable(curgeom);
+                    }
+                    if( dGeomGetClass(curgeom) == dGeomTransformClass ) {
+                        if( bEnable ) {
+                            dGeomEnable(dGeomTransformGetGeom(curgeom));
+                        }
+                        else {
+                            dGeomDisable(dGeomTransformGetGeom(curgeom));
+                        }
+                    }
                     curgeom = dBodyGetNextGeom(curgeom);
                 }
             }
 
-
             list<dTriIndex*> listtrimeshinds;
             list<dReal*> listvertices;
             KinBody::LinkPtr plink;
+            bool _bEnabled;
         };
 
         KinBodyInfo(boost::shared_ptr<ODEResources> ode) : _ode(ode)
@@ -189,7 +202,7 @@ public:
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
         vector<dJointFeedback> vjointfeedback;
-        boost::shared_ptr<void> _geometrycallback, _staticcallback;
+        OpenRAVE::UserDataPtr _geometrycallback, _staticcallback;
         boost::weak_ptr<ODESpace> _odespace;
 
         dSpaceID space;                             ///< space that contanis all the collision objects of this chain
@@ -464,27 +477,8 @@ private:
             pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
         }
 
-        Synchronize(pinfo);
+        _Synchronize(pinfo);
         return pinfo;
-    }
-
-    bool Enable(KinBodyConstPtr pbody, bool bEnable)
-    {
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
-        BOOST_ASSERT( pinfo->pbody == pbody );
-        FOREACH(it, pinfo->vlinks) {
-            (*it)->Enable(bEnable);
-        }
-        return true;
-    }
-
-    bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
-    {
-        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
-        BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
-        pinfo->vlinks[plink->GetIndex()]->Enable(bEnable);
-        return true;
     }
 
     void Synchronize()
@@ -497,9 +491,7 @@ private:
         FOREACHC(itbody, vbodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             BOOST_ASSERT( pinfo->pbody == *itbody );
-            if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() ) {
-                Synchronize(pinfo);
-            }
+            _Synchronize(pinfo);
         }
     }
 
@@ -507,9 +499,7 @@ private:
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) {
-            Synchronize(pinfo);
-        }
+        _Synchronize(pinfo);
     }
 
     dSpaceID GetBodySpace(KinBodyConstPtr pbody)
@@ -526,7 +516,6 @@ private:
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->body;
     }
-
 
     dGeomID GetLinkGeom(KinBody::LinkConstPtr plink)
     {
@@ -576,20 +565,27 @@ private:
     JointSetFn _jointset[12];
 
 private:
-    void Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(KinBodyInfoPtr pinfo)
     {
-        vector<Transform> vtrans;
-        pinfo->pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
-        pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
-        BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
-        for(size_t i = 0; i < vtrans.size(); ++i) {
-            RaveTransform<dReal> t = vtrans[i];
-            BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
-            dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
-            dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
-        }
-        if( !!_synccallback ) {
-            _synccallback(pinfo);
+        if( pinfo->nLastStamp != pinfo->pbody->GetUpdateStamp() ) {
+            vector<Transform> vtrans;
+            pinfo->pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
+            pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
+            BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
+            for(size_t i = 0; i < vtrans.size(); ++i) {
+                RaveTransform<dReal> t = vtrans[i];
+                BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
+                dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
+                dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
+            }
+
+            // update stamps also reflect enable links
+            FOREACH(it, pinfo->vlinks) {
+                (*it)->Enable((*it)->plink->IsEnabled());
+            }
+            if( !!_synccallback ) {
+                _synccallback(pinfo);
+            }
         }
     }
 
@@ -599,11 +595,13 @@ private:
         KinBodyPtr pbody(_pbody);
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         if( !pinfo ) {
-            return;
+            RAVELOG_WARN(str(boost::format("body %s is not registered")%pbody->GetName()));
         }
-        BOOST_ASSERT(boost::shared_ptr<ODESpace>(pinfo->_odespace) == shared_from_this());
-        BOOST_ASSERT(pinfo->pbody==pbody);
-        InitKinBody(pbody,pinfo);
+        else {
+            BOOST_ASSERT(boost::shared_ptr<ODESpace>(pinfo->_odespace) == shared_from_this());
+            BOOST_ASSERT(pinfo->pbody==pbody);
+            InitKinBody(pbody,pinfo);
+        }
     }
 
     EnvironmentBasePtr _penv;

@@ -453,15 +453,6 @@ public:
         return _options;
     }
 
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable)
-    {
-        return bulletspace->Enable(pbody,bEnable);
-    }
-    virtual bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
-    {
-        return bulletspace->EnableLink(plink,bEnable);
-    }
-
     virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {

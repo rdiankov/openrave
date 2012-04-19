@@ -615,12 +615,9 @@ void KinBody::Link::Enable(bool bEnable)
 {
     if( _bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
-        if( !parent->GetEnv()->GetCollisionChecker()->EnableLink(LinkConstPtr(shared_from_this()),bEnable) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to enable link %s:%s", parent->GetName()%GetName(), ORE_Failed);
-        }
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _bIsEnabled = bEnable;
-        //GetParent()->_ParametersChanged(Prop_Links);
+        GetParent()->_ParametersChanged(Prop_LinkEnable);
     }
 }
 
@@ -4367,19 +4364,15 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
 void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
-    CollisionCheckerBasePtr p = GetEnv()->GetCollisionChecker();
     FOREACH(it, _veclinks) {
         if( (*it)->_bIsEnabled != bEnable ) {
-            if( !p->EnableLink(LinkConstPtr(*it),bEnable) ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to enable link %s:%s", GetName()%(*it)->GetName(), ORE_Failed);
-            }
             (*it)->_bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
     }
     if( bchanged ) {
-        //_ParametersChanged(Prop_Links);
+        _ParametersChanged(Prop_LinkEnable);
     }
 }
 
@@ -4603,6 +4596,13 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
 
     _listAttachedBodies.clear(); // will be set in the environment
+    FOREACHC(itatt, r->_listAttachedBodies) {
+        KinBodyConstPtr pattref = itatt->lock();
+        if( !!pattref ) {
+            _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
+        }
+    }
+
     _listRegisteredCallbacks.clear(); // reset the callbacks
 
     // cache
@@ -4625,9 +4625,12 @@ void KinBody::_ParametersChanged(int parameters)
         _ComputeInternalInformation();
     }
     // do not change hash if geometry changed!
-    //if( parameters&Prop_LinkGeometry )
-    if( parameters & (Prop_Joints|Prop_Links) ) {
-        __hashkinematics.resize(0);
+    boost::array<int,3> hashproperties = {{Prop_LinkDynamics, Prop_LinkGeometry, Prop_JointMimic }};
+    FOREACH(it, hashproperties) {
+        if( (parameters & *it) == *it ) {
+            __hashkinematics.resize(0);
+            break;
+        }
     }
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed

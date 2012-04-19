@@ -187,16 +187,6 @@ public:
         return _options;
     }
 
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable)
-    {
-        return odespace->Enable(pbody,bEnable);
-    }
-
-    virtual bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
-    {
-        return odespace->EnableLink(plink,bEnable);
-    }
-
     virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
