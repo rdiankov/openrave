@@ -433,7 +433,7 @@ public:
 #ifdef USE_CRLIBM
 
 #ifdef HAS_FENV_H
-	feclearexcept(-1); // clear any cached exceptions
+        feclearexcept(-1); // clear any cached exceptions
 #endif
         crlibm_exit(_crlibm_fpu_state);
 #endif
@@ -835,14 +835,14 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
-ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype)
+ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation)
 {
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
     spec._vgroups[0].name = str(boost::format("ikparam_values %d")%iktype);
-    spec._vgroups[0].interpolation = "linear";
+    spec._vgroups[0].interpolation = interpolation;
     return spec;
 }
 

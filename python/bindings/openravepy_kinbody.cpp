@@ -1280,18 +1280,18 @@ public:
         _pbody->SetZeroConfiguration();
     }
 
-    object GetConfigurationSpecification() const {
-        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification()));
+    object GetConfigurationSpecification(const std::string& interpolation="") const {
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification(interpolation)));
     }
 
-    object GetConfigurationSpecificationIndices(object oindices) const {
+    object GetConfigurationSpecificationIndices(object oindices,const std::string& interpolation="") const {
         vector<int> vindices = ExtractArray<int>(oindices);
-        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices)));
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices,interpolation)));
     }
 
     void SetConfigurationValues(object ovalues, bool checklimits) {
         vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
-        BOOST_ASSERT((int)vvalues.size()==_pbody->GetConfigurationSpecification().GetDOF());
+        BOOST_ASSERT((int)vvalues.size()==_pbody->GetDOF()+7);
         _pbody->SetConfigurationValues(vvalues.begin(),checklimits);
     }
 
@@ -2103,8 +2103,8 @@ public:
         return toPyArray(values);
     }
 
-    object GetActiveConfigurationSpecification() const {
-        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification()));
+    object GetActiveConfigurationSpecification(const std::string& interpolation="") const {
+        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification(interpolation)));
     }
 
     object GetActiveJointIndices() {
@@ -2271,6 +2271,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecification_overloads, GetConfigurationSpecification, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecificationIndices_overloads, GetConfigurationSpecificationIndices, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetWrapOffset_overloads, GetWrapOffset, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1, 2)
@@ -2532,8 +2534,8 @@ void init_openravepy_kinbody()
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
-                        .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, DOXY_FN(KinBody,GetConfigurationSpecification))
-                        .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, args("indices"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices))
+                        .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, GetConfigurationSpecification_overloads(args("interpolation"), DOXY_FN(KinBody,GetConfigurationSpecification)))
+                        .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, GetConfigurationSpecificationIndices_overloads(args("indices","interpolation"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices)))
                         .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues))
                         .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))

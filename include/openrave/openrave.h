@@ -1627,10 +1627,10 @@ public:
         }
     }
 
-    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype);
-    inline ConfigurationSpecification GetConfigurationSpecification() const
+    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="");
+    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const
     {
-        return GetConfigurationSpecification(GetType());
+        return GetConfigurationSpecification(GetType(),interpolation);
     }
 
 protected:

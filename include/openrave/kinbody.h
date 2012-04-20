@@ -1365,12 +1365,14 @@ private:
     //@{
 
     /// \brief return the configuration specification of the joint values and transform
-    virtual const ConfigurationSpecification& GetConfigurationSpecification() const;
+    ///
+    /// Note that the return type is by-value, so should not be used in iteration
+    virtual ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const;
 
     /// \brief return the configuration specification of the specified joint indices.
     ///
     /// Note that the return type is by-value, so should not be used in iteration
-    virtual ConfigurationSpecification GetConfigurationSpecificationIndices(const std::vector<int>& indices) const;
+    virtual ConfigurationSpecification GetConfigurationSpecificationIndices(const std::vector<int>& indices, const std::string& interpolation="") const;
 
     /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
     ///

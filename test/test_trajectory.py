@@ -140,7 +140,7 @@ class TestTrajectory(EnvironmentSetup):
         for delta in [0,1e-8,1e-9,1e-10,1e-11,1e-12,1e-13,1e-14,1e-15,1e-16]:
             self.log.debug('delta=%.16e',delta)
             traj = RaveCreateTrajectory(env,'')
-            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Init(robot.GetActiveConfigurationSpecification('linear'))
             # get some values, hopefully non-zero
             basevalues = robot.GetActiveDOFValues()
             with robot:

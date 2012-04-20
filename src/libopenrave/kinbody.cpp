@@ -4707,13 +4707,17 @@ void KinBody::GetConfigurationValues(std::vector<dReal>& v) const
     RaveGetAffineDOFValuesFromTransform(v.begin()+GetDOF(),GetTransform(),DOF_Transform);
 }
 
-const ConfigurationSpecification& KinBody::GetConfigurationSpecification() const
+ConfigurationSpecification KinBody::GetConfigurationSpecification(const std::string& interpolation) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    return _spec;
+    ConfigurationSpecification spec=_spec;
+    FOREACH(itgroup,spec._vgroups) {
+        itgroup->interpolation=interpolation;
+    }
+    return spec;
 }
 
-ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>& indices) const
+ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>& indices, const std::string& interpolation) const
 {
     CHECK_INTERNAL_COMPUTATION;
     ConfigurationSpecification spec;
@@ -4726,6 +4730,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
     spec._vgroups[0].name = ss.str();
     spec._vgroups[0].dof = indices.size();
     spec._vgroups[0].offset = 0;
+    spec._vgroups[0].interpolation=interpolation;
     return spec;
 }
 

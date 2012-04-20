@@ -426,8 +426,10 @@ private:
         return GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(GetAffineDOF(),dof);
     }
 
-    /// \brief return the configuration specification of the active dofs
-    virtual const ConfigurationSpecification& GetActiveConfigurationSpecification() const;
+    /// \brief return a copy of the configuration specification of the active dofs
+    ///
+    /// Note that the return type is by-value, so should not be used in iteration
+    virtual ConfigurationSpecification GetActiveConfigurationSpecification(const std::string& interpolation="") const;
 
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;

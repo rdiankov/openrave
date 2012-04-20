@@ -51,13 +51,15 @@ def main(env,options):
         robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
     #basemanip.MoveToHandPosition([Tstart],maxiter=1000,maxtries=1,seedik=4)
     #robot.WaitForController(0)
-    taskmanip.CloseFingers()
-    robot.WaitForController(0)
-    with env:
-        target = env.GetKinBody('cylinder_green_3')
-        robot.Grab(target)
-        updir = array((0,0,1))
 
+    if len(ikmodel.manip.GetGripperIndices()) > 0:
+        taskmanip.CloseFingers()
+        robot.WaitForController(0)
+        with env:
+            target = env.GetKinBody('cylinder_green_3')
+            robot.Grab(target)
+
+    updir = array((0,0,1))
     success = basemanip.MoveHandStraight(direction=updir,stepsize=0.01,minsteps=1,maxsteps=40)
     robot.WaitForController(0)
     success = basemanip.MoveHandStraight(direction=-updir,stepsize=0.01,minsteps=1,maxsteps=40)

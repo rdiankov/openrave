@@ -1616,9 +1616,13 @@ const std::vector<int>& RobotBase::GetActiveDOFIndices() const
     return _nActiveDOF < 0 ? _vAllDOFIndices : _vActiveDOFIndices;
 }
 
-const ConfigurationSpecification& RobotBase::GetActiveConfigurationSpecification() const
+ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const std::string& interpolation) const
 {
-    return _activespec;
+    ConfigurationSpecification spec = _activespec;
+    FOREACH(itgroup,spec._vgroups) {
+        itgroup->interpolation=interpolation;
+    }
+    return spec;
 }
 
 void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const

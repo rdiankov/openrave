@@ -110,7 +110,7 @@ class TestKinematics(EnvironmentSetup):
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
                                 if transdist(dot(Jtrans,deltavalues),deltatrans) > thresh:
-                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
                                 if transdist(dot(Jquat,deltavalues)+worldquat,newquat) > 2*thresh:
                                     raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
                                 if axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) > 2*thresh:
