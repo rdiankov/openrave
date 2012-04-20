@@ -28,6 +28,10 @@ class TestKinematics(EnvironmentSetup):
                         body.GetLinks()[0].SetStatic((i%2)>0)
 
                         lowerlimit,upperlimit = body.GetDOFLimits()
+                        body.SetDOFLimits(lowerlimit,upperlimit)
+                        assert( transdist(body.GetDOFLimits()[0],lowerlimit) <= g_epsilon )
+                        assert( transdist(body.GetDOFLimits()[1],upperlimit) <= g_epsilon )
+                                                
                         body.SetDOFValues(lowerlimit)
                         dofvalues = body.GetDOFValues()
                         assert( transdist(lowerlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))

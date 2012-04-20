@@ -2369,7 +2369,7 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
             if( (*it)->_vlowerlimit.at(i) != *(itlower+i) || (*it)->_vupperlimit.at(i) != *(itupper+i) ) {
                 bChanged = true;
                 std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_vlowerlimit.begin());
-                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_vlowerlimit.begin());
+                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_vupperlimit.begin());
                 for(int i = 0; i < (*it)->GetDOF(); ++i) {
                     if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
                         // TODO, necessary to set wrap?
