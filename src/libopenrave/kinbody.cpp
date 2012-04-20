@@ -1972,10 +1972,17 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody()
         _pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }
     if( _options & Save_LinkEnable ) {
+        // should first enable before calling the parameter callbacks
+        bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
             if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                _pbody->GetLinks().at(i)->Enable(!!_vEnabledLinks[i]);
+                _pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
+                bchanged = true;
             }
+        }
+        if( bchanged ) {
+            _pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
+            _pbody->_ParametersChanged(Prop_LinkEnable);
         }
     }
     if( _options & Save_LinkVelocities ) {

@@ -1,4 +1,3 @@
-
 // -*- coding: utf-8 -*-
 // Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
 //
@@ -79,7 +78,7 @@ public:
 public:
         struct LINK
         {
-            LINK() : body(NULL), geom(NULL), _bEnabled(false) {
+            LINK() : body(NULL), geom(NULL), _bEnabled(true) {
             }
             virtual ~LINK() {
                 BOOST_ASSERT(listtrimeshinds.size()==0&&listvertices.size()==0&&body==NULL&&geom==NULL);
@@ -90,7 +89,7 @@ public:
 
             void Enable(bool bEnable)
             {
-                if( _bEnabled == bEnable ) {
+                if( plink->IsStatic() || _bEnabled == bEnable ) {
                     return;
                 }
                 _bEnabled = bEnable;
@@ -284,6 +283,7 @@ private:
 
             if( (*itlink)->IsStatic() ) {
                 dBodyDisable(link->body);
+                link->_bEnabled = false;
             }
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {

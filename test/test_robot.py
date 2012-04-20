@@ -122,6 +122,7 @@ class RunRobot(EnvironmentSetup):
             manip=robot.GetActiveManipulator()
             target.SetTransform(manip.GetEndEffector().GetTransform())
             assert(env.CheckCollision(robot,target))
+            self.log.info('check disabling target')
             target.Enable(False)
             robot.Grab(target,manip.GetEndEffector())
             assert(not robot.CheckSelfCollision())
@@ -130,6 +131,13 @@ class RunRobot(EnvironmentSetup):
             target.Enable(False)
             assert(not robot.CheckSelfCollision())
             target.GetLinks()[0].Enable(True)
+            assert(not robot.CheckSelfCollision())
+            self.log.info('check disabling links')
+            robot.Enable(False)
+            assert(not robot.CheckSelfCollision())
+            robot.RegrabAll()
+            assert(not robot.CheckSelfCollision())
+            robot.Enable(True)
             assert(not robot.CheckSelfCollision())
             
     def test_ikcollision(self):
@@ -184,13 +192,16 @@ class RunRobot(EnvironmentSetup):
             assert(robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+
+            assert(not robot.CheckSelfCollision())
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+            assert(not robot.CheckSelfCollision())
             assert(not manip.CheckEndEffectorCollision(Tmanip))
 
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -0.1,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             Tmanip = manip.GetTransform()
-            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
             # test if initial colliding attachments are handled correctly
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
             T = manip.GetTransform()

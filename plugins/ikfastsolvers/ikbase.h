@@ -186,6 +186,12 @@ public:
             _bDisabled = false;
         }
         virtual ~StateCheckEndEffector() {
+            // restore the link states
+            if( _vlinkenabled.size() == _vchildlinks.size() ) {
+                for(size_t i = 0; i < _vchildlinks.size(); ++i) {
+                    _vchildlinks[i]->Enable(!!_vlinkenabled[i]);
+                }
+            }
         }
 
         void SetEnvironmentCollisionState()
@@ -195,7 +201,7 @@ public:
                 for(size_t i = 0; i < _vchildlinks.size(); ++i) {
                     _vchildlinks[i]->Enable(false);
                 }
-                FOREACH(it, _savers) {
+                FOREACH(it, _listGrabbedSavedStates) {
                     it->GetBody()->Enable(false);
                 }
                 _bDisabled = true;
@@ -208,7 +214,7 @@ public:
                 for(size_t i = 0; i < _vchildlinks.size(); ++i) {
                     _vchildlinks[i]->Enable(_vlinkenabled[i]);
                 }
-                FOREACH(it, _savers) {
+                FOREACH(it, _listGrabbedSavedStates) {
                     it->Restore();
                 }
                 _bDisabled = false;
@@ -238,12 +244,12 @@ protected:
             for(size_t i = 0; i < _vchildlinks.size(); ++i) {
                 _vlinkenabled[i] = _vchildlinks[i]->IsEnabled();
             }
-            _savers.clear();
+            _listGrabbedSavedStates.clear();
             std::vector<KinBodyPtr> vgrabbedbodies;
             _probot->GetGrabbed(vgrabbedbodies);
             FOREACH(itbody,vgrabbedbodies) {
                 if( find(_vchildlinks.begin(),_vchildlinks.end(),_probot->IsGrabbing(*itbody)) != _vchildlinks.end() ) {
-                    _savers.push_back(KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkEnable));
+                    _listGrabbedSavedStates.push_back(KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkEnable));
                 }
             }
         }
@@ -261,25 +267,27 @@ protected:
                     return CA_Ignore;
                 }
                 // check for attached bodies of the child links
-                KinBodyPtr pcolliding;
-                if( bIndependentLink1 && !!report->plink2 ) {
-                    pcolliding = report->plink2->GetParent();
-                }
-                if( bIndependentLink2 && !!report->plink1 ) {
-                    pcolliding = report->plink1->GetParent();
-                }
-                if( !!pcolliding ) {
-                    FOREACH(it,_savers) {
+                if( !bIndependentLink2 && !bChildLink2 && !!report->plink2 ) {
+                    KinBodyPtr pcolliding = report->plink2->GetParent();
+                    FOREACH(it,_listGrabbedSavedStates) {
                         if( it->GetBody() == pcolliding ) {
                             return CA_Ignore;
                         }
                     }
                 }
-//                if( _savers.size() > 0 && !!report->plink1 && !!report->plink2 ) {
+                if( !bIndependentLink1 && !bChildLink1 && !!report->plink1 ) {
+                    KinBodyPtr pcolliding = report->plink1->GetParent();
+                    FOREACH(it,_listGrabbedSavedStates) {
+                        if( it->GetBody() == pcolliding ) {
+                            return CA_Ignore;
+                        }
+                    }
+                }
+//                if( _listGrabbedSavedStates.size() > 0 && !!report->plink1 && !!report->plink2 ) {
 //                    // two attached bodies can be colliding
 //                    bool bAttached1=false,bAttached2=false;
 //                    KinBodyPtr pbody1 = report->plink1->GetParent(), pbody2 = report->plink1->GetParent();
-//                    FOREACH(it,_savers) {
+//                    FOREACH(it,_listGrabbedSavedStates) {
 //                        if( !bAttached1 && it->GetBody() == pbody1 ) {
 //                            bAttached1 = true;
 //                            if( bAttached1 && bAttached2 ) {
@@ -299,10 +307,10 @@ protected:
         }
 
         RobotBasePtr _probot;
-        std::list<KinBody::KinBodyStateSaver> _savers;
+        std::list<KinBody::KinBodyStateSaver> _listGrabbedSavedStates;
         vector<uint8_t> _vlinkenabled;
         boost::shared_ptr<void> _callbackhandle;
-        const std::vector<KinBody::LinkPtr>& _vchildlinks, _vindependentlinks;
+        const std::vector<KinBody::LinkPtr>& _vchildlinks, &_vindependentlinks;
         bool _bCheckEndEffectorCollision, _bCheckSelfCollision, _bDisabled;
     };
 
