@@ -17,6 +17,8 @@ Core
 
 * Added KinBody::Prop_LinkEnable that allows other objects to track enable changes for a body.
 
+* Allow dynamic setting of link inertial parameters
+
 Viewer
 ------
 

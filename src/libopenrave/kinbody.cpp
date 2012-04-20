@@ -705,6 +705,24 @@ TransformMatrix KinBody::Link::GetGlobalInertia() const
     return ComputeInertia(_t*_tMassFrame, _vinertiamoments);
 }
 
+void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
+{
+    _tMassFrame=massframe;
+    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+}
+
+void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
+{
+    _vinertiamoments = inertiamoments;
+    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+}
+
+void KinBody::Link::SetMass(dReal mass)
+{
+    _mass=mass;
+    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+}
+
 AABB KinBody::Link::ComputeAABB() const
 {
     if( _listGeomProperties.size() == 1) {

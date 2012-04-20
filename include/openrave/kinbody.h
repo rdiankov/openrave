@@ -48,8 +48,8 @@ public:
         // 0x100
         // 0x200
         Prop_LinkStatic=0x400,     ///< static property of link changed
-        Prop_LinkEnable=0x800,     ///< static property of link changed
-        Prop_LinkDynamics=0x1000,     ///< static property of link changed
+        Prop_LinkEnable=0x800,     ///< enable property of link changed
+        Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
         Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         // robot only
         Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
@@ -321,6 +321,15 @@ protected:
             RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetGlobalInertia\n");
             return GetLocalInertia();
         }
+
+        /// \brief sets a new mass frame with respect to the link coordinate system
+        virtual void SetLocalMassFrame(const Transform& massframe);
+
+        /// \brief sets new principal moments of inertia (with respect to the mass frame)
+        virtual void SetPrincipalMomentsOfInertia(const Vector& inertiamoments);
+
+        /// \brief set a new mass
+        virtual void SetMass(dReal mass);
 
         /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
         inline const Transform& GetLocalMassFrame() const {

@@ -859,7 +859,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         itdh->theta = RaveAtan2(vlocalx.y,vlocalx.x);
         itdh->a = vlocalanchor.dot3(vlocalx);
         // normalize if theta is closer to PI
-        if( itdh->theta > 0.5*PI ) {
+        if( itdh->theta > 0.5*PI-g_fEpsilon ) { // this is a really weird condition but it looks like people prefer theta to be negative
             itdh->alpha = -itdh->alpha;
             itdh->theta -= PI;
             itdh->a = -itdh->a;

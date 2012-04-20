@@ -205,6 +205,18 @@ public:
         {
             return ReturnTransform(_plink->GetLocalMassFrame());
         }
+        void SetLocalMassFrame(object omassframe)
+        {
+            _plink->SetLocalMassFrame(ExtractTransform(omassframe));
+        }
+        void SetPrincipalMomentsOfInertia(object oinertiamoments)
+        {
+            _plink->SetPrincipalMomentsOfInertia(ExtractVector3(oinertiamoments));
+        }
+        void SetMass(dReal mass)
+        {
+            _plink->SetMass(mass);
+        }
 
         void SetStatic(bool bStatic) {
             _plink->SetStatic(bStatic);
@@ -2598,6 +2610,9 @@ void init_openravepy_kinbody()
                          .def("GetPrincipalMomentsOfInertia",&PyKinBody::PyLink::GetPrincipalMomentsOfInertia, DOXY_FN(KinBody::Link,GetPrincipalMomentsOfInertia))
                          .def("GetLocalMassFrame",&PyKinBody::PyLink::GetLocalMassFrame, DOXY_FN(KinBody::Link,GetLocalMassFrame))
                          .def("GetMass",&PyKinBody::PyLink::GetMass, DOXY_FN(KinBody::Link,GetMass))
+                         .def("SetLocalMassFrame",&PyKinBody::PyLink::SetLocalMassFrame, args("massframe"), DOXY_FN(KinBody::Link,SetLocalMassFrame))
+                         .def("SetPrincipalMomentsOfInertia",&PyKinBody::PyLink::SetPrincipalMomentsOfInertia, args("inertiamoments"), DOXY_FN(KinBody::Link,SetPrincipalMomentsOfInertia))
+                         .def("SetMass",&PyKinBody::PyLink::SetMass, args("mass"), DOXY_FN(KinBody::Link,SetMass))
                          .def("SetStatic",&PyKinBody::PyLink::SetStatic,args("static"), DOXY_FN(KinBody::Link,SetStatic))
                          .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"), DOXY_FN(KinBody::Link,SetTransform))
                          .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"), DOXY_FN(KinBody::Link,SetForce))
