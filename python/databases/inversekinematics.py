@@ -771,7 +771,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             successrate = float(res[1])/numtested
             solutionresults = []
             index = 2
-            numvalues=1+IkParameterization.GetNumberOfValues(self.iktype)+self.manip.GetIkSolver().GetNumFreeParameters()
+            numvalues=1+IkParameterization.GetNumberOfValuesFromType(self.iktype)+self.manip.GetIkSolver().GetNumFreeParameters()
             for iresults in range(3):
                 num = int(res[index])
                 index += 1
