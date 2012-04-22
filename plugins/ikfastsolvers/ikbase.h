@@ -761,8 +761,8 @@ private:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-                paramnewglobal = pmanip->GetIkParameterization(param.GetType());
-                paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 switch(_CallFilters(itravesol->first, pmanip, paramnew)) {
                 case IKFR_Reject: break;
                 case IKFR_Quit: return SR_Quit;
@@ -781,8 +781,8 @@ private:
             _vsolutionindices = vsolutionindices;
             probot->SetActiveDOFValues(vravesol,false);
             // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-            paramnewglobal = pmanip->GetIkParameterization(param.GetType());
-            paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+            paramnew = pmanip->GetIkParameterization(param,false);
+            paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
         }
 
         CollisionReport report;
@@ -926,8 +926,8 @@ private:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-                paramnewglobal = pmanip->GetIkParameterization(param.GetType());
-                paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 switch(_CallFilters(itravesol->first, pmanip, paramnew)) {
                 case IKFR_Reject: break;
                 case IKFR_Quit: return SR_Quit;
@@ -946,8 +946,8 @@ private:
             _vsolutionindices = vsolutionindices;
             probot->SetActiveDOFValues(vravesol,false);
             // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-            paramnewglobal = pmanip->GetIkParameterization(param.GetType());
-            paramnew = pmanip->GetBase()->GetTransform().inverse() * paramnewglobal;
+            paramnew = pmanip->GetIkParameterization(param,false);
+            paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
         }
 
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {

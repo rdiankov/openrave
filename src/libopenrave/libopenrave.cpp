@@ -848,7 +848,12 @@ ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkP
 
 std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
 {
-    O << ikparam._type << " ";
+    int type = ikparam._type;
+    BOOST_ASSERT( !(type & IKP_CustomDataBit) );
+    if( ikparam._mapCustomData.size() > 0 ) {
+        type |= IKP_CustomDataBit;
+    }
+    O << type << " ";
     switch(ikparam._type) {
     case IKP_Transform6D:
         O << ikparam.GetTransform6D();
@@ -926,6 +931,15 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
+    if( ikparam._mapCustomData.size() > 0 ) {
+        O << ikparam._mapCustomData.size() << " ";
+        FOREACHC(it, ikparam._mapCustomData) {
+            O << it->first << " " << it->second.size() << " ";
+            FOREACHC(itvalue, it->second) {
+                O << *itvalue << " ";
+            }
+        }
+    }
     return O;
 }
 
@@ -933,7 +947,7 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 {
     int type=IKP_None;
     I >> type;
-    ikparam._type = static_cast<IkParameterizationType>(type);
+    ikparam._type = static_cast<IkParameterizationType>(type&~IKP_CustomDataBit);
     switch(ikparam._type) {
     case IKP_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
     case IKP_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
@@ -983,6 +997,26 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+    }
+    ikparam._mapCustomData.clear();
+    if( type & IKP_CustomDataBit ) {
+        size_t numcustom = 0, numvalues=0;
+        std::string name;
+        I >> numcustom;
+        if( !I ) {
+            return I;
+        }
+        for(size_t i = 0; i < numcustom; ++i) {
+            I >> name >> numvalues;
+            if( !I ) {
+                return I;
+            }
+            std::vector<dReal>& v = ikparam._mapCustomData[name];
+            v.resize(numvalues);
+            for(size_t j = 0; j < v.size(); ++j) {
+                I >> v[j];
+            }
+        }
     }
     return I;
 }

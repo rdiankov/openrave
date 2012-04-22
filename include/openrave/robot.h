@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -159,16 +159,19 @@ public:
             }
             \endcode
             \param iktype the type of parameterization to request
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
          */
-        virtual IkParameterization GetIkParameterization(IkParameterizationType iktype) const;
+        virtual IkParameterization GetIkParameterization(IkParameterizationType iktype, bool inworld=true) const;
 
         /** \brief returns a full parameterization of a given IK type for the current manipulator position using an existing IkParameterization as the seed.
 
+            Custom data is copied to the new parameterization. Furthermore, some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
             Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
             such that a new call to GetIkParameterization returns the same values.
-            \param ikparam Some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
+            \param ikparam The parameterization to use as seed.
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
          */
-        virtual IkParameterization GetIkParameterization(const IkParameterization& ikparam) const;
+        virtual IkParameterization GetIkParameterization(const IkParameterization& ikparam, bool inworld=true) const;
 
         /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -839,6 +839,8 @@ enum IkParameterizationType {
     IKP_TranslationZAxisAngleYNorm4D=0x44000010, ///< end effector origin reaches desired 3D translation, manipulator direction needs to be orthogonal to y-axis and be rotated at a certain angle starting from the z-axis (defined in the manipulator base link's coordinate system)
 
     IKP_NumberOfParameterizations=16,     ///< number of parameterizations (does not count IKP_None)
+
+    IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
 /** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
@@ -1163,6 +1165,7 @@ inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
     return theta;
 }
 
+
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
@@ -1214,20 +1217,20 @@ public:
     }
     inline const std::string& GetName() const;
 
-    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     static int GetDOF(IkParameterizationType type) {
         return (type>>28)&0xf;
     }
-    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     inline int GetDOF() const {
         return (_type>>28)&0xf;
     }
 
-    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). Does \b not count custom data.
     static int GetNumberOfValues(IkParameterizationType type) {
         return (type>>24)&0xf;
     }
-    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). Does \b not count custom data.
     inline int GetNumberOfValues() const {
         return (_type>>24)&0xf;
     }
@@ -1461,7 +1464,8 @@ public:
 
     /// \brief fills the iterator with the serialized values of the ikparameterization.
     ///
-    /// the container the iterator points to needs to have \ref GetNumberOfValues() available.
+    /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
+    /// Does not support serialized data
     inline void GetValues(std::vector<dReal>::iterator itvalues) const
     {
         switch(_type) {
@@ -1544,6 +1548,9 @@ public:
         }
     }
 
+    /// \brief sets a serialized set of values for the IkParameterization
+    ///
+    /// Function does not handle custom data
     inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
@@ -1627,15 +1634,172 @@ public:
         }
     }
 
+    /** \brief sets named custom data in the ik parameterization
+
+        The custom data is serialized along with the rest of the parameters and can also be part of a configuration specification under the "ikparam_values" anotation.
+        The custom data name can have meta-tags for the type of transformation the data undergos when \ref MultiplyTransform is called. For example, if the user wants to have an extra 3 values that represent "direction", then the direction has to be rotated along with all the data or coordinate systems can get lost. The anotations are specified by putting:
+
+        \b _transform=%s_
+
+        somewhere in the string. The %s can be: \b direction, \b point, \b quat
+
+        \param name Describes the type of data, cannot contain spaces or new lines.
+        \param values the values representing the data
+        \throw openrave_exception throws if the name is invalid
+     */
+    void SetCustomValues(const std::string& name, const std::vector<dReal>& values)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name] = values;
+    }
+
+    /// \brief gets custom data if it exists, returns false if it doesn't
+    bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
+    {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it == _mapCustomData.end() ) {
+            return false;
+        }
+        values = it->second;
+        return true;
+    }
+
+    /// \brief clears all the custom data
+    void ClearCustomValues()
+    {
+        _mapCustomData.clear();
+    }
+
     static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="");
     inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const
     {
         return GetConfigurationSpecification(GetType(),interpolation);
     }
 
+    /// \brief in-place transform into a new coordinate system
+    inline IkParameterization& MultiplyTransform(const Transform& t) {
+        switch(GetType()) {
+        case IKP_Transform6D:
+            SetTransform6D(t * GetTransform6D());
+            break;
+        case IKP_Rotation3D:
+            SetRotation3D(quatMultiply(quatInverse(t.rot),GetRotation3D()));
+            break;
+        case IKP_Translation3D:
+            SetTranslation3D(t*GetTranslation3D());
+            break;
+        case IKP_Direction3D:
+            SetDirection3D(t.rotate(GetDirection3D()));
+            break;
+        case IKP_Ray4D:
+            SetRay4D(RAY(t*GetRay4D().pos,t.rotate(GetRay4D().dir)));
+            break;
+        case IKP_Lookat3D:
+            SetLookat3D(RAY(t*GetLookat3D(),t.rotate(GetLookat3DDirection())));
+            break;
+        case IKP_TranslationDirection5D:
+            SetTranslationDirection5D(RAY(t*GetTranslationDirection5D().pos,t.rotate(GetTranslationDirection5D().dir)));
+            break;
+        case IKP_TranslationXY2D:
+            SetTranslationXY2D(t*GetTranslationXY2D());
+            break;
+        case IKP_TranslationXYOrientation3D: {
+            Vector v = GetTranslationXYOrientation3D();
+            Vector voldtrans(v.x,v.y,0);
+            Vector vnewtrans = t*voldtrans;
+            dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+            SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+            break;
+        }
+        case IKP_TranslationLocalGlobal6D:
+            SetTranslationLocalGlobal6D(GetTranslationLocalGlobal6D().first, t*GetTranslationLocalGlobal6D().second);
+            break;
+        case IKP_TranslationXAxisAngle4D: {
+            std::pair<Vector,dReal> p = GetTranslationXAxisAngle4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationXAxisAngle4D(t*p.first,p.second);
+            break;
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            std::pair<Vector,dReal> p = GetTranslationYAxisAngle4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationYAxisAngle4D(t*p.first,p.second);
+            break;
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            std::pair<Vector,dReal> p = GetTranslationZAxisAngle4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationZAxisAngle4D(t*p.first,p.second);
+            break;
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            std::pair<Vector,dReal> p = GetTranslationXAxisAngleZNorm4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationXAxisAngleZNorm4D(t*p.first,p.second);
+            break;
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            std::pair<Vector,dReal> p = GetTranslationYAxisAngleXNorm4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationYAxisAngleXNorm4D(t*p.first,p.second);
+            break;
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            std::pair<Vector,dReal> p = GetTranslationZAxisAngleYNorm4D();
+            // don't change the angle since don't know the exact direction it is pointing at
+            SetTranslationZAxisAngleYNorm4D(t*p.first,p.second);
+            break;
+        }
+        default:
+            throw openrave_exception(str(boost::format("does not support parameterization %d")%GetType()));
+        }
+        for(std::map<std::string, std::vector<dReal> >::iterator it = _mapCustomData.begin(); it != _mapCustomData.end(); ++it) {
+            _MultiplyTransform(t, it->first, it->second);
+        }
+        return *this;
+    }
+
 protected:
+    inline static bool _IsValidCharInName(char c) {
+        return c < 0 || c >= 33;
+    }
+    inline static void _MultiplyTransform(const Transform& t, const std::string& name, std::vector<dReal>& values)
+    {
+        size_t startoffset = name.find("_transform=");
+        if( startoffset != std::string::npos ) {
+            size_t endoffset = name.find("_", startoffset+11);
+            std::string transformtype;
+            if( endoffset == std::string::npos ) {
+                transformtype = name.substr(startoffset+11);
+            }
+            else {
+                transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
+            }
+            if( transformtype == "direction" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v = t.rotate(v);
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "point" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v = t*v;
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "quat" ) {
+                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                v = quatMultiply(t.rot,v);
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("IkParameterization custom data '%s' does not have a valid transform",name,ORE_InvalidState);
+            }
+        }
+    }
+
     Transform _transform;
     IkParameterizationType _type;
+    std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
@@ -1719,6 +1883,10 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
     }
     default:
         throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+    }
+    local._mapCustomData = ikparam._mapCustomData;
+    for(std::map<std::string, std::vector<dReal> >::iterator it = local._mapCustomData.begin(); it != local._mapCustomData.end(); ++it) {
+        IkParameterization::_MultiplyTransform(t, it->first,it->second);
     }
     return local;
 }

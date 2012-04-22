@@ -19,6 +19,8 @@ Core
 
 * Allow dynamic setting of link inertial parameters
 
+* Can add custom data to IkParameterization that is also passed to the ik filters. :meth:`.IkParameterization.SetCustomData`
+
 Viewer
 ------
 

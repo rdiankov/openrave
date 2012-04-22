@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,6 +81,10 @@ class TestIkSolver(EnvironmentSetup):
             assert(ikparam.GetDOF(IkParameterizationType.Transform6D)==6)
             assert(IkParameterization.GetDOFFromType(IkParameterizationType.Transform6D)==6)
             assert(IkParameterization.GetDOFFromType(ikparam.GetType())==6)
+            assert(ikparam.GetNumberOfValues()==7)
+            assert(ikparam.GetNumberOfValues(IkParameterizationType.Transform6D)==7)
+            assert(IkParameterization.GetNumberOfValuesFromType(IkParameterizationType.Transform6D)==7)
+            assert(IkParameterization.GetNumberOfValuesFromType(ikparam.GetType())==7)
             assert(manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions) is None)
             assert(manip.FindIKSolution(ikparam,0) is not None)
             sampler=planningutils.ManipulatorIKGoalSampler(robot.GetActiveManipulator(),[ikparam],nummaxsamples=20,nummaxtries=10,jitter=0)
@@ -112,3 +116,53 @@ class TestIkSolver(EnvironmentSetup):
 
         joint.SetLimits([-pi],[pi])
         sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)
+
+    def test_customikvalues(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            robot.SetDOFValues([pi/2,pi/4],[3,5])
+            manip = robot.GetActiveManipulator()
+            ikparam=manip.GetIkParameterization(IkParameterizationType.Transform6D)
+            d = [1,0,0]
+            p = [1,2,3]
+            ikparam.SetCustomValues('myparam0_transform=direction_',d)
+            ikparam.SetCustomValues('myparam1_transform=point_',p)
+            ikparam.SetCustomValues('myparam2',[5,4])
+            assert(transdist(ikparam.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
+            assert(transdist(ikparam.GetCustomValues('myparam1_transform=point_'),p) <= g_epsilon)
+            assert(transdist(ikparam.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
+            data=str(ikparam)
+            ikparam2 = IkParameterization(data)
+            assert(transdist(ikparam2.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
+            assert(transdist(ikparam2.GetCustomValues('myparam1_transform=point_'),p) <= g_epsilon)
+            assert(transdist(ikparam2.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
+
+            T = matrixFromAxisAngle([0,1,0])
+            T[0:3,3] = [0.5,0.2,0.8]
+            ikparam3=ikparam.Transform(T)
+            assert(transdist(ikparam3.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
+            assert(transdist(ikparam3.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
+            assert(transdist(ikparam3.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
+
+            T = linalg.inv(manip.GetBase().GetTransform())
+            ikparam4 = ikparam.Transform(T)
+            ikparam5 = manip.GetIkParameterization(ikparam4,False)
+            assert(transdist(ikparam5.GetTransform6D(),ikparam4.GetTransform6D()) <= g_epsilon)
+            assert(transdist(ikparam5.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
+            assert(transdist(ikparam5.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
+            assert(transdist(ikparam5.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)            
+            
+            def filtertest(sol,manip,ikparamint):
+                assert(transdist(ikparamint.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
+                assert(transdist(ikparamint.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
+                assert(transdist(ikparamint.GetCustomValues('myparam2'),[5,4]) != g_epsilon)
+                return IkFilterReturn.Success
+            
+            handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
+            manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
