@@ -77,6 +77,7 @@ class TestIkSolver(EnvironmentSetup):
             robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
             manip = robot.GetActiveManipulator()
             ikparam=manip.GetIkParameterization(IkParameterizationType.Transform6D)
+            ikparamcopy = IkParameterization(ikparam)
             assert(ikparam.GetDOF()==6)
             assert(ikparam.GetDOF(IkParameterizationType.Transform6D)==6)
             assert(IkParameterization.GetDOFFromType(IkParameterizationType.Transform6D)==6)

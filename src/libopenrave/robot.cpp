@@ -140,8 +140,7 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     _strIkSolver.resize(0);
     _pIkSolver.reset();
     _tLocalTool = t;
-    RobotBasePtr probot = GetRobot();
-    probot->_ParametersChanged(Prop_RobotManipulatorTool);
+    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
 }
@@ -165,15 +164,22 @@ Transform RobotBase::Manipulator::GetTransform() const
 
 bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 {
-    _pIkSolver = iksolver;
-    if( !!_pIkSolver ) {
-        _strIkSolver = _pIkSolver->GetXMLId();
-        if( _strIkSolver.size() == 0 ) {
-            RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
-        }
-        return _pIkSolver->Init(shared_from_this());
+    if( !iksolver ) {
+        _pIkSolver.reset();
+        return true;
     }
-    return true;
+
+    if( iksolver->GetXMLId().size() == 0 ) {
+        RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
+    }
+    if( iksolver->Init(shared_from_this()) ) {
+        _pIkSolver = iksolver;
+        _strIkSolver = iksolver->GetXMLId();
+        GetRobot()->_ParametersChanged(Prop_RobotManipulatorSolver);
+        return true;
+    }
+
+    return false;
 }
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
@@ -2467,7 +2473,7 @@ void RobotBase::_ParametersChanged(int parameters)
             (*itsensor)->__hashstructure.resize(0);
         }
     }
-    if( parameters & Prop_Manipulators ) {
+    if( parameters & Prop_RobotManipulatorTool ) {
         FOREACH(itmanip,_vecManipulators) {
             (*itmanip)->__hashstructure.resize(0);
             (*itmanip)->__hashkinematicsstructure.resize(0);

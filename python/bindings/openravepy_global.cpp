@@ -423,6 +423,9 @@ public:
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
+    PyIkParameterization(boost::shared_ptr<PyIkParameterization> pyikparam) {
+        _param = pyikparam->_param;
+    }
     PyIkParameterization(const IkParameterization &ikparam) : _param(ikparam) {
     }
     virtual ~PyIkParameterization() {
@@ -1434,6 +1437,7 @@ void init_openravepy_global()
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
+                                   .def(init<boost::shared_ptr<PyIkParameterization> >(args("ikparam")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
                                    .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))

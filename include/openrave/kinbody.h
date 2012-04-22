@@ -52,8 +52,7 @@ public:
         Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
         Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         // robot only
-        Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
-        Prop_Manipulators = 0x00010000,
+        // 0x00010000
         Prop_RobotSensors = 0x00020000,     ///< [robot only] all properties of all sensors
         Prop_Sensors = 0x00020000,
         Prop_RobotSensorPlacement = 0x00040000,     ///< [robot only] relative sensor placement of sensors
@@ -61,6 +60,8 @@ public:
         Prop_RobotActiveDOFs = 0x00080000,     ///< [robot only] active dofs changed
         Prop_RobotManipulatorTool = 0x00100000, ///< [robot only] the tool coordinate system changed
         Prop_RobotManipulatorName = 0x00200000, ///< [robot only] the manipulator name
+        Prop_RobotManipulatorSolver = 0x00400000,
+        Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
     };
 
     /// \brief A rigid body holding all its collision and rendering data.
