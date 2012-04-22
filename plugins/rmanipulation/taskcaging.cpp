@@ -58,7 +58,7 @@ public:
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
                 if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                                                                                                                                                                                                                                                                       // minimum on top of stack
+                    return a.second > b.second;                                                                                                                                                                                                                                                                                                                                                        // minimum on top of stack
                 else
                     return a.first->iksolutions.size() == 0;
             }
@@ -735,10 +735,10 @@ private:
     };
 
     inline boost::shared_ptr<TaskCaging> shared_problem() {
-        return boost::static_pointer_cast<TaskCaging>(shared_from_this());
+        return boost::dynamic_pointer_cast<TaskCaging>(shared_from_this());
     }
     inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
-        return boost::static_pointer_cast<TaskCaging const>(shared_from_this());
+        return boost::dynamic_pointer_cast<TaskCaging const>(shared_from_this());
     }
 
 public:

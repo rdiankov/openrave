@@ -1520,10 +1520,10 @@ private:
 
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() {
-        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
+        return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
-        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
+        return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)

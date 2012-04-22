@@ -46,10 +46,10 @@ public:
     }
 
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> > shared_solver() {
-        return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> >(shared_from_this());
+        return boost::dynamic_pointer_cast<IkFastSolver<IKReal,Solution> >(shared_from_this());
     }
     inline boost::shared_ptr<IkFastSolver<IKReal,Solution> const> shared_solver_const() const {
-        return boost::static_pointer_cast<IkFastSolver<IKReal,Solution> const>(shared_from_this());
+        return boost::dynamic_pointer_cast<IkFastSolver<IKReal,Solution> const>(shared_from_this());
     }
     inline boost::weak_ptr<IkFastSolver<IKReal,Solution> > weak_solver() {
         return shared_solver();

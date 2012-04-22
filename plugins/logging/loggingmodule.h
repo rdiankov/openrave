@@ -20,10 +20,10 @@
 class LoggingModule : public ModuleBase
 {
     inline boost::shared_ptr<LoggingModule> shared_module() {
-        return boost::static_pointer_cast<LoggingModule>(shared_from_this());
+        return boost::dynamic_pointer_cast<LoggingModule>(shared_from_this());
     }
     inline boost::shared_ptr<LoggingModule const> shared_module_const() const {
-        return boost::static_pointer_cast<LoggingModule const>(shared_from_this());
+        return boost::dynamic_pointer_cast<LoggingModule const>(shared_from_this());
     }
 
 public:

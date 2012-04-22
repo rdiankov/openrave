@@ -2669,7 +2669,7 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     }
                     else {
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
