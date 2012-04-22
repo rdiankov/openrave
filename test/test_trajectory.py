@@ -315,8 +315,8 @@ class TestTrajectory(EnvironmentSetup):
                     ikparams.append(ikparam)
                     # compute the change in angle, also check if valid transform can be extracted
                     T=ikparam.GetTransform6D()
-                    angledelta.append(linalg.norm(axisAngleFromRotationMatrix(dot(linalg.inv(ikparam0.GetTransform()),T))))
-                    transdelta.append(linalg.norm(T[0:3,3]-ikparam0.GetTransform()[0:3,3]))
+                    angledelta.append(linalg.norm(axisAngleFromRotationMatrix(dot(linalg.inv(ikparam0.GetTransform6D()),T))))
+                    transdelta.append(linalg.norm(T[0:3,3]-ikparam0.GetTransform6D()[0:3,3]))
                 angledelta = array(angledelta)
                 transdelta = array(transdelta)
                 assert(ikparam0.ComputeDistanceSqr(ikparams[0]) <= g_epsilon)
