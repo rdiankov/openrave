@@ -380,12 +380,12 @@ public:
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
-        char* phomedir = getenv("OPENRAVE_HOME");
+        char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?
         if( phomedir == NULL ) {
 #ifndef _WIN32
-            _homedirectory = string(getenv("HOME"))+string("/.openrave");
+            _homedirectory = string(getenv("HOME"))+string("/.openrave"); // getenv not thread-safe?
 #else
-            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave"); // getenv not thread-safe?
 #endif
         }
         else {
@@ -403,7 +403,7 @@ public:
         const char* delim = ":";
 #endif
         _vdbdirectories.clear();
-        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_DATABASE");
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_DATABASE"); // getenv not thread-safe?
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, _vdbdirectories);
         }

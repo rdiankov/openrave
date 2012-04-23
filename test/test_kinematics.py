@@ -126,7 +126,7 @@ class TestKinematics(EnvironmentSetup):
             for envfile in g_envfiles:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
-                # try all loadable physics engines
+                # try all loadable physics engines?
                 #self.env.SetPhysicsEngine()
                 for i in range(10):
                     T = eye(4)
@@ -241,6 +241,14 @@ class TestKinematics(EnvironmentSetup):
             s = 'this is a test string'
             body.SetUserData(s)
             assert(body.GetUserData()==s)
+
+            originalvel = body.GetDOFVelocityLimits()
+            originalaccel = body.GetDOFAccelerationLimits()
+            with KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration):
+                body.SetDOFVelocityLimits(zeros(body.GetDOF()))
+                body.SetDOFAccelerationLimits(zeros(body.GetDOF()))
+            assert(transdist(body.GetDOFVelocityLimits(),originalvel) <= g_epsilon)
+            assert(transdist(body.GetDOFAccelerationLimits(),originalaccel) <= g_epsilon)
         
     def test_geometrychange(self):
         self.log.info('change geometry and test if changes are updated')

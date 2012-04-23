@@ -908,9 +908,10 @@ private:
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
-        Save_LinkTransformation=0x00000001,     ///< [default] save link transformations
+        Save_LinkTransformation=0x00000001,     ///< [default] save link transformations and joint branches
         Save_LinkEnable=0x00000002,     ///< [default] save link enable states
         Save_LinkVelocities=0x00000004,     ///< save the link velocities
+        Save_JointMaxVelocityAndAcceleration=0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
         Save_ActiveDOF=0x00010000,     ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator=0x00020000,     ///< [robot only], saves the active manipulator
         Save_GrabbedBodies=0x00040000,     ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
@@ -934,6 +935,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<int> _vdofbranches;
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations;
         KinBodyPtr _pbody;
 private:
         virtual void _RestoreKinBody();

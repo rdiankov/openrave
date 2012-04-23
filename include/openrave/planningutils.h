@@ -163,12 +163,23 @@ OPENRAVE_API void GetDHParameters(std::vector<DHParameter>& vparameters, KinBody
 class OPENRAVE_API LineCollisionConstraint
 {
 public:
-    LineCollisionConstraint();
-    bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
+    LineCollisionConstraint() RAVE_DEPRECATED;
+    /// \param listCheckCollisions initialize with these bodies to check environment and self-collision with
+    LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv=true);
+    virtual ~LineCollisionConstraint() {
+    }
+
+    /// \deprecated (12/04/23)
+    virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr body, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations) RAVE_DEPRECATED;
+
+    /// \brief checks line collision. Uses the constructor's self-collisions
+    virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
 
 protected:
     std::vector<dReal> _vtempconfig, dQ;
     CollisionReportPtr _report;
+    std::list<KinBodyPtr> _listCheckSelfCollisions;
+    bool _bCheckEnv;
 };
 
 /// \brief simple distance metric based on joint weights

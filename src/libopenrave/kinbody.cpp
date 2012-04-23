@@ -1972,6 +1972,10 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_LinkVelocities ) {
         _pbody->GetLinkVelocities(_vLinkVelocities);
     }
+    if( _options & Save_JointMaxVelocityAndAcceleration ) {
+        _pbody->GetDOFVelocityLimits(_vMaxVelocities);
+        _pbody->GetDOFAccelerationLimits(_vMaxAccelerations);
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -2002,6 +2006,10 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody()
             _pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
             _pbody->_ParametersChanged(Prop_LinkEnable);
         }
+    }
+    if( _options & Save_JointMaxVelocityAndAcceleration ) {
+        _pbody->SetDOFVelocityLimits(_vMaxVelocities);
+        _pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
     }
     if( _options & Save_LinkVelocities ) {
         _pbody->SetLinkVelocities(_vLinkVelocities);

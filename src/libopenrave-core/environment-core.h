@@ -116,7 +116,7 @@ public:
 #else
             const char* delim = ":";
 #endif
-            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA");
+            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA"); // getenv not thread-safe?
             if( pOPENRAVE_DATA != NULL ) {
                 utils::TokenizeString(pOPENRAVE_DATA, delim, _vdatadirs);
             }
@@ -660,11 +660,6 @@ public:
         psensor->Configure(SensorBase::CC_PowerOn);
     }
 
-    virtual bool RemoveKinBody(KinBodyPtr pbody)
-    {
-        return Remove(InterfaceBasePtr(pbody));
-    }
-
     virtual bool Remove(InterfaceBasePtr pinterface)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -1066,10 +1061,6 @@ public:
     virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
     {
         TriangulateScene(trimesh,options,"");
-    }
-
-    virtual const std::string& GetHomeDirectory() const {
-        return _homedirectory;
     }
 
     virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts)
@@ -1479,22 +1470,6 @@ public:
         }
         return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
     }
-
-    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
-    {
-        return RaveRegisterXMLReader(type,xmltag,fn);
-    }
-
-    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
-    {
-        return _ParseXMLFile(preader,filename);
-    }
-
-    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
-    {
-        return _ParseXMLData(preader,pdata);
-    }
-
 
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
     {

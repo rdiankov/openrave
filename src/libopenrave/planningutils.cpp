@@ -473,8 +473,9 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
         if( listsetfunctions.size() > 0 ) {
             params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listsetfunctions));
             params->_getstatefn = boost::bind(_GetAffineState,_1,boost::ref(listgetfunctions));
-            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
-            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
+            std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
+            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
+            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), _1, _2, _3, _4);
             statesaver.reset(new PlannerStateSaver(traj->GetConfigurationSpecification().GetDOF(), params->_setstatefn, params->_getstatefn));
         }
     }
@@ -876,7 +877,12 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-LineCollisionConstraint::LineCollisionConstraint()
+LineCollisionConstraint::LineCollisionConstraint() : _bCheckEnv(true)
+{
+    _report.reset(new CollisionReport());
+}
+
+LineCollisionConstraint::LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv) : _listCheckSelfCollisions(listCheckCollisions), _bCheckEnv(bCheckEnv)
 {
     _report.reset(new CollisionReport());
 }
@@ -911,7 +917,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
             return false;
         }
         if( robot->CheckSelfCollision(_report) ) {
@@ -945,7 +951,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 
     if (start == 0 ) {
         params->_setstatefn(pQ0);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
             return false;
         }
         if( robot->CheckSelfCollision(_report) ) {
@@ -973,11 +979,133 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+        if( _bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
             return false;
         }
         if( robot->CheckSelfCollision() ) {
             return false;
+        }
+        if( !!params->_getstatefn ) {
+            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+        }
+        if( !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->push_back(_vtempconfig);
+        }
+        if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+            return false;
+        }
+    }
+
+    if( bCheckEnd && !!pvCheckedConfigurations ) {
+        pvCheckedConfigurations->push_back(pQ1);
+    }
+    return true;
+}
+
+bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
+{
+    // set the bounds based on the interval type
+    PlannerBase::PlannerParametersPtr params = _params.lock();
+    if( !params ) {
+        return false;
+    }
+    BOOST_ASSERT(_listCheckSelfCollisions.size()>0);
+    int start=0;
+    bool bCheckEnd=false;
+    switch (interval) {
+    case IT_Open:
+        start = 1;  bCheckEnd = false;
+        break;
+    case IT_OpenStart:
+        start = 1;  bCheckEnd = true;
+        break;
+    case IT_OpenEnd:
+        start = 0;  bCheckEnd = false;
+        break;
+    case IT_Closed:
+        start = 0;  bCheckEnd = true;
+        break;
+    default:
+        BOOST_ASSERT(0);
+    }
+
+    // first make sure the end is free
+    _vtempconfig.resize(params->GetDOF());
+    if (bCheckEnd) {
+        params->_setstatefn(pQ1);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision(_report) ) {
+                return false;
+            }
+        }
+    }
+
+    // compute  the discretization
+    dQ = pQ1;
+    params->_diffstatefn(dQ,pQ0);
+    int i, numSteps = 1;
+    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
+    int totalsteps = 0;
+    for (i = 0; i < params->GetDOF(); i++,itres++) {
+        int steps;
+        if( *itres != 0 ) {
+            steps = (int)(fabs(dQ[i]) / *itres);
+        }
+        else {
+            steps = (int)(fabs(dQ[i]) * 100);
+        }
+        totalsteps += steps;
+        if (steps > numSteps) {
+            numSteps = steps;
+        }
+    }
+    if((totalsteps == 0)&&(start > 0)) {
+        return true;
+    }
+
+    if (start == 0 ) {
+        params->_setstatefn(pQ0);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision(_report) ) {
+                return false;
+            }
+        }
+        start = 1;
+    }
+
+    dReal fisteps = dReal(1.0f)/numSteps;
+    for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
+        *it *= fisteps;
+    }
+
+    // check for collision along the straight-line path
+    // NOTE: this does not check the end config, and may or may
+    // not check the start based on the value of 'start'
+    for (i = 0; i < params->GetDOF(); i++) {
+        _vtempconfig[i] = pQ0[i];
+    }
+    if( start > 0 ) {
+        params->_setstatefn(_vtempconfig);
+        if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            return false;
+        }
+    }
+    for (int f = start; f < numSteps; f++) {
+        params->_setstatefn(_vtempconfig);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody)) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision() ) {
+                return false;
+            }
         }
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits

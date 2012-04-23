@@ -1665,10 +1665,17 @@ public:
         return true;
     }
 
-    /// \brief clears all the custom data
-    void ClearCustomValues()
+    /// \brief clears custom data
+    ///
+    /// \param name if name is empty, will clear all the data, otherwise will clear only the custom data with that name
+    void ClearCustomValues(const std::string& name=std::string())
     {
-        _mapCustomData.clear();
+        if( name.size() > 0 ) {
+            _mapCustomData.erase(name);
+        }
+        else {
+            _mapCustomData.clear();
+        }
     }
 
     static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="");

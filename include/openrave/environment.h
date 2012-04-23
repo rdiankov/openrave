@@ -306,18 +306,6 @@ public:
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
 
-    /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
-    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
-
-    /// \brief Parses a file for OpenRAVE XML formatted data.
-    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) RAVE_DEPRECATED = 0;
-
-    /** \brief Parses a data file for XML data.
-
-        \param pdata The data of the buffer
-        \param len the number of bytes valid in pdata
-     */
-    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) RAVE_DEPRECATED = 0;
     //@}
 
     /// \name Object Setting and Querying
@@ -356,9 +344,6 @@ public:
     ///
     /// The sensors come from the currently loaded robots and the explicitly added sensors
     virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
-
-    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
-    virtual bool RemoveKinBody(KinBodyPtr body) RAVE_DEPRECATED = 0;
 
     /// \brief Removes a currently loaded interface from the environment. <b>[multi-thread safe]</b>
     ///
@@ -553,9 +538,6 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
     //@}
-
-    /// \deprecated (10/09/23) see \ref RaveGetHomeDirectory
-    virtual const std::string& GetHomeDirectory() const RAVE_DEPRECATED = 0;
 
     //@{ debug/global commands
 

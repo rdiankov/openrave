@@ -352,7 +352,7 @@ protected:
 #else
         const char* delim = ":";
 #endif
-        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS");
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
         }

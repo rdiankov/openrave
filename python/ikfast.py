@@ -3081,7 +3081,7 @@ class IKFastSolver(AutoReloader):
         dummysubs2 = []
         dummyvars = []
         usedvars = []
-        hassinglevariable = False
+        singlevariables = []
         i = 0
         while i < len(symbols):
             dummy = Symbol('ht%s'%symbols[i].name[1:])
@@ -3097,7 +3097,7 @@ class IKFastSolver(AutoReloader):
                     usedvars.append(var)
                 i += 2
             else:
-                hassinglevariable = True
+                singlevariables.append(var)
                 # most likely a single variable
                 dummys.append(var)
                 dummysubs += [(var,var)]
@@ -3108,10 +3108,17 @@ class IKFastSolver(AutoReloader):
 
         newreducedeqs = []
         for peq in RightEquations:
-            maxdenom = [0]*(len(symbols)/2)
+            maxdenom = dict()
             for monoms in peq.iter_monoms():
-                for i in range(len(maxdenom)):
-                    maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+                i = 0
+                while i < len(monoms):
+                    if peq.symbols[i].name[0] == 'j':
+                        # single variable
+                        maxdenom[peq.symbols[i]] = max(maxdenom.get(peq.symbols[i],0),monoms[i])
+                        i += 1
+                    else:
+                        maxdenom[peq.symbols[i]] = max(maxdenom.get(peq.symbols[i],0),monoms[i]+monoms[i+1])
+                        i += 2
             eqnew = S.Zero
             for c,monoms in peq.iter_terms():
                 term = c
@@ -3119,9 +3126,16 @@ class IKFastSolver(AutoReloader):
                     num,denom = fraction(dummysubs[i][1])
                     term *= num**monoms[i]
                 # the denoms for 0,1 and 2,3 are the same
-                for i in range(len(maxdenom)):
-                    denom = fraction(dummysubs[2*i][1])[1]
-                    term *= denom**(maxdenom[i]-monoms[2*i]-monoms[2*i+1])
+                i = 0
+                while i < len(monoms):
+                    if peq.symbols[i].name[0] == 'j':
+                        denom = fraction(dummysubs[i][1])[1]
+                        term *= denom**(maxdenom[peq.symbols[i]]-monoms[i])
+                        i += 1
+                    else:
+                        denom = fraction(dummysubs[i][1])[1]
+                        term *= denom**(maxdenom[peq.symbols[i]]-monoms[i]-monoms[i+1])
+                        i += 2
                 eqnew += term
             newreducedeqs.append(Poly(eqnew,*dummys))
 
@@ -3130,14 +3144,33 @@ class IKFastSolver(AutoReloader):
 #         ipshell(local_ns=locals())
                 
         # check for equations with a single variable
-        if hassinglevariable:
+        if len(singlevariables) > 0:
             try:
-                AllEquations = [eq.subs(self.invsubs) for eq in newreducedeqs]
+                AllEquations = [eq.subs(self.invsubs).as_basic() for eq in newreducedeqs]
                 tree = self.solveAllEquations(AllEquations,curvars=dummys,othersolvedvars=[],solsubs=self.freevarsubs,endbranchtree=endbranchtree)
                 return raghavansolutiontree+tree,usedvars
             except self.CannotSolveError:
                 pass
-        
+
+            if 0:
+                # try solving for the single variable and substituting for the rest of the equations in order to get a set of equations without the single variable
+                var = singlevariables[0]
+                monomindex = symbols.index(var)
+                singledegreeeqs = []
+                AllEquations = []
+                for peq in newreducedeqs:
+                    if all([m[monomindex] <= 1 for m in peq.monoms]):
+                        newpeq = Poly(peq,var)
+                        if newpeq.degree > 0:
+                            singledegreeeqs.append(newpeq)
+                        else:
+                            AllEquations.append(peq.subs(self.invsubs).as_basic())
+                for peq0, peq1 in combinations(singledegreeeqs,2):
+                    AllEquations.append(simplify((peq0.coeff(0)*peq1.coeff(1) - peq0.coeff(1)*peq1.coeff(0)).subs(self.invsubs)))
+
+                print AllEquations
+                #sol=self.solvePairVariablesHalfAngle(AllEquations,usedvars[1],usedvars[2],[])
+            
         # choose which leftvar can determine the singularity of the following equations!
         ileftvar = 0
         leftvar = dummys[ileftvar]
@@ -3145,7 +3178,10 @@ class IKFastSolver(AutoReloader):
         coupledvars.pop(ileftvar)
         getsubs = raghavansolutiontree[0].getsubs if len(raghavansolutiontree) > 0 else None
         exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
-        coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
+        jointevalcos=[d[1] for d in dummysubs if d[0].name[0] == 'c']
+        jointevalsin=[d[1] for d in dummysubs if d[0].name[0] == 's']
+        #jointeval=[d[1] for d in dummysubs if d[0].name[0] == 'j']
+        coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=jointevalcos, jointevalsin=jointevalsin, isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
         self.usinglapack = True
         return raghavansolutiontree+[coupledsolution]+endbranchtree,usedvars
 
