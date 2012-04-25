@@ -579,6 +579,35 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     return false;
 }
 
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report) const
+{
+    if( ikparam.GetType() == IKP_Transform6D ) {
+        return CheckEndEffectorCollision(ikparam.GetTransform6D());
+    }
+    RobotBasePtr probot = GetRobot();
+    OPENRAVE_ASSERT_OP_FORMAT(GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(_pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%_pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
+    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    IkParameterization localgoal;
+    if( !!_pBase ) {
+        localgoal = _pBase->GetTransform().inverse()*ikparam;
+    }
+    else {
+        localgoal=ikparam;
+    }
+    vector<dReal> vsolution;
+    boost::shared_ptr< vector<dReal> > psolution(&vsolution, utils::null_deleter());
+    // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
+    if( !_pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+    }
+    RobotStateSaver saver(probot);
+    probot->SetActiveDOFs(GetArmIndices());
+    probot->SetActiveDOFValues(vsolution,false);
+    return CheckEndEffectorCollision(GetTransform(),report);
+}
+
 bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const
 {
     RobotBasePtr probot(_probot);

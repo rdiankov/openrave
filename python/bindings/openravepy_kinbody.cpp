@@ -1669,11 +1669,22 @@ public:
 
         bool CheckEndEffectorCollision(object otrans) const
         {
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(otrans,ikparam) ) {
+                return _pmanip->CheckEndEffectorCollision(ikparam);
+            }
             return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans));
         }
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
-            bool bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),openravepy::GetCollisionReport(pReport));
+            bool bCollision;
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(otrans,ikparam) ) {
+                bCollision = _pmanip->CheckEndEffectorCollision(ikparam,openravepy::GetCollisionReport(pReport));
+            }
+            else {
+                bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),openravepy::GetCollisionReport(pReport));
+            }
             openravepy::UpdateCollisionReport(pReport,_pyenv);
             return bCollision;
         }

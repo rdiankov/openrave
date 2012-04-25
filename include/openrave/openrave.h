@@ -573,7 +573,7 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),errorcode); } }
 
-#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s!=%s, (eval %s!=%s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
+#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 
@@ -840,8 +840,15 @@ enum IkParameterizationType {
 
     IKP_NumberOfParameterizations=16,     ///< number of parameterizations (does not count IKP_None)
 
+    IKP_UniqueIdMask = 0x000000ff, ///< the mask for the unique ids
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
+
+/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
+OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
+
+/// \brief returns the IkParameterizationType given the unique id detmerined b IKP_UniqueIdMask
+OPENRAVE_API IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid);
 
 /** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
 
@@ -1551,7 +1558,7 @@ public:
     /// \brief sets a serialized set of values for the IkParameterization
     ///
     /// Function does not handle custom data
-    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
         switch(_type) {
@@ -1634,6 +1641,10 @@ public:
         }
     }
 
+    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype) {
+        SetValues(itvalues,iktype);
+    }
+
     /** \brief sets named custom data in the ik parameterization
 
         The custom data is serialized along with the rest of the parameters and can also be part of a configuration specification under the "ikparam_values" anotation.
@@ -1641,7 +1652,9 @@ public:
 
         \b _transform=%s_
 
-        somewhere in the string. The %s can be: \b direction, \b point, \b quat
+        somewhere in the string. The %s can be: \b direction, \b point, \b quat, \b ikparam
+
+        If \b ikparam, the first value is expected to be the unique id of the ik type (GetType()&IKP_UniqueIdMask). The other values can be computed from \ref IkParameterization::GetValues
 
         \param name Describes the type of data, cannot contain spaces or new lines.
         \param values the values representing the data
@@ -1797,6 +1810,14 @@ protected:
                 Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
                 v = quatMultiply(t.rot,v);
                 values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+            }
+            else if( transformtype == "ikparam" ) {
+                IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
+                IkParameterization newikparam;
+                OPENRAVE_ASSERT_OP_FORMAT0(IkParameterization::GetNumberOfValues(newiktype)+1, ==, (int)values.size(),"expected values not equal",ORE_InvalidState);
+                newikparam.SetValues(values.begin()+1,newiktype);
+                newikparam.MultiplyTransform(t);
+                newikparam.GetValues(values.begin()+1);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT("IkParameterization custom data '%s' does not have a valid transform",name,ORE_InvalidState);
@@ -2048,9 +2069,6 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 /// \brief returns a lower case string of the interface type
 OPENRAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
 OPENRAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
-
-/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
-OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
 
 /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
 ///

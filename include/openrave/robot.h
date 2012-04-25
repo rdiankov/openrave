@@ -203,6 +203,16 @@ public:
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
+        /** \brief Checks collision with only the gripper given an IK parameterization of the gripper.
+
+            Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
+            \param ikparam the ik parameterization determining the gripper transform
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+            /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
+         */
+        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr()) const;
+
         /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
 
             \param[out] report [optional] collision report

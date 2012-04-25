@@ -161,6 +161,8 @@ class RunRobot(EnvironmentSetup):
             robot.SetActiveDOFs(manip.GetArmIndices())
             assert(not manip.CheckEndEffectorCollision(manip.GetTransform()))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
+            assert(not manip.CheckEndEffectorCollision(manip.GetIkParameterization(IkParameterizationType.Transform6D)))
+            assert(not manip2.CheckEndEffectorCollision(manip2.GetIkParameterization(IkParameterizationType.Transform6D)))
 
             # with bullet, robot gets into self-collision when first angle reaches 0.5
             robot.SetActiveDOFValues([0.678, 0, 1.75604762, -1.74228108, 0, 0, 0])
@@ -233,6 +235,56 @@ class RunRobot(EnvironmentSetup):
             assert(not manip.CheckEndEffectorCollision(Tmanip))
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             assert(not manip.CheckEndEffectorCollision(Tmanip))
+
+    def test_checkendeffector(self):
+        self.log.info('test if can check end effector collisions with ik params')
+        env=self.env
+        self.LoadEnv('data/katanatable.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.TranslationDirection5D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+            
+        with env:
+            robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+            robot.SetActiveDOFValues([ 0,  0.89098841,  0.92174268, -1.32022237,  0])
+            ikparam=ikmodel.manip.GetIkParameterization(IkParameterizationType.TranslationDirection5D)
+            assert(not env.CheckCollision(robot))
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            assert(not ikmodel.manip.CheckEndEffectorCollision(ikparam))
+
+            T = eye(4)
+            T[2,3] = -0.1
+            ikparam2 = IkParameterization(ikparam)
+            ikparam2.MultiplyTransform(T)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,0) is not None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(ikmodel.manip.CheckEndEffectorCollision(ikparam2))
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+            robot.SetActiveDOFValues([ 0,  0.89098841,  0.92174268, -1.32022237,  0])
+            ikparam=ikmodel.manip.GetIkParameterization(IkParameterizationType.Translation3D)
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            try:
+                ikmodel.manip.CheckEndEffectorCollision(ikparam)
+                raise ValueError('expected exception')
+            
+            except openrave_exception:
+                pass
+
+            T = eye(4)
+            T[2,3] = -0.1
+            ikparam2 = IkParameterization(ikparam)
+            ikparam2.MultiplyTransform(T)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,0) is not None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
     def test_badtrajectory(self):
         self.log.info('create a discontinuous trajectory and check if robot throws exception')

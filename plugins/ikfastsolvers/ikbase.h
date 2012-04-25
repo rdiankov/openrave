@@ -802,12 +802,15 @@ private:
         }
         if( filteroptions&IKFO_CheckEnvCollisions ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
-                // if gripper is colliding, solutions will always fail, so completely stop solution process
-                if(  pmanip->CheckEndEffectorCollision(paramnewglobal.GetTransform6D()) ) {
-                    return SR_Quit; // stop the search
+            if( stateCheck.NeedCheckEndEffectorCollision() ) {
+                // only check if the end-effector position is fully determined from the ik
+                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                    // if gripper is colliding, solutions will always fail, so completely stop solution process
+                    if(  pmanip->CheckEndEffectorCollision(paramnewglobal) ) {
+                        return SR_Quit; // stop the search
+                    }
+                    stateCheck.ResetCheckEndEffectorCollision();
                 }
-                stateCheck.ResetCheckEndEffectorCollision();
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
                 if( !!report.plink1 && !!report.plink2 ) {
@@ -966,11 +969,14 @@ private:
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() && param.GetType() == IKP_Transform6D ) {
-                if( pmanip->CheckEndEffectorCollision(paramnewglobal.GetTransform6D()) ) {
-                    return SR_Quit; // stop the search
+            if( stateCheck.NeedCheckEndEffectorCollision() ) {
+                // only check if the end-effector position is fully determined from the ik
+                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                    if( pmanip->CheckEndEffectorCollision(paramnewglobal) ) {
+                        return SR_Quit; // stop the search
+                    }
+                    stateCheck.ResetCheckEndEffectorCollision();
                 }
-                stateCheck.ResetCheckEndEffectorCollision();
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {
                 return SR_Continue;
