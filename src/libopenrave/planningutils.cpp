@@ -1243,27 +1243,27 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D;
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || _pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
-            if( _pmanip->CheckEndEffectorCollision(ikparam.GetTransform6D(),_report) ) {
+            if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
                 bool bcollision=true;
                 if( _fjittermaxdist > 0 ) {
                     // try jittering the end effector out
                     RAVELOG_VERBOSE("starting jitter transform...\n");
 
                     // randomly add small offset to the ik until it stops being in collision
-                    Transform transorig = ikparam.GetTransform6D();
-                    Transform transnew = transorig;
+                    Transform tjitter;
                     int iiter = 0;
                     int nMaxIterations = 100;
                     std::vector<dReal> xyzsamples(3);
                     for(iiter = 0; iiter < nMaxIterations; ++iiter) {
                         _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                        transnew.trans = transorig.trans + _fjittermaxdist * Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f);
-                        if( !_pmanip->CheckEndEffectorCollision(transnew,_report) ) {
-                            ikparam.SetTransform6D(transnew);
+                        tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
+                        IkParameterization ikparamjittered = tjitter * ikparam;
+                        if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                            ikparam = ikparamjittered;
                             bcollision = false;
                             break;
                         }

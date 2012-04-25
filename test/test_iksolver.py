@@ -145,7 +145,11 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam2.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
             assert(transdist(ikparam2.GetCustomValues('myparam1_transform=point_'),p) <= g_epsilon)
             assert(transdist(ikparam2.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
+            ikparam2.ClearCustomValues('myparam2')
+            assert(ikparam2.GetCustomValues('myparam2') is None)
             assert(transdist(ikparam2.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam2.GetType()),ikparam2.GetValues()]) <= g_epsilon)
+            ikparam2.ClearCustomValues()
+            assert(ikparam2.GetCustomValues('myparam3_transform=ikparam_') is None)
 
             T = matrixFromAxisAngle([0,1,0])
             T[0:3,3] = [0.5,0.2,0.8]
