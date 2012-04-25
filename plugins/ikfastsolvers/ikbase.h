@@ -806,7 +806,7 @@ private:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
-                    if(  pmanip->CheckEndEffectorCollision(paramnewglobal) ) {
+                    if(  pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         return SR_Quit; // stop the search
                     }
                     stateCheck.ResetCheckEndEffectorCollision();
@@ -972,7 +972,7 @@ private:
             if( stateCheck.NeedCheckEndEffectorCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
-                    if( pmanip->CheckEndEffectorCollision(paramnewglobal) ) {
+                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         return SR_Quit; // stop the search
                     }
                     stateCheck.ResetCheckEndEffectorCollision();
