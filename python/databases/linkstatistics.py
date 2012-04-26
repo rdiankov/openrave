@@ -92,6 +92,7 @@ class LinkStatisticsModel(DatabaseGenerator):
 
     def has(self):
         return self.linkstats is not None and len(self.linkstats)==len(self.robot.GetLinks())
+
     def load(self):
         try:
             if not self.cdmodel.load():
@@ -106,10 +107,26 @@ class LinkStatisticsModel(DatabaseGenerator):
             return False
 
     def getversion(self):
-        return 2
-    
+        return 3
+
     def save(self):
         DatabaseGenerator.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
+        
+#     def save2(self):
+#         import h5py
+#         filename=self.getfilename(False)        
+#         log.info('saving model to %s',filename)
+#         try:
+#             makedirs(os.path.split(filename)[0])
+#             f=h5py.File(filename,'w')
+#             f['version'] = self.getversion()
+#             f['linkstats'] = self.linkstats
+#             f['jointvolumes'] = self.jointvolumes
+#             f['affinevolumes'] = self.affinevolumes
+#             f['samplingdelta'] = self.samplingdelta
+#             f.close()
+#         except OSError:
+#             pass
 
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'linkstatistics.pp'),read)
@@ -257,7 +274,8 @@ class LinkStatisticsModel(DatabaseGenerator):
                     volumedelta = sum(crossarea[:,0])*density**2
                 else:
                     volumedelta = 0
-                self.jointvolumes[joint.GetJointIndex()] = {'sweptvolume':sweptvolume,'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
+                # don't save sweptvolume until we can do it more efficiently
+                self.jointvolumes[joint.GetJointIndex()] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
                 jointvolumes_points[joint.GetJointIndex()] = sweptvolume
                 del sweptvolume
 
