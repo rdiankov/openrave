@@ -205,7 +205,7 @@ class ReachabilityModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except h5py.H5Error,e:
+        except Exception,e:
             log.debug('LoadHDF5 for %s: ',filename,e)
             return False
         finally:
