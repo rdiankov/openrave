@@ -41,7 +41,7 @@ log = logging.getLogger('openravepy.databases')
 try:
     import h5py
 except ImportError:
-    print 'python h5py library not found, will not be able to speedup database access'
+    pass
     
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
