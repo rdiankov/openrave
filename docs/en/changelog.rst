@@ -23,6 +23,11 @@ Core
 
 * Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
 
+Database
+--------
+
+* Introduced HDF5 loading/saving of the :mod:`.databases.kinematicreachability` and :mod:`.databases.linkstatistics databases` making computation much faster, it also allows C++ to access it.
+
 Viewer
 ------
 

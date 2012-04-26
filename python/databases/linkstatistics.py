@@ -76,6 +76,7 @@ import time
 import os.path
 from optparse import OptionParser
 from itertools import izip
+from os import makedirs
 
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
@@ -93,41 +94,124 @@ class LinkStatisticsModel(DatabaseGenerator):
     def has(self):
         return self.linkstats is not None and len(self.linkstats)==len(self.robot.GetLinks())
 
+    @staticmethod
+    def _GetValue(value):
+        if hasattr(value,'value'):
+            return value.value
+        else:
+            return value
+
+    def getversion(self):
+        return 4
+    
+    def save(self):
+        try:
+            self.SaveHDF5()
+        except ImportError:
+            self.SavePickle()
+
     def load(self):
         try:
             if not self.cdmodel.load():
                 self.cdmodel.autogenerate()
-            params = DatabaseGenerator.load(self)
-            if params is None:
-                return False
 
-            self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta = params
-            return self.has()
-        except e:
+            try:
+                return self.LoadHDF5()
+            except ImportError:
+                return self.LoadPickle()
+        except Exception, e:
+            log.warn(e)
             return False
-
-    def getversion(self):
-        return 3
-
-    def save(self):
+            
+    def SavePickle(self):
         DatabaseGenerator.save(self,(self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta))
         
-#     def save2(self):
-#         import h5py
-#         filename=self.getfilename(False)        
-#         log.info('saving model to %s',filename)
-#         try:
-#             makedirs(os.path.split(filename)[0])
-#             f=h5py.File(filename,'w')
-#             f['version'] = self.getversion()
-#             f['linkstats'] = self.linkstats
-#             f['jointvolumes'] = self.jointvolumes
-#             f['affinevolumes'] = self.affinevolumes
-#             f['samplingdelta'] = self.samplingdelta
-#             f.close()
-#         except OSError:
-#             pass
+    def LoadPickle(self):
+        params = DatabaseGenerator.load(self)
+        if params is None:
+            return False
+        self.linkstats,self.jointvolumes,self.affinevolumes,self.samplingdelta = params
+        return self.has()
 
+    def SaveHDF5(self):
+        import h5py
+        filename=self.getfilename(False)
+        log.info('saving model to %s',filename)
+        try:
+            makedirs(os.path.split(filename)[0])
+        except OSError:
+            pass
+
+        f=h5py.File(filename,'w')
+        try:
+            f['version'] = self.getversion()
+            glinkstats = f.create_group('linkstats')
+            for i, linkstat in enumerate(self.linkstats):
+                glinkstat = glinkstats.create_group(str(i))
+                for name,values in linkstat.iteritems():
+                    glinkstat[name] = values
+            gjointvolumes = f.create_group('jointvolumes')
+            for i, jointvolume in enumerate(self.jointvolumes):
+                gjointvolume = gjointvolumes.create_group(str(i))
+                for name,values in jointvolume.iteritems():
+                    gjointvolume[name] = values
+            gaffinevolumes = f.create_group('affinevolumes')
+            for i, affinevolume in enumerate(self.affinevolumes):
+                if affinevolume is not None:
+                    gaffinevolume = gaffinevolumes.create_group(str(i))
+                    for name,values in affinevolume.iteritems():
+                        gaffinevolume[name] = values
+            f['samplingdelta'] = self.samplingdelta
+        finally:
+            f.close()
+
+    def LoadHDF5(self):
+        import h5py
+        filename = self.getfilename(True)
+        if len(filename) == 0:
+            return False
+
+        self._CloseDatabase()
+        try:
+            f=h5py.File(filename,'r')
+            if f['version'].value != self.getversion():
+                log.error('version is wrong %s!=%s ',f['version'],self.getversion())
+                return False
+
+            self.samplingdelta = f['samplingdelta'].value
+            glinkstats = f['linkstats']
+            self.linkstats = []
+            for name,linkstat in glinkstats.iteritems():
+                index = int(name)
+                while len(self.linkstats) <= index:
+                    self.linkstats.append(None)
+                self.linkstats[index] = dict(list(linkstat.items()))
+            gjointvolumes = f['jointvolumes']
+            self.jointvolumes = []
+            for name,jointvolume in gjointvolumes.iteritems():
+                index = int(name)
+                while len(self.jointvolumes) <= index:
+                    self.jointvolumes.append(None)
+                self.jointvolumes[index] = dict(list(jointvolume.iteritems()))
+            gaffinevolumes = f['affinevolumes']
+            self.affinevolumes = []
+            for name,affinevolume in gaffinevolumes.iteritems():
+                index = int(name)
+                while len(self.affinevolumes) <= index:
+                    self.affinevolumes.append(None)
+                self.affinevolumes[index] = dict(list(affinevolume.iteritems()))
+
+            self._databasefile = f
+            f = None
+            return self.has()
+        
+        except h5py.H5Error,e:
+            log.debug('LoadHDF5 for %s: ',filename,e)
+            return False
+        finally:
+            if f is not None:
+                f.close()
+            
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'linkstatistics.pp'),read)
 
@@ -139,7 +223,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 if joint.GetType() == KinBody.Joint.Type.Prismatic:
                     joint.SetResolution(xyzdelta)
                 elif not joint.IsStatic():
-                    crossarea = self.jointvolumes[index]['crossarea']
+                    crossarea = self._GetValue(self.jointvolumes[index]['crossarea'])
                     # some cross areas are 0.... bad sampling?
                     if len(crossarea) > 0:
                         joint.SetResolution(xyzdelta/numpy.max(crossarea[:,0]))
@@ -155,13 +239,13 @@ class LinkStatisticsModel(DatabaseGenerator):
         """
         with self.env:
             if type == 0:
-                linkvolumes = array([linkstat['volume'] for linkstat in self.linkstats])
+                linkvolumes = array([self._GetValue(linkstat['volume']) for linkstat in self.linkstats])
                 def getweight(ijoint,volumeinfo):
                     if ijoint < 0:
                         accumvolume = sum(linkvolumes)
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
-                    weight=(volumeinfo['volumedelta']*accumvolume)**weightexp
+                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume)**weightexp
                     if weight <= 0:
                         log.info('joint %d has weight=%e, setting to 1e-6'%(ijoint,weight))
                         weight = 1e-6
@@ -223,7 +307,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                     elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
                         hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight()))
                         hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
-                self.linkstats[ilink] = self.computeGeometryStatistics(hulls)
+                self.linkstats[ilink] = self.ComputeGeometryStatistics(hulls)
                 
             log.info('Generating swept volumes...')
             self.jointvolumes = [None]*len(self.robot.GetJoints())
@@ -251,9 +335,9 @@ class LinkStatisticsModel(DatabaseGenerator):
                 # gather the swept volumes of all child joints
                 for childjoint in self.robot.GetJoints():
                     if childjoint.GetJointIndex() != joint.GetJointIndex() and (childjoint.GetFirstAttached().GetIndex() in connectedlinkindices or childjoint.GetSecondAttached().GetIndex() in connectedlinkindices):
-                        jointvolume = r_[jointvolume, self.transformJointPoints(childjoint,jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
+                        jointvolume = r_[jointvolume, self.TransformJointPoints(childjoint,jointvolumes_points[childjoint.GetJointIndex()],translation=-joint.GetAnchor())]
                         jointvolumes_points[childjoint.GetJointIndex()] = None # release since won't be needing it anymore
-                sweptvolume = self.computeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0],samplingdelta=self.samplingdelta)
+                sweptvolume = self.ComputeSweptVolume(volumepoints=jointvolume,axis=-joint.GetAxis(0),minangle=lower[0],maxangle=upper[0],samplingdelta=self.samplingdelta)
                 # rotate jointvolume so that -joint.GetAxis(0) matches with the z-axis
                 R = rotationMatrixFromQuat(quatRotateDirection(-joint.GetAxis(0),[0,0,1]))
                 sweptvolume = dot(sweptvolume,transpose(R))
@@ -270,12 +354,12 @@ class LinkStatisticsModel(DatabaseGenerator):
                     volumeinertia = zeros((3,3))
                     crossarea = zeros((0,2))
                 if len(crossarea) > 0:
-                    crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                    crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
                     volumedelta = sum(crossarea[:,0])*density**2
                 else:
                     volumedelta = 0
                 # don't save sweptvolume until we can do it more efficiently
-                self.jointvolumes[joint.GetJointIndex()] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
+                self.jointvolumes[joint.GetJointIndex()] = {'sweptvolume':sweptvolume, 'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
                 jointvolumes_points[joint.GetJointIndex()] = sweptvolume
                 del sweptvolume
 
@@ -294,7 +378,7 @@ class LinkStatisticsModel(DatabaseGenerator):
             # since jointvolumes were removed as soon as they were used, only consider ones that are still initialized
             for joint,jointvolume in izip(self.robot.GetJoints(),jointvolumes_points):
                 if jointvolume is not None:
-                    points = self.transformJointPoints(joint,jointvolume)
+                    points = self.TransformJointPoints(joint,jointvolume)
                     if len(points) > 1:
                         kdtree = pyANN.KDTree(robotvolume)
                         neighs,dists,kball = kdtree.kFRSearchArray(points,self.samplingdelta**2,0,self.samplingdelta*0.01)
@@ -311,7 +395,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 volume = dot(robotvolume,transpose(R))
                 # get the cross sections and a dV/dAngle measure
                 crossarea = c_[sqrt(sum(volume[:,0:2]**2,1)),volume[:,2:]]
-                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 # compute simple statistics and compress the joint volume
                 volumedelta = sum(crossarea[:,0])*density**2
                 volumecom = r_[tile(mean(crossarea[:,0]),2),mean(crossarea[:,1])]
@@ -322,7 +406,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 indices = range(3)
                 indices.remove(i)
                 crossarea = robotvolume[:,indices]
-                crossarea = crossarea[self.prunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
                 volumedelta = len(crossarea)*density**2
                 volumecom = mean(robotvolume,0)
                 volume = len(robotvolume)*self.samplingdelta**3
@@ -330,7 +414,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 self.affinevolumes[i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
 
     @staticmethod
-    def computeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
+    def ComputeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
         """Compute the swept volume and mesh of volumepoints around rotated around an axis"""
         if len(volumepoints) == 0:
             return zeros((0,3))
@@ -372,7 +456,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         return sweptvolume
 
     @staticmethod
-    def transformJointPoints(joint,points,translation=array((0.0,0.0,0.0))):
+    def TransformJointPoints(joint,points,translation=array((0.0,0.0,0.0))):
         if len(points) > 0:
             Rinv = rotationMatrixFromQuat(quatRotateDirection([0,0,1],-joint.GetAxis(0)))
             return dot(points,transpose(Rinv)) + tile(joint.GetAnchor()+translation,(len(points),1))
@@ -380,18 +464,20 @@ class LinkStatisticsModel(DatabaseGenerator):
         return points
 
     def show(self,options=None):
-        self.env.SetViewer('qtcoin')
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         for joint in self.robot.GetJoints():
             log.info('joint %d',joint.GetJointIndex())
             haxis = self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))
             jv = self.jointvolumes[joint.GetJointIndex()]
             if 'sweptvolume' in jv:
-                hvol = self.env.plot3(self.transformJointPoints(joint,jv['sweptvolume']),2,colors=array((0,0,1,0.2)))
-            crossarea = jv['crossarea']
-            harea = self.env.plot3(points=self.transformJointPoints(joint,c_[crossarea[:,0],zeros(len(crossarea)),crossarea[:,1]]),pointsize=5.0,colors=array((1,0,0,0.3)))
+                hvol = self.env.plot3(self.TransformJointPoints(joint,self._GetValue(jv['sweptvolume'])),2,colors=array((0,0,1,0.2)))
+            crossarea = self._GetValue(jv['crossarea'])
+            harea = self.env.plot3(points=self.TransformJointPoints(joint,c_[crossarea[:,0],zeros(len(crossarea)),crossarea[:,1]]),pointsize=5.0,colors=array((1,0,0,0.3)))
             raw_input('press any key to go to next: ')
 
-    def computeGeometryStatistics(self,hulls):
+    def ComputeGeometryStatistics(self,hulls):
         if len(hulls) == 0:
             return {'com':zeros(3),'inertia':zeros((3,3)),'volume':0,'volumepoints':zeros((0,3))}
         minpoint = numpy.min([numpy.min(hull[0],axis=0) for hull in hulls],axis=0)
@@ -416,7 +502,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         return {'com':com,'inertia':inertia,'volume':volume,'volumepoints':volumepoints}
 
     @staticmethod
-    def prunePointsKDTree(points, thresh2, neighsize,k=20):
+    def PrunePointsKDTree(points, thresh2, neighsize,k=20):
         """Prunes the poses so that every pose has at most neighsize neighbors within sqrt(thresh2) distance. In order to successfully compute the nearest neighbors, each pose's quaternion is also negated.
         Input:
         thresh2 - squared threshold
@@ -431,10 +517,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 allneighs,alldists,kball = kdtree.kFRSearchArray(points,thresh2,k,sqrt(thresh2)*0.01)
                 break
             except pyANN.pyann_exception:
-                log.error('prunePointsKDTree: ann memory exceeded. Retrying with less neighbors')
+                log.error('PrunePointsKDTree: ann memory exceeded. Retrying with less neighbors')
                 k = (k+1)/2
             except MemoryError:
-                log.error('prunePointsKDTree: memory error. Retrying with less neighbors')
+                log.error('PrunePointsKDTree: memory error. Retrying with less neighbors')
                 k = (k+1)/2
         inds = []
         for i in xrange(N):
@@ -452,7 +538,7 @@ class LinkStatisticsModel(DatabaseGenerator):
         del kdtree, allneighs, alldists
         if dorepeat:
             log.debug('repeating pruning... %d/%d',len(inds),points.shape[0])
-            newinds = LinkStatisticsModel.prunePointsKDTree(points[inds,:], thresh2, neighsize,k)
+            newinds = LinkStatisticsModel.PrunePointsKDTree(points[inds,:], thresh2, neighsize,k)
             inds = [inds[i] for i in newinds]
         return inds
 

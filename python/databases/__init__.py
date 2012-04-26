@@ -38,16 +38,35 @@ import time
 import logging
 log = logging.getLogger('openravepy.databases')
 
+try:
+    import h5py
+except ImportError:
+    print 'python h5py library not found, will not be able to speedup database access'
+    
 class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
     """
     def __init__(self,robot):
         self.robot = robot
         self.env = self.robot.GetEnv()
+        self._databasefile = None # necessary if file handle needs to be open
         try:
             self.manip = self.robot.GetActiveManipulator()
         except:
             self.manip = None
+
+    def _CloseDatabase(self):
+        if self._databasefile is not None:
+            try:
+                if self._databasefile:
+                    self._databasefile.close()
+            except Exception,e:
+                log.warn(e)
+            self._databasefile = None
+            
+    def __del__(self):
+        self._CloseDatabase()
+            
     def clone(self,envother):
         """clones a database onto a different environment"""
         import copy
@@ -81,8 +100,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
         filename=self.getfilename(False)
         log.info('saving model to %s',filename)
         try:
-            makedirs(os.path.split(filename)[0])
-            
+            makedirs(os.path.split(filename)[0])            
         except OSError:
             pass
         pickle.dump((self.getversion(),params), open(filename, 'w'))
@@ -91,6 +109,12 @@ class DatabaseGenerator(metaclass.AutoReloader):
     def show(self,options=None):
         raise NotImplementedError()
 
+    @staticmethod
+    def _GetValue(value):
+        if hasattr(value,'value'):
+            return value.value
+        else:
+            return value
     def autogenerateparams(self,options=None):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()
@@ -218,7 +242,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 env.SetViewer(options.viewername)
             if options.show:
                 if not model.load():
-                    raise ValueError('failed to find cached model %s:%s'%(model.getfilename(True),model.getfilename(False)))
+                    raise ValueError('failed to find cached model %s : %s'%(model.getfilename(True),model.getfilename(False)))
                 model.show(options=options)
                 return model
             model.autogenerate(options=options)

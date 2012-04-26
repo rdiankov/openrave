@@ -267,7 +267,9 @@ class VisibilityModel(DatabaseGenerator):
                     else:
                         raw_input(msg)
     def show(self,options=None):
-        self.env.SetViewer('qtcoin')
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
         return self.showtransforms(options)
