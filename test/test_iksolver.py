@@ -177,3 +177,21 @@ class TestIkSolver(EnvironmentSetup):
             
             handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
             manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
+
+            # test with velocities
+            T = matrixFromAxisAngle([0,1,0])
+            T[0:3,3] = [0.5,0.2,0.8]
+            
+            angularvelocity = array([1,0.5,-0.4])
+            quatvelocity = 0.5*quatMultiply(r_[0,angularvelocity],ikparam.GetValues()[0:4])
+            transvelocity = array([0.1,0.2,0.3])
+            ikparamvel = IkParameterization()
+            ikparamvel.SetValues(r_[quatvelocity,transvelocity],IkParameterizationType.Transform6DVelocity)
+
+            ikparam2 = ikparam.Transform(T)
+            ikparamvel2 = ikparamvel.Transform(T)
+            newquatvelocity = ikparamvel2.GetValues()[0:4]
+            newtransvelocity = ikparamvel2.GetValues()[4:7]
+            newangularvelocity = 2*quatMultiply(newquatvelocity, quatInverse(ikparam2.GetValues()[0:4]))
+            assert(transdist(newangularvelocity[1:4], dot(T[0:3,0:3],angularvelocity)) <= g_epsilon)
+            assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)

@@ -610,6 +610,11 @@ public:
         _param.SetCustomValues(name,ExtractArray<dReal>(ovalues));
     }
 
+    void SetCustomValue(const std::string& name, dReal value)
+    {
+        _param.SetCustomValue(name,value);
+    }
+
     object GetCustomValues(const std::string& name)
     {
         std::vector<dReal> values;
@@ -1333,6 +1338,24 @@ void init_openravepy_global()
                     .value("TranslationXAxisAngleZNorm4D",IKP_TranslationXAxisAngleZNorm4D)
                     .value("TranslationYAxisAngleXNorm4D",IKP_TranslationYAxisAngleXNorm4D)
                     .value("TranslationZAxisAngleYNorm4D",IKP_TranslationZAxisAngleYNorm4D)
+                    // velocity
+                    .value("VelocityDataBit",IKP_VelocityDataBit)
+                    .value("Transform6DVelocity",IKP_Transform6DVelocity)
+                    .value("Rotation3DVelocity",IKP_Rotation3DVelocity)
+                    .value("Translation3DVelocity",IKP_Translation3DVelocity)
+                    .value("Direction3DVelocity",IKP_Direction3DVelocity)
+                    .value("Ray4DVelocity",IKP_Ray4DVelocity)
+                    .value("Lookat3DVelocity",IKP_Lookat3DVelocity)
+                    .value("TranslationDirection5DVelocity",IKP_TranslationDirection5DVelocity)
+                    .value("TranslationXY2DVelocity",IKP_TranslationXY2DVelocity)
+                    .value("TranslationXYOrientation3DVelocity",IKP_TranslationXYOrientation3DVelocity)
+                    .value("TranslationLocalGlobal6DVelocity",IKP_TranslationLocalGlobal6DVelocity)
+                    .value("TranslationXAxisAngle4DVelocity",IKP_TranslationXAxisAngle4DVelocity)
+                    .value("TranslationYAxisAngle4DVelocity",IKP_TranslationYAxisAngle4DVelocity)
+                    .value("TranslationZAxisAngle4DVelocity",IKP_TranslationZAxisAngle4DVelocity)
+                    .value("TranslationXAxisAngleZNorm4DVelocity",IKP_TranslationXAxisAngleZNorm4DVelocity)
+                    .value("TranslationYAxisAngleXNorm4DVelocity",IKP_TranslationYAxisAngleXNorm4DVelocity)
+                    .value("TranslationZAxisAngleYNorm4DVelocity",IKP_TranslationZAxisAngleYNorm4DVelocity)
     ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
@@ -1496,6 +1519,7 @@ void init_openravepy_global()
                                    .def("SetValues",&PyIkParameterization::SetValues, args("values","type"), DOXY_FN(IkParameterization,SetValues))
                                    .def("GetCustomValues",&PyIkParameterization::GetCustomValues, args("name"), DOXY_FN(IkParameterization,GetCustomValues))
                                    .def("SetCustomValues",&PyIkParameterization::SetCustomValues, args("name","values"), DOXY_FN(IkParameterization,SetCustomValues))
+                                   .def("SetCustomValue",&PyIkParameterization::SetCustomValue, args("name","value"), DOXY_FN(IkParameterization,SetCustomValue))
                                    .def("ClearCustomValues",&PyIkParameterization::ClearCustomValues,ClearCustomValues_overloads(args("name"), DOXY_FN(IkParameterization,ClearCustomValues)))
                                    .def("__str__",&PyIkParameterization::__str__)
                                    .def("__unicode__",&PyIkParameterization::__unicode__)

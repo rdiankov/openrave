@@ -865,7 +865,7 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         type |= IKP_CustomDataBit;
     }
     O << type << " ";
-    switch(ikparam._type) {
+    switch(ikparam._type & ~IKP_VelocityDataBit) {
     case IKP_Transform6D:
         O << ikparam.GetTransform6D();
         break;
@@ -960,16 +960,49 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     I >> type;
     ikparam._type = static_cast<IkParameterizationType>(type&~IKP_CustomDataBit);
     switch(ikparam._type) {
-    case IKP_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
+    case IKP_Transform6D: {
+        Transform t; I >> t;
+        ikparam.SetTransform6D(t);
+        break;
+    }
+    case IKP_Transform6DVelocity:
+        I >> ikparam._transform;
+        break;
     case IKP_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
-    case IKP_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
+    case IKP_Rotation3DVelocity:
+        I >> ikparam._transform.rot;
+        break;
+    case IKP_Translation3D: {
+        Vector v;
+        I >> v.x >> v.y >> v.z;
+        ikparam.SetTranslation3D(v);
+        break;
+    }
+    case IKP_Lookat3DVelocity:
+    case IKP_Translation3DVelocity:
+    case IKP_TranslationXYOrientation3DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     case IKP_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
+    case IKP_Direction3DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
+        break;
     case IKP_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IKP_Ray4DVelocity:
+    case IKP_TranslationDirection5DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
+        break;
     case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IKP_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
+    case IKP_TranslationXY2DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y;
+        break;
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
+    case IKP_TranslationLocalGlobal6DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     case IKP_TranslationXAxisAngle4D: {
         Vector trans; dReal angle=0;
         I >> angle >> trans.x >> trans.y >> trans.z;
@@ -1006,6 +1039,14 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         ikparam.SetTranslationZAxisAngleYNorm4D(trans,angle);
         break;
     }
+    case IKP_TranslationXAxisAngle4DVelocity:
+    case IKP_TranslationYAxisAngle4DVelocity:
+    case IKP_TranslationZAxisAngle4DVelocity:
+    case IKP_TranslationXAxisAngleZNorm4DVelocity:
+    case IKP_TranslationYAxisAngleXNorm4DVelocity:
+    case IKP_TranslationZAxisAngleYNorm4DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
@@ -1810,7 +1851,7 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             int iktype = IKP_None;
             ss >> iktype;
             if( !!ss ) {
-                ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype));
+                ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype|(timederivative == 1 ? IKP_VelocityDataBit : 0)));
                 bfound = true;
                 if( timederivative == 0 ) {
                     // normalize parameterizations

@@ -1990,6 +1990,10 @@ void KinBody::KinBodyStateSaver::Restore()
 
 void KinBody::KinBodyStateSaver::_RestoreKinBody()
 {
+    if( _pbody->GetEnvironmentId() == 0 ) {
+        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%_pbody->GetName()));
+        return;
+    }
     if( _options & Save_LinkTransformation ) {
         _pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }

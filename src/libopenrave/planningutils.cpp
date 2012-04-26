@@ -1243,7 +1243,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || _pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {

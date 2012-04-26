@@ -23,6 +23,8 @@ Core
 
 * Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
 
+* Added velocities enumerations to IkParameterizationType (like Transform6DVelocity), coordinate transforms can handle velocities.
+
 Database
 --------
 

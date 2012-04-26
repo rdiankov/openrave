@@ -703,6 +703,7 @@ private:
             vravesol[i] = dReal(sol[i]);
         }
 
+        int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
         std::vector<unsigned int> vsolutionindices;
         iksol.GetSolutionIndices(vsolutionindices);
@@ -763,6 +764,7 @@ private:
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
+                _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 switch(_CallFilters(itravesol->first, pmanip, paramnew)) {
                 case IKFR_Reject: break;
                 case IKFR_Quit: return SR_Quit;
@@ -770,7 +772,8 @@ private:
                     vravesols2.push_back(*itravesol);
                     break;
                 }
-                _nSameStateRepeatCount++;
+                ++nSameStateRepeatCount;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
             }
             if( vravesols2.size() == 0 ) {
                 return SR_Continue;
@@ -890,6 +893,7 @@ private:
             vravesol[i] = (dReal)sol[i];
         }
 
+        int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
         std::vector< pair<std::vector<dReal>,int> > vravesols, vravesols2;
 
@@ -931,6 +935,7 @@ private:
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
+                _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 switch(_CallFilters(itravesol->first, pmanip, paramnew)) {
                 case IKFR_Reject: break;
                 case IKFR_Quit: return SR_Quit;
@@ -938,7 +943,8 @@ private:
                     vravesols2.push_back(*itravesol);
                     break;
                 }
-                _nSameStateRepeatCount++;
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
             }
             if( vravesols2.size() == 0 ) {
                 return SR_Continue;
@@ -1132,7 +1138,9 @@ private:
     boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
     dReal _ikthreshold;
-    std::vector<unsigned int> _vsolutionindices; // holds the indices of the current solution, this is not multi-thread safe
+
+    // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters)
+    std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
 };
 

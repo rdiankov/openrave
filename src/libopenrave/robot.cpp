@@ -585,7 +585,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         return CheckEndEffectorCollision(ikparam.GetTransform6D());
     }
     RobotBasePtr probot = GetRobot();
-    OPENRAVE_ASSERT_OP_FORMAT(GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT((int)GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
     OPENRAVE_ASSERT_FORMAT(_pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%_pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
     BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
@@ -918,6 +918,10 @@ void RobotBase::RobotStateSaver::Restore()
 
 void RobotBase::RobotStateSaver::_RestoreRobot()
 {
+    if( _probot->GetEnvironmentId() == 0 ) {
+        RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
+        return;
+    }
     if( _options & Save_ActiveDOF ) {
         _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }
