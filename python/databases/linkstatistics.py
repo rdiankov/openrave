@@ -385,7 +385,8 @@ class LinkStatisticsModel(DatabaseGenerator):
             log.info('joint %d',joint.GetJointIndex())
             haxis = self.env.drawlinestrip(points=vstack((joint.GetAnchor()-2.0*joint.GetAxis(0),joint.GetAnchor()+2.0*joint.GetAxis(0))),linewidth=3.0,colors=array((0.1,0.1,0,1)))
             jv = self.jointvolumes[joint.GetJointIndex()]
-            hvol = self.env.plot3(self.transformJointPoints(joint,jv['sweptvolume']),2,colors=array((0,0,1,0.2)))
+            if 'sweptvolume' in jv:
+                hvol = self.env.plot3(self.transformJointPoints(joint,jv['sweptvolume']),2,colors=array((0,0,1,0.2)))
             crossarea = jv['crossarea']
             harea = self.env.plot3(points=self.transformJointPoints(joint,c_[crossarea[:,0],zeros(len(crossarea)),crossarea[:,1]]),pointsize=5.0,colors=array((1,0,0,0.3)))
             raw_input('press any key to go to next: ')
