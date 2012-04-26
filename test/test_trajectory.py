@@ -294,6 +294,7 @@ class TestTrajectory(EnvironmentSetup):
             ikparam1 = manip.GetIkParameterization(ikparam0.GetType())
             assert(ikparam0.GetNumberOfValues()==7 and ikparam0.GetDOF()==6)
             assert(ikparam1.GetNumberOfValues(ikparam1.GetType())==7 and ikparam1.GetDOF(ikparam1.GetType())==6)
+            rotaxis = axisAngleFromRotationMatrix(dot(linalg.inv(ikparam0.GetTransform6D()),ikparam1.GetTransform6D()))
             traj = RaveCreateTrajectory(env,'')
             plannerinfo = [('LinearTrajectoryRetimer',1,1.9851930205965249), ('ParabolicTrajectoryRetimer', 2,2.2014092368127409)]
             maxvel = 0.8
@@ -305,6 +306,8 @@ class TestTrajectory(EnvironmentSetup):
                 traj.Insert(1,ikparam1.GetValues())
                 planningutils.RetimeAffineTrajectory(traj,maxvelocities=tile(maxvel,ikparam0.GetNumberOfValues()),maxaccelerations=tile(maxaccel,ikparam0.GetNumberOfValues()),hastimestamps=False,plannername=plannername,plannerparameters='<multidofinterp>1</multidofinterp>')
                 assert(abs(traj.GetDuration()-expectedduration) < 0.01)
+                gvel = traj.GetConfigurationSpecification().GetGroupFromName('ikparam_velocities')
+                assert(gvel is not None)
                 ikparams = []
                 angledelta = []
                 transdelta = []
@@ -312,6 +315,10 @@ class TestTrajectory(EnvironmentSetup):
                 for t in times:
                     ikparam = IkParameterization()
                     ikparam.SetValues(traj.Sample(t,ikparam0.GetConfigurationSpecification()),ikparam0.GetType())
+                    quatvelocity = traj.Sample(t,gvel)[0:4]
+                    # quatvelocity = 0.5 * angularvelocity * quat
+                    angularvelocity = 2*quatMultiply(quatvelocity, quatInverse(ikparam.GetValues()[0:4]))[1:4]
+                    assert( abs( abs(dot(rotaxis,angularvelocity))- linalg.norm(rotaxis)*linalg.norm(angularvelocity)) <= g_epsilon)
                     ikparams.append(ikparam)
                     # compute the change in angle, also check if valid transform can be extracted
                     T=ikparam.GetTransform6D()
