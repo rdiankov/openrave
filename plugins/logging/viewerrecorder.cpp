@@ -227,7 +227,7 @@ protected:
             BOOST_ASSERT(!!_callback);
             return !!_callback;
         }
-        catch(const openrave_exception& ex) {
+        catch(const std::exception& ex) {
             RAVELOG_WARN("%s\n",ex.what());
             _Reset();
         }
@@ -372,7 +372,7 @@ protected:
                 }
                 _frameLastAdded = frame;
             }
-            catch(const openrave_exception& ex) {
+            catch(const std::exception& ex) {
                 RAVELOG_WARN("%s\n",ex.what());
             }
         }

@@ -518,11 +518,8 @@ private:
                 try {
                     (*it)();
                 }
-                catch(const openrave_exception& ex) {
+                catch(const std::exception& ex) {
                     RAVELOG_FATAL("server caught exception: %s\n",ex.what());
-                }
-                catch(const std::logic_error& ex) {
-                    RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                 }
                 catch(...) {
                     RAVELOG_FATAL("unknown exception!!\n");
@@ -590,11 +587,8 @@ private:
                         try {
                             bSuccess = itfn->second.fnSocketThread(*is, sout, pdata);
                         }
-                        catch(const openrave_exception& ex) {
+                        catch(const std::exception& ex) {
                             RAVELOG_FATAL("server caught exception: %s\n",ex.what());
-                        }
-                        catch(const std::logic_error& ex) {
-                            RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                         }
                         catch(...) {
                             RAVELOG_FATAL("unknown exception!!\n");

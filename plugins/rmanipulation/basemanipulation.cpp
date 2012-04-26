@@ -819,7 +819,7 @@ protected:
                 sinput << "GetGoalIndex";
                 rrtplanner->SendCommand(soutput,sinput);
             }
-            catch(const openrave_exception& ex) {
+            catch(const std::exception& ex) {
                 RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
             }
         }
