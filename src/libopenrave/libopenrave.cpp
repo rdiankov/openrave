@@ -659,11 +659,11 @@ IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid)
 {
     uniqueid &= IKP_UniqueIdMask;
     FOREACHC(it, RaveGlobal::instance()->GetIkParameterizationMap()) {
-        if( (it->first & IKP_UniqueIdMask) == uniqueid ) {
-            return it->first;
+        if( (it->first & (IKP_UniqueIdMask&~IKP_VelocityDataBit)) == (uniqueid&(IKP_UniqueIdMask&~IKP_VelocityDataBit)) ) {
+            return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
         }
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id %d",uniqueid,ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
 }
 
 const std::string& RaveGetInterfaceName(InterfaceType type)

@@ -576,19 +576,19 @@ public:
     }
     bool operator()(const vector<dReal> & v1, const vector<dReal>& v2) const
     {
-        if( v1.size() != v2.size() )
+        if( v1.size() != v2.size() ) {
             return true;
-
-        for(size_t i = 0; i < v1.size(); ++i) {
-            if( v1[i] < v2[i]-_thresh )
-                return true;
-            else if( v1[i] > v2[i]+_thresh )
-                return false;
         }
-
+        for(size_t i = 0; i < v1.size(); ++i) {
+            if( v1[i] < v2[i]-_thresh ) {
+                return true;
+            }
+            else if( v1[i] > v2[i]+_thresh ) {
+                return false;
+            }
+        }
         return false;
     }
-
     dReal _thresh;
 };
 

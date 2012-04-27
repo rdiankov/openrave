@@ -398,6 +398,17 @@ public:
     }
     PyIkFilterReturn(IkFilterReturnAction action) : _ret(action) {
     }
+    object GetUserData() {
+        return openravepy::GetUserData(_ret._userdata);
+    }
+    object GetMapData() {
+        boost::python::dict odata;
+        FOREACHC(it,_ret._mapdata) {
+            odata[it->first] = toPyArray(it->second);
+        }
+        return odata;
+    }
+
     IkFilterReturn _ret;
 };
 
@@ -1480,6 +1491,8 @@ void init_openravepy_global()
     {
         scope ikreturn = class_<PyIkFilterReturn, PyIkFilterReturnPtr>("IkFilterReturn", DOXY_CLASS(IkFilterReturn), no_init)
                          .def(init<IkFilterReturnAction>(args("action")))
+                         .def("GetUserData",&PyIkFilterReturn::GetUserData, "Retuns IkFilterReturn::_userdata")
+                         .def("GetMapData",&PyIkFilterReturn::GetMapData, "Returns a dictionary copy for IkFilterReturn::_mapdata")
         ;
         ikreturn.attr("Success") = IKFR_Success;
         ikreturn.attr("Reject") = IKFR_Reject;

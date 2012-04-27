@@ -121,7 +121,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     int ppsize=-1;
     if( p != NULL ) {
         I.clear();
-        ppsize=(p-pbuf.c_str())+20;
+        ppsize=(p-pbuf.c_str())+13;
         I.seekg((size_t)pos+ppsize);
     }
     else {

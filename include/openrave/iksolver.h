@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -64,8 +64,9 @@ public:
     /// \brief clears the data, leaves the _action unchanged
     void Clear();
 
+    typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkFilterReturnAction _action;
-    std::map<std::string, std::vector<dReal> > _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
+    CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
 };
 typedef boost::shared_ptr<IkFilterReturn> IkFilterReturnPtr;
@@ -86,7 +87,7 @@ public:
         \param solution The current solution of the manipulator. Can be modified by this function, but note that it will not go through previous checks again.
         \param manipulator The current manipulator that the ik is being solved for.
         \param param The paramterization that IK was called with. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
-        \return \ref IkFilterReturn controlling the behavior of the ik search process.
+        \return \ref IkFilterReturn controlling the behavior of the ik search process and any custom parameters the filter should pass to the user.
      */
     typedef boost::function<IkFilterReturn(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFilterCallbackFn;
 
