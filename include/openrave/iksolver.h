@@ -24,14 +24,6 @@
 
 namespace OpenRAVE {
 
-/// \brief Return value for the ik filter that can be optionally set on an ik solver.
-enum IkFilterReturn
-{
-    IKFR_Success = 0, ///< the ik solution is good
-    IKFR_Reject = 1, ///< reject the ik solution
-    IKFR_Quit = 2, ///< the ik solution is rejected and the ik call itself should quit with failure
-};
-
 /// \brief Controls what information gets validated when searching for an inverse kinematics solution.
 enum IkFilterOptions
 {
@@ -41,6 +33,42 @@ enum IkFilterOptions
     IKFO_IgnoreCustomFilters=8, ///< will not use the custom filter, even if one is set
     IKFO_IgnoreEndEffectorCollisions=16, ///< will not check collision with the environment and the end effector links and bodies attached to the end effector links. The end effector links are defined by \ref RobotBase::Manipulator::GetChildLinks. Use this option when \ref RobotBase::Manipulator::CheckEndEffectorCollision has already been called, or it is ok for the end effector to collide given the IK constraints. Self-collisions between the moving links and end effector are still checked.
 };
+
+/// \brief Return value for the ik filter that can be optionally set on an ik solver.
+enum IkFilterReturnAction
+{
+    IKFR_Success = 0, ///< the ik solution is good
+    IKFR_Reject = 1, ///< reject the ik solution
+    IKFR_Quit = 2, ///< the ik solution is rejected and the ik call itself should quit with failure
+};
+
+class OPENRAVE_API IkFilterReturn
+{
+public:
+    IkFilterReturn(IkFilterReturnAction action) : _action(action) {
+    }
+
+    inline bool operator != (IkFilterReturnAction action) const {
+        return _action != action;
+    }
+    inline bool operator == (IkFilterReturnAction action) const {
+        return _action == action;
+    }
+
+    /// \brief appends the data of one IkFilterReturn to this structure
+    ///
+    /// _action is untouched.
+    /// \return If data clashes, will output text and return false
+    bool Append(const IkFilterReturn& r);
+
+    /// \brief clears the data, leaves the _action unchanged
+    void Clear();
+
+    IkFilterReturnAction _action;
+    std::map<std::string, std::vector<dReal> > _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
+    UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
+};
+typedef boost::shared_ptr<IkFilterReturn> IkFilterReturnPtr;
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.
    \ingroup interfaces
@@ -118,9 +146,10 @@ public:
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solution [optional] Holds the IK solution
+        \param[out] filterreturn [optional] Holds custom data outputted from the executed filters.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >(), IkFilterReturnPtr filterreturn=IkFilterReturnPtr()) = 0;
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -128,9 +157,10 @@ public:
        takes into account the grasp coordinate frame for the RobotBase::Manipulator
        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
        \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
+       \param[out] filterreturn [optional] Holds custom data outputted from the executed filters.
        \return true if at least one solution is found
      */
-    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns=boost::shared_ptr< std::vector<IkFilterReturnPtr> >()) = 0;
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -139,10 +169,11 @@ public:
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is empty, returns the first solution found
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-        \param[out] solution Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
+        \param[out] solution [optional] Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
+        \param[out] filterreturn [optional] Holds custom data outputted from the executed filters.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >(), IkFilterReturnPtr filterreturn=IkFilterReturnPtr()) = 0;
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -152,9 +183,10 @@ public:
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
+        \param[out] filterreturn [optional] Holds custom data outputted from the executed filters.
         \return true at least one solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns=boost::shared_ptr< std::vector<IkFilterReturnPtr> >()) = 0;
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -168,7 +200,11 @@ protected:
     }
 
     /// \brief calls the registered filters in their priority order and returns the value of the last called filter.
-    virtual IkFilterReturn _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param);
+    ///
+    /// The parameters are the same as \ref IkFilterCallbackFn, except the IkFilterReturn is an optional input parameter and the return
+    /// value is just the \ref IkFilterReturnAction. For users that do not request the filter output, this allows the computation
+    // to be optimized away.
+    virtual IkFilterReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkFilterReturnPtr filterreturn=IkFilterReturnPtr());
 
 private:
     virtual const char* GetHash() const {

@@ -41,8 +41,16 @@ protected:
         if( res == object() ) {
             return IKFR_Reject;
         }
-        extract<IkFilterReturn> ikfr(res);
-        return (IkFilterReturn)ikfr;
+        IkFilterReturn ikfr(IKFR_Success);
+        if( ExtractIkFilterReturn(res,ikfr) ) {
+            return ikfr;
+        }
+        extract<IkFilterReturnAction> ikfra(res);
+        if( ikfra.check() ) {
+            ikfr._action = (IkFilterReturnAction)ikfra;
+            return ikfr;
+        }
+        throw openrave_exception("failed to convert return type of filter to IkFilterReturn",ORE_Assert);
     }
 
 public:

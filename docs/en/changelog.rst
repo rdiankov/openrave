@@ -25,6 +25,8 @@ Core
 
 * Added velocities enumerations to IkParameterizationType (like Transform6DVelocity), coordinate transforms can handle velocities.
 
+* :meth:`.IkSolver.Solve` can output custom data returned from IK filters as a :class:`.IkFilterReturn` object.
+
 Database
 --------
 

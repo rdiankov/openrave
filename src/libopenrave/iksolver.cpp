@@ -18,6 +18,36 @@
 
 namespace OpenRAVE {
 
+bool IkFilterReturn::Append(const IkFilterReturn& r)
+{
+    bool bclashing = false;
+    if( !!r._userdata ) {
+        if( !!_userdata ) {
+            RAVELOG_WARN("IkFilterReturn already has _userdata set, but overwriting anyway\n");
+            bclashing = true;
+        }
+        _userdata = r._userdata;
+    }
+    if( _mapdata.size() == 0 ) {
+        _mapdata = r._mapdata;
+    }
+    else {
+        FOREACHC(itr,r._mapdata) {
+            if( !_mapdata.insert(*itr).second ) {
+                RAVELOG_WARN(str(boost::format("IkFilterReturn _mapdata %s overwritten")%itr->first));
+                bclashing = true;
+            }
+        }
+    }
+    return bclashing;
+}
+
+void IkFilterReturn::Clear()
+{
+    _mapdata.clear();
+    _userdata.reset();
+}
+
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
 {
 public:
@@ -57,7 +87,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase:
     return pdata;
 }
 
-IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param)
+IkFilterReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkFilterReturnPtr filterreturn)
 {
     vector<dReal> vtestsolution,vtestsolution2;
     if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -79,7 +109,7 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
         if( !!pitdata) {
             IkFilterReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKFR_Success ) {
-                return ret;
+                return ret._action; // just return the action
             }
             if( vtestsolution.size() > 0 ) {
                 // check that the robot is set to solution
@@ -94,7 +124,13 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     }
                 }
             }
+            if( !!filterreturn ) {
+                filterreturn->Append(ret);
+            }
         }
+    }
+    if( !!filterreturn ) {
+        filterreturn->_action = IKFR_Success;
     }
     return IKFR_Success;
 }
