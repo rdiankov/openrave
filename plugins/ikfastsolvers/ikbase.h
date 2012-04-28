@@ -1002,7 +1002,6 @@ private:
                         vfilterreturns.push_back(localret);
                     }
                     vravesols2.push_back(*itravesol);
-                    break;
                 }
             }
             if( vravesols2.size() == 0 ) {

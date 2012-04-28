@@ -323,37 +323,40 @@ class RunRobot(EnvironmentSetup):
         if not ikmodel.load():
             ikmodel.autogenerate()
 
-        j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
-        lower,upper = j.GetLimits()
-        assert( upper-lower > 3*pi )
-        robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
-        assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
-        
-        robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
-        ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
-        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-        assert(len(sols)==8)
+        with env:
+            j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+            lower,upper = j.GetLimits()
+            assert( upper-lower > 3*pi )
+            robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
+            assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
 
-        # add a filter
-        numrepeats = [0]
-        indices = []
-        def customfilter(solution, manip, ikparam):
-            out = ikmodel.manip.GetIkSolver().SendCommand('GetRobotLinkStateRepeatCount')
-            if out=='1':
-                numrepeats[0] += 1
-            out = ikmodel.manip.GetIkSolver().SendCommand('GetSolutionIndices')
-            for index in out.split()[1:]:
-                indices.append(int(index))
+            robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
+            ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)==8)
 
-        handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,customfilter)
-        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-        assert(numrepeats[0]==4)
-        indices.sort()
-        assert(indices == [0,3,4,7,16,19,20,23])
-        handle.Close()
-        # customfilter shouldn't be executed anymore
-        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-        assert(numrepeats[0]==4)
+            # add a filter
+            numrepeats = [0]
+            indices = []
+            def customfilter(solution, manip, ikparam):
+                out = manip.GetIkSolver().SendCommand('GetRobotLinkStateRepeatCount')
+                if out=='1':
+                    numrepeats[0] += 1
+                out = manip.GetIkSolver().SendCommand('GetSolutionIndices')
+                for index in out.split()[1:]:
+                    indices.append(int(index))
+                return IkReturnAction.Success
+            
+            handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,customfilter)
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)==8)
+            assert(numrepeats[0]==4)
+            indices.sort()
+            assert(indices == [0,3,4,7,0x20000,0x20003,0x20004,0x20007])
+            handle.Close()
+            # customfilter shouldn't be executed anymore
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(numrepeats[0]==4)
         
 # def test_ikgeneration():
 #     import inversekinematics
