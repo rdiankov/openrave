@@ -569,4 +569,4 @@ class TestTrajectory(EnvironmentSetup):
         traj.Insert(0,ikparam.GetValues())
         traj.Insert(1,ikparam1.GetValues())
         planningutils.RetimeAffineTrajectory(traj,maxvelocities,maxaccelerations,hastimestamps=False,plannername='ParabolicTrajectoryRetimer',plannerparameters='<multidofinterp>2</multidofinterp>')
-        assert(traj.GetDuration())
+        assert(abs(traj.GetDuration()-0.45473694444377921) <= g_epsilon)

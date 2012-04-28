@@ -1447,14 +1447,15 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
     if(pres && FuzzyEquals(endTime,p.ttotal,EpsilonT) && Abs(p.MaxVelocity()) <= vmax) {
         if(FuzzyEquals(p.Evaluate(endTime),x1,EpsilonX) && FuzzyEquals(p.Derivative(endTime),dx1,EpsilonV)) {
             a1 = p.a;
-            v = 0;
             //tswitch1 = tswitch2 = p.ttotal;
             //ttotal = p.ttotal;
             if( Abs(a1) < EpsilonA ) {
                 // not accelerating
+                v = dx0;
                 tswitch1 = 0;
             }
             else {
+                v = 0;
                 tswitch1 = endTime;
             }
             tswitch2 = endTime;
@@ -1548,12 +1549,13 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
     if(pres && Abs(p.a) <= amax+EpsilonA && p.ttotal < ttotal) {
         if(Abs(p.a) <= amax) {
             a1 = p.a;
-            v = 0;
             if( Abs(a1) < EpsilonA ) {
                 // not accelerating
+                v = dx0;
                 tswitch1 = 0;
             }
             else {
+                v = 0;
                 tswitch1 = p.ttotal;
             }
             tswitch2 = p.ttotal;
@@ -1631,12 +1633,13 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
     if(pres && Abs(p.a) <= amax+EpsilonA && p.ttotal < ttotal && p.ttotal >= tLowerBound) {
         if(Abs(p.a) <= amax) {
             a1 = p.a;
-            v = 0;
             if( Abs(a1) < EpsilonA ) {
                 // not accelerating
+                v = dx0;
                 tswitch1 = 0;
             }
             else {
+                v = 0;
                 tswitch1 = p.ttotal;
             }
             tswitch2 = p.ttotal;
@@ -1732,12 +1735,13 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     if(pres && Abs(p.a) <= amax+EpsilonA && FuzzyEquals(p.ttotal,endTime,EpsilonT) ) {
         if(Abs(p.a) <= amax) {
             a1 = p.a;
-            v = 0;
             if( Abs(a1) < EpsilonA ) {
                 // not accelerating
+                v = dx0;
                 tswitch1 = 0;
             }
             else {
+                v = 0;
                 tswitch1 = p.ttotal;
             }
             tswitch2 = p.ttotal;
@@ -1748,12 +1752,13 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
             p.a = Sign(p.a)*amax;
             if(FuzzyEquals(p.Evaluate(p.ttotal),x1,EpsilonX) && FuzzyEquals(p.Derivative(p.ttotal),dx1,EpsilonV)) {
                 a1 = p.a;
-                v = 0;
                 if( Abs(a1) < EpsilonA ) {
                     // not accelerating
+                    v = dx0;
                     tswitch1 = 0;
                 }
                 else {
+                    v = 0;
                     tswitch1 = p.ttotal;
                 }
                 tswitch2=p.ttotal;
