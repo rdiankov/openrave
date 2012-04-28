@@ -391,12 +391,12 @@ public:
     }
 };
 
-class PyIkFilterReturn
+class PyIkReturn
 {
 public:
-    PyIkFilterReturn(IkFilterReturn& ret) : _ret(ret) {
+    PyIkReturn(IkReturn& ret) : _ret(ret) {
     }
-    PyIkFilterReturn(IkFilterReturnAction action) : _ret(action) {
+    PyIkReturn(IkReturnAction action) : _ret(action) {
     }
     object GetUserData() {
         return openravepy::GetUserData(_ret._userdata);
@@ -409,10 +409,10 @@ public:
         return odata;
     }
 
-    IkFilterReturn _ret;
+    IkReturn _ret;
 };
 
-typedef boost::shared_ptr<PyIkFilterReturn> PyIkFilterReturnPtr;
+typedef boost::shared_ptr<PyIkReturn> PyIkReturnPtr;
 
 class PyIkParameterization
 {
@@ -691,11 +691,11 @@ public:
 
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 
-bool ExtractIkFilterReturn(object o, IkFilterReturn& ikfr)
+bool ExtractIkReturn(object o, IkReturn& ikfr)
 {
-    extract<PyIkFilterReturnPtr > pyikfr(o);
+    extract<PyIkReturnPtr > pyikfr(o);
     if( pyikfr.check() ) {
-        ikfr = ((PyIkFilterReturnPtr)pyikfr)->_ret;
+        ikfr = ((PyIkReturnPtr)pyikfr)->_ret;
         return true;
     }
     return false;
@@ -1339,10 +1339,16 @@ void init_openravepy_global()
     .value("IgnoreCustomFilters",IKFO_IgnoreCustomFilters)
     .value("IgnoreEndEffectorCollisions",IKFO_IgnoreEndEffectorCollisions)
     ;
-    enum_<IkFilterReturnAction>("IkFilterReturnAction" DOXY_ENUM(IkFilterReturnAction))
-    .value("Success",IKFR_Success)
-    .value("Reject",IKFR_Reject)
-    .value("Quit",IKFR_Quit)
+    enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
+    .value("Success",IKRA_Success)
+    .value("Reject",IKRA_Reject)
+    .value("Quit",IKRA_Quit)
+    .value("QuitEndEffectorCollision",IKRA_QuitEndEffectorCollision)
+    .value("RejectKinematics",IKRA_RejectKinematics)
+    .value("RejectEnvCollision",IKRA_RejectEnvCollision)
+    .value("RejectJointLimits",IKRA_RejectJointLimits)
+    .value("RejectKinematicsPrecision",IKRA_RejectKinematicsPrecision)
+    .value("RejectCustomFilter",IKRA_RejectCustomFilter)
     ;
 
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
@@ -1489,14 +1495,11 @@ void init_openravepy_global()
     openravepy::spec_from_group();
 
     {
-        scope ikreturn = class_<PyIkFilterReturn, PyIkFilterReturnPtr>("IkFilterReturn", DOXY_CLASS(IkFilterReturn), no_init)
-                         .def(init<IkFilterReturnAction>(args("action")))
-                         .def("GetUserData",&PyIkFilterReturn::GetUserData, "Retuns IkFilterReturn::_userdata")
-                         .def("GetMapData",&PyIkFilterReturn::GetMapData, "Returns a dictionary copy for IkFilterReturn::_mapdata")
+        scope ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
+                         .def(init<IkReturnAction>(args("action")))
+                         .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
+                         .def("GetMapData",&PyIkReturn::GetMapData, "Returns a dictionary copy for IkReturn::_mapdata")
         ;
-        ikreturn.attr("Success") = IKFR_Success;
-        ikreturn.attr("Reject") = IKFR_Reject;
-        ikreturn.attr("Quit") = IKFR_Quit;
     }
 
 

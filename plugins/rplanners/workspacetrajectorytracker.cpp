@@ -308,7 +308,7 @@ protected:
         _vprevsolution = vsolution;
     }
 
-    IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
+    IkReturnAction _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
         RobotBase::RobotStateSaver saver(_robot);
 
@@ -331,7 +331,7 @@ protected:
             if( jdeltatrans_len > 1e-7 * solutiondiff ) {     // first see if there is a direction
                 if(( transangle < 0) ||( transangle*transangle < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len) ) {
                     //RAVELOG_INFO("rejected translation: %e < %e\n",transangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len));
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
 
@@ -353,7 +353,7 @@ protected:
             if( jdeltaquat_len > 1e-4 * solutiondiff ) {     // first see if there is a direction
                 if(( quatangle < 0) ||( quatangle*quatangle < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len) ) {
                     //RAVELOG_INFO("rejected rotation: %e < %e\n",quatangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltaquat.lengthsqr3()*jdeltaquat.lengthsqr3()));
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
         }
@@ -361,7 +361,7 @@ protected:
             // should be very close to _vprevsolution
             for(size_t i = 0; i < _vprevsolution.size(); ++i) {
                 if( RaveFabs(_vprevsolution[i]-vsolution.at(i)) > 0.1f ) {
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
         }
@@ -385,7 +385,7 @@ protected:
             // note that ikp might be a little off from vsolution due to the ik solver!
             if( middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
-                return IKFR_Reject;
+                return IKRA_Reject;
             }
         }
 
@@ -395,13 +395,13 @@ protected:
                 (*it)->Enable(true);
             }
             if( !_parameters->_checkpathconstraintsfn((_vprevsolution.size() > 0) ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
-                return IKFR_Reject;
+                return IKRA_Reject;
             }
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(false);
             }
         }
-        return IKFR_Success;
+        return IKRA_Success;
     }
 
     RobotBasePtr _robot;

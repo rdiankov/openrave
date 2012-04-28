@@ -18,12 +18,12 @@
 
 namespace OpenRAVE {
 
-bool IkFilterReturn::Append(const IkFilterReturn& r)
+bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
     if( !!r._userdata ) {
         if( !!_userdata ) {
-            RAVELOG_WARN("IkFilterReturn already has _userdata set, but overwriting anyway\n");
+            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting anyway\n");
             bclashing = true;
         }
         _userdata = r._userdata;
@@ -34,7 +34,7 @@ bool IkFilterReturn::Append(const IkFilterReturn& r)
     else {
         FOREACHC(itr,r._mapdata) {
             if( !_mapdata.insert(*itr).second ) {
-                RAVELOG_WARN(str(boost::format("IkFilterReturn _mapdata %s overwritten")%itr->first));
+                RAVELOG_WARN(str(boost::format("IkReturn _mapdata %s overwritten")%itr->first));
                 bclashing = true;
             }
         }
@@ -42,7 +42,7 @@ bool IkFilterReturn::Append(const IkFilterReturn& r)
     return bclashing;
 }
 
-void IkFilterReturn::Clear()
+void IkReturn::Clear()
 {
     _mapdata.clear();
     _userdata.reset();
@@ -87,7 +87,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase:
     return pdata;
 }
 
-IkFilterReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkFilterReturnPtr filterreturn)
+IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr filterreturn)
 {
     vector<dReal> vtestsolution,vtestsolution2;
     if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -107,8 +107,8 @@ IkFilterReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, Ro
     FOREACHC(it,__listRegisteredFilters) {
         CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata) {
-            IkFilterReturn ret = pitdata->_filterfn(solution,manipulator,param);
-            if( ret != IKFR_Success ) {
+            IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
+            if( ret != IKRA_Success ) {
                 return ret._action; // just return the action
             }
             if( vtestsolution.size() > 0 ) {
@@ -130,9 +130,9 @@ IkFilterReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, Ro
         }
     }
     if( !!filterreturn ) {
-        filterreturn->_action = IKFR_Success;
+        filterreturn->_action = IKRA_Success;
     }
-    return IKFR_Success;
+    return IKRA_Success;
 }
 
 }

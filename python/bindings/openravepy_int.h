@@ -444,7 +444,7 @@ public:
 
 object toPyGraphHandle(const GraphHandlePtr p);
 object toPyUserData(UserDataPtr p);
-bool ExtractIkFilterReturn(object o, IkFilterReturn& ikfr);
+bool ExtractIkReturn(object o, IkReturn& ikfr);
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);

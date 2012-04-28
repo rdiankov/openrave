@@ -22,12 +22,6 @@
 template <typename IKReal, typename Solution>
 class IkFastSolver : public IkSolverBase
 {
-    enum SolutionResults {
-        SR_Continue = 0, ///< go onto next set of parameters
-        SR_Success = 1, ///< found solution
-        SR_Quit = 2,  ///< failed due to collisions or other reasons that requires immediate failure
-    };
-
     class SolutionInfo
     {
 public:
@@ -35,7 +29,7 @@ public:
         }
         std::vector<dReal> values;
         dReal dist;
-        IkFilterReturnPtr filterreturn;
+        IkReturnPtr filterreturn;
     };
 
 public:
@@ -324,7 +318,7 @@ protected:
         bool _bCheckEndEffectorCollision, _bCheckSelfCollision, _bDisabled;
     };
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkFilterReturnPtr filterreturn)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkReturnPtr filterreturn)
     {
         if( param.GetType() != _iktype ) {
             RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
@@ -338,10 +332,11 @@ protected:
         std::vector<IKReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        return ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,result,filterreturn,boost::ref(stateCheck))) == SR_Success;
+        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,result,filterreturn,boost::ref(stateCheck)));
+        return retaction == IKRA_Success;
     }
 
-    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns)
+    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkReturnPtr> > filterreturns)
     {
         qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
@@ -355,14 +350,15 @@ protected:
         std::vector<IKReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        if( ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),filterreturns, boost::ref(stateCheck))) == SR_Quit ) {
+        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(qSolutions),filterreturns, boost::ref(stateCheck)));
+        if( retaction & IKRA_Quit ) {
             return false;
         }
         _SortSolutions(probot, qSolutions);
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkFilterReturnPtr filterreturn)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkReturnPtr filterreturn)
     {
         if( param.GetType() != _iktype ) {
             RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x\n")%_iktype%param.GetType()));
@@ -381,9 +377,10 @@ protected:
         }
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        return _SolveSingle(param,vfree,q0,filteroptions,result,filterreturn,stateCheck)==SR_Success;
+        IkReturnAction retaction = _SolveSingle(param,vfree,q0,filteroptions,result,filterreturn,stateCheck);
+        return retaction==IKRA_Success;
     }
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkReturnPtr> > filterreturns)
     {
         qSolutions.resize(0);
         if( param.GetType() != _iktype ) {
@@ -403,7 +400,8 @@ protected:
         }
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        if( _SolveAll(param,vfree,filteroptions,qSolutions,filterreturns, stateCheck) == SR_Quit ) {
+        IkReturnAction retaction = _SolveAll(param,vfree,filteroptions,qSolutions,filterreturns, stateCheck);
+        if( retaction & IKRA_Quit ) {
             return false;
         }
         _SortSolutions(probot, qSolutions);
@@ -434,7 +432,7 @@ protected:
     }
 
 private:
-    SolutionResults ComposeSolution(const std::vector<int>& vfreeparams, vector<IKReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<SolutionResults()>& fn)
+    IkReturnAction ComposeSolution(const std::vector<int>& vfreeparams, vector<IKReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<IkReturnAction()>& fn)
     {
         if( freeindex >= (int)vfreeparams.size()) {
             return fn();
@@ -474,8 +472,8 @@ private:
             iter++;
 
             vfree.at(freeindex) = curphi;
-            SolutionResults res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
-            if( res != SR_Continue ) {
+            IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
+            if( !(res & IKRA_Reject) ) {
                 return res;
             }
         }
@@ -483,13 +481,13 @@ private:
         // explicitly test 0 since many edge cases involve 0s
         if( _qlower[vfreeparams[freeindex]] <= 0 && _qupper[vfreeparams[freeindex]] >= 0 ) {
             vfree.at(freeindex) = 0;
-            SolutionResults res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
-            if( res != SR_Continue ) {
+            IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn);
+            if( !(res & IKRA_Reject) ) {
                 return res;
             }
         }
 
-        return SR_Continue;
+        return IKRA_Reject;
     }
 
     bool _CallIK(const IkParameterization& param, const vector<IKReal>& vfree, std::vector<Solution>& vsolutions)
@@ -625,11 +623,11 @@ private:
         return p1.second < p2.second;
     }
 
-    SolutionResults _SolveSingle(const IkParameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkFilterReturnPtr filterreturn, StateCheckEndEffector& stateCheck)
+    IkReturnAction _SolveSingle(const IkParameterization& param, const vector<IKReal>& vfree, const vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result, IkReturnPtr filterreturn, StateCheckEndEffector& stateCheck)
     {
         std::vector<Solution> vsolutions;
         if( !_CallIK(param,vfree,vsolutions) ) {
-            return SR_Continue;
+            return IKRA_RejectKinematics;
         }
 
         RobotBase::ManipulatorPtr pmanip(_pmanip);
@@ -668,9 +666,9 @@ private:
             }
         }
 
+        IkReturnAction res = IKRA_Reject;
         FOREACH(itindex,vsolutionorder) {
             Solution& iksol = vsolutions.at(*itindex);
-            SolutionResults res;
             if( iksol.GetFree().size() > 0 ) {
                 // have to search over all the free parameters of the solution!
                 vsolfree.resize(iksol.GetFree().size());
@@ -681,11 +679,11 @@ private:
                 res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, bestsolution, !!filterreturn, param, stateCheck);
             }
 
-            if( res == SR_Quit ) {
-                return SR_Quit;
+            if( res & IKRA_Quit ) {
+                return res;
             }
             // stop if there is no solution we are attempting to get close to
-            if( res == SR_Success && q0.size() != pmanip->GetArmIndices().size() ) {
+            if( res == IKRA_Success && q0.size() != pmanip->GetArmIndices().size() ) {
                 break;
             }
         }
@@ -699,16 +697,17 @@ private:
             if( !!filterreturn && !!bestsolution.filterreturn ) {
                 filterreturn->Clear();
                 filterreturn->Append(*bestsolution.filterreturn);
-                filterreturn->_action = IKFR_Success;
+                filterreturn->_action = IKRA_Success;
             }
-            return SR_Success;
+            return IKRA_Success;
         }
 
-        return SR_Continue;
+        BOOST_ASSERT(res&IKRA_Reject);
+        return res;
     }
 
     // validate a solution
-    SolutionResults _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const vector<IKReal>&, const vector<dReal>&,int>& freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, SolutionInfo& bestsolution, bool bComputeFilterReturns, const IkParameterization& param, StateCheckEndEffector& stateCheck)
+    IkReturnAction _ValidateSolutionSingle(const Solution& iksol, boost::tuple<const vector<IKReal>&, const vector<dReal>&,int>& freeq0check, std::vector<IKReal>& sol, std::vector<dReal>& vravesol, SolutionInfo& bestsolution, bool bComputeFilterReturns, const IkParameterization& param, StateCheckEndEffector& stateCheck)
     {
         const vector<IKReal>& vfree = boost::get<0>(freeq0check);
         //BOOST_ASSERT(sol.size()== iksol.basesol.size() && vfree.size() == iksol.GetFree().size());
@@ -745,21 +744,21 @@ private:
                 vravesols.swap(vravesols2);
             }
             if( vravesols.size() == 0 ) {
-                return SR_Continue;
+                return IKRA_RejectJointLimits;
             }
         }
         else {
             if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
                 d = _configdist2(probot,vravesol,boost::get<1>(freeq0check));
                 if( bestsolution.dist <= d ) {
-                    return SR_Continue;
+                    return IKRA_Reject;
                 }
             }
             vravesols.push_back(make_pair(vravesol,0));
         }
 
         IkParameterization paramnewglobal, paramnew;
-        vector<IkFilterReturnPtr> vfilterreturns; // orderd with respect to vravesols
+        vector<IkReturnPtr> vfilterreturns; // orderd with respect to vravesols
 
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
             if( bComputeFilterReturns ) {
@@ -772,6 +771,7 @@ private:
 //                    maxsolutions *= m;
 //                }
 //            }
+            IkReturnAction retaction = IKRA_Reject;
             vravesols2.resize(0);
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
@@ -783,33 +783,34 @@ private:
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
-                IkFilterReturnPtr localret;
+                IkReturnPtr localret;
                 if( bComputeFilterReturns ) {
-                    localret.reset(new IkFilterReturn(IKFR_Success));
+                    localret.reset(new IkReturn(IKRA_Success));
                     localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 }
-                switch(_CallFilters(itravesol->first, pmanip, paramnew,localret)) {
-                case IKFR_Reject: break;
-                case IKFR_Quit: return SR_Quit;
-                case IKFR_Success:
+                retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
+                if( retaction & IKRA_Quit ) {
+                    return retaction;
+                }
+                else if( retaction == IKRA_Success ) {
                     if( !!localret ) {
                         vfilterreturns.push_back(localret);
                     }
                     vravesols2.push_back(*itravesol);
-                    break;
                 }
-                ++nSameStateRepeatCount;
-                _nSameStateRepeatCount = nSameStateRepeatCount;
             }
             if( vravesols2.size() == 0 ) {
-                return SR_Continue;
+                BOOST_ASSERT(retaction&IKRA_Reject);
+                return retaction;
             }
             vravesols.swap(vravesols2);
         }
         else {
             _vsolutionindices = vsolutionindices;
             if( bComputeFilterReturns ) {
-                vfilterreturns.push_back(IkFilterReturnPtr(new IkFilterReturn(IKFR_Success)));
+                vfilterreturns.push_back(IkReturnPtr(new IkReturn(IKRA_Success)));
                 vfilterreturns.back()->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
             }
             probot->SetActiveDOFValues(vravesol,false);
@@ -824,12 +825,12 @@ private:
             stateCheck.SetSelfCollisionState();
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
-                    return SR_Continue;
+                    return IKRA_RejectSelfCollision;
                 }
             }
             else {
                 if( probot->CheckSelfCollision() ) {
-                    return SR_Continue;
+                    return IKRA_RejectSelfCollision;
                 }
             }
         }
@@ -840,7 +841,7 @@ private:
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if(  pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
-                        return SR_Quit; // stop the search
+                        return IKRA_QuitEndEffectorCollision; // stop the search
                     }
                     stateCheck.ResetCheckEndEffectorCollision();
                 }
@@ -852,7 +853,7 @@ private:
                 else {
                     RAVELOG_VERBOSE("ik collision, no link\n");
                 }
-                return SR_Continue;
+                return IKRA_RejectEnvCollision;
             }
         }
 
@@ -866,7 +867,7 @@ private:
             }
             ss << "]" << endl;
             RAVELOG_ERROR(ss.str());
-            return SR_Continue;
+            return IKRA_RejectKinematicsPrecision;
         }
 
         // solution is valid, so replace the best
@@ -899,10 +900,10 @@ private:
             }
             ++index;
         }
-        return SR_Success;
+        return IKRA_Success;
     }
 
-    SolutionResults _SolveAll(const IkParameterization& param, const vector<IKReal>& vfree, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns, StateCheckEndEffector& stateCheck)
+    IkReturnAction _SolveAll(const IkParameterization& param, const vector<IKReal>& vfree, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkReturnPtr> > filterreturns, StateCheckEndEffector& stateCheck)
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
@@ -915,21 +916,23 @@ private:
                 if( itsol->GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(itsol->GetFree().size());
-                    if( ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(*itsol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(qSolutions), filterreturns, boost::ref(stateCheck))) == SR_Quit) {
-                        return SR_Quit;
+                    IkReturnAction retaction = ComposeSolution(itsol->GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(*itsol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(qSolutions), filterreturns, boost::ref(stateCheck)));
+                    if( retaction & IKRA_Quit) {
+                        return retaction;
                     }
                 }
                 else {
-                    if( _ValidateSolutionAll(param, *itsol, vector<IKReal>(), filteroptions, sol, qSolutions, filterreturns, stateCheck) == SR_Quit ) {
-                        return SR_Quit;
+                    IkReturnAction retaction = _ValidateSolutionAll(param, *itsol, vector<IKReal>(), filteroptions, sol, qSolutions, filterreturns, stateCheck);
+                    if( retaction & IKRA_Quit ) {
+                        return retaction;
                     }
                 }
             }
         }
-        return SR_Continue;
+        return IKRA_Reject; // signals to continue
     }
 
-    SolutionResults _ValidateSolutionAll(const IkParameterization& param, const Solution& iksol, const vector<IKReal>& vfree, int filteroptions, std::vector<IKReal>& sol, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkFilterReturnPtr> > filterreturns, StateCheckEndEffector& stateCheck)
+    IkReturnAction _ValidateSolutionAll(const IkParameterization& param, const Solution& iksol, const vector<IKReal>& vfree, int filteroptions, std::vector<IKReal>& sol, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkReturnPtr> > filterreturns, StateCheckEndEffector& stateCheck)
     {
         iksol.GetSolution(&sol[0],vfree.size()>0 ? &vfree[0] : NULL);
         std::vector<dReal> vravesol(sol.size());
@@ -943,7 +946,7 @@ private:
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
             _ComputeAllSimilarJointAngles(vravesols, vravesol);
             if( vravesols.size() == 0 ) {
-                return SR_Continue;
+                return IKRA_RejectJointLimits;
             }
         }
         else {
@@ -958,7 +961,7 @@ private:
         RobotBasePtr probot = pmanip->GetRobot();
 
         IkParameterization paramnewglobal, paramnew;
-        vector<IkFilterReturnPtr> vfilterreturns; // orderd with respect to vravesols
+        vector<IkReturnPtr> vfilterreturns; // orderd with respect to vravesols
 
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
             if( !!filterreturns ) {
@@ -972,6 +975,7 @@ private:
 //                }
 //            }
             vravesols2.resize(0);
+            IkReturnAction retaction = IKRA_Reject;
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
@@ -982,33 +986,35 @@ private:
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
-                IkFilterReturnPtr localret;
+                IkReturnPtr localret;
                 if( !!filterreturns ) {
-                    localret.reset(new IkFilterReturn(IKFR_Success));
+                    localret.reset(new IkReturn(IKRA_Success));
                     localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 }
-                switch(_CallFilters(itravesol->first, pmanip, paramnew,localret)) {
-                case IKFR_Reject: break;
-                case IKFR_Quit: return SR_Quit;
-                case IKFR_Success:
+                retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
+                if( retaction & IKRA_Quit ) {
+                    return retaction;
+                }
+                else if( retaction == IKRA_Success ) {
                     if( !!localret ) {
                         vfilterreturns.push_back(localret);
                     }
                     vravesols2.push_back(*itravesol);
                     break;
                 }
-                nSameStateRepeatCount++;
-                _nSameStateRepeatCount = nSameStateRepeatCount;
             }
             if( vravesols2.size() == 0 ) {
-                return SR_Continue;
+                BOOST_ASSERT(retaction&IKRA_Reject);
+                return retaction;
             }
             vravesols.swap(vravesols2);
         }
         else {
             _vsolutionindices = vsolutionindices;
             if( !!filterreturns ) {
-                vfilterreturns.push_back(IkFilterReturnPtr(new IkFilterReturn(IKFR_Success)));
+                vfilterreturns.push_back(IkReturnPtr(new IkReturn(IKRA_Success)));
                 vfilterreturns.back()->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
             }
             probot->SetActiveDOFValues(vravesol,false);
@@ -1022,12 +1028,12 @@ private:
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 CollisionReport report;
                 if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
-                    return SR_Continue;
+                    return IKRA_RejectSelfCollision;
                 }
             }
             else {
                 if( probot->CheckSelfCollision() ) {
-                    return SR_Continue;
+                    return IKRA_RejectSelfCollision;
                 }
             }
         }
@@ -1037,13 +1043,13 @@ private:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
-                        return SR_Quit; // stop the search
+                        return IKRA_QuitEndEffectorCollision; // stop the search
                     }
                     stateCheck.ResetCheckEndEffectorCollision();
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {
-                return SR_Continue;
+                return IKRA_RejectEnvCollision;
             }
         }
 
@@ -1055,7 +1061,7 @@ private:
         if( !!filterreturns ) {
             filterreturns->insert(filterreturns->end(),vfilterreturns.begin(),vfilterreturns.end());
         }
-        return SR_Continue;
+        return IKRA_Reject; // signals to continue
     }
 
     bool _CheckJointAngles(std::vector<dReal>& vravesol) const

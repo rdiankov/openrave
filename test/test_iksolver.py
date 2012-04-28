@@ -30,18 +30,18 @@ class TestIkSolver(EnvironmentSetup):
             assert(len(sols)>0 and any([sol[index] > 0.2 for sol in sols]) and any([sol[index] < -0.2 for sol in sols]) and any([sol[index] > -0.2 and sol[index] < 0.2 for sol in sols]))
 
             def filter1(sol,manip,ikparam):
-                return IkFilterReturn.Success if sol[2] > -0.2 else IkFilterReturn.Reject
+                return IkReturnAction.Success if sol[2] > -0.2 else IkReturnAction.Reject
 
             def filter1test(sol,manip,ikparam):
                 assert(sol[2] < 0.2)
-                return IkFilterReturn.Success if sol[2] > -0.2 else IkFilterReturn.Reject
+                return IkReturnAction.Success if sol[2] > -0.2 else IkReturnAction.Reject
 
             def filter2(sol,manip,ikparam):
-                return IkFilterReturn.Success if sol[2] < 0.2 else IkFilterReturn.Reject
+                return IkReturnAction.Success if sol[2] < 0.2 else IkReturnAction.Reject
 
             def filter2test(sol,manip,ikparam):
                 assert(sol[2] > -0.2)
-                return IkFilterReturn.Success if sol[2] < 0.2 else IkFilterReturn.Reject
+                return IkReturnAction.Success if sol[2] < 0.2 else IkReturnAction.Reject
 
             handle1 = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filter1)
             sols = ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions)
@@ -102,7 +102,7 @@ class TestIkSolver(EnvironmentSetup):
             ikmodel.autogenerate()
 
         def filtertest(sol,manip,ikparam):
-            return IkFilterReturn.Success
+            return IkReturnAction.Success
 
         handle1 = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
 
@@ -173,7 +173,7 @@ class TestIkSolver(EnvironmentSetup):
                 assert(transdist(ikparamint.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam2'),[5,4]) != g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparamint.GetType()),ikparamint.GetValues()]) != g_epsilon)
-                return IkFilterReturn.Success
+                return IkReturnAction.Success
             
             handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
             manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)

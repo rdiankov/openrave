@@ -22,7 +22,7 @@ class PyIkSolverBase : public PyInterfaceBase
 protected:
     IkSolverBasePtr _pIkSolver;
 
-    static IkFilterReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, IkSolverBasePtr pIkSolver, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
+    static IkReturn _CallCustomFilter(object fncallback, PyEnvironmentBasePtr pyenv, IkSolverBasePtr pIkSolver, std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam)
     {
         object res;
         PyGILState_STATE gstate = PyGILState_Ensure();
@@ -39,18 +39,18 @@ protected:
             throw openrave_exception(errmsg,ORE_Assert);
         }
         if( res == object() ) {
-            return IKFR_Reject;
+            return IKRA_Reject;
         }
-        IkFilterReturn ikfr(IKFR_Success);
-        if( ExtractIkFilterReturn(res,ikfr) ) {
+        IkReturn ikfr(IKRA_Success);
+        if( ExtractIkReturn(res,ikfr) ) {
             return ikfr;
         }
-        extract<IkFilterReturnAction> ikfra(res);
+        extract<IkReturnAction> ikfra(res);
         if( ikfra.check() ) {
-            ikfr._action = (IkFilterReturnAction)ikfra;
+            ikfr._action = (IkReturnAction)ikfra;
             return ikfr;
         }
-        throw openrave_exception("failed to convert return type of filter to IkFilterReturn",ORE_Assert);
+        throw openrave_exception("failed to convert return type of filter to IkReturn",ORE_Assert);
     }
 
 public:
