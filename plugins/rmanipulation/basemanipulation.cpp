@@ -320,7 +320,7 @@ protected:
         // compute a workspace trajectory (important to do this after jittering!)
         {
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D);
+            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D,"quadratic");
             params->workspacetraj->Init(spec);
             vector<dReal> data(spec._vgroups[0].dof);
             IkParameterization ikparam(Tee,IKP_Transform6D);
@@ -331,7 +331,7 @@ protected:
             ikparam.GetValues(data.begin());
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
-            vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
+            vector<dReal> maxaccelerations(spec._vgroups[0].dof,5);
             planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
