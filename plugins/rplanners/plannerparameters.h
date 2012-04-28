@@ -213,9 +213,10 @@ protected:
 class TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _outputaccelchanges(true), _multidofinterp(0), _fToolAccelerationLimit(0), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), _fToolAccelerationLimit(0), _bProcessing(false) {
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
+        _vXMLParameters.push_back("hasvelocities");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("toolaccelerationlimit");
@@ -224,9 +225,9 @@ public:
 
     string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
-    bool _hastimestamps;
+    bool _hastimestamps, _hasvelocities;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
-    int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration
+    int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
     dReal _fToolAccelerationLimit; ///< if non-zero then the timer shoulld consdier the max acceleration limit of the tool.
 
 protected:
@@ -238,6 +239,7 @@ protected:
         }
         O << "<interpolation>" << _interpolation << "</interpolation>" << endl;
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << endl;
+        O << "<hasvelocities>" << _hasvelocities << "</hasvelocities>" << endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << endl;
@@ -256,7 +258,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit" || name=="multidofinterp";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit" || name=="multidofinterp";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -268,6 +270,9 @@ protected:
             }
             else if( name == "hastimestamps" ) {
                 _ss >> _hastimestamps;
+            }
+            else if( name == "hasvelocities" ) {
+                _ss >> _hasvelocities;
             }
             else if( name == "pointtolerance" ) {
                 _ss >> _pointtolerance;

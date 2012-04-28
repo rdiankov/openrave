@@ -533,7 +533,6 @@ class TestTrajectory(EnvironmentSetup):
             except openrave_exception,e:
                 pass
             
-
     def test_reverse(self):
         env=self.env
         self.LoadEnv('data/lab1.env.xml')
@@ -555,3 +554,19 @@ class TestTrajectory(EnvironmentSetup):
             rtraj1 = planningutils.ReverseTrajectory(traj1)
             self.RunTrajectory(robot,rtraj1)
             assert( transdist(originalvalues, robot.GetConfigurationValues()) <= g_epsilon)
+
+    def test_worktraj(self):
+        env=self.env
+        maxvelocities = array([ 0.62831853,  0.62831853,  0.62831853,  0.62831853,  0.3259    , 0.3259    ,  0.3259    ])
+        maxaccelerations = array([ 4.24811395,  4.24811395,  4.24811395,  4.24811395,  2.2036    ,    2.2036    ,  2.2036    ])
+        hastimestamps=False
+        ikparam = IkParameterization(eye(4),IkParameterizationType.Transform6D)
+        T = matrixFromAxisAngle([0,0,0])
+        T[0:3,3] = [0,0,0.1]
+        ikparam1 = ikparam.Transform(T)
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(ikparam.GetConfigurationSpecification())
+        traj.Insert(0,ikparam.GetValues())
+        traj.Insert(1,ikparam1.GetValues())
+        planningutils.RetimeAffineTrajectory(traj,maxvelocities,maxaccelerations,hastimestamps=False,plannername='ParabolicTrajectoryRetimer',plannerparameters='<multidofinterp>2</multidofinterp>')
+        assert(traj.GetDuration())

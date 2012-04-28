@@ -91,6 +91,17 @@ public:
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
+        ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
+        if( _parameters->_hasvelocities ) {
+            // check that all velocity groups are there
+            FOREACH(itgroup,velspec._vgroups) {
+                if(ptraj->GetConfigurationSpecification().FindCompatibleGroup(*itgroup,true) == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
+                    RAVELOG_WARN(str(boost::format("trajectory does not velocity group '%s', even though parameters say is needed")%itgroup->name));
+                    return PS_Failed;
+                }
+            }
+        }
+
         ConfigurationSpecification newspec = oldspec;
         newspec.AddVelocityGroups(true);
         vector<dReal> vdiffdata, data;
@@ -144,6 +155,7 @@ public:
             _listgroupinfo.clear();
             list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
+            list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listcheckvelocityfns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > listwritefns;
             const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
             for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
@@ -205,15 +217,30 @@ public:
                 }
 
                 if( igrouptype == 0 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                    if( _parameters->_hasvelocities ) {
+                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2));
+                    }
+                    else {
+                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                    }
                     listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                 }
                 else if( igrouptype == 1 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                    if( _parameters->_hasvelocities ) {
+                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2));
+                    }
+                    else {
+                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                    }
                     listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                 }
                 else if( igrouptype == 2 ) {
-                    listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                    if( _parameters->_hasvelocities ) {
+                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2));
+                    }
+                    else {
+                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                    }
                     listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                 }
 
@@ -246,6 +273,11 @@ public:
                 ptraj->GetWaypoints(0,numpoints,vdeltatimes,*itoldgrouptime);
                 ConfigurationSpecification::ConvertData(data.begin(),newspec,vdeltatimes.begin(),*itoldgrouptime,numpoints,GetEnv(),false);
             }
+            if( _parameters->_hasvelocities ) {
+                vector<dReal> vvelocities;
+                ptraj->GetWaypoints(0,numpoints,vvelocities,velspec);
+                ConfigurationSpecification::ConvertData(data.begin(),newspec,vvelocities.begin(),velspec,numpoints,GetEnv(),false);
+            }
             try {
                 std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
                 std::vector<dReal>::iterator itdataprev = itdata;
@@ -261,17 +293,26 @@ public:
                     }
                     if( _parameters->_hastimestamps ) {
                         if( *(itdata+_timeoffset) < mintime ) {
-                            RAVELOG_WARN(str(boost::format("point %d/%d has unreachable minimum time %f > %f, changing...")%i%numpoints%(*(itdata+_timeoffset))%mintime));
-                            //*(itdata+_timeoffset) = mintime;
+                            RAVELOG_DEBUG(str(boost::format("point %d/%d has unreachable minimum time %f > %f")%i%numpoints%(*(itdata+_timeoffset))%mintime));
                             return PS_Failed;
                         }
                     }
                     else {
                         *(itdata+_timeoffset) = mintime;
                     }
-                    // given the mintime, fill the velocities
-                    FOREACH(itfn,listvelocityfns) {
-                        (*itfn)(itorgdiff, itdataprev, itdata);
+                    if( _parameters->_hasvelocities ) {
+                        FOREACH(itfn,listcheckvelocityfns) {
+                            if( !(*itfn)(itdataprev, itdata) ) {
+                                RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
+                                return PS_Failed;
+                            }
+                        }
+                    }
+                    else {
+                        // given the mintime, fill the velocities
+                        FOREACH(itfn,listvelocityfns) {
+                            (*itfn)(itorgdiff, itdataprev, itdata);
+                        }
                     }
 
                     FOREACH(itfn,listwritefns) {
@@ -311,16 +352,25 @@ protected:
     virtual bool _SupportInterpolation() = 0;
     virtual dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     virtual void _ComputeVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        return true;
+    }
     virtual void _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
     }
 
     virtual dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     virtual void _ComputeVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        return true;
+    }
     virtual void _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
     }
 
     virtual dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     virtual void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
+    virtual bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        return true;
+    }
     virtual void _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
     }
 

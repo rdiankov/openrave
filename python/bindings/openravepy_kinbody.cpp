@@ -797,7 +797,7 @@ public:
     }
     object GetDOFMaxAccel() const
     {
-        RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFAccelerationLimits\n");
+        RAVELOG_WARN("KinBody.GetDOFMaxAccel() is deprecated, use GetDOFAccelerationLimits\n");
         vector<dReal> values;
         _pbody->GetDOFAccelerationLimits(values);
         return toPyArray(values);

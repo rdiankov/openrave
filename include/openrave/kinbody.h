@@ -801,6 +801,15 @@ protected:
          */
         virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
+        /// \brief evaluates the mimic joint equation using vdependentvalues
+        ///
+        /// \param[in] axis the joint axis
+        /// \param[in] timederiv the time derivative to evaluate. 0 is position, 1 is velocity, 2 is acceleration, etc
+        /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
+        /// \param[out] voutput the output values
+        /// \return an internal error code, 0 if no error
+        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
+
         std::string _name;         ///< \see GetName
         boost::array<bool,3> _bIsCircular;            ///< \see IsCircular
         boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
@@ -1449,9 +1458,6 @@ protected:
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
-
-    /// creates the function parser connected to this body's joint values
-    virtual OpenRAVEFunctionParserRealPtr _CreateFunctionParser();
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

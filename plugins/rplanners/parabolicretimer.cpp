@@ -105,6 +105,21 @@ protected:
         }
     }
 
+    bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        dReal deltatime = *(itdata+_timeoffset);
+        for(int i=0; i < info->gvel.dof; ++i) {
+            dReal fvel = *(itdata+info->gvel.offset+i);
+            if( RaveFabs(fvel) > info->_vConfigVelocityLimit.at(i) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            dReal diff = RaveFabs(*(itdataprev+info->gvel.offset+i)-fvel);
+            if( RaveFabs(diff) > info->_vConfigAccelerationLimit.at(i) * deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
         ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
@@ -216,6 +231,10 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesAffine not implemented", ORE_NotImplemented);
     }
 
+    bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesAffine not implemented", ORE_NotImplemented);
+    }
+
     void _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
@@ -311,6 +330,86 @@ protected:
                 *(itdata+info->gvel.offset+i) = 0;
             }
         }
+    }
+
+    bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+        dReal deltatime = *(itdata+_timeoffset);
+        int transoffset = -1;
+        IkParameterization ikparamprev;
+        switch(iktype) {
+        case IKP_Transform6D: {
+            ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+            Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetTransform6D().rot))*2;
+            dReal fvelprev2 = utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w);
+            Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
+            dReal fvel2 = utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w);
+            if( fvel2 > utils::Sqr(info->_vConfigVelocityLimit.at(0)) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            if( fvel2+fvelprev2-2*RaveSqrt(fvel2*fvelprev2) > info->_vConfigAccelerationLimit.at(0)*deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+            transoffset = 4;
+            break;
+        }
+        case IKP_Rotation3D: {
+            ikparamprev.Set(itdataprev+info->gpos.offset,iktype);
+            Vector angularvelocityprev = quatMultiply(Vector(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2), *(itdataprev+info->gvel.offset+3)),quatInverse(ikparamprev.GetRotation3D()))*2;
+            dReal fvelprev2 = utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w);
+            Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
+            dReal fvel2 = utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w);
+            if( fvel2 > utils::Sqr(info->_vConfigVelocityLimit.at(0)) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            if( fvel2+fvelprev2-2*RaveSqrt(fvel2*fvelprev2) > info->_vConfigAccelerationLimit.at(0)*deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+            break;
+        }
+        case IKP_Translation3D:
+            transoffset = 0;
+            break;
+        case IKP_TranslationDirection5D: {
+            Vector angularvelocityprev(*(itdataprev+info->gvel.offset+0), *(itdataprev+info->gvel.offset+1), *(itdataprev+info->gvel.offset+2));
+            dReal fvelprev2 = utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w);
+            Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
+            dReal fvel2 = utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w);
+            if( fvel2 > utils::Sqr(info->_vConfigVelocityLimit.at(0)) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            if( fvel2+fvelprev2-2*RaveSqrt(fvel2*fvelprev2) > info->_vConfigAccelerationLimit.at(0)*deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+            transoffset = 3;
+            break;
+        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            dReal fvelprev = *(itdataprev+info->gvel.offset+0);
+            dReal fvel = *(itdata+info->gvel.offset+0);
+            if( RaveFabs(fvel) > info->_vConfigVelocityLimit.at(0) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            if( RaveFabs(fvel-fvelprev) > info->_vConfigAccelerationLimit.at(0)*deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+            transoffset = 1;
+            break;
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", iktype,ORE_InvalidArguments);
+        }
+        if( transoffset >= 0 ) {
+            dReal fvelprev2 = utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+2));
+            dReal fvel2 = utils::Sqr(*(itdata+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+2));
+
+            if( fvel2 > utils::Sqr(info->_vConfigVelocityLimit.at(transoffset)) + ParabolicRamp::EpsilonV ) {
+                return false;
+            }
+            if( fvel2+fvelprev2-2*RaveSqrt(fvel2*fvelprev2) > info->_vConfigAccelerationLimit.at(transoffset)*deltatime + ParabolicRamp::EpsilonA ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     void _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {

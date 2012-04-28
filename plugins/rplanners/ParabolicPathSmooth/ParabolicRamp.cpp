@@ -1450,7 +1450,14 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
             v = 0;
             //tswitch1 = tswitch2 = p.ttotal;
             //ttotal = p.ttotal;
-            tswitch1 = tswitch2 = endTime;
+            if( Abs(a1) < EpsilonA ) {
+                // not accelerating
+                tswitch1 = 0;
+            }
+            else {
+                tswitch1 = endTime;
+            }
+            tswitch2 = endTime;
             ttotal = endTime;
         }
     }
@@ -1473,7 +1480,8 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
         if(vmax == 0) {
             if(FuzzyEquals(x0,x1,EpsilonX) && FuzzyEquals(dx0,dx1,EpsilonV)) {
                 a1 = a2 = v = 0;
-                tswitch1 = tswitch2 = ttotal = endTime;
+                tswitch1 = 0;
+                tswitch2 = ttotal = endTime;
                 return true;
             }
         }
@@ -1541,7 +1549,14 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         if(Abs(p.a) <= amax) {
             a1 = p.a;
             v = 0;
-            tswitch1 = tswitch2 = p.ttotal;
+            if( Abs(a1) < EpsilonA ) {
+                // not accelerating
+                tswitch1 = 0;
+            }
+            else {
+                tswitch1 = p.ttotal;
+            }
+            tswitch2 = p.ttotal;
             ttotal = p.ttotal;
         }
         else {
@@ -1617,7 +1632,14 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
         if(Abs(p.a) <= amax) {
             a1 = p.a;
             v = 0;
-            tswitch1 = tswitch2 = p.ttotal;
+            if( Abs(a1) < EpsilonA ) {
+                // not accelerating
+                tswitch1 = 0;
+            }
+            else {
+                tswitch1 = p.ttotal;
+            }
+            tswitch2 = p.ttotal;
             ttotal = p.ttotal;
         }
         else {
@@ -1711,7 +1733,14 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         if(Abs(p.a) <= amax) {
             a1 = p.a;
             v = 0;
-            tswitch1 = tswitch2 = p.ttotal;
+            if( Abs(a1) < EpsilonA ) {
+                // not accelerating
+                tswitch1 = 0;
+            }
+            else {
+                tswitch1 = p.ttotal;
+            }
+            tswitch2 = p.ttotal;
             ttotal = p.ttotal;
         }
         else {
@@ -1720,7 +1749,14 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
             if(FuzzyEquals(p.Evaluate(p.ttotal),x1,EpsilonX) && FuzzyEquals(p.Derivative(p.ttotal),dx1,EpsilonV)) {
                 a1 = p.a;
                 v = 0;
-                tswitch1=tswitch2=p.ttotal;
+                if( Abs(a1) < EpsilonA ) {
+                    // not accelerating
+                    tswitch1 = 0;
+                }
+                else {
+                    tswitch1 = p.ttotal;
+                }
+                tswitch2=p.ttotal;
                 ttotal = p.ttotal;
             }
         }
@@ -3179,7 +3215,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                     ramps[i][0] = newramp;
                 }
                 else {
-                    PARABOLIC_RAMP_PERROR("failed to set correct ramp switch times %f, %f, %f for index %d!\n",newramp.tswitch1,newramp.tswitch2,newramp.ttotal,i);
+                    PARABOLIC_RAMP_PERROR("failed to set correct ramp switch times %e, %e, %e for index %d!\n",newramp.tswitch1,newramp.tswitch2,newramp.ttotal,i);
                     return false;
                 }
             }
