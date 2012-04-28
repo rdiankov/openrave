@@ -338,7 +338,8 @@ public:
         }
 
         _WriteTrajectory(ptraj,newspec, data);
-        RAVELOG_DEBUG(str(boost::format("%s path duration=%fs")%GetXMLId()%ptraj->GetDuration()));
+        // happens too often for debug message?
+        RAVELOG_VERBOSE(str(boost::format("%s path duration=%fs")%GetXMLId()%ptraj->GetDuration()));
         return PS_HasSolution;
     }
 

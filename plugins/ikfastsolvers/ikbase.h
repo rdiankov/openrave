@@ -48,7 +48,7 @@ public:
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IKReal,Solution>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IKReal,Solution>::_GetSolutionIndicesCommand,this,_1,_2),
-                        "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered");
+                        "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered. if large-range joints wrap around, (index>>16) holds the index. So (index&0xffff) is unique to robot link pose, while (index>>16) describes the repetition.");
         RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IKReal,Solution>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.**. Returns 1 if the filter was called already with the same robot link positions, 0 otherwise. This is useful in saving computation. ");
     }
@@ -765,18 +765,18 @@ private:
             if( bComputeFilterReturns ) {
                 vfilterreturns.reserve(vravesols.size());
             }
-            unsigned int maxsolutions = 1;
-            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
-                unsigned char m = iksol.basesol[i].maxsolutions;
-                if( m != (unsigned char)-1 && m > 1) {
-                    maxsolutions *= m;
-                }
-            }
+//            unsigned int maxsolutions = 1;
+//            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
+//                unsigned char m = iksol.basesol[i].maxsolutions;
+//                if( m != (unsigned char)-1 && m > 1) {
+//                    maxsolutions *= m;
+//                }
+//            }
             vravesols2.resize(0);
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
-                    *it += maxsolutions * itravesol->second;
+                    *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
@@ -964,18 +964,18 @@ private:
             if( !!filterreturns ) {
                 vfilterreturns.reserve(vravesols.size());
             }
-            unsigned int maxsolutions = 1;
-            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
-                unsigned char m = iksol.basesol[i].maxsolutions;
-                if( m != (unsigned char)-1 && m > 1) {
-                    maxsolutions *= m;
-                }
-            }
+//            unsigned int maxsolutions = 1;
+//            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
+//                unsigned char m = iksol.basesol[i].maxsolutions;
+//                if( m != (unsigned char)-1 && m > 1) {
+//                    maxsolutions *= m;
+//                }
+//            }
             vravesols2.resize(0);
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
-                    *it += maxsolutions * itravesol->second;
+                    *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
