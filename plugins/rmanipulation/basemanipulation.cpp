@@ -58,13 +58,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Sets _minimumgoalpaths for all planner parameters.");
         RegisterCommand("SetPostProcessing",boost::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
                         "Sets post processing parameters.");
-        RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
-                        "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
-- solveall - When specified, will return all possible solutions.\n\
-- ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
-- filteroptions\n\
-");
         _minimumgoalpaths=1;
     }
 
@@ -335,7 +328,7 @@ protected:
             planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
-        if( params->workspacetraj->GetDuration() == 0 ) {
+        if( params->workspacetraj->GetDuration() <= 10*g_fEpsilon ) {
             RAVELOG_WARN("workspace traj is empty\n");
             return false;
         }
@@ -993,75 +986,6 @@ protected:
         return true;
     }
 
-    bool FindIKWithFilters(ostream& sout, istream& sinput)
-    {
-        bool bSolveAll = false;
-        IkSolverBase::IkFilterCallbackFn filterfn;
-        IkParameterization ikparam;
-        int filteroptions = IKFO_CheckEnvCollisions;
-        string cmd;
-        RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-        if( !pmanip->GetIkSolver() ) {
-            throw openrave_exception(str(boost::format("FindIKWithFilters: manipulator %s has no ik solver set")%robot->GetActiveManipulator()->GetName()));
-        }
-
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "cone" ) {
-                Vector vlocalaxis, vworldaxis;
-                dReal anglelimit;
-                sinput >> vlocalaxis.x >> vlocalaxis.y >> vlocalaxis.z >> vworldaxis.x >> vworldaxis.y >> vworldaxis.z >> anglelimit;
-                filterfn = boost::bind(&BaseManipulation::_FilterWorldAxisIK,shared_problem(),_1,_2,_3, vlocalaxis, vworldaxis, RaveCos(anglelimit));
-            }
-            else if( cmd == "solveall" ) {
-                bSolveAll = true;
-            }
-            else if( cmd == "ikparam" ) {
-                sinput >> ikparam;
-            }
-            else if( cmd == "filteroptions" ) {
-                sinput >> filteroptions;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if( !filterfn ) {
-            throw openrave_exception("FindIKWithFilters: no filter function set");
-        }
-        UserDataPtr filterhandle = robot->GetActiveManipulator()->GetIkSolver()->RegisterCustomFilter(0,filterfn);
-        vector< vector<dReal> > vsolutions;
-        if( bSolveAll ) {
-            if( !pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions)) {
-                return false;
-            }
-        }
-        else {
-            vsolutions.resize(1);
-            if( !pmanip->FindIKSolution(ikparam,vsolutions[0],filteroptions)) {
-                return false;
-            }
-        }
-        sout << vsolutions.size() << " ";
-        FOREACH(itsol,vsolutions) {
-            FOREACH(it, *itsol) {
-                sout << *it << " ";
-            }
-        }
-        return true;
-    }
-
     bool GrabBody(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("BaseManipulation GrabBody command is deprecated. Use Robot::Grab (11/03/07)\n");
@@ -1124,14 +1048,6 @@ protected:
             return false;
         }
         return !!sinput;
-    }
-
-    IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
-    {
-        if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
-            return IKFR_Reject;
-        }
-        return IKFR_Success;
     }
 
     RobotBasePtr robot;
