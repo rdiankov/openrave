@@ -23,8 +23,8 @@
     </Geom>
     <mass type="custom">
       <total>8.3936</total>
-      <com>0.0006286 -0.1326795 0.0003506</com>
-      <!-- inertia>0.2070507372 -0.0002626542 -0.0000931687 -0.0002626542 0.0920367003 0.0006365542 -0.0000931687 0.0006365542 0.2429198516</inertia -->
+      <com>0.3506e-3 132.6795e-3 0.6286e-3</com>
+      <inertia>95157.4294e-6   246.1404e-6   -95.0183e-6 246.1404e-6 92032.3524e-6  -962.6725e-6  -95.0183e-6  -962.6725e-6 59290.5997e-6</inertia>
     </mass>
   </Body>
 
@@ -37,6 +37,8 @@
     <maxvel>1.5708</maxvel>
     <weight>1.92154</weight>
     <resolution>0.25</resolution>
+    <rotorinertia>0.0 0.201 0.0</rotorinertia>
+    <maxtorque>77.3</maxtorque>
   </Joint>
   <Body name="wam2" type="dynamic">
     <offsetfrom>wam1</offsetfrom>
@@ -48,6 +50,8 @@
     </Geom>
     <mass type="custom">
       <total>4.8487</total>
+      <com>-0.2230e-3 -21.3924e-3 13.3754e-3</com>
+      <inertia>29326.8098e-6   -43.3994e-6  -129.2942e-6  -43.3994e-6 20781.5826e-6  1348.6924e-6 -129.2942e-6  1348.6924e-6 22807.3271e-6</inertia>
     </mass>
   </Body>
   <Joint name="Shoulder_Pitch" type="hinge">
@@ -59,6 +63,8 @@
     <weight>0.91739941</weight>
     <maxvel>1.0472</maxvel>
     <resolution>0.5</resolution>
+    <rotorinertia>0 0.182 0</rotorinertia>
+    <maxtorque>160.6</maxtorque>
   </Joint>
   <Body name="wam3" type="dynamic">
     <offsetfrom>wam2</offsetfrom>
@@ -69,6 +75,8 @@
     </Geom>
     <mass type="custom">
       <total>1.7251</total>
+      <com>-38.7565e-3 217.9078e-3 0.0252e-3</com>
+      <inertia>56662.2970e-6 -2321.6892e-6     8.2125e-6  -2321.6892e-6  3158.0509e-6   -16.6307e-6  8.2125e-6   -16.6307e-6 56806.6024e-6</inertia>
     </mass>
   </Body>
   <Joint name="Shoulder_Roll" type="hinge">
@@ -80,6 +88,8 @@
     <weight>0.882397</weight>
     <maxvel>2.0944</maxvel>
     <resolution>0.5</resolution>
+    <rotorinertia>0 0.067 0</rotorinertia>
+    <maxtorque>95.6</maxtorque>
   </Joint>
   <Body name="wam4" type="dynamic">
     <offsetfrom>wam3</offsetfrom>
@@ -90,7 +100,9 @@
       <Render>models/WAM/wam4.iv  1.0</Render>
     </Geom>
     <mass type="custom">
-      <total>0.4809</total>
+      <total>2.17266212</total>
+      <com>0.00553408 0.00006822 0.11927695</com>
+      <inertia>0.01067491  0.00004503 -0.00135557 0.00004503  0.01058659 -0.00011002  -0.00135557 -0.00011002  0.00282036</inertia>
     </mass>
   </Body>
   <Joint name="Elbow" type="hinge">
@@ -102,6 +114,8 @@
     <weight>0.45504</weight>
     <maxvel>2.0944</maxvel>
     <resolution>1</resolution>
+    <rotorinertia>0 0.034 0</rotorinertia>
+    <maxtorque>29.4</maxtorque>
   </Joint>
   <Body name="wam5" type="dynamic">
     <offsetfrom>wam4</offsetfrom>
@@ -112,7 +126,9 @@
       <Render>models/WAM/wam5.iv  1.0</Render>
     </Geom>
     <mass type="custom">
-      <total>1.6015</total>
+      <total>0.35655692</total>
+      <com>0.00005483 0.02886286 0.00148493</com>
+      <inertia> 0.00037112 -0.00000008 -0.00000003  -0.00000008  0.00019434 -0.00001613  -0.00000003 -0.00001613  0.00038209</inertia>
     </mass>
   </Body>
   <Joint name="Wrist_Yaw" type="hinge">
@@ -124,6 +140,8 @@
     <weight>0.40141</weight>
     <maxvel>4.1888</maxvel>
     <resolution>1.11</resolution>
+    <rotorinertia>0 0.0033224 0</rotorinertia>
+    <maxtorque>11.6</maxtorque>
   </Joint>
 
   <Body name="wam6" type="dynamic">
@@ -135,7 +153,9 @@
       <Render>models/WAM/wam6.iv  1.0</Render>
     </Geom>
     <mass type="custom">
-      <total>0.3067</total>
+      <total>0.40915886</total>
+      <com>-0.00005923 -0.01686123 0.02419052</com>
+      <inertia>0.00054889  0.00000019 -0.00000010   0.00000019  0.00023846 -0.00004430  -0.00000010 -0.00004430  0.00045133</inertia>
     </mass>
   </Body>
 
@@ -148,17 +168,21 @@
     <weight>0.22841245</weight>
     <maxvel>4.1888</maxvel>
     <resolution>1.62</resolution>
+    <rotorinertia>0 0.0033224 0</rotorinertia>
+    <maxtorque>11.6</maxtorque>
   </Joint>
   <Body name="wam7" type="dynamic">
     <offsetfrom>wam6</offsetfrom>
     <Translation>0.0  0.0  0.0</Translation>
     <RotationMat>1 0 0 0 0 -1 0 1 0</RotationMat>
     <Geom type="trimesh">
-      <data>models/WAM/wam7.iv 1.0</data>
-      <Render>models/WAM/wam7.iv 1.0</Render>
+      <data>models/WAM/wam7_nohand.iv 1.0</data>
+      <Render>models/WAM/wam7_nohand.iv 1.0</Render>
     </Geom>
     <mass type="custom">
-      <total>1.18</total>
+      <total>0.07548270</total>
+      <com>0.00014836 0.00007252 -0.00335185</com>
+      <inertia>0.00003911 0.00000019 0.00000000  0.00000019 0.00003877 0.00000000  0.00000000 0.00000000 0.00007614</inertia>
     </mass>
   </Body>
 
@@ -171,6 +195,8 @@
     <weight>0.20178</weight>
     <maxvel>1.0472</maxvel>
     <resolution>1.62</resolution>
+    <rotorinertia>0 0 0.000466939</rotorinertia>
+    <maxtorque>2.7</maxtorque>
   </Joint>
 
   <adjacent>wam1 wam3</adjacent>

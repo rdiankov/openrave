@@ -51,6 +51,7 @@ code-bases.
    architecture/index
    robots_overview
    geometric_conventions
+   speed_up_planning
 
 History
 -------

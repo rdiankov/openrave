@@ -374,6 +374,8 @@ void MainOpenRAVEThread()
 
 void sigint_handler(int sig)
 {
+    // if signal comes from viewer thread, then this could freeze openrave since this function
+    // will call the viewer to exit, but it will be blocked waiting for this function to finish
     s_bThreadDestroyed = true;
     RaveDestroy();
     s_penv.reset();

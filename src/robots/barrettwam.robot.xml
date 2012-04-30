@@ -3,6 +3,17 @@
   <KinBody file="wam7.kinbody.xml"/>
   <KinBody file="barretthand.kinbody.xml"/>
 
+ <kinbody>
+   <body name="handbase">
+     <offsetfrom>wam7</offsetfrom>
+   </body>
+   <joint type="hinge" enable="false">
+     <body>wam7</body>
+     <body>handbase</body>
+     <limits>0 0</limits>
+   </joint>
+ </kinbody>
+
   <Manipulator name="arm">
     <base>wam0</base>
     <effector>wam7</effector>
