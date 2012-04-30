@@ -1,11 +1,12 @@
 <KinBody name="BarrettHand">
   <Body name="handbase" type="dynamic">
     <Geom type="trimesh" modifiable="false">
+      <Translation>0.0  0.0  -0.06</Translation>
       <data>models/barrett/palm.iv 1</data>
       <Render>models/barrett/palm.iv 1</Render>
     </Geom>
     <Geom type="trimesh" modifiable="false">
-      <Translation>0.0  0.0  0.1515</Translation>
+      <Translation>0.0  0.0  0.0915</Translation>
       <RotationMat>-1 0 0 0 -1 0 0 0 1</RotationMat>
       <data>models/barrett/link1.iv 0.001</data>
       <Render>models/barrett/link1.iv 0.001</Render>
@@ -13,7 +14,7 @@
     <mass type="custom">
       <!-- cylinder -->
       <total>1.1</total>
-      <com>0 0 0.10796</com>
+      <com>0 0 0.04796</com>
       <inertia>0.000556875 0 0 0 0.000556875 0 0 0 0.00111375</inertia>
     </mass>
   </Body>
@@ -21,7 +22,7 @@
   <!-- finger 0-->
   <Body name="Finger0-0" type="dynamic">
     <offsetfrom>handbase</offsetfrom>
-    <Translation>0 -0.025 0.1515</Translation>
+    <Translation>0 -0.025 0.0915</Translation>
     <Geom type="trimesh" modifiable="false">
       <data>models/barrett/link1.iv 0.001</data>
       <Render>models/barrett/link1.iv 0.001</Render>
@@ -90,7 +91,7 @@
   <!-- finger 1-->
   <Body name="Finger1-0" type="dynamic">
     <offsetfrom>handbase</offsetfrom>
-    <Translation>0 0.025 0.1515</Translation>
+    <Translation>0 0.025 0.0915</Translation>
     <Geom type="trimesh" modifiable="false">
       <data>models/barrett/link1.iv 0.001</data>
       <Render>models/barrett/link1.iv 0.001</Render>
@@ -160,7 +161,7 @@
   <!-- finger 2-->
   <Body name="Finger2-1" type="dynamic" >
     <offsetfrom>handbase</offsetfrom>
-    <Translation>-0.05 0 0.1515</Translation>
+    <Translation>-0.05 0 0.0915</Translation>
     <RotationMat>-1 0 0 0 0 1 0 1 0</RotationMat>
     <Geom type="trimesh" modifiable="false">
       <Translation>0 0 0</Translation>

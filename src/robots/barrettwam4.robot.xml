@@ -5,9 +5,9 @@
  <kinbody>
    <body name="handbase">
      <offsetfrom>wam4</offsetfrom>
-     <translation>-0.045 0 0.29</translation>
+     <translation>0 0 0.35</translation>
    </body>
-   <joint type="hinge" enable="false">
+   <joint name="dummyhand" type="hinge" enable="false">
      <body>wam4</body>
      <body>handbase</body>
      <limits>0 0</limits>
@@ -20,6 +20,6 @@
     <joints>JF1 JF2 JF3 JF4</joints>
     <closingdirection>1 1 1 0</closingdirection>
     <direction>0 0 1</direction>
-    <Translation>-0.045 0 0.35</Translation>
+    <Translation>0 0 0.35</Translation>
   </Manipulator>
 </Robot>
