@@ -61,19 +61,19 @@ struct AnimBone;
 struct FramePivot;
 }
 
-/** The XFileParser reads a XFile either in text or binary form and builds a temporary
+/** The XFileParserOpenRAVE reads a XFile either in text or binary form and builds a temporary
  * data structure out of it.
  */
-class XFileParser
+class XFileParserOpenRAVE
 {
 public:
     /** Constructor. Creates a data structure out of the XFile given in the memory block.
      * @param pBuffer Null-terminated memory buffer containing the XFile
      */
-    XFileParser( const std::string& pBuffer);
+    XFileParserOpenRAVE( const std::string& pBuffer);
 
     /** Destructor. Destroys all imported data along with it */
-    ~XFileParser();
+    ~XFileParserOpenRAVE();
 
     /** Returns the temporary representation of the imported data */
     const XFile::Scene* GetImportedData() const {
