@@ -391,29 +391,6 @@ public:
     }
 };
 
-class PyIkReturn
-{
-public:
-    PyIkReturn(IkReturn& ret) : _ret(ret) {
-    }
-    PyIkReturn(IkReturnAction action) : _ret(action) {
-    }
-    object GetUserData() {
-        return openravepy::GetUserData(_ret._userdata);
-    }
-    object GetMapData() {
-        boost::python::dict odata;
-        FOREACHC(it,_ret._mapdata) {
-            odata[it->first] = toPyArray(it->second);
-        }
-        return odata;
-    }
-
-    IkReturn _ret;
-};
-
-typedef boost::shared_ptr<PyIkReturn> PyIkReturnPtr;
-
 class PyIkParameterization
 {
 public:
@@ -690,16 +667,6 @@ public:
 };
 
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
-
-bool ExtractIkReturn(object o, IkReturn& ikfr)
-{
-    extract<PyIkReturnPtr > pyikfr(o);
-    if( pyikfr.check() ) {
-        ikfr = ((PyIkReturnPtr)pyikfr)->_ret;
-        return true;
-    }
-    return false;
-}
 
 bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
     extract<PyIkParameterizationPtr > pyikparam(o);
@@ -1312,16 +1279,6 @@ void init_openravepy_global()
     .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
     .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
     ;
-    enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
-    .value("Distance",CO_Distance)
-    .value("UseTolerance",CO_UseTolerance)
-    .value("Contacts",CO_Contacts)
-    .value("RayAnyHit",CO_RayAnyHit)
-    .value("ActiveDOFs",CO_ActiveDOFs);
-    enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
-    .value("DefaultAction",CA_DefaultAction)
-    .value("Ignore",CA_Ignore)
-    ;
     enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
     .value("Bodies",Clone_Bodies)
     .value("Viewer",Clone_Viewer)
@@ -1331,24 +1288,6 @@ void init_openravepy_global()
     ;
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
     .value("SelfCollisions",PEO_SelfCollisions)
-    ;
-    enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
-    .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
-    .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
-    .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
-    .value("IgnoreCustomFilters",IKFO_IgnoreCustomFilters)
-    .value("IgnoreEndEffectorCollisions",IKFO_IgnoreEndEffectorCollisions)
-    ;
-    enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
-    .value("Success",IKRA_Success)
-    .value("Reject",IKRA_Reject)
-    .value("Quit",IKRA_Quit)
-    .value("QuitEndEffectorCollision",IKRA_QuitEndEffectorCollision)
-    .value("RejectKinematics",IKRA_RejectKinematics)
-    .value("RejectEnvCollision",IKRA_RejectEnvCollision)
-    .value("RejectJointLimits",IKRA_RejectJointLimits)
-    .value("RejectKinematicsPrecision",IKRA_RejectKinematicsPrecision)
-    .value("RejectCustomFilter",IKRA_RejectCustomFilter)
     ;
 
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
@@ -1493,15 +1432,6 @@ void init_openravepy_global()
     }
 
     openravepy::spec_from_group();
-
-    {
-        scope ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
-                         .def(init<IkReturnAction>(args("action")))
-                         .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
-                         .def("GetMapData",&PyIkReturn::GetMapData, "Returns a dictionary copy for IkReturn::_mapdata")
-        ;
-    }
-
 
     {
         int (PyIkParameterization::*getdof1)() = &PyIkParameterization::GetDOF;

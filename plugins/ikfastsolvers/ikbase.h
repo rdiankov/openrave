@@ -287,25 +287,6 @@ protected:
                         }
                     }
                 }
-//                if( _listGrabbedSavedStates.size() > 0 && !!report->plink1 && !!report->plink2 ) {
-//                    // two attached bodies can be colliding
-//                    bool bAttached1=false,bAttached2=false;
-//                    KinBodyPtr pbody1 = report->plink1->GetParent(), pbody2 = report->plink1->GetParent();
-//                    FOREACH(it,_listGrabbedSavedStates) {
-//                        if( !bAttached1 && it->GetBody() == pbody1 ) {
-//                            bAttached1 = true;
-//                            if( bAttached1 && bAttached2 ) {
-//                                return CA_Ignore;
-//                            }
-//                        }
-//                        else if( !bAttached2 && it->GetBody() == pbody2 ) {
-//                            bAttached2 = true;
-//                            if( bAttached1 && bAttached2 ) {
-//                                return CA_Ignore;
-//                            }
-//                        }
-//                    }
-//                }
             }
             return CA_DefaultAction;
         }
@@ -333,6 +314,9 @@ protected:
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,result,filterreturn,boost::ref(stateCheck)));
+        if( !!filterreturn ) {
+            filterreturn->_action = retaction;
+        }
         return retaction == IKRA_Success;
     }
 
@@ -378,6 +362,9 @@ protected:
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
         IkReturnAction retaction = _SolveSingle(param,vfree,q0,filteroptions,result,filterreturn,stateCheck);
+        if( !!filterreturn ) {
+            filterreturn->_action = retaction;
+        }
         return retaction==IKRA_Success;
     }
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& qSolutions, boost::shared_ptr< std::vector<IkReturnPtr> > filterreturns)
@@ -443,6 +430,7 @@ private:
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
         int iter = 0;
         dReal fFreeInc = _vFreeInc.at(freeindex);
+        int allres = IKRA_Reject;
         while(1) {
             dReal curphi = startphi;
             if( iter & 1 ) { // increment
@@ -476,6 +464,7 @@ private:
             if( !(res & IKRA_Reject) ) {
                 return res;
             }
+            allres |= res;
         }
 
         // explicitly test 0 since many edge cases involve 0s
@@ -485,9 +474,10 @@ private:
             if( !(res & IKRA_Reject) ) {
                 return res;
             }
+            allres |= res;
         }
 
-        return IKRA_Reject;
+        return static_cast<IkReturnAction>(allres);
     }
 
     bool _CallIK(const IkParameterization& param, const vector<IKReal>& vfree, std::vector<Solution>& vsolutions)

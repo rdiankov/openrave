@@ -360,10 +360,10 @@ private:
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
                 if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %f < %f, time=%f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
+                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
                 }
                 if( curvalues.at(i) > _vupper[0][i]+g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %f > %f, time=%f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
+                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %e > %e, time=%f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
                 }
             }
         }

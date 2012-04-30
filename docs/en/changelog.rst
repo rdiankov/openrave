@@ -25,7 +25,7 @@ Core
 
 * Added velocities enumerations to IkParameterizationType (like Transform6DVelocity), coordinate transforms can handle velocities.
 
-* :meth:`.IkSolver.Solve` can output custom data returned from IK filters as a :class:`.IkReturn` object.
+* :meth:`.IkSolver.Solve` can output reason of IK failures via :class:`.IkReturnAction` and custom data returned from IK filters through a :class:`.IkReturn` object.
 
 * Added IK solver error codes for notifying user where IK failed.
 

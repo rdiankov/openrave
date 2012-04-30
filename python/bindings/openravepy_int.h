@@ -444,7 +444,6 @@ public:
 
 object toPyGraphHandle(const GraphHandlePtr p);
 object toPyUserData(UserDataPtr p);
-bool ExtractIkReturn(object o, IkReturn& ikfr);
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);
@@ -545,6 +544,8 @@ protected:
 
 namespace openravepy
 {
+
+bool ExtractIkReturn(object o, IkReturn& ikfr);
 
 object GetUserData(UserDataPtr pdata);
 

@@ -118,6 +118,16 @@ class TestIkSolver(EnvironmentSetup):
         joint.SetLimits([-pi],[pi])
         sols=ikmodel.manip.FindIKSolutions(T,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreJointLimits)
 
+    def test_returnactions(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterization.Type.Transform6D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        solver=ikmodel.manip.GetIkSolver()
+        
     def test_customikvalues(self):
         env=self.env
         self.LoadEnv('data/lab1.env.xml')
