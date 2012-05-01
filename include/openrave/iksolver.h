@@ -85,7 +85,6 @@ public:
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
 };
-typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.
    \ingroup interfaces

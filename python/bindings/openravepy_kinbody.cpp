@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <openrave/utils.h>
+
 class PyKinBody : public PyInterfaceBase
 {
 protected:
@@ -1525,91 +1527,168 @@ public:
             return toPyArray(values);
         }
 
-        object FindIKSolution(object oparam, int filteroptions) const
+        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false) const
         {
-            vector<dReal> solution;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolution(ikparam,solution,filteroptions) ) {
-                    return object();
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ikparam,solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
-                return object();
-            }
-            return toPyArray(solution);
-        }
-
-        object FindIKSolution(object oparam, object freeparams, int filteroptions) const
-        {
-            vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
-            IkParameterization ikparam;
-            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
-            if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolution(ikparam,vfreeparams,solution,filteroptions) ) {
-                    return object();
+            else {
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ExtractTransform(oparam),filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
-            // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
-                return object();
-            }
-            return toPyArray(solution);
         }
 
-        object FindIKSolutions(object oparam, int filteroptions) const
+        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false) const
         {
-            std::vector<std::vector<dReal> > vsolutions;
-            IkParameterization ikparam;
-            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
-            if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
-                    return numeric::array(boost::python::list());
-                }
-            }
-            // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
-                return numeric::array(boost::python::list());
-            }
-
-            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
-            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-            FOREACH(itsol,vsolutions) {
-                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-                std::copy(itsol->begin(),itsol->end(),ppos);
-                ppos += itsol->size();
-            }
-            return static_cast<numeric::array>(handle<>(pysolutions));
-        }
-
-        object FindIKSolutions(object oparam, object freeparams, int filteroptions) const
-        {
-            std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
-                    return numeric::array(boost::python::list());
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,vfreeparams,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ikparam,vfreeparams,solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
-                return numeric::array(boost::python::list());
+            else {
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,vfreeparams,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
+                }
             }
+        }
 
-            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
-            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-            FOREACH(itsol,vsolutions) {
-                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-                std::copy(itsol->begin(),itsol->end(),ppos);
-                ppos += itsol->size();
+        object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false) const
+        {
+            IkParameterization ikparam;
+            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+            if( ikreturn ) {
+                std::vector<IkReturnPtr> vikreturns;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,filteroptions,vikreturns) ) {
+                        return boost::python::list();
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),filteroptions,vikreturns) ) {
+                    return boost::python::list();
+                }
+
+                boost::python::list oikreturns;
+                FOREACH(it,vikreturns) {
+                    oikreturns.append(openravepy::toPyIkReturn(**it));
+                }
+                return oikreturns;
             }
-            return static_cast<numeric::array>(handle<>(pysolutions));
+            else {
+                std::vector<std::vector<dReal> > vsolutions;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
+                        return numeric::array(boost::python::list());
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
+                    return numeric::array(boost::python::list());
+                }
+
+                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                FOREACH(itsol,vsolutions) {
+                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    std::copy(itsol->begin(),itsol->end(),ppos);
+                    ppos += itsol->size();
+                }
+                return static_cast<numeric::array>(handle<>(pysolutions));
+            }
+        }
+
+        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false) const
+        {
+            vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
+            IkParameterization ikparam;
+            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+            if( ikreturn ) {
+                std::vector<IkReturnPtr> vikreturns;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,filteroptions,vikreturns) ) {
+                        return boost::python::list();
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams,filteroptions,vikreturns) ) {
+                    return boost::python::list();
+                }
+
+                boost::python::list oikreturns;
+                FOREACH(it,vikreturns) {
+                    oikreturns.append(openravepy::toPyIkReturn(**it));
+                }
+                return oikreturns;
+            }
+            else {
+                std::vector<std::vector<dReal> > vsolutions;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
+                        return numeric::array(boost::python::list());
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
+                    return numeric::array(boost::python::list());
+                }
+
+                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                FOREACH(itsol,vsolutions) {
+                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    std::copy(itsol->begin(),itsol->end(),ppos);
+                    ppos += itsol->size();
+                }
+                return static_cast<numeric::array>(handle<>(pysolutions));
+            }
         }
 
         object GetIkParameterization(object oparam, bool inworld=true)
@@ -1806,7 +1885,7 @@ public:
 
     PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {
     }
-    PyRobotBase(const PyRobotBase& r) : PyKinBody(r._probot,r._pyenv) {
+    PyRobotBase(const PyRobotBase &r) : PyKinBody(r._probot,r._pyenv) {
         _probot = r._probot;
     }
     virtual ~PyRobotBase() {
@@ -2311,6 +2390,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolutions, 3, 4)
 
 namespace openravepy
 {
@@ -2880,10 +2963,10 @@ void init_openravepy_kinbody()
         ;
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
 
-        object (PyRobotBase::PyManipulator::*pmanipik)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
-        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision2)(object,PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
@@ -2902,10 +2985,10 @@ void init_openravepy_kinbody()
         .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
-        .def("FindIKSolution",pmanipik,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int"))
-        .def("FindIKSolution",pmanipikf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int"))
-        .def("FindIKSolutions",pmanipiks,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int"))
-        .def("FindIKSolutions",pmanipiksf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int"))
+        .def("FindIKSolution",pmanipik,FindIKSolution_overloads(args("param","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int")))
+        .def("FindIKSolution",pmanipikf,FindIKSolutionFree_overloads(args("param","freevalues","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int")))
+        .def("FindIKSolutions",pmanipiks,FindIKSolutions_overloads(args("param","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int")))
+        .def("FindIKSolutions",pmanipiksf,FindIKSolutionsFree_overloads(args("param","freevalues","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int")))
         .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(args("iktype","inworld"), GetIkParameterization_doc.c_str()))
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))

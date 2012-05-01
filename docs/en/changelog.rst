@@ -27,7 +27,7 @@ Core
 
 * Added IK solver error codes for notifying user where IK failed.
 
-* :meth:`.IkSolver.Solve` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
+* :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
 
 Database

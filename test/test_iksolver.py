@@ -132,27 +132,38 @@ class TestIkSolver(EnvironmentSetup):
             ikparam = ikmodel.manip.GetIkParameterization(IkParameterizationType.Transform6D)
             RaveSetDebugLevel(DebugLevel.Verbose)
             solexpected = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
+            ikreturn = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions,ikreturn=True)
+            assert( transdist(solexpected, ikreturn.GetSolution()) <= g_epsilon )
+            
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            ikreturns = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions,ikreturn=True)
+            assert(len(sols) == len(ikreturns))
+            
             Tbaseinv = linalg.inv(ikmodel.manip.GetBase().GetTransform())
             ikparam2 = ikparam.Transform(Tbaseinv)
             ikreturn = solver.Solve(ikparam2,robot.GetDOFValues(ikmodel.manip.GetArmIndices()), IkFilterOptions.CheckEnvCollisions)
             assert( transdist(solexpected, ikreturn.GetSolution()) <= g_epsilon )
             assert(ikreturn.GetAction() == IkReturnAction.Success)
-
+            
             ikreturn = solver.Solve(ikparam2,None, IkFilterOptions.CheckEnvCollisions)
             assert(ikreturn.GetAction() == IkReturnAction.Success)
-
+            
             T = eye(4)
             T[2,3] = 0.5
             ikreturn = solver.Solve(ikparam2.Transform(T),None, IkFilterOptions.CheckEnvCollisions)
             assert(ikreturn.GetAction() == IkReturnAction.RejectKinematics)
-
+            
             robot.SetDOFValues([pi/2,1],[1,3])
             ikparam = ikmodel.manip.GetIkParameterization(IkParameterizationType.Transform6D)
             solexpected = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(solexpected is None)
+            expectedaction = int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits)
+            ikreturn = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions,ikreturn=True)
+            assert(ikreturn.GetAction()==expectedaction)
+            
             ikparam2 = ikparam.Transform(Tbaseinv)
             ikreturn = solver.Solve(ikparam2,None, IkFilterOptions.CheckEnvCollisions)
-            assert( ikreturn.GetAction() == int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits))
+            assert( ikreturn.GetAction() == expectedaction)
         
     def test_customikvalues(self):
         env=self.env

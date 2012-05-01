@@ -616,6 +616,7 @@ class ViewerBase;
 class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
+class IkReturn;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -664,6 +665,9 @@ typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
+
+typedef boost::shared_ptr<IkReturn> IkReturnPtr;
+typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {

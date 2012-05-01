@@ -546,6 +546,7 @@ namespace openravepy
 {
 
 bool ExtractIkReturn(object o, IkReturn& ikfr);
+object toPyIkReturn(const IkReturn& ret);
 
 object GetUserData(UserDataPtr pdata);
 

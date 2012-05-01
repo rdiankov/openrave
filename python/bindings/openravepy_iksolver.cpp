@@ -201,6 +201,11 @@ bool ExtractIkReturn(object o, IkReturn& ikfr)
     return false;
 }
 
+object toPyIkReturn(const IkReturn& ret)
+{
+    return object(PyIkReturnPtr(new PyIkReturn(ret)));
+}
+
 IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr pyIkSolver)
 {
     return !pyIkSolver ? IkSolverBasePtr() : pyIkSolver->GetIkSolver();
