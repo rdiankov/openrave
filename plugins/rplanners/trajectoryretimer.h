@@ -292,7 +292,7 @@ public:
                         }
                     }
                     if( _parameters->_hastimestamps ) {
-                        if( *(itdata+_timeoffset) < mintime ) {
+                        if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
                             RAVELOG_DEBUG(str(boost::format("point %d/%d has unreachable minimum time %f > %f")%i%numpoints%(*(itdata+_timeoffset))%mintime));
                             return PS_Failed;
                         }
