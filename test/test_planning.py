@@ -423,13 +423,13 @@ class RunPlanning(EnvironmentSetup):
         ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
             ikmodel.autogenerate()
-        gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug1'))
+        gmodel = databases.grasping.GraspingModel(robot=robot,target=env.GetKinBody('mug4'))
         if not gmodel.load():
             # don't do multithreaded yet since ode on some ubuntu distors does not support it
             gmodel.numthreads = 2 # at least two threads
             gmodel.generate(approachrays=gmodel.computeBoxApproachRays(delta=0.04))
             gmodel.save()
-            
+                
         with env:
             basemanip = interfaces.BaseManipulation(robot)
             taskmanip = interfaces.TaskManipulation(robot,graspername=gmodel.grasper.plannername)
@@ -452,7 +452,7 @@ class RunPlanning(EnvironmentSetup):
             expectedsteps = floor(approachoffset/stepsize)
             with gmodel.target:
                 gmodel.target.Enable(False)
-                traj = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps,execute=False,outputtrajobj=True)
+                traj = basemanip.MoveHandStraight(direction=direction, ignorefirstcollision=0,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps,execute=False,outputtrajobj=True)
             with robot:
                 robot.SetActiveDOFValues(traj.GetWaypoint(-1,robot.GetActiveConfigurationSpecification()))
                 Tfinal = gmodel.manip.GetTransform()
@@ -461,6 +461,11 @@ class RunPlanning(EnvironmentSetup):
             Tcurgrasp = gmodel.manip.GetTransform()
             assert(transdist(Tgoalgrasp,Tcurgrasp) <= g_epsilon )
 
+            # grasp, and try to lift up
+            robot.Grab(gmodel.target)
+            trajup = basemanip.MoveHandStraight(direction=[0,0,1], stepsize=0.003,minsteps=1,maxsteps=60,execute=False,outputtrajobj=True)
+            robot.Release(gmodel.target)
+                        
             gmodel.target.Enable(False)
             
             # try another

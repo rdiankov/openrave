@@ -306,11 +306,12 @@ class GraspPlanning:
                 try:
                     # should not allow any error since destination goal depends on accurate relative placement
                     # of the gripper with respect to the object
-                    print repr(robot.GetDOFValues())
-                    print repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()))
                     with gmodel.target:
+                        print 'current robot', repr(robot.GetDOFValues())
+                        print 'global direction',repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection())), gmodel.getGlobalApproachDir(grasp)
+                        print 'local direction',grasp[gmodel.graspindices.get('igraspdir')]
                         gmodel.target.Enable(False)
-                        res = self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp), ignorefirstcollision=False,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
+                        res = self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp), ignorefirstcollision=0,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
                 except planning_error:
                     print 'use a planner to move the rest of the way'
                     try:

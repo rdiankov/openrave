@@ -304,7 +304,7 @@ protected:
             _mjacobian.resize(boost::extents[0][0]);
             _mquatjacobian.resize(boost::extents[0][0]);
         }
-        _ikprev = _tbaseinv * _manip->GetIkParameterization(IKP_Transform6D);
+        _ikprev = _manip->GetIkParameterization(IKP_Transform6D,false);
         _vprevsolution = vsolution;
     }
 
@@ -375,7 +375,7 @@ protected:
             //RobotBase::RobotStateSaver savestate(_robot);
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
             _robot->SetActiveDOFValues(vmidsolution);
-            IkParameterization ikmidreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
+            IkParameterization ikmidreal = pmanip->GetIkParameterization(ikp.GetType(),false);
 
             IkParameterization ikmidest;
             ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
@@ -383,7 +383,8 @@ protected:
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
             dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
             // note that ikp might be a little off from vsolution due to the ik solver!
-            if( middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+            // realdist2 should also be great or otherwise we could be picking up noise in the subtraction
+            if( realdist2 > g_fEpsilon && middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
                 return IKRA_Reject;
             }

@@ -215,7 +215,7 @@ protected:
 
     bool MoveHandStraight(ostream& sout, istream& sinput)
     {
-        Vector direction = Vector(0,1,0);
+        Vector direction = Vector(0,0,1);
         string strtrajfilename;
         bool bExecute = true;
         int minsteps = 0;
@@ -227,7 +227,7 @@ protected:
 
         WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
-        params->ignorefirstcollision = 0.04;     // 0.04m?
+        params->ignorefirstcollision = 0.1;     // 0.1**2 * 5 * 0.5 = 0.025 m
         string plannername = "workspacetrajectorytracker";
         params->_fStepLength = 0.01;
         string cmd;
@@ -293,7 +293,7 @@ protected:
         }
 
         params->minimumcompletetime = params->_fStepLength * minsteps;
-        RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
+        RAVELOG_DEBUG(str(boost::format("Starting MoveHandStraight dir=(%f,%f,%f)...")%direction.x%direction.y%direction.z));
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
@@ -348,7 +348,7 @@ protected:
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
-        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+        if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             planningutils::VerifyTrajectory(params,poutputtraj);
         }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
