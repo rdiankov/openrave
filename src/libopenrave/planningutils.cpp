@@ -829,12 +829,21 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         itdh->joint = *itjoint;
         itdh->parentindex = -1;
         if( !!plink ) {
-            for(size_t iparent = 0; iparent < pbody->GetDependencyOrderedJoints().size(); ++iparent) {
-                if( pbody->GetDependencyOrderedJoints()[iparent]->GetHierarchyChildLink() == plink ) {
-                    itdh->parentindex = iparent;
-                    tparent = vparameters.at(iparent).transform;
+            std::vector<KinBody::JointPtr> vparentjoints;
+            pbody->GetChain(0,plink->GetIndex(),vparentjoints);
+            if( vparentjoints.size() > 0 ) {
+                // get the first non-passive joint
+                int index = (int)vparentjoints.size()-1;
+                while(index >= 0 && vparentjoints[index]->GetJointIndex() < 0 ) {
+                    index--;
+                }
+                if( index >= 0 ) {
+                    // search for it in pbody->GetDependencyOrderedJoints()
+                    std::vector<KinBody::JointPtr>::const_iterator itjoint = find(pbody->GetDependencyOrderedJoints().begin(),pbody->GetDependencyOrderedJoints().end(),vparentjoints[index]);
+                    BOOST_ASSERT( itjoint != pbody->GetDependencyOrderedJoints().end() );
+                    itdh->parentindex = itjoint - pbody->GetDependencyOrderedJoints().begin();
+                    tparent = vparameters.at(itdh->parentindex).transform;
                     tparentinv = tparent.inverse();
-                    break;
                 }
             }
         }

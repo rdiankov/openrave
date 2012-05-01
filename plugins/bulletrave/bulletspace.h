@@ -140,7 +140,7 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0001)
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.000001)
     {
         // create all ode bodies and joints
         if( !pinfo ) {
