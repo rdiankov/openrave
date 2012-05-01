@@ -39,6 +39,13 @@ bool IkReturn::Append(const IkReturn& r)
             }
         }
     }
+    if( r._vsolution.size() > 0 ) {
+        if( _vsolution.size() > 0 ) {
+            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting anyway\n");
+            bclashing = true;
+        }
+        _vsolution = r._vsolution;
+    }
     return bclashing;
 }
 
@@ -46,6 +53,7 @@ void IkReturn::Clear()
 {
     _mapdata.clear();
     _userdata.reset();
+    _vsolution.resize(0);
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
@@ -71,6 +79,68 @@ typedef boost::shared_ptr<CustomIkSolverFilterData> CustomIkSolverFilterDataPtr;
 bool CustomIkSolverFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
 {
     return boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data1)->_priority;
+}
+
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+{
+    if( !ikreturn ) {
+        return Solve(param,q0,filteroptions,boost::shared_ptr< vector<dReal> >());
+    }
+    ikreturn->Clear();
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    if( !Solve(param,q0,filteroptions,psolution) ) {
+        ikreturn->_action = IKRA_Reject;
+        return false;
+    }
+    ikreturn->_action = IKRA_Success;
+    return true;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
+{
+    ikreturns.resize(0);
+    std::vector< std::vector<dReal> > vsolutions;
+    if( !SolveAll(param,filteroptions,vsolutions) ) {
+        return false;
+    }
+    ikreturns.resize(vsolutions.size());
+    for(size_t i = 0; i < ikreturns.size(); ++i) {
+        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i]->_vsolution = vsolutions[i];
+        ikreturns[i]->_action = IKRA_Success;
+    }
+    return vsolutions.size() > 0;
+}
+
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+{
+    if( !ikreturn ) {
+        return Solve(param,q0,vFreeParameters,filteroptions,boost::shared_ptr< vector<dReal> >());
+    }
+    ikreturn->Clear();
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    if( !Solve(param,q0,vFreeParameters,filteroptions,psolution) ) {
+        ikreturn->_action = IKRA_Reject;
+        return false;
+    }
+    ikreturn->_action = IKRA_Success;
+    return true;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
+{
+    ikreturns.resize(0);
+    std::vector< std::vector<dReal> > vsolutions;
+    if( !SolveAll(param,vFreeParameters,filteroptions,vsolutions) ) {
+        return false;
+    }
+    ikreturns.resize(vsolutions.size());
+    for(size_t i = 0; i < ikreturns.size(); ++i) {
+        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i]->_vsolution = vsolutions[i];
+        ikreturns[i]->_action = IKRA_Success;
+    }
+    return vsolutions.size() > 0;
 }
 
 UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase::IkFilterCallbackFn &filterfn)

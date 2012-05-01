@@ -1711,13 +1711,13 @@ protected:
         return ptraj;
     }
 
-    IkFilterReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikaram, KinBodyPtr ptarget)
+    IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikaram, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
-            return IKFR_Success;
+            return IKRA_Success;
         }
         if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
-            return IKFR_Reject;
+            return IKRA_Reject;
         }
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
@@ -1734,15 +1734,15 @@ protected:
         graspparams->bavoidcontact = true;
         // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
         if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
-            return IKFR_Reject;
+            return IKRA_Reject;
         }
 
         if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
-            return IKFR_Reject;
+            return IKRA_Reject;
         }
 
         _phandtraj->GetWaypoint(-1,_vFinalGripperValues, _robot->GetConfigurationSpecificationIndices(pmanip->GetGripperIndices()));
-        return IKFR_Success;
+        return IKRA_Success;
     }
 
     void _UpdateSwitchModels(bool bSwitchToFat, bool bUpdateBodies=true)

@@ -21,12 +21,17 @@
 class PyIkReturn
 {
 public:
-    PyIkReturn(IkReturn& ret) : _ret(ret) {
+    PyIkReturn(const IkReturn& ret) : _ret(ret) {
+    }
+    PyIkReturn(IkReturnPtr pret) : _ret(*pret) {
     }
     PyIkReturn(IkReturnAction action) : _ret(action) {
     }
     IkReturnAction GetAction() {
         return _ret._action;
+    }
+    object GetSolution() {
+        return toPyArray(_ret._vsolution);
     }
     object GetUserData() {
         return openravepy::GetUserData(_ret._userdata);
@@ -102,16 +107,10 @@ public:
         return toPyArray(values);
     }
 
-    object Solve(object oparam, object oq0, int filteroptions, bool ikreturn=false)
+    PyIkReturnPtr Solve(object oparam, object oq0, int filteroptions)
     {
-        vector<dReal> vsolution;
-        boost::shared_ptr< std::vector<dReal> > psolution(&vsolution, utils::null_deleter());
-        IkReturnPtr preturn;
-        PyIkReturnPtr pyreturn;
-        if( ikreturn ) {
-            pyreturn.reset(new PyIkReturn(IKRA_Reject));
-            preturn = IkReturnPtr(&pyreturn->_ret, utils::null_deleter());
-        }
+        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
         vector<dReal> q0;
         if( !(oq0 == object()) ) {
             q0 = ExtractArray<dReal>(oq0);
@@ -120,39 +119,29 @@ public:
         if( !ExtractIkParameterization(oparam,ikparam) ) {
             throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
         }
-        if( _pIkSolver->Solve(ikparam, q0, filteroptions, psolution, preturn) ) {
-            if( ikreturn ) {
-                return boost::python::make_tuple(toPyArray(vsolution),pyreturn);
-            }
-            else {
-                return toPyArray(vsolution);
-            }
-        }
-        if( ikreturn ) {
-            return boost::python::make_tuple(object(), pyreturn);
-        }
-        else {
-            return object();
-        }
+        _pIkSolver->Solve(ikparam, q0, filteroptions, preturn);
+        return pyreturn;
     }
 
-    object SolveAll(object oparam, int filteroptions, bool ikreturn=true)
+    object SolveAll(object oparam, int filteroptions)
     {
-        //std::vector< std::vector<dReal> > vsolutions;
-        //boost::shared_ptr< std::vector<IkReturnPtr> > ikreturns=boost::shared_ptr< std::vector<IkReturnPtr> >();
-        return object();
+        boost::python::list pyreturns;
+        std::vector<IkReturnPtr> vikreturns;
+        IkParameterization ikparam;
+        if( !ExtractIkParameterization(oparam,ikparam) ) {
+            throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
+        }
+        _pIkSolver->SolveAll(ikparam, filteroptions, vikreturns);
+        FOREACH(itikreturn,vikreturns) {
+            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+        }
+        return pyreturns;
     }
 
-    object Solve(object oparam, object oq0, object oFreeParameters, int filteroptions, bool ikreturn=true)
+    PyIkReturnPtr Solve(object oparam, object oq0, object oFreeParameters, int filteroptions)
     {
-        vector<dReal> vsolution;
-        boost::shared_ptr< std::vector<dReal> > psolution(&vsolution, utils::null_deleter());
-        IkReturnPtr preturn;
-        PyIkReturnPtr pyreturn;
-        if( ikreturn ) {
-            pyreturn.reset(new PyIkReturn(IKRA_Reject));
-            preturn = IkReturnPtr(&pyreturn->_ret, utils::null_deleter());
-        }
+        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
         vector<dReal> q0, vFreeParameters;
         if( !(oq0 == object()) ) {
             q0 = ExtractArray<dReal>(oq0);
@@ -164,27 +153,28 @@ public:
         if( !ExtractIkParameterization(oparam,ikparam) ) {
             throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
         }
-        if( _pIkSolver->Solve(ikparam, q0, vFreeParameters, filteroptions, psolution, preturn) ) {
-            if( ikreturn ) {
-                return boost::python::make_tuple(toPyArray(vsolution),pyreturn);
-            }
-            else {
-                return toPyArray(vsolution);
-            }
-        }
-        if( ikreturn ) {
-            return boost::python::make_tuple(object(), pyreturn);
-        }
-        else {
-            return object();
-        }
+        _pIkSolver->Solve(ikparam, q0, vFreeParameters,filteroptions, preturn);
+        return pyreturn;
     }
 
-    object SolveAll(object oparam, object oFreeParameters, int filteroptions, bool ikreturn=false)
+    object SolveAll(object oparam, object oFreeParameters, int filteroptions)
     {
-        return object();
+        boost::python::list pyreturns;
+        std::vector<IkReturnPtr> vikreturns;
+        IkParameterization ikparam;
+        if( !ExtractIkParameterization(oparam,ikparam) ) {
+            throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
+        }
+        vector<dReal> vFreeParameters;
+        if( !(oFreeParameters == object()) ) {
+            vFreeParameters = ExtractArray<dReal>(oFreeParameters);
+        }
+        _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);
+        FOREACH(itikreturn,vikreturns) {
+            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+        }
+        return pyreturns;
     }
-
 
     bool Supports(IkParameterizationType type) {
         return _pIkSolver->Supports(type);
@@ -230,9 +220,6 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
     return PyIkSolverBasePtr(new PyIkSolverBase(p,pyenv));
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Solve_overloads, Solve, 3, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SolveFree_overloads, Solve, 4, 5)
-
 void init_openravepy_iksolver()
 {
     enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
@@ -249,6 +236,7 @@ void init_openravepy_iksolver()
     .value("Quit",IKRA_Quit)
     .value("QuitEndEffectorCollision",IKRA_QuitEndEffectorCollision)
     .value("RejectKinematics",IKRA_RejectKinematics)
+    .value("RejectSelfCollision",IKRA_RejectSelfCollision)
     .value("RejectEnvCollision",IKRA_RejectEnvCollision)
     .value("RejectJointLimits",IKRA_RejectJointLimits)
     .value("RejectKinematicsPrecision",IKRA_RejectKinematicsPrecision)
@@ -259,17 +247,22 @@ void init_openravepy_iksolver()
         scope ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
                          .def(init<IkReturnAction>(args("action")))
                          .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
+                         .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
                          .def("GetMapData",&PyIkReturn::GetMapData, "Returns a dictionary copy for IkReturn::_mapdata")
         ;
     }
 
     {
-        object (PyIkSolverBase::*Solve)(object, object, int, bool) = &PyIkSolverBase::Solve;
-        object (PyIkSolverBase::*SolveFree)(object, object, object, int, bool) = &PyIkSolverBase::Solve;
+        PyIkReturnPtr (PyIkSolverBase::*Solve)(object, object, int) = &PyIkSolverBase::Solve;
+        PyIkReturnPtr (PyIkSolverBase::*SolveFree)(object, object, object, int) = &PyIkSolverBase::Solve;
+        object (PyIkSolverBase::*SolveAll)(object, int) = &PyIkSolverBase::SolveAll;
+        object (PyIkSolverBase::*SolveAllFree)(object, object, int) = &PyIkSolverBase::SolveAll;
         class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
-        .def("Solve",Solve,Solve_overloads(args("ikparam","q0","filteroptions","ikreturn"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; boost::shared_ptr; IkReturnPtr")))
-        .def("Solve",SolveFree,SolveFree_overloads(args("ikparam","q0","freeparameters", "filteroptions","ikreturn"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; boost::shared_ptr; IkReturnPtr")))
+        .def("Solve",Solve,args("ikparam","q0","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
+        .def("Solve",SolveFree,args("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; boost::shared_ptr"))
+        .def("SolveAll",SolveAll,args("ikparam","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; int; std::vector<IkReturnPtr>"))
+        .def("SolveAll",SolveAllFree,args("ikparam","freeparameters","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; std::vector<IkReturnPtr>"))
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
         .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))

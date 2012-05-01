@@ -72,7 +72,7 @@ public:
 
     /// \brief appends the data of one IkReturn to this structure
     ///
-    /// _action is untouched.
+    /// _action is untouched, _vsolution is overridden if non-empty
     /// \return If data clashes, will output text and return false
     bool Append(const IkReturn& r);
 
@@ -81,6 +81,7 @@ public:
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action;
+    std::vector< dReal > _vsolution; ///< the solution
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
 };
@@ -162,10 +163,20 @@ public:
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solution [optional] Holds the IK solution
-        \param[out] ikreturn [optional] Holds custom data outputted from the many processes involved in solving ik.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >(), IkReturnPtr ikreturn=IkReturnPtr()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >()) = 0;
+
+    /** \brief Return a joint configuration for the given end effector transform.
+
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] ikreturn Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
+        \return true if solution is found
+     */
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -173,10 +184,24 @@ public:
        takes into account the grasp coordinate frame for the RobotBase::Manipulator
        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
        \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
-       \param[out] ikreturn [optional] Holds custom data outputted from the many processes involved in solving ik.
        \return true if at least one solution is found
      */
-    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions, boost::shared_ptr< std::vector<IkReturnPtr> > ikreturns=boost::shared_ptr< std::vector<IkReturnPtr> >()) = 0;
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+
+    /// \deprecated (12/05/01)
+    virtual bool Solve(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) RAVE_DEPRECATED {
+        return SolveAll(param,filteroptions,solutions);
+    }
+
+    /** \brief Return all joint configurations for the given end effector transform.
+
+       \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+       takes into account the grasp coordinate frame for the RobotBase::Manipulator
+       \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+       \param[out] ikreturns Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
+       \return true if at least one solution is found
+     */
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -186,10 +211,21 @@ public:
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solution [optional] Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
-        \param[out] ikreturn [optional] Holds custom data outputted from the many processes involved in solving ik.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >(), IkReturnPtr ikreturn=IkReturnPtr()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >()) = 0;
+
+    /** Return a joint configuration for the given end effector transform.
+
+        Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is empty, returns the first solution found
+        \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] ikreturn Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
+        \return true if solution is found
+     */
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -199,10 +235,26 @@ public:
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
-        \param[out] ikreturn [optional] Holds custom data outputted from the many processes involved in solving ik.
         \return true at least one solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions, boost::shared_ptr< std::vector<IkReturnPtr> > ikreturns=boost::shared_ptr< std::vector<IkReturnPtr> >()) = 0;
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
+
+    /// \deprecated (12/05/01)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector< std::vector<dReal> >& solutions) RAVE_DEPRECATED {
+        return SolveAll(param,vFreeParameters,filteroptions,solutions);
+    }
+
+    /** \brief Return all joint configurations for the given end effector transform.
+
+        Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
+        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
+        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] ikreturns Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
+        \return true at least one solution is found
+     */
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;

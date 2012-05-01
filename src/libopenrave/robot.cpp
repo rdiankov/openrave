@@ -225,7 +225,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal,filteroptions,solutions) : _pIkSolver->Solve(localgoal,vFreeParameters,filteroptions,solutions);
+    return vFreeParameters.size() == 0 ? _pIkSolver->SolveAll(localgoal,filteroptions,solutions) : _pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
 IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizationType iktype, bool inworld) const
