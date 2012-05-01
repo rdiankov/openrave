@@ -364,7 +364,9 @@ protected:
             RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
             return false;
         }
-
+        if( !!ikreturn ) {
+            ikreturn->Clear();
+        }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
@@ -409,6 +411,9 @@ protected:
         }
         if( vFreeParameters.size() != _vfreeparams.size() ) {
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+        }
+        if( !!ikreturn ) {
+            ikreturn->Clear();
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
