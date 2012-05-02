@@ -104,7 +104,7 @@ class TestKinematics(EnvironmentSetup):
                                 body.SetDOFValues(dofvaluesnew+deltavalues0)
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
                                 armlength = bodymaxjointdist(link,localtrans[0:3,3])
-                                thresh = armlength*sum(abs(deltavalues))*1.1
+                                thresh = armlength*sum(abs(deltavalues))*1.2
                                 if armlength < 0.0001 or thresh < 1e-12:
                                     continue
                                 Tlinknew=dot(link.GetTransform(),localtrans)
