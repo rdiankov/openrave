@@ -158,6 +158,7 @@ Parameters:
  - For **Transform6D** it is 9 values for the 3x3 rotation matrix.
  - For **Direction3D**, **Ray4D**, and **TranslationDirection5D**, the first 3 values represent the target direction.
  - For **TranslationXAxisAngle4D**, **TranslationYAxisAngle4D**, and **TranslationZAxisAngle4D** the first value represents the angle.
+ - For **TranslationLocalGlobal6D**, the diagonal elements ([0],[4],[8]) are the local translation inside the end effector coordinate system.
 - ``IKSolution`` - The discrete solutions are returned in this structure. Sometimes the joint axes of the robot can align allowing an infinite number of solutions. The ``IKSolution`` structure stores all these solutions in the form of free variables that the user has to set when querying the solution. Its prototype is:
 
 .. code-block:: c++

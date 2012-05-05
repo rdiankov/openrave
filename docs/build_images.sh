@@ -14,5 +14,7 @@ dia -e images/openrave_documentation.png -s 700 images/openrave_documentation.di
 
 cp -f ../resources/openrave_banner_400.png _static/
 cp -f ../resources/openrave_icon*.png _static/
+mkdir -p build/en/coreapihtml/
+mkdir -p build/ja/coreapihtml/
 cp -f ../resources/openrave_banner_dark.png build/en/coreapihtml/
 cp -f ../resources/openrave_banner_dark.png build/ja/coreapihtml/

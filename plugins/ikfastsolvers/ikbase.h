@@ -901,9 +901,10 @@ private:
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
+            BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
-            FOREACHC(itvalue,vravesol) {
+            FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
                 ss << *itvalue << ", ";
             }
             ss << "]" << endl;
@@ -914,7 +915,7 @@ private:
         // solution is valid, so replace the best
         size_t index = 0;
         FOREACH(itikreturn, listlocalikreturns) {
-            if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
+            if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
                 d = _configdist2(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
                 if( !(bestsolution.dist <= d) ) {
                     bestsolution.ikreturn = *itikreturn;
