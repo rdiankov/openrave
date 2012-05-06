@@ -1,6 +1,6 @@
 /***************************************************************************\
 |* Function Parser for C++ v4.4.3                                          *|
-|*|*|*|*-------------------------------------------------------------------------*|
+|*|*|*|*|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen, Joel Yliluoma                                 *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -186,6 +186,11 @@ inline Value_t fp_atan2(const Value_t& x, const Value_t& y)
     return std::atan2(x, y);
 }
 
+template<typename Value_t>
+inline Value_t fp_exp(const Value_t& x) {
+    return std::exp(x);
+}
+
 #ifdef FP_SUPPORT_CBRT
 template<typename Value_t>
 inline Value_t fp_cbrt(const Value_t& x) {
@@ -214,11 +219,6 @@ inline Value_t fp_cos(const Value_t& x) {
 template<typename Value_t>
 inline Value_t fp_cosh(const Value_t& x) {
     return std::cosh(x);
-}
-
-template<typename Value_t>
-inline Value_t fp_exp(const Value_t& x) {
-    return std::exp(x);
 }
 
 template<typename Value_t>
@@ -843,7 +843,7 @@ inline std::complex<T> fp_log(const std::complex<T>& x)
     // log(Xr^2+Xi^2)*0.5 + i*arg(x)
     if(x.imag()==T())
         return std::complex<T>( fp_log(fp_abs(x.real())),
-                                fp_arg(x.real()) );                                                                                                            // Note: Uses real-value fp_arg() here!
+                                fp_arg(x.real()) );                                                                                                                                                                 // Note: Uses real-value fp_arg() here!
     return std::complex<T>(
                fp_log(std::norm(x)) * T(0.5),
                fp_arg(x).real() );
@@ -1069,7 +1069,7 @@ inline std::complex<T> fp_mod(const std::complex<T>& x, const std::complex<T>& y
     // Modulo function is probably not defined for complex numbers.
     // But we do our best to calculate it the same way as it is done
     // with real numbers, so that at least it is in some way "consistent".
-    if(y.imag() == 0) return fp_mod(x.real(), y.real());                                                                                                                      // optimization
+    if(y.imag() == 0) return fp_mod(x.real(), y.real());                                                                                                                                                                                // optimization
     std::complex<T> n = fp_trunc(x / y);
     return x - n * y;
 }
