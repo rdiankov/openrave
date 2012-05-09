@@ -664,6 +664,7 @@ find_package(FPARSER 4.4.3)
 if( NOT FPARSER_FOUND )
   message(STATUS "compiling local fparser library")
   add_subdirectory(3rdparty/fparser-4.5)
+  set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
 endif()
 
 message(STATUS "compiling local convexdecomposition library")

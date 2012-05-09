@@ -70,6 +70,9 @@ static void fparser_sass(std::vector<dReal>& res, const vector<dReal>& coeffs)
 OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
 {
     OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParserReal());
+#ifdef OPENRAVE_FPARSER_SETEPSILON
+    parser->setEpsilon(g_fEpsilonLinear);
+#endif
     // register commonly used functions
     parser->AddBoostFunction("polyroots2",fparser_polyroots2,3);
     parser->AddBoostFunction("polyroots3",fparser_polyroots<3>,4);
