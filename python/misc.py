@@ -99,7 +99,7 @@ class OpenRAVEGlobalArguments:
                           help='port to load server on (default=%default).')
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
-        ogroup.add_option('--level','-l', action="store",type='string',dest='_level',default=None,
+        ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
                           help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
