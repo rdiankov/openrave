@@ -663,7 +663,7 @@ endif()
 find_package(FPARSER 4.4.3)
 if( NOT FPARSER_FOUND )
   message(STATUS "compiling local fparser library")
-  add_subdirectory(3rdparty/fparser-4.4.3)
+  add_subdirectory(3rdparty/fparser-4.5)
 endif()
 
 message(STATUS "compiling local convexdecomposition library")
