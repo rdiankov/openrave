@@ -18,6 +18,7 @@
 #define OPENRAVE_TEXTSERVER
 
 #include <openrave/planningutils.h>
+#include <cstdlib>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -733,11 +734,15 @@ protected:
         if( cmd == "quit" ) {
             GetEnv()->Reset();
             // call exit in a different thread
-            new boost::thread(boost::bind(exit,0));
+	    new boost::thread(_CallExit);
         }
         return true;
     }
 
+    static void _CallExit()
+    {
+        exit(0);
+    }
     bool worSetOptions(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
         string cmd;
