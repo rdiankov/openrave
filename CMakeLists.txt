@@ -167,13 +167,18 @@ set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
 include_directories(${REQUIRED_INCLUDES})
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+set(COMPILER_IS_CLANG FALSE)
+if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+  set(COMPILER_IS_CLANG TRUE)
+endif()
+
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG") 
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
@@ -200,7 +205,7 @@ else()
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
 endif()
 
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(STDC_LIBRARY stdc++)
 else()
   set(STDC_LIBRARY)
@@ -353,7 +358,7 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   endif()
 endforeach()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
 else()
@@ -444,7 +449,7 @@ endif()
 
 pkg_check_modules(ASSIMP assimp)
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   check_cxx_source_runs("
   int main()
   {

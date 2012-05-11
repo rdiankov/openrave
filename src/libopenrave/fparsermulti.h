@@ -149,7 +149,7 @@ public:
 
     bool AddBoostFunction(const std::string& name, const BoostFunction& fn, unsigned paramsAmount)
     {
-        return AddFunctionWrapper(name, BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
+       return FunctionParserBase<Value_t>::AddFunctionWrapper(name, BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
     }
 
 //===========================================================================
