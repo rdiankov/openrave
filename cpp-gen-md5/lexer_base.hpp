@@ -48,8 +48,8 @@ namespace lexer {
 
 template < typename TokenT >
 struct token_traits; /*
-    static TokenT const eof_token;
-*/
+                        static TokenT const eof_token;
+                      */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Opaque interface.
@@ -67,8 +67,10 @@ private:
 
 protected:
     // Virtual destructor is always needed for an abstract interface.
-    virtual ~input_interface() {}
-    input_interface() {}
+    virtual ~input_interface() {
+    }
+    input_interface() {
+    }
 
 public:
     // Useful types.
@@ -102,7 +104,7 @@ public:
 
     input_interface_t* interf;
 
-    input_policy(input_policy const& other):
+    input_policy(input_policy const& other) :
         interf(other.interf)
     {
         interf->add_ref();
@@ -117,7 +119,7 @@ public:
         return *this;
     }
 
-    input_policy(input_interface_t* interf_):
+    input_policy(input_interface_t* interf_) :
         interf(interf_)
     {
     }
@@ -131,7 +133,9 @@ public:
 #ifndef TEMP_SPIRIT_HACK
     static result_type const& eof;
 #else
-    result_type const& eof() { return token_traits<TokenT>::eof_token; }
+    result_type const& eof() {
+        return token_traits<TokenT>::eof_token;
+    }
 #endif
 };
 
@@ -145,28 +149,31 @@ input_policy<TokenT>::eof
 template < typename TokenT >
 class my_iterator_base {
 public:
+    // cannot use bs due to namespace clashes
     typedef bs::multi_pass<
-    input_policy<TokenT>,
-               bs::multi_pass_policies::functor_input
+        input_policy<TokenT>,
+        bs::multi_pass_policies::functor_input
 /* defaulted    ,
                 multi_pass_policies::first_owner,
                 multi_pass_policies::no_check,
                 multi_pass_policies::std_deque
-*/
-            >
-        type;
+ */
+        >
+    type;
 };
 
 template < typename TokenT >
-struct iterator: my_iterator_base<TokenT>::type {
+struct iterator : my_iterator_base<TokenT>::type {
     typedef typename my_iterator_base<TokenT>::type base_t;
     typedef iterator self_t;
 
-    iterator() {}
+    iterator() {
+    }
 
-    iterator(input_interface<TokenT>* interf):
+    iterator(input_interface<TokenT>* interf) :
         base_t(input_policy<TokenT>(interf))
-    {}
+    {
+    }
 };
 
 } // lexer
