@@ -30,6 +30,8 @@ extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo
         (*itviewer)->quitmainloop();
     }
     openravepy::s_listViewersToQuit.clear();
+    // is this call necessary? perhaps could get the C++ planners out of their loops?
+    RaveDestroy();
 #ifndef _WIN32
     if( sigaction(SIGINT, &openravepy::s_signalActionPrev, NULL) < 0 ) {
         RAVELOG_WARN("failed to restore old signal\n");
