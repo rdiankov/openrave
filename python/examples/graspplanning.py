@@ -464,8 +464,7 @@ def run(args=None):
     parser.add_option('--planner',action="store",type='string',dest='planner',default=None,
                       help='the planner to use')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

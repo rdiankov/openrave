@@ -108,8 +108,7 @@ def run(args=None):
     parser.add_option('--withlocal',action="store_true",dest='withlocal',default=False,
                       help='If set, will use the TranslationLocalGlobal6D type to further specify the target point in the manipulator coordinate system')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

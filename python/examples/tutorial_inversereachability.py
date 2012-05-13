@@ -509,8 +509,7 @@ def run(args=None):
     parser.add_option('--target',action="store",type='string',dest='target',default='data/mug2.kinbody.xml',
                       help='filename of the target to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__=='__main__':
     run()

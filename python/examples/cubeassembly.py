@@ -211,8 +211,7 @@ def run(args=None):
                       action="store",type='string',dest='manipname',default='leftarm_torso',
                       help='The manipulator to use')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

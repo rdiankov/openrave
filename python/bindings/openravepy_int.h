@@ -507,14 +507,16 @@ protected:
     };
 
     object SendCommand(const string& in, bool releasegil=false) {
-        boost::shared_ptr<PythonThreadSaver> statesaver;
-        if( releasegil ) {
-            statesaver.reset(new PythonThreadSaver());
-        }
         stringstream sin(in), sout;
-        sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        if( !_pbase->SendCommand(sout,sin) ) {
-            return object();
+        {
+            boost::shared_ptr<PythonThreadSaver> statesaver;
+            if( releasegil ) {
+                statesaver.reset(new PythonThreadSaver());
+            }
+            sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+            if( !_pbase->SendCommand(sout,sin) ) {
+                return object();
+            }
         }
         return object(sout.str());
     }

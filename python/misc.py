@@ -23,6 +23,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from threading import Thread
+except ImportError:
+    pass
+
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
@@ -35,12 +40,10 @@ def mkdir_recursive(newdir):
         pass
 
 try:
-    from os.path import relpath
-    
+    from os.path import relpath    
 except ImportError:
     # relpath is not present in python 2.5 and below, so hold an implementation of it.
     from posixpath import curdir, sep, pardir, join, abspath, commonprefix
-    
     def relpath(path, start=curdir):
         """Return a relative version of a path"""
         if not path:
@@ -124,46 +127,48 @@ class OpenRAVEGlobalArguments:
                 cc = openravepy_int.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
-        except openrave_exception, e:
+        except openravepy_ext.openrave_exception, e:
             log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
-        except openrave_exception, e:
+        except openravepy_ext.openrave_exception, e:
             log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.Add(sr,True,'%d'%options._serverport)
-        except openrave_exception, e:
+        except openravepy_ext.openrave_exception, e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
                     env.Add(module,True,args)
-            except openrave_exception, e:
+            except openravepy_ext.openrave_exception, e:
                 log.warn(e)
         try:
-            viewer=None
+            viewername=None
             if options._viewer is not None:
                 if len(options._viewer) > 0:
-                    viewer=options._viewer
+                    viewername=options._viewer
             elif defaultviewer:
-                viewer='qtcoin'
+                viewername='qtcoin'
             if returnviewer:
-                return viewer
-            elif viewer is not None:
-                env.SetViewer(viewer)
-        except openrave_exception, e:
+                return viewername
+            elif viewername is not None:
+                env.SetViewer(viewername)
+        except openravepy_ext.openrave_exception, e:
             log.warn(e)
             
     @staticmethod
-    def parseAndCreate(options,createenv=openravepy_int.Environment,**kwargs):
-        """Parse all options and create the global Environment. The left over arguments are passed to the parse functions"""
+    def parseAndCreate(options,createenv=openravepy_int.Environment,returnviewer=False,**kwargs):
+        """Parse all options and create the global Environment. The left over arguments are passed to the parse functions.
+        If returnviewer is False, the viewer is created in a separate thread, so this method will not work for MacOSX if this is the main executing thread.
+        """
         openravepy_int.RaveInitialize(True)
         for plugin in options._loadplugins:
             openravepy_int.RaveLoadPlugin(plugin)
@@ -171,9 +176,48 @@ class OpenRAVEGlobalArguments:
         if createenv is None:
             return None
         env = createenv()
-        OpenRAVEGlobalArguments.parseEnvironment(options,env,**kwargs)
-        return env
+        viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=returnviewer,**kwargs)
+        if returnviewer:
+            return env,viewername
+        else:
+            return env
 
+    @staticmethod
+    def parseAndCreateThreadedUser(options,userfn,createenv=openravepy_int.Environment,returnviewer=True,**kwargs):
+        """Parse all options and create the global Environment. The left over arguments are passed to the parse functions.
+        If a viewer is requested, it is created in this thread, and another thread is executed with the user function. This is required for OSes that require viewer thread to be in main thread (Mac OSX)
+        :param userfn: Call with userfn(env,options)
+        :return: nothing
+        """
+        openravepy_int.RaveInitialize(True)
+        for plugin in options._loadplugins:
+            openravepy_int.RaveLoadPlugin(plugin)
+        OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
+        if createenv is None:
+            raise openravepy_ext.openrave_exception('failed to create environment')
+        env = createenv()
+        viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=True,**kwargs)
+        viewer = None
+        if viewername is not None:
+            viewer = openravepy_int.RaveCreateViewer(env,viewername)
+        if viewer is not None:
+            # add the viewer before starting the user function
+            env.Add(viewer)
+            Thread = __import__('threading').Thread
+            def localuserfn(env,options,userfn):
+                try:
+                    userfn(env,options)
+                finally:
+                    # user function quit, so have to destroy the viewer
+                    viewer.quitmainloop()
+            userthread = Thread(target=localuserfn,args=(env,options,userfn))
+            userthread.start()
+            viewer.main(True)
+            # gets skipped if viewer.main raises an exception (this is ok behavior)
+            userthread.join()
+        else:
+            userfn(env,options)
+        
 def ComputeGeodesicSphereMesh(radius=1.0,level=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
     GTS_M_ICOSAHEDRON_X = numpy.sqrt(numpy.sqrt(5)+1)/numpy.sqrt(2*numpy.sqrt(5))

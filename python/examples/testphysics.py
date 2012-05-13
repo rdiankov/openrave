@@ -127,8 +127,7 @@ def run(args=None):
     parser.add_option('--timestep',action="store",type='float',dest='timestep',default=0.001,
                       help='The physics simulation time step size  (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__=='__main__':
     run()

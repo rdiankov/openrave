@@ -16,6 +16,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include <csignal>
+
+namespace openravepy {
+static struct sigaction s_signalActionPrev;
+static std::list<ViewerBasePtr> s_listViewersToQuit;
+}
+
+extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo, void *context)
+{
+    RAVELOG_VERBOSE("openravepy_viewer_sigint_handler\n");
+    FOREACHC(itviewer, openravepy::s_listViewersToQuit) {
+        (*itviewer)->quitmainloop();
+    }
+    openravepy::s_listViewersToQuit.clear();
+#ifndef _WIN32
+    if( sigaction(SIGINT, &openravepy::s_signalActionPrev, NULL) < 0 ) {
+        RAVELOG_WARN("failed to restore old signal\n");
+    }
+    kill(0 /*getpid()*/, SIGINT);
+#endif
+}
 
 class PyViewerBase : public PyInterfaceBase
 {
@@ -59,9 +80,36 @@ public:
         return _pviewer;
     }
 
-    int main(bool bShow) {
-        return _pviewer->main(bShow);
+    int main(bool bShow)
+    {
+        openravepy::s_listViewersToQuit.push_back(_pviewer);
+        // very helpful: https://www.securecoding.cert.org/confluence/display/cplusplus/SIG01-CPP.+Understand+implementation-specific+details+regarding+signal+handler+persistence
+        memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
+        struct sigaction act;
+        memset(&act,0,sizeof(act));
+        //sigfillset(&act.sa_mask);
+        sigemptyset(&act.sa_mask);
+        act.sa_flags = 0;
+        act.sa_handler = &openravepy_viewer_sigint_handler;
+        int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
+        if( ret < 0 ) {
+            RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
+        }
+        //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
+        // have to release the GIL since this is an infinite loop
+        boost::shared_ptr<PythonThreadSaver> statesaver(new PythonThreadSaver());
+        bool bSuccess=false;
+        try {
+            bSuccess = _pviewer->main(bShow);
+        }
+        catch(...) {
+        }
+        openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list
+        // restore again?
+        sigaction(SIGINT,&openravepy::s_signalActionPrev,NULL);
+        return bSuccess;
     }
+
     void quitmainloop() {
         return _pviewer->quitmainloop();
     }
@@ -161,6 +209,8 @@ PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& 
 
 void init_openravepy_viewer()
 {
+    memset(&s_signalActionPrev,0,sizeof(s_signalActionPrev));
+
     {
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;

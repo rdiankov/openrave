@@ -40,6 +40,13 @@ Viewer
 
 * Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
 
+Misc
+----
+
+* Mac OSX compatibility: openrave.py now runs the viewer in the main thread for Mac OSX.
+
+* Added :meth:`.misc.OpenRAVEGlobalArguments.parseAndCreateThreadedUser` to allow viewer to be run in main thread while user functions are run in a different thread. All examples use this now.
+
 Version 0.6.4
 =============
 

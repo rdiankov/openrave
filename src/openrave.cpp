@@ -382,6 +382,6 @@ void sigint_handler(int sig)
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
     signal(SIGINT, SIG_DFL);
-    kill(getpid(), SIGINT);
+    kill(0 /*getpid()*/, SIGINT);
 #endif
 }
