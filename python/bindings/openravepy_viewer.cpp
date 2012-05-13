@@ -18,8 +18,16 @@
 #include "openravepy_int.h"
 #include <csignal>
 
+#if defined(_WIN32)and !defined(sighandler_t)
+typedef void (*sighandler_t)(int);
+#endif
+
 namespace openravepy {
+#ifndef _WIN32
 static struct sigaction s_signalActionPrev;
+#else
+static sighandler_t s_signalActionPrev;
+#endif
 static std::list<ViewerBasePtr> s_listViewersToQuit;
 }
 
@@ -37,6 +45,8 @@ extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo
         RAVELOG_WARN("failed to restore old signal\n");
     }
     kill(0 /*getpid()*/, SIGINT);
+#else
+    signal(SIGINT, openravepy::s_signalActionPrev);
 #endif
 }
 
@@ -86,6 +96,7 @@ public:
     {
         openravepy::s_listViewersToQuit.push_back(_pviewer);
         // very helpful: https://www.securecoding.cert.org/confluence/display/cplusplus/SIG01-CPP.+Understand+implementation-specific+details+regarding+signal+handler+persistence
+#ifndef _WIN32
         memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
         struct sigaction act;
         memset(&act,0,sizeof(act));
@@ -97,6 +108,9 @@ public:
         if( ret < 0 ) {
             RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
         }
+#else
+        openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
+#endif
         //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
         // have to release the GIL since this is an infinite loop
         boost::shared_ptr<PythonThreadSaver> statesaver(new PythonThreadSaver());
@@ -106,9 +120,13 @@ public:
         }
         catch(...) {
         }
-        openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list
+        openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list anymore
+#ifndef _WIN32
         // restore again?
         sigaction(SIGINT,&openravepy::s_signalActionPrev,NULL);
+#else
+        signal(SIGINT,openravepy::s_signalActionPrev);
+#endif
         return bSuccess;
     }
 

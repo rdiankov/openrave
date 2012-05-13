@@ -553,6 +553,12 @@ It is also necessary to install these libraries:
 - <a href="http://www.coin3d.org/lib/soqt">SoQt</a> - build from sources. Might ask you to set QTDIR to the correct directory.
 - ffmpeg and other video recording codecs
 
+Sometimes multiple python versions will be installed making it difficult to choose which one OpenRAVE should build with. It is possible to force a particular python version when using the cmake command line:
+
+\verbatim
+cmake -DPYTHON_INCLUDE_DIR:PATH=/opt/local/Library/Frameworks/Python.framework/Headers -DPYTHON_LIBRARIES:FILEPATH=/opt/local/lib/libpython2.7.dylib -DPYTHON_EXECUTABLE:FILEPATH=/opt/local/bin/python2.7
+\endverbatim
+
 After this, follow the instructions on \ref installation_linux.
 
 \ja \page installation_macosx Mac OSXユーザーのためのインストール方法
