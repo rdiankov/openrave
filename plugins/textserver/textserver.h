@@ -1795,7 +1795,7 @@ protected:
                     break;
                 }
                 else {
-                    RAVELOG_WARN("incorrect number of indices, ignoring\n");
+                    RAVELOG_WARN(str(boost::format("incorrect number of indices %d, ignoring")%dof));
                     return false;
                 }
             }

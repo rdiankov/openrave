@@ -64,6 +64,9 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
             # this is such an unbelievable hack, that it's disgusting
             set_target_properties(pyANN_int PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
           endif()
+        elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+          # on mac osx, python cannot import libraries with .dylib extension
+          set_target_properties(pyANN_int PROPERTIES SUFFIX ".so")
         endif()
         install(TARGETS pyANN_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       endif()
