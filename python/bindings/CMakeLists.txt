@@ -46,6 +46,9 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
       if( WIN32 )
         set_target_properties(openravepy_int PROPERTIES SUFFIX ".pyd")
+      elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        # on mac osx, python cannot import libraries with .dylib extension
+        set_target_properties(openravepy_int PROPERTIES SUFFIX ".so")
       endif()
       install(TARGETS openravepy_int DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 
@@ -86,6 +89,9 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
             # this is such an unbelievable hack, that it's disgusting
             set_target_properties(convexdecompositionpy PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
           endif()
+        elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+          # on mac osx, python cannot import libraries with .dylib extension
+          set_target_properties(convexdecompositionpy PROPERTIES SUFFIX ".so")
         endif()
         install(TARGETS convexdecompositionpy DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       endif()
