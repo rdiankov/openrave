@@ -1228,25 +1228,35 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
 
 bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
 {
-    vgoal.resize(0);
+    IkReturnPtr ikreturn = Sample();
+    if( !ikreturn ) {
+        vgoal.resize(0);
+        return false;
+    }
+    vgoal.swap(ikreturn->_vsolution); // won't be using the ik return anymore
+    return true;
+}
+
+IkReturnPtr ManipulatorIKGoalSampler::Sample()
+{
     std::vector<dReal> vindex;
     _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
     if( vindex.at(0) > _fsampleprob ) {
-        return false;
+        return IkReturnPtr();
     }
-    if( _viksolutions.size() > 0 ) {
-        vgoal = _viksolutions.back();
-        _viksolutions.pop_back();
+    if( _vikreturns.size() > 0 ) {
+        IkReturnPtr ikreturnlocal = _vikreturns.back();
+        _vikreturns.pop_back();
         _listreturnedsamples.push_back(_tempikindex);
-        if( _viksolutions.size() == 0 ) {
+        if( _vikreturns.size() == 0 ) {
             _tempikindex = -1;
         }
-        return true;
+        return ikreturnlocal;
     }
 
     for(int itry = 0; itry < _nummaxtries; ++itry ) {
         if( _listsamples.size() == 0 ) {
-            return false;
+            return IkReturnPtr();
         }
         _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
         int isampleindex = (int)(vindex.at(0)*_listsamples.size());
@@ -1305,7 +1315,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                 }
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
+        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0), _vikreturns);
         if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }
@@ -1313,15 +1323,15 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         if( bsuccess ) {
             _tempikindex = orgindex;
             _listreturnedsamples.push_back(orgindex);
-            vgoal = _viksolutions.back();
-            _viksolutions.pop_back();
-            if( _viksolutions.size() == 0 ) {
+            IkReturnPtr ikreturnlocal = _vikreturns.back();
+            _vikreturns.pop_back();
+            if( _vikreturns.size() == 0 ) {
                 _tempikindex = -1;
             }
-            return true;
+            return ikreturnlocal;
         }
     }
-    return false;
+    return IkReturnPtr();
 }
 
 int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)

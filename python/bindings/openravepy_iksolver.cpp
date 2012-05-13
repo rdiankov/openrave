@@ -36,7 +36,14 @@ public:
     object GetUserData() {
         return openravepy::GetUserData(_ret._userdata);
     }
-    object GetMapData() {
+    object GetMapData(const std::string& key) {
+        IkReturn::CustomData::const_iterator it = _ret._mapdata.find(key);
+        if( it == _ret._mapdata.end() ) {
+            return object();
+        }
+        return toPyArray(it->second);
+    }
+    object GetMapDataDict() {
         boost::python::dict odata;
         FOREACHC(it,_ret._mapdata) {
             odata[it->first] = toPyArray(it->second);
@@ -254,7 +261,8 @@ void init_openravepy_iksolver()
                          .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
                          .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
-                         .def("GetMapData",&PyIkReturn::GetMapData, "Returns a dictionary copy for IkReturn::_mapdata")
+                         .def("GetMapData",&PyIkReturn::GetMapData, args("key"), "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
+                         .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
         ;
     }
 

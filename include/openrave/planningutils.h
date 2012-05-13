@@ -108,7 +108,7 @@ OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vect
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
 
-/// \brief reverses the order of the trajectory waypoints and times.
+/// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
 OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
@@ -217,8 +217,14 @@ public:
     ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1);
     virtual ~ManipulatorIKGoalSampler() {
     }
-    //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
+
+    /// \brief if can sample, returns IkReturn pointer
+    virtual IkReturnPtr Sample();
     virtual bool Sample(std::vector<dReal>& vgoal);
+
+    //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
+
+
     virtual int GetIkParameterizationIndex(int index);
     virtual void SetSamplingProb(dReal fsampleprob);
 
@@ -242,10 +248,10 @@ protected:
     SpaceSamplerBasePtr _pindexsampler;
     dReal _fsampleprob, _fjittermaxdist;
     CollisionReportPtr _report;
-    std::vector< std::vector<dReal> > _viksolutions;
+    std::vector< IkReturnPtr > _vikreturns;
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
-    int _tempikindex; ///< if _viksolutions.size() > 0, points to the original ik index of those solutions
+    int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
