@@ -80,10 +80,15 @@ set(OPENRAVE_PYTHON_INSTALL_DIR)
 if( OPT_PYTHON )
   include(FindPythonInterp)
   ## check python
-  find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIR
+  find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIRS?
   if( NOT PYTHON_EXECUTABLE )
     # look specifically for 2.6
     find_program(PYTHON_EXECUTABLE NAMES python2.6 python PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+  endif()
+
+  # back compat?
+  if( NOT PYTHON_INCLUDE_DIRS )
+    set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_PATH})
   endif()
 
   if( PYTHON_EXECUTABLE )
@@ -109,10 +114,10 @@ if( OPT_PYTHON )
           message(STATUS "cannot find python numpy dir!")
           set(PYTHON_EXECUTABLE)
         else()
-          set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage_arch}/numpy/core/include)
+          set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_sitepackage_arch}/numpy/core/include)
         endif()
       else()
-        set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_distpackage}/numpy/core/include)
+        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_distpackage}/numpy/core/include)
       endif()
 
       # get the major.minor python version

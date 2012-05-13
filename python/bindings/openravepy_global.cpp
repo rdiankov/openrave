@@ -624,6 +624,15 @@ public:
         return object();
     }
 
+    object GetCustomDataMap()
+    {
+        boost::python::dict odata;
+        FOREACHC(it, _param.GetCustomDataMap()) {
+            odata[it->first] = toPyArray(it->second);
+        }
+        return odata;
+    }
+
     void ClearCustomValues(const std::string& name=std::string())
     {
         _param.ClearCustomValues(name);
@@ -1505,6 +1514,7 @@ void init_openravepy_global()
                                    .def("MultiplyTransform",&PyIkParameterization::MultiplyTransform,DOXY_FN(IkParameterization,MultiplyTransform))
                                    .def("GetValues",&PyIkParameterization::GetValues, DOXY_FN(IkParameterization,GetValues))
                                    .def("SetValues",&PyIkParameterization::SetValues, args("values","type"), DOXY_FN(IkParameterization,SetValues))
+                                   .def("GetCustomDataMap",&PyIkParameterization::GetCustomDataMap, DOXY_FN(IkParameterization,GetCustomDataMap))
                                    .def("GetCustomValues",&PyIkParameterization::GetCustomValues, args("name"), DOXY_FN(IkParameterization,GetCustomValues))
                                    .def("SetCustomValues",&PyIkParameterization::SetCustomValues, args("name","values"), DOXY_FN(IkParameterization,SetCustomValues))
                                    .def("SetCustomValue",&PyIkParameterization::SetCustomValue, args("name","value"), DOXY_FN(IkParameterization,SetCustomValue))
