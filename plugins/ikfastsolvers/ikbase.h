@@ -705,7 +705,7 @@ private:
                 }
                 itsol->GetSolution(&sol[0],vsolfree.size()>0 ? &vsolfree[0] : NULL);
                 for(int i = 0; i < (int)sol.size(); ++i) {
-                    vravesol[i] = (dReal)sol[i];
+                    vravesol.at(i) = (dReal)sol[i];
                 }
                 vdists.push_back(make_pair(vdists.size(),_configdist2(probot,vravesol,q0)));
             }
@@ -762,7 +762,7 @@ private:
         //BOOST_ASSERT(sol.size()== iksol.basesol.size() && vfree.size() == iksol.GetFree().size());
         iksol.GetSolution(&sol[0],vfree.size()>0 ? &vfree[0] : NULL);
         for(int i = 0; i < (int)sol.size(); ++i) {
-            vravesol[i] = dReal(sol[i]);
+            vravesol.at(i) = dReal(sol[i]);
         }
 
         int nSameStateRepeatCount = 0;
@@ -856,7 +856,7 @@ private:
 
             IkReturnPtr localret(new IkReturn(IKRA_Success));
             localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-            localret->_vsolution.swap(vravesol);
+            localret->_vsolution = vravesol;
             listlocalikreturns.push_back(localret);
         }
 
@@ -1038,7 +1038,7 @@ private:
             paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
             IkReturnPtr localret(new IkReturn(IKRA_Success));
             localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-            localret->_vsolution.swap(vravesol);
+            localret->_vsolution = vravesol;
             listlocalikreturns.push_back(localret);
         }
 
@@ -1080,7 +1080,7 @@ private:
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
             if( _vjointrevolute.at(j) ) {
-                while( vravesol[j] > _qupper[j] ) {
+                while( vravesol.at(j) > _qupper[j] ) {
                     vravesol[j] -= 2*PI;
                 }
                 while( vravesol[j] < _qlower[j] ) {
