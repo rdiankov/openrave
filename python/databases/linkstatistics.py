@@ -237,13 +237,14 @@ class LinkStatisticsModel(DatabaseGenerator):
                     joint.SetResolution(xyzdelta)
                 elif not joint.IsStatic():
                     crossarea = self._GetValue(self.jointvolumes[index]['crossarea'])
-                    # some cross areas are 0.... bad sampling?
-                    if len(crossarea) > 0:
+                    # some cross areas are 0.... bad sampling? opening with hdf5 sometimes has crossarea as a float
+                    if isinstance(crossarea,numpy.ndarray) and len(crossarea) > 0:
                         joint.SetResolution(xyzdelta/numpy.max(crossarea[:,0]))
                     else:
                         pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
-            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(self.affinevolumes[3+2]['crossarea'][:,0]),4))
+            crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
+            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
 
     def setRobotWeights(self,weightexp=0.3333,type=0,weightmult=10.0):
         """sets the weights for the robot.
@@ -260,8 +261,8 @@ class LinkStatisticsModel(DatabaseGenerator):
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
                     weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume)**weightexp
                     if weight <= 0:
-                        log.info('joint %d has weight=%e, setting to 1e-6'%(ijoint,weight))
-                        weight = 1e-6
+                        log.warn('joint %d has weight=%e, setting to 1e-3'%(ijoint,weight))
+                        weight = 1e-3
                     return weight
                 
                 jweights = array([getweight(ijoint,jv) for ijoint,jv in enumerate(self.jointvolumes)])

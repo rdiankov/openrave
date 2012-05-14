@@ -1267,30 +1267,77 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
-            if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
-                bool bcollision=true;
-                if( _fjittermaxdist > 0 ) {
-                    // try jittering the end effector out
-                    RAVELOG_VERBOSE("starting jitter transform...\n");
+            try {
+                if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
+                    bool bcollision=true;
+                    if( _fjittermaxdist > 0 ) {
+                        // try jittering the end effector out
+                        RAVELOG_VERBOSE("starting jitter transform...\n");
 
-                    // randomly add small offset to the ik until it stops being in collision
-                    Transform tjitter;
-                    int iiter = 0;
-                    int nMaxIterations = 100;
-                    std::vector<dReal> xyzsamples(3);
-                    for(iiter = 0; iiter < nMaxIterations; ++iiter) {
-                        _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                        tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
-                        IkParameterization ikparamjittered = tjitter * ikparam;
-                        if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
-                            ikparam = ikparamjittered;
-                            bcollision = false;
-                            break;
+                        // randomly add small offset to the ik until it stops being in collision
+                        Transform tjitter;
+                        // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
+                        for(int iaxis = 2; iaxis >= 0; --iaxis) {
+                            tjitter.trans = Vector();
+                            dReal delta = 0.25;
+                            for(int iiter = 2; iiter < 10; ++iiter) {
+                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(iiter/2);
+                                if( iiter & 1 ) {
+                                    // revert sign
+                                    tjitter.trans[iaxis] = -tjitter.trans[iaxis];
+                                }
+                                IkParameterization ikparamjittered = tjitter * ikparam;
+                                try {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                        ikparam = ikparamjittered;
+                                        bcollision = false;
+                                        break;
+                                    }
+                                }
+                                catch(const std::exception& ex) {
+                                    // ignore most likely ik failed in CheckEndEffectorCollision
+                                }
+                            }
+                            if( !bcollision ) {
+                                break;
+                            }
+                        }
+
+                        if( bcollision ) {
+                            // try random samples, most likely will fail...
+                            int nMaxIterations = 10;
+                            std::vector<dReal> xyzsamples(3);
+                            for(int iiter = 0; iiter < nMaxIterations; ++iiter) {
+                                _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
+                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
+                                IkParameterization ikparamjittered = tjitter * ikparam;
+                                try {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                        ikparam = ikparamjittered;
+                                        bcollision = false;
+                                        break;
+                                    }
+                                }
+                                catch(const std::exception& ex) {
+                                    // ignore most likely ik failed in CheckEndEffectorCollision
+                                }
+                            }
                         }
                     }
+                    if( bcollision ) {
+                        RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
+                        _listsamples.erase(itsample);
+                        continue;
+                    }
                 }
-                if( bcollision ) {
-                    RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
+            }
+            catch(const std::exception& ex) {
+                if( itsample->_ikparam.GetType() == IKP_Transform6D ) {
+                    RAVELOG_WARN(str(boost::format("CheckEndEffectorCollision threw exception: %s")%ex.what()));
+                }
+                else {
+                    // most likely the ik couldn't get solved
+                    RAVELOG_VERBOSE(str(boost::format("sampleiksolutions failed to solve ik: %s.\n")%ex.what()));
                     _listsamples.erase(itsample);
                     continue;
                 }
