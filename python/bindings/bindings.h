@@ -70,7 +70,7 @@ public:
     }
     PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     boost::shared_ptr<void> _handle;
@@ -83,7 +83,7 @@ public:
     }
     PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     boost::shared_ptr<void const> _handle;
@@ -269,6 +269,22 @@ struct T_from_number
         data->convertible = storage;
     }
 };
+
+inline std::string GetPyErrorString()
+{
+    PyObject *error, *value, *traceback, *string;
+    PyErr_Fetch(&error, &value, &traceback);
+    PyErr_NormalizeException(&error, &value, &traceback);
+    std::string s;
+    if(error != NULL) {
+        string = PyObject_Str(value);
+        if(string != NULL) {
+            s.assign(PyString_AsString(string));
+            Py_DECREF(string);
+        }
+    }
+    return s;
+}
 
 /// should call in the beginning of all BOOST_PYTHON_MODULE
 void init_python_bindings();

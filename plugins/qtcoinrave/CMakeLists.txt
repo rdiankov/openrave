@@ -18,14 +18,20 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND O
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS} ${COIN_LINK_DIRS})
 
   # generate rules for building source files from the resources
-  set(QTCOIN_MOCS qtcoinviewer.h)
+  # BOOST_TT_HAS_OPERATOR_HPP_INCLUDED: https://bugreports.qt-project.org/browse/QTBUG-22829
+  set(QTCOIN_MOCS qtcoinviewer.h OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
   include(${QT_USE_FILE})
   qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
+
+  check_include_file(X11/Xlib.h HAVE_X11_XLIB_H)
 
    # build sources, moc'd sources, and rcc'd sources
   add_library(qtcoinrave SHARED ivselector.cpp item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} item.h ivselector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h ivmodelloader.cpp)
 
   set(QTCOIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
+  if( HAVE_X11_XLIB_H )
+    set(QTCOIN_COMPILE_FLAGS "${QTCOIN_COMPILE_FLAGS} -DHAVE_X11_XLIB_H")
+  endif()
   set(QTCOIN_LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${COIN_LINK_FLAGS} ${SOQT_LINK_FLAGS}")
 
   set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${COIN_LIBRARY} ${SOQT_LIBRARY} ${OPENGL_LIBRARIES})

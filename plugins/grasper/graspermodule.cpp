@@ -345,7 +345,7 @@ public:
                 }
                 analysis = _AnalyzeContacts3D(c,friction,8);
             }
-            catch(const openrave_exception& ex) {
+            catch(const std::exception& ex) {
                 RAVELOG_WARN("AnalyzeContacts3D: %s\n",ex.what());
             }
             sout << analysis.mindist << " " << analysis.volume << " ";
@@ -988,7 +988,7 @@ public:
                         grasp_params->mindist = analysis.mindist;
                         grasp_params->volume = analysis.volume;
                     }
-                    catch(const openrave_exception& ex) {
+                    catch(const std::exception& ex) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: force closure failed: %s")%grasp_params->id%ex.what()));
                         continue;     // failed
                     }

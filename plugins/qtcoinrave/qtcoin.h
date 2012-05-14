@@ -194,6 +194,8 @@ inline T CLAMP_ON_RANGE(T value, T min, T max)
 #endif
 #endif
 
+
+#include <Inventor/C/errors/debugerror.h> // call to function 'cc_debugerror_post' that is neither visible in the template definition nor found by argument-dependent lookup
 #include <Inventor/SbColor.h>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoOffscreenRenderer.h>

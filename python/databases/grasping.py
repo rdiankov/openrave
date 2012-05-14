@@ -1064,7 +1064,7 @@ class GraspingModel(DatabaseGenerator):
                 with robot.GetEnv():
                     target = robot.GetEnv().ReadKinBodyXMLFile(options.target)
                     target.SetTransform(eye(4))
-                    robot.GetEnv().AddKinBody(target)
+                    robot.GetEnv().Add(target)
                 return GraspingModel(robot=robot,target=target)
             
             Model = CreateModel
@@ -1080,7 +1080,7 @@ def run(args,*margs,**kwargs):
         with robot.GetEnv():
             target = robot.GetEnv().ReadKinBodyXMLFile(options.target)
             target.SetTransform(eye(4))
-            robot.GetEnv().AddKinBody(target)
+            robot.GetEnv().Add(target)
         return GraspingModel(robot=robot,target=target)
 
     GraspingModel.RunFromParser(Model=CreateModel, parser=parser,args=args,defaultviewer=True,*margs,**kwargs)

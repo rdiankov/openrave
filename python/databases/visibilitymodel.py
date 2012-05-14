@@ -267,7 +267,9 @@ class VisibilityModel(DatabaseGenerator):
                     else:
                         raw_input(msg)
     def show(self,options=None):
-        self.env.SetViewer('qtcoin')
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
         return self.showtransforms(options)
@@ -389,7 +391,7 @@ class VisibilityModel(DatabaseGenerator):
             with env:
                 target = env.ReadKinBodyXMLFile(options.target)
                 target.SetTransform(eye(4))
-                env.AddKinBody(target)
+                env.Add(target)
             if Model is None:
                 Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
             DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)

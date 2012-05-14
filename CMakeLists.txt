@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 6)
-set (OPENRAVE_VERSION_PATCH 4)
+set (OPENRAVE_VERSION_MINOR 7)
+set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -80,10 +80,15 @@ set(OPENRAVE_PYTHON_INSTALL_DIR)
 if( OPT_PYTHON )
   include(FindPythonInterp)
   ## check python
-  find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIR
+  find_package(PythonLibs) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIRS?
   if( NOT PYTHON_EXECUTABLE )
     # look specifically for 2.6
     find_program(PYTHON_EXECUTABLE NAMES python2.6 python PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
+  endif()
+
+  # back compat?
+  if( NOT PYTHON_INCLUDE_DIRS )
+    set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_PATH})
   endif()
 
   if( PYTHON_EXECUTABLE )
@@ -109,10 +114,10 @@ if( OPT_PYTHON )
           message(STATUS "cannot find python numpy dir!")
           set(PYTHON_EXECUTABLE)
         else()
-          set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_sitepackage_arch}/numpy/core/include)
+          set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_sitepackage_arch}/numpy/core/include)
         endif()
       else()
-        set(PYTHON_INCLUDE_PATH ${PYTHON_INCLUDE_PATH} ${_python_distpackage}/numpy/core/include)
+        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_distpackage}/numpy/core/include)
       endif()
 
       # get the major.minor python version
@@ -167,13 +172,18 @@ set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
 include_directories(${REQUIRED_INCLUDES})
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+set(COMPILER_IS_CLANG FALSE)
+if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+  set(COMPILER_IS_CLANG TRUE)
+endif()
+
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O2 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG") 
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
@@ -200,7 +210,7 @@ else()
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
 endif()
 
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(STDC_LIBRARY stdc++)
 else()
   set(STDC_LIBRARY)
@@ -353,7 +363,7 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
   endif()
 endforeach()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
 else()
@@ -444,7 +454,7 @@ endif()
 
 pkg_check_modules(ASSIMP assimp)
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   check_cxx_source_runs("
   int main()
   {
@@ -663,7 +673,8 @@ endif()
 find_package(FPARSER 4.4.3)
 if( NOT FPARSER_FOUND )
   message(STATUS "compiling local fparser library")
-  add_subdirectory(3rdparty/fparser-4.4.3)
+  add_subdirectory(3rdparty/fparser-4.5)
+  set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
 endif()
 
 message(STATUS "compiling local convexdecomposition library")
@@ -819,9 +830,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config fparser-dev)
-  # developer tools for devs
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} python-scipy ipython)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
@@ -832,7 +841,8 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS openrave-minimal)
   set(CPACK_DEBIAN_CMAKE_OPTIONS "-DBASH_COMPLETION_DIR=../etc/bash_completion.d -DOPT_DOUBLE_PRECISION=${OPT_DOUBLE_PRECISION} -DOPT_BUILD_PACKAGE_DEFAULT=${OPT_BUILD_PACKAGE_DEFAULT}")
-  set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "ipython, python-qt4")
+  set(CPACK_DEBIAN_PACKAGE_SUGGESTS)
+  set(CPACK_DEBIAN_PACKAGE_RECOMMENDS)
   foreach(COMP ${CPACK_COMPONENTS_ALL})
     set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "${CPACK_DEBIAN_PACKAGE_RECOMMENDS}, ${COMP}")
   endforeach()

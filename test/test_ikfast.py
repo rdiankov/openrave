@@ -56,7 +56,7 @@ def setup_robotstats():
     env.StopSimulation()
     ikfastproblem = RaveCreateProblem(env,'ikfast')
     assert(ikfastproblem is not None)
-    env.AddModule(ikfastproblem,'')
+    env.Add(ikfastproblem)
 
 def teardown_robotstats():
     global env,ikfastproblem
@@ -78,7 +78,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
             break
     with env:
         robot = env.ReadRobotURI(robotfilename,{'skipgeometry':'1'})
-        env.AddRobot(robot)
+        env.Add(robot)
         manip = robot.SetActiveManipulator(manipname)
         # set base to identity to avoid complications when reporting errors, testing that IK works under transformations is a different test
         robot.SetTransform(numpy.dot(numpy.linalg.inv(manip.GetBase().GetTransform()),robot.GetTransform()))
@@ -271,7 +271,7 @@ def test_robot_ikfast():
         for robotfilename in options.robotfilenames:
             envlocal.Reset()
             robot = envlocal.ReadRobotURI(robotfilename,{'skipgeometry':'1'})
-            envlocal.AddRobot(robot)
+            envlocal.Add(robot)
             for iktype in options.iktypes:
                 expecteddof = IkParameterization.GetDOF(iktype)
                 for manip in robot.GetManipulators():

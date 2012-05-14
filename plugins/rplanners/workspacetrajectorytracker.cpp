@@ -273,7 +273,7 @@ Planner Parameters\n\
             return PS_Failed;
         }
 
-        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%f computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
+        RAVELOG_DEBUG(str(boost::format("workspace trajectory tracker plan success, path=%d points, traj time=%e computed in %fs\n")%poutputtraj->GetNumWaypoints()%poutputtraj->GetDuration()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
         return PS_HasSolution;
     }
 
@@ -304,11 +304,11 @@ protected:
             _mjacobian.resize(boost::extents[0][0]);
             _mquatjacobian.resize(boost::extents[0][0]);
         }
-        _ikprev = _tbaseinv * _manip->GetIkParameterization(IKP_Transform6D);
+        _ikprev = _manip->GetIkParameterization(IKP_Transform6D,false);
         _vprevsolution = vsolution;
     }
 
-    IkFilterReturn _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
+    IkReturnAction _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
         RobotBase::RobotStateSaver saver(_robot);
 
@@ -331,7 +331,7 @@ protected:
             if( jdeltatrans_len > 1e-7 * solutiondiff ) {     // first see if there is a direction
                 if(( transangle < 0) ||( transangle*transangle < _fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len) ) {
                     //RAVELOG_INFO("rejected translation: %e < %e\n",transangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltatrans_len*jdeltatrans_len));
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
 
@@ -353,7 +353,7 @@ protected:
             if( jdeltaquat_len > 1e-4 * solutiondiff ) {     // first see if there is a direction
                 if(( quatangle < 0) ||( quatangle*quatangle < 0.95f*0.95f*expecteddeltaquat_len*jdeltaquat_len) ) {
                     //RAVELOG_INFO("rejected rotation: %e < %e\n",quatangle,RaveSqrt(_fMaxCosDeviationAngle*_fMaxCosDeviationAngle*expecteddeltaquat.lengthsqr3()*jdeltaquat.lengthsqr3()));
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
         }
@@ -361,7 +361,7 @@ protected:
             // should be very close to _vprevsolution
             for(size_t i = 0; i < _vprevsolution.size(); ++i) {
                 if( RaveFabs(_vprevsolution[i]-vsolution.at(i)) > 0.1f ) {
-                    return IKFR_Reject;
+                    return IKRA_Reject;
                 }
             }
         }
@@ -375,7 +375,7 @@ protected:
             //RobotBase::RobotStateSaver savestate(_robot);
             _robot->SetActiveDOFs(pmanip->GetArmIndices());
             _robot->SetActiveDOFValues(vmidsolution);
-            IkParameterization ikmidreal = _tbaseinv*pmanip->GetIkParameterization(ikp.GetType());
+            IkParameterization ikmidreal = pmanip->GetIkParameterization(ikp.GetType(),false);
 
             IkParameterization ikmidest;
             ikmidest.SetTransform6D(Transform(quatSlerp(_ikprev.GetTransform6D().rot, ikp.GetTransform6D().rot,dReal(0.5)), 0.5*(_ikprev.GetTransform6D().trans+ikp.GetTransform6D().trans)));
@@ -383,9 +383,10 @@ protected:
             dReal middist2 = ikmidreal.ComputeDistanceSqr(ikmidest);
             dReal realdist2 = ikp.ComputeDistanceSqr(_ikprev);
             // note that ikp might be a little off from vsolution due to the ik solver!
-            if( middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
+            // realdist2 should also be great or otherwise we could be picking up noise in the subtraction
+            if( realdist2 > g_fEpsilon && middist2 > g_fEpsilonWorkSpaceLimitSqr && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
                 RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
-                return IKFR_Reject;
+                return IKRA_Reject;
             }
         }
 
@@ -395,13 +396,13 @@ protected:
                 (*it)->Enable(true);
             }
             if( !_parameters->_checkpathconstraintsfn((_vprevsolution.size() > 0) ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
-                return IKFR_Reject;
+                return IKRA_Reject;
             }
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(false);
             }
         }
-        return IKFR_Success;
+        return IKRA_Success;
     }
 
     RobotBasePtr _robot;

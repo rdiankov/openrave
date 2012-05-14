@@ -171,7 +171,7 @@ public:
                     }
                 }
             }
-            catch(const openrave_exception& ex) {
+            catch(const std::exception& ex) {
                 RAVELOG_WARN(str(boost::format("BaseCameraSensor::Configure: %s")%ex.what()));
             }
             return _bRenderData;

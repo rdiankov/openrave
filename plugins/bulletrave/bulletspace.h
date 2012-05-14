@@ -140,7 +140,7 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0001)
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.000001)
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -349,13 +349,6 @@ private:
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&BulletSpace::GeometryChangedCallback,boost::bind(&utils::sptr_from<BulletSpace>, weak_space()),KinBodyWeakPtr(pbody)));
         _Synchronize(pinfo);
         return pinfo;
-    }
-
-    bool Enable(KinBodyConstPtr pbody, bool bEnable) {
-        return true;
-    }
-    bool EnableLink(KinBody::LinkConstPtr pbody, bool bEnable) {
-        return true;
     }
 
     void Synchronize()

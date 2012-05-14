@@ -39,7 +39,7 @@ public:
         probot->SetActiveDOFs(vindices);
 
         ModuleBasePtr pbasemanip = RaveCreateModule(penv,"basemanipulation"); // create the module
-        penv->AddModule(pbasemanip,probot->GetName()); // load the module
+        penv->Add(pbasemanip,true,probot->GetName()); // load the module
 
         while(IsOk()) {
             {

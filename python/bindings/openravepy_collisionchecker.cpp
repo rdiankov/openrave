@@ -181,6 +181,17 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
 
 void init_openravepy_collisionchecker()
 {
+    enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
+    .value("Distance",CO_Distance)
+    .value("UseTolerance",CO_UseTolerance)
+    .value("Contacts",CO_Contacts)
+    .value("RayAnyHit",CO_RayAnyHit)
+    .value("ActiveDOFs",CO_ActiveDOFs);
+    enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
+    .value("DefaultAction",CA_DefaultAction)
+    .value("Ignore",CA_Ignore)
+    ;
+
     class_<PyCollisionReport::PYCONTACT, boost::shared_ptr<PyCollisionReport::PYCONTACT> >("Contact", DOXY_CLASS(CollisionReport::CONTACT))
     .def_readonly("pos",&PyCollisionReport::PYCONTACT::pos)
     .def_readonly("norm",&PyCollisionReport::PYCONTACT::norm)

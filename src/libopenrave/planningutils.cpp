@@ -290,7 +290,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     v.VerifyTrajectory(trajectory,samplingstep);
 }
 
-void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& interpolation, bool bsmooth, const std::string& plannerparameters)
+void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -310,15 +310,15 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
     }
+    FOREACH(it,params->_vConfigAccelerationLimit) {
+        *it *= fmaxaccelmult;
+    }
     if( !bsmooth ) {
         params->_setstatefn.clear();
         params->_checkpathconstraintsfn.clear();
     }
 
     params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps>")%hastimestamps);
-    if( interpolation.size() > 0 ) {
-        params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation>")%interpolation);
-    }
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
@@ -391,7 +391,7 @@ private:
 };
 
 // this function is very messed up...?
-static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& interpolation, bool bsmooth, const std::string& plannerparameters)
+static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -470,8 +470,9 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
         if( listsetfunctions.size() > 0 ) {
             params->_setstatefn = boost::bind(_SetAffineState,_1,boost::ref(listsetfunctions));
             params->_getstatefn = boost::bind(_GetAffineState,_1,boost::ref(listgetfunctions));
-            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint());
-            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), robot, _1, _2, _3, _4);
+            std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
+            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
+            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), _1, _2, _3, _4);
             statesaver.reset(new PlannerStateSaver(traj->GetConfigurationSpecification().GetDOF(), params->_setstatefn, params->_getstatefn));
         }
     }
@@ -485,9 +486,6 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
 
     //params->_distmetricfn;
     params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps><forcemaxaccel>1</forcemaxaccel>")%hastimestamps);
-    if( interpolation.size() > 0 ) {
-        params->_sExtraParameters += str(boost::format("<interpolation>%s</interpolation>")%interpolation);
-    }
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
@@ -497,51 +495,58 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
     }
 }
 
-void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& plannerparameters)
+void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
-    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", "", true,plannerparameters);
+    _PlanActiveDOFTrajectory(traj,robot,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
-void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
+void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
-    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "parabolicsmoother", "", true, plannerparameters);
+    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", true, plannerparameters);
 }
 
-void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, const std::string& plannername, const std::string& plannerparameters)
+static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std::string& forceplanner=std::string())
 {
-    std::string newplannername = plannername;
+    if( forceplanner.size() > 0 ) {
+        return forceplanner;
+    }
     std::string interpolation;
-    if( newplannername.size() == 0 ) {
-        // check out the trajectory interpolation values and take it from there
-        FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
-            if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
-                interpolation = itgroup->interpolation;
-                break;
-            }
-            else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
-                interpolation = itgroup->interpolation;
-            }
+    // check out the trajectory interpolation values and take it from there
+    FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
+        if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
+            interpolation = itgroup->interpolation;
+            break;
         }
-
-        if( interpolation == "quadratic" ) {
-            newplannername = "parabolictrajectoryretimer";
+        else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+            interpolation = itgroup->interpolation;
         }
-        else if( interpolation == "linear" ) {
-            newplannername = "lineartrajectoryretimer";
-        }
-        else {
-            newplannername = "lineartrajectoryretimer";
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            interpolation = itgroup->interpolation;
         }
     }
-    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,newplannername, interpolation, false,plannerparameters);
+
+    if( interpolation == "quadratic" ) {
+        return "parabolictrajectoryretimer";
+    }
+    else if( interpolation == "linear" ) {
+        return "lineartrajectoryretimer";
+    }
+    else {
+        return "lineartrajectoryretimer";
+    }
+}
+
+void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+{
+    _PlanActiveDOFTrajectory(traj,robot,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
 void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
 {
-    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, plannername.size() > 0 ? plannername : "lineartrajectoryretimer", "", false,plannerparameters);
+    _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, const std::string& plannername)
+void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -601,7 +606,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             throw OPENRAVE_EXCEPTION_FORMAT("currently do not support retiming for %s interpolations",interpolation,ORE_InvalidArguments);
         }
     }
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,newplannername);
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername);
 
     // retiming is done, now merge the two trajectories
     size_t targetdof = vtargetvalues.size();
@@ -824,12 +829,21 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         itdh->joint = *itjoint;
         itdh->parentindex = -1;
         if( !!plink ) {
-            for(size_t iparent = 0; iparent < pbody->GetDependencyOrderedJoints().size(); ++iparent) {
-                if( pbody->GetDependencyOrderedJoints()[iparent]->GetHierarchyChildLink() == plink ) {
-                    itdh->parentindex = iparent;
-                    tparent = vparameters.at(iparent).transform;
+            std::vector<KinBody::JointPtr> vparentjoints;
+            pbody->GetChain(0,plink->GetIndex(),vparentjoints);
+            if( vparentjoints.size() > 0 ) {
+                // get the first non-passive joint
+                int index = (int)vparentjoints.size()-1;
+                while(index >= 0 && vparentjoints[index]->GetJointIndex() < 0 ) {
+                    index--;
+                }
+                if( index >= 0 ) {
+                    // search for it in pbody->GetDependencyOrderedJoints()
+                    std::vector<KinBody::JointPtr>::const_iterator itjoint = find(pbody->GetDependencyOrderedJoints().begin(),pbody->GetDependencyOrderedJoints().end(),vparentjoints[index]);
+                    BOOST_ASSERT( itjoint != pbody->GetDependencyOrderedJoints().end() );
+                    itdh->parentindex = itjoint - pbody->GetDependencyOrderedJoints().begin();
+                    tparent = vparameters.at(itdh->parentindex).transform;
                     tparentinv = tparent.inverse();
-                    break;
                 }
             }
         }
@@ -856,7 +870,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         itdh->theta = RaveAtan2(vlocalx.y,vlocalx.x);
         itdh->a = vlocalanchor.dot3(vlocalx);
         // normalize if theta is closer to PI
-        if( itdh->theta > 0.5*PI ) {
+        if( itdh->theta > 0.5*PI-g_fEpsilon ) { // this is a really weird condition but it looks like people prefer theta to be negative
             itdh->alpha = -itdh->alpha;
             itdh->theta -= PI;
             itdh->a = -itdh->a;
@@ -873,7 +887,12 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-LineCollisionConstraint::LineCollisionConstraint()
+LineCollisionConstraint::LineCollisionConstraint() : _bCheckEnv(true)
+{
+    _report.reset(new CollisionReport());
+}
+
+LineCollisionConstraint::LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv) : _listCheckSelfCollisions(listCheckCollisions), _bCheckEnv(bCheckEnv)
 {
     _report.reset(new CollisionReport());
 }
@@ -908,7 +927,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
             return false;
         }
         if( robot->CheckSelfCollision(_report) ) {
@@ -942,7 +961,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 
     if (start == 0 ) {
         params->_setstatefn(pQ0);
-        if (robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
+        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
             return false;
         }
         if( robot->CheckSelfCollision(_report) ) {
@@ -970,11 +989,133 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+        if( _bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
             return false;
         }
         if( robot->CheckSelfCollision() ) {
             return false;
+        }
+        if( !!params->_getstatefn ) {
+            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+        }
+        if( !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->push_back(_vtempconfig);
+        }
+        if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+            return false;
+        }
+    }
+
+    if( bCheckEnd && !!pvCheckedConfigurations ) {
+        pvCheckedConfigurations->push_back(pQ1);
+    }
+    return true;
+}
+
+bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
+{
+    // set the bounds based on the interval type
+    PlannerBase::PlannerParametersPtr params = _params.lock();
+    if( !params ) {
+        return false;
+    }
+    BOOST_ASSERT(_listCheckSelfCollisions.size()>0);
+    int start=0;
+    bool bCheckEnd=false;
+    switch (interval) {
+    case IT_Open:
+        start = 1;  bCheckEnd = false;
+        break;
+    case IT_OpenStart:
+        start = 1;  bCheckEnd = true;
+        break;
+    case IT_OpenEnd:
+        start = 0;  bCheckEnd = false;
+        break;
+    case IT_Closed:
+        start = 0;  bCheckEnd = true;
+        break;
+    default:
+        BOOST_ASSERT(0);
+    }
+
+    // first make sure the end is free
+    _vtempconfig.resize(params->GetDOF());
+    if (bCheckEnd) {
+        params->_setstatefn(pQ1);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision(_report) ) {
+                return false;
+            }
+        }
+    }
+
+    // compute  the discretization
+    dQ = pQ1;
+    params->_diffstatefn(dQ,pQ0);
+    int i, numSteps = 1;
+    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
+    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
+    int totalsteps = 0;
+    for (i = 0; i < params->GetDOF(); i++,itres++) {
+        int steps;
+        if( *itres != 0 ) {
+            steps = (int)(fabs(dQ[i]) / *itres);
+        }
+        else {
+            steps = (int)(fabs(dQ[i]) * 100);
+        }
+        totalsteps += steps;
+        if (steps > numSteps) {
+            numSteps = steps;
+        }
+    }
+    if((totalsteps == 0)&&(start > 0)) {
+        return true;
+    }
+
+    if (start == 0 ) {
+        params->_setstatefn(pQ0);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision(_report) ) {
+                return false;
+            }
+        }
+        start = 1;
+    }
+
+    dReal fisteps = dReal(1.0f)/numSteps;
+    for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
+        *it *= fisteps;
+    }
+
+    // check for collision along the straight-line path
+    // NOTE: this does not check the end config, and may or may
+    // not check the start based on the value of 'start'
+    for (i = 0; i < params->GetDOF(); i++) {
+        _vtempconfig[i] = pQ0[i];
+    }
+    if( start > 0 ) {
+        params->_setstatefn(_vtempconfig);
+        if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            return false;
+        }
+    }
+    for (int f = start; f < numSteps; f++) {
+        params->_setstatefn(_vtempconfig);
+        FOREACHC(itbody, _listCheckSelfCollisions) {
+            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody)) ) {
+                return false;
+            }
+            if( (*itbody)->CheckSelfCollision() ) {
+                return false;
+            }
         }
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
@@ -1087,59 +1228,116 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
 
 bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
 {
-    vgoal.resize(0);
+    IkReturnPtr ikreturn = Sample();
+    if( !ikreturn ) {
+        vgoal.resize(0);
+        return false;
+    }
+    vgoal.swap(ikreturn->_vsolution); // won't be using the ik return anymore
+    return true;
+}
+
+IkReturnPtr ManipulatorIKGoalSampler::Sample()
+{
     std::vector<dReal> vindex;
     _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
     if( vindex.at(0) > _fsampleprob ) {
-        return false;
+        return IkReturnPtr();
     }
-    if( _viksolutions.size() > 0 ) {
-        vgoal = _viksolutions.back();
-        _viksolutions.pop_back();
+    if( _vikreturns.size() > 0 ) {
+        IkReturnPtr ikreturnlocal = _vikreturns.back();
+        _vikreturns.pop_back();
         _listreturnedsamples.push_back(_tempikindex);
-        if( _viksolutions.size() == 0 ) {
+        if( _vikreturns.size() == 0 ) {
             _tempikindex = -1;
         }
-        return true;
+        return ikreturnlocal;
     }
 
     for(int itry = 0; itry < _nummaxtries; ++itry ) {
         if( _listsamples.size() == 0 ) {
-            return false;
+            return IkReturnPtr();
         }
         _pindexsampler->SampleSequence(vindex,1,IT_OpenEnd);
         int isampleindex = (int)(vindex.at(0)*_listsamples.size());
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D;
+        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
-            if( _pmanip->CheckEndEffectorCollision(ikparam.GetTransform6D(),_report) ) {
-                bool bcollision=true;
-                if( _fjittermaxdist > 0 ) {
-                    // try jittering the end effector out
-                    RAVELOG_VERBOSE("starting jitter transform...\n");
+            try {
+                if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
+                    bool bcollision=true;
+                    if( _fjittermaxdist > 0 ) {
+                        // try jittering the end effector out
+                        RAVELOG_VERBOSE("starting jitter transform...\n");
 
-                    // randomly add small offset to the ik until it stops being in collision
-                    Transform transorig = ikparam.GetTransform6D();
-                    Transform transnew = transorig;
-                    int iiter = 0;
-                    int nMaxIterations = 100;
-                    std::vector<dReal> xyzsamples(3);
-                    for(iiter = 0; iiter < nMaxIterations; ++iiter) {
-                        _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                        transnew.trans = transorig.trans + _fjittermaxdist * Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f);
-                        if( !_pmanip->CheckEndEffectorCollision(transnew,_report) ) {
-                            ikparam.SetTransform6D(transnew);
-                            bcollision = false;
-                            break;
+                        // randomly add small offset to the ik until it stops being in collision
+                        Transform tjitter;
+                        // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
+                        for(int iaxis = 2; iaxis >= 0; --iaxis) {
+                            tjitter.trans = Vector();
+                            dReal delta = 0.25;
+                            for(int iiter = 2; iiter < 10; ++iiter) {
+                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(iiter/2);
+                                if( iiter & 1 ) {
+                                    // revert sign
+                                    tjitter.trans[iaxis] = -tjitter.trans[iaxis];
+                                }
+                                IkParameterization ikparamjittered = tjitter * ikparam;
+                                try {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                        ikparam = ikparamjittered;
+                                        bcollision = false;
+                                        break;
+                                    }
+                                }
+                                catch(const std::exception& ex) {
+                                    // ignore most likely ik failed in CheckEndEffectorCollision
+                                }
+                            }
+                            if( !bcollision ) {
+                                break;
+                            }
+                        }
+
+                        if( bcollision ) {
+                            // try random samples, most likely will fail...
+                            int nMaxIterations = 10;
+                            std::vector<dReal> xyzsamples(3);
+                            for(int iiter = 0; iiter < nMaxIterations; ++iiter) {
+                                _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
+                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
+                                IkParameterization ikparamjittered = tjitter * ikparam;
+                                try {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                        ikparam = ikparamjittered;
+                                        bcollision = false;
+                                        break;
+                                    }
+                                }
+                                catch(const std::exception& ex) {
+                                    // ignore most likely ik failed in CheckEndEffectorCollision
+                                }
+                            }
                         }
                     }
+                    if( bcollision ) {
+                        RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
+                        _listsamples.erase(itsample);
+                        continue;
+                    }
                 }
-                if( bcollision ) {
-                    RAVELOG_VERBOSE(str(boost::format("sampleiksolutions gripper in collision: %s.\n")%_report->__str__()));
+            }
+            catch(const std::exception& ex) {
+                if( itsample->_ikparam.GetType() == IKP_Transform6D ) {
+                    RAVELOG_WARN(str(boost::format("CheckEndEffectorCollision threw exception: %s")%ex.what()));
+                }
+                else {
+                    // most likely the ik couldn't get solved
+                    RAVELOG_VERBOSE(str(boost::format("sampleiksolutions failed to solve ik: %s.\n")%ex.what()));
                     _listsamples.erase(itsample);
                     continue;
                 }
@@ -1164,7 +1362,7 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
                 }
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _viksolutions, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0));
+        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0), _vikreturns);
         if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
             _listsamples.erase(itsample);
         }
@@ -1172,15 +1370,15 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
         if( bsuccess ) {
             _tempikindex = orgindex;
             _listreturnedsamples.push_back(orgindex);
-            vgoal = _viksolutions.back();
-            _viksolutions.pop_back();
-            if( _viksolutions.size() == 0 ) {
+            IkReturnPtr ikreturnlocal = _vikreturns.back();
+            _vikreturns.pop_back();
+            if( _vikreturns.size() == 0 ) {
                 _tempikindex = -1;
             }
-            return true;
+            return ikreturnlocal;
         }
     }
-    return false;
+    return IkReturnPtr();
 }
 
 int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)

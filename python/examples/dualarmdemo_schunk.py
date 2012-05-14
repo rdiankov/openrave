@@ -40,7 +40,7 @@ class Schunkplanner:
         self.probsmanip = RaveCreateModule(self.env,'dualmanipulation')
         args = self.robot.GetName()
         #args += ' planner birrt' 
-        self.env.AddModule(self.probsmanip,args)
+        self.env.Add(self.probsmanip,True,args)
         self.leftArm=self.robot.GetManipulator('leftarm')
         self.rightArm=self.robot.GetManipulator('rightarm')
         self.dualsolver = MultiManipIKSolver([self.leftArm,self.rightArm])
@@ -181,8 +181,7 @@ def run(args=None):
                       action="store",type='string',dest='scene',default='data/dualarmmanipulation.env.xml',
                       help='Scene file to load')   
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)    
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

@@ -2634,7 +2634,7 @@ public:
                     ModuleBasePtr pIKFastLoader;
                     {
                         list<ModuleBasePtr> listModules;
-                        boost::shared_ptr<void> pmutex = _probot->GetEnv()->GetModules(listModules);
+                        _probot->GetEnv()->GetModules(listModules);
                         FOREACHC(itprob, listModules) {
                             if( _stricmp((*itprob)->GetXMLId().c_str(),"ikfast") == 0 ) {
                                 pIKFastLoader = *itprob;
@@ -3416,7 +3416,7 @@ public:
                     boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
-                    _penv->AddRobot(probot);
+                    _penv->Add(probot);
                     if( !!robotreader->GetJointValues() ) {
                         if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
@@ -3430,7 +3430,7 @@ public:
                     KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
                     KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
-                    _penv->AddKinBody(pbody);
+                    _penv->Add(pbody);
                     if( !!kinbodyreader->GetJointValues() ) {
                         if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
                             RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
@@ -3442,7 +3442,7 @@ public:
                 }
                 else if( !!boost::dynamic_pointer_cast<SensorXMLReader>(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Sensor);
-                    _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
+                    _penv->Add(RaveInterfaceCast<SensorBase>(_pinterface));
                 }
                 else if( !!boost::dynamic_pointer_cast< DummyInterfaceXMLReader<PT_PhysicsEngine> >(_pcurreader) ) {
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_PhysicsEngine);
@@ -3615,21 +3615,7 @@ public:
             if( _pcurreader->endElement(xmlname) ) {
                 if( !!_pinterface ) {
                     if( _bAddToEnvironment ) {
-                        if( _pinterface->GetInterfaceType() == PT_Robot ) {
-                            _penv->AddRobot(RaveInterfaceCast<RobotBase>(_pinterface));
-                        }
-                        else if( _pinterface->GetInterfaceType() == PT_KinBody ) {
-                            _penv->AddKinBody(RaveInterfaceCast<KinBody>(_pinterface));
-                        }
-                        else if( _pinterface->GetInterfaceType() == PT_Sensor ) {
-                            _penv->AddSensor(RaveInterfaceCast<SensorBase>(_pinterface));
-                        }
-//                        else if( _pinterface->GetInterfaceType() == PT_Module ) {
-//                            _penv->AddModule(RaveInterfaceCast<ModuleBase>(_pinterface),"");
-//                        }
-                        else if( _pinterface->GetInterfaceType() == PT_Viewer ) {
-                            _penv->AddViewer(RaveInterfaceCast<ViewerBase>(_pinterface));
-                        }
+                        _penv->Add(_pinterface);
                     }
                     return true;
                 }

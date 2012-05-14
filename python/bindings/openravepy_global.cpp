@@ -423,6 +423,9 @@ public:
         default: throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", type, ORE_InvalidArguments);
         }
     }
+    PyIkParameterization(boost::shared_ptr<PyIkParameterization> pyikparam) {
+        _param = pyikparam->_param;
+    }
     PyIkParameterization(const IkParameterization &ikparam) : _param(ikparam) {
     }
     virtual ~PyIkParameterization() {
@@ -477,12 +480,16 @@ public:
         if( pyikptr.check() ) {
             return openravepy::toPyConfigurationSpecification(((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification());
         }
-        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)extract<IkParameterizationType>(o)));
+        extract<IkParameterizationType> pyiktype(o);
+        if( pyiktype.check() ) {
+            return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype));
+        }
+        return openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(o)));
     }
 
-    static PyConfigurationSpecificationPtr GetConfigurationSpecificationFromType(IkParameterizationType iktype)
+    static PyConfigurationSpecificationPtr GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="")
     {
-        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype));
+        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation));
     }
 
     void SetTransform6D(object o) {
@@ -598,6 +605,39 @@ public:
         return toPyIkParameterization(ExtractTransform(otrans) * _param);
     }
 
+    void SetCustomValues(const std::string& name, object ovalues)
+    {
+        _param.SetCustomValues(name,ExtractArray<dReal>(ovalues));
+    }
+
+    void SetCustomValue(const std::string& name, dReal value)
+    {
+        _param.SetCustomValue(name,value);
+    }
+
+    object GetCustomValues(const std::string& name)
+    {
+        std::vector<dReal> values;
+        if( _param.GetCustomValues(name,values) ) {
+            return toPyArray(values);
+        }
+        return object();
+    }
+
+    object GetCustomDataMap()
+    {
+        boost::python::dict odata;
+        FOREACHC(it, _param.GetCustomDataMap()) {
+            odata[it->first] = toPyArray(it->second);
+        }
+        return odata;
+    }
+
+    void ClearCustomValues(const std::string& name=std::string())
+    {
+        _param.ClearCustomValues(name);
+    }
+
     object GetValues() const
     {
         vector<dReal> values(_param.GetNumberOfValues());
@@ -609,6 +649,11 @@ public:
     {
         vector<dReal> vsetvalues = ExtractArray<dReal>(ovalues);
         _param.Set(vsetvalues.begin(),iktype);
+    }
+
+    void MultiplyTransform(object otrans)
+    {
+        _param.MultiplyTransform(ExtractTransform(otrans));
     }
 
     string __repr__() {
@@ -1062,19 +1107,19 @@ void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal s
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
-void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername,plannerparameters);
+    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
-void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
+void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
+    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),plannername,plannerparameters);
 }
 
-void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,plannername,plannerparameters);
+    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
 void pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
@@ -1170,11 +1215,19 @@ public:
     virtual ~PyManipulatorIKGoalSampler() {
     }
 
-    object Sample()
+    object Sample(bool ikreturn = false)
     {
-        std::vector<dReal> vgoal;
-        if( _sampler->Sample(vgoal) ) {
-            return toPyArray(vgoal);
+        if( ikreturn ) {
+            IkReturnPtr pikreturn = _sampler->Sample();
+            if( !!pikreturn ) {
+                return openravepy::toPyIkReturn(*pikreturn);
+            }
+        }
+        else {
+            std::vector<dReal> vgoal;
+            if( _sampler->Sample(vgoal) ) {
+                return toPyArray(vgoal);
+            }
         }
         return object();
     }
@@ -1188,9 +1241,12 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
-BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 6)
-BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 1)
 
 void init_openravepy_global()
 {
@@ -1241,16 +1297,6 @@ void init_openravepy_global()
     .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
     .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
     ;
-    enum_<CollisionOptions>("CollisionOptions" DOXY_ENUM(CollisionOptions))
-    .value("Distance",CO_Distance)
-    .value("UseTolerance",CO_UseTolerance)
-    .value("Contacts",CO_Contacts)
-    .value("RayAnyHit",CO_RayAnyHit)
-    .value("ActiveDOFs",CO_ActiveDOFs);
-    enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
-    .value("DefaultAction",CA_DefaultAction)
-    .value("Ignore",CA_Ignore)
-    ;
     enum_<CloningOptions>("CloningOptions" DOXY_ENUM(CloningOptions))
     .value("Bodies",Clone_Bodies)
     .value("Viewer",Clone_Viewer)
@@ -1261,18 +1307,7 @@ void init_openravepy_global()
     enum_<PhysicsEngineOptions>("PhysicsEngineOptions" DOXY_ENUM(PhysicsEngineOptions))
     .value("SelfCollisions",PEO_SelfCollisions)
     ;
-    enum_<IkFilterOptions>("IkFilterOptions" DOXY_ENUM(IkFilterOptions))
-    .value("CheckEnvCollisions",IKFO_CheckEnvCollisions)
-    .value("IgnoreSelfCollisions",IKFO_IgnoreSelfCollisions)
-    .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
-    .value("IgnoreCustomFilters",IKFO_IgnoreCustomFilters)
-    .value("IgnoreEndEffectorCollisions",IKFO_IgnoreEndEffectorCollisions)
-    ;
-    enum_<IkFilterReturn>("IkFilterReturn" DOXY_ENUM(IkFilterReturn))
-    .value("Success",IKFR_Success)
-    .value("Reject",IKFR_Reject)
-    .value("Quit",IKFR_Quit)
-    ;
+
     enum_<IntervalType>("Interval" DOXY_ENUM(IntervalType))
     .value("Open",IT_Open)
     .value("OpenStart",IT_OpenStart)
@@ -1300,6 +1335,24 @@ void init_openravepy_global()
                     .value("TranslationXAxisAngleZNorm4D",IKP_TranslationXAxisAngleZNorm4D)
                     .value("TranslationYAxisAngleXNorm4D",IKP_TranslationYAxisAngleXNorm4D)
                     .value("TranslationZAxisAngleYNorm4D",IKP_TranslationZAxisAngleYNorm4D)
+                    // velocity
+                    .value("VelocityDataBit",IKP_VelocityDataBit)
+                    .value("Transform6DVelocity",IKP_Transform6DVelocity)
+                    .value("Rotation3DVelocity",IKP_Rotation3DVelocity)
+                    .value("Translation3DVelocity",IKP_Translation3DVelocity)
+                    .value("Direction3DVelocity",IKP_Direction3DVelocity)
+                    .value("Ray4DVelocity",IKP_Ray4DVelocity)
+                    .value("Lookat3DVelocity",IKP_Lookat3DVelocity)
+                    .value("TranslationDirection5DVelocity",IKP_TranslationDirection5DVelocity)
+                    .value("TranslationXY2DVelocity",IKP_TranslationXY2DVelocity)
+                    .value("TranslationXYOrientation3DVelocity",IKP_TranslationXYOrientation3DVelocity)
+                    .value("TranslationLocalGlobal6DVelocity",IKP_TranslationLocalGlobal6DVelocity)
+                    .value("TranslationXAxisAngle4DVelocity",IKP_TranslationXAxisAngle4DVelocity)
+                    .value("TranslationYAxisAngle4DVelocity",IKP_TranslationYAxisAngle4DVelocity)
+                    .value("TranslationZAxisAngle4DVelocity",IKP_TranslationZAxisAngle4DVelocity)
+                    .value("TranslationXAxisAngleZNorm4DVelocity",IKP_TranslationXAxisAngleZNorm4DVelocity)
+                    .value("TranslationYAxisAngleXNorm4DVelocity",IKP_TranslationYAxisAngleXNorm4DVelocity)
+                    .value("TranslationZAxisAngleYNorm4DVelocity",IKP_TranslationZAxisAngleYNorm4DVelocity)
     ;
 
     class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
@@ -1313,7 +1366,8 @@ void init_openravepy_global()
     ;
 
     class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
-    .def("close",&PyUserData::close,"force releasing the user handle point.")
+    .def("close",&PyUserData::Close,"deprecated")
+    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
     ;
     class_<PySerializableData, boost::shared_ptr<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData), no_init)
     .def("Serialize",&PySerializableData::Serialize,args("options"), DOXY_FN(SerializableData, Serialize))
@@ -1409,6 +1463,7 @@ void init_openravepy_global()
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
+                                   .def(init<boost::shared_ptr<PyIkParameterization> >(args("ikparam")))
                                    .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
                                    .def("SetTransform6D",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
                                    .def("SetRotation3D",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
@@ -1452,31 +1507,22 @@ void init_openravepy_global()
                                    .staticmethod("GetNumberOfValuesFromType")
                                    .def("GetConfigurationSpecification", GetConfigurationSpecification1, DOXY_FN(IkParameterization,GetConfigurationSpecification))
                                    .def("GetConfigurationSpecification", GetConfigurationSpecification2, args("type"), DOXY_FN(IkParameterization,GetConfigurationSpecification))
-                                   .def("GetConfigurationSpecificationFromType", PyIkParameterization::GetConfigurationSpecificationFromType,args("type"), DOXY_FN(IkParameterization,GetConfigurationSpecification))
+                                   .def("GetConfigurationSpecificationFromType", PyIkParameterization::GetConfigurationSpecificationFromType, GetConfigurationSpecificationFromType_overloads(args("type","interpolation"), DOXY_FN(IkParameterization,GetConfigurationSpecification)))
                                    .staticmethod("GetConfigurationSpecificationFromType")
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
-                                   .def("Transform",&PyIkParameterization::Transform,"Transforms the IK parameterization by this (T * ik)")
+                                   .def("Transform",&PyIkParameterization::Transform,"Returns a new parameterization with transformed by the transformation T (T * ik)")
+                                   .def("MultiplyTransform",&PyIkParameterization::MultiplyTransform,DOXY_FN(IkParameterization,MultiplyTransform))
                                    .def("GetValues",&PyIkParameterization::GetValues, DOXY_FN(IkParameterization,GetValues))
                                    .def("SetValues",&PyIkParameterization::SetValues, args("values","type"), DOXY_FN(IkParameterization,SetValues))
+                                   .def("GetCustomDataMap",&PyIkParameterization::GetCustomDataMap, DOXY_FN(IkParameterization,GetCustomDataMap))
+                                   .def("GetCustomValues",&PyIkParameterization::GetCustomValues, args("name"), DOXY_FN(IkParameterization,GetCustomValues))
+                                   .def("SetCustomValues",&PyIkParameterization::SetCustomValues, args("name","values"), DOXY_FN(IkParameterization,SetCustomValues))
+                                   .def("SetCustomValue",&PyIkParameterization::SetCustomValue, args("name","value"), DOXY_FN(IkParameterization,SetCustomValue))
+                                   .def("ClearCustomValues",&PyIkParameterization::ClearCustomValues,ClearCustomValues_overloads(args("name"), DOXY_FN(IkParameterization,ClearCustomValues)))
                                    .def("__str__",&PyIkParameterization::__str__)
                                    .def("__unicode__",&PyIkParameterization::__unicode__)
                                    .def("__repr__",&PyIkParameterization::__repr__)
                                    .def_pickle(IkParameterization_pickle_suite())
-                                   // deprecated
-                                   .def("SetTransform",&PyIkParameterization::SetTransform6D,args("transform"), DOXY_FN(IkParameterization,SetTransform6D))
-                                   .def("SetRotation",&PyIkParameterization::SetRotation3D,args("quat"), DOXY_FN(IkParameterization,SetRotation3D))
-                                   .def("SetTranslation",&PyIkParameterization::SetTranslation3D,args("pos"), DOXY_FN(IkParameterization,SetTranslation3D))
-                                   .def("SetDirection",&PyIkParameterization::SetDirection3D,args("dir"), DOXY_FN(IkParameterization,SetDirection3D))
-                                   .def("SetRay",&PyIkParameterization::SetRay4D,args("quat"), DOXY_FN(IkParameterization,SetRay4D))
-                                   .def("SetLookat",&PyIkParameterization::SetLookat3D,args("pos"), DOXY_FN(IkParameterization,SetLookat3D))
-                                   .def("SetTranslationDirection",&PyIkParameterization::SetTranslationDirection5D,args("quat"), DOXY_FN(IkParameterization,SetTranslationDirection5D))
-                                   .def("GetTransform",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
-                                   .def("GetRotation",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
-                                   .def("GetTranslation",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
-                                   .def("GetDirection",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))
-                                   .def("GetRay",&PyIkParameterization::GetRay4D, DOXY_FN(IkParameterization,GetRay4D))
-                                   .def("GetLookat",&PyIkParameterization::GetLookat3D, DOXY_FN(IkParameterization,GetLookat3D))
-                                   .def("GetTranslationDirection",&PyIkParameterization::GetTranslationDirection5D, DOXY_FN(IkParameterization,GetTranslationDirection5D))
         ;
         ikparameterization.attr("Type") = iktype;
     }
@@ -1489,11 +1535,11 @@ void init_openravepy_global()
                   .staticmethod("ReverseTrajectory")
                   .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))
                   .staticmethod("VerifyTrajectory")
-                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername","plannerparameters"),DOXY_FN1(SmoothActiveDOFTrajectory)))
+                  .def("SmoothActiveDOFTrajectory",planningutils::pySmoothActiveDOFTrajectory, SmoothActiveDOFTrajectory_overloads(args("trajectory","robot","maxvelmult","maxaccelmult","plannername","plannerparameters"),DOXY_FN1(SmoothActiveDOFTrajectory)))
                   .staticmethod("SmoothActiveDOFTrajectory")
-                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters"),DOXY_FN1(SmoothAffineTrajectory)))
+                  .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","plannername","plannerparameters"),DOXY_FN1(SmoothAffineTrajectory)))
                   .staticmethod("SmoothAffineTrajectory")
-                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","plannername","plannerparameters"),DOXY_FN1(RetimeActiveDOFTrajectory)))
+                  .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters"),DOXY_FN1(RetimeActiveDOFTrajectory)))
                   .staticmethod("RetimeActiveDOFTrajectory")
                   .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters"),DOXY_FN1(RetimeAffineTrajectory)))
                   .staticmethod("RetimeAffineTrajectory")
@@ -1512,6 +1558,7 @@ void init_openravepy_global()
         .def_readwrite("a",&planningutils::PyDHParameter::a)
         .def_readwrite("theta",&planningutils::PyDHParameter::theta)
         .def_readwrite("alpha",&planningutils::PyDHParameter::alpha)
+        .def_readwrite("parentindex",&planningutils::PyDHParameter::parentindex)
         .def("__str__",&planningutils::PyDHParameter::__str__)
         .def("__unicode__",&planningutils::PyDHParameter::__unicode__)
         .def("__repr__",&planningutils::PyDHParameter::__repr__)
@@ -1521,7 +1568,7 @@ void init_openravepy_global()
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
-        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample))
+        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         ;
     }
 

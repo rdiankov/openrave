@@ -34,8 +34,7 @@ class Grasper:
         self.args = self.robot.GetName()
         if plannername is not None and len(plannername)>0:
             self.args += ' planner %s '%plannername
-        if env.AddModule(self.prob,self.args) != 0:
-            raise ValueError('module failed to initialize')
+        env.Add(self.prob,True,self.args)
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
@@ -45,8 +44,7 @@ class Grasper:
         clone.prob = RaveCreateModule(envother,'Grasper')
         clone.robot = envother.GetRobot(self.robot.GetName())
         clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
-        if envother.AddModule(clone.prob,clone.args) != 0:
-            raise ValueError('module failed to initialize')
+        envother.Add(clone.prob,True,clone.args)
         return clone
     def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None):
         """See :ref:`module-grasper-grasp`

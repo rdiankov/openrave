@@ -113,7 +113,7 @@ Release Process
 
 1. Run Jenkins and create the latest_stable tag, windows installers, and documentation
 
-2. Upload the documentation:
+2. Update and upload the documentation. Make sure to set the correct revision in **changelog.rst**, and change Latest Official Version in **index.rst**. To upload:
 
 .. code-block:: bash
 

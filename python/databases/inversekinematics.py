@@ -33,11 +33,11 @@ First set the active manipulator, and then instantiate the InverseKinematicsMode
 .. code-block:: python
 
   robot.SetActiveManipulator(...)
-  ikmodel = openravepy.databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+  ikmodel = openravepy.databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterizationType.Transform6D)
   if not ikmodel.load():
       ikmodel.autogenerate()
 
-The supported types are defined by `IkParameterization.Type` and are propagated throughout the entire OpenRAVE framework. All solve methods take in a `IkParameterization` structure, which handles each IK type's serialization, distances metrics, derivatives, and transformation.
+The supported types are defined by `IkParameterizationType` and are propagated throughout the entire OpenRAVE framework. All solve methods take in a `IkParameterization` structure, which handles each IK type's serialization, distances metrics, derivatives, and transformation.
 
 To show the manipulator and IK results do:
 
@@ -214,7 +214,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
-            self.env.AddModule(self.ikfastproblem,'')
+            self.env.Add(self.ikfastproblem)
         self.iktype = iktype
         self.iksolver = None
         self.freeinc = None
@@ -245,7 +245,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         clone = DatabaseGenerator.clone(self,envother)
         clone.ikfastproblem = RaveCreateModule(envother,'ikfast')
         if clone.ikfastproblem is not None:
-            envother.AddModule(clone.ikfastproblem,'')
+            envother.Add(clone.ikfastproblem)
         if self.has():
             clone.setrobot(self.freeinc)
         return clone
@@ -356,12 +356,12 @@ class InverseKinematicsModel(DatabaseGenerator):
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
             for i in range(len(remainingindices) - dofexpected):
-                if self.iktype == IkParameterization.Type.Transform6D or self.iktype == IkParameterization.Type.Translation3D or self.iktype == IkParameterization.Type.TranslationLocalGlobal6D:
+                if self.iktype == IkParameterizationType.Transform6D or self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
                     freeindices.append(remainingindices.pop(2))
-                elif self.iktype == IkParameterization.Type.Lookat3D:
+                elif self.iktype == IkParameterizationType.Lookat3D:
                     # usually head (rotation joints) are at the end
                     freeindices.append(remainingindices.pop(0))
-                elif self.iktype == IkParameterization.Type.TranslationDirection5D:
+                elif self.iktype == IkParameterizationType.TranslationDirection5D:
                     # usually on arms, so remove furthest joints
                     freeindices.append(remainingindices.pop(-1))
                 else:
@@ -472,29 +472,29 @@ class InverseKinematicsModel(DatabaseGenerator):
                 freeinc = [float64(s) for s in options.freeinc]
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
-                iktype=IkParameterization.Type.Translation3D
-            if iktype == IkParameterization.Type.Translation3D and freejoints is None:
+                iktype=IkParameterizationType.Translation3D
+            if iktype == IkParameterizationType.Translation3D and freejoints is None:
                 freejoints = ['Shoulder_Roll']
         elif self.manip.GetKinematicsStructureHash() == 'bfc61bd497e9993b85f1ab511ee7bdbc': # stage
             if iktype is None:
-                iktype=IkParameterization.Type.Rotation3D
+                iktype=IkParameterizationType.Rotation3D
         elif self.manip.GetKinematicsStructureHash() == 'c363859a2d7a151a22dc1e251d6d8669' or self.manip.GetKinematicsStructureHash() == '12ceb0aaa06143fe305efa6e48faae0b': # pr2
             if iktype == None:
-                iktype=IkParameterization.Type.Transform6D
+                iktype=IkParameterizationType.Transform6D
             if freejoints is None:
                 # take the torso and roll joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[ind]].GetName() for ind in [0,3]]
         elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
-                iktype=IkParameterization.Type.Ray4D
+                iktype=IkParameterizationType.Ray4D
             if freejoints is None:
                 # take the torso joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
         elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05' or self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
-            if iktype==IkParameterization.Type.Translation3D or (iktype==None and self.iktype==IkParameterization.Type.Translation3D):
+            if iktype==IkParameterizationType.Translation3D or (iktype==None and self.iktype==IkParameterizationType.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
             if iktype==None:
-                iktype == IkParameterization.Type.TranslationDirection5D
+                iktype == IkParameterizationType.TranslationDirection5D
         self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
         self.save()
 
@@ -517,20 +517,20 @@ class InverseKinematicsModel(DatabaseGenerator):
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:
-            self.iktype = iktype = IkParameterization.Type.Transform6D
-        if self.iktype == IkParameterization.Type.Rotation3D:
+            self.iktype = iktype = IkParameterizationType.Transform6D
+        if self.iktype == IkParameterizationType.Rotation3D:
             Rbaseraw=self.manip.GetLocalToolTransform()[0:3,0:3]
             def solveFullIK_Rotation3D(*args,**kwargs):
                 kwargs['Rbaseraw'] = Rbaseraw
                 return self.ikfast.IKFastSolver.solveFullIK_Rotation3D(*args,**kwargs)
             solvefn=solveFullIK_Rotation3D
-        elif self.iktype == IkParameterization.Type.Direction3D:
+        elif self.iktype == IkParameterizationType.Direction3D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             def solveFullIK_Direction3D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 return self.ikfast.IKFastSolver.solveFullIK_Direction3D(*args,**kwargs)
             solvefn=solveFullIK_Direction3D
-        elif self.iktype == IkParameterization.Type.Ray4D:
+        elif self.iktype == IkParameterizationType.Ray4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Ray4D(*args,**kwargs):
@@ -538,7 +538,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Ray4D(*args,**kwargs)
             solvefn=solveFullIK_Ray4D
-        elif self.iktype == IkParameterization.Type.TranslationDirection5D:
+        elif self.iktype == IkParameterizationType.TranslationDirection5D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationDirection5D(*args,**kwargs):
@@ -546,19 +546,19 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationDirection5D(*args,**kwargs)
             solvefn=solveFullIK_TranslationDirection5D
-        elif self.iktype == IkParameterization.Type.Translation3D:
+        elif self.iktype == IkParameterizationType.Translation3D:
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Translation3D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Translation3D(*args,**kwargs)
             solvefn=solveFullIK_Translation3D
-        elif self.iktype == IkParameterization.Type.TranslationXY2D:
+        elif self.iktype == IkParameterizationType.TranslationXY2D:
             rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
             def solveFullIK_TranslationXY2D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXY2D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXY2D
-        elif self.iktype == IkParameterization.Type.TranslationXYOrientation3D:
+        elif self.iktype == IkParameterizationType.TranslationXYOrientation3D:
             rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
             rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetLocalToolTransform()[0:3,0:3])[0]
             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
@@ -566,13 +566,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawangle'] = rawangle
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXYOrientation3D
-        elif self.iktype == IkParameterization.Type.Transform6D:
+        elif self.iktype == IkParameterizationType.Transform6D:
             Tgripperraw=self.manip.GetLocalToolTransform()
             def solveFullIK_6D(*args,**kwargs):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_6D(*args,**kwargs)
             solvefn=solveFullIK_6D
-        elif self.iktype == IkParameterization.Type.Lookat3D:
+        elif self.iktype == IkParameterizationType.Lookat3D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_Lookat3D(*args,**kwargs):
@@ -580,13 +580,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawbasepos'] = rawbasepos
                 return self.ikfast.IKFastSolver.solveFullIK_Lookat3D(*args,**kwargs)
             solvefn=solveFullIK_Lookat3D
-        elif self.iktype == IkParameterization.Type.TranslationLocalGlobal6D:
+        elif self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
             Tgripperraw=self.manip.GetLocalToolTransform()
             def solveFullIK_TranslationLocalGlobal6D(*args,**kwargs):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationLocalGlobal6D(*args,**kwargs)
             solvefn=solveFullIK_TranslationLocalGlobal6D
-        elif self.iktype == IkParameterization.Type.TranslationXAxisAngle4D:
+        elif self.iktype == IkParameterizationType.TranslationXAxisAngle4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationXAxisAngle4D(*args,**kwargs):
@@ -595,7 +595,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawglobaldir'] = [1.0,0.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngle4D
-        elif self.iktype == IkParameterization.Type.TranslationYAxisAngle4D:
+        elif self.iktype == IkParameterizationType.TranslationYAxisAngle4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationYAxisAngle4D(*args,**kwargs):
@@ -604,7 +604,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawglobaldir'] = [0.0,1.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngle4D
-        elif self.iktype == IkParameterization.Type.TranslationZAxisAngle4D:
+        elif self.iktype == IkParameterizationType.TranslationZAxisAngle4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationZAxisAngle4D(*args,**kwargs):
@@ -613,7 +613,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawglobaldir'] = [0.0,0.0,1.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngle4D
-        elif self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D:
+        elif self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
@@ -623,7 +623,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawnormaldir'] = [0.0,0.0,1.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
-        elif self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D:
+        elif self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationYAxisAngleXNorm4D(*args,**kwargs):
@@ -633,7 +633,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 kwargs['rawnormaldir'] = [1.0,0.0,0.0]
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngleXNorm4D
-        elif self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
+        elif self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D:
             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
             def solveFullIK_TranslationZAxisAngleYNorm4D(*args,**kwargs):
@@ -678,7 +678,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 pass
             
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
-            if self.iktype == IkParameterization.Type.TranslationXAxisAngle4D or self.iktype == IkParameterization.Type.TranslationYAxisAngle4D or self.iktype == IkParameterization.Type.TranslationZAxisAngle4D or self.iktype == IkParameterization.Type.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterization.Type.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterization.Type.TranslationZAxisAngleYNorm4D:
+            if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()
@@ -854,7 +854,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
                           help='if true will drop into the ipython interpreter right before ikfast is called')
         parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
-                          help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterization.Type.values.values())))
+                          help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterizationType.values.values() if not int(iktype) & IkParameterizationType.VelocityDataBit )))
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
@@ -863,12 +863,12 @@ class InverseKinematicsModel(DatabaseGenerator):
         (options, leftargs) = parser.parse_args(args=args)
         if options.iktype is not None:
             # cannot use .names due to python 2.5 (or is it boost version?)
-            for value,type in IkParameterization.Type.values.iteritems():
+            for value,type in IkParameterizationType.values.iteritems():
                 if type.name.lower() == options.iktype.lower():
                     iktype = type
                     break
         else:
-            iktype = IkParameterization.Type.Transform6D
+            iktype = IkParameterizationType.Transform6D
         Model = lambda robot: InverseKinematicsModel(robot=robot,iktype=iktype,forceikfast=True)
         robotatts={}
         if not options.show:
@@ -879,7 +879,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             env = Environment()
             try:
                 robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
-                env.AddRobot(robot)
+                env.Add(robot)
                 if options.manipname is not None:
                     robot.SetActiveManipulator(options.manipname)
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices)

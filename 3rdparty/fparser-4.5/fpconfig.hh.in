@@ -1,6 +1,6 @@
 /***************************************************************************\
-|* Function Parser for C++ v4.3                                            *|
-|*|*|*|*|*-------------------------------------------------------------------------*|
+|* Function Parser for C++ v4.5                                            *|
+|*|*|*|*|*|*|*|*|*|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen                                                *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -45,42 +45,6 @@
 #cmakedefine FP_DISABLE_DOUBLE_TYPE
 
 /*
-   Note that these do not change what FunctionParser supports, they only
-   change how the function is evaluated, potentially making it faster when
-   these functions are involved.
-   These will make the source code use asinh(), acosh(), atanh(), exp2()
-   and log2().
- */
-#cmakedefine FP_SUPPORT_TR1_MATH_FUNCS
-
-#ifdef FP_SUPPORT_TR1_MATH_FUNCS
-#define FP_SUPPORT_ASINH
-#define FP_SUPPORT_EXP2
-#define FP_SUPPORT_LOG2
-#define FP_SUPPORT_CBRT
-#define FP_SUPPORT_HYPOT
-#endif
-
-/*
-   Comment out the following line to enable the eval() function, which can
-   be used in the function string to recursively call the same function.
-   Note that enabling this function may be dangerous even if the maximum
-   recursion level is limited because it is still possible to write functions
-   using it which take enormous  amounts of time to evaluate even though the
-   maximum recursion is never reached. This may be undesirable in some
-   applications.
-   Alternatively you can define the FP_ENABLE_EVAL precompiler constant in
-   your compiler settings.
- */
-#cmakedefine FP_DISABLE_EVAL
-
-/*
-   Maximum recursion level for eval() calls:
- */
-#cmakedefine FP_EVAL_MAX_REC_LEVEL 1000
-
-
-/*
    Whether to use shortcut evaluation for the & and | operators:
  */
 #cmakedefine FP_ENABLE_SHORTCUT_LOGICAL_EVALUATION
@@ -106,14 +70,6 @@
 #if defined(FP_SUPPORT_COMPLEX_DOUBLE_TYPE) || defined(FP_SUPPORT_COMPLEX_FLOAT_TYPE) || defined(FP_SUPPORT_COMPLEX_LONG_DOUBLE_TYPE)
 #define FP_SUPPORT_COMPLEX_NUMBERS
 #endif
-
-/*
-   Epsilon value used with the comparison operators (must be non-negative):
-   (Comment it out if you don't want to use epsilon in comparisons. Might
-   lead to marginally faster evaluation of the comparison operators, but
-   can introduce inaccuracies in comparisons.)
- */
-#cmakedefine FP_EPSILON @FP_EPSILON@
 
 
 /*

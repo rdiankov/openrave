@@ -121,7 +121,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     int ppsize=-1;
     if( p != NULL ) {
         I.clear();
-        ppsize=(p-pbuf.c_str())+20;
+        ppsize=(p-pbuf.c_str())+13;
         I.seekg((size_t)pos+ppsize);
     }
     else {
@@ -268,7 +268,7 @@ void TrajectoryBase::AddPoint(const Point& p)
 bool TrajectoryBase::CalcTrajTiming(RobotBasePtr probot, int interp,  bool autocalc, bool activedof, dReal fmaxvelmult)
 {
     if( activedof ) {
-        planningutils::SmoothActiveDOFTrajectory(shared_trajectory(),probot, !autocalc,fmaxvelmult);
+        planningutils::RetimeActiveDOFTrajectory(shared_trajectory(),probot, !autocalc,fmaxvelmult);
     }
     else if( !!probot ) {
         RobotBase::RobotStateSaver saver(probot);
@@ -277,7 +277,7 @@ bool TrajectoryBase::CalcTrajTiming(RobotBasePtr probot, int interp,  bool autoc
             indices[i] = i;
         }
         probot->SetActiveDOFs(indices);
-        planningutils::SmoothActiveDOFTrajectory(shared_trajectory(),probot,!autocalc,fmaxvelmult);
+        planningutils::RetimeActiveDOFTrajectory(shared_trajectory(),probot,!autocalc,fmaxvelmult);
     }
     else {
         RAVELOG_WARN("CalcTrajTiming failed, need to specify robot\n");

@@ -72,8 +72,7 @@ def run(args=None):
     parser.add_option('--samplingdelta', action="store",type='float',dest='samplingdelta',default=None,
                       help='The sampling rate for the robot (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

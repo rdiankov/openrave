@@ -93,7 +93,7 @@ class CubeAssembly(object):
                 for g in body.GetLinks()[0].GetGeometries():
                     g.SetDiffuseColor(color)
                 body.SetName('block%d'%iblock)
-                self.env.AddKinBody(body,True)
+                self.env.Add(body,True)
                 body.SetTransform(T)
 
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=body)
@@ -211,8 +211,7 @@ def run(args=None):
                       action="store",type='string',dest='manipname',default='leftarm_torso',
                       help='The manipulator to use')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

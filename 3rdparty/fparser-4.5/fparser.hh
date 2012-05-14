@@ -1,6 +1,6 @@
 /***************************************************************************\
-|* Function Parser for C++ v4.4.3                                          *|
-|*|*|*|*|*-------------------------------------------------------------------------*|
+|* Function Parser for C++ v4.5                                            *|
+|*-------------------------------------------------------------------------*|
 |* Copyright: Juha Nieminen, Joel Yliluoma                                 *|
 |*                                                                         *|
 |* This library is distributed under the terms of the                      *|
@@ -29,7 +29,7 @@ namespace FPoptimizer_CodeTree { template<typename Value_t> class CodeTree; }
 template<typename Value_t>
 class FunctionParserBase
 {
-public:
+ public:
     enum ParseErrorType
     {
         SYNTAX_ERROR=0, MISM_PARENTH, MISSING_PARENTH, EMPTY_PARENTH,
@@ -49,6 +49,9 @@ public:
               bool useDegrees = false);
 
     void setDelimiterChar(char);
+
+    static Value_t epsilon();
+    static void setEpsilon(Value_t);
 
     const char* ErrorMsg() const;
     ParseErrorType GetParseErrorType() const;
@@ -117,7 +120,7 @@ public:
 
 
 //========================================================================
-protected:
+ protected:
 //========================================================================
     // A derived class can implement its own evaluation logic by using
     // the parser data (found in fptypes.hh).
@@ -126,7 +129,7 @@ protected:
 
 
 //========================================================================
-private:
+ private:
 //========================================================================
 
     friend class FPoptimizer_CodeTree::CodeTree<Value_t>;
@@ -135,6 +138,7 @@ private:
 // ------------
     Data* mData;
     unsigned mStackPtr;
+    static Value_t sEpsilon;
 
 
 // Private methods:
@@ -182,15 +186,15 @@ protected:
     static unsigned ParseIdentifier(const char*);
 };
 
-class FunctionParser : public FunctionParserBase<double> {};
-class FunctionParser_f : public FunctionParserBase<float> {};
-class FunctionParser_ld : public FunctionParserBase<long double> {};
-class FunctionParser_li : public FunctionParserBase<long> {};
+class FunctionParser: public FunctionParserBase<double> {};
+class FunctionParser_f: public FunctionParserBase<float> {};
+class FunctionParser_ld: public FunctionParserBase<long double> {};
+class FunctionParser_li: public FunctionParserBase<long> {};
 
 #include <complex>
-class FunctionParser_cd : public FunctionParserBase<std::complex<double> > {};
-class FunctionParser_cf : public FunctionParserBase<std::complex<float> > {};
-class FunctionParser_cld : public FunctionParserBase<std::complex<long double> > {};
+class FunctionParser_cd: public FunctionParserBase<std::complex<double> > {};
+class FunctionParser_cf: public FunctionParserBase<std::complex<float> > {};
+class FunctionParser_cld: public FunctionParserBase<std::complex<long double> > {};
 
 
 
@@ -200,15 +204,11 @@ class FunctionParserBase<Value_t>::FunctionWrapper
     unsigned mReferenceCount;
     friend class FunctionParserBase<Value_t>;
 
-public:
-    FunctionWrapper() : mReferenceCount(1) {
-    }
-    FunctionWrapper(const FunctionWrapper &) : mReferenceCount(1) {
-    }
+ public:
+    FunctionWrapper(): mReferenceCount(1) {}
+    FunctionWrapper(const FunctionWrapper&): mReferenceCount(1) {}
     virtual ~FunctionWrapper() {}
-    FunctionWrapper& operator=(const FunctionWrapper&) {
-        return *this;
-    }
+    FunctionWrapper& operator=(const FunctionWrapper&) { return *this; }
 
     virtual Value_t callFunction(const Value_t*) = 0;
 };
@@ -216,9 +216,9 @@ public:
 template<typename Value_t>
 template<typename DerivedWrapper>
 bool FunctionParserBase<Value_t>::AddFunctionWrapper
-    (const std::string& name, const DerivedWrapper& wrapper, unsigned paramsAmount)
+(const std::string& name, const DerivedWrapper& wrapper, unsigned paramsAmount)
 {
     return addFunctionWrapperPtr
-               (name, new DerivedWrapper(wrapper), paramsAmount);
+        (name, new DerivedWrapper(wrapper), paramsAmount);
 }
 #endif

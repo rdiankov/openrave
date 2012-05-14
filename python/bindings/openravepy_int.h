@@ -389,7 +389,7 @@ public:
     }
     virtual ~PyUserData() {
     }
-    virtual void close() {
+    virtual void Close() {
         _handle.reset();
     }
     UserDataPtr _handle;
@@ -402,7 +402,7 @@ public:
     }
     PySerializableData(SerializableDataPtr handle) : _handle(handle) {
     }
-    void close() {
+    void Close() {
         _handle.reset();
     }
     object Serialize(int options) {
@@ -507,14 +507,16 @@ protected:
     };
 
     object SendCommand(const string& in, bool releasegil=false) {
-        boost::shared_ptr<PythonThreadSaver> statesaver;
-        if( releasegil ) {
-            statesaver.reset(new PythonThreadSaver());
-        }
         stringstream sin(in), sout;
-        sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        if( !_pbase->SendCommand(sout,sin) ) {
-            return object();
+        {
+            boost::shared_ptr<PythonThreadSaver> statesaver;
+            if( releasegil ) {
+                statesaver.reset(new PythonThreadSaver());
+            }
+            sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+            if( !_pbase->SendCommand(sout,sin) ) {
+                return object();
+            }
         }
         return object(sout.str());
     }
@@ -544,6 +546,9 @@ protected:
 
 namespace openravepy
 {
+
+bool ExtractIkReturn(object o, IkReturn& ikfr);
+object toPyIkReturn(const IkReturn& ret);
 
 object GetUserData(UserDataPtr pdata);
 

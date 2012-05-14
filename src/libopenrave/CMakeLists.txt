@@ -1,5 +1,5 @@
 cmake_policy(SET CMP0005 NEW)
-set(openrave_lib_SOURCES controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp  libopenrave.cpp libopenrave.h math.cpp planner.cpp planningutils.cpp plugindatabase.h robot.cpp sensorsystem.cpp trajectory.cpp utils.cpp ${rave_header_files})
+set(openrave_lib_SOURCES controller.cpp fparsermulti.h iksolver.cpp interface.cpp kinbody.cpp kinbodyjoint.cpp kinbodylink.cpp  libopenrave.cpp libopenrave.h math.cpp planner.cpp planningutils.cpp plugindatabase.h robot.cpp sensorsystem.cpp trajectory.cpp utils.cpp ${rave_header_files})
 
 check_function_exists(asinh HAS_ASINH)
 check_function_exists(acosh HAS_ACOSH)
@@ -8,6 +8,11 @@ check_function_exists(exp2 HAS_EXP2)
 check_function_exists(log2 HAS_LOG2)
 if( HAS_LOG2 )
   add_definitions("-DHAS_LOG2")
+endif()
+
+check_include_file(fenv.h HAVE_FENV_H)
+if( HAVE_FENV_H )
+  add_definitions("-DHAVE_FENV_H")
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS} ${FPARSER_LIBRARY_DIRS})

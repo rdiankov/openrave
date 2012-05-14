@@ -96,7 +96,7 @@ class ConstraintPlanning:
             with self.envreal:
                 showtarget = RaveCreateKinBody(self.envreal,'')
                 showtarget.Clone(target,0)
-                self.envreal.AddKinBody(showtarget,True)
+                self.envreal.Add(showtarget,True)
                 showtarget.Enable(False)
                 for geom in showtarget.GetLinks()[0].GetGeometries():
                     geom.SetTransparency(0.7)
@@ -172,8 +172,7 @@ def run(args=None):
                       action="store",type='string',dest='scene',default='data/lab1.env.xml',
                       help='Scene file to load (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

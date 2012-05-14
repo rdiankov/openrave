@@ -205,10 +205,10 @@ private:
     };
 
     inline boost::shared_ptr<IKFastProblem> shared_problem() {
-        return boost::static_pointer_cast<IKFastProblem>(shared_from_this());
+        return boost::dynamic_pointer_cast<IKFastProblem>(shared_from_this());
     }
     inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const {
-        return boost::static_pointer_cast<IKFastProblem const>(shared_from_this());
+        return boost::dynamic_pointer_cast<IKFastProblem const>(shared_from_this());
     }
 
 public:

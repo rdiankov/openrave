@@ -245,7 +245,7 @@ class VisibilityGrasping:
                 target = self.gettarget(self.orenvreal)
                 if target is not None:
                     self.target = self.orenv.ReadKinBodyXMLFile(targetfilename)
-                    self.orenv.AddKinBody(self.target)
+                    self.orenv.Add(self.target)
                     self.target.SetTransform(target.GetTransform())
                     break
                 time.sleep(0.1)
@@ -370,7 +370,7 @@ class PA10GraspExample(VisibilityGrasping):
                             continue
 
                         body.SetName('obstacle%d'%numcreated)
-                        self.orenvreal.AddKinBody(body)
+                        self.orenvreal.Add(body)
 
                         angs = arange(0,pi,pi/3)
                         angs = angs[random.permutation(len(angs))]
@@ -426,8 +426,7 @@ def run(args=None):
     parser.add_option('--nocameraview',action="store_false",dest='usecameraview',default=True,
                       help='If set, will not open any camera views')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__=='__main__':
     run()

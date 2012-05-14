@@ -104,7 +104,7 @@ public:
     void Read(KinBodyPtr pbody, const std::string& data,const AttributesList& atts)
     {
         _ProcessAtts(atts, pbody);
-        Assimp::XFileParser parser(data.c_str());
+        Assimp::XFileParserOpenRAVE parser(data.c_str());
         _Read(pbody,parser.GetImportedData());
         if( pbody->GetName().size() == 0 ) {
             pbody->SetName("body");
@@ -114,7 +114,7 @@ public:
     void Read(RobotBasePtr probot, const std::string& data,const AttributesList& atts)
     {
         _ProcessAtts(atts,probot);
-        Assimp::XFileParser parser(data.c_str());
+        Assimp::XFileParserOpenRAVE parser(data.c_str());
         _Read(probot,parser.GetImportedData());
         if( probot->GetName().size() == 0 ) {
             probot->SetName("robot");

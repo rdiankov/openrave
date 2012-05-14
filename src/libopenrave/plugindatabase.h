@@ -82,7 +82,7 @@ protected:
     typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
-    class Plugin : public boost::enable_shared_from_this<Plugin>
+    class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
     {
 public:
         Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false) {
@@ -352,7 +352,7 @@ protected:
 #else
         const char* delim = ":";
 #endif
-        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS");
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, vplugindirs);
         }

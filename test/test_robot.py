@@ -24,7 +24,7 @@ class RunRobot(EnvironmentSetup):
         with self.env:
             robot = self.LoadRobot('robots/schunk-lwa3-dual.robot.xml')
             body = self.env.ReadKinBodyXMLFile('data/box3.kinbody.xml')
-            self.env.AddKinBody(body)
+            self.env.Add(body)
             T = eye(4)
             T[1,3] = -1.18
             T[2,3] = 0.712
@@ -112,25 +112,33 @@ class RunRobot(EnvironmentSetup):
             robot.ReleaseAllGrabbed()
             assert(env.CheckCollision(leftmug,rightmug))        
 
-#     def test_grabcollision_dynamic(self):
-#         self.log.info('test if can handle grabbed bodies being enabled/disabled')
-#         env=self.env
-#         robot = self.LoadRobot('robots/barrettwam.robot.xml')
-#         with env:
-#             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-#             env.AddKinBody(target,True)
-#             manip=robot.GetActiveManipulator()
-#             target.SetTransform(manip.GetEndEffector().GetTransform())
-#             assert(env.CheckCollision(robot,target))
-#             target.Enable(False)
-#             robot.Grab(target,manip.GetEndEffector())
-#             assert(not robot.CheckSelfCollision())
-#             target.Enable(True)
-#             assert(not robot.CheckSelfCollision())
-#             target.Enable(False)
-#             assert(not robot.CheckSelfCollision())
-#             target.GetLinks()[0].Enable(True)
-#             assert(not robot.CheckSelfCollision())
+    def test_grabcollision_dynamic(self):
+        self.log.info('test if can handle grabbed bodies being enabled/disabled')
+        env=self.env
+        robot = self.LoadRobot('robots/barrettwam.robot.xml')
+        with env:
+            target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(target,True)
+            manip=robot.GetActiveManipulator()
+            target.SetTransform(manip.GetEndEffector().GetTransform())
+            assert(env.CheckCollision(robot,target))
+            self.log.info('check disabling target')
+            target.Enable(False)
+            robot.Grab(target,manip.GetEndEffector())
+            assert(not robot.CheckSelfCollision())
+            target.Enable(True)
+            assert(not robot.CheckSelfCollision())
+            target.Enable(False)
+            assert(not robot.CheckSelfCollision())
+            target.GetLinks()[0].Enable(True)
+            assert(not robot.CheckSelfCollision())
+            self.log.info('check disabling links')
+            robot.Enable(False)
+            assert(not robot.CheckSelfCollision())
+            robot.RegrabAll()
+            assert(not robot.CheckSelfCollision())
+            robot.Enable(True)
+            assert(not robot.CheckSelfCollision())
             
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
@@ -138,14 +146,14 @@ class RunRobot(EnvironmentSetup):
         with env:
             robot = self.LoadRobot('robots/pr2-beta-static.zae')
             target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(target,True)
+            env.Add(target,True)
             T=target.GetTransform()
             T[0:3,3] = [-0.342,0,0.8]
             target.SetTransform(T)
             floor = RaveCreateKinBody(env,'')
             floor.InitFromBoxes(array([[0,0,0,2,2,0.01]]),True)
             floor.SetName('floor')
-            env.AddKinBody(floor,True)
+            env.Add(floor,True)
             
             assert(env.CheckCollision(robot))
             manip=robot.SetActiveManipulator('leftarm')
@@ -153,6 +161,8 @@ class RunRobot(EnvironmentSetup):
             robot.SetActiveDOFs(manip.GetArmIndices())
             assert(not manip.CheckEndEffectorCollision(manip.GetTransform()))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
+            assert(not manip.CheckEndEffectorCollision(manip.GetIkParameterization(IkParameterizationType.Transform6D)))
+            assert(not manip2.CheckEndEffectorCollision(manip2.GetIkParameterization(IkParameterizationType.Transform6D)))
 
             # with bullet, robot gets into self-collision when first angle reaches 0.5
             robot.SetActiveDOFValues([0.678, 0, 1.75604762, -1.74228108, 0, 0, 0])
@@ -177,20 +187,23 @@ class RunRobot(EnvironmentSetup):
             box = RaveCreateKinBody(env,'')
             box.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box.SetName('box')
-            env.AddKinBody(box,True)
+            env.Add(box,True)
             box.SetTransform(manip.GetTransform())
             robot.Grab(box)
             robot.SetActiveDOFValues([  0.5,   0.00000000e+00,   1.57, -1.74228108e+00,   3.23831570e-16,   0.00000000e+00, 0.00000000e+00])
             assert(robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+
+            assert(not robot.CheckSelfCollision())
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+            assert(not robot.CheckSelfCollision())
             assert(not manip.CheckEndEffectorCollision(Tmanip))
 
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -0.1,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             Tmanip = manip.GetTransform()
-            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
             # test if initial colliding attachments are handled correctly
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
             T = manip.GetTransform()
@@ -212,7 +225,7 @@ class RunRobot(EnvironmentSetup):
             box2 = RaveCreateKinBody(env,'')
             box2.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box2.SetName('box2')
-            env.AddKinBody(box2,True)
+            env.Add(box2,True)
             box2.SetTransform(manip2.GetTransform())
             robot.Grab(box2,grablink=manip2.GetEndEffector())
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
@@ -222,6 +235,56 @@ class RunRobot(EnvironmentSetup):
             assert(not manip.CheckEndEffectorCollision(Tmanip))
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             assert(not manip.CheckEndEffectorCollision(Tmanip))
+
+    def test_checkendeffector(self):
+        self.log.info('test if can check end effector collisions with ik params')
+        env=self.env
+        self.LoadEnv('data/katanatable.env.xml')
+        robot=env.GetRobots()[0]
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.TranslationDirection5D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+            
+        with env:
+            robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+            robot.SetActiveDOFValues([ 0,  0.89098841,  0.92174268, -1.32022237,  0])
+            ikparam=ikmodel.manip.GetIkParameterization(IkParameterizationType.TranslationDirection5D)
+            assert(not env.CheckCollision(robot))
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            assert(not ikmodel.manip.CheckEndEffectorCollision(ikparam))
+
+            T = eye(4)
+            T[2,3] = -0.1
+            ikparam2 = IkParameterization(ikparam)
+            ikparam2.MultiplyTransform(T)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,0) is not None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(ikmodel.manip.CheckEndEffectorCollision(ikparam2))
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+
+        with env:
+            robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+            robot.SetActiveDOFValues([ 0,  0.89098841,  0.92174268, -1.32022237,  0])
+            ikparam=ikmodel.manip.GetIkParameterization(IkParameterizationType.Translation3D)
+            robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
+            try:
+                ikmodel.manip.CheckEndEffectorCollision(ikparam)
+                raise ValueError('expected exception')
+            
+            except openrave_exception:
+                pass
+
+            T = eye(4)
+            T[2,3] = -0.1
+            ikparam2 = IkParameterization(ikparam)
+            ikparam2.MultiplyTransform(T)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,0) is not None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions) is None)
+            assert(ikmodel.manip.FindIKSolution(ikparam2,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
 
     def test_badtrajectory(self):
         self.log.info('create a discontinuous trajectory and check if robot throws exception')
@@ -260,16 +323,40 @@ class RunRobot(EnvironmentSetup):
         if not ikmodel.load():
             ikmodel.autogenerate()
 
-        j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
-        lower,upper = j.GetLimits()
-        assert( upper-lower > 3*pi )
-        robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
-        assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
-        
-        robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
-        ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
-        sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
-        assert(len(sols)==8)
+        with env:
+            j=robot.GetJointFromDOFIndex(ikmodel.manip.GetArmIndices()[-1])
+            lower,upper = j.GetLimits()
+            assert( upper-lower > 3*pi )
+            robot.SetDOFValues(lower+0.1,[j.GetDOFIndex()])
+            assert(transdist(robot.GetDOFValues([j.GetDOFIndex()]),lower+0.1) <= g_epsilon)
+
+            robot.SetDOFValues(ones(len(ikmodel.manip.GetArmIndices())),ikmodel.manip.GetArmIndices(),True)
+            ikparam = ikmodel.manip.GetIkParameterization(IkParameterization.Type.Transform6D)
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)==8)
+
+            # add a filter
+            numrepeats = [0]
+            indices = []
+            def customfilter(solution, manip, ikparam):
+                out = manip.GetIkSolver().SendCommand('GetRobotLinkStateRepeatCount')
+                if out=='1':
+                    numrepeats[0] += 1
+                out = manip.GetIkSolver().SendCommand('GetSolutionIndices')
+                for index in out.split()[1:]:
+                    indices.append(int(index))
+                return IkReturnAction.Success
+            
+            handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,customfilter)
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)==8)
+            assert(numrepeats[0]==4)
+            indices.sort()
+            assert(indices == [0,3,4,7,0x20000,0x20003,0x20004,0x20007])
+            handle.Close()
+            # customfilter shouldn't be executed anymore
+            sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
+            assert(numrepeats[0]==4)
         
 # def test_ikgeneration():
 #     import inversekinematics

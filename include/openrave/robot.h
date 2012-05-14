@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -68,12 +68,6 @@ public:
             return _pIkSolver;
         }
 
-        /// \deprecated (11/02/08) use GetIkSolver()->GetNumFreeParameters()
-        virtual int GetNumFreeParameters() const RAVE_DEPRECATED;
-
-        /// \deprecated (11/02/08) use GetIkSolver()->GetFreeParameters()
-        virtual bool GetFreeParameters(std::vector<dReal>& vFreeParameters) const RAVE_DEPRECATED;
-
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
             return _pBase;
@@ -141,6 +135,8 @@ public:
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         virtual bool FindIKSolution(const IkParameterization& param, std::vector<dReal>& solution, int filteroptions) const;
         virtual bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
+        virtual bool FindIKSolution(const IkParameterization& param, int filteroptions, IkReturnPtr ikreturn) const;
+        virtual bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) const;
 
         /// \brief Find all the IK solutions for the given end effector transform
         ///
@@ -149,6 +145,8 @@ public:
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         virtual bool FindIKSolutions(const IkParameterization& param, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
         virtual bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const;
+        virtual bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
 
@@ -165,16 +163,19 @@ public:
             }
             \endcode
             \param iktype the type of parameterization to request
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
          */
-        virtual IkParameterization GetIkParameterization(IkParameterizationType iktype) const;
+        virtual IkParameterization GetIkParameterization(IkParameterizationType iktype, bool inworld=true) const;
 
         /** \brief returns a full parameterization of a given IK type for the current manipulator position using an existing IkParameterization as the seed.
 
+            Custom data is copied to the new parameterization. Furthermore, some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
             Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
             such that a new call to GetIkParameterization returns the same values.
-            \param ikparam Some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
+            \param ikparam The parameterization to use as seed.
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
          */
-        virtual IkParameterization GetIkParameterization(const IkParameterization& ikparam) const;
+        virtual IkParameterization GetIkParameterization(const IkParameterization& ikparam, bool inworld=true) const;
 
         /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         virtual void GetChildJoints(std::vector<JointPtr>& vjoints) const;
@@ -205,6 +206,16 @@ public:
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+
+        /** \brief Checks collision with only the gripper given an IK parameterization of the gripper.
+
+            Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
+            \param ikparam the ik parameterization determining the gripper transform
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+            /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
+         */
+        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
 
@@ -338,16 +349,6 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
 
-    /// \brief The information of a currently grabbed body.
-    class OPENRAVE_API Grabbed
-    {
-public:
-        KinBodyWeakPtr pbody;         ///< the grabbed body
-        LinkPtr plinkrobot;         ///< robot link that is grabbing the body
-        std::vector<LinkConstPtr> vCollidingLinks, vNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
-        Transform troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    };
-
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -361,7 +362,7 @@ protected:
         int affinedofs;
         Vector rotationaxis;
         int nActiveManip;
-        std::vector<Grabbed> _vGrabbedBodies;
+        std::vector<UserDataPtr> _vGrabbedBodies;
 private:
         virtual void _RestoreRobot();
     };
@@ -376,11 +377,6 @@ private:
     }
 
     virtual void Destroy();
-
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLFile
-    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadRobotXMLData
-    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() {
@@ -447,8 +443,10 @@ private:
         return GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(GetAffineDOF(),dof);
     }
 
-    /// \brief return the configuration specification of the active dofs
-    virtual const ConfigurationSpecification& GetActiveConfigurationSpecification() const;
+    /// \brief return a copy of the configuration specification of the active dofs
+    ///
+    /// Note that the return type is by-value, so should not be used in iteration
+    virtual ConfigurationSpecification GetActiveConfigurationSpecification(const std::string& interpolation="") const;
 
     /// \brief Return the set of active dof indices of the joints.
     virtual const std::vector<int>& GetActiveDOFIndices() const;
@@ -643,7 +641,7 @@ private:
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
-    /** Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+    /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 
         This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
      */
@@ -706,15 +704,6 @@ private:
     /// \param args - the argument list to pass when initializing the controller
     virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
 
-    /// \deprecated (10/11/16)
-    virtual bool SetController(ControllerBasePtr controller, const std::string& args) RAVE_DEPRECATED {
-        std::vector<int> dofindices;
-        for(int i = 0; i < GetDOF(); ++i) {
-            dofindices.push_back(i);
-        }
-        return SetController(controller,dofindices,1);
-    }
-
     /// \deprecated (11/10/04)
     void GetFullTrajectoryFromActive(TrajectoryBasePtr pfulltraj, TrajectoryBaseConstPtr pActiveTraj, bool bOverwriteTransforms=true) RAVE_DEPRECATED;
 
@@ -728,6 +717,9 @@ protected:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
+    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
+    virtual void _Regrab(UserDataPtr pgrabbed);
+
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
 
@@ -736,7 +728,7 @@ protected:
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _ParametersChanged(int parameters);
 
-    std::vector<Grabbed> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
@@ -787,6 +779,7 @@ private:
 #endif
 #endif
     friend class RaveDatabase;
+    friend class Grabbed;
 };
 
 } // end namespace OpenRAVE

@@ -53,6 +53,10 @@ const char s_filesep = '/';
 
 #if defined(USE_CRLIBM)
 
+#ifdef HAS_FENV_H
+#include <fenv.h>
+#endif
+
 #ifdef LIBM_ACCURACY_RESULTS_H
 #include LIBM_ACCURACY_RESULTS_H
 #endif
@@ -376,12 +380,12 @@ public:
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
 
-        char* phomedir = getenv("OPENRAVE_HOME");
+        char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?
         if( phomedir == NULL ) {
 #ifndef _WIN32
-            _homedirectory = string(getenv("HOME"))+string("/.openrave");
+            _homedirectory = string(getenv("HOME"))+string("/.openrave"); // getenv not thread-safe?
 #else
-            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave");
+            _homedirectory = string(getenv("HOMEDRIVE"))+string(getenv("HOMEPATH"))+string("\\.openrave"); // getenv not thread-safe?
 #endif
         }
         else {
@@ -399,7 +403,7 @@ public:
         const char* delim = ":";
 #endif
         _vdbdirectories.clear();
-        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_DATABASE");
+        char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_DATABASE"); // getenv not thread-safe?
         if( pOPENRAVE_PLUGINS != NULL ) {
             utils::TokenizeString(pOPENRAVE_PLUGINS, delim, _vdbdirectories);
         }
@@ -427,6 +431,10 @@ public:
         _mapreaders.clear();
         _pdatabase.reset();
 #ifdef USE_CRLIBM
+
+#ifdef HAS_FENV_H
+        feclearexcept(-1); // clear any cached exceptions
+#endif
         crlibm_exit(_crlibm_fpu_state);
 #endif
     }
@@ -647,6 +655,17 @@ const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap
     return RaveGlobal::instance()->GetIkParameterizationMap();
 }
 
+IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid)
+{
+    uniqueid &= IKP_UniqueIdMask;
+    FOREACHC(it, RaveGlobal::instance()->GetIkParameterizationMap()) {
+        if( (it->first & (IKP_UniqueIdMask&~IKP_VelocityDataBit)) == (uniqueid&(IKP_UniqueIdMask&~IKP_VelocityDataBit)) ) {
+            return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
+        }
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
+}
+
 const std::string& RaveGetInterfaceName(InterfaceType type)
 {
     return RaveGlobal::instance()->GetInterfaceName(type);
@@ -827,21 +846,26 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
-ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype)
+ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation)
 {
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
     spec._vgroups[0].name = str(boost::format("ikparam_values %d")%iktype);
-    spec._vgroups[0].interpolation = "linear";
+    spec._vgroups[0].interpolation = interpolation;
     return spec;
 }
 
 std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
 {
-    O << ikparam._type << " ";
-    switch(ikparam._type) {
+    int type = ikparam._type;
+    BOOST_ASSERT( !(type & IKP_CustomDataBit) );
+    if( ikparam._mapCustomData.size() > 0 ) {
+        type |= IKP_CustomDataBit;
+    }
+    O << type << " ";
+    switch(ikparam._type & ~IKP_VelocityDataBit) {
     case IKP_Transform6D:
         O << ikparam.GetTransform6D();
         break;
@@ -918,6 +942,15 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
     }
+    if( ikparam._mapCustomData.size() > 0 ) {
+        O << ikparam._mapCustomData.size() << " ";
+        FOREACHC(it, ikparam._mapCustomData) {
+            O << it->first << " " << it->second.size() << " ";
+            FOREACHC(itvalue, it->second) {
+                O << *itvalue << " ";
+            }
+        }
+    }
     return O;
 }
 
@@ -925,18 +958,51 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
 {
     int type=IKP_None;
     I >> type;
-    ikparam._type = static_cast<IkParameterizationType>(type);
+    ikparam._type = static_cast<IkParameterizationType>(type&~IKP_CustomDataBit);
     switch(ikparam._type) {
-    case IKP_Transform6D: { Transform t; I >> t; ikparam.SetTransform6D(t); break; }
+    case IKP_Transform6D: {
+        Transform t; I >> t;
+        ikparam.SetTransform6D(t);
+        break;
+    }
+    case IKP_Transform6DVelocity:
+        I >> ikparam._transform;
+        break;
     case IKP_Rotation3D: { Vector v; I >> v; ikparam.SetRotation3D(v); break; }
-    case IKP_Translation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslation3D(v); break; }
+    case IKP_Rotation3DVelocity:
+        I >> ikparam._transform.rot;
+        break;
+    case IKP_Translation3D: {
+        Vector v;
+        I >> v.x >> v.y >> v.z;
+        ikparam.SetTranslation3D(v);
+        break;
+    }
+    case IKP_Lookat3DVelocity:
+    case IKP_Translation3DVelocity:
+    case IKP_TranslationXYOrientation3DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     case IKP_Direction3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetDirection3D(v); break; }
+    case IKP_Direction3DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
+        break;
     case IKP_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IKP_Ray4DVelocity:
+    case IKP_TranslationDirection5DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
+        break;
     case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IKP_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
+    case IKP_TranslationXY2DVelocity:
+        I >> ikparam._transform.trans.x >> ikparam._transform.trans.y;
+        break;
     case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
+    case IKP_TranslationLocalGlobal6DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     case IKP_TranslationXAxisAngle4D: {
         Vector trans; dReal angle=0;
         I >> angle >> trans.x >> trans.y >> trans.z;
@@ -973,8 +1039,36 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         ikparam.SetTranslationZAxisAngleYNorm4D(trans,angle);
         break;
     }
+    case IKP_TranslationXAxisAngle4DVelocity:
+    case IKP_TranslationYAxisAngle4DVelocity:
+    case IKP_TranslationZAxisAngle4DVelocity:
+    case IKP_TranslationXAxisAngleZNorm4DVelocity:
+    case IKP_TranslationYAxisAngleXNorm4DVelocity:
+    case IKP_TranslationZAxisAngleYNorm4DVelocity:
+        I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
+        break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+    }
+    ikparam._mapCustomData.clear();
+    if( type & IKP_CustomDataBit ) {
+        size_t numcustom = 0, numvalues=0;
+        std::string name;
+        I >> numcustom;
+        if( !I ) {
+            return I;
+        }
+        for(size_t i = 0; i < numcustom; ++i) {
+            I >> name >> numvalues;
+            if( !I ) {
+                return I;
+            }
+            std::vector<dReal>& v = ikparam._mapCustomData[name];
+            v.resize(numvalues);
+            for(size_t j = 0; j < v.size(); ++j) {
+                I >> v[j];
+            }
+        }
     }
     return I;
 }
@@ -1757,7 +1851,7 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             int iktype = IKP_None;
             ss >> iktype;
             if( !!ss ) {
-                ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype));
+                ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype|(timederivative == 1 ? IKP_VelocityDataBit : 0)));
                 bfound = true;
                 if( timederivative == 0 ) {
                     // normalize parameterizations

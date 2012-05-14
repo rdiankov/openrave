@@ -135,161 +135,155 @@ to be modified by hand.
         }
 
         /* This function generated with make_function_name_parser.cc */
-#define lO l1 lE
-#define lN l4 lE
-#define lM if('i'l5
-#define lL 'n'l5
-#define lK l2 3]={
+#define lO l3 lH
+#define lN switch(
+#define lM l4 lH
+#define lL if('i'l5
+#define lK 'n'l5
 #define lJ 0x80000003U;
-#define lI )==0)l0(
-#define lH l3 3 lI
+#define lI l1 3]={
+#define lH case
 #define lG 0x80000005U;
-#define lF :l9 uptr[
-#define lE case
-#define lD l8 3;}lE
-#define lC std::memcmp(uptr+
-#define lB lF 1]){lE
-#define lA 'a'lB
-#define l9 switch(
+#define lF )==0)l0(
+#define lE l8 3;}lH
+#define lD std::memcmp(uptr+
+#define lC l2 3 lF
+#define lB lA 1]){lH
+#define lA :lN uptr[
+#define l9 'a'lB
 #define l8 default:l0
-#define l7 lG l0 5;}lE
+#define l7 lG l0 5;}lH
 #define l6 <<16)|
 #define l5 ==uptr[
 #define l4 lJ l0 3;
-#define l3 lC 1,tmp,
-#define l2 static const char tmp[
-#define l1 0x80000004U;l0 4;
+#define l3 0x80000004U;l0 4;
+#define l2 lD 1,tmp,
+#define l1 static const char tmp[
 #define l0 return
-l9
-nameLength){lE
-2:lM
+lN
+nameLength){lH
+2:lL
 0]&&'f'l5
 1])l0(cIf
 l6
 0x80000002U;l0
-2;lE
+2;lH
 3
-lF
-0]){lE
-lA'b':if('s'l5
+lA
+0]){lH
+l9'b':if('s'l5
 2])l0(cAbs
 l6
-lN'r':if('g'l5
+lM'r':if('g'l5
 2])l0(cArg
 l6
 l4
-lD'c'lB'o'lF
-2]){lE's':l0(cCos
+lE'c'lB'o'lA
+2]){lH's':l0(cCos
 l6
 lJ
-lE't':l0(cCot
+lH't':l0(cCot
 l6
 lJ
-lD's':if('c'l5
+lE's':if('c'l5
 2])l0(cCsc
 l6
 l4
-lD'e':if('x'l5
+lE'e':if('x'l5
 1]&&'p'l5
 2])l0(cExp
 l6
-lN'i':if(lL
+lM'i':if(lK
 1]&&'t'l5
 2])l0(cInt
 l6
-lN'l':if('o'l5
+lM'l':if('o'l5
 1]&&'g'l5
 2])l0(cLog
 l6
-lN'm'lB'a':if('x'l5
+lM'm'lB'a':if('x'l5
 2])l0(cMax
 l6
-lN'i':if(lL
+lM'i':if(lK
 2])l0(cMin
 l6
 l4
-lD'p':if('o'l5
+lE'p':if('o'l5
 1]&&'w'l5
 2])l0(cPow
 l6
-lN's'lB'e':if('c'l5
+lM's'lB'e':if('c'l5
 2])l0(cSec
 l6
-lN'i':if(lL
+lM'i':if(lK
 2])l0(cSin
 l6
 l4
-lD't':if('a'l5
-1]&&lL
+lE't':if('a'l5
+1]&&lK
 2])l0(cTan
 l6
 l4
-lD
+lE
 4
-lF
-0]){lE
-lA'c':if('o'l5
+lA
+0]){lH
+l9'c':if('o'l5
 2]&&'s'l5
 3])l0(cAcos
 l6
-lO's':lM
-2]&&lL
+lO's':lL
+2]&&lK
 3])l0(cAsin
 l6
 lO't':if('a'l5
-2]&&lL
+2]&&lK
 3])l0(cAtan
 l6
-l1
+l3
 l8
 4;}
-lE'c'lB'b':if('r'l5
+lH'c'lB'b':if('r'l5
 2]&&'t'l5
 3])l0(cCbrt
 l6
-lO'e':lM
+lO'e':lL
 2]&&'l'l5
 3])l0(cCeil
 l6
-lO'o'lF
-2]){lE'n':if('j'l5
+lO'o'lA
+2]){lH'n':if('j'l5
 3])l0(cConj
 l6
 lO's':if('h'l5
 3])l0(cCosh
 l6
-l1
+l3
 l8
 4;}
 l8
 4;}
-lE'e'lB'v':if('a'l5
-2]&&'l'l5
-3])l0(cEval
+lH'e':{lI'x','p','2'}
+;if(lC
+cExp2
 l6
-lO'x':if('p'l5
-2]&&'2'l5
-3])l0(cExp2
-l6
-l1
-l8
-4;}
-lE'i':{lK'm','a','g'}
-;if(lH
+l3}
+lH'i':{lI'm','a','g'}
+;if(lC
 cImag
 l6
-l1}
-lE'l':{lK'o','g','2'}
-;if(lH
+l3}
+lH'l':{lI'o','g','2'}
+;if(lC
 cLog2
 l6
-l1}
-lE'r':{lK'e','a','l'}
-;if(lH
+l3}
+lH'r':{lI'e','a','l'}
+;if(lC
 cReal
 l6
-l1}
-lE's'lB'i':if(lL
+l3}
+lH's'lB'i':if(lK
 2]&&'h'l5
 3])l0(cSinh
 l6
@@ -297,39 +291,39 @@ lO'q':if('r'l5
 2]&&'t'l5
 3])l0(cSqrt
 l6
-l1
+l3
 l8
 4;}
-lE't':{lK'a','n','h'}
-;if(lH
+lH't':{lI'a','n','h'}
+;if(lC
 cTanh
 l6
-l1}
+l3}
 l8
 4;}
-lE
+lH
 5
-lF
-0]){lE
-lA'c':{lK'o','s','h'}
-;if(lC
+lA
+0]){lH
+l9'c':{lI'o','s','h'}
+;if(lD
 2,tmp,3
-lI
+lF
 cAcosh
 l6
-l7's':{lK'i','n','h'}
-;if(lC
+l7's':{lI'i','n','h'}
+;if(lD
 2,tmp,3
-lI
+lF
 cAsinh
 l6
 l7't':if('a'l5
-2]){if(lL
-3]){l9
-uptr[4]){lE'2':l0(cAtan2
+2]){if(lK
+3]){lN
+uptr[4]){lH'2':l0(cAtan2
 l6
 lG
-lE'h':l0(cAtanh
+lH'h':l0(cAtanh
 l6
 lG
 l8
@@ -340,39 +334,39 @@ l0
 l0
 5;l8
 5;}
-lE'f':{l2
+lH'f':{l1
 4]={'l','o','o','r'}
-;if(l3
+;if(l2
 4
-lI
+lF
 cFloor
 l6
-l7'h':{l2
+l7'h':{l1
 4]={'y','p','o','t'}
-;if(l3
+;if(l2
 4
-lI
+lF
 cHypot
 l6
-l7'l':{l2
+l7'l':{l1
 4]={'o','g','1','0'}
-;if(l3
+;if(l2
 4
-lI
+lF
 cLog10
 l6
-l7'p':{l2
+l7'p':{l1
 4]={'o','l','a','r'}
-;if(l3
+;if(l2
 4
-lI
+lF
 cPolar
 l6
-l7't':{l2
+l7't':{l1
 4]={'r','u','n','c'}
-;if(l3
+;if(l2
 4
-lI
+lF
 cTrunc
 l6
 lG

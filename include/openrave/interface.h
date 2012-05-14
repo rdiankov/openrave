@@ -169,9 +169,13 @@ private:
     /// Write the help commands to an output stream
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
 
+    inline InterfaceBase& operator=(const InterfaceBase&r) {
+        throw openrave_exception("InterfaceBase copying not allowed");
+    }
+
     mutable boost::mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
-    boost::shared_ptr<void> __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
+    UserDataPtr __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
     std::string __struri; ///< \see GetURI
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId

@@ -10,6 +10,45 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Core
+----
+
+* Fixed regrabbing when enabling/disabling grabbed bodies
+
+* Added KinBody::Prop_LinkEnable that allows other objects to track enable changes for a body.
+
+* Allow dynamic setting of link inertial parameters
+
+* Can add custom data to IkParameterization that is also passed to the ik filters. :meth:`.IkParameterization.SetCustomData`
+
+* Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
+
+* Added velocities enumerations to IkParameterizationType (like IkParameterizationType.Transform6DVelocity), coordinate transforms can handle velocities.
+
+* Added IK solver error codes for notifying user where IK failed.
+
+* :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
+
+
+Database
+--------
+
+* Introduced HDF5 loading/saving of the :mod:`.databases.kinematicreachability` and :mod:`.databases.linkstatistics databases` making computation much faster, it also allows C++ to access it.
+
+Viewer
+------
+
+* Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
+
+Misc
+----
+
+* Mac OSX compatibility: openrave.py now runs the viewer in the main thread for Mac OSX.
+
+* Added :meth:`.misc.OpenRAVEGlobalArguments.parseAndCreateThreadedUser` and :meth:`.misc.SetViewerUserThread` to allow viewer to be run in main thread while user functions are run in a different thread. All examples use this now.
+
+* Clang compilation
+
 Version 0.6.4
 =============
 

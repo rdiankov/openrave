@@ -243,7 +243,7 @@ class CalibrationViews:
                 else:
                     target = env.ReadKinBodyXMLFile(type)
                 if target is not None:
-                    env.AddKinBody(target,True)
+                    env.Add(target,True)
                     env.UpdatePublishedBodies()
         self = CalibrationViews(robot=robot,sensorname=sensorname,target=target)
         if target:
@@ -297,8 +297,7 @@ def run(args=None):
     parser.add_option('--posedist',action="store",type='float',dest='posedist',default=0.05,
                       help='An average distance between gathered poses. The smaller the value, the more poses robot will gather close to each other')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)        
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

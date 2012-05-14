@@ -50,6 +50,46 @@ int QtCoinViewer::s_InitRefCount = 0;
 
 #define ITEM_DELETER boost::bind(&QtCoinViewer::_DeleteItemCallback,shared_viewer(),_1)
 
+class ItemSelectionCallbackData : public UserData
+{
+public:
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ItemSelectionCallbackData() {
+        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ItemSelectionCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
+
+class ViewerImageCallbackData : public UserData
+{
+public:
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ViewerImageCallbackData() {
+        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ViewerImageCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
+
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
 {
@@ -2181,15 +2221,18 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
     // check the callbacks
     if( !!pSelectedLink ) {
         boost::mutex::scoped_lock lock(_mutexCallbacks);
-        FOREACH(itcallback,_listItemSelectionCallbacks) {
+        FOREACH(it,_listRegisteredItemSelectionCallbacks) {
             bool bSame;
             {
                 boost::mutex::scoped_lock lock(_mutexMessages);
                 bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
             }
             if( bSame ) {
-                if( !(*itcallback)(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) ) {
-                    bProceedSelection = false;
+                ItemSelectionCallbackDataPtr pdata = boost::dynamic_pointer_cast<ItemSelectionCallbackData>(it->lock());
+                if( !!pdata ) {
+                    if( pdata->_callback(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) ) {
+                        bProceedSelection = false;
+                    }
                 }
             }
         }
@@ -2536,13 +2579,13 @@ void QtCoinViewer::GlobVideoFrame(void* p, SoSensor*)
 
 void QtCoinViewer::_VideoFrame()
 {
-    std::list<ViewerImageCallbackFn> listViewerImageCallbacks;
+    std::list<UserDataWeakPtr> listRegisteredViewerImageCallbacks;
     {
         boost::mutex::scoped_lock lock(_mutexCallbacks);
-        if( _listViewerImageCallbacks.size() == 0 ) {
+        if( _listRegisteredViewerImageCallbacks.size() == 0 ) {
             return;
         }
-        listViewerImageCallbacks = _listViewerImageCallbacks;
+        listRegisteredViewerImageCallbacks = _listRegisteredViewerImageCallbacks;
     }
 
     const uint8_t* memory;
@@ -2551,12 +2594,15 @@ void QtCoinViewer::_VideoFrame()
         RAVELOG_WARN("cannot record video\n");
         return;
     }
-    FOREACH(itcallback,listViewerImageCallbacks) {
-        try {
-            (*itcallback)(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
-        }
-        catch(const std::exception& e) {
-            RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
+    FOREACH(it,listRegisteredViewerImageCallbacks) {
+        ViewerImageCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
+        if( !!pdata ) {
+            try {
+                pdata->_callback(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+            }
+            catch(const std::exception& e) {
+                RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
+            }
         }
     }
 }
@@ -2623,7 +2669,7 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     }
                     else {
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
@@ -3283,38 +3329,16 @@ bool QtCoinViewer::_SetFeedbackVisibility(ostream& sout, istream& sinput)
     return false;
 }
 
-void QtCoinViewer::_UnregisterItemSelectionCallback(ViewerBaseWeakPtr pweakviewer, std::list<ItemSelectionCallbackFn>::iterator* pit)
+UserDataPtr QtCoinViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
 {
-    if( !!pit ) {
-        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
-        if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
-            pviewer->_listItemSelectionCallbacks.erase(*pit);
-        }
-        delete pit;
-    }
+    ItemSelectionCallbackDataPtr pdata(new ItemSelectionCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredItemSelectionCallbacks.insert(_listRegisteredItemSelectionCallbacks.end(),pdata);
+    return pdata;
 }
 
-boost::shared_ptr<void> QtCoinViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
+UserDataPtr QtCoinViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
 {
-    boost::mutex::scoped_lock lock(_mutexCallbacks);
-    return boost::shared_ptr<void>(new std::list<ItemSelectionCallbackFn>::iterator(_listItemSelectionCallbacks.insert(_listItemSelectionCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterItemSelectionCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
-}
-
-void QtCoinViewer::_UnregisterViewerImageCallback(ViewerBaseWeakPtr pweakviewer, std::list<ViewerImageCallbackFn>::iterator* pit)
-{
-    if( !!pit ) {
-        boost::shared_ptr<QtCoinViewer> pviewer = boost::dynamic_pointer_cast<QtCoinViewer>(pweakviewer.lock());
-        if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
-            pviewer->_listViewerImageCallbacks.erase(*pit);
-        }
-        delete pit;
-    }
-}
-
-boost::shared_ptr<void> QtCoinViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
-{
-    boost::mutex::scoped_lock lock(_mutexCallbacks);
-    return boost::shared_ptr<void>(new std::list<ViewerImageCallbackFn>::iterator(_listViewerImageCallbacks.insert(_listViewerImageCallbacks.end(),fncallback)), boost::bind(QtCoinViewer::_UnregisterViewerImageCallback,ViewerBaseWeakPtr(shared_viewer()), _1));
+    ViewerImageCallbackDataPtr pdata(new ViewerImageCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredViewerImageCallbacks.insert(_listRegisteredViewerImageCallbacks.end(),pdata);
+    return pdata;
 }

@@ -24,6 +24,7 @@ if( length(robotfile) > 0)
 end
 
 probid = orEnvCreateProblem('ikfast');
+s = orProblemSendCommand(['LoadIKFastSolver robot Transform6D'],probid)
 
 orRobotSetActiveManipulator(robotid,manipname);
 manips = orRobotGetManipulators(robotid);
@@ -39,7 +40,10 @@ if( length(manipname) > 0)
 end
 
 %% test any specific ik configuration
-orBodySetJointValues(robotid,[ 0.919065 -1.4331 1.45619 1.31858 0.696941 1.52955 -0.314613],manips{1}.armjoints);
+armdof = length(manips{1}.armjoints);
+testvalues = [ 0.919065 -1.4331 1.45619 1.31858 0.696941 1.52955 -0.314613, 0, 0];
+
+orBodySetJointValues(robotid,testvalues(1:armdof),manips{1}.armjoints);
 links = orBodyGetLinks(robotid);
 Thand = reshape(links(:,manips{1}.eelink+1),[3 4]);
 Tee = [Thand; 0 0 0 1]*[manips{1}.Tgrasp; 0 0 0 1]

@@ -27,12 +27,12 @@ class RunCollision(EnvironmentSetup):
             robot=env.GetRobots()[0]
             env.CheckCollision(robot)
             newobject=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(newobject,True)
+            env.Add(newobject,True)
             box=RaveCreateKinBody(env,'')
             env.CheckCollision(box)
             box.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
             box.SetName('box')
-            env.AddKinBody(box,True)
+            env.Add(box,True)
             
     def test_collisioncaching(self):
         filenames = ['robots/barrettwam.robot.xml']
@@ -41,7 +41,7 @@ class RunCollision(EnvironmentSetup):
             env.Reset()
             robot=env.ReadRobotURI(filename)
             for i in range(10):
-                env.AddRobot(robot)
+                env.Add(robot)
                 lower,upper = robot.GetDOFLimits()
                 v = random.rand()*(upper-lower)+lower
                 robot.SetDOFValues(v)
@@ -161,14 +161,46 @@ class RunCollision(EnvironmentSetup):
         robot.SetDOFValues([ -8.44575603e-02,   1.48528347e+00,  -5.09108824e-08, 6.48108822e-01,  -4.57571203e-09,  -1.04008750e-08, 7.26855048e-10,   5.50807826e-08,   5.50807826e-08, -1.90689327e-08,   0.00000000e+00])
         assert(env.CheckCollision(robot))
         
+    def test_collisioncallbacks(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        
+        reports = []
+        def collisioncallback(report,fromphysics):
+            assert(not fromphysics)
+            reports.append(report)
+            return CollisionAction.DefaultAction
+        
+        handle = env.RegisterCollisionCallback(collisioncallback)
+        assert(not env.CheckCollision(robot))
+        assert(len(reports)==0)
 
+        assert(env.CheckCollision(env.GetKinBody('mug1')))
+        assert(len(reports)==1)
+
+        def collisioncallback2(report,fromphysics):
+            return CollisionAction.Ignore
+
+        handle2 = env.RegisterCollisionCallback(collisioncallback2)
+        assert(not env.CheckCollision(env.GetKinBody('mug1')))
+
+        del reports[:]
+        handle2.Close()
+        assert(env.CheckCollision(env.GetKinBody('mug1')))
+        assert(len(reports)==1)
+
+        handle.Close()
+        assert(env.CheckCollision(env.GetKinBody('mug1')))
+        assert(len(reports)==1)
+        
 #generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunCollision):
     def __init__(self):
         RunCollision.__init__(self, 'ode')
 
-class test_bullet(RunCollision):
-    def __init__(self):
-        RunCollision.__init__(self, 'bullet')
-
+# class test_bullet(RunCollision):
+#     def __init__(self):
+#         RunCollision.__init__(self, 'bullet')
+# 

@@ -3,11 +3,11 @@
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
  <link href="style.css" rel="stylesheet" type="text/css" title="normal" media=screen>
- <title>Function Parser for C++ v4.4.3  : Documentation</title>
+ <title>Function Parser for C++ v4.5    : Documentation</title>
 </head>
 
 <body>
-<h1>Function Parser for C++ v4.4.3  </h1>
+<h1>Function Parser for C++ v4.5    </h1>
 
 <p>Authors: Juha Nieminen
 (<a href="http://iki.fi/warp/">http://iki.fi/warp/</a>),
@@ -70,46 +70,25 @@ Joel Yliluoma
 <a name="whatsnew"></a>
 <h2>What's new</h2>
 
-<p>What's new in v4.4.3
+<p>What's new in v4.5
   <ul>
-    <li>Added support for user-specialized function pointer objects for
-      user-defined functions (besides the existing support for raw C++
-      function pointers). See documentation for details.
+    <li>Removed support for the <code>"eval()"</code> function from the
+      supported syntax. (This function was too dangerous, too difficult to
+      maintain internally, not very useful, and more or less a gimmick in
+      the first place.)
+    <li>Removed several of the conditional compiling macro definitions, namely
+      <code>FP_SUPPORT_TR1_MATH</code>, <code>FP_ENABLE_EVAL</code>,
+      <code>FP_EVAL_MAX_REC_LEVEL</code>, <code>FP_NO_EVALUATION_CHECKS</code>
+      and <code>FP_EPSILON</code>.
+    <li>The epsilon value used in comparisons is now set with a member function
+      of FunctionParser (which allows setting different values for different
+      versions of the parser).
+    <li>The math functions previously turned on with
+      <code>FP_SUPPORT_TR1_MATH</code> are now automatically used if
+      <code>__cplusplus</code> indicates that C++11 is in use.
+    <li>Fixed some compilation problems with clang++.
   </ul>
 
-<p>What's new in v4.4.2
-  <ul>
-    <li>Complex-only internal functions were being not properly disabled in the
-      non-complex versions of the parser, causing mayhem if they were called
-      from those.
-  </ul>
-
-<p>What's new in v4.4.1
-  <ul>
-    <li>Added missing documentation on complex literals.
-    <li>Fixed problem when using <code>std::complex</code> with TR1 math
-      functions enabled. (TR1 does not define any new math functions for
-      <code>std::complex</code> even though C++0x does. When attempting to
-      use them, the implementation of TR1 in the current gcc misbehaves
-      instead of giving a compiler error. This has now been replaced with
-      the equivalent formulas using standard math functions.)
-    <li>Fixed some compilation issues in the development version of the
-      library (which happened with certain combinations of disabled parsers
-      and compiler settings).
-  </ul>
-
-<p>What's new in v4.4
-  <ul>
-    <li>Added support for <code>std::complex</code> (of type
-      <code>double</code>, <code>float</code> and <code>long double</code>)
-      as the numerical type, along with new complex-specific functions.
-    <li>Removed all dependencies on C99 functions, making the non-double
-      versions of the library usable with older compilers (such as Visual
-      Studio 2005). (But consult the documentation on the <code>long
-	double</code> literal parsing accuracy.)
-    <li>Several minor bugfixes.
-    <li>Fixed some compilation issues with gcc&nbsp;4.6.
-  </ul>
 
 
 <!-- -------------------------------------------------------------------- -->
@@ -342,33 +321,8 @@ file.
       literals will be parsed with double precision only, which in most
       systems is less accurate than long double precision, which will cause
       small rounding errors. (This setting has no effect on the other parser
-      types.)
-  </dd>
-
-  <dt><p><code>FP_SUPPORT_TR1_MATH_FUNCS</code> : (Default off)</dt>
-  <dd><p>Define this precompiler constant to make the library use additional
-      math functions defined in the C99 standard and the C++ TR1 standard
-      proposal (but not yet in the official C++ standard). This can make
-      evaluation faster when these functions are involved.
-    <p>The C++ TR1 math functions in question are: <code>asinh()</code>,
-      <code>acosh()</code>, <code>atanh()</code>, <code>exp2()</code> and
-      <code>log2()</code>. (Note that these functions are assumed to be
-      inside the <code>std::tr1</code> namespace and declared in the
-      <code>&lt;tr1/cmath&gt;</code> header.)
-  </dd>
-
-  <dt><p><code>FP_ENABLE_EVAL</code> : (Default off)</dt>
-  <dd><p>Even though the maximum recursion level of the <code>eval()</code>
-      function is limited, it is still possible to write functions which never
-      reach this maximum recursion level but take enormous amounts of
-      time to evaluate (this can be undesirable eg. in web server-side
-      applications). For this reason this function is disabled by default.
-      You can add support for the <code>eval()</code> function by
-      defining this precompiler constant.
-  </dd>
-
-  <dt><p><code>FP_EVAL_MAX_REC_LEVEL</code> : (Default 1000)</dt>
-  <dd><p>Sets the maximum recursion level allowed for <code>eval()</code>.
+      types.) Note that <code>strtold()</code> will also be automatically used
+      if <code>__cplusplus</code> indicates that C++11 is in use.
   </dd>
 
   <dt><p><code>FP_SUPPORT_OPTIMIZER</code> : (Default on)</dt>
@@ -380,11 +334,6 @@ file.
     <p>You can also disable the optimizer by specifying the
       <code>FP_NO_SUPPORT_OPTIMIZER</code> precompiler constant in your
       compiler settings.
-  </dd>
-
-  <dt><p><code>FP_EPSILON</code> : (Default <code>1e-14</code>)</dt>
-  <dd><p>Epsilon value used in comparison operators.
-      If this line is commented out, then no epsilon will be used.
   </dd>
 
   <dt><p><code>FP_USE_THREAD_SAFE_EVAL</code> : (Default off)</dt>
@@ -401,13 +350,6 @@ file.
       <code>alloca()</code> function (instead of <code>std::vector</code>).
       This will make it faster, but the <code>alloca()</code>
       function is not standard and thus not supported by all compilers.
-  </dd>
-
-  <dt><p><code>FP_NO_EVALUATION_CHECKS</code> : (Default off)</dt>
-  <dd><p>If this precompiler constant is defined, no evaluation-time checks
-      will be performed. This may give a slight boost in speed in certain
-      situations. Consult the <a href="#evaluationchecks">evaluation
-        checks section</a> below for more information on this subject.
   </dd>
 </dl>
 
@@ -457,6 +399,14 @@ void setDelimiterChar(char);
 
 <p>Sets an ending delimiter character for the function string. (See the
     long description for more details.)
+
+<hr>
+<pre>
+static double epsilon();
+static void setEpsilon(double);
+</pre>
+
+<p>Setter and getter for the epsilon value used with comparison operators.
 
 <hr>
 <pre>
@@ -675,6 +625,27 @@ or alphanumeric (including the underscore) character, nor the other
 characters defined in the function syntax. It must be a character not
 supported by the function parser (such as <code>'}'</code>,
 <code>'&quot;'</code>, <code>']'</code>, etc).
+
+
+<hr>
+<a name="longdesc_Epsilon"></a>
+<pre>
+static double epsilon();
+static void setEpsilon(double);
+</pre>
+
+<p>Comparison operators (for the non-integral versions of the parser) use an
+epsilon value to account for floating point calculation rounding errors.
+This epsilon value can be set and read with these functions. (Note that the
+specified value will be used by all instances of FunctionParser.) If not
+specified, the default values are:
+
+<ul>
+ <li>double: 1e-12
+ <li>float: 1e-5
+ <li>long double: 1e-14
+ <li>MpfrFloat: The value of MpfrFloat::someEpsilon()
+</ul>
 
 
 <hr>
@@ -1665,7 +1636,7 @@ should be used instead of using numerical literals).
 <a name="evaluationchecks"></a>
 <h3>About evaluation-time checks</h3>
 
-<p>By default <code>FunctionParser::Eval()</code> will perform certain sanity
+<p><code>FunctionParser::Eval()</code> will perform certain sanity
 checks before performing certain operations. For example, before calling the
 <code>sqrt</code> function, it will check if the parameter is negative, and
 if so, it will set the proper error code instead of calling the function.
@@ -1701,12 +1672,6 @@ return the floating point values <em>inf</em> and <em>NaN</em>. Moreover,
 if floating point errors cause an interrupt in the target computer
 architecture and/or when using certain compiler settings, this library
 cannot guarantee that it will never happen.
-
-<p>Since not all error situations can be caught, and since the sanity checks
-only slow down the evaluation (although only very slightly), the precompiler
-constant <code>FP_NO_EVALUATION_CHECKS</code> can be used to turn all the
-checks off. This might make the evaluation slightly faster in certain
-situations.
 
 <p>Note that the optimizer never performs any sanity checks.
 

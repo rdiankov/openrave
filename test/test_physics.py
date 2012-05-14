@@ -49,7 +49,7 @@ class RunPhysics(EnvironmentSetup):
                 body = env.ReadKinBodyURI(bodynames[random.randint(len(bodynames))])
                 body.SetName('body%d'%numbodies)
                 numbodies += 1
-                env.AddKinBody(body)
+                env.Add(body)
                 T = eye(4)
                 T[0:3,3] = array((-0.5,-0.5,2))+0.4*random.rand(3)
                 body.SetTransform(T)
@@ -65,7 +65,7 @@ class RunPhysics(EnvironmentSetup):
         with env:
             body = env.ReadKinBodyURI('data/lego2.kinbody.xml')
             body.SetName('body')
-            env.AddKinBody(body)
+            env.Add(body)
             Tinit = eye(4)
             Tinit[2,3] = 3
             body.SetTransform(Tinit)

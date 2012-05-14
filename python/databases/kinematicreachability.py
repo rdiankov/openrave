@@ -68,6 +68,7 @@ from . import convexdecomposition, inversekinematics
 import numpy
 import time
 import os.path
+from os import makedirs
 from heapq import nsmallest # for nth smallest element
 from optparse import OptionParser
 
@@ -127,21 +128,91 @@ class ReachabilityModel(DatabaseGenerator):
         return clone
     def has(self):
         return len(self.reachabilitydensity3d) > 0 and len(self.reachability3d) > 0 and len(self.reachabilitystats) > 0
+
     def getversion(self):
-        return 4
+        return 5
+    
+    def save(self):
+        try:
+            self.SaveHDF5()
+        except ImportError:
+            log.warn('python h5py library not found, will not be able to speedup database access')
+            self.SavePickle()
+
     def load(self):
         try:
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
-            params = DatabaseGenerator.load(self)
-            if params is None:
-                return False
-            self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d,self.pointscale,self.xyzdelta,self.quatdelta = params
-            return self.has()
-        except e:
+
+            try:
+                return self.LoadHDF5()
+            except ImportError:
+                log.warn('python h5py library not found, will not be able to speedup database access')
+                return self.LoadPickle()
+        except Exception, e:
+            log.warn(e)
             return False
-    def save(self):
+
+    def SavePickle(self):
         DatabaseGenerator.save(self,(self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d, self.pointscale,self.xyzdelta,self.quatdelta))
+        
+    def LoadPickle(self):
+        params = DatabaseGenerator.load(self)
+        if params is None:
+            return False
+        self.reachabilitystats,self.reachabilitydensity3d,self.reachability3d,self.pointscale,self.xyzdelta,self.quatdelta = params
+        return self.has()
+
+    def SaveHDF5(self):
+        import h5py
+        filename=self.getfilename(False)
+        log.info('saving model to %s',filename)
+        try:
+            makedirs(os.path.split(filename)[0])
+        except OSError:
+            pass
+
+        f=h5py.File(filename,'w')
+        try:
+            f['version'] = self.getversion()
+            f['reachabilitystats'] = self.reachabilitystats
+            f['reachabilitydensity3d'] = self.reachabilitydensity3d
+            f['reachability3d'] = self.reachability3d
+            f['pointscale'] = self.pointscale
+            f['xyzdelta'] = self.xyzdelta
+            f['quatdelta'] = self.quatdelta
+        finally:
+            f.close()
+
+    def LoadHDF5(self):
+        import h5py
+        filename = self.getfilename(True)
+        if len(filename) == 0:
+            return False
+
+        self._CloseDatabase()
+        try:
+            f=h5py.File(filename,'r')
+            if f['version'].value != self.getversion():
+                log.error('version is wrong %s!=%s ',f['version'],self.getversion())
+                return False
+
+            self.reachabilitystats = f['reachabilitystats']
+            self.reachabilitydensity3d = f['reachabilitydensity3d']
+            self.reachability3d = f['reachability3d']
+            self.pointscale = f['pointscale'].value
+            self.xyzdelta = f['xyzdelta'].value
+            self.quatdelta = f['quatdelta'].value
+            self._databasefile = f
+            f = None
+            return self.has()
+        
+        except Exception,e:
+            log.debug('LoadHDF5 for %s: ',filename,e)
+            return False
+        finally:
+            if f is not None:
+                f.close()
 
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'reachability.' + self.manip.GetStructureHash() + '.pp'),read)
@@ -287,11 +358,11 @@ class ReachabilityModel(DatabaseGenerator):
         mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
-        log.info('max reachability: %r',numpy.max(self.reachability3d))
+        log.info('max reachability: %r',numpy.max(self._GetValue(self.reachability3d)))
         if options is not None:
-            reachability3d = minimum(self.reachability3d*options.showscale,1.0)
+            reachability3d = minimum(self._GetValue(self.reachability3d)*options.showscale,1.0)
         else:
-            reachability3d = minimum(self.reachability3d,1.0)
+            reachability3d = minimum(self._GetValue(self.reachability3d),1.0)
         reachability3d[0,0,0] = 1 # have at least one point be at the maximum
         if xrange is None:
             offset = array((0,0,0))
@@ -324,11 +395,11 @@ class ReachabilityModel(DatabaseGenerator):
     def ComputeNN(self,translationonly=False):
         if translationonly:
             if self.kdtree3d is None:
-                self.kdtree3d = pyANN.KDTree(self.reachabilitystats[:,4:7])
+                self.kdtree3d = pyANN.KDTree(self._GetValue(self.reachabilitystats)[:,4:7])
             return self.kdtree3d
         else:
             if self.kdtree6d is None:
-                self.kdtree6d = self.QuaternionKDTree(self.reachabilitystats,5.0)
+                self.kdtree6d = self.QuaternionKDTree(self._GetValue(self.reachabilitystats),5.0)
             return self.kdtree6d
     @staticmethod
     def CreateOptionParser():

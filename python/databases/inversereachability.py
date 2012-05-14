@@ -66,13 +66,14 @@ from . import kinematicreachability, linkstatistics, inversekinematics
 import numpy
 import os.path
 from optparse import OptionParser
-try:
-    from scipy.optimize import leastsq
-except ImportError:
-    pass
 
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
+try:
+    from scipy.optimize import leastsq
+except ImportError:
+    print 'could not import scipy.optimize.leastsq'
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
@@ -205,7 +206,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             self.rotweight = heightthresh/quatthresh
             quateucdist2 = (1-cos(quatthresh))**2+sin(quatthresh)**2
             # find the density
-            basetrans = array(self.rmodel.reachabilitystats)
+            basetrans = array(self._GetValue(self.rmodel.reachabilitystats))
             assert len(basetrans) > 0
             basetrans[:,0:7] = poseMultArrayT(poseFromMatrix(Tbase),basetrans[:,0:7])
             # find the density of the points
@@ -631,7 +632,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     for link in newrobot.GetLinks():
                         for geom in link.GetGeometries():
                             geom.SetTransparency(transparency)
-                    self.env.AddRobot(newrobot,True)
+                    self.env.Add(newrobot,True)
                     newrobot.SetTransform(T)
                     newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
@@ -640,7 +641,7 @@ class InverseReachabilityModel(DatabaseGenerator):
         finally:
             for newrobot in newrobots:
                 self.env.Remove(newrobot)
-            self.env.AddRobot(self.robot)
+            self.env.Add(self.robot)
 
     def show(self,options=None):
         if self.env.GetViewer() is None:
@@ -692,7 +693,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.env.Remove(self.robot)
                     for i in range(len(goals)):
                         newrobot = newrobots[i]
-                        self.env.AddRobot(newrobot,True)
+                        self.env.Add(newrobot,True)
                         newrobot.SetTransform(goals[i][0])
                         newrobot.SetDOFValues(goals[i][1])
                 raw_input('press any key to continue')
@@ -700,7 +701,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 h=None
                 for newrobot in newrobots:
                     self.env.Remove(newrobot)
-                self.env.AddRobot(self.robot)
+                self.env.Add(self.robot)
 
 
     @staticmethod

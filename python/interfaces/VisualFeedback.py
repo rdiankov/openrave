@@ -29,8 +29,7 @@ class VisualFeedback:
         self.args = self.robot.GetName()
         if maxvelmult is not None:
             self.args += ' maxvelmult %.15e '%maxvelmult
-        if env.AddModule(self.prob,self.args) != 0:
-            raise ValueError('module failed to initialize')
+        env.Add(self.prob,True,self.args)
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
     def clone(self,envother):
@@ -39,9 +38,9 @@ class VisualFeedback:
         clone = shallowcopy(self)
         clone.prob = RaveCreateModule(envother,'VisualFeedback')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        if envother.AddModule(clone.prob,clone.args) != 0:
-            raise ValueError('module failed to initialize')
+        envother.Add(clone.prob,True,clone.args)
         return clone
+    
     def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
         """See :ref:`module-visualfeedback-setcameraandtarget`
         """

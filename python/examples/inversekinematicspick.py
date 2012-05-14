@@ -86,7 +86,7 @@ def main(env,options):
                 color[igeom] = 1
                 geom.SetDiffuseColor(color)
             picker.SetName(ikmodel.manip.GetName())
-            env.AddKinBody(picker,True)
+            env.Add(picker,True)
             # have to disable since not part of collision 
             picker.Enable(False)
             picker.SetTransform(ikmodel.manip.GetTransform())
@@ -164,8 +164,7 @@ def run(args=None):
     parser.add_option('--iktype', action='store',type='string',dest='iktype',default=None,
                       help='The ik type to build the solver current types are: %s'%(', '.join(iktype.name for iktype in IkParameterization.Type.values.values())))
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

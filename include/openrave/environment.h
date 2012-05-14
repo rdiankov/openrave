@@ -123,9 +123,14 @@ public:
     /// The callback should return an action specifying how the collision should be handled:
     /// <b>action = callback(CollisionReport,bool IsCalledFromPhysicsEngine)</b>
     /// \return a handle to the registration, once the handle loses scope, the callback is unregistered
-    virtual boost::shared_ptr<void> RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
+    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) = 0;
     virtual bool HasRegisteredCollisionCallbacks() const = 0;
+
+    /// \brief return all the collision callbacks, the environment must be locked!
+    ///
+    /// \param listcallbacks filled with the user callbacks. Once the environment is unlocked, the list becomes invalid.
     virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>&) const = 0;
+
     //@}
 
     /// \name Physics and Simulation
@@ -301,52 +306,44 @@ public:
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
 
-    /// \deprecated (10/09/30) see \ref RaveRegisterXMLReader
-    virtual UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn) RAVE_DEPRECATED = 0;
-
-    /// \brief Parses a file for OpenRAVE XML formatted data.
-    virtual bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename) RAVE_DEPRECATED = 0;
-
-    /** \brief Parses a data file for XML data.
-
-        \param pdata The data of the buffer
-        \param len the number of bytes valid in pdata
-     */
-    virtual bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& data) RAVE_DEPRECATED = 0;
     //@}
 
     /// \name Object Setting and Querying
     /// \anchor env_objects
     //@{
 
-    /// \brief Add a body to the environment
-    ///
-    /// \param[in] body the pointer to an initialized body
-    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
-    /// \throw openrave_exception Throw if body is invalid or already added
-    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) = 0;
+    /** \brief Add an interface to the environment
 
-    /// \brief add a robot to the environment
-    ///
-    /// \param[in] robot the pointer to an initialized robot
-    /// \param[in] bAnonymous if true and there exists a body/robot with the same name, will make robot's name unique
-    /// \throw openrave_exception Throw if robot is invalid or already added
-    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) = 0;
+        Depending on the type of interface, the addition behaves differently. For bodies/robots, will add them to visual/geometric environment. For modules, will call their main() method and add them officially. For viewers, will attach a viewer to the environment and start sending it data.
+        For interfaces that don't make sense to add, will throw an exception.
+        \param[in] pinterface the pointer to an initialized interface
+        \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
+        \param[in] cmdargs The command-line arguments for the module.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") = 0;
 
-    /// \brief registers the sensor with the environment and turns its power on.
-    ///
-    /// \param[in] sensor the pointer to an initialized sensor
-    /// \param[in] bAnonymous if true and there exists a sensor with the same name, will make sensor's name unique
-    /// \throw openrave_exception Throw if sensor is invalid or already added
-    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) = 0;
+    /// \deprecated (12/04/18)
+    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddKinBody deprecated, please use EnvironmentBase::Add\n");
+        Add(body,bAnonymous);
+    }
+    /// \deprecated (12/04/18)
+    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddRobot deprecated, please use EnvironmentBase::Add\n");
+        Add(robot,bAnonymous);
+    }
+
+    /// \deprecated (12/04/18)
+    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) RAVE_DEPRECATED {
+        RAVELOG_WARN("EnvironmentBase::AddSensor deprecated, please use EnvironmentBase::Add\n");
+        Add(sensor,bAnonymous);
+    }
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
     ///
     /// The sensors come from the currently loaded robots and the explicitly added sensors
     virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
-
-    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
-    virtual bool RemoveKinBody(KinBodyPtr body) RAVE_DEPRECATED = 0;
 
     /// \brief Removes a currently loaded interface from the environment. <b>[multi-thread safe]</b>
     ///
@@ -415,17 +412,14 @@ public:
         return AddModule(module,cmdargs);
     }
 
-    /// \deprecated (10/09/15) see \ref EnvironmentBase::Remove
-    virtual bool RemoveProblem(ModuleBasePtr prob) RAVE_DEPRECATED = 0;
-
-    /// \brief Returns a list of loaded problems with a pointer to a lock preventing the list from being modified.
+    /// \brief Fills a list with the loaded modules in the environment.
     ///
-    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<void> GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
+    /// If the environment is locked, the modules are guaranteed to stay loaded in the environment.
+    virtual void GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
 
-    virtual boost::shared_ptr<void> GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {
-        return GetModules(listModules);
+    /// \deprecated (12/01/30)
+    virtual void GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {
+        GetModules(listModules);
     }
 
     /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
@@ -442,14 +436,15 @@ public:
     /// \deprecated (10/11/05)
     typedef OpenRAVE::GraphHandlePtr GraphHandlePtr RAVE_DEPRECATED;
 
-    /// \brief adds a viewer to the environment
-    ///
-    /// \throw openrave_exception Throw if body is invalid or already added
-    virtual void AddViewer(ViewerBasePtr pviewer) = 0;
+    /// \deprecated (12/04/18)
+    virtual void AddViewer(ViewerBasePtr pviewer) {
+        Add(pviewer);
+    }
 
     /// \deprecated (11/06/13) see AddViewer
     virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
-        AddViewer(pnewviewer); return true;
+        Add(pnewviewer);
+        return true;
     }
 
     /// \brief Return a viewer with a particular name.
@@ -459,9 +454,8 @@ public:
 
     /// \brief Returns a list of loaded viewers with a pointer to a lock preventing the list from being modified.
     ///
-    /// As long as the lock is held, the problems are guaranteed to stay loaded in the environment.
-    /// \return returns a pointer to a Lock. Destroying the shared_ptr will release the lock
-    virtual boost::shared_ptr<boost::mutex::scoped_lock> GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
+    /// If the environment is locked, the viewers are guaranteed to stay loaded in the environment.
+    virtual void GetViewers(std::list<ViewerBasePtr>& listViewers) const = 0;
 
     /// \brief Plot a point cloud with one color. <b>[multi-thread safe]</b>
     ///
@@ -544,9 +538,6 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) = 0;
     //@}
-
-    /// \deprecated (10/09/23) see \ref RaveGetHomeDirectory
-    virtual const std::string& GetHomeDirectory() const RAVE_DEPRECATED = 0;
 
     //@{ debug/global commands
 

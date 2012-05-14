@@ -17,7 +17,7 @@ if( CRLIBM_FOUND )
 
   # check the accuracy of the current math library with crlibm
   add_executable(check_libm_accuracy check_libm_accuracy_main.cpp)
-  target_link_libraries(check_libm_accuracy ${CRLIBM_LIBRARY})
+  target_link_libraries(check_libm_accuracy ${CRLIBM_LIBRARY} ${STDC_LIBRARY})
   set(libm_accuracy_results_h "${CMAKE_CURRENT_BINARY_DIR}/libm_accuracy_results.h")
   add_custom_command(TARGET check_libm_accuracy POST_BUILD
     COMMAND check_libm_accuracy ARGS ${libm_accuracy_results_h}
@@ -34,7 +34,7 @@ if( NEED_TRIINDEX  )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -fPIC")
 endif()
 

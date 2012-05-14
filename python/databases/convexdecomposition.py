@@ -276,7 +276,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return vertices,hull[1]
         return vertices,hull[1],dot(hull[2],linalg.inv(T))
     def show(self,options=None):
-        self.env.SetViewer('qtcoin')
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
         self.env.UpdatePublishedBodies()
         T = self.env.Triangulate(self.robot)
         log.info('total vertices: %d, total triangles: %d',len(T.vertices),len(T.indices)/3)

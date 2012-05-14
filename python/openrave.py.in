@@ -180,7 +180,7 @@ if __name__ == "__main__":
                     print '  %s - %s'%(interfacename,pluginname)
             RaveDestroy()
             sys.exit(0)
-        env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=False)
+        env,viewername = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True,returnviewer=True)
         try:
             # load files after viewer is loaded since they may contain information about where to place the camera
             for arg in args:
@@ -190,16 +190,40 @@ if __name__ == "__main__":
                 robot=None if len(robots) == 0 else robots[0]
             if options.pythoncmd is not None:
                 eval(compile(options.pythoncmd,'<string>','exec'))
-            if options._viewer is None:
-                env.SetViewer('qtcoin')
+            viewer = None
+            if viewername is not None:
+                viewer = RaveCreateViewer(env,viewername)
+                env.Add(viewer)
+
+            ipythonthread = None
             if options.ipython:
+                # start ipython in a separate thread
                 from IPython.Shell import IPShellEmbed
-                ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
-                ipshell(local_ns=locals())
-                RaveDestroy()
-                sys.exit(0)
-            while True:
-                time.sleep(1.0)
+                def ipythonthreadfn(env,robot):
+                    try:
+                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+                        ipshell(local_ns=locals())
+                    finally:
+                        # ipython exited. if viewer is valid, then exit the viewer also
+                        if viewer is not None:
+                            viewer.quitmainloop()
+                    
+                if viewer is None:
+                    ipythonthreadfn(env,robot)
+                else:
+                    from threading import Thread
+                    ipythonthread = Thread(target=ipythonthreadfn,args=(env,robot))
+                    ipythonthread.start()
+                    viewer.main(True)
+                    # join ipython thread
+                    ipythonthread.join()
+            else:
+                if viewer is not None:
+                    viewer.main(True)
+                else:
+                    # infinite loop until a KeyboardInterrupt
+                    while True:
+                        time.sleep(1.0)
         finally:
             env.Destroy()
     finally:

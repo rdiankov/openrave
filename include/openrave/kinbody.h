@@ -22,10 +22,10 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
-/// declare function parser class from fparser library
-template<typename Value_t> class FunctionParserBase;
-
 namespace OpenRAVE {
+
+class OpenRAVEFunctionParserReal;
+typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
@@ -35,20 +35,24 @@ class OPENRAVE_API KinBody : public InterfaceBase
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
     enum KinBodyProperty {
-        Prop_Joints=0x1,     ///< all properties of all joints
-        Prop_JointLimits=0x2|Prop_Joints,     ///< regular limits
-        Prop_JointOffset=0x4|Prop_Joints,
-        Prop_JointProperties=0x8|Prop_Joints,     ///< max velocity, max acceleration, resolution, max torque
-        Prop_Links=0x10,     ///< all properties of all links
+        Prop_JointMimic=0x1,     ///< joint mimic equations
+        Prop_JointLimits=0x2,     ///< regular limits
+        Prop_JointOffset=0x4,
+        Prop_JointProperties=0x8,     ///< resolution, weights
+        Prop_JointAccelerationVelocityTorqueLimits=0x10,     ///< velocity + acceleration + torque
+        Prop_Joints=Prop_JointMimic|Prop_JointLimits|Prop_JointOffset|Prop_JointProperties|Prop_JointAccelerationVelocityTorqueLimits, ///< all properties of all joints
+
         Prop_Name=0x20,     ///< name changed
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
-        Prop_LinkGeometry=0x80|Prop_Links,     ///< the geometry of the link changed
-        Prop_JointMimic=0x100|Prop_Joints,     ///< joint mimic equations
-        Prop_JointAccelerationVelocityTorqueLimits=0x200|Prop_Joints,     ///< velocity + acceleration + torque
-        Prop_LinkStatic=0x400|Prop_Links,     ///< static property of link changed
+        Prop_LinkGeometry=0x80,     ///< the geometry of the link changed
+        // 0x100
+        // 0x200
+        Prop_LinkStatic=0x400,     ///< static property of link changed
+        Prop_LinkEnable=0x800,     ///< enable property of link changed
+        Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
+        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         // robot only
-        Prop_RobotManipulators = 0x00010000,     ///< [robot only] all properties of all manipulators
-        Prop_Manipulators = 0x00010000,
+        // 0x00010000
         Prop_RobotSensors = 0x00020000,     ///< [robot only] all properties of all sensors
         Prop_Sensors = 0x00020000,
         Prop_RobotSensorPlacement = 0x00040000,     ///< [robot only] relative sensor placement of sensors
@@ -56,6 +60,8 @@ public:
         Prop_RobotActiveDOFs = 0x00080000,     ///< [robot only] active dofs changed
         Prop_RobotManipulatorTool = 0x00100000, ///< [robot only] the tool coordinate system changed
         Prop_RobotManipulatorName = 0x00200000, ///< [robot only] the manipulator name
+        Prop_RobotManipulatorSolver = 0x00400000,
+        Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
     };
 
     /// \brief A rigid body holding all its collision and rendering data.
@@ -316,6 +322,15 @@ protected:
             RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetGlobalInertia\n");
             return GetLocalInertia();
         }
+
+        /// \brief sets a new mass frame with respect to the link coordinate system
+        virtual void SetLocalMassFrame(const Transform& massframe);
+
+        /// \brief sets new principal moments of inertia (with respect to the mass frame)
+        virtual void SetPrincipalMomentsOfInertia(const Vector& inertiamoments);
+
+        /// \brief set a new mass
+        virtual void SetMass(dReal mass);
 
         /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
         inline const Transform& GetLocalMassFrame() const {
@@ -586,11 +601,6 @@ public:
         /// \brief \see GetLimits
         virtual void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
 
-        /// \deprecated (11/1/1)
-        virtual void SetJointLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper) RAVE_DEPRECATED {
-            SetLimits(lower,upper);
-        }
-
         /** \brief Returns the max velocities of the joint
 
             \param[out] the max velocity
@@ -633,6 +643,11 @@ public:
         /// Takes into account joint limits and wrapping of circular joints.
         virtual void SubtractValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
+        /// \brief Returns the configuration difference value1-value2 for axis i.
+        ///
+        /// Takes into account joint limits and wrapping of circular joints.
+        virtual dReal SubtractValue(dReal value1, dReal value2, int iaxis) const;
+
         /// \brief Return internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
@@ -648,10 +663,6 @@ public:
 
         /// \brief \see GetWrapOffset
         virtual void SetWrapOffset(dReal offset, int iaxis=0);
-        /// \deprecated (11/1/16)
-        virtual void SetOffset(dReal offset, int iaxis=0) RAVE_DEPRECATED {
-            SetWrapOffset(offset,iaxis);
-        }
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -661,8 +672,6 @@ public:
         virtual LinkPtr GetHierarchyParentLink() const;
         /// \brief Return the child link whose transformation is computed by this joint's values (either GetFirstAttached() or GetSecondAttached())
         virtual LinkPtr GetHierarchyChildLink() const;
-        /// \deprecated (11/1/27)
-        virtual Vector GetInternalHierarchyAnchor() const RAVE_DEPRECATED;
         /// \brief The axis of the joint in local coordinates.
         virtual Vector GetInternalHierarchyAxis(int axis = 0) const;
         /// \brief Left multiply transform given the base body.
@@ -764,8 +773,8 @@ protected:
                 }
             };
             std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
-            boost::shared_ptr<FunctionParserBase<dReal> > _posfn;
-            std::vector<boost::shared_ptr<FunctionParserBase<dReal> > > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
+            OpenRAVEFunctionParserRealPtr _posfn;
+            std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
             boost::array< std::string, 3>  _equations;         ///< the original equations
         };
         boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
@@ -791,6 +800,15 @@ protected:
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
          */
         virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+
+        /// \brief evaluates the mimic joint equation using vdependentvalues
+        ///
+        /// \param[in] axis the joint axis
+        /// \param[in] timederiv the time derivative to evaluate. 0 is position, 1 is velocity, 2 is acceleration, etc
+        /// \param[in] vdependentvalues input values ordered with respect to _vdofformat[iaxis]
+        /// \param[out] voutput the output values
+        /// \return an internal error code, 0 if no error
+        virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
 
         std::string _name;         ///< \see GetName
         boost::array<bool,3> _bIsCircular;            ///< \see IsCircular
@@ -899,9 +917,10 @@ private:
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
-        Save_LinkTransformation=0x00000001,     ///< [default] save link transformations
+        Save_LinkTransformation=0x00000001,     ///< [default] save link transformations and joint branches
         Save_LinkEnable=0x00000002,     ///< [default] save link enable states
         Save_LinkVelocities=0x00000004,     ///< save the link velocities
+        Save_JointMaxVelocityAndAcceleration=0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
         Save_ActiveDOF=0x00010000,     ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator=0x00020000,     ///< [robot only], saves the active manipulator
         Save_GrabbedBodies=0x00040000,     ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
@@ -925,6 +944,7 @@ protected:
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<int> _vdofbranches;
+        std::vector<dReal> _vMaxVelocities, _vMaxAccelerations;
         KinBodyPtr _pbody;
 private:
         virtual void _RestoreKinBody();
@@ -940,11 +960,6 @@ private:
     }
 
     virtual void Destroy();
-
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLFile
-    virtual bool InitFromFile(const std::string& filename, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
-    /// \deprecated (11/02/18) \see EnvironmentBase::ReadKinBodyXMLData
-    virtual bool InitFromData(const std::string& data, const AttributesList& atts = AttributesList()) RAVE_DEPRECATED;
 
     /// \brief Create a kinbody with one link composed of an array of aligned bounding boxes.
     ///
@@ -1031,6 +1046,9 @@ private:
     /// \brief \see GetDOFWeights
     virtual void SetDOFWeights(const std::vector<dReal>& weights);
 
+    /// \brief \see GetDOFLimits
+    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
+
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {
         return _vecjoints;
@@ -1045,9 +1063,6 @@ private:
     const std::vector<JointPtr>& GetPassiveJoints() const {
         return _vPassiveJoints;
     }
-
-    /// \deprecated \see Link::GetRigidlyAttachedLinks (10/12/12)
-    virtual void GetRigidlyAttachedLinks(int linkindex, std::vector<LinkPtr>& vattachedlinks) const RAVE_DEPRECATED;
 
     /// \brief Returns the joints in hierarchical order starting at the base link.
     ///
@@ -1110,21 +1125,10 @@ private:
     /// Takes into account joint limits and wrapping of circular joints.
     virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
 
-    /// \deprecated (01/01/11)
-    virtual void SubtractJointValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const RAVE_DEPRECATED {
-        SubtractDOFValues(q1,q2);
-    }
-
-
     /// \brief Adds a torque to every joint.
     ///
     /// \param bAdd if true, adds to previous torques, otherwise resets the torques on all bodies and starts from 0
     virtual void SetDOFTorques(const std::vector<dReal>& torques, bool add);
-
-    /// \deprecated (11/06/17)
-    virtual void SetJointTorques(const std::vector<dReal>& torques, bool add) RAVE_DEPRECATED {
-        SetDOFTorques(torques,add);
-    }
 
     /// \brief Returns all the rigid links of the body.
     virtual const std::vector<LinkPtr>& GetLinks() const {
@@ -1198,11 +1202,6 @@ private:
 
     /// \brief Enables or disables all the links.
     virtual void Enable(bool enable);
-
-    /// \deprecated (10/09/08)
-    virtual void EnableLink(LinkPtr plink, bool bEnable) RAVE_DEPRECATED {
-        plink->Enable(bEnable);
-    }
 
     /// \return true if any link of the KinBody is enabled
     virtual bool IsEnabled() const;
@@ -1375,14 +1374,6 @@ private:
     /// \return md5 hash string of kinematics/geometry
     virtual const std::string& GetKinematicsGeometryHash() const;
 
-    /// \deprecated (10/11/18)
-    virtual void SetJointVelocities(const std::vector<dReal>& pJointVelocities) RAVE_DEPRECATED {
-        SetDOFVelocities(pJointVelocities);
-    }
-
-    /// \deprecated (10/11/18)
-    virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const RAVE_DEPRECATED;
-
     /// \brief Sets the joint offsets so that the current configuration becomes the new zero state of the robot.
     ///
     /// When this function returns, the returned DOF values should be all zero for controllable joints.
@@ -1395,12 +1386,14 @@ private:
     //@{
 
     /// \brief return the configuration specification of the joint values and transform
-    virtual const ConfigurationSpecification& GetConfigurationSpecification() const;
+    ///
+    /// Note that the return type is by-value, so should not be used in iteration
+    virtual ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const;
 
     /// \brief return the configuration specification of the specified joint indices.
     ///
     /// Note that the return type is by-value, so should not be used in iteration
-    virtual ConfigurationSpecification GetConfigurationSpecificationIndices(const std::vector<int>& indices) const;
+    virtual ConfigurationSpecification GetConfigurationSpecificationIndices(const std::vector<int>& indices, const std::string& interpolation="") const;
 
     /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
     ///
@@ -1465,9 +1458,6 @@ protected:
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
-
-    /// creates the function parser connected to this body's joint values
-    virtual boost::shared_ptr<FunctionParserBase<dReal> > _CreateFunctionParser();
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

@@ -29,7 +29,7 @@
 template <typename T>
 const T& mymax(const T& a, const T& b)
 {
-    return (a<b)?b:a;
+    return (a<b) ? b : a;
 }
 
 // out = fn(in)
@@ -93,6 +93,7 @@ const T& mymax(const T& a, const T& b)
         } \
 } \
 
+namespace OpenRAVE {
 
 template <typename Value_t>
 class OpenRAVEFunctionParser : public FunctionParserBase<Value_t>
@@ -148,7 +149,7 @@ public:
 
     bool AddBoostFunction(const std::string& name, const BoostFunction& fn, unsigned paramsAmount)
     {
-        return AddFunctionWrapper(name, BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
+       return FunctionParserBase<Value_t>::AddFunctionWrapper(name, BoostFunctionWrapper(fn,paramsAmount), paramsAmount);
     }
 
 //===========================================================================
@@ -294,44 +295,6 @@ public:
                 EVAL_MULTI_APPLY(Value_t(1)/,Stack[SP],Stack[SP]);
                 break;
             }
-
-
-//#       ifndef FP_DISABLE_EVAL
-//          case  cEval:
-//              {
-//                  const unsigned varAmount = mData->mVariablesAmount;
-//                  Value_t retVal = Value_t(0);
-//                  if(mData->mEvalRecursionLevel == FP_EVAL_MAX_REC_LEVEL)
-//                  {
-//                      mData->mEvalErrorType = 5;
-//                  }
-//                  else
-//                  {
-//                      ++mData->mEvalRecursionLevel;
-//#                   ifndef FP_USE_THREAD_SAFE_EVAL
-//                      /* Eval() will use mData->mStack for its storage.
-//                       * Swap the current stack with an empty one.
-//                       * This is the not-thread-safe method.
-//                       */
-//                      std::vector<Value_t> tmpStack(Stack.size());
-//                      mData->mStack.swap(tmpStack);
-//                      retVal = Eval(&tmpStack[SP - varAmount + 1]);
-//                      mData->mStack.swap(tmpStack);
-//#                   else
-//                      /* Thread safety mode. We don't need to
-//                       * worry about stack reusing here, because
-//                       * each instance of Eval() will allocate
-//                       * their own stack.
-//                       */
-//                      retVal = Eval(&Stack[SP - varAmount + 1]);
-//#                   endif
-//                      --mData->mEvalRecursionLevel;
-//                  }
-//                  SP -= varAmount-1;
-//                  Stack[SP] = retVal;
-//                  break;
-//              }
-//#       endif
 
             case   cExp: EVAL_MULTI_APPLY(fp_exp,Stack[SP],Stack[SP]); break;
 
@@ -851,17 +814,6 @@ public:
 
             case   cCsc: Stack[SP] = mlApplyFunction("csc",Stack[SP]); break;
 
-#       ifndef FP_DISABLE_EVAL
-            case  cEval:
-            {
-                printf("do not support Eval in mathml output\n");
-                const unsigned varAmount = mData->mVariablesAmount;
-                SP -= varAmount-1;
-                Stack[SP] = "";
-                break;
-            }
-#       endif
-
             case   cExp: Stack[SP] = mlApplyFunction("exp",Stack[SP]); break;
 
             case   cExp2: Stack[SP] = mlApplyFunction("power",mlNumberInt(2),Stack[SP]); break;
@@ -1143,7 +1095,10 @@ public:
     }
 };
 
-typedef OpenRAVEFunctionParser<dReal> OpenRAVEFunctionParserReal;
-typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
+class OpenRAVEFunctionParserReal : public OpenRAVEFunctionParser<dReal>
+{
+};
+
+}
 
 #endif

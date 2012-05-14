@@ -18,6 +18,44 @@
 
 namespace OpenRAVE {
 
+bool IkReturn::Append(const IkReturn& r)
+{
+    bool bclashing = false;
+    if( !!r._userdata ) {
+        if( !!_userdata ) {
+            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting anyway\n");
+            bclashing = true;
+        }
+        _userdata = r._userdata;
+    }
+    if( _mapdata.size() == 0 ) {
+        _mapdata = r._mapdata;
+    }
+    else {
+        FOREACHC(itr,r._mapdata) {
+            if( !_mapdata.insert(*itr).second ) {
+                RAVELOG_WARN(str(boost::format("IkReturn _mapdata %s overwritten")%itr->first));
+                bclashing = true;
+            }
+        }
+    }
+    if( r._vsolution.size() > 0 ) {
+        if( _vsolution.size() > 0 ) {
+            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting anyway\n");
+            bclashing = true;
+        }
+        _vsolution = r._vsolution;
+    }
+    return bclashing;
+}
+
+void IkReturn::Clear()
+{
+    _mapdata.clear();
+    _userdata.reset();
+    _vsolution.resize(0);
+}
+
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
 {
 public:
@@ -43,6 +81,68 @@ bool CustomIkSolverFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
     return boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data1)->_priority;
 }
 
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+{
+    if( !ikreturn ) {
+        return Solve(param,q0,filteroptions,boost::shared_ptr< vector<dReal> >());
+    }
+    ikreturn->Clear();
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    if( !Solve(param,q0,filteroptions,psolution) ) {
+        ikreturn->_action = IKRA_Reject;
+        return false;
+    }
+    ikreturn->_action = IKRA_Success;
+    return true;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
+{
+    ikreturns.resize(0);
+    std::vector< std::vector<dReal> > vsolutions;
+    if( !SolveAll(param,filteroptions,vsolutions) ) {
+        return false;
+    }
+    ikreturns.resize(vsolutions.size());
+    for(size_t i = 0; i < ikreturns.size(); ++i) {
+        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i]->_vsolution = vsolutions[i];
+        ikreturns[i]->_action = IKRA_Success;
+    }
+    return vsolutions.size() > 0;
+}
+
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+{
+    if( !ikreturn ) {
+        return Solve(param,q0,vFreeParameters,filteroptions,boost::shared_ptr< vector<dReal> >());
+    }
+    ikreturn->Clear();
+    boost::shared_ptr< vector<dReal> > psolution(&ikreturn->_vsolution, utils::null_deleter());
+    if( !Solve(param,q0,vFreeParameters,filteroptions,psolution) ) {
+        ikreturn->_action = IKRA_Reject;
+        return false;
+    }
+    ikreturn->_action = IKRA_Success;
+    return true;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
+{
+    ikreturns.resize(0);
+    std::vector< std::vector<dReal> > vsolutions;
+    if( !SolveAll(param,vFreeParameters,filteroptions,vsolutions) ) {
+        return false;
+    }
+    ikreturns.resize(vsolutions.size());
+    for(size_t i = 0; i < ikreturns.size(); ++i) {
+        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i]->_vsolution = vsolutions[i];
+        ikreturns[i]->_action = IKRA_Success;
+    }
+    return vsolutions.size() > 0;
+}
+
 UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase::IkFilterCallbackFn &filterfn)
 {
     CustomIkSolverFilterDataPtr pdata(new CustomIkSolverFilterData(priority,filterfn,shared_iksolver()));
@@ -57,7 +157,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int priority, const IkSolverBase:
     return pdata;
 }
 
-IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param)
+IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr filterreturn)
 {
     vector<dReal> vtestsolution,vtestsolution2;
     if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -67,15 +167,7 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             int dofindex = manipulator->GetArmIndices()[i];
             dReal fdiff = 0;
             KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex);
-            if( pjoint->GetDOF() == 1 ) {
-                // use subtract values
-                vector<dReal> v1(1), v2(1); v1[0] = vtestsolution.at(dofindex); v2[0] = solution.at(i);
-                pjoint->SubtractValues(v1,v2);
-                fdiff = RaveFabs(v1.at(0));
-            }
-            else {
-                fdiff = RaveFabs(vtestsolution.at(dofindex) - solution.at(i));
-            }
+            fdiff = pjoint->SubtractValue(vtestsolution.at(dofindex), solution.at(i), dofindex-pjoint->GetDOFIndex());
             if( fdiff > g_fEpsilonJointLimit ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
             }
@@ -85,9 +177,9 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
     FOREACHC(it,__listRegisteredFilters) {
         CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata) {
-            IkFilterReturn ret = pitdata->_filterfn(solution,manipulator,param);
-            if( ret != IKFR_Success ) {
-                return ret;
+            IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
+            if( ret != IKRA_Success ) {
+                return ret._action; // just return the action
             }
             if( vtestsolution.size() > 0 ) {
                 // check that the robot is set to solution
@@ -102,9 +194,15 @@ IkFilterReturn IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     }
                 }
             }
+            if( !!filterreturn ) {
+                filterreturn->Append(ret);
+            }
         }
     }
-    return IKFR_Success;
+    if( !!filterreturn ) {
+        filterreturn->_action = IKRA_Success;
+    }
+    return IKRA_Success;
 }
 
 }

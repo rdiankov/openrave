@@ -57,11 +57,11 @@ class TestEnvironment(EnvironmentSetup):
         with env:
             scalefactor = array([2.0,3.0,4.0])
             body1=env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.AddKinBody(body1,True)
+            env.Add(body1,True)
             renderfilename = body1.GetLinks()[0].GetGeometries()[0].GetRenderFilename()
             body1.SetTransform(eye(4))
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml',{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
-            env.AddKinBody(body2,True)
+            env.Add(body2,True)
             body2.SetTransform(eye(4))
             ab1=body1.ComputeAABB()
             ab2=body2.ComputeAABB()
@@ -72,7 +72,7 @@ class TestEnvironment(EnvironmentSetup):
                     assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
             if len(body1.GetLinks()) == 1:
                 body3 = env.ReadKinBodyURI(renderfilename,{'scalegeometry':'%f %f %f'%tuple(scalefactor)})
-                env.AddKinBody(body3,True)
+                env.Add(body3,True)
                 body3.SetTransform(eye(4))
                 ab3=body3.ComputeAABB()
                 assert( transdist(ab3.pos(),ab2.pos()) <= g_epsilon )
@@ -189,7 +189,7 @@ class TestEnvironment(EnvironmentSetup):
         body=RaveCreateKinBody(env,'')
         body.InitFromBoxes(array([[0,0,0,1,1,1]]),True)
         body.SetName(name)
-        env.AddKinBody(body)
+        env.Add(body)
         assert(body.GetName()==name)
         assert(unicode(body.GetName())==name)
 

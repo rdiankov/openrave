@@ -113,16 +113,6 @@ public:
         return true;
     }
 
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable)
-    {
-        return true;
-    }
-
-    virtual bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
-    {
-        return true;
-    }
-
     void GetPQPTransformFromTransform(Transform T, PQP_REAL PQP_R[3][3], PQP_REAL PQP_T[3])
     {
         TransformMatrix Tfm1(T);

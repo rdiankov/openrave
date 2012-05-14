@@ -133,9 +133,9 @@ public:
         MASS m;
         m.fTotalMass = totalmass;
         m.t = TransformMatrix();
-        m.t.m[0] = totalmass/(dReal)12.0 * (extents.y*extents.y + extents.z*extents.z);
-        m.t.m[4*1+1]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.z*extents.z);
-        m.t.m[4*2+2]= totalmass/(dReal)12.0 * (extents.x*extents.x + extents.y*extents.y);
+        m.t.m[0] = totalmass/(dReal)3.0 * (extents.y*extents.y + extents.z*extents.z);
+        m.t.m[4*1+1]= totalmass/(dReal)3.0 * (extents.x*extents.x + extents.z*extents.z);
+        m.t.m[4*2+2]= totalmass/(dReal)3.0 * (extents.x*extents.x + extents.y*extents.y);
         m.t.trans = pos;
         return m;
     }

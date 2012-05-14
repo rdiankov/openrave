@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -573,7 +573,7 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),errorcode); } }
 
-#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s!=%s, (eval %s!=%s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
+#define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
 
 #define OPENRAVE_DUMMY_IMPLEMENTATION { throw OPENRAVE_EXCEPTION_FORMAT0("not implemented",ORE_NotImplemented); }
 
@@ -616,6 +616,7 @@ class ViewerBase;
 class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
+class IkReturn;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
@@ -664,6 +665,9 @@ typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
 typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
 typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
+
+typedef boost::shared_ptr<IkReturn> IkReturnPtr;
+typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -839,7 +843,34 @@ enum IkParameterizationType {
     IKP_TranslationZAxisAngleYNorm4D=0x44000010, ///< end effector origin reaches desired 3D translation, manipulator direction needs to be orthogonal to y-axis and be rotated at a certain angle starting from the z-axis (defined in the manipulator base link's coordinate system)
 
     IKP_NumberOfParameterizations=16,     ///< number of parameterizations (does not count IKP_None)
+
+    IKP_VelocityDataBit = 0x00008000, ///< bit is set if the data represents the time-derivate velocity of an IkParameterization
+    IKP_Transform6DVelocity = IKP_Transform6D|IKP_VelocityDataBit,
+    IKP_Rotation3DVelocity = IKP_Rotation3D|IKP_VelocityDataBit,
+    IKP_Translation3DVelocity = IKP_Translation3D|IKP_VelocityDataBit,
+    IKP_Direction3DVelocity = IKP_Direction3D|IKP_VelocityDataBit,
+    IKP_Ray4DVelocity = IKP_Ray4D|IKP_VelocityDataBit,
+    IKP_Lookat3DVelocity = IKP_Lookat3D|IKP_VelocityDataBit,
+    IKP_TranslationDirection5DVelocity = IKP_TranslationDirection5D|IKP_VelocityDataBit,
+    IKP_TranslationXY2DVelocity = IKP_TranslationXY2D|IKP_VelocityDataBit,
+    IKP_TranslationXYOrientation3DVelocity = IKP_TranslationXYOrientation3D|IKP_VelocityDataBit,
+    IKP_TranslationLocalGlobal6DVelocity = IKP_TranslationLocalGlobal6D|IKP_VelocityDataBit,
+    IKP_TranslationXAxisAngle4DVelocity = IKP_TranslationXAxisAngle4D|IKP_VelocityDataBit,
+    IKP_TranslationYAxisAngle4DVelocity = IKP_TranslationYAxisAngle4D|IKP_VelocityDataBit,
+    IKP_TranslationZAxisAngle4DVelocity = IKP_TranslationZAxisAngle4D|IKP_VelocityDataBit,
+    IKP_TranslationXAxisAngleZNorm4DVelocity = IKP_TranslationXAxisAngleZNorm4D|IKP_VelocityDataBit,
+    IKP_TranslationYAxisAngleXNorm4DVelocity = IKP_TranslationYAxisAngleXNorm4D|IKP_VelocityDataBit,
+    IKP_TranslationZAxisAngleYNorm4DVelocity = IKP_TranslationZAxisAngleYNorm4D|IKP_VelocityDataBit,
+
+    IKP_UniqueIdMask = 0x0000ffff, ///< the mask for the unique ids
+    IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
+
+/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
+OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
+
+/// \brief returns the IkParameterizationType given the unique id detmerined b IKP_UniqueIdMask
+OPENRAVE_API IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid);
 
 /** \brief A configuration specification references values in the environment that then define a configuration-space which can be searched for.
 
@@ -1163,6 +1194,7 @@ inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
     return theta;
 }
 
+
 /** \brief Parameterization of basic primitives for querying inverse-kinematics solutions.
 
     Holds the parameterization of a geometric primitive useful for autonomous manipulation scenarios like:
@@ -1214,20 +1246,20 @@ public:
     }
     inline const std::string& GetName() const;
 
-    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     static int GetDOF(IkParameterizationType type) {
         return (type>>28)&0xf;
     }
-    /// \brief Returns the minimum degree of freedoms required for the IK type.
+    /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     inline int GetDOF() const {
         return (_type>>28)&0xf;
     }
 
-    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). Does \b not count custom data.
     static int GetNumberOfValues(IkParameterizationType type) {
         return (type>>24)&0xf;
     }
-    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). The number of values serialized is this number plus 1 for the iktype.
+    /// \brief Returns the number of values used to represent the parameterization ( >= dof ). Does \b not count custom data.
     inline int GetNumberOfValues() const {
         return (_type>>24)&0xf;
     }
@@ -1350,53 +1382,6 @@ public:
         return std::make_pair(_transform.trans,_transform.rot.x);
     }
 
-    /// \deprecated (11/02/15)
-    //@{
-    inline void SetTransform(const Transform& t) RAVE_DEPRECATED {
-        SetTransform6D(t);
-    }
-    inline void SetRotation(const Vector& quaternion) RAVE_DEPRECATED {
-        SetRotation3D(quaternion);
-    }
-    inline void SetTranslation(const Vector& trans) RAVE_DEPRECATED {
-        SetTranslation3D(trans);
-    }
-    inline void SetDirection(const Vector& dir) RAVE_DEPRECATED {
-        SetDirection3D(dir);
-    }
-    inline void SetRay(const RAY& ray) RAVE_DEPRECATED {
-        SetRay4D(ray);
-    }
-    inline void SetLookat(const Vector& trans) RAVE_DEPRECATED {
-        SetLookat3D(trans);
-    }
-    inline void SetTranslationDirection(const RAY& ray) RAVE_DEPRECATED {
-        SetTranslationDirection5D(ray);
-    }
-    inline const Transform& GetTransform() const RAVE_DEPRECATED {
-        return _transform;
-    }
-    inline const Vector& GetRotation() const RAVE_DEPRECATED {
-        return _transform.rot;
-    }
-    inline const Vector& GetTranslation() const RAVE_DEPRECATED {
-        return _transform.trans;
-    }
-    inline const Vector& GetDirection() const RAVE_DEPRECATED {
-        return _transform.rot;
-    }
-    inline const Vector& GetLookat() const RAVE_DEPRECATED {
-        return _transform.trans;
-    }
-    inline const RAY GetRay() const RAVE_DEPRECATED {
-        return RAY(_transform.trans,_transform.rot);
-    }
-    inline const RAY GetTranslationDirection() const RAVE_DEPRECATED {
-        return RAY(_transform.trans,_transform.rot);
-    }
-    //@}
-
-
     /// \brief Computes the distance squared between two IK parmaeterizations.
     inline dReal ComputeDistanceSqr(const IkParameterization& ikparam) const
     {
@@ -1508,10 +1493,12 @@ public:
 
     /// \brief fills the iterator with the serialized values of the ikparameterization.
     ///
-    /// the container the iterator points to needs to have \ref GetNumberOfValues() available.
+    /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
+    /// Does not support custom data
+    /// Don't normalize quaternions since it could hold velocity data.
     inline void GetValues(std::vector<dReal>::iterator itvalues) const
     {
-        switch(_type) {
+        switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
             *itvalues++ = _transform.rot.x;
             *itvalues++ = _transform.rot.y;
@@ -1591,10 +1578,13 @@ public:
         }
     }
 
-    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    /// \brief sets a serialized set of values for the IkParameterization
+    ///
+    /// Function does not handle custom data. Don't normalize quaternions since it could hold velocity data.
+    inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
-        switch(_type) {
+        switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
             _transform.rot.x = *itvalues++;
             _transform.rot.y = *itvalues++;
@@ -1674,15 +1664,271 @@ public:
         }
     }
 
-    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype);
-    inline ConfigurationSpecification GetConfigurationSpecification() const
+    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype) {
+        SetValues(itvalues,iktype);
+    }
+
+    /** \brief sets named custom data in the ik parameterization
+
+        The custom data is serialized along with the rest of the parameters and can also be part of a configuration specification under the "ikparam_values" anotation.
+        The custom data name can have meta-tags for the type of transformation the data undergos when \ref MultiplyTransform is called. For example, if the user wants to have an extra 3 values that represent "direction", then the direction has to be rotated along with all the data or coordinate systems can get lost. The anotations are specified by putting:
+
+        \b _transform=%s_
+
+        somewhere in the string. The %s can be: \b direction, \b point, \b quat, \b ikparam
+
+        If \b ikparam, the first value is expected to be the unique id of the ik type (GetType()&IKP_UniqueIdMask). The other values can be computed from \ref IkParameterization::GetValues
+
+        \param name Describes the type of data, cannot contain spaces or new lines.
+        \param values the values representing the data
+        \throw openrave_exception throws if the name is invalid
+     */
+    void SetCustomValues(const std::string& name, const std::vector<dReal>& values)
     {
-        return GetConfigurationSpecification(GetType());
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name] = values;
+    }
+
+    /// \brief sets named custom data in the ik parameterization (\see SetCustomValues)
+    void SetCustomValue(const std::string& name, dReal value)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
+        OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
+        _mapCustomData[name].resize(1);
+        _mapCustomData[name][0] = value;
+    }
+
+    /// \brief gets custom data if it exists, returns false if it doesn't
+    bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
+    {
+        std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
+        if( it == _mapCustomData.end() ) {
+            return false;
+        }
+        values = it->second;
+        return true;
+    }
+
+    /// \brief returns a const reference of the custom data key/value pairs
+    const std::map<std::string, std::vector<dReal> >& GetCustomDataMap() const
+    {
+        return _mapCustomData;
+    }
+
+    /// \brief clears custom data
+    ///
+    /// \param name if name is empty, will clear all the data, otherwise will clear only the custom data with that name
+    void ClearCustomValues(const std::string& name=std::string())
+    {
+        if( name.size() > 0 ) {
+            _mapCustomData.erase(name);
+        }
+        else {
+            _mapCustomData.clear();
+        }
+    }
+
+    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="");
+    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const
+    {
+        return GetConfigurationSpecification(GetType(),interpolation);
+    }
+
+    /// \brief in-place transform into a new coordinate system
+    inline IkParameterization& MultiplyTransform(const Transform& t) {
+        switch(GetType()) {
+        case IKP_Transform6D:
+            _transform = t * _transform;
+            break;
+        case IKP_Transform6DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            _transform.rot = quatMultiply(t.rot,_transform.rot);
+            break;
+        case IKP_Rotation3D:
+        case IKP_Rotation3DVelocity:
+            _transform.rot = quatMultiply(t.rot,_transform.rot);
+            break;
+        case IKP_Translation3D:
+            _transform.trans = t * _transform.trans;
+            break;
+        case IKP_Translation3DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            break;
+        case IKP_Direction3D:
+        case IKP_Direction3DVelocity:
+            _transform.rot = t.rotate(_transform.rot);
+            break;
+        case IKP_Ray4D:
+            _transform.trans = t * _transform.trans;
+            _transform.rot = t.rotate(_transform.rot);
+            break;
+        case IKP_Ray4DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            _transform.rot = t.rotate(_transform.rot);
+            break;
+        case IKP_Lookat3D:
+            SetLookat3D(RAY(t*GetLookat3D(),t.rotate(GetLookat3DDirection())));
+            break;
+        case IKP_TranslationDirection5D:
+            _transform.trans = t * _transform.trans;
+            _transform.rot = t.rotate(_transform.rot);
+            break;
+        case IKP_TranslationDirection5DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            _transform.rot = t.rotate(_transform.rot);
+            break;
+        case IKP_TranslationXY2D:
+            SetTranslationXY2D(t*GetTranslationXY2D());
+            break;
+        case IKP_TranslationXY2DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            break;
+        case IKP_TranslationXYOrientation3D: {
+            Vector v = GetTranslationXYOrientation3D();
+            Vector voldtrans(v.x,v.y,0);
+            Vector vnewtrans = t*voldtrans;
+            dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+            SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+            break;
+        }
+        case IKP_TranslationXYOrientation3DVelocity: {
+            Vector v = GetTranslationXYOrientation3D();
+            Vector voldtrans(v.x,v.y,0);
+            _transform.trans = t.rotate(voldtrans);
+            _transform.trans.z = quatRotate(t.rot,Vector(0,0,v.z)).z;
+            break;
+        }
+        case IKP_TranslationLocalGlobal6D:
+            _transform.trans = t*_transform.trans;
+            break;
+        case IKP_TranslationLocalGlobal6DVelocity:
+            _transform.trans = t.rotate(_transform.trans);
+            break;
+        case IKP_TranslationXAxisAngle4D: {
+            _transform.trans = t*_transform.trans;
+            // do not support rotations
+            break;
+        }
+        case IKP_TranslationXAxisAngle4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // do not support rotations
+            break;
+        }
+        case IKP_TranslationYAxisAngle4D: {
+            _transform.trans = t*_transform.trans;
+            // do not support rotations
+            break;
+        }
+        case IKP_TranslationYAxisAngle4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // do not support rotations
+            break;
+        }
+        case IKP_TranslationZAxisAngle4D: {
+            _transform.trans = t*_transform.trans;
+            // do not support rotations
+            break;
+        }
+        case IKP_TranslationZAxisAngle4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // do not support rotations
+            break;
+        }
+
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            _transform.trans = t*_transform.trans;
+            // only support rotation along z-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+            break;
+        }
+        case IKP_TranslationXAxisAngleZNorm4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // only support rotation along z-axis
+            _transform.rot.x = quatRotate(t.rot,Vector(0,0,_transform.rot.x)).z;
+            break;
+        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            _transform.trans = t*_transform.trans;
+            // only support rotation along x-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(1,0,0),t.rot).first;
+            break;
+        }
+        case IKP_TranslationYAxisAngleXNorm4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // only support rotation along x-axis
+            _transform.rot.x = quatRotate(t.rot,Vector(_transform.rot.x,0,0)).x;
+            break;
+        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            _transform.trans = t*_transform.trans;
+            // only support rotation along y-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(0,1,0),t.rot).first;
+            break;
+        }
+        case IKP_TranslationZAxisAngleYNorm4DVelocity: {
+            _transform.trans = t.rotate(_transform.trans);
+            // only support rotation along y-axis
+            _transform.rot.x = quatRotate(t.rot,Vector(0,_transform.rot.x,0)).y;
+            break;
+        }
+        default:
+            throw openrave_exception(str(boost::format("does not support parameterization 0x%x")%GetType()));
+        }
+        for(std::map<std::string, std::vector<dReal> >::iterator it = _mapCustomData.begin(); it != _mapCustomData.end(); ++it) {
+            _MultiplyTransform(t, it->first, it->second);
+        }
+        return *this;
     }
 
 protected:
+    inline static bool _IsValidCharInName(char c) {
+        return c < 0 || c >= 33;
+    }
+    inline static void _MultiplyTransform(const Transform& t, const std::string& name, std::vector<dReal>& values)
+    {
+        size_t startoffset = name.find("_transform=");
+        if( startoffset != std::string::npos ) {
+            size_t endoffset = name.find("_", startoffset+11);
+            std::string transformtype;
+            if( endoffset == std::string::npos ) {
+                transformtype = name.substr(startoffset+11);
+            }
+            else {
+                transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
+            }
+            if( transformtype == "direction" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v = t.rotate(v);
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "point" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v = t*v;
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "quat" ) {
+                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                v = quatMultiply(t.rot,v);
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+            }
+            else if( transformtype == "ikparam" ) {
+                IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
+                IkParameterization newikparam;
+                OPENRAVE_ASSERT_OP_FORMAT0(IkParameterization::GetNumberOfValues(newiktype)+1, ==, (int)values.size(),"expected values not equal",ORE_InvalidState);
+                newikparam.SetValues(values.begin()+1,newiktype);
+                newikparam.MultiplyTransform(t);
+                newikparam.GetValues(values.begin()+1);
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("IkParameterization custom data '%s' does not have a valid transform",name,ORE_InvalidState);
+            }
+        }
+    }
+
     Transform _transform;
     IkParameterizationType _type;
+    std::map<std::string, std::vector<dReal> > _mapCustomData;
 
     friend IkParameterization operator* (const Transform &t, const IkParameterization &ikparam);
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
@@ -1697,7 +1943,7 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
         local.SetTransform6D(t * ikparam.GetTransform6D());
         break;
     case IKP_Rotation3D:
-        local.SetRotation3D(quatMultiply(quatInverse(t.rot),ikparam.GetRotation3D()));
+        local.SetRotation3D(quatMultiply(t.rot,ikparam.GetRotation3D()));
         break;
     case IKP_Translation3D:
         local.SetTranslation3D(t*ikparam.GetTranslation3D());
@@ -1765,7 +2011,12 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
         break;
     }
     default:
-        throw openrave_exception(str(boost::format("does not support parameterization %d")%ikparam.GetType()));
+        // internal MultiplyTransform supports more types
+        return IkParameterization(ikparam).MultiplyTransform(t);
+    }
+    local._mapCustomData = ikparam._mapCustomData;
+    for(std::map<std::string, std::vector<dReal> >::iterator it = local._mapCustomData.begin(); it != local._mapCustomData.end(); ++it) {
+        IkParameterization::_MultiplyTransform(t, it->first,it->second);
     }
     return local;
 }
@@ -1920,9 +2171,6 @@ inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr p
 /// \brief returns a lower case string of the interface type
 OPENRAVE_API const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap();
 OPENRAVE_API const std::string& RaveGetInterfaceName(InterfaceType type);
-
-/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
-OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
 
 /// \brief Returns the openrave home directory where settings, cache, and other files are stored.
 ///

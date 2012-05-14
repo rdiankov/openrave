@@ -41,7 +41,7 @@ public:
 
         // load inverse kinematics using ikfast
         ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
-        penv->AddModule(pikfast,"");
+        penv->Add(pikfast,true,"");
         stringstream ssin,ssout;
         vector<dReal> vsolution;
         ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IKP_Transform6D;
@@ -53,7 +53,7 @@ public:
         }
 
         ModuleBasePtr pbasemanip = RaveCreateModule(penv,"basemanipulation"); // create the module
-        penv->AddModule(pbasemanip,probot->GetName()); // load the module
+        penv->Add(pbasemanip,true,probot->GetName()); // load the module
 
         while(IsOk()) {
             {

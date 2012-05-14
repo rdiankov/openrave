@@ -70,7 +70,7 @@ public:
             _psampler->SampleSequence(vsample,4,IT_OpenStart);
             if( vsample.at(0) < appearanceprobability ) {
                 KinBodyPtr pbody = GetEnv()->ReadKinBodyXMLFile(it->filename);
-                GetEnv()->AddKinBody(pbody,true);
+                GetEnv()->Add(pbody,true);
                 InstancedBody b;
                 for(int iter = 0; iter < 10; ++iter) {
                     Transform t;
@@ -133,7 +133,7 @@ public:
 
         // create the conveyor module and add a couple of bodies for simulation
         ModuleBasePtr p = RaveCreateModule(penv,"conveyorbelt");
-        penv->AddModule(p,"");
+        penv->Add(p,true,"");
         stringstream sout, sin("registerbody data/mug1.kinbody.xml 0.6");
         p->SendCommand(sout,sin);
         sin.clear();

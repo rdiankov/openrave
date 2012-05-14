@@ -291,7 +291,7 @@ Code fragment from `databases.inversereachability`
                 for link in newrobot.GetLinks():
                     for geom in link.GetGeometries():
                         geom.SetTransparency(transparency)
-                self.env.AddRobot(newrobot,True)
+                self.env.Add(newrobot,True)
                 with self.env:
                     newrobot.SetTransform(T)
                     newrobot.SetDOFValues(values)
@@ -430,7 +430,7 @@ class InverseReachabilityDemo:
                 for link in newrobot.GetLinks():
                     for geom in link.GetGeometries():
                         geom.SetTransparency(transparency)
-                self.env.AddRobot(newrobot,True)
+                self.env.Add(newrobot,True)
                 newrobot.SetTransform(T)
                 newrobot.SetDOFValues(values)
                 newrobots.append(newrobot)
@@ -467,13 +467,13 @@ def pause():
 def main(env,options):
     "Main example code."
     robot = env.ReadRobotXMLFile(options.robot)
-    env.AddRobot(robot)
+    env.Add(robot)
     if options.manipname is not None:
         robot.SetActiveManipulator(options.manipname)
     else:
         robot.SetActiveManipulator('leftarm')
     target = env.ReadKinBodyXMLFile(options.target)
-    env.AddKinBody(target)
+    env.Add(target)
     # initialize target pose, for visualization and collision checking purpose only
     O_T_Target = mat([[1,0,0,1],[0,1,0,0],[0,0,1,.9],[0,0,0,1]])
     target.SetTransform(array(O_T_Target))
@@ -509,8 +509,7 @@ def run(args=None):
     parser.add_option('--target',action="store",type='string',dest='target',default='data/mug2.kinbody.xml',
                       help='filename of the target to use (default=%default)')
     (options, leftargs) = parser.parse_args(args=args) # use default options 
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True) # the special setup for openrave tutorial
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__=='__main__':
     run()

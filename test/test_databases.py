@@ -21,7 +21,7 @@ class TestDatabases(EnvironmentSetup):
         manip=robot.GetActiveManipulator()
         manip.SetIkSolver(None)
         ikmodule = RaveCreateModule(env,'ikfast')
-        env.AddModule(ikmodule,'')
+        env.Add(ikmodule)
         out=ikmodule.SendCommand('LoadIKFastSolver %s %d 1'%(robot.GetName(),IkParameterizationType.TranslationDirection5D))
         assert(out is not None)
         assert(manip.GetIkSolver() is not None)

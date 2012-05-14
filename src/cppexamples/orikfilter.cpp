@@ -40,7 +40,7 @@ int main(int argc, char ** argv)
 
     // load inverse kinematics using ikfast
     ModuleBasePtr pikfast = RaveCreateModule(penv,"ikfast");
-    penv->AddModule(pikfast,"");
+    penv->Add(pikfast,true,"");
     stringstream ssin,ssout;
     vector<dReal> vsolution;
     ssin << "LoadIKFastSolver " << probot->GetName() << " " << (int)IKP_Transform6D;

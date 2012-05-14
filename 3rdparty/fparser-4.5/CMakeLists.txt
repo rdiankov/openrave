@@ -21,18 +21,6 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   set(CMAKE_REQUIRED_LIBRARIES m)
 endif()
 
-#look for asinh(), acosh(), atanh(), exp2() and log2().
-check_function_exists(asinh HAS_ASINH)
-check_function_exists(acosh HAS_ACOSH)
-check_function_exists(atanh HAS_ATANH)
-check_function_exists(exp2 HAS_EXP2)
-check_function_exists(log2 HAS_LOG2)
-
-# make things faster?
-if( HAS_ASINH AND HAS_ACOSH AND HAS_ATANH AND HAS_EXP2 AND HAS_LOG2 )
-  set(FP_SUPPORT_TR1_MATH_FUNCS 1 CACHE STRING "support tr1 math functions")
-endif()
-
 # check if alloca exists
 check_include_file(alloca.h HAVE_ALLOCA_H)
 set(FP_USE_THREAD_SAFE_EVAL 1 CACHE STRING "use thread-safety")
@@ -53,13 +41,6 @@ endif()
 if( HAVE_LONG_DOUBLE_SIZE EQUAL 16 )
   set(FP_SUPPORT_COMPLEX_LONG_DOUBLE_TYPE 1 CACHE STRING "support complex long double")
 endif()
-
-# custom flag
-set(FP_EPSILON "1e-14" CACHE STRING "epsilon")
-set(FP_EVAL_MAX_REC_LEVEL 1000 CACHE STRING "max recursion level")
-
-#should be faster at a cost
-set(FP_NO_EVALUATION_CHECKS 0 CACHE STRING "no evaluation checks")
 
 set(fparser_SOURCES fparser.cc ) # fpoptimizer.cc
 

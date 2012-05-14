@@ -28,6 +28,10 @@ class TestKinematics(EnvironmentSetup):
                         body.GetLinks()[0].SetStatic((i%2)>0)
 
                         lowerlimit,upperlimit = body.GetDOFLimits()
+                        body.SetDOFLimits(lowerlimit,upperlimit)
+                        assert( transdist(body.GetDOFLimits()[0],lowerlimit) <= g_epsilon )
+                        assert( transdist(body.GetDOFLimits()[1],upperlimit) <= g_epsilon )
+                                                
                         body.SetDOFValues(lowerlimit)
                         dofvalues = body.GetDOFValues()
                         assert( transdist(lowerlimit,body.GetDOFValues()) <= g_epsilon*len(dofvalues))
@@ -100,7 +104,7 @@ class TestKinematics(EnvironmentSetup):
                                 body.SetDOFValues(dofvaluesnew+deltavalues0)
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
                                 armlength = bodymaxjointdist(link,localtrans[0:3,3])
-                                thresh = armlength*sum(abs(deltavalues))*1.1
+                                thresh = armlength*sum(abs(deltavalues))*1.2
                                 if armlength < 0.0001 or thresh < 1e-12:
                                     continue
                                 Tlinknew=dot(link.GetTransform(),localtrans)
@@ -110,7 +114,7 @@ class TestKinematics(EnvironmentSetup):
                                     newquat = -newquat
                                 deltatrans = Tlinknew[0:3,3] - worldtrans
                                 if transdist(dot(Jtrans,deltavalues),deltatrans) > thresh:
-                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
+                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
                                 if transdist(dot(Jquat,deltavalues)+worldquat,newquat) > 2*thresh:
                                     raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
                                 if axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) > 2*thresh:
@@ -122,7 +126,7 @@ class TestKinematics(EnvironmentSetup):
             for envfile in g_envfiles:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
-                # try all loadable physics engines
+                # try all loadable physics engines?
                 #self.env.SetPhysicsEngine()
                 for i in range(10):
                     T = eye(4)
@@ -219,24 +223,32 @@ class TestKinematics(EnvironmentSetup):
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
             k.InitFromBoxes(boxes,True)
             k.SetName('temp')
-            self.env.AddKinBody(k)
+            self.env.Add(k)
             assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
             k2 = RaveCreateKinBody(self.env,'')
             k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
-            self.env.AddKinBody(k2,True)
+            self.env.Add(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
 
     def test_misc(self):
         env=self.env
         body=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
-        env.AddKinBody(body)
+        env.Add(body)
         with env:
             s = 'this is a test string'
             body.SetUserData(s)
             assert(body.GetUserData()==s)
+
+            originalvel = body.GetDOFVelocityLimits()
+            originalaccel = body.GetDOFAccelerationLimits()
+            with KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration):
+                body.SetDOFVelocityLimits(zeros(body.GetDOF()))
+                body.SetDOFAccelerationLimits(zeros(body.GetDOF()))
+            assert(transdist(body.GetDOFVelocityLimits(),originalvel) <= g_epsilon)
+            assert(transdist(body.GetDOFAccelerationLimits(),originalaccel) <= g_epsilon)
         
     def test_geometrychange(self):
         self.log.info('change geometry and test if changes are updated')
@@ -369,13 +381,13 @@ class TestKinematics(EnvironmentSetup):
 """
         with env:
 #             body = env.ReadKinBodyData(xml%'universal')
-#             env.AddKinBody(body)
+#             env.Add(body)
 #             assert(body.GetDOF()==2)
 #             assert(len(body.GetJoints())==1)
 #             assert(env.GetJoints()[0].GetType()==Joint.Type.Universal)
             env.Reset()
             body = env.ReadKinBodyData(xml%'hinge2')
-            env.AddKinBody(body)
+            env.Add(body)
             assert(body.GetDOF()==2)
             assert(len(body.GetJoints())==1)
             assert(body.GetJoints()[0].GetType()==KinBody.Joint.Type.Hinge2)
@@ -410,7 +422,7 @@ class TestKinematics(EnvironmentSetup):
 </kinbody>
 """
         body = env.ReadKinBodyData(xml)
-        env.AddKinBody(body)
+        env.Add(body)
         assert(len(body.GetJoints())==1)
         assert(len(body.GetPassiveJoints())==2)
         value = 0.5
@@ -431,6 +443,22 @@ class TestKinematics(EnvironmentSetup):
         newspec=pickle.loads(s)
         assert(newspec==spec)
 
+    def test_enablelinks(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            assert(not env.CheckCollision(robot))
+            T = robot.GetTransform()
+            T[2,3] -= 0.5
+            robot.SetTransform(T)
+            link = robot.GetLinks()[0]
+            assert(env.CheckCollision(robot) and env.CheckCollision(link))
+            robot.GetLinks()[0].Enable(False)
+            assert(not env.CheckCollision(robot) and not env.CheckCollision(link))
+            robot.GetLinks()[0].Enable(True)
+            assert(env.CheckCollision(link) and env.CheckCollision(robot))
+            
     def test_inertia(self):
         env=self.env
         massdensity=2.5
@@ -467,11 +495,11 @@ class TestKinematics(EnvironmentSetup):
         </body>
         </kinbody>"""%{'mass':massxml}
         body = env.ReadKinBodyXMLData(xmldata)
-        env.AddKinBody(body)
+        env.Add(body)
         m = body.GetLink('box').GetMass()
         assert(abs(m-48*massdensity) <= g_epsilon)
         assert(transdist(body.GetLink('box').GetLocalMassFrame(),eye(4)) <= g_epsilon)
-        inertia = m/12*array([4+9,1+9,1+4])
+        inertia = m/3*array([4+9,1+9,1+4])
         assert(transdist(body.GetLink('box').GetPrincipalMomentsOfInertia(),inertia) <= g_epsilon)
 
         m = body.GetLink('rbox').GetMass()

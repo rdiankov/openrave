@@ -47,7 +47,8 @@ def collisioncallback(report,fromphysics):
     return CollisionAction.DefaultAction
 
 def main(env,options):
-    "Main example code."
+    """Main example code.
+    """
     env.Load('robots/barrettwam.robot.xml')
     # register an optional collision callback
     handle = env.RegisterCollisionCallback(collisioncallback)
@@ -69,9 +70,9 @@ def main(env,options):
         print e
 
     robot2 = env.ReadRobotXMLFile('robots/mitsubishi-pa10.zae')
-    env.AddRobot(robot2)
+    env.Add(robot2)
     body1 = env.ReadKinBodyXMLFile('data/mug1.kinbody.xml')
-    env.AddKinBody(body1)
+    env.Add(body1)
 
     env.CheckCollision(robot1,robot2)
     env.CheckCollision(robot1,body1)
@@ -125,8 +126,7 @@ def run(args=None):
     parser = OptionParser(description='Example shows how to query collision detection information using openravepy')
     OpenRAVEGlobalArguments.addOptions(parser)
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__ == "__main__":
     run()

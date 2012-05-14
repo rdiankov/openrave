@@ -374,12 +374,14 @@ void MainOpenRAVEThread()
 
 void sigint_handler(int sig)
 {
+    // if signal comes from viewer thread, then this could freeze openrave since this function
+    // will call the viewer to exit, but it will be blocked waiting for this function to finish
     s_bThreadDestroyed = true;
     RaveDestroy();
     s_penv.reset();
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
     signal(SIGINT, SIG_DFL);
-    kill(getpid(), SIGINT);
+    kill(0 /*getpid()*/, SIGINT);
 #endif
 }

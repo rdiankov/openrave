@@ -31,7 +31,7 @@
 
    \verbatim
    m=RaveCreateModule(env,'mymodule')
-   env.AddModule(m,'my args')
+   env.Add(m,true,'my args')
    m.SendCommand('numbodies')
    \endverbatim
 

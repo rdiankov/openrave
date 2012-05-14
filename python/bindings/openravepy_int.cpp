@@ -654,31 +654,35 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
+    void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
+        _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
+    }
+
     void AddKinBody(PyKinBodyPtr pbody) {
-        CHECK_POINTER(pbody); _penv->AddKinBody(openravepy::GetKinBody(pbody));
+        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody));
     }
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
-        CHECK_POINTER(pbody); _penv->AddKinBody(openravepy::GetKinBody(pbody),bAnonymous);
+        CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous);
     }
     void AddRobot(PyRobotBasePtr robot) {
         CHECK_POINTER(robot);
-        _penv->AddRobot(openravepy::GetRobot(robot));
+        _penv->Add(openravepy::GetRobot(robot));
     }
     void AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
         CHECK_POINTER(robot);
-        _penv->AddRobot(openravepy::GetRobot(robot),bAnonymous);
+        _penv->Add(openravepy::GetRobot(robot),bAnonymous);
     }
     void AddSensor(PySensorBasePtr sensor) {
         CHECK_POINTER(sensor);
-        _penv->AddSensor(openravepy::GetSensor(sensor));
+        _penv->Add(openravepy::GetSensor(sensor));
     }
     void AddSensor(PySensorBasePtr sensor, bool bAnonymous) {
         CHECK_POINTER(sensor);
-        _penv->AddSensor(openravepy::GetSensor(sensor),bAnonymous);
+        _penv->Add(openravepy::GetSensor(sensor),bAnonymous);
     }
     void AddViewer(PyViewerBasePtr viewer) {
         CHECK_POINTER(viewer);
-        _penv->AddViewer(openravepy::GetViewer(viewer));
+        _penv->Add(openravepy::GetViewer(viewer));
     }
 
     bool RemoveKinBody(PyKinBodyPtr pbody) {
@@ -722,7 +726,7 @@ public:
     object GetModules()
     {
         std::list<ModuleBasePtr> listModules;
-        boost::shared_ptr<void> lock = _penv->GetModules(listModules);
+        _penv->GetModules(listModules);
         boost::python::list modules;
         FOREACHC(itprob, listModules) {
             modules.append(openravepy::toPyModule(*itprob,shared_from_this()));
@@ -738,16 +742,16 @@ public:
         return object(openravepy::toPyPhysicsEngine(_penv->GetPhysicsEngine(),shared_from_this()));
     }
 
-    PyVoidHandle RegisterCollisionCallback(object fncallback)
+    object RegisterCollisionCallback(object fncallback)
     {
         if( !fncallback ) {
             throw openrave_exception("callback not specified");
         }
-        boost::shared_ptr<void> p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
+        UserDataPtr p = _penv->RegisterCollisionCallback(boost::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,_1,_2));
         if( !p ) {
             throw openrave_exception("registration handle is NULL");
         }
-        return PyVoidHandle(p);
+        return openravepy::GetUserData(p);
     }
 
     void StepSimulation(dReal timeStep) {
@@ -1220,6 +1224,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1403,6 +1408,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("ReadTrimeshURI",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+                    .def("Add", &PyEnvironmentBase::Add, Add_overloads(args("interface","anonymous","cmdargs"), DOXY_FN(EnvironmentBase,Add)))
                     .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddRobot",addrobot1,args("robot"), DOXY_FN(EnvironmentBase,AddRobot))

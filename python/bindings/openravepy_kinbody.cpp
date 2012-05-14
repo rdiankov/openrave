@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <openrave/utils.h>
+
 class PyKinBody : public PyInterfaceBase
 {
 protected:
@@ -204,6 +206,18 @@ public:
         object GetLocalMassFrame() const
         {
             return ReturnTransform(_plink->GetLocalMassFrame());
+        }
+        void SetLocalMassFrame(object omassframe)
+        {
+            _plink->SetLocalMassFrame(ExtractTransform(omassframe));
+        }
+        void SetPrincipalMomentsOfInertia(object oinertiamoments)
+        {
+            _plink->SetPrincipalMomentsOfInertia(ExtractVector3(oinertiamoments));
+        }
+        void SetMass(dReal mass)
+        {
+            _plink->SetMass(mass);
         }
 
         void SetStatic(bool bStatic) {
@@ -468,6 +482,11 @@ public:
             BOOST_ASSERT((int)values1.size() == GetDOF() );
             _pjoint->SubtractValues(values0,values1);
             return toPyArray(values0);
+        }
+
+        dReal SubtractValue(dReal value0, dReal value1, int iaxis)
+        {
+            return _pjoint->SubtractValue(value0,value1,iaxis);
         }
 
         void AddTorque(object otorques) {
@@ -780,7 +799,7 @@ public:
     }
     object GetDOFMaxAccel() const
     {
-        RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFAccelerationLimits\n");
+        RAVELOG_WARN("KinBody.GetDOFMaxAccel() is deprecated, use GetDOFAccelerationLimits\n");
         vector<dReal> values;
         _pbody->GetDOFAccelerationLimits(values);
         return toPyArray(values);
@@ -1103,6 +1122,18 @@ public:
         _pbody->SetDOFWeights(values);
     }
 
+    void SetDOFLimits(object olower, object oupper)
+    {
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> vlower = ExtractArray<dReal>(olower), vupper = ExtractArray<dReal>(oupper);
+        if( (int)vlower.size() != GetDOF() || (int)vupper.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFLimits(vlower,vupper);
+    }
+
     void SetDOFVelocityLimits(object o)
     {
         if( _pbody->GetDOF() == 0 ) {
@@ -1263,18 +1294,18 @@ public:
         _pbody->SetZeroConfiguration();
     }
 
-    object GetConfigurationSpecification() const {
-        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification()));
+    object GetConfigurationSpecification(const std::string& interpolation="") const {
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification(interpolation)));
     }
 
-    object GetConfigurationSpecificationIndices(object oindices) const {
+    object GetConfigurationSpecificationIndices(object oindices,const std::string& interpolation="") const {
         vector<int> vindices = ExtractArray<int>(oindices);
-        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices)));
+        return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices,interpolation)));
     }
 
     void SetConfigurationValues(object ovalues, bool checklimits) {
         vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
-        BOOST_ASSERT((int)vvalues.size()==_pbody->GetConfigurationSpecification().GetDOF());
+        BOOST_ASSERT((int)vvalues.size()==_pbody->GetDOF()+7);
         _pbody->SetConfigurationValues(vvalues.begin(),checklimits);
     }
 
@@ -1496,96 +1527,178 @@ public:
             return toPyArray(values);
         }
 
-        object FindIKSolution(object oparam, int filteroptions) const
+        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false) const
         {
-            vector<dReal> solution;
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolution(ikparam,solution,filteroptions) ) {
-                    return object();
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ikparam,solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
-                return object();
-            }
-            return toPyArray(solution);
-        }
-
-        object FindIKSolution(object oparam, object freeparams, int filteroptions) const
-        {
-            vector<dReal> solution, vfreeparams = ExtractArray<dReal>(freeparams);
-            IkParameterization ikparam;
-            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
-            if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolution(ikparam,vfreeparams,solution,filteroptions) ) {
-                    return object();
+            else {
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ExtractTransform(oparam),filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ExtractTransform(oparam),solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
-            // assume transformation matrix
-            else if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
-                return object();
-            }
-            return toPyArray(solution);
         }
 
-        object FindIKSolutions(object oparam, int filteroptions) const
+        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false) const
         {
-            std::vector<std::vector<dReal> > vsolutions;
-            IkParameterization ikparam;
-            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
-            if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
-                    return numeric::array(boost::python::list());
-                }
-            }
-            // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
-                return numeric::array(boost::python::list());
-            }
-
-            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
-            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-            FOREACH(itsol,vsolutions) {
-                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-                std::copy(itsol->begin(),itsol->end(),ppos);
-                ppos += itsol->size();
-            }
-            return static_cast<numeric::array>(handle<>(pysolutions));
-        }
-
-        object FindIKSolutions(object oparam, object freeparams, int filteroptions) const
-        {
-            std::vector<std::vector<dReal> > vsolutions;
             vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
             IkParameterization ikparam;
             EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
             if( ExtractIkParameterization(oparam,ikparam) ) {
-                if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
-                    return numeric::array(boost::python::list());
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,vfreeparams,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ikparam,vfreeparams,solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
                 }
             }
             // assume transformation matrix
-            else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
-                return numeric::array(boost::python::list());
+            else {
+                if( ikreturn ) {
+                    IkReturn ikreturn(IKRA_Reject);
+                    _pmanip->FindIKSolution(ikparam,vfreeparams,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
+                    return openravepy::toPyIkReturn(ikreturn);
+                }
+                else {
+                    vector<dReal> solution;
+                    if( !_pmanip->FindIKSolution(ExtractTransform(oparam),vfreeparams, solution,filteroptions) ) {
+                        return object();
+                    }
+                    return toPyArray(solution);
+                }
             }
-
-            npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
-            PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-            dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
-            FOREACH(itsol,vsolutions) {
-                BOOST_ASSERT(itsol->size()==size_t(dims[1]));
-                std::copy(itsol->begin(),itsol->end(),ppos);
-                ppos += itsol->size();
-            }
-            return static_cast<numeric::array>(handle<>(pysolutions));
         }
 
-        object GetIkParameterization(IkParameterizationType iktype)
+        object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false) const
         {
-            return toPyIkParameterization(_pmanip->GetIkParameterization(iktype));
+            IkParameterization ikparam;
+            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+            if( ikreturn ) {
+                std::vector<IkReturnPtr> vikreturns;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,filteroptions,vikreturns) ) {
+                        return boost::python::list();
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),filteroptions,vikreturns) ) {
+                    return boost::python::list();
+                }
+
+                boost::python::list oikreturns;
+                FOREACH(it,vikreturns) {
+                    oikreturns.append(openravepy::toPyIkReturn(**it));
+                }
+                return oikreturns;
+            }
+            else {
+                std::vector<std::vector<dReal> > vsolutions;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions) ) {
+                        return numeric::array(boost::python::list());
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vsolutions,filteroptions) ) {
+                    return numeric::array(boost::python::list());
+                }
+
+                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                FOREACH(itsol,vsolutions) {
+                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    std::copy(itsol->begin(),itsol->end(),ppos);
+                    ppos += itsol->size();
+                }
+                return static_cast<numeric::array>(handle<>(pysolutions));
+            }
+        }
+
+        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false) const
+        {
+            vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
+            IkParameterization ikparam;
+            EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+            if( ikreturn ) {
+                std::vector<IkReturnPtr> vikreturns;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,filteroptions,vikreturns) ) {
+                        return boost::python::list();
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams,filteroptions,vikreturns) ) {
+                    return boost::python::list();
+                }
+
+                boost::python::list oikreturns;
+                FOREACH(it,vikreturns) {
+                    oikreturns.append(openravepy::toPyIkReturn(**it));
+                }
+                return oikreturns;
+            }
+            else {
+                std::vector<std::vector<dReal> > vsolutions;
+                if( ExtractIkParameterization(oparam,ikparam) ) {
+                    if( !_pmanip->FindIKSolutions(ikparam,vfreeparams,vsolutions,filteroptions) ) {
+                        return numeric::array(boost::python::list());
+                    }
+                }
+                // assume transformation matrix
+                else if( !_pmanip->FindIKSolutions(ExtractTransform(oparam),vfreeparams, vsolutions,filteroptions) ) {
+                    return numeric::array(boost::python::list());
+                }
+
+                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+                dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
+                FOREACH(itsol,vsolutions) {
+                    BOOST_ASSERT(itsol->size()==size_t(dims[1]));
+                    std::copy(itsol->begin(),itsol->end(),ppos);
+                    ppos += itsol->size();
+                }
+                return static_cast<numeric::array>(handle<>(pysolutions));
+            }
+        }
+
+        object GetIkParameterization(object oparam, bool inworld=true)
+        {
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(oparam,ikparam) ) {
+                return toPyIkParameterization(_pmanip->GetIkParameterization(ikparam,inworld));
+            }
+            // must be IkParameterizationType
+            return toPyIkParameterization(_pmanip->GetIkParameterization((IkParameterizationType)extract<IkParameterizationType>(oparam),inworld));
         }
 
         object GetChildJoints() {
@@ -1635,11 +1748,22 @@ public:
 
         bool CheckEndEffectorCollision(object otrans) const
         {
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(otrans,ikparam) ) {
+                return _pmanip->CheckEndEffectorCollision(ikparam);
+            }
             return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans));
         }
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
-            bool bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),openravepy::GetCollisionReport(pReport));
+            bool bCollision;
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(otrans,ikparam) ) {
+                bCollision = _pmanip->CheckEndEffectorCollision(ikparam,openravepy::GetCollisionReport(pReport));
+            }
+            else {
+                bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),openravepy::GetCollisionReport(pReport));
+            }
             openravepy::UpdateCollisionReport(pReport,_pyenv);
             return bCollision;
         }
@@ -1759,30 +1883,9 @@ public:
         }
     };
 
-    class PyGrabbed
-    {
-public:
-        PyGrabbed(const RobotBase::Grabbed& grabbed, PyEnvironmentBasePtr pyenv) {
-            grabbedbody.reset(new PyKinBody(KinBodyPtr(grabbed.pbody),pyenv));
-            linkrobot.reset(new PyLink(KinBody::LinkPtr(grabbed.plinkrobot),pyenv));
-
-            FOREACHC(it, grabbed.vCollidingLinks) {
-                validColLinks.append(PyLinkPtr(new PyLink(boost::const_pointer_cast<KinBody::Link>(*it),pyenv)));
-            }
-            troot = ReturnTransform(grabbed.troot);
-        }
-        virtual ~PyGrabbed() {
-        }
-
-        PyKinBodyPtr grabbedbody;
-        PyLinkPtr linkrobot;
-        boost::python::list validColLinks;
-        object troot;
-    };
-
     PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {
     }
-    PyRobotBase(const PyRobotBase& r) : PyKinBody(r._probot,r._pyenv) {
+    PyRobotBase(const PyRobotBase &r) : PyKinBody(r._probot,r._pyenv) {
         _probot = r._probot;
     }
     virtual ~PyRobotBase() {
@@ -2107,8 +2210,8 @@ public:
         return toPyArray(values);
     }
 
-    object GetActiveConfigurationSpecification() const {
-        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification()));
+    object GetActiveConfigurationSpecification(const std::string& interpolation="") const {
+        return object(openravepy::toPyConfigurationSpecification(_probot->GetActiveConfigurationSpecification(interpolation)));
     }
 
     object GetActiveJointIndices() {
@@ -2275,6 +2378,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetChain_overloads, GetChain, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecification_overloads, GetConfigurationSpecification, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecificationIndices_overloads, GetConfigurationSpecificationIndices, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetAxis_overloads, GetAxis, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetWrapOffset_overloads, GetWrapOffset, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1, 2)
@@ -2283,6 +2389,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolutions, 3, 4)
 
 namespace openravepy
 {
@@ -2480,6 +2591,7 @@ void init_openravepy_kinbody()
                         .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
                         .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
+                        .def("SetDOFLimits",&PyKinBody::SetDOFLimits, args("lower","upper"), DOXY_FN(KinBody,SetDOFLimits))
                         .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
                         .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
                         .def("SetDOFTorqueLimits",&PyKinBody::SetDOFTorqueLimits, args("limits"), DOXY_FN(KinBody,SetDOFTorqueLimits))
@@ -2535,8 +2647,8 @@ void init_openravepy_kinbody()
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
-                        .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, DOXY_FN(KinBody,GetConfigurationSpecification))
-                        .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, args("indices"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices))
+                        .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, GetConfigurationSpecification_overloads(args("interpolation"), DOXY_FN(KinBody,GetConfigurationSpecification)))
+                        .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, GetConfigurationSpecificationIndices_overloads(args("indices","interpolation"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices)))
                         .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues))
                         .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
@@ -2567,6 +2679,7 @@ void init_openravepy_kinbody()
         enum_<KinBody::SaveParameters>("SaveParameters" DOXY_ENUM(SaveParameters))
         .value("LinkTransformation",KinBody::Save_LinkTransformation)
         .value("LinkEnable",KinBody::Save_LinkEnable)
+        .value("JointMaxVelocityAndAcceleration",KinBody::Save_JointMaxVelocityAndAcceleration)
         .value("ActiveDOF",KinBody::Save_ActiveDOF)
         .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
         .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
@@ -2598,6 +2711,9 @@ void init_openravepy_kinbody()
                          .def("GetPrincipalMomentsOfInertia",&PyKinBody::PyLink::GetPrincipalMomentsOfInertia, DOXY_FN(KinBody::Link,GetPrincipalMomentsOfInertia))
                          .def("GetLocalMassFrame",&PyKinBody::PyLink::GetLocalMassFrame, DOXY_FN(KinBody::Link,GetLocalMassFrame))
                          .def("GetMass",&PyKinBody::PyLink::GetMass, DOXY_FN(KinBody::Link,GetMass))
+                         .def("SetLocalMassFrame",&PyKinBody::PyLink::SetLocalMassFrame, args("massframe"), DOXY_FN(KinBody::Link,SetLocalMassFrame))
+                         .def("SetPrincipalMomentsOfInertia",&PyKinBody::PyLink::SetPrincipalMomentsOfInertia, args("inertiamoments"), DOXY_FN(KinBody::Link,SetPrincipalMomentsOfInertia))
+                         .def("SetMass",&PyKinBody::PyLink::SetMass, args("mass"), DOXY_FN(KinBody::Link,SetMass))
                          .def("SetStatic",&PyKinBody::PyLink::SetStatic,args("static"), DOXY_FN(KinBody::Link,SetStatic))
                          .def("SetTransform",&PyKinBody::PyLink::SetTransform,args("transform"), DOXY_FN(KinBody::Link,SetTransform))
                          .def("SetForce",&PyKinBody::PyLink::SetForce,args("force","pos","add"), DOXY_FN(KinBody::Link,SetForce))
@@ -2690,6 +2806,7 @@ void init_openravepy_kinbody()
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                           .def("SubtractValues",&PyKinBody::PyJoint::SubtractValues,args("values0","values1"), DOXY_FN(KinBody::Joint,SubtractValues))
+                          .def("SubtractValue",&PyKinBody::PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))
 
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
@@ -2820,7 +2937,7 @@ void init_openravepy_kinbody()
                       .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
                       .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
                       .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
-                      .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, DOXY_FN(RobotBase,GetActiveConfigurationSpecification))
+                      .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, GetActiveConfigurationSpecification_overloads(args("interpolation"),DOXY_FN(RobotBase,GetActiveConfigurationSpecification)))
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))
@@ -2846,16 +2963,17 @@ void init_openravepy_kinbody()
         ;
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
 
-        object (PyRobotBase::PyManipulator::*pmanipik)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
-        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision2)(object,PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
+        std::string GetIkParameterization_doc = std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "const IkParameterization&; bool")) + std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType; bool"));
         class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
         .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
@@ -2867,11 +2985,11 @@ void init_openravepy_kinbody()
         .def("SetIKSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
         .def("GetNumFreeParameters",&PyRobotBase::PyManipulator::GetNumFreeParameters, DOXY_FN(RobotBase::Manipulator,GetNumFreeParameters))
         .def("GetFreeParameters",&PyRobotBase::PyManipulator::GetFreeParameters, DOXY_FN(RobotBase::Manipulator,GetFreeParameters))
-        .def("FindIKSolution",pmanipik,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int"))
-        .def("FindIKSolution",pmanipikf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int"))
-        .def("FindIKSolutions",pmanipiks,args("param","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int"))
-        .def("FindIKSolutions",pmanipiksf,args("param","freevalues","filteroptions"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int"))
-        .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, args("iktype"), DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType"))
+        .def("FindIKSolution",pmanipik,FindIKSolution_overloads(args("param","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int")))
+        .def("FindIKSolution",pmanipikf,FindIKSolutionFree_overloads(args("param","freevalues","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int")))
+        .def("FindIKSolutions",pmanipiks,FindIKSolutions_overloads(args("param","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int")))
+        .def("FindIKSolutions",pmanipiksf,FindIKSolutionsFree_overloads(args("param","freevalues","filteroptions","ikreturn"), DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int")))
+        .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(args("iktype","inworld"), GetIkParameterization_doc.c_str()))
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
@@ -2922,13 +3040,6 @@ void init_openravepy_kinbody()
         .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)
         .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
-        ;
-
-        class_<PyRobotBase::PyGrabbed, boost::shared_ptr<PyRobotBase::PyGrabbed> >("Grabbed", DOXY_CLASS(RobotBase::Grabbed),no_init)
-        .def_readwrite("grabbedbody",&PyRobotBase::PyGrabbed::grabbedbody)
-        .def_readwrite("linkrobot",&PyRobotBase::PyGrabbed::linkrobot)
-        .def_readwrite("validColLinks",&PyRobotBase::PyGrabbed::validColLinks)
-        .def_readwrite("troot",&PyRobotBase::PyGrabbed::troot)
         ;
     }
 

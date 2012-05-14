@@ -58,13 +58,6 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Sets _minimumgoalpaths for all planner parameters.");
         RegisterCommand("SetPostProcessing",boost::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
                         "Sets post processing parameters.");
-        RegisterCommand("FindIKWithFilters",boost::bind(&BaseManipulation::FindIKWithFilters,this,_1,_2),
-                        "Samples IK solutions using custom filters that constrain the end effector in the world. Parameters:\n\n\
-- cone - Constraint the direction of a local axis with respect to a cone in the world. Takes in: worldaxis(3), localaxis(3), anglelimit. \n\
-- solveall - When specified, will return all possible solutions.\n\
-- ikparam - The serialized ik parameterization to use for FindIKSolution(s).\n\
-- filteroptions\n\
-");
         _minimumgoalpaths=1;
     }
 
@@ -138,10 +131,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
@@ -210,7 +203,7 @@ protected:
 
         if(( ptraj->GetDuration() == 0) || bResetTiming ) {
             RAVELOG_VERBOSE(str(boost::format("retiming trajectory: %f\n")%_fMaxVelMult));
-            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, false, _fMaxVelMult);
+            planningutils::SmoothActiveDOFTrajectory(ptraj, robot, _fMaxVelMult);
         }
         RAVELOG_VERBOSE(str(boost::format("executing traj with %d points\n")%ptraj->GetNumWaypoints()));
         if( !robot->GetController()->SetPath(ptraj) ) {
@@ -222,7 +215,7 @@ protected:
 
     bool MoveHandStraight(ostream& sout, istream& sinput)
     {
-        Vector direction = Vector(0,1,0);
+        Vector direction = Vector(0,0,1);
         string strtrajfilename;
         bool bExecute = true;
         int minsteps = 0;
@@ -234,7 +227,7 @@ protected:
 
         WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
         boost::shared_ptr<ostream> pOutputTrajStream;
-        params->ignorefirstcollision = 0.04;     // 0.04m?
+        params->ignorefirstcollision = 0.1;     // 0.1**2 * 5 * 0.5 = 0.025 m
         string plannername = "workspacetrajectorytracker";
         params->_fStepLength = 0.01;
         string cmd;
@@ -300,7 +293,7 @@ protected:
         }
 
         params->minimumcompletetime = params->_fStepLength * minsteps;
-        RAVELOG_DEBUG("Starting MoveHandStraight dir=(%f,%f,%f)...\n",(float)direction.x, (float)direction.y, (float)direction.z);
+        RAVELOG_DEBUG(str(boost::format("Starting MoveHandStraight dir=(%f,%f,%f)...")%direction.x%direction.y%direction.z));
         robot->RegrabAll();
 
         RobotBase::RobotStateSaver saver(robot);
@@ -320,7 +313,7 @@ protected:
         // compute a workspace trajectory (important to do this after jittering!)
         {
             params->workspacetraj = RaveCreateTrajectory(GetEnv(),"");
-            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D);
+            ConfigurationSpecification spec = IkParameterization::GetConfigurationSpecification(IKP_Transform6D,"quadratic");
             params->workspacetraj->Init(spec);
             vector<dReal> data(spec._vgroups[0].dof);
             IkParameterization ikparam(Tee,IKP_Transform6D);
@@ -331,11 +324,11 @@ protected:
             ikparam.GetValues(data.begin());
             params->workspacetraj->Insert(1,data);
             vector<dReal> maxvelocities(spec._vgroups[0].dof,1);
-            vector<dReal> maxaccelerations(spec._vgroups[0].dof,10);
+            vector<dReal> maxaccelerations(spec._vgroups[0].dof,5);
             planningutils::RetimeAffineTrajectory(params->workspacetraj,maxvelocities,maxaccelerations);
         }
 
-        if( params->workspacetraj->GetDuration() == 0 ) {
+        if( params->workspacetraj->GetDuration() <= 10*g_fEpsilon ) {
             RAVELOG_WARN("workspace traj is empty\n");
             return false;
         }
@@ -355,7 +348,7 @@ protected:
         if( !planner->PlanPath(poutputtraj) ) {
             return false;
         }
-        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+        if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             planningutils::VerifyTrajectory(params,poutputtraj);
         }
         CM::SetActiveTrajectory(robot, poutputtraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
@@ -819,7 +812,7 @@ protected:
                 sinput << "GetGoalIndex";
                 rrtplanner->SendCommand(soutput,sinput);
             }
-            catch(const openrave_exception& ex) {
+            catch(const std::exception& ex) {
                 RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
             }
         }
@@ -993,75 +986,6 @@ protected:
         return true;
     }
 
-    bool FindIKWithFilters(ostream& sout, istream& sinput)
-    {
-        bool bSolveAll = false;
-        IkSolverBase::IkFilterCallbackFn filterfn;
-        IkParameterization ikparam;
-        int filteroptions = IKFO_CheckEnvCollisions;
-        string cmd;
-        RobotBase::ManipulatorPtr pmanip = robot->GetActiveManipulator();
-        if( !pmanip->GetIkSolver() ) {
-            throw openrave_exception(str(boost::format("FindIKWithFilters: manipulator %s has no ik solver set")%robot->GetActiveManipulator()->GetName()));
-        }
-
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "cone" ) {
-                Vector vlocalaxis, vworldaxis;
-                dReal anglelimit;
-                sinput >> vlocalaxis.x >> vlocalaxis.y >> vlocalaxis.z >> vworldaxis.x >> vworldaxis.y >> vworldaxis.z >> anglelimit;
-                filterfn = boost::bind(&BaseManipulation::_FilterWorldAxisIK,shared_problem(),_1,_2,_3, vlocalaxis, vworldaxis, RaveCos(anglelimit));
-            }
-            else if( cmd == "solveall" ) {
-                bSolveAll = true;
-            }
-            else if( cmd == "ikparam" ) {
-                sinput >> ikparam;
-            }
-            else if( cmd == "filteroptions" ) {
-                sinput >> filteroptions;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if( !filterfn ) {
-            throw openrave_exception("FindIKWithFilters: no filter function set");
-        }
-        UserDataPtr filterhandle = robot->GetActiveManipulator()->GetIkSolver()->RegisterCustomFilter(0,filterfn);
-        vector< vector<dReal> > vsolutions;
-        if( bSolveAll ) {
-            if( !pmanip->FindIKSolutions(ikparam,vsolutions,filteroptions)) {
-                return false;
-            }
-        }
-        else {
-            vsolutions.resize(1);
-            if( !pmanip->FindIKSolution(ikparam,vsolutions[0],filteroptions)) {
-                return false;
-            }
-        }
-        sout << vsolutions.size() << " ";
-        FOREACH(itsol,vsolutions) {
-            FOREACH(it, *itsol) {
-                sout << *it << " ";
-            }
-        }
-        return true;
-    }
-
     bool GrabBody(ostream& sout, istream& sinput)
     {
         RAVELOG_WARN("BaseManipulation GrabBody command is deprecated. Use Robot::Grab (11/03/07)\n");
@@ -1124,14 +1048,6 @@ protected:
             return false;
         }
         return !!sinput;
-    }
-
-    IkFilterReturn _FilterWorldAxisIK(std::vector<dReal>& values, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikparam, const Vector& vlocalaxis, const Vector& vworldaxis, dReal coslimit)
-    {
-        if( RaveFabs(vworldaxis.dot3(pmanip->GetTransform().rotate(vlocalaxis))) < coslimit ) {
-            return IKFR_Reject;
-        }
-        return IKFR_Success;
     }
 
     RobotBasePtr robot;

@@ -135,10 +135,10 @@ class VisualFeedback : public ModuleBase
 {
 public:
     inline boost::shared_ptr<VisualFeedback> shared_problem() {
-        return boost::static_pointer_cast<VisualFeedback>(shared_from_this());
+        return boost::dynamic_pointer_cast<VisualFeedback>(shared_from_this());
     }
     inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const {
-        return boost::static_pointer_cast<VisualFeedback const>(shared_from_this());
+        return boost::dynamic_pointer_cast<VisualFeedback const>(shared_from_this());
     }
     friend class VisibilityConstraintFunction;
 
@@ -170,7 +170,7 @@ public:
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,false);
                 _ptargetbox->SetName("__visualfeedbacktest__");
-                _ptargetbox->GetEnv()->AddKinBody(_ptargetbox,true);
+                _ptargetbox->GetEnv()->Add(_ptargetbox,true);
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_vf->_target->GetTransform());
             }

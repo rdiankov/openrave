@@ -18,6 +18,7 @@
 #define OPENRAVE_TEXTSERVER
 
 #include <openrave/planningutils.h>
+#include <cstdlib>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -417,7 +418,7 @@ public:
             }
             bDestroying = true;
             _mapFigureIds.clear();
-            _mapProblems.clear();
+            _mapModules.clear();
         }
 
         if( bInitThread ) {
@@ -471,10 +472,10 @@ public:
 private:
 
     inline boost::shared_ptr<SimpleTextServer> shared_server() {
-        return boost::static_pointer_cast<SimpleTextServer>(shared_from_this());
+        return boost::dynamic_pointer_cast<SimpleTextServer>(shared_from_this());
     }
     inline boost::shared_ptr<SimpleTextServer const> shared_server_const() const {
-        return boost::static_pointer_cast<SimpleTextServer const>(shared_from_this());
+        return boost::dynamic_pointer_cast<SimpleTextServer const>(shared_from_this());
     }
 
     // called from threads other than the main worker to wait until
@@ -518,11 +519,8 @@ private:
                 try {
                     (*it)();
                 }
-                catch(const openrave_exception& ex) {
+                catch(const std::exception& ex) {
                     RAVELOG_FATAL("server caught exception: %s\n",ex.what());
-                }
-                catch(const std::logic_error& ex) {
-                    RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                 }
                 catch(...) {
                     RAVELOG_FATAL("unknown exception!!\n");
@@ -590,11 +588,8 @@ private:
                         try {
                             bSuccess = itfn->second.fnSocketThread(*is, sout, pdata);
                         }
-                        catch(const openrave_exception& ex) {
+                        catch(const std::exception& ex) {
                             RAVELOG_FATAL("server caught exception: %s\n",ex.what());
-                        }
-                        catch(const std::logic_error& ex) {
-                            RAVELOG_FATAL("server caught std exception: %s\n",ex.what());
                         }
                         catch(...) {
                             RAVELOG_FATAL("unknown exception!!\n");
@@ -668,7 +663,7 @@ private:
     map<string, RAVENETWORKFN> mapNetworkFns;
 
     int _nIdIndex;
-    map<int, ModuleBasePtr > _mapProblems;
+    map<int, ModuleBasePtr > _mapModules;
     map<int, GraphHandlePtr> _mapFigureIds;
     int _nNextFigureId;
 
@@ -697,7 +692,7 @@ protected:
         if( !pbody || !pbody->IsRobot() ) {
             return RobotBasePtr();
         }
-        return boost::static_pointer_cast<RobotBase>(pbody);
+        return RaveInterfaceCast<RobotBase>(pbody);
     }
 
     /// orRender - Render the new OpenRAVE scene
@@ -739,11 +734,15 @@ protected:
         if( cmd == "quit" ) {
             GetEnv()->Reset();
             // call exit in a different thread
-            new boost::thread(boost::bind(exit,0));
+	    new boost::thread(_CallExit);
         }
         return true;
     }
 
+    static void _CallExit()
+    {
+        exit(0);
+    }
     bool worSetOptions(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
         string cmd;
@@ -850,7 +849,7 @@ protected:
         is >> filename >> bClearScene;
         if( !is ||( filename.size() == 0) ) {
             RAVELOG_DEBUG("resetting scene\n");
-            _mapProblems.clear();
+            _mapModules.clear();
             GetEnv()->Reset();
             return true;
         }
@@ -858,7 +857,7 @@ protected:
             if( bClearScene ) {
                 RAVELOG_VERBOSE("resetting scene\n");
                 GetEnv()->Reset();
-                _mapProblems.clear();
+                _mapModules.clear();
                 RAVELOG_VERBOSE("resetting destroying\n");
             }
 
@@ -887,7 +886,7 @@ protected:
             return false;
         }
         robot->SetName(robotname);
-        GetEnv()->AddRobot(robot);
+        GetEnv()->Add(robot);
         os << robot->GetEnvironmentId();
         return true;
     }
@@ -905,14 +904,14 @@ protected:
 
         if( bDestroyDuplicates ) {
             // if there's a duplicate problem instance, delete it
-            map<int, ModuleBasePtr >::iterator itprob = _mapProblems.begin();
-            while(itprob != _mapProblems.end()) {
+            map<int, ModuleBasePtr >::iterator itprob = _mapModules.begin();
+            while(itprob != _mapModules.end()) {
                 if( itprob->second->GetXMLId() == problemname ) {
                     RAVELOG_DEBUG("deleting duplicate problem %s\n", problemname.c_str());
                     if( !GetEnv()->Remove(itprob->second) ) {
                         RAVELOG_WARN("environment failed to remove duplicate problem %s\n", problemname.c_str());
                     }
-                    _mapProblems.erase(itprob++);
+                    _mapModules.erase(itprob++);
                 }
                 else ++itprob;
             }
@@ -925,17 +924,14 @@ protected:
         }
 
         pdata.reset(new pair<ModuleBasePtr,string>(prob,strargs));
-        _mapProblems[_nIdIndex] = prob;
+        _mapModules[_nIdIndex] = prob;
         os << _nIdIndex++;
         return true;
     }
 
     bool worEnvCreateModule(boost::shared_ptr<istream> is, boost::shared_ptr<void> pdata)
     {
-        if( GetEnv()->AddModule(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second) != 0 ) {
-            RAVELOG_WARN("failed to load problem");
-            return false;
-        }
+        GetEnv()->Add(boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, true, boost::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
         return true;
     }
 
@@ -946,12 +942,12 @@ protected:
         if( !*is ) {
             return false;
         }
-        map<int, ModuleBasePtr >::iterator it = _mapProblems.find(index);
-        if( it != _mapProblems.end() ) {
+        map<int, ModuleBasePtr >::iterator it = _mapModules.find(index);
+        if( it != _mapModules.end() ) {
             if( !GetEnv()->Remove(it->second) ) {
                 RAVELOG_WARN("orEnvDestroyProblem: failed to remove problem from environment\n");
             }
-            _mapProblems.erase(it);
+            _mapModules.erase(it);
         }
         else {
             RAVELOG_WARN("orEnvDestroyProblem: cannot find problem with id %d\n", index);
@@ -977,7 +973,7 @@ protected:
         }
         body->SetName(bodyname);
 
-        GetEnv()->AddKinBody(body);
+        GetEnv()->Add(body);
         os << body->GetEnvironmentId();
         return true;
     }
@@ -1078,7 +1074,7 @@ protected:
         pbody->SetTransform(t);
 
         if( pbody->IsRobot() ) {
-            RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             ControllerBasePtr pcontroller = probot->GetController();
             if( !!pcontroller )
                 // if robot, reset the trajectory
@@ -1799,7 +1795,7 @@ protected:
                     break;
                 }
                 else {
-                    RAVELOG_WARN("incorrect number of indices, ignoring\n");
+                    RAVELOG_WARN(str(boost::format("incorrect number of indices %d, ignoring")%dof));
                     return false;
                 }
             }
@@ -1830,7 +1826,7 @@ protected:
 
         if( pbody->IsRobot() ) {
             // if robot, have to turn off any trajectory following
-            RobotBasePtr probot = boost::static_pointer_cast<RobotBase>(pbody);
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             if( !!probot->GetController() ) {
                 // reget the values since they'll go through the joint limits
                 probot->GetDOFValues(vvalues);
@@ -2027,7 +2023,7 @@ protected:
         if( havetrans ) {
             probot->SetActiveDOFs(probot->GetActiveDOFIndices(),DOF_Transform);
         }
-        planningutils::SmoothActiveDOFTrajectory(ptraj,probot,havetime);
+        planningutils::RetimeActiveDOFTrajectory(ptraj,probot,havetime);
         probot->GetController()->SetPath(ptraj);
         return true;
     }
@@ -2272,8 +2268,8 @@ protected:
         //EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         if( problemid > 0 ) {
-            map<int, ModuleBasePtr >::iterator it = _mapProblems.find(problemid);
-            if( it == _mapProblems.end() ) {
+            map<int, ModuleBasePtr >::iterator it = _mapModules.find(problemid);
+            if( it == _mapModules.end() ) {
                 RAVELOG_WARN("failed to find problem %d\n", problemid);
                 return false;
             }

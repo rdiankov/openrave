@@ -99,10 +99,10 @@ private:
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() {
-        return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this());
+        return boost::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
     inline boost::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
-        return boost::static_pointer_cast<ODECollisionChecker const>(shared_from_this());
+        return boost::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:
@@ -185,16 +185,6 @@ public:
 
     virtual int GetCollisionOptions() const {
         return _options;
-    }
-
-    virtual bool Enable(KinBodyConstPtr pbody, bool bEnable)
-    {
-        return odespace->Enable(pbody,bEnable);
-    }
-
-    virtual bool EnableLink(KinBody::LinkConstPtr plink, bool bEnable)
-    {
-        return odespace->EnableLink(plink,bEnable);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)

@@ -101,7 +101,7 @@ def main(env,options):
                 body = env.ReadKinBodyXMLFile(bodynames[random.randint(len(bodynames))])
                 body.SetName('body%d'%numbodies)
                 numbodies += 1
-                env.AddKinBody(body,True)
+                env.Add(body,True)
                 T = eye(4)
                 T[0:3,3] = array((-0.5,-0.5,2))+0.4*random.rand(3)
                 body.SetTransform(T)
@@ -127,8 +127,7 @@ def run(args=None):
     parser.add_option('--timestep',action="store",type='float',dest='timestep',default=0.001,
                       help='The physics simulation time step size  (default=%default)')
     (options, leftargs) = parser.parse_args(args=args)
-    env = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True)
-    main(env,options)
+    OpenRAVEGlobalArguments.parseAndCreateThreadedUser(options,main,defaultviewer=True)
 
 if __name__=='__main__':
     run()
