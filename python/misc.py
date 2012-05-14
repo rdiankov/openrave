@@ -82,6 +82,31 @@ def InitOpenRAVELogging():
         handler.setFormatter(logging.Formatter('%(name)s: %(funcName)s, %(message)s'))
         log.addHandler(handler)
 
+def SetViewerUserThread(env,viewername,userfn):
+    """Adds a viewer to the environment if one doesn't exist yet and starts it on this thread. Then creates a new thread to call the user-defined function to continue computation.
+    This function will return when the viewer and uesrfn exits. If userfn exits first, then will quit the viewer
+    """
+    if env.GetViewer() is not None or viewername is None:
+        userfn()
+    viewer = openravepy_int.RaveCreateViewer(env,viewername)
+    if viewer is None:
+        userfn()
+    # add the viewer before starting the user function
+    env.Add(viewer)
+    Thread = __import__('threading').Thread
+    def localuserfn(userfn,viewer):
+        try:
+            userfn()
+        finally:
+            # user function quit, so have to destroy the viewer
+            viewer.quitmainloop()
+    userthread = Thread(target=localuserfn,args=(userfn,viewer))
+    userthread.start()
+    try:
+        viewer.main(True)
+    finally:
+        userthread.join()
+            
 class OpenRAVEGlobalArguments:
     """manages a global set of command-line options applicable to all openrave environments"""
     @staticmethod
@@ -197,26 +222,7 @@ class OpenRAVEGlobalArguments:
             raise openravepy_ext.openrave_exception('failed to create environment')
         env = createenv()
         viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=True,**kwargs)
-        viewer = None
-        if viewername is not None:
-            viewer = openravepy_int.RaveCreateViewer(env,viewername)
-        if viewer is not None:
-            # add the viewer before starting the user function
-            env.Add(viewer)
-            Thread = __import__('threading').Thread
-            def localuserfn(env,options,userfn):
-                try:
-                    userfn(env,options)
-                finally:
-                    # user function quit, so have to destroy the viewer
-                    viewer.quitmainloop()
-            userthread = Thread(target=localuserfn,args=(env,options,userfn))
-            userthread.start()
-            viewer.main(True)
-            # gets skipped if viewer.main raises an exception (this is ok behavior)
-            userthread.join()
-        else:
-            userfn(env,options)
+        SetViewerUserThread(env,viewername,lambda: userfn(env,options))
         
 def ComputeGeodesicSphereMesh(radius=1.0,level=2):
     """Computes a geodesic sphere to a specified level. Returns the vertices and triangle indices"""
