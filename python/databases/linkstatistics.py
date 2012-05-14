@@ -151,18 +151,28 @@ class LinkStatisticsModel(DatabaseGenerator):
             for i, linkstat in enumerate(self.linkstats):
                 glinkstat = glinkstats.create_group(str(i))
                 for name,values in linkstat.iteritems():
-                    glinkstat[name] = values
+                    # limitation of h5py
+                    if isinstance(values, numpy.ndarray) and len(values) == 0:
+                        glinkstat.create_dataset(name,[],dtype=values.dtype)
+                    else:
+                        glinkstat[name] = values
             gjointvolumes = f.create_group('jointvolumes')
             for i, jointvolume in enumerate(self.jointvolumes):
                 gjointvolume = gjointvolumes.create_group(str(i))
                 for name,values in jointvolume.iteritems():
-                    gjointvolume[name] = values
+                    if isinstance(values, numpy.ndarray) and len(values) == 0:
+                        gjointvolume.create_dataset(name,[],dtype=values.dtype)
+                    else:
+                        gjointvolume[name] = values
             gaffinevolumes = f.create_group('affinevolumes')
             for i, affinevolume in enumerate(self.affinevolumes):
                 if affinevolume is not None:
                     gaffinevolume = gaffinevolumes.create_group(str(i))
                     for name,values in affinevolume.iteritems():
-                        gaffinevolume[name] = values
+                        if isinstance(values, numpy.ndarray) and len(values) == 0:
+                            gaffinevolume.create_dataset(name,[],dtype=values.dtype)
+                        else:
+                            gaffinevolume[name] = values
             f['samplingdelta'] = self.samplingdelta
         finally:
             f.close()
