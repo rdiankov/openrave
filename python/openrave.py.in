@@ -192,11 +192,16 @@ if __name__ == "__main__":
                 eval(compile(options.pythoncmd,'<string>','exec'))
             viewer = None
             if viewername is not None:
-                viewer = RaveCreateViewer(env,viewername)
-                env.Add(viewer)
+                if sys.platform.startswith('darwin'):
+                    viewer = RaveCreateViewer(env,viewername)
+                    env.Add(viewer)
+                else:
+                    # create in a separate thread for windows and linux since the signals do not get messed up
+                    env.SetViewer(viewername)
 
             ipythonthread = None
             if options.ipython:
+
                 # start ipython in a separate thread
                 from IPython.Shell import IPShellEmbed
                 def ipythonthreadfn(env,robot):

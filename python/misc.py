@@ -17,6 +17,7 @@ from __future__ import with_statement # for python 2.5
 import openravepy_int
 import openravepy_ext
 import os.path
+from sys import platform as sysplatformname
 import numpy
 try:
     from itertools import izip
@@ -88,7 +89,12 @@ def SetViewerUserThread(env,viewername,userfn):
     """
     if env.GetViewer() is not None or viewername is None:
         userfn()
-    viewer = openravepy_int.RaveCreateViewer(env,viewername)
+    viewer = None
+    if sysplatformname.startswith('darwin'):
+        viewer = openravepy_int.RaveCreateViewer(env,viewername)
+    else:
+        # create in a separate thread for windows and linux since the signals do not get messed up
+        env.SetViewer(viewername)
     if viewer is None:
         userfn()
     # add the viewer before starting the user function

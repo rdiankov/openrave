@@ -2029,7 +2029,9 @@ public:
         // for all robot joints after _setInitialJoints, first put listJoints in that order
         vector<KinBody::JointPtr> vjoints, vlastjoints;
         vjoints.reserve(probot->_vecjoints.size());
-        vlastjoints.reserve(probot->_vecjoints.size()-listOrderedJoints.size());
+        if( probot->_vecjoints.size() > listOrderedJoints.size() ) {
+            vlastjoints.reserve(probot->_vecjoints.size()-listOrderedJoints.size());
+        }
         FOREACH(itjoint,probot->_vecjoints) {
             if( _setInitialJoints.find(*itjoint) == _setInitialJoints.end()) {
                 if( find(listOrderedJoints.begin(),listOrderedJoints.end(),*itjoint) == listOrderedJoints.end() ) {
