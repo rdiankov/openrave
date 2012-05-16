@@ -72,7 +72,7 @@ def measurement(name,value):
 def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
     global env, ikfastproblem, globalstats
     iktype = None
-    for value,type in IkParameterization.Type.values.iteritems():
+    for value,type in IkParameterizationType.values.iteritems():
         if type.name == iktypestr:
             iktype = type
             break
@@ -117,7 +117,7 @@ def robotstats(description,robotfilename,manipname, iktypestr,freeindices):
                 numtested += int(res[0])
                 numsuccessful += int(res[1])
                 index = 2
-                ikdof = 1+IkParameterization.GetNumberOfValues(iktype)
+                ikdof = 1+IkParameterization.GetNumberOfValuesFromType(iktype)
                 for iresults in range(3):
                     num = int(res[index])
                     index += 1
@@ -230,11 +230,11 @@ def parseoptions(args=None):
     (options, parseargs) = parser.parse_args(args=args)
     
     if options.iktypes == '*':
-        options.iktypes = [iktype for value,iktype in IkParameterization.Type.values.iteritems()]
+        options.iktypes = [iktype for value,iktype in IkParameterizationType.values.iteritems()]
     else:
         iktypes = []
         for iktype in options.iktypes.split(','):
-            for value,type in IkParameterization.Type.values.iteritems():
+            for value,type in IkParameterizationType.values.iteritems():
                 if type.name.lower() == iktype.lower():
                     iktypes.append(type)
                     break
@@ -273,7 +273,7 @@ def test_robot_ikfast():
             robot = envlocal.ReadRobotURI(robotfilename,{'skipgeometry':'1'})
             envlocal.Add(robot)
             for iktype in options.iktypes:
-                expecteddof = IkParameterization.GetDOF(iktype)
+                expecteddof = IkParameterization.GetDOFFromType(iktype)
                 for manip in robot.GetManipulators():
                     armdof = len(manip.GetArmIndices())
                     if armdof >= expecteddof and armdof <= expecteddof+options.maxfreejoints:
