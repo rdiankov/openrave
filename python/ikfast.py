@@ -235,7 +235,7 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '55'
+__version__ = '56'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -3472,7 +3472,7 @@ class IKFastSolver(AutoReloader):
                     #finalsolution = self.solveSingleVariable(AllEquations,usedvars[2],othersolvedvars=self.freejointvars+usedvars[0:2],maxsolutions=4,maxdegree=4)
                     try:
                         finaltree = self.solveAllEquations(AllEquations,curvars=usedvars[2:],othersolvedvars=self.freejointvars+usedvars[0:2],solsubs=self.freevarsubs+self.Variable(usedvars[0]).subs+self.Variable(usedvars[1]).subs,endbranchtree=endbranchtree)
-                        jointtrees.append(finaltree)
+                        jointtrees += finaltree
                         return [halfanglesolution]+nexttree,usedvars
                     
                     except self.CannotSolveError,e:
@@ -4638,16 +4638,20 @@ class IKFastSolver(AutoReloader):
                         rows = [startrow]
                         M = Matrix(1,len(allmonoms),systemequations[rows[0]])
                         for i in range(startrow+1,len(systemequations)):
-                            M2 = M.col_join(Matrix(1,len(allmonoms),systemequations[i]))
-                            if M2.shape[0] == M2.shape[1]:
-                                Mdet = M2.det()
-                            else:
-                                Mdet = (M2*M2.transpose()).det()
+                            numequationsneeded = M.shape[1] - M.shape[0]
+                            if i+numequationsneeded > len(systemequations):
+                                # cannot do anything
+                                break
+                            mergedsystemequations = list(systemequations[i])
+                            for j in range(1,numequationsneeded):
+                                mergedsystemequations += systemequations[i+j]
+                            M2 = M.col_join(Matrix(numequationsneeded,len(allmonoms),mergedsystemequations))
+                            Mdet = M2.det()
                             if Mdet != S.Zero:
                                 M = M2
-                                rows.append(i)
-                                if M.shape[0] == M.shape[1]:
-                                    break
+                                for j in range(numequationsneeded):
+                                    rows.append(i+j)
+                                break
                                 
                         if M.shape[0] == M.shape[1]:
                             Mdet = self.trigsimp(Mdet.subs(trigsubsinv),othersolvedvars).subs(trigsubs)

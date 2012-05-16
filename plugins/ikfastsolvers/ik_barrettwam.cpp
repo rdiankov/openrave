@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 55 generated on 2012-02-02 15:09:37.542586
+/// ikfast version 56 generated on 2012-05-16 11:32:02.850620
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -206,8 +206,8 @@ inline double IKlog(double f) { return log(f); }
 inline float IKasin(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return -IKPI_2;
-else if( f >= 1 ) return IKPI_2;
+if( f <= -1 ) return float(-IKPI_2);
+else if( f >= 1 ) return float(IKPI_2);
 return asinf(f);
 }
 inline double IKasin(double f)
@@ -228,7 +228,7 @@ inline float IKfmod(float x, float y)
 }
 
 // return positive value in [0,y)
-inline float IKfmod(double x, double y)
+inline double IKfmod(double x, double y)
 {
     while(x < 0) {
         x += y;
@@ -239,8 +239,8 @@ inline float IKfmod(double x, double y)
 inline float IKacos(float f)
 {
 IKFAST_ASSERT( f > -1-IKFAST_SINCOS_THRESH && f < 1+IKFAST_SINCOS_THRESH ); // any more error implies something is wrong with the solver
-if( f <= -1 ) return IKPI;
-else if( f >= 1 ) return 0;
+if( f <= -1 ) return float(IKPI);
+else if( f >= 1 ) return float(0);
 return acosf(f);
 }
 inline double IKacos(double f)
@@ -261,7 +261,7 @@ inline double IKsqrt(double f) { if( f <= 0.0 ) return 0.0; return sqrt(f); }
 inline float IKatan2(float fy, float fx) {
     if( isnan(fy) ) {
         IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
-        return IKPI_2;
+        return float(IKPI_2);
     }
     else if( isnan(fx) ) {
         return 0;
@@ -281,10 +281,10 @@ inline double IKatan2(double fy, double fx) {
 
 inline float IKsign(float f) {
     if( f > 0 ) {
-        return 1.0f;
+        return float(1);
     }
     else if( f < 0 ) {
-        return -1.0f;
+        return float(-1);
     }
     return 0;
 }
@@ -2239,7 +2239,7 @@ return solver.ik(eetrans,eerot,pfree,vsolutions);
 
 IKFAST_API const char* getKinematicsHash() { return "2ac375a0aaf420715f482953e36187a5"; }
 
-IKFAST_API const char* getIKFastVersion() { return "55"; }
+IKFAST_API const char* getIKFastVersion() { return "56"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

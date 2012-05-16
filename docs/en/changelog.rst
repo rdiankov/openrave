@@ -19,6 +19,9 @@ Core
 
 * Allow dynamic setting of link inertial parameters
 
+Inverse Kinematics
+------------------
+
 * Can add custom data to IkParameterization that is also passed to the ik filters. :meth:`.IkParameterization.SetCustomData`
 
 * Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
@@ -29,6 +32,7 @@ Core
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
+* Fixed several ikfast bugs, upgraded version to 56
 
 Database
 --------
