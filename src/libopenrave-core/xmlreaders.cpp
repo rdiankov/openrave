@@ -89,7 +89,11 @@ void __SetAssimpLog()
     using namespace Assimp;
     Assimp::DefaultLogger::create("",Assimp::Logger::VERBOSE);
     // Select the kinds of messages you want to receive on this log stream
+#ifdef OPENRAVE_ASSIMP_PRE_R896
+    const unsigned int severity = Logger::DEBUGGING|Logger::INFO|Logger::WARN|Logger::ERR;
+#else
     const unsigned int severity = Logger::Debugging|Logger::Info|Logger::Warn|Logger::Err;
+#endif
 
     // Attaching it to the default logger
     DefaultLogger::get()->attachStream( new myStream(), severity );

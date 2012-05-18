@@ -453,6 +453,21 @@ else()
 endif()
 
 pkg_check_modules(ASSIMP assimp)
+if( ASSIMP_FOUND )
+  # For older versions of libassimp2, 
+  # like the one in Ubuntu 12.04 
+  set(CMAKE_REQUIRED_LIBRARIES assimp) 
+  check_cxx_source_compiles(" 
+  #include <assimp/Logger.h> 
+  int main() 
+  { 
+      Assimp::Logger::WARN; 
+      return 0; 
+  }" 
+  IS_ASSIMP_PRE_R896 
+  )
+  set(CMAKE_REQUIRED_LIBRARIES)
+endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   check_cxx_source_runs("
