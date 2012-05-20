@@ -123,12 +123,12 @@ class TestKinematics(EnvironmentSetup):
     def test_bodyvelocities(self):
         self.log.info('check physics/dynamics properties')
         with self.env:
-            for envfile in g_envfiles:
+            for envfile in ['robots/barrettwam.robot.xml']:#,'robots/pr2-beta-static.zae']:#g_envfiles:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines?
                 #self.env.SetPhysicsEngine()
-                for i in range(10):
+                for i in range(20):
                     T = eye(4)
                     for body in self.env.GetBodies():
                         for ijoint,joint in enumerate(body.GetJoints()):
@@ -136,9 +136,12 @@ class TestKinematics(EnvironmentSetup):
                             assert(joint == body.GetJoint(joint.GetName()) )
                             assert(joint == body.GetJointFromDOFIndex(joint.GetDOFIndex()) )
                         # velocities, has to do with physics engine
+                        dt = 0.0001
+                        dofvaluesnew = randlimits(*body.GetDOFLimits())
+                        body.SetDOFValues(dofvaluesnew)
                         oldlinkvels = body.GetLinkVelocities()
                         vellimits = body.GetDOFVelocityLimits()
-                        dofvelnew = randlimits(-vellimits,vellimits)
+                        dofvelnew = randlimits(-vellimits+10*dt,vellimits-10*dt)
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         body.SetVelocity(*link0vel)
                         assert( all(abs(body.GetDOFVelocities()) <= g_epsilon ) )
@@ -159,7 +162,59 @@ class TestKinematics(EnvironmentSetup):
                             assert( transdist(joint.GetVelocities(), dofvelnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
                         for link,vel in izip(body.GetLinks(),linkvels):
                             assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
-                        # test consistency with kinematics
+
+                        body.SetDOFValues(dofvaluesnew)
+                        linktrans = body.GetLinkTransformations()
+                        
+                        # test consistency of velocities with kinematics
+                        body.SetLinkVelocities(zeros((len(body.GetLinks()),6)))
+                        body.SetLinkVelocities(linkvels)
+                        assert(transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon)
+                        
+                        dofvaluesnew2 = dofvaluesnew + dt * dofvelnew
+                        body.SetDOFValues(dofvaluesnew2)
+                        Tlink = array(linktrans[0])
+                        Tlink[0:3,0:3] = dot(rotationMatrixFromAxisAngle(linkvels[0][3:6]*dt),Tlink[0:3,0:3])
+                        Tlink[0:3,3] += linkvels[0][0:3]*dt
+                        body.SetTransform(Tlink)
+                        linktrans2 = body.GetLinkTransformations()
+                        for i in range(1,len(linktrans)):
+                            angularvel = linkvels[i][3:6]*dt                            
+                            R = rotationMatrixFromAxisAngle(angularvel)
+                            linearvel = linkvels[i][0:3]*dt
+                            deltaxyz = linktrans2[i][0:3,3] - linktrans[i][0:3,3]
+                            deltarot = axisAngleFromRotationMatrix(dot(linktrans2[i][0:3,0:3], linalg.inv(linktrans[i][0:3,0:3])))
+                            # dist
+                            #print i,linalg.norm(deltaxyz-linearvel),linalg.norm(linearvel)
+                            #print i,dot(deltaxyz,linearvel),(linalg.norm(deltaxyz)*linalg.norm(linearvel))
+                            assert(linalg.norm(deltaxyz-linearvel) <= 0.5*linalg.norm(linearvel))
+                            assert(linalg.norm(deltarot-angularvel) <= 0.5*linalg.norm(angularvel))
+                            # angle
+                            assert(dot(deltaxyz,linearvel) >= 0.95*linalg.norm(deltaxyz)*linalg.norm(linearvel))
+                            assert(dot(deltarot,angularvel) >= 0.95*linalg.norm(deltarot)*linalg.norm(angularvel))
+
+                        # test consistency of accelerations with kinematics
+                        dofaccel = 10*random.rand(body.GetDOF())-0.5
+                        linkaccel = body.GetLinkAccelerations(dofaccel)
+                        dofvelnew2 = dofvelnew + dt * dofaccel
+                        dofvaluesnew2 = dofvaluesnew + 0.5* dt * (dofvelnew+dofvelnew2)
+                        body.SetDOFValues(dofvaluesnew2)
+                        body.SetDOFVelocities(dofvelnew2)
+                        Tlink = array(linktrans[0])
+                        Tlink[0:3,0:3] = dot(rotationMatrixFromAxisAngle(linkvels[0][3:6]*dt),Tlink[0:3,0:3])
+                        Tlink[0:3,3] += linkvels[0][0:3]*dt
+                        body.SetTransform(Tlink)
+                        linktrans2 = body.GetLinkTransformations()
+                        linkvels2 = body.GetLinkVelocities()
+                        for i in range(1,len(linktrans)):
+                            angularaccel = linkaccel[i][3:6]*dt
+                            deltaangularvel = linkvels2[i][3:6]-linkvels[i][3:6]
+                            assert(linalg.norm(angularaccel-deltaangularvel) <= 0.5*linalg.norm(angularaccel))
+                            assert(dot(deltaangularvel,angularaccel) >= 0.95*linalg.norm(deltaangularvel)*linalg.norm(angularaccel))
+                            linearaccel = linkaccel[i][0:3]*dt
+                            deltalinearvel = linkvels2[i][0:3]-linkvels[i][0:3]
+                            assert(linalg.norm(linearaccel-deltalinearvel) <= 0.5*linalg.norm(linearaccel))
+                            assert(dot(deltalinearvel,linearaccel) >= 0.95*linalg.norm(deltalinearvel)*linalg.norm(linearaccel))
 
     def test_hierarchy(self):
         self.log.info('tests the kinematics hierarchy')

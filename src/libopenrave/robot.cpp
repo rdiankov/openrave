@@ -745,28 +745,52 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
     return false;
 }
 
-void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::Manipulator::CalculateJacobian(std::vector<dReal>& jacobian) const
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tLocalTool.trans,mjacobian);
+    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tLocalTool.trans,jacobian);
 }
 
-void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& jacobian) const
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),mjacobian);
+    probot->CalculateActiveJacobian(_pEndEffector->GetIndex(),_pEndEffector->GetTransform() * _tLocalTool.trans,jacobian);
 }
 
-void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::Manipulator::CalculateRotationJacobian(std::vector<dReal>& jacobian) const
 {
     RobotBasePtr probot(_probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveAngularVelocityJacobian(_pEndEffector->GetIndex(),mjacobian);
+    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),jacobian);
+}
+
+void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,2>& jacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(__varmdofindices);
+    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),jacobian);
+}
+
+void RobotBase::Manipulator::CalculateAngularVelocityJacobian(std::vector<dReal>& jacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(__varmdofindices);
+    probot->CalculateActiveAngularVelocityJacobian(_pEndEffector->GetIndex(),jacobian);
+}
+
+void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& jacobian) const
+{
+    RobotBasePtr probot(_probot);
+    RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
+    probot->SetActiveDOFs(__varmdofindices);
+    probot->CalculateActiveAngularVelocityJacobian(_pEndEffector->GetIndex(),jacobian);
 }
 
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
@@ -1696,21 +1720,22 @@ ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const 
     return spec;
 }
 
-void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateJacobian(index, offset, mjacobian);
+        CalculateJacobian(index, offset, vjacobian);
         return;
     }
 
-    mjacobian.resize(boost::extents[3][GetActiveDOF()]);
+    int dofstride = GetActiveDOF();
+    vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
-        boost::multi_array<dReal,2> mjacobianjoints;
-        CalculateJacobian(index, offset, mjacobianjoints);
+        std::vector<dReal> vjacobianjoints;
+        CalculateJacobian(index, offset, vjacobianjoints);
         for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
+            vjacobian[i] = vjacobianjoints[_vActiveDOFIndices[i]];
+            vjacobian[dofstride+i] = vjacobianjoints[GetDOF()+_vActiveDOFIndices[i]];
+            vjacobian[2*dofstride+i] = vjacobianjoints[2*GetDOF()+_vActiveDOFIndices[i]];
         }
     }
 
@@ -1719,28 +1744,28 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
     }
     size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {
-        mjacobian[0][ind] = 1;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
+        vjacobian[ind] = 1;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 1;
-        mjacobian[2][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 1;
+        vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 1;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 1;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
         Vector vj = vActvAffineRotationAxis.cross(GetTransform().trans-offset);
-        mjacobian[0][ind] = vj.x;
-        mjacobian[1][ind] = vj.y;
-        mjacobian[2][ind] = vj.z;
+        vjacobian[ind] = vj.x;
+        vjacobian[dofstride+ind] = vj.y;
+        vjacobian[2*dofstride+ind] = vj.z;
         ind++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
@@ -1780,7 +1805,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
 
         for(int i = 0; i < 3; ++i) {
             for(int j = 0; j < 3; ++j) {
-                mjacobian[i][ind+j] = dRQ[4*i+0]*dQA[3*0+j] + dRQ[4*i+1]*dQA[3*1+j] + dRQ[4*i+2]*dQA[3*2+j] + dRQ[4*i+3]*dQA[3*3+j];
+                vjacobian[i*dofstride+ind+j] = dRQ[4*i+0]*dQA[3*0+j] + dRQ[4*i+1]*dQA[3*1+j] + dRQ[4*i+2]*dQA[3*2+j] + dRQ[4*i+3]*dQA[3*3+j];
             }
         }
         ind += 3;
@@ -1798,80 +1823,81 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, boost::
 
         for(int i = 0; i < 3; ++i) {
             for(int j = 0; j < 4; ++j) {
-                mjacobian[i][j] = dRQ[4*i+j];
+                vjacobian[i*dofstride+j] = dRQ[4*i+j];
             }
         }
         ind += 3;
     }
 }
 
-void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<dReal>& vjacobian) const
+void RobotBase::CalculateActiveJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateJacobian(index, offset, vjacobian);
+        CalculateJacobian(linkindex, offset, mjacobian);
         return;
     }
-
-    boost::multi_array<dReal,2> mjacobian;
-    RobotBase::CalculateActiveJacobian(index,offset,mjacobian);
-    vjacobian.resize(3*GetActiveDOF());
-    vector<dReal>::iterator itdst = vjacobian.begin();
-    FOREACH(it,mjacobian) {
-        std::copy(it->begin(),it->end(),itdst);
-        itdst += GetActiveDOF();
+    std::vector<dReal> vjacobian;
+    RobotBase::CalculateActiveJacobian(linkindex,offset,vjacobian);
+    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*GetActiveDOF());
+    mjacobian.resize(boost::extents[3][GetActiveDOF()]);
+    vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst,mjacobian) {
+        std::copy(itsrc,itsrc+GetActiveDOF(),itdst->begin());
+        itsrc += GetActiveDOF();
     }
 }
 
-void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateJacobian(index, q, mjacobian);
+        CalculateJacobian(index, q, vjacobian);
         return;
     }
-
-    mjacobian.resize(boost::extents[4][GetActiveDOF()]);
+    int dofstride = GetActiveDOF();
+    vjacobian.resize(4*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
-        boost::multi_array<dReal,2> mjacobianjoints;
-        CalculateRotationJacobian(index, q, mjacobianjoints);
+        std::vector<dReal> vjacobianjoints;
+        CalculateRotationJacobian(index, q, vjacobianjoints);
         for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
-            mjacobian[3][i] = mjacobianjoints[3][_vActiveDOFIndices[i]];
+            vjacobian[i] = vjacobianjoints[_vActiveDOFIndices[i]];
+            vjacobian[dofstride+i] = vjacobianjoints[GetDOF()+_vActiveDOFIndices[i]];
+            vjacobian[2*dofstride+i] = vjacobianjoints[2*GetDOF()+_vActiveDOFIndices[i]];
+            vjacobian[3*dofstride+i] = vjacobianjoints[3*GetDOF()+_vActiveDOFIndices[i]];
         }
     }
 
-    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform )
+    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
         return;
+    }
 
     size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
-        mjacobian[3][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
+        vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
-        mjacobian[3][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
+        vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
-        mjacobian[3][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
+        vjacobian[3*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
         const Vector& v = vActvAffineRotationAxis;
-        mjacobian[0][ind] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-        mjacobian[1][ind] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-        mjacobian[2][ind] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-        mjacobian[3][ind] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
+        vjacobian[ind] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+        vjacobian[dofstride+ind] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+        vjacobian[2*dofstride+ind] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+        vjacobian[3*dofstride+ind] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
         ind++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
@@ -1884,38 +1910,39 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, boos
     }
 }
 
-void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std::vector<dReal>& vjacobian) const
+void RobotBase::CalculateActiveRotationJacobian(int linkindex, const Vector& q, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateRotationJacobian(index, q, vjacobian);
+        CalculateRotationJacobian(linkindex, q, mjacobian);
         return;
     }
-
-    boost::multi_array<dReal,2> mjacobian;
-    RobotBase::CalculateActiveRotationJacobian(index,q,mjacobian);
-    vjacobian.resize(4*GetActiveDOF());
-    vector<dReal>::iterator itdst = vjacobian.begin();
-    FOREACH(it,mjacobian) {
-        std::copy(it->begin(),it->end(),itdst);
-        itdst += GetActiveDOF();
+    std::vector<dReal> vjacobian;
+    RobotBase::CalculateActiveRotationJacobian(linkindex,q,vjacobian);
+    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,4*GetActiveDOF());
+    mjacobian.resize(boost::extents[4][GetActiveDOF()]);
+    vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst,mjacobian) {
+        std::copy(itsrc,itsrc+GetActiveDOF(),itdst->begin());
+        itsrc += GetActiveDOF();
     }
 }
 
-void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& mjacobian) const
+void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateAngularVelocityJacobian(index, mjacobian);
+        CalculateAngularVelocityJacobian(index, vjacobian);
         return;
     }
 
-    mjacobian.resize(boost::extents[3][GetActiveDOF()]);
+    int dofstride = GetActiveDOF();
+    vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
-        boost::multi_array<dReal,2> mjacobianjoints;
-        CalculateAngularVelocityJacobian(index, mjacobianjoints);
+        std::vector<dReal> vjacobianjoints;
+        CalculateAngularVelocityJacobian(index, vjacobianjoints);
         for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            mjacobian[0][i] = mjacobianjoints[0][_vActiveDOFIndices[i]];
-            mjacobian[1][i] = mjacobianjoints[1][_vActiveDOFIndices[i]];
-            mjacobian[2][i] = mjacobianjoints[2][_vActiveDOFIndices[i]];
+            vjacobian[i] = vjacobianjoints[_vActiveDOFIndices[i]];
+            vjacobian[dofstride+i] = vjacobianjoints[GetDOF()+_vActiveDOFIndices[i]];
+            vjacobian[2*dofstride+i] = vjacobianjoints[2*GetDOF()+_vActiveDOFIndices[i]];
         }
     }
 
@@ -1924,28 +1951,28 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
     }
     size_t ind = _vActiveDOFIndices.size();
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Y ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_Z ) {
-        mjacobian[0][ind] = 0;
-        mjacobian[1][ind] = 0;
-        mjacobian[2][ind] = 0;
+        vjacobian[ind] = 0;
+        vjacobian[dofstride+ind] = 0;
+        vjacobian[2*dofstride+ind] = 0;
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
         const Vector& v = vActvAffineRotationAxis;
-        mjacobian[0][ind] = v.x;
-        mjacobian[1][ind] = v.y;
-        mjacobian[2][ind] = v.z;
+        vjacobian[ind] = v.x;
+        vjacobian[dofstride+ind] = v.y;
+        vjacobian[2*dofstride+ind] = v.z;
 
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
@@ -1960,34 +1987,34 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, boost::multi_a
         dReal fnorm = t.rot.y*t.rot.y+t.rot.z*t.rot.z+t.rot.w*t.rot.w;
         if( fnorm > 0 ) {
             fnorm = dReal(1)/RaveSqrt(fnorm);
-            mjacobian[0][ind] = t.rot.y*fnorm;
-            mjacobian[1][ind] = t.rot.z*fnorm;
-            mjacobian[2][ind] = t.rot.w*fnorm;
+            vjacobian[ind] = t.rot.y*fnorm;
+            vjacobian[dofstride+ind] = t.rot.z*fnorm;
+            vjacobian[2*dofstride+ind] = t.rot.w*fnorm;
         }
         else {
-            mjacobian[0][ind] = 0;
-            mjacobian[1][ind] = 0;
-            mjacobian[2][ind] = 0;
+            vjacobian[ind] = 0;
+            vjacobian[dofstride+ind] = 0;
+            vjacobian[2*dofstride+ind] = 0;
         }
 
         ++ind;
     }
 }
 
-void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
+void RobotBase::CalculateActiveAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& mjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateAngularVelocityJacobian(index, vjacobian);
+        CalculateAngularVelocityJacobian(linkindex, mjacobian);
         return;
     }
-
-    boost::multi_array<dReal,2> mjacobian;
-    RobotBase::CalculateActiveAngularVelocityJacobian(index,mjacobian);
-    vjacobian.resize(3*GetActiveDOF());
-    vector<dReal>::iterator itdst = vjacobian.begin();
-    FOREACH(it,mjacobian) {
-        std::copy(it->begin(),it->end(),itdst);
-        itdst += GetActiveDOF();
+    std::vector<dReal> vjacobian;
+    CalculateActiveAngularVelocityJacobian(linkindex,vjacobian);
+    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*GetActiveDOF());
+    mjacobian.resize(boost::extents[3][GetActiveDOF()]);
+    vector<dReal>::const_iterator itsrc = vjacobian.begin();
+    FOREACH(itdst,mjacobian) {
+        std::copy(itsrc,itsrc+GetActiveDOF(),itdst->begin());
+        itsrc += GetActiveDOF();
     }
 }
 

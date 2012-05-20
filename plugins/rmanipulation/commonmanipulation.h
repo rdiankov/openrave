@@ -209,6 +209,7 @@ public:
                 vnew[i] += vdelta.at(i);
             }
 
+            size_t armdof = _pmanip->GetArmIndices().size();
             KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
             _probot->SetActiveDOFValues(vnew);
             _probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
@@ -244,14 +245,14 @@ public:
                 // compute jacobians, make sure to transform by the world frame
                 _pmanip->CalculateAngularVelocityJacobian(_vjacobian);
                 for(size_t j = 0; j < _viweights.size(); ++j) {
-                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[0][j],_vjacobian[1][j],_vjacobian[2][j]));
+                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]));
                     _J(0,j) = v[0]*_viweights[j];
                     _J(1,j) = v[1]*_viweights[j];
                     _J(2,j) = v[2]*_viweights[j];
                 }
                 _pmanip->CalculateJacobian(_vjacobian);
                 for(size_t j = 0; j < _viweights.size(); ++j) {
-                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[0][j],_vjacobian[1][j],_vjacobian[2][j]));
+                    Vector v = _tTargetFrameLeft.rotate(Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]));
                     _J(3+0,j) = v[0]*_viweights[j];
                     _J(3+1,j) = v[1]*_viweights[j];
                     _J(3+2,j) = v[2]*_viweights[j];
@@ -334,7 +335,7 @@ protected:
         vector<dReal> _vlower, _vupper, _viweights;
         boost::array<T,6> _vfreedoms;
         T _errorthresh2;
-        boost::multi_array<dReal,2> _vjacobian;
+        std::vector<dReal> _vjacobian;
         boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 

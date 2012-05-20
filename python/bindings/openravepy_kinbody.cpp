@@ -1091,6 +1091,29 @@ public:
         return static_cast<numeric::array>(handle<>(pyvel));
     }
 
+    object GetLinkAccelerations(object odofaccelerations) const
+    {
+        if( _pbody->GetLinks().size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
+        std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
+        _pbody->GetLinkAccelerations(vDOFAccelerations,vLinkAccelerations);
+
+        npy_intp dims[] = { vLinkAccelerations.size(),6};
+        PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        dReal* pf = (dReal*)PyArray_DATA(pyaccel);
+        for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {
+            pf[6*i+0] = vLinkAccelerations[i].first.x;
+            pf[6*i+1] = vLinkAccelerations[i].first.y;
+            pf[6*i+2] = vLinkAccelerations[i].first.z;
+            pf[6*i+3] = vLinkAccelerations[i].second.x;
+            pf[6*i+4] = vLinkAccelerations[i].second.y;
+            pf[6*i+5] = vLinkAccelerations[i].second.z;
+        }
+        return static_cast<numeric::array>(handle<>(pyaccel));
+    }
+
     object ComputeAABB() {
         return toPyAABB(_pbody->ComputeAABB());
     }
@@ -1246,25 +1269,28 @@ public:
         _pbody->SetDOFTorques(vtorques,bAdd);
     }
 
-    boost::multi_array<dReal,2> CalculateJacobian(int index, object offset)
+    object CalculateJacobian(int index, object offset)
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _pbody->CalculateJacobian(index,ExtractVector3(offset),mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _pbody->CalculateJacobian(index,ExtractVector3(offset),vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    boost::multi_array<dReal,2> CalculateRotationJacobian(int index, object q) const
+    object CalculateRotationJacobian(int index, object q) const
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _pbody->CalculateRotationJacobian(index,ExtractVector4(q),vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    boost::multi_array<dReal,2> CalculateAngularVelocityJacobian(int index) const
+    object CalculateAngularVelocityJacobian(int index) const
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _pbody->CalculateAngularVelocityJacobian(index,mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _pbody->CalculateAngularVelocityJacobian(index,vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     bool CheckSelfCollision() {
@@ -1778,25 +1804,28 @@ public:
             return bCollision;
         }
 
-        boost::multi_array<dReal,2> CalculateJacobian()
+        object CalculateJacobian()
         {
-            boost::multi_array<dReal,2> mjacobian;
-            _pmanip->CalculateJacobian(mjacobian);
-            return mjacobian;
+            std::vector<dReal> vjacobian;
+            _pmanip->CalculateJacobian(vjacobian);
+            std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
+            return toPyArray(vjacobian,dims);
         }
 
-        boost::multi_array<dReal,2> CalculateRotationJacobian()
+        object CalculateRotationJacobian()
         {
-            boost::multi_array<dReal,2> mjacobian;
-            _pmanip->CalculateRotationJacobian(mjacobian);
-            return mjacobian;
+            std::vector<dReal> vjacobian;
+            _pmanip->CalculateRotationJacobian(vjacobian);
+            std::vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _pmanip->GetArmIndices().size();
+            return toPyArray(vjacobian,dims);
         }
 
-        boost::multi_array<dReal,2> CalculateAngularVelocityJacobian()
+        object CalculateAngularVelocityJacobian()
         {
-            boost::multi_array<dReal,2> mjacobian;
-            _pmanip->CalculateAngularVelocityJacobian(mjacobian);
-            return mjacobian;
+            std::vector<dReal> vjacobian;
+            _pmanip->CalculateAngularVelocityJacobian(vjacobian);
+            std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pmanip->GetArmIndices().size();
+            return toPyArray(vjacobian,dims);
         }
 
         string GetStructureHash() const {
@@ -2231,25 +2260,28 @@ public:
         return toPyArray(values0);
     }
 
-    boost::multi_array<dReal,2> CalculateActiveJacobian(int index, object offset) const
+    object CalculateActiveJacobian(int index, object offset) const
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _probot->CalculateActiveJacobian(index,ExtractVector3(offset),vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    boost::multi_array<dReal,2> CalculateActiveRotationJacobian(int index, object q) const
+    object CalculateActiveRotationJacobian(int index, object q) const
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _probot->CalculateActiveRotationJacobian(index,ExtractVector4(q),mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _probot->CalculateActiveRotationJacobian(index,ExtractVector4(q),vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 4; dims[1] = _probot->GetActiveDOF();
+        return toPyArray(vjacobian,dims);
     }
 
-    boost::multi_array<dReal,2> CalculateActiveAngularVelocityJacobian(int index) const
+    object CalculateActiveAngularVelocityJacobian(int index) const
     {
-        boost::multi_array<dReal,2> mjacobian;
-        _probot->CalculateActiveAngularVelocityJacobian(index,mjacobian);
-        return mjacobian;
+        std::vector<dReal> vjacobian;
+        _probot->CalculateActiveAngularVelocityJacobian(index,vjacobian);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _probot->GetActiveDOF();
+        return toPyArray(vjacobian,dims);
     }
 
     bool Grab(PyKinBodyPtr pbody) {
@@ -2623,6 +2655,7 @@ void init_openravepy_kinbody()
                         .def("SetDOFVelocities",setdofvelocities3, args("dofvelocities","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; bool"))
                         .def("SetDOFVelocities",setdofvelocities4, args("dofvelocities","linear","angular","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; bool"))
                         .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
+                        .def("GetLinkAccelerations",&PyKinBody::GetLinkAccelerations, DOXY_FN(KinBody,GetLinkAccelerations))
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(KinBody,ComputeAABB))
                         .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
@@ -2639,9 +2672,9 @@ void init_openravepy_kinbody()
                         .def("SetJointTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
                         .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
                         .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
-                        .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; boost::multi_array"))
-                        .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; boost::multi_array"))
-                        .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; boost::multi_array"))
+                        .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
+                        .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
+                        .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
                         .def("CheckSelfCollision",pkinbodyself, DOXY_FN(KinBody,CheckSelfCollision))
                         .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
@@ -2941,9 +2974,9 @@ void init_openravepy_kinbody()
                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, args("values0","values1"), DOXY_FN(RobotBase,SubtractActiveDOFValues))
-                      .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"), DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; boost::multi_array"))
-                      .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"), DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; boost::multi_array"))
-                      .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; boost::multi_array"))
+                      .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian,args("linkindex","offset"), DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; std::vector"))
+                      .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian,args("linkindex","quat"), DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; std::vector"))
+                      .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian,args("linkindex"), DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                       .def("Grab",pgrab1,args("body"), DOXY_FN(RobotBase,Grab "KinBodyPtr"))
                       .def("Grab",pgrab2,args("body","linkstoignre"), DOXY_FN(RobotBase,Grab "KinBodyPtr; const std::set"))
                       .def("Grab",pgrab3,args("body","grablink"), DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))

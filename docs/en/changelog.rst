@@ -19,6 +19,10 @@ Core
 
 * Allow dynamic setting of link inertial parameters
 
+* Fixed converting from dof velocities to link velocities (:meth:`.KinBody.SetDOFVelocities`)
+
+* Added :meth:`.KinBody.GetLinkAccelerations` to compute link accelerations from dof accelerations.
+
 Inverse Kinematics
 ------------------
 

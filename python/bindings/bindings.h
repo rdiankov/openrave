@@ -339,14 +339,14 @@ inline numeric::array toPyArrayN(const double* pvalues, size_t N)
 inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
     }
     size_t totalsize = 1;
     FOREACH(it,dims) {
         totalsize *= *it;
     }
     if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_DOUBLE);
     if( pvalues != NULL ) {
@@ -358,14 +358,14 @@ inline numeric::array toPyArrayN(const double* pvalues, std::vector<npy_intp>& d
 inline numeric::array toPyArrayN(const uint8_t* pvalues, std::vector<npy_intp>& dims)
 {
     if( dims.size() == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
     }
     size_t totalsize = 1;
     for(size_t i = 0; i < dims.size(); ++i) {
         totalsize *= dims[i];
     }
     if( totalsize == 0 ) {
-        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f4"));
+        return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u1"));
     }
     PyObject *pyvalues = PyArray_SimpleNew(dims.size(),&dims[0], PyArray_UINT8);
     if( pvalues != NULL ) {
@@ -434,8 +434,9 @@ inline numeric::array toPyArray(const std::vector<T>& v)
 template <typename T>
 inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& dims)
 {
-    if( v.size() == 0 )
-        return toPyArrayN((T*)NULL,0);
+    if( v.size() == 0 ) {
+        return toPyArrayN((T*)NULL,dims);
+    }
     size_t totalsize = 1;
     FOREACH(it,dims)
     totalsize *= *it;

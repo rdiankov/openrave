@@ -1122,7 +1122,7 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
             }
         }
     }
-    else if( timederiv == 1 ) {
+    else if( timederiv == 2 ) {
         voutput.resize(_vmimic.at(axis)->_accelfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
             _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);

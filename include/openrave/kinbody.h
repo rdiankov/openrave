@@ -1169,20 +1169,33 @@ private:
         Velocities correspond to the link's coordinate system origin.
         \param[in] linearvel linear velocity of base link
         \param[in] angularvel angular velocity rotation_axis*theta_dot
-        \param[in] vDOFVelocities - velocities of each of the degrees of freeom
-        \param checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+        \param[in] dofvelocities - velocities of each of the degrees of freeom
+        \param[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
      */
-    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
 
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
-    /// \param[in] vDOFVelocity - velocities of each of the degrees of freeom
-    /// \praam checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual void SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits = true);
+    /// \param[in] dofvelocities - velocities of each of the degrees of freeom
+    /// \praam[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
 
     /// \brief Returns the linear and angular velocities for each link
+    ///
+    /// The velocities of the link frames with respect to the world coordinate system are returned.
+    /// \param[out]
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
+
+    /// \brief Returns the linear and angular accelerations for each link given the dof accelerations
+    ///
+    /// Computes accelerations of the link frames with respect to the world coordinate system are returned. In otherwords, the derivate
+    /// is taken with respect to the world origin fixed in space (also known as spatial acceleration).
+    /// The current angles and velocities set on the robot are used.
+    /// Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
+    /// \param[in] dofaccelerations the accelerations of each of the DOF
+    /// \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
+    virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
 
@@ -1258,24 +1271,49 @@ private:
     /// (doesn't touch the rest of the values)
     /// \param linkindex of the link that the rotation is attached to
     /// \param position position in world space where to compute derivatives from.
-    /// \param vjacobian 3xDOF matrix
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& pfJacobian) const;
+    /// \param jacobian 3xDOF matrix
+    virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& jacobian) const;
+
+    /// \brief calls std::vector version of CalculateJacobian internally, a little inefficient since it copies memory
+    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& jacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param qInitialRot the rotation in world space whose derivative to take from.
-    /// \param vjacobian 4xDOF matrix
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& pfJacobian) const;
+    /// \param jacobian 4xDOF matrix
+    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, std::vector<dReal>& jacobian) const;
+
+    /// \brief calls std::vector version of CalculateRotationJacobian internally, a little inefficient since it copies memory
+    virtual void CalculateRotationJacobian(int linkindex, const Vector& quat, boost::multi_array<dReal,2>& jacobian) const;
 
     /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
-    virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& jacobian) const;
+
+    /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
+    virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
+
+    /** \brief Computes the inverse dynamics (torques) from the current robot position, velocity, and acceleration.
+
+        Q = M(dofvalues) * dofaccel + C(dofvalues,dofvel) * dofvel + F(dofvel) + G(dofvalues)
+
+        Where
+        Q - generalized forces associated with dofvalues
+        M - manipulator inertia tensor (symmetric joint-space inertia)
+        C - coriolis and centripetal effects
+        F - coulomb and viscous friction
+        G - gravity loading
+
+        The dof values are ready from GetDOFValues() and GetDOFVelocities(). Because openrave does not have a state for robot acceleration,
+        it has to be inserted as a parameter to this function. Acceleration due to gravitation is extracted from GetEnv()->GetPhysicsEngine()->GetGravity().
+        The method uses Recursive Newton Euler algorithm from  Walker Orin and Corke.
+        \param[in] dofaccelerations the dof accelerations of the current robot state
+        \param[out] doftorques the output torques
+     */
+    virtual void ComputeInverseDynamics(const std::vector<dReal>& dofaccelerations, std::vector<dReal>& doftorques, std::vector<dReal>& M, std::vector<dReal>& C, std::vector<dReal>& G) const;
 
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
@@ -1438,6 +1476,11 @@ protected:
         Avoids making specific calls on the collision checker (like CheckCollision) or physics engine (like simulating velocities/torques) since this information can change depending on the attached plugin.
      */
     virtual void _ComputeInternalInformation();
+
+    /// \brief computes accelerations given all the necessary data of the robot. \see GetLinkAccelerations
+    ///
+    /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
+    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector<Transform>& linktransformations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
