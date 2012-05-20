@@ -99,7 +99,8 @@ def SetViewerUserThread(env,viewername,userfn):
         userfn()
     # add the viewer before starting the user function
     env.Add(viewer)
-    Thread = __import__('threading').Thread
+    threading = __import__('threading')
+    Thread = threading.Thread
     def localuserfn(userfn,viewer):
         try:
             userfn()
@@ -108,8 +109,13 @@ def SetViewerUserThread(env,viewername,userfn):
             viewer.quitmainloop()
     userthread = Thread(target=localuserfn,args=(userfn,viewer))
     userthread.start()
+    sig_thread_id = 0
+    for tid, tobj in threading._active.items():
+        if tobj is userthread:
+            sig_thread_id = tid
+            break
     try:
-        viewer.main(True)
+        viewer.main(True,sig_thread_id)
     finally:
         userthread.join()
             

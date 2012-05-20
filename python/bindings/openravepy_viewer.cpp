@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -29,22 +29,45 @@ static struct sigaction s_signalActionPrev;
 static sighandler_t s_signalActionPrev;
 #endif
 static std::list<ViewerBasePtr> s_listViewersToQuit;
+static int s_nInterruptCount=0;
 }
 
 extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo, void *context)
 {
     RAVELOG_VERBOSE("openravepy_viewer_sigint_handler\n");
-    FOREACHC(itviewer, openravepy::s_listViewersToQuit) {
-        (*itviewer)->quitmainloop();
-    }
-    openravepy::s_listViewersToQuit.clear();
+    openravepy::s_nInterruptCount += 1;
+    //PyErr_SetInterrupt();
+    //PyGILState_STATE gstate = PyGILState_Ensure();
+//    try
+//    {
+//        exec("raise KeyboardInterrupt()\n"); // boost::python::globals(),locals);
+//        //exec("import thread; thread.interrupt_main()\n"); // boost::python::globals(),locals);
+//    }
+//    catch( const error_already_set& e )
+//    {
+//        // should be the interrupt we just raised...
+//        //RAVELOG_WARN(boost::str(boost::format("failed to throw KeyboardInterrupt from signal handler: %s\n")%e));
+//    }
+////
+//    PyGILState_Release(gstate);
+
+
+//    FOREACHC(itviewer, openravepy::s_listViewersToQuit) {
+//        ++(*itviewer)->_nSetInterrupt;
+//    }
+//        (*itviewer)->quitmainloop();
+//    }
+//    openravepy::s_listViewersToQuit.clear();
     // is this call necessary? perhaps could get the C++ planners out of their loops?
-    RaveDestroy();
+//    RaveDestroy();
+
 #ifndef _WIN32
+    //struct sigaction act;
     if( sigaction(SIGINT, &openravepy::s_signalActionPrev, NULL) < 0 ) {
         RAVELOG_WARN("failed to restore old signal\n");
     }
     kill(0 /*getpid()*/, SIGINT);
+    //sigaction(SIGINT,&act,NULL);
 #else
     signal(SIGINT, openravepy::s_signalActionPrev);
 #endif
@@ -54,6 +77,8 @@ class PyViewerBase : public PyInterfaceBase
 {
 protected:
     ViewerBasePtr _pviewer;
+    UserDataPtr _viewercallback;
+    int64_t _sig_thread_id;
 
     static bool _ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
     {
@@ -81,9 +106,54 @@ protected:
         }
         return true;
     }
+
+    void _ThreadCallback()
+    {
+        if( openravepy::s_nInterruptCount > 0 ) {
+            --openravepy::s_nInterruptCount;
+            if( _sig_thread_id != 0 ) {
+                // calling handler for other thread
+                PyGILState_STATE gstate = PyGILState_Ensure();
+                int count = PyThreadState_SetAsyncExc(_sig_thread_id, PyExc_KeyboardInterrupt);
+                if( count == 0 ) {
+                    RAVELOG_WARN("PyThreadState_SetAsyncExc invalid thread id %d\n",_sig_thread_id);
+                }
+                else if(count != 1 ) {
+                    RAVELOG_WARN("we're in trouble!\n");
+                    PyThreadState_SetAsyncExc(_sig_thread_id, NULL);
+                }
+                PyGILState_Release(gstate);
+
+#ifndef _WIN32
+                // restore the viewer signal handler
+                memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
+                struct sigaction act;
+                memset(&act,0,sizeof(act));
+                //sigfillset(&act.sa_mask);
+                sigemptyset(&act.sa_mask);
+                act.sa_flags = 0;
+                act.sa_handler = &openravepy_viewer_sigint_handler;
+                int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
+                if( ret < 0 ) {
+                    RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
+                }
+#endif
+            }
+            else {
+                RAVELOG_INFO("destroying viewer and openrave runtime\n");
+                _pviewer->quitmainloop();
+                RaveDestroy();
+            }
+        }
+    }
+
 public:
 
     PyViewerBase(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {
+        _sig_thread_id = 0;
+        if( !!_pviewer ) {
+            _viewercallback = _pviewer->RegisterViewerThreadCallback(boost::bind(&PyViewerBase::_ThreadCallback,this));
+        }
     }
     virtual ~PyViewerBase() {
     }
@@ -92,8 +162,9 @@ public:
         return _pviewer;
     }
 
-    int main(bool bShow)
+    int main(bool bShow, int64_t sig_thread_id=0)
     {
+        _sig_thread_id = sig_thread_id;
         openravepy::s_listViewersToQuit.push_back(_pviewer);
         // very helpful: https://www.securecoding.cert.org/confluence/display/cplusplus/SIG01-CPP.+Understand+implementation-specific+details+regarding+signal+handler+persistence
 #ifndef _WIN32
@@ -117,6 +188,9 @@ public:
         bool bSuccess=false;
         try {
             bSuccess = _pviewer->main(bShow);
+        }
+        catch(const error_already_set& e) {
+            RAVELOG_WARN("received python error\n");
         }
         catch(...) {
         }
@@ -227,6 +301,8 @@ PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& 
     return PyViewerBasePtr(new PyViewerBase(p,pyenv));
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(main_overloads, main, 1, 2)
+
 void init_openravepy_viewer()
 {
     memset(&s_signalActionPrev,0,sizeof(s_signalActionPrev));
@@ -235,7 +311,7 @@ void init_openravepy_viewer()
         void (PyViewerBase::*setcamera1)(object) = &PyViewerBase::SetCamera;
         void (PyViewerBase::*setcamera2)(object,float) = &PyViewerBase::SetCamera;
         scope viewer = class_<PyViewerBase, boost::shared_ptr<PyViewerBase>, bases<PyInterfaceBase> >("Viewer", DOXY_CLASS(ViewerBase), no_init)
-                       .def("main",&PyViewerBase::main, DOXY_FN(ViewerBase,main))
+                       .def("main",&PyViewerBase::main, main_overloads(args("show","sig_thread_id"), DOXY_FN(ViewerBase,main)))
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
                        .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
                        .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))

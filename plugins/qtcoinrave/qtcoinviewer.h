@@ -157,6 +157,7 @@ public:
 
     virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
     virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
+    virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
     virtual void _DeleteItemCallback(Item* pItem)
     {
         boost::mutex::scoped_lock lock(_mutexItems);
@@ -445,6 +446,7 @@ public:
 
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;
@@ -470,6 +472,7 @@ public:
 
     friend class ItemSelectionCallbackData;
     friend class ViewerImageCallbackData;
+    friend class ViewerThreadCallbackData;
 };
 
 #ifdef RAVE_REGISTER_BOOST

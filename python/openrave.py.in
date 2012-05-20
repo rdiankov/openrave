@@ -216,10 +216,18 @@ if __name__ == "__main__":
                 if viewer is None:
                     ipythonthreadfn(env,robot)
                 else:
+                    import threading
                     from threading import Thread
                     ipythonthread = Thread(target=ipythonthreadfn,args=(env,robot))
                     ipythonthread.start()
-                    viewer.main(True)
+
+                    # find the thread id
+                    sig_thread_id = 0
+                    for tid, tobj in threading._active.items():
+                        if tobj is ipythonthread:
+                            sig_thread_id = tid
+                            break
+                    viewer.main(True,sig_thread_id)
                     # join ipython thread
                     ipythonthread.join()
             else:
