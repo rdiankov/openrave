@@ -123,7 +123,7 @@ class TestKinematics(EnvironmentSetup):
     def test_bodyvelocities(self):
         self.log.info('check physics/dynamics properties')
         with self.env:
-            for envfile in ['robots/barrettwam.robot.xml']:#,'robots/pr2-beta-static.zae']:#g_envfiles:
+            for envfile in ['robots/pr2-beta-static.zae', 'robots/barretthand.robot.xml', 'robots/barrettwam.robot.xml']:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines?
@@ -137,10 +137,11 @@ class TestKinematics(EnvironmentSetup):
                             assert(joint == body.GetJointFromDOFIndex(joint.GetDOFIndex()) )
                         # velocities, has to do with physics engine
                         dt = 0.0001
-                        dofvaluesnew = randlimits(*body.GetDOFLimits())
+                        lower,upper = body.GetDOFLimits()
+                        vellimits = body.GetDOFVelocityLimits()
+                        dofvaluesnew = randlimits(lower+2*dt*vellimits, upper-2*dt*vellimits)
                         body.SetDOFValues(dofvaluesnew)
                         oldlinkvels = body.GetLinkVelocities()
-                        vellimits = body.GetDOFVelocityLimits()
                         dofvelnew = randlimits(-vellimits+10*dt,vellimits-10*dt)
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         body.SetVelocity(*link0vel)

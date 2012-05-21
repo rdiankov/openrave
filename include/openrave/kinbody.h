@@ -579,6 +579,9 @@ public:
         /// \return the degrees of freedom of the joint (even if pValues is NULL)
         virtual void GetVelocities(std::vector<dReal>& values, bool bAppend=false) const;
 
+        /// \brief Return the velocity of the specified joint axis only.
+        virtual dReal GetVelocity(int axis) const;
+
         /// \brief Add effort (force or torque) to the joint
         virtual void AddTorque(const std::vector<dReal>& torques);
 

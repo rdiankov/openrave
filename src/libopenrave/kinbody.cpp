@@ -1847,7 +1847,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
         }
         else if( pjoint->GetType() == Joint::JointPrismatic ) {
             Vector v = tdelta.rotate(pjoint->GetInternalHierarchyAxis(0));
-            vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross(vChildVelocities.first-vParentVelocities.first + v*pdofvelocities[0]) + v*pdofaccelerations[0];
+            vChildAccelerations.first= vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross(vChildVelocities.first-vParentVelocities.first + v*pdofvelocities[0]) + v*pdofaccelerations[0];
             vChildAccelerations.second = vParentAccelerations.second;
         }
         else {

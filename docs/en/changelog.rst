@@ -21,6 +21,8 @@ Core
 
 * Fixed converting from dof velocities to link velocities (:meth:`.KinBody.SetDOFVelocities`)
 
+* Fixed mimic joint computation of velocities/accelerations
+
 * Added :meth:`.KinBody.GetLinkAccelerations` to compute link accelerations from dof accelerations.
 
 * Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics` (thanks to Quang-Cuong Pham)
