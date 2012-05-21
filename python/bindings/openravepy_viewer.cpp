@@ -137,6 +137,8 @@ protected:
                 if( ret < 0 ) {
                     RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
                 }
+#else
+                openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
 #endif
             }
             else {
