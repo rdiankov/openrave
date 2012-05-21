@@ -785,6 +785,7 @@ public:
         if( !_pPhysicsEngine ) {
             RAVELOG_DEBUG("disabling physics\n");
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
+            _SetDefaultGravity();
         }
         else {
             RAVELOG_DEBUG(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));

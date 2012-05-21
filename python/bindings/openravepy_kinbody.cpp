@@ -1293,6 +1293,15 @@ public:
         return toPyArray(vjacobian,dims);
     }
 
+    object ComputeInverseDynamics(object odofaccelerations)
+    {
+        vector<dReal> vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
+        vector<dReal> vDOFTorques;
+        KinBody::ForceTorqueMap mapExternalForceTorque; // todo
+        _pbody->ComputeInverseDynamics(vDOFTorques,vDOFAccelerations,mapExternalForceTorque);
+        return toPyArray(vDOFTorques);
+    }
+
     bool CheckSelfCollision() {
         return _pbody->CheckSelfCollision();
     }
@@ -2675,6 +2684,7 @@ void init_openravepy_kinbody()
                         .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
                         .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
                         .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
+                        .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, args("dofaccelerations"), DOXY_FN(KinBody, ComputeInverseDynamics))
                         .def("CheckSelfCollision",pkinbodyself, DOXY_FN(KinBody,CheckSelfCollision))
                         .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))

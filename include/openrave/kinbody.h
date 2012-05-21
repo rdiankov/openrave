@@ -1187,14 +1187,16 @@ private:
     /// \param[out]
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
-    /// \brief Returns the linear and angular accelerations for each link given the dof accelerations
-    ///
-    /// Computes accelerations of the link frames with respect to the world coordinate system are returned. In otherwords, the derivate
-    /// is taken with respect to the world origin fixed in space (also known as spatial acceleration).
-    /// The current angles and velocities set on the robot are used.
-    /// Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
-    /// \param[in] dofaccelerations the accelerations of each of the DOF
-    /// \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
+    /** \brief Returns the linear and angular accelerations for each link given the dof accelerations
+
+        Computes accelerations of the link frames with respect to the world coordinate system are returned. The gravity vector from the physics engine is used as the  accelerations for the base link and static links.
+        In otherwords, the derivate
+        is taken with respect to the world origin fixed in space (also known as spatial acceleration).
+        The current angles and velocities set on the robot are used.
+        Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
+        \param[in] dofaccelerations the accelerations of each of the DOF
+        \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
+     */
     virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
@@ -1296,6 +1298,7 @@ private:
     /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
 
+    typedef std::map<int, std::pair<Vector,Vector> > ForceTorqueMap;
     /** \brief Computes the inverse dynamics (torques) from the current robot position, velocity, and acceleration.
 
         Q = M(dofvalues) * dofaccel + C(dofvalues,dofvel) * dofvel + F(dofvel) + G(dofvalues)
@@ -1310,10 +1313,11 @@ private:
         The dof values are ready from GetDOFValues() and GetDOFVelocities(). Because openrave does not have a state for robot acceleration,
         it has to be inserted as a parameter to this function. Acceleration due to gravitation is extracted from GetEnv()->GetPhysicsEngine()->GetGravity().
         The method uses Recursive Newton Euler algorithm from  Walker Orin and Corke.
-        \param[in] dofaccelerations the dof accelerations of the current robot state
-        \param[out] doftorques the output torques
+        \param[out] doftorques The output torques.
+        \param[in] dofaccelerations The dof accelerations of the current robot state.
+        \param[in] mapExternalForceTorque [optional] Specifies all the external forces/torques acting on the links.
      */
-    virtual void ComputeInverseDynamics(const std::vector<dReal>& dofaccelerations, std::vector<dReal>& doftorques, std::vector<dReal>& M, std::vector<dReal>& C, std::vector<dReal>& G) const;
+    virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& mapExternalForceTorque=ForceTorqueMap()); //, std::vector<dReal>& M, std::vector<dReal>& C, std::vector<dReal>& G) const;
 
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
