@@ -990,11 +990,15 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                     }
                     else {
                         if( p[i] < lowerlim[i] ) {
-                            RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%i%p[i]%lowerlim[i]));
+                            if( p[i] < lowerlim[i]-g_fEpsilonEvalJointLimit ) {
+                                RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%i%p[i]%lowerlim[i]));
+                            }
                             *ptempjoints++ = lowerlim[i];
                         }
                         else if( p[i] > upperlim[i] ) {
-                            RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%i%p[i]%upperlim[i]));
+                            if( p[i] > upperlim[i]+g_fEpsilonEvalJointLimit ) {
+                                RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%i%p[i]%upperlim[i]));
+                            }
                             *ptempjoints++ = upperlim[i];
                         }
                         else {
