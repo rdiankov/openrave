@@ -1634,7 +1634,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
 
-        Vector vchildtoanchor = vLinkTransformations.at(childindex).trans - pjoint->GetAnchor();
+        //Vector vchildtoanchor = vLinkTransformations.at(childindex).trans - pjoint->GetAnchor();
         Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
         Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass();
         Vector vaccumforce = vLinkForceTorques.at(childindex).first + vcomforce;
