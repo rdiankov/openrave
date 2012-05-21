@@ -139,8 +139,8 @@ def main(env,options):
 #                         geom.SetDiffuseColor(color)
                     Tpickers[ipicker] = T
 
-            # update rate of 0.2s
-            time.sleep(0.2)        
+            # update rate of 0.05s
+            time.sleep(0.05)
 
     # create the thread
     t = threading.Thread(target=PickerThread,args=[env,pickers,iktype])

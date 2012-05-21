@@ -1605,15 +1605,18 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkTransformations, vLinkVelocities, vLinkAccelerations);
 
     // all valuess are in the global coordinate system
+    // Given the velocity/acceleration of the object is on point A, to change to B do:
+    // v_B = v_A + angularvel x (B-A)
+    // a_B = a_A + angularaccel x (B-A) + angularvel x (angularvel x (B-A))
     // forward recursion
-    std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkMomentOfInertia(_veclinks.size());
+    std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkCOMMomentOfInertia(_veclinks.size());
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
-        Vector vglobalcom = _veclinks.at(i)->GetGlobalCOM();
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - vLinkTransformations.at(i).trans;
         Vector vangularaccel = vLinkAccelerations.at(i).second;
         Vector vangularvelocity = vLinkVelocities.at(i).second;
-        vLinkCOMLinearAccelerations[i] = vangularaccel.cross(vglobalcom) + vangularvelocity.cross(vangularvelocity.cross(vglobalcom)) + vLinkAccelerations.at(i).first;
-        Transform tm = _veclinks.at(i)->GetGlobalInertia();
-        vLinkMomentOfInertia[i] = tm.rotate(vangularaccel) + vangularvelocity.cross(tm.rotate(vangularvelocity));
+        vLinkCOMLinearAccelerations[i] = vLinkAccelerations.at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
+        TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
+        vLinkCOMMomentOfInertia[i] = tm.rotate(vangularaccel) + vangularvelocity.cross(tm.rotate(vangularvelocity));
     }
 
     // backward recursion
@@ -1626,36 +1629,34 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         doftorques[i] = 0;
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
     // go backwards
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        if( vlinkscomputed.at(childindex) ) {
-            continue;
-        }
 
-        Vector vchildtoanchor = pjoint->GetHierarchyChildLink()->GetTransform().trans - pjoint->GetAnchor();
-        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() -  -pjoint->GetAnchor();
+        Vector vchildtoanchor = vLinkTransformations.at(childindex).trans - pjoint->GetAnchor();
+        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
         Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass();
-        Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkMomentOfInertia.at(childindex) + vchildtoanchor.cross(vLinkForceTorques.at(childindex).first) + vcomtoanchor.cross(vcomforce);
         Vector vaccumforce = vLinkForceTorques.at(childindex).first + vcomforce;
+        Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex) + vcomtoanchor.cross(vLinkForceTorques.at(childindex).first) + vcomtoanchor.cross(vcomforce);
+
         if( !!pjoint->GetHierarchyParentLink() ) {
             int parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
             vLinkForceTorques.at(parentindex).first += vaccumforce;
             vLinkForceTorques.at(parentindex).second += vjointtorque;
         }
 
-        if( pjoint->GetType() == Joint::JointHinge ) {
-            doftorques.at(pjoint->GetDOFIndex()) = vjointtorque.dot3(pjoint->GetAxis(0));
+        if( pjoint->GetDOFIndex() >= 0 ) {
+            if( pjoint->GetType() == Joint::JointHinge ) {
+                doftorques.at(pjoint->GetDOFIndex()) = vjointtorque.dot3(pjoint->GetAxis(0));
+            }
+            else if( pjoint->GetType() == Joint::JointSlider ) {
+                doftorques.at(pjoint->GetDOFIndex()) = vaccumforce.dot3(pjoint->GetAxis(0));
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported", pjoint->GetType(), ORE_Assert);
+            }
         }
-        else if( pjoint->GetType() == Joint::JointSlider ) {
-            doftorques.at(pjoint->GetDOFIndex()) = vaccumforce.dot3(pjoint->GetAxis(0));
-        }
-        else {
-            throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported", pjoint->GetType(), ORE_Assert);
-        }
-        vlinkscomputed.at(childindex) = 1;
     }
 }
 
@@ -1686,10 +1687,10 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     vector<dReal> vtempvalues, veval;
     boost::array<dReal,3> dummyvelocities, dummyaccelerations; // dummy values for a joint
 
-    Vector vgravity = -GetEnv()->GetPhysicsEngine()->GetGravity();
+    Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
 
     // set accelerations of first link to 0 since it isn't actuated
-    vLinkAccelerations.at(0).first = vgravity;
+    vLinkAccelerations.at(0).first = -vgravity;
     vLinkAccelerations.at(0).second = Vector();
 
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
