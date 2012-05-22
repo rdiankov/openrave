@@ -18,7 +18,7 @@ class TestKinematics(EnvironmentSetup):
         self.log.info('check if the joint-link set-get functions are consistent along with jacobians')
         env=self.env
         with env:
-            for envfile in g_envfiles+['testdata/bobcat.robot.xml']:
+            for envfile in g_envfiles:#+['testdata/bobcat.robot.xml']:
                 env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
