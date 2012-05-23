@@ -128,7 +128,7 @@ class TestKinematics(EnvironmentSetup):
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 # try all loadable physics engines?
                 #self.env.SetPhysicsEngine()
-                for i in range(20):
+                for itry in range(20):
                     T = eye(4)
                     for body in self.env.GetBodies():
                         for ijoint,joint in enumerate(body.GetJoints()):
