@@ -1683,7 +1683,7 @@ public:
         \param values the values representing the data
         \throw openrave_exception throws if the name is invalid
      */
-    void SetCustomValues(const std::string& name, const std::vector<dReal>& values)
+    inline void SetCustomValues(const std::string& name, const std::vector<dReal>& values)
     {
         OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
         OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
@@ -1691,7 +1691,7 @@ public:
     }
 
     /// \brief sets named custom data in the ik parameterization (\see SetCustomValues)
-    void SetCustomValue(const std::string& name, dReal value)
+    inline void SetCustomValue(const std::string& name, dReal value)
     {
         OPENRAVE_ASSERT_OP_FORMAT0( name.size(), >, 0, "name is empty", ORE_InvalidArguments );
         OPENRAVE_ASSERT_OP_FORMAT0(std::count_if(name.begin(), name.end(), _IsValidCharInName), ==, (int)name.size(), "name has invalid characters",ORE_InvalidArguments);
@@ -1700,7 +1700,7 @@ public:
     }
 
     /// \brief gets custom data if it exists, returns false if it doesn't
-    bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
+    inline bool GetCustomValues(const std::string& name, std::vector<dReal>& values) const
     {
         std::map<std::string, std::vector<dReal> >::const_iterator it = _mapCustomData.find(name);
         if( it == _mapCustomData.end() ) {
@@ -1711,7 +1711,7 @@ public:
     }
 
     /// \brief returns a const reference of the custom data key/value pairs
-    const std::map<std::string, std::vector<dReal> >& GetCustomDataMap() const
+    inline const std::map<std::string, std::vector<dReal> >& GetCustomDataMap() const
     {
         return _mapCustomData;
     }
@@ -1719,13 +1719,16 @@ public:
     /// \brief clears custom data
     ///
     /// \param name if name is empty, will clear all the data, otherwise will clear only the custom data with that name
-    void ClearCustomValues(const std::string& name=std::string())
+    /// \return number of elements erased
+    inline size_t ClearCustomValues(const std::string& name=std::string())
     {
         if( name.size() > 0 ) {
-            _mapCustomData.erase(name);
+            return _mapCustomData.erase(name) > 0;
         }
         else {
+            size_t num = _mapCustomData.size();
             _mapCustomData.clear();
+            return num;
         }
     }
 
