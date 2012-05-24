@@ -313,6 +313,79 @@ class TestKinematics(EnvironmentSetup):
                 #    lknotindex = [i for i,(link,joint) in enumerate(loop) if link.GetIndex() == knot]
                 #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
 
+    def test_dynamics2d(self):
+        self.log.info('test dynamics of a simple 2d robot')
+        xmldata = """
+<Robot name="2DOFRobot">
+  <KinBody>
+    <Mass type="mimicgeom">
+      <density>10000000</density>
+    </Mass>
+    <Body name="Base" type="dynamic">
+      <Translation>0.0  0.0  0.0</Translation>
+      <Geom type="cylinder">
+        <rotationaxis>1 0 0 90</rotationaxis>
+        <radius>0.03</radius>
+        <height>0.02</height>
+      </Geom>
+    </Body>
+    <Body name="Arm0" type="dynamic">
+      <offsetfrom>Base</offsetfrom>
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <Translation>0.1 0 0</Translation>
+        <Extents>0.1 0.001 0.001</Extents>
+      </Geom> 
+	</Body>
+    <Joint circular="true" name="Arm0" type="hinge">
+      <Body>Base</Body>
+      <Body>Arm0</Body>
+      <offsetfrom>Arm0</offsetfrom>
+      <weight>4</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>3</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    <Body name="Arm1" type="dynamic">
+      <offsetfrom>Arm0</offsetfrom>
+      <Translation>0.2 0 0</Translation>
+      <Geom type="box">
+        <Translation>0.1 0 0</Translation>
+        <Extents>0.1 0.001 0.001</Extents>
+      </Geom>
+    </Body>
+    <Joint circular="true" name="Arm1" type="hinge">
+      <Body>Arm0</Body>
+      <Body>Arm1</Body>
+      <offsetfrom>Arm1</offsetfrom>
+      <weight>3</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>4</maxvel>
+    </Joint>
+  </KinBody>
+</Robot>"""
+        robot = self.LoadRobotData(xmldata)
+        robot.SetDOFValues(zeros(robot.GetDOF()))
+        robot.SetDOFVelocities(zeros(robot.GetDOF()))
+
+        m=robot.GetLinks()[1].GetMass() #mass of the links
+        l=robot.GetLinks()[1].GetGlobalCOM()[0]*2 #length of the links
+        coef=1/2.*m*l*l
+
+        theta1=0
+        theta2=1.1
+        ctheta2=cos(theta2)
+        robot.SetDOFValues([theta1,theta2])
+        M_ref=coef*array([[2*(5/3.+ctheta2),2/3.+ctheta2],[2/3.+ctheta2,2/3.]])
+
+        torques1c = robot.ComputeInverseDynamics([1,0])
+        torques2c = robot.ComputeInverseDynamics([0,1])
+        print transdist(torques1c,M_ref[0]), transdist(torques2c,M_ref[1])
+        assert(transdist(torques1c,M_ref[0]) <= 1e-5)
+        assert(transdist(torques2c,M_ref[1]) <= 1e-5)
+
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
         with self.env:
