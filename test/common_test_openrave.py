@@ -74,7 +74,7 @@ def transdist(list0,list1):
     return sum([sum(abs(item0-item1)) for item0, item1 in izip(list0,list1)])
 
 def axisangledist(axis0,axis1):
-    return arccos(numpy.minimum(1.0,abs(dot(quatFromAxisAngle(axis0),quatFromAxisAngle(axis1)))))
+    return 2*arccos(numpy.minimum(1.0,dot(quatFromAxisAngle(axis0),quatFromAxisAngle(axis1))))
 
 def randtrans():
     T = matrixFromAxisAngle(random.rand(3)*6-3)
@@ -99,12 +99,15 @@ def randlimits(lower,upper):
 def bodymaxjointdist(link,localtrans):
     body = link.GetParent()
     joints = body.GetChain(0,link.GetIndex(),returnjoints=True)
-    baseanchor = joints[0].GetAnchor()
-    eetrans = transformPoints(link.GetTransform(),[localtrans])
+    eetrans = transformPoints(link.GetTransform(),[localtrans])[0]
     armlength = 0
-    for j in body.GetDependencyOrderedJoints()[::-1]:
-        armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
-        eetrans = j.GetAnchor()    
+    for j in joints[::-1]:
+        if not j.IsStatic():
+            if j.IsRevolute(0):
+                d = dot(j.GetAxis(0), eetrans-j.GetAnchor())
+                orthogonaldir = eetrans-j.GetAnchor()-d*j.GetAxis(0)
+                armlength += linalg.norm(orthogonaldir)
+                eetrans -= orthogonaldir
     return armlength
 
 def locate(pattern, root=os.curdir):

@@ -236,13 +236,22 @@ public:
         virtual bool IsGrabbing(KinBodyConstPtr body) const;
 
         /// \brief computes the jacobian of the manipulator arm indices from the current manipulator frame origin.
-        virtual void CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const;
+        virtual void CalculateJacobian(std::vector<dReal>& jacobian) const;
+
+        /// \brief calls std::vector version of CalculateJacobian internally, a little inefficient since it copies memory
+        virtual void CalculateJacobian(boost::multi_array<dReal,2>& jacobian) const;
 
         /// \brief computes the quaternion jacobian of the manipulator arm indices from the current manipulator frame rotation.
-        virtual void CalculateRotationJacobian(boost::multi_array<dReal,2>& mjacobian) const;
+        virtual void CalculateRotationJacobian(std::vector<dReal>& jacobian) const;
+
+        /// \brief calls std::vector version of CalculateRotationJacobian internally, a little inefficient since it copies memory
+        virtual void CalculateRotationJacobian(boost::multi_array<dReal,2>& jacobian) const;
 
         /// \brief computes the angule axis jacobian of the manipulator arm indices.
-        virtual void CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const;
+        virtual void CalculateAngularVelocityJacobian(std::vector<dReal>& jacobian) const;
+
+        /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
+        virtual void CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& jacobian) const;
 
         virtual void serialize(std::ostream& o, int options) const;
 
@@ -571,19 +580,20 @@ private:
         (doesn't touch the rest of the values).
         \param mjacobian a 3 x ActiveDOF matrix
      */
-    virtual void CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& mjacobian) const;
-    virtual void CalculateActiveJacobian(int index, const Vector& offset, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateActiveJacobian(int index, const Vector& offset, std::vector<dReal>& jacobian) const;
+    virtual void CalculateActiveJacobian(int index, const Vector& offset, boost::multi_array<dReal,2>& jacobian) const;
 
-    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, boost::multi_array<dReal,2>& vjacobian) const;
-    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, std::vector<dReal>& jacobian) const;
+    virtual void CalculateActiveRotationJacobian(int index, const Vector& qInitialRot, boost::multi_array<dReal,2>& jacobian) const;
+
 
     /** Calculates the angular velocity jacobian of a specified link about the axes of world coordinates.
 
         \param index of the link that the rotation is attached to
         \param mjacobian 3x(num ACTIVE DOF) matrix
      */
-    virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& mjacobian) const;
-    virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& pfJacobian) const;
+    virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& jacobian) const;
+    virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& jacobian) const;
 
     virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 

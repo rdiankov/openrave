@@ -89,7 +89,11 @@ void __SetAssimpLog()
     using namespace Assimp;
     Assimp::DefaultLogger::create("",Assimp::Logger::VERBOSE);
     // Select the kinds of messages you want to receive on this log stream
+#ifdef OPENRAVE_ASSIMP_PRE_R896
+    const unsigned int severity = Logger::DEBUGGING|Logger::INFO|Logger::WARN|Logger::ERR;
+#else
     const unsigned int severity = Logger::Debugging|Logger::Info|Logger::Warn|Logger::Err;
+#endif
 
     // Attaching it to the default logger
     DefaultLogger::get()->attachStream( new myStream(), severity );
@@ -1463,6 +1467,7 @@ public:
                 _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 _pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f+%f")%strmimicjoint%a%b);
                 _pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%strmimicjoint%a);
+                _pjoint->_vmimic[0]->_equations[2] = str(boost::format("|%s %f")%strmimicjoint%a);
             }
             else if((itatt->first.size() >= 9)&&(itatt->first.substr(0,9) == "mimic_pos")) {
                 if( !_pjoint->_vmimic[0] ) {

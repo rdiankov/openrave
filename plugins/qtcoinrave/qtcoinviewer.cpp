@@ -90,6 +90,26 @@ protected:
 };
 typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
 
+class ViewerThreadCallbackData : public UserData
+{
+public:
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ViewerThreadCallbackData() {
+        boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ViewerThreadCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtCoinViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
 {
@@ -2519,6 +2539,25 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     _UpdatePhysicsEngine();
     _UpdateEnvironment();
 
+    {
+        std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
+        {
+            boost::mutex::scoped_lock lock(_mutexCallbacks);
+            listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
+        }
+        FOREACH(it,listRegisteredViewerThreadCallbacks) {
+            ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
+            if( !!pdata ) {
+                try {
+                    pdata->_callback();
+                }
+                catch(const std::exception& e) {
+                    RAVELOG_ERROR(str(boost::format("Viewer Thread Callback Failed with error %s")%e.what()));
+                }
+            }
+        }
+    }
+
     if( ControlDown() ) {
 
     }
@@ -3340,5 +3379,12 @@ UserDataPtr QtCoinViewer::RegisterViewerImageCallback(const ViewerImageCallbackF
 {
     ViewerImageCallbackDataPtr pdata(new ViewerImageCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredViewerImageCallbacks.insert(_listRegisteredViewerImageCallbacks.end(),pdata);
+    return pdata;
+}
+
+UserDataPtr QtCoinViewer::RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback)
+{
+    ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
     return pdata;
 }

@@ -129,6 +129,16 @@ public:
     /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
     virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief callback function for viewer thread
+    typedef boost::function<void ()> ViewerThreadCallbackFn;
+
+    /// \brief registers a function with the viewer that gets called in the viewer's GUI thread for every cycle the viewer refreshes at
+    ///
+    /// The environment will not be locked when the thread is called
+    /// \return a handle to the callback. If this handle is deleted, the callback will be unregistered.
+    virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+
     /// \brief controls whether the viewer synchronizes with the newest environment automatically
     virtual void SetEnvironmentSync(bool bUpdate) OPENRAVE_DUMMY_IMPLEMENTATION;
 

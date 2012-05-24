@@ -19,6 +19,19 @@ Core
 
 * Allow dynamic setting of link inertial parameters
 
+* Fixed converting from dof velocities to link velocities (:meth:`.KinBody.SetDOFVelocities`)
+
+* Fixed mimic joint computation of velocities/accelerations
+
+* Fixed jacobian computation for mimic joints
+
+* Added :meth:`.KinBody.GetLinkAccelerations` to compute link accelerations from dof accelerations.
+
+* Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics` (thanks to Quang-Cuong Pham)
+
+Inverse Kinematics
+------------------
+
 * Can add custom data to IkParameterization that is also passed to the ik filters. :meth:`.IkParameterization.SetCustomData`
 
 * Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
@@ -29,6 +42,7 @@ Core
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
+* Fixed several ikfast bugs, upgraded version to 56
 
 Database
 --------

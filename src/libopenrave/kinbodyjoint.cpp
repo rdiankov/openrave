@@ -412,6 +412,14 @@ dReal KinBody::Joint::GetValue(int iaxis) const
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
 {
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    if( !bAppend ) {
+        pVelocities.resize(0);
+    }
+    if( GetDOF() == 1 ) {
+        pVelocities.push_back(GetVelocity(0));
+        return;
+    }
+
     boost::array<Transform,2> transforms;
     boost::array<Vector,2> linearvel, angularvel;
     _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
@@ -437,27 +445,70 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
         }
     }
     else {
+        // chain of revolute and prismatic joints
+        Vector angvelocitycovered, linvelocitycovered;
+        for(int i = 0; i < GetDOF(); ++i) {
+            if( IsRevolute(i) ) {
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]-angvelocitycovered)));
+                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+            }
+            else { // prismatic
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-(angularvel[0]-angvelocitycovered).cross(transforms[1].trans-transforms[0].trans)-linvelocitycovered)));
+                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+            }
+        }
+    }
+}
+
+dReal KinBody::Joint::GetVelocity(int axis) const
+{
+    boost::array<Transform,2> transforms;
+    boost::array<Vector,2> linearvel, angularvel;
+    _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
+    _attachedbodies[1]->GetVelocity(linearvel[1],angularvel[1]);
+    transforms[0] = _attachedbodies[0]->GetTransform();
+    transforms[1] = _attachedbodies[1]->GetTransform();
+    Vector quatdelta = quatMultiply(transforms[0].rot,_tLeft.rot);
+    Vector quatdeltainv = quatInverse(quatdelta);
+    if( _type & JointSpecialBit ) {
+        switch(_type) {
+        case JointSpherical: {
+            Vector v = quatRotate(quatdeltainv,angularvel[1]-angularvel[0]);
+            return v[axis];
+        }
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT("unknown joint type 0x%x", _type, ORE_InvalidArguments);
+        }
+    }
+    else {
         if( _type == JointPrismatic ) {
-            pVelocities.push_back(_vaxes[0].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-angularvel[0].cross(transforms[1].trans-transforms[0].trans))));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-angularvel[0].cross(transforms[1].trans-transforms[0].trans)));
         }
         else if( _type == JointRevolute ) {
-            pVelocities.push_back(_vaxes[0].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0])));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]));
         }
         else {
             // chain of revolute and prismatic joints
             Vector angvelocitycovered, linvelocitycovered;
             for(int i = 0; i < GetDOF(); ++i) {
                 if( IsRevolute(i) ) {
-                    pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]-angvelocitycovered)));
-                    angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]-angvelocitycovered));
+                    if( i == axis ) {
+                        return fvelocity;
+                    }
+                    angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*fvelocity);
                 }
                 else { // prismatic
-                    pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-(angularvel[0]-angvelocitycovered).cross(transforms[1].trans-transforms[0].trans)-linvelocitycovered)));
-                    linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-(angularvel[0]-angvelocitycovered).cross(transforms[1].trans-transforms[0].trans)-linvelocitycovered));
+                    if( i == axis ) {
+                        return fvelocity;
+                    }
+                    linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*fvelocity);
                 }
             }
         }
     }
+    throw OPENRAVE_EXCEPTION_FORMAT("unsupported joint type 0x%x", _type, ORE_InvalidArguments);
 }
 
 Vector KinBody::Joint::GetAnchor() const
@@ -1115,17 +1166,17 @@ int KinBody::Joint::_Eval(int axis, uint32_t timederiv, const std::vector<dReal>
     else if( timederiv == 1 ) {
         voutput.resize(_vmimic.at(axis)->_velfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_velfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
             int err = _vmimic.at(axis)->_velfns.at(i)->EvalError();
             if( err ) {
                 return err;
             }
         }
     }
-    else if( timederiv == 1 ) {
+    else if( timederiv == 2 ) {
         voutput.resize(_vmimic.at(axis)->_accelfns.size());
         for(size_t i = 0; i < voutput.size(); ++i) {
-            _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
+            voutput[i] = _vmimic.at(axis)->_accelfns.at(i)->Eval(vdependentvalues.empty() ? NULL : &vdependentvalues[0]);
             int err = _vmimic.at(axis)->_accelfns.at(i)->EvalError();
             if( err ) {
                 return err;

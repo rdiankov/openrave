@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- http://openrave.programmingvision.com/wiki/index.php/Format:XML -->
+<Robot name="robot">
+  <KinBody>
+
+    <!-- Links between joints: -->
+
+    <!-- <Body name="RobotOrigin"> -->
+    <!--   <Geom type="box"> -->
+    <!-- 	<extents>0.01 0.01 0.01</extents> -->
+    <!-- 	<diffuseColor>0. 0. 0.</diffuseColor> -->
+    <!--   </Geom> -->
+    <!-- </Body> -->
+    <Body name="FLHip1">
+      <!-- <offsetfrom>RobotOrigin</offsetfrom> -->
+      <Translation>0.107 .207 .037</Translation>
+      <RotationMat>
+        1  0  0
+        0  0  1
+        0 -1  0
+      </RotationMat>
+      <Geom type="box">
+	<translation>0. 0. -0.039</translation>
+	<extents>0.01 0.01 0.039</extents>
+	<diffuseColor>1. 0. 0.</diffuseColor>
+      </Geom>
+    </Body>
+
+    <!-- part which aligns the z-axis with the rotation axis of FLHipJoint2 -->
+    <Body name="FLHip2">
+      <offsetfrom>FLHip1</offsetfrom>
+      <Translation>0.078 .0 .0</Translation>
+      <RotationMat>
+	0  0  1
+	1  0  0
+	0  1  0
+      </RotationMat>
+      <Geom type="box">
+        <translation>0. 0. -0.03</translation>
+	<extents>0.01 0.01 0.03</extents>
+	<diffuseColor>0. 1. 0.</diffuseColor>
+      </Geom>
+    </Body>
+
+    <!-- aligning the z-axis with the rotation axis of FLHipJoint3 -->
+    <Body name="FLHip3">
+      <offsetfrom>FLHip2</offsetfrom>
+      <Translation>0.078 0. 0.</Translation>
+      <RotationMat>
+	0  0  1
+	1  0  0
+	0  1  0
+      </RotationMat>
+      <Geom type="box">
+	<translation>0 0 -0.03</translation>
+	<extents>0.01 0.01 0.03</extents>
+	<diffuseColor>0. 0. 1.</diffuseColor>
+      </Geom>
+    </Body>
+
+    <!-- align z-axis with z-axis of knee joint -->
+    <Body name="FLUpperLeg">
+      <offsetfrom>FLHip3</offsetfrom>
+      <Translation>0.0 0 0.24</Translation>
+      <RotationMat>
+	0  0  1
+	0 -1  0
+	1  0  0
+      </RotationMat>
+      <Geom type="box">
+	<translation>-.11 0 0</translation>
+	<extents>0.11 0.01 0.01</extents>
+	<diffuseColor>1. 1. 0.</diffuseColor>
+      </Geom>
+    </Body>
+
+    <!-- align z-axis with z-axis of ankle joint -->
+    <Body name="FLLowerLeg">
+      <offsetfrom>FLUpperLeg</offsetfrom>
+      <Translation>0.24 0. 0.</Translation>
+      <RotationAxis>1 0 0  90</RotationAxis>
+      <RotationAxis>0 0 1 -90</RotationAxis>
+      <Geom type="box">
+        <translation>0 0 .11</translation>
+	<extents>0.01 0.01 0.11</extents>
+      </Geom>
+    </Body>    
+
+    <Body name="FLAnkleWithPitch">
+      <offsetfrom>FLLowerLeg</offsetfrom>
+      <Translation>0. 0. -0.035</Translation>
+      <Geom type="box">
+	<extents>0.01 0.01 0.01</extents>
+	<diffuseColor>1. 0. 0.</diffuseColor>
+      </Geom>
+    </Body>
+
+    <Body name="FLFoot">
+      <offsetfrom>FLAnkleWithPitch</offsetfrom>
+      <RotationAxis>0 1 0 90</RotationAxis><!-- rotate x-axis into 'direction' for ik solver -->
+      <Translation>0 0 -0.03</Translation>
+      <Geom type="box">
+        <translation>0 0 0.05</translation>
+	<extents>0.01 0.04 0.1</extents>
+	<diffuseColor>0. 0. 1.</diffuseColor>
+      </Geom>
+    </Body>
+
+
+    <!-- Joints connecting the links: -->
+
+    <Joint name="FLHipJoint1" type="hinge" cicular="true">
+      <offsetfrom>FLHip1</offsetfrom>
+      <Body>FLHip1</Body>
+      <Body>FLHip2</Body>
+      <axis>0 0 1</axis>
+    </Joint>
+
+    <Joint name="FLHipJoint2" type="hinge" cicular="true">
+      <offsetfrom>FLHip2</offsetfrom>
+      <Body>FLHip2</Body>
+      <Body>FLHip3</Body>
+      <axis>0 0 1</axis>
+    </Joint>
+
+    <Joint name="FLHipJoint3" type="hinge" cicular="true">
+      <offsetfrom>FLHip3</offsetfrom>
+      <Body>FLHip3</Body>
+      <Body>FLUpperLeg</Body>
+      <axis>0 0 1</axis>
+    </Joint>
+
+    <Joint name="FLKneeJoint" type="hinge" cicular="true">
+      <offsetfrom>FLUpperLeg</offsetfrom>
+      <Body>FLUpperLeg</Body>
+      <Body>FLLowerLeg</Body>
+      <axis>0 0 1</axis>
+    </Joint>
+
+    <Joint name="FLAnkleJointActivePitch" type="hinge" cicular="true">
+      <offsetfrom>FLLowerLeg</offsetfrom>
+      <Body>FLLowerLeg</Body>
+      <Body>FLAnkleWithPitch</Body>
+      <axis1>0 1 0</axis1>
+    </Joint>
+
+    <Joint name="FLAnkleJointActiveRoll" type="hinge" cicular="true">
+      <offsetfrom>FLAnkleWithPitch</offsetfrom>
+      <Body>FLAnkleWithPitch</Body>
+      <Body>FLFoot</Body>
+      <axis>1 0 0</axis>
+    </Joint>
+  </KinBody>
+
+  <!-- This chain should be solved by ikfast: -->
+  <Manipulator name="FLLeg">
+    <base>FLHip1</base>
+    <effector>FLFoot</effector>
+  </Manipulator>
+
+</Robot>

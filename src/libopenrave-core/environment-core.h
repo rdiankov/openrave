@@ -203,6 +203,7 @@ public:
         }
         if( !_pPhysicsEngine ) {
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(), "GenericPhysicsEngine");
+            _SetDefaultGravity();
         }
 
         // try to set init as early as possible since will be calling into user code
@@ -784,6 +785,7 @@ public:
         if( !_pPhysicsEngine ) {
             RAVELOG_DEBUG("disabling physics\n");
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
+            _SetDefaultGravity();
         }
         else {
             RAVELOG_DEBUG(str(boost::format("setting %s physics engine\n")%_pPhysicsEngine->GetXMLId()));
@@ -1708,6 +1710,17 @@ public:
     }
 
 protected:
+
+    void _SetDefaultGravity()
+    {
+        if( !!_pPhysicsEngine ) {
+            // At a latitude of L with altitude H (above sea level), the acceleration due to gravity at sea level is approximately
+            // g= 9.780327 * ( 1 + .0053024*sin(L)**2 - .0000058*sin(2L)**2 ) - 0.000003086*H meters per second**2.
+            // tokyo,japan 35.6894875 deg
+            // rate of change with respect to altitude is da/dH= -2*g*R**2/(R+H)3 = -2g*a*/(R+H)
+            _pPhysicsEngine->SetGravity(Vector(0,0,-9.797930195020351));
+        }
+    }
 
     virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
