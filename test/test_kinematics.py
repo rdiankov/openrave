@@ -148,7 +148,7 @@ class TestKinematics(EnvironmentSetup):
     def test_bodyvelocities(self):
         self.log.info('check physics/dynamics properties')
         with self.env:
-            for envfile in ['robots/barrettwam.robot.xml']:#,'robots/pr2-beta-static.zae', 'robots/barretthand.robot.xml']:
+            for envfile in ['robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 self.env.GetPhysicsEngine().SetGravity([0,0,0]) # have to set gravity to 0
@@ -163,7 +163,7 @@ class TestKinematics(EnvironmentSetup):
                         dt = 0.0001
                         lower,upper = body.GetDOFLimits()
                         vellimits = body.GetDOFVelocityLimits()
-                        dofvaluesnew = randlimits(lower+2*dt*vellimits, upper-2*dt*vellimits)
+                        dofvaluesnew = randlimits(lower, upper)
                         body.SetDOFValues(dofvaluesnew)
                         linktrans = body.GetLinkTransformations()
                         oldlinkvels = body.GetLinkVelocities()
@@ -313,7 +313,7 @@ class TestKinematics(EnvironmentSetup):
                 #    lknotindex = [i for i,(link,joint) in enumerate(loop) if link.GetIndex() == knot]
                 #    lknownindex = [i for i,(link,joint) in enumerate(loop) if link == knownlink]
 
-    def test_dynamics2d(self):
+    def test_inversedynamics2d(self):
         self.log.info('test dynamics of a simple 2d robot')
         xmldata = """
 <Robot name="2DOFRobot">
@@ -334,7 +334,7 @@ class TestKinematics(EnvironmentSetup):
       <Translation>0 0 0</Translation>
       <Geom type="box">
         <Translation>0.1 0 0</Translation>
-        <Extents>0.1 0.001 0.001</Extents>
+        <Extents>0.1 0.00001 0.00001</Extents>
       </Geom> 
 	</Body>
     <Joint circular="true" name="Arm0" type="hinge">
@@ -352,7 +352,7 @@ class TestKinematics(EnvironmentSetup):
       <Translation>0.2 0 0</Translation>
       <Geom type="box">
         <Translation>0.1 0 0</Translation>
-        <Extents>0.1 0.001 0.001</Extents>
+        <Extents>0.1 0.00001 0.00001</Extents>
       </Geom>
     </Body>
     <Joint circular="true" name="Arm1" type="hinge">
@@ -374,18 +374,61 @@ class TestKinematics(EnvironmentSetup):
         l=robot.GetLinks()[1].GetGlobalCOM()[0]*2 #length of the links
         coef=1/2.*m*l*l
 
+        # note that M_ref is an approximation when the rods are infinitely thin
         theta1=0
         theta2=1.1
         ctheta2=cos(theta2)
         robot.SetDOFValues([theta1,theta2])
         M_ref=coef*array([[2*(5/3.+ctheta2),2/3.+ctheta2],[2/3.+ctheta2,2/3.]])
-
+        
         torques1c = robot.ComputeInverseDynamics([1,0])
         torques2c = robot.ComputeInverseDynamics([0,1])
-        print transdist(torques1c,M_ref[0]), transdist(torques2c,M_ref[1])
-        assert(transdist(torques1c,M_ref[0]) <= 1e-5)
-        assert(transdist(torques2c,M_ref[1]) <= 1e-5)
+        assert(transdist(torques1c,M_ref[0]) <= g_epsilon)
+        assert(transdist(torques2c,M_ref[1]) <= g_epsilon)
 
+    def test_inversedynamics(self):
+        self.log.info('verify inverse dynamics computations')
+        with self.env:
+            self.env.GetPhysicsEngine().SetGravity([0,0,-10])
+            for envfile in ['robots/wam4.robot.xml']:#'robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
+                self.env.Reset()
+                self.LoadEnv(envfile,{'skipgeometry':'1'})
+                body = [body for body in self.env.GetBodies() if body.GetDOF() > 0][0]
+                dt = 0.0001
+                for idofvalues in range(10):
+                    lower,upper = body.GetDOFLimits()
+                    vellimits = body.GetDOFVelocityLimits()
+                    dofvaluesnew = randlimits(lower, upper)
+                    Mreal = None
+                    for idofvel in range(10):
+                        dofvelnew = randlimits(-vellimits+10*dt,vellimits-10*dt)
+                        dofvelnew[dofvaluesnew<lower+10*dt] = 0
+                        dofvelnew[dofvaluesnew>upper-10*dt] = 0
+                        link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
+                        dofaccel = 10*random.rand(body.GetDOF())-5
+                        dofaccel[dofvaluesnew<lower+10*dt] = 0
+                        dofaccel[dofvaluesnew>upper-10*dt] = 0
+
+                        body.SetDOFValues(dofvaluesnew)
+                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
+                        torques = body.ComputeInverseDynamics(dofaccel)
+                        # how to verify these torques?
+                        
+                        # compute M(q) and check if output torques form a symmetric matrix
+                        torquebase = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                        M = []
+                        for i in range(body.GetDOF()):
+                            dofaccel = zeros(body.GetDOF())
+                            dofaccel[i] = 1.0
+                            M.append(body.ComputeInverseDynamics(dofaccel)-torquebase)
+                        M = array(M)
+                        assert(transdist(M,transpose(M)) <= 1e-15*M.shape[0]**2)
+                        if Mreal is None:
+                            Mreal = M
+                        else:
+                            # should be constant with changes to velocity
+                            assert(transdist(M,Mreal) <= 1e-15*M.shape[0]**2)                
+        
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
         with self.env:
