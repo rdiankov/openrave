@@ -226,8 +226,8 @@ class TestKinematics(EnvironmentSetup):
                             deltaxyz = linktrans2[i][0:3,3] - linktrans[i][0:3,3]
                             deltarot = axisAngleFromRotationMatrix(dot(linktrans2[i][0:3,0:3], linalg.inv(linktrans[i][0:3,0:3])))
                             # dist
-                            assert(linalg.norm(deltaxyz-linearvel) <= 0.01*(linalg.norm(linearvel)+linalg.norm(angularvel)))
-                            assert(linalg.norm(deltarot-angularvel) <= 0.01*(linalg.norm(angularvel)+linalg.norm(deltarot)))
+                            assert(linalg.norm(deltaxyz-linearvel) <= 0.02*(linalg.norm(linearvel)+linalg.norm(angularvel)))
+                            assert(linalg.norm(deltarot-angularvel) <= 0.02*(linalg.norm(angularvel)+linalg.norm(deltarot)))
                             # angle
                             assert(dot(deltaxyz,linearvel) >= 0.9*linalg.norm(deltaxyz)*linalg.norm(linearvel))
                             assert(dot(deltarot,angularvel) >= 0.9*linalg.norm(deltarot)*linalg.norm(angularvel))
@@ -250,11 +250,11 @@ class TestKinematics(EnvironmentSetup):
                         for i in range(1,len(linktrans)):
                             angularaccel = linkaccel[i][3:6]*dt
                             deltaangularvel = linkvels2[i][3:6]-linkvels[i][3:6]
-                            assert(linalg.norm(angularaccel-deltaangularvel) <= 0.01*(linalg.norm(angularaccel)+linalg.norm(deltaangularvel)))
+                            assert(linalg.norm(angularaccel-deltaangularvel) <= 0.02*(linalg.norm(angularaccel)+linalg.norm(deltaangularvel)))
                             assert(dot(deltaangularvel,angularaccel) >= 0.9*linalg.norm(deltaangularvel)*linalg.norm(angularaccel))
                             expecteddeltalinearvel = dt*linkaccel[i][0:3]
                             realdeltalinearvel = linkvels2[i][0:3]-linkvels[i][0:3]
-                            assert(linalg.norm(expecteddeltalinearvel-realdeltalinearvel) <= 0.01*(linalg.norm(realdeltalinearvel)+linalg.norm(expecteddeltalinearvel)))
+                            assert(linalg.norm(expecteddeltalinearvel-realdeltalinearvel) <= 0.02*(linalg.norm(realdeltalinearvel)+linalg.norm(expecteddeltalinearvel)))
                             assert(dot(expecteddeltalinearvel,realdeltalinearvel) >= 0.9*linalg.norm(expecteddeltalinearvel)*linalg.norm(realdeltalinearvel))
 
     def test_hierarchy(self):
