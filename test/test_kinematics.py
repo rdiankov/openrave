@@ -415,19 +415,17 @@ class TestKinematics(EnvironmentSetup):
                         dofaccel = 10*random.rand(body.GetDOF())-5
                         dofaccel[dofvaluesnew<lower+10*dt] = 0
                         dofaccel[dofvaluesnew>upper-10*dt] = 0
-
                         body.SetDOFValues(dofvaluesnew)
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
                         torques = body.ComputeInverseDynamics(dofaccel)
                         # how to verify these torques?
-                        
                         # compute M(q) and check if output torques form a symmetric matrix
                         torquebase = body.ComputeInverseDynamics(zeros(body.GetDOF()))
                         M = []
                         for i in range(body.GetDOF()):
-                            dofaccel = zeros(body.GetDOF())
-                            dofaccel[i] = 1.0
-                            M.append(body.ComputeInverseDynamics(dofaccel)-torquebase)
+                            testaccel = zeros(body.GetDOF())
+                            testaccel[i] = 1.0
+                            M.append(body.ComputeInverseDynamics(testaccel)-torquebase)
                         M = array(M)
                         assert(transdist(M,transpose(M)) <= 1e-15*M.shape[0]**2)
                         if Mreal is None:
@@ -435,8 +433,8 @@ class TestKinematics(EnvironmentSetup):
                         else:
                             # should be constant with changes to velocity
                             assert(transdist(M,Mreal) <= 1e-15*M.shape[0]**2)
-                        assert(transdist(dot(M,dofaccel)+torquebase,torques) <= 1e-15*len(torquebase))
-        
+                        assert(transdist(dot(dofaccel,M)+torquebase,torques) <= 1e-14*len(torquebase))
+                        
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
         with self.env:
