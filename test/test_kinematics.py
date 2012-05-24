@@ -122,17 +122,16 @@ class TestKinematics(EnvironmentSetup):
                                 newquat = quatFromRotationMatrix(Tlinknew[0:3,0:3])
                                 if dot(worldquat,newquat) < 0:
                                     newquat = -newquat
-
                                 if thresh > 1e-12:
                                     deltatrans = Tlinknew[0:3,3] - worldtrans
                                     assert(linalg.norm(deltatrans) < thresh+1e-9) # should always be true
                                     jacobiandeltatrans = dot(Jtrans,deltavalues)
                                     if dot(jacobiandeltatrans,deltatrans) < 0.9*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
                                         raise ValueError('jacobian dot failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
-
+                                    
                                     if linalg.norm(jacobiandeltatrans-deltatrans) > thresh*0.1:
                                         raise ValueError('jacobian trans failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
-
+                                    
                                 if angthresh > 1e-12:
                                     expectedworldquat = dot(Jquat,deltavalues)+worldquat
                                     expectedworldquat /= linalg.norm(expectedworldquat)
@@ -261,6 +260,14 @@ class TestKinematics(EnvironmentSetup):
     def test_hierarchy(self):
         self.log.info('tests the kinematics hierarchy')
         with self.env:
+            self.env.Reset()
+            robot=self.LoadRobot('robots/puma.robot.xml')
+            link=robot.GetLink('LClaw')
+            joint=robot.GetPassiveJoints()[0]
+            assert(joint.GetHierarchyChildLink()==link)
+            chain=robot.GetChain(0,link.GetIndex())
+            assert(chain[-1]==joint)
+            
             for robotfile in g_robotfiles:
                 self.env.Reset()
                 self.LoadEnv(robotfile,{'skipgeometry':'1'})
@@ -427,7 +434,8 @@ class TestKinematics(EnvironmentSetup):
                             Mreal = M
                         else:
                             # should be constant with changes to velocity
-                            assert(transdist(M,Mreal) <= 1e-15*M.shape[0]**2)                
+                            assert(transdist(M,Mreal) <= 1e-15*M.shape[0]**2)
+                        assert(transdist(dot(M,dofaccel)+torquebase,torques) <= 1e-15*len(torquebase))
         
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
