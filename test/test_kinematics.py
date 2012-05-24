@@ -390,7 +390,7 @@ class TestKinematics(EnvironmentSetup):
         self.log.info('verify inverse dynamics computations')
         with self.env:
             self.env.GetPhysicsEngine().SetGravity([0,0,-10])
-            for envfile in ['robots/wam4.robot.xml']:#'robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
+            for envfile in ['robots/wam7.kinbody.xml']:#'robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 body = [body for body in self.env.GetBodies() if body.GetDOF() > 0][0]
