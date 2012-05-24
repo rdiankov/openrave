@@ -1192,9 +1192,10 @@ private:
 
     /** \brief Returns the linear and angular accelerations for each link given the dof accelerations
 
-        Computes accelerations of the link frames with respect to the world coordinate system are returned. The gravity vector from the physics engine is used as the  accelerations for the base link and static links.
-        In otherwords, the derivate
-        is taken with respect to the world origin fixed in space (also known as spatial acceleration).
+        Computes accelerations of the link frames with respect to the world coordinate system are returned.
+        The base angular velocity is used when computing accelerations.
+        The gravity vector from the physics engine is used as the  accelerations for the base link and static links.
+        The derivate is taken with respect to the world origin fixed in space (also known as spatial acceleration).
         The current angles and velocities set on the robot are used.
         Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
         \param[in] dofaccelerations the accelerations of each of the DOF

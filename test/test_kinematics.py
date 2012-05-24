@@ -18,7 +18,7 @@ class TestKinematics(EnvironmentSetup):
         self.log.info('check if the joint-link set-get functions are consistent along with jacobians')
         env=self.env
         with env:
-            for envfile in g_envfiles:#+['testdata/bobcat.robot.xml']:
+            for envfile in ['robots/barrettwam.robot.xml']:#['robots/pa10schunk.robot.xml']:#g_envfiles:#+['testdata/bobcat.robot.xml']:
                 env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
                 for i in range(20):
@@ -94,6 +94,7 @@ class TestKinematics(EnvironmentSetup):
                                 if len(jointchain) == 0:
                                     continue
                                 body.SetDOFValues(dofvaluesnew)
+                                chainvalues = [j.GetValues() for j in jointchain]
                                 Tlink = dot(link.GetTransform(),localtrans)
                                 worldtrans = Tlink[0:3,3]
                                 worldquat = quatFromRotationMatrix(Tlink[0:3,0:3]) # should use localquat
@@ -101,34 +102,57 @@ class TestKinematics(EnvironmentSetup):
                                 Jtrans = body.CalculateJacobian(ilink,worldtrans)
                                 Jquat = body.CalculateRotationJacobian(ilink,worldquat)
                                 Jangvel = body.CalculateAngularVelocityJacobian(ilink)
-                                body.SetDOFValues(dofvaluesnew+deltavalues0)
+                                body.SetDOFValues(numpy.minimum(upperlimit,numpy.maximum(lowerlimit,dofvaluesnew+deltavalues0)))
+                                chainvaluesnew = [j.GetValues() for j in jointchain]
                                 deltavalues = body.GetDOFValues()-dofvaluesnew
-                                armlength = bodymaxjointdist(link,localtrans[0:3,3])
-                                thresh = armlength*sum(abs(deltavalues))*1.2
-                                if armlength < 0.0001 or thresh < 1e-12:
-                                    continue
+                                thresh = 0.0
+                                angthresh = 0.0
+                                for ichain,j in enumerate(jointchain):
+                                    if not j.IsStatic():
+                                        for iaxis in range(j.GetDOF()):
+                                            deltaangle = abs(chainvaluesnew[ichain][iaxis]-chainvalues[ichain][iaxis])
+                                            if j.IsRevolute(iaxis):
+                                                maxdisplacement = cross(j.GetAxis(iaxis), Tlink[0:3,3]-j.GetAnchor()) * deltaangle
+                                                thresh += linalg.norm(maxdisplacement)
+                                                angthresh += deltaangle
+                                            elif j.IsPrismatic(iaxis):
+                                                thresh += deltaangle
                                 Tlinknew=dot(link.GetTransform(),localtrans)
                                 newaxisangle = axisAngleFromRotationMatrix(Tlinknew[0:3,0:3])
                                 newquat = quatFromRotationMatrix(Tlinknew[0:3,0:3])
                                 if dot(worldquat,newquat) < 0:
                                     newquat = -newquat
-                                deltatrans = Tlinknew[0:3,3] - worldtrans
-                                if transdist(dot(Jtrans,deltavalues),deltatrans) > thresh:
-                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jtrans,deltavalues), deltatrans))
-                                if transdist(dot(Jquat,deltavalues)+worldquat,newquat) > 2*thresh:
-                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
-                                if axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle) > 2*thresh:
-                                    raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f, armlength=%f'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh, armlength))
+
+                                if thresh > 1e-12:
+                                    deltatrans = Tlinknew[0:3,3] - worldtrans
+                                    assert(linalg.norm(deltatrans) < thresh+1e-9) # should always be true
+                                    jacobiandeltatrans = dot(Jtrans,deltavalues)
+                                    if dot(jacobiandeltatrans,deltatrans) < 0.9*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
+                                        raise ValueError('jacobian dot failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
+
+                                    if linalg.norm(jacobiandeltatrans-deltatrans) > thresh*0.1:
+                                        raise ValueError('jacobian trans failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newtrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
+
+                                if angthresh > 1e-12:
+                                    expectedworldquat = dot(Jquat,deltavalues)+worldquat
+                                    expectedworldquat /= linalg.norm(expectedworldquat)
+                                    if 2*arccos(abs(dot(expectedworldquat,expectedworldquat))) > 0.1*angthresh:
+                                        raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
+
+                                    if axisangledist(dot(Jangvel,deltavalues),axisAngleFromRotationMatrix(dot(Tlinknew[0:3,0:3], linalg.inv(Tlink[0:3,0:3])))) > 0.1*angthresh:
+                                        from IPython.Shell import IPShellEmbed
+                                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+                                        ipshell(local_ns=locals())
+                                        raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh))
 
     def test_bodyvelocities(self):
         self.log.info('check physics/dynamics properties')
         with self.env:
-            for envfile in ['robots/pr2-beta-static.zae', 'robots/barretthand.robot.xml', 'robots/barrettwam.robot.xml']:
+            for envfile in ['robots/barrettwam.robot.xml']:#,'robots/pr2-beta-static.zae', 'robots/barretthand.robot.xml']:
                 self.env.Reset()
                 self.LoadEnv(envfile,{'skipgeometry':'1'})
-                # try all loadable physics engines?
-                #self.env.SetPhysicsEngine()
-                for itry in range(20):
+                self.env.GetPhysicsEngine().SetGravity([0,0,0]) # have to set gravity to 0
+                for itry in range(200):
                     T = eye(4)
                     for body in self.env.GetBodies():
                         for ijoint,joint in enumerate(body.GetJoints()):
@@ -141,8 +165,19 @@ class TestKinematics(EnvironmentSetup):
                         vellimits = body.GetDOFVelocityLimits()
                         dofvaluesnew = randlimits(lower+2*dt*vellimits, upper-2*dt*vellimits)
                         body.SetDOFValues(dofvaluesnew)
+                        linktrans = body.GetLinkTransformations()
                         oldlinkvels = body.GetLinkVelocities()
                         dofvelnew = randlimits(-vellimits+10*dt,vellimits-10*dt)
+                        dofvelnew[dofvaluesnew<lower+10*dt] = 0
+                        dofvelnew[dofvaluesnew>upper-10*dt] = 0
+                        # check consistency with jacobians, since base is 0 vel, do not have to do any extra conversions
+                        body.SetDOFVelocities(dofvelnew,linear=[0,0,0],angular=[0,0,0],checklimits=True)
+                        linkvels = body.GetLinkVelocities()
+                        for link,vel in izip(body.GetLinks(),linkvels):
+                            Jt=body.CalculateJacobian(link.GetIndex(),link.GetTransform()[0:3,3])
+                            assert( transdist(dot(Jt,dofvelnew),vel[0:3]) <= g_epsilon)
+                            Jr=body.CalculateAngularVelocityJacobian(link.GetIndex())
+                            assert( transdist(dot(Jr,dofvelnew),vel[3:6]) <= g_epsilon)
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         body.SetVelocity(*link0vel)
                         assert( all(abs(body.GetDOFVelocities()) <= g_epsilon ) )
@@ -165,12 +200,18 @@ class TestKinematics(EnvironmentSetup):
                             assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
 
                         body.SetDOFValues(dofvaluesnew)
+                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=False)
                         linktrans = body.GetLinkTransformations()
                         
                         # test consistency of velocities with kinematics
                         body.SetLinkVelocities(zeros((len(body.GetLinks()),6)))
                         body.SetLinkVelocities(linkvels)
                         assert(transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon)
+
+                        dofaccel = 10*random.rand(body.GetDOF())-5
+                        dofaccel[dofvaluesnew<lower+10*dt] = 0
+                        dofaccel[dofvaluesnew>upper-10*dt] = 0
+                        linkaccel = body.GetLinkAccelerations(dofaccel)
                         
                         dofvaluesnew2 = dofvaluesnew + dt * dofvelnew
                         body.SetDOFValues(dofvaluesnew2)
@@ -186,36 +227,36 @@ class TestKinematics(EnvironmentSetup):
                             deltaxyz = linktrans2[i][0:3,3] - linktrans[i][0:3,3]
                             deltarot = axisAngleFromRotationMatrix(dot(linktrans2[i][0:3,0:3], linalg.inv(linktrans[i][0:3,0:3])))
                             # dist
-                            #print i,linalg.norm(deltaxyz-linearvel),linalg.norm(linearvel)
-                            #print i,dot(deltaxyz,linearvel),(linalg.norm(deltaxyz)*linalg.norm(linearvel))
-                            assert(linalg.norm(deltaxyz-linearvel) <= 0.5*linalg.norm(linearvel))
-                            assert(linalg.norm(deltarot-angularvel) <= 0.5*linalg.norm(angularvel))
+                            assert(linalg.norm(deltaxyz-linearvel) <= 0.01*(linalg.norm(linearvel)+linalg.norm(angularvel)))
+                            assert(linalg.norm(deltarot-angularvel) <= 0.01*(linalg.norm(angularvel)+linalg.norm(deltarot)))
                             # angle
-                            assert(dot(deltaxyz,linearvel) >= 0.95*linalg.norm(deltaxyz)*linalg.norm(linearvel))
-                            assert(dot(deltarot,angularvel) >= 0.95*linalg.norm(deltarot)*linalg.norm(angularvel))
+                            assert(dot(deltaxyz,linearvel) >= 0.9*linalg.norm(deltaxyz)*linalg.norm(linearvel))
+                            assert(dot(deltarot,angularvel) >= 0.9*linalg.norm(deltarot)*linalg.norm(angularvel))
 
-                        # test consistency of accelerations with kinematics
-                        dofaccel = 10*random.rand(body.GetDOF())-0.5
-                        linkaccel = body.GetLinkAccelerations(dofaccel)
+                        # test consistency of accelerations with kinematics                        
                         dofvelnew2 = dofvelnew + dt * dofaccel
                         dofvaluesnew2 = dofvaluesnew + 0.5* dt * (dofvelnew+dofvelnew2)
-                        body.SetDOFValues(dofvaluesnew2)
-                        body.SetDOFVelocities(dofvelnew2)
+
                         Tlink = array(linktrans[0])
                         Tlink[0:3,0:3] = dot(rotationMatrixFromAxisAngle(linkvels[0][3:6]*dt),Tlink[0:3,0:3])
                         Tlink[0:3,3] += linkvels[0][0:3]*dt
-                        body.SetTransform(Tlink)
+                        link0vel2 = [link0vel[0]+dt*cross(link0vel[1],link0vel[0]), link0vel[1]]
+                        
+                        body.SetTransformWithDOFValues(Tlink, dofvaluesnew2)
+                        body.SetDOFVelocities(dofvelnew2,*link0vel2,checklimits=False)
+                        
                         linktrans2 = body.GetLinkTransformations()
                         linkvels2 = body.GetLinkVelocities()
+
                         for i in range(1,len(linktrans)):
                             angularaccel = linkaccel[i][3:6]*dt
                             deltaangularvel = linkvels2[i][3:6]-linkvels[i][3:6]
-                            assert(linalg.norm(angularaccel-deltaangularvel) <= 0.5*linalg.norm(angularaccel))
-                            assert(dot(deltaangularvel,angularaccel) >= 0.95*linalg.norm(deltaangularvel)*linalg.norm(angularaccel))
-                            linearaccel = linkaccel[i][0:3]*dt
-                            deltalinearvel = linkvels2[i][0:3]-linkvels[i][0:3]
-                            assert(linalg.norm(linearaccel-deltalinearvel) <= 0.5*linalg.norm(linearaccel))
-                            assert(dot(deltalinearvel,linearaccel) >= 0.95*linalg.norm(deltalinearvel)*linalg.norm(linearaccel))
+                            assert(linalg.norm(angularaccel-deltaangularvel) <= 0.01*(linalg.norm(angularaccel)+linalg.norm(deltaangularvel)))
+                            assert(dot(deltaangularvel,angularaccel) >= 0.9*linalg.norm(deltaangularvel)*linalg.norm(angularaccel))
+                            expecteddeltalinearvel = dt*linkaccel[i][0:3]
+                            realdeltalinearvel = linkvels2[i][0:3]-linkvels[i][0:3]
+                            assert(linalg.norm(expecteddeltalinearvel-realdeltalinearvel) <= 0.01*(linalg.norm(realdeltalinearvel)+linalg.norm(expecteddeltalinearvel)))
+                            assert(dot(expecteddeltalinearvel,realdeltalinearvel) >= 0.9*linalg.norm(expecteddeltalinearvel)*linalg.norm(realdeltalinearvel))
 
     def test_hierarchy(self):
         self.log.info('tests the kinematics hierarchy')

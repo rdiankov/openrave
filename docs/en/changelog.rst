@@ -23,6 +23,8 @@ Core
 
 * Fixed mimic joint computation of velocities/accelerations
 
+* Fixed jacobian computation for mimic joints
+
 * Added :meth:`.KinBody.GetLinkAccelerations` to compute link accelerations from dof accelerations.
 
 * Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics` (thanks to Quang-Cuong Pham)

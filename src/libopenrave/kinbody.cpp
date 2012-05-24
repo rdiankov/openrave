@@ -754,7 +754,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 //        }
 
 
-        vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
+        vlinkscomputed[childindex] = 1;
     }
     SetLinkVelocities(velocities);
 }
@@ -1324,68 +1324,73 @@ void KinBody::CalculateJacobian(int linkindex, const Vector& trans, vector<dReal
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     int dofstride = GetDOF();
     vjacobian.resize(3*dofstride);
-    Vector v;
-    FOREACHC(itjoint, _vecjoints) {
-        int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
-        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
-            if( affect == 0 ) {
-                vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = 0;
-            }
-            else {
-                if( (*itjoint)->IsRevolute(dof) ) {
-                    v = (*itjoint)->GetAxis(dof).cross(trans-(*itjoint)->GetAnchor());
-                }
-                else if( (*itjoint)->IsPrismatic(dof) ) {
-                    v = (*itjoint)->GetAxis(dof);
-                }
-                else {
-                    RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    v = Vector(0,0,0);
-                }
-                vjacobian[dofindex+dof] = v.x; vjacobian[dofstride+dofindex+dof] = v.y; vjacobian[2*dofstride+dofindex+dof] = v.z;
-            }
-        }
+    if( dofstride == 0 ) {
+        return;
     }
+    std::fill(vjacobian.begin(),vjacobian.end(),0);
 
-    // add in the contributions for each of the passive joints
+    Vector v;
+    int offset = linkindex*_veclinks.size();
+    int curlink = 0;
     std::vector<std::pair<int,dReal> > vpartials;
     std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
-    FOREACHC(itjoint, _vPassiveJoints) {
-        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-            if( (*itjoint)->IsMimic(idof) ) {
-                bool usejoint = false;
-                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
-                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
-                        usejoint = true;
-                    }
-                }
-                if( !usejoint ) {
-                    continue;
-                }
-                Vector vaxis;
-                if( (*itjoint)->IsRevolute(idof) ) {
-                    vaxis = (*itjoint)->GetAxis(idof).cross(trans-(*itjoint)->GetAnchor());
-                }
-                else if( (*itjoint)->IsPrismatic(idof) ) {
-                    vaxis = (*itjoint)->GetAxis(idof);
+    while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
+        int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
+        if( jointindex < (int)_vecjoints.size() ) {
+            // active joint
+            JointPtr pjoint = _vecjoints.at(jointindex);
+            int dofindex = pjoint->GetDOFIndex();
+            int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
+            for(int dof = 0; dof < pjoint->GetDOF(); ++dof) {
+                if( affect == 0 ) {
+                    RAVELOG_WARN(str(boost::format("link %s should be affected by joint %s")%_veclinks.at(linkindex)->GetName()%pjoint->GetName()));
+                    vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = 0;
                 }
                 else {
-                    RAVELOG_WARN("CalculateJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    vaxis = Vector(0,0,0);
+                    if( pjoint->IsRevolute(dof) ) {
+                        v = pjoint->GetAxis(dof).cross(trans-pjoint->GetAnchor());
+                    }
+                    else if( pjoint->IsPrismatic(dof) ) {
+                        v = pjoint->GetAxis(dof);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateJacobian joint %d not supported\n", pjoint->GetType());
+                        v = Vector(0,0,0);
+                    }
+                    vjacobian[dofindex+dof] = v.x; vjacobian[dofstride+dofindex+dof] = v.y; vjacobian[2*dofstride+dofindex+dof] = v.z;
                 }
-                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
-                FOREACH(itpartial,vpartials) {
-                    int dofindex = itpartial->first;
-                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                        Vector v = vaxis * itpartial->second;
-                        vjacobian[dofindex] += v.x;
-                        vjacobian[dofstride+dofindex] += v.y;
-                        vjacobian[2*dofstride+dofindex] += v.z;
+            }
+        }
+        else {
+            // add in the contributions from the passive joint
+            JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
+            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                if( pjoint->IsMimic(idof) ) {
+                    Vector vaxis;
+                    if( pjoint->IsRevolute(idof) ) {
+                        vaxis = pjoint->GetAxis(idof).cross(trans-pjoint->GetAnchor());
+                    }
+                    else if( pjoint->IsPrismatic(idof) ) {
+                        vaxis = pjoint->GetAxis(idof);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateJacobian joint %d not supported\n", pjoint->GetType());
+                        vaxis = Vector(0,0,0);
+                    }
+                    pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                    FOREACH(itpartial,vpartials) {
+                        int dofindex = itpartial->first;
+                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                            Vector v = vaxis * itpartial->second;
+                            vjacobian[dofindex] += v.x;
+                            vjacobian[dofstride+dofindex] += v.y;
+                            vjacobian[2*dofstride+dofindex] += v.z;
+                        }
                     }
                 }
             }
         }
+        curlink = _vAllPairsShortestPaths[offset+curlink].first;
     }
 }
 
@@ -1411,75 +1416,76 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, std::vec
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     int dofstride = GetDOF();
     vjacobian.resize(4*dofstride);
-    if( GetDOF() == 0 ) {
+    if( dofstride == 0 ) {
         return;
     }
+    std::fill(vjacobian.begin(),vjacobian.end(),0);
     Vector v;
-    FOREACHC(itjoint, _vecjoints) {
-        int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
-        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
-            if( affect == 0 ) {
-                vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = vjacobian[3*dofstride+dofindex+dof] = 0;
-            }
-            else {
-                if( (*itjoint)->IsRevolute(dof) ) {
-                    v = (*itjoint)->GetAxis(dof);
-                }
-                else if( (*itjoint)->IsPrismatic(dof) ) {
-                    v = Vector(0,0,0);
-                }
-                else {
-                    RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    v = Vector(0,0,0);
-                }
-                vjacobian[dofindex+dof] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-                vjacobian[dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-                vjacobian[2*dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-                vjacobian[3*dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
-            }
-        }
-    }
-
-    // add in the contributions for each of the passive links
+    int offset = linkindex*_veclinks.size();
+    int curlink = 0;
     std::vector<std::pair<int,dReal> > vpartials;
     std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
-    FOREACHC(itjoint, _vPassiveJoints) {
-        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-            if( (*itjoint)->IsMimic(idof) ) {
-                bool usejoint = false;
-                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
-                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
-                        usejoint = true;
-                    }
-                }
-                if( !usejoint ) {
-                    continue;
-                }
-                Vector vaxis;
-                if( (*itjoint)->IsRevolute(idof) ) {
-                    vaxis = (*itjoint)->GetAxis(idof);
-                }
-                else if( (*itjoint)->IsPrismatic(idof) ) {
-                    vaxis = Vector(0,0,0);
+    while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
+        int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
+        if( jointindex < (int)_vecjoints.size() ) {
+            // active joint
+            JointPtr pjoint = _vecjoints.at(jointindex);
+            int dofindex = pjoint->GetDOFIndex();
+            int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
+            for(int dof = 0; dof < pjoint->GetDOF(); ++dof) {
+                if( affect == 0 ) {
+                    RAVELOG_WARN(str(boost::format("link %s should be affected by joint %s")%_veclinks.at(linkindex)->GetName()%pjoint->GetName()));
+                    vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = vjacobian[3*dofstride+dofindex+dof] = 0;
                 }
                 else {
-                    RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    vaxis = Vector(0,0,0);
+                    if( pjoint->IsRevolute(dof) ) {
+                        v = pjoint->GetAxis(dof);
+                    }
+                    else if( pjoint->IsPrismatic(dof) ) {
+                        v = Vector(0,0,0);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", pjoint->GetType());
+                        v = Vector(0,0,0);
+                    }
+                    vjacobian[dofindex+dof] = dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                    vjacobian[dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                    vjacobian[2*dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                    vjacobian[3*dofstride+dofindex+dof] = dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
                 }
-                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
-                FOREACH(itpartial,vpartials) {
-                    int dofindex = itpartial->first;
-                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                        Vector v = vaxis * itpartial->second;
-                        vjacobian[dofindex] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-                        vjacobian[dofstride+dofindex] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-                        vjacobian[2*dofstride+dofindex] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-                        vjacobian[3*dofstride+dofindex] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
+            }
+        }
+        else {
+            // add in the contributions from the passive joint
+            JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
+            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                if( pjoint->IsMimic(idof) ) {
+                    Vector vaxis;
+                    if( pjoint->IsRevolute(idof) ) {
+                        vaxis = pjoint->GetAxis(idof);
+                    }
+                    else if( pjoint->IsPrismatic(idof) ) {
+                        vaxis = Vector(0,0,0);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateRotationJacobian joint %d not supported\n", pjoint->GetType());
+                        vaxis = Vector(0,0,0);
+                    }
+                    pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                    FOREACH(itpartial,vpartials) {
+                        int dofindex = itpartial->first;
+                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                            Vector v = vaxis * itpartial->second;
+                            vjacobian[dofindex] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                            vjacobian[dofstride+dofindex] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                            vjacobian[2*dofstride+dofindex] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                            vjacobian[3*dofstride+dofindex] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
+                        }
                     }
                 }
             }
         }
+        curlink = _vAllPairsShortestPaths[offset+curlink].first;
     }
 }
 
@@ -1509,65 +1515,64 @@ void KinBody::CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>
         return;
     }
     Vector v, anchor, axis;
-    FOREACHC(itjoint, _vecjoints) {
-        int dofindex = (*itjoint)->GetDOFIndex();
-        int8_t affect = DoesAffect((*itjoint)->GetJointIndex(), linkindex);
-        for(int dof = 0; dof < (*itjoint)->GetDOF(); ++dof) {
-            if( affect == 0 ) {
-                vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = 0;
-            }
-            else {
-                if( (*itjoint)->IsRevolute(dof) ) {
-                    v = (*itjoint)->GetAxis(dof);
-                }
-                else if( (*itjoint)->IsPrismatic(dof) ) {
-                    v = Vector(0,0,0);
-                }
-                else {
-                    RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    v = Vector(0,0,0);
-                }
-                vjacobian[dofindex+dof] = v.x; vjacobian[dofstride+dofindex+dof] = v.y; vjacobian[2*dofstride+dofindex+dof] = v.z;
-            }
-        }
-    }
-
-    // add in the contributions for each of the passive links
+    int offset = linkindex*_veclinks.size();
+    int curlink = 0;
     std::vector<std::pair<int,dReal> > vpartials;
     std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
-    FOREACHC(itjoint, _vPassiveJoints) {
-        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-            if( (*itjoint)->IsMimic(idof) ) {
-                bool usejoint = false;
-                FOREACHC(itmimicdof,(*itjoint)->_vmimic[idof]->_vmimicdofs) {
-                    if( DoesAffect(itmimicdof->dofindex,linkindex) ) {
-                        usejoint = true;
-                    }
-                }
-                if( !usejoint ) {
-                    continue;
-                }
-                Vector vaxis;
-                if( (*itjoint)->IsRevolute(idof) ) {
-                    vaxis = (*itjoint)->GetAxis(idof);
-                }
-                else if( (*itjoint)->IsPrismatic(idof) ) {
-                    vaxis = Vector(0,0,0);
+    while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
+        int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
+        if( jointindex < (int)_vecjoints.size() ) {
+            // active joint
+            JointPtr pjoint = _vecjoints.at(jointindex);
+            int dofindex = pjoint->GetDOFIndex();
+            int8_t affect = DoesAffect(pjoint->GetJointIndex(), linkindex);
+            for(int dof = 0; dof < pjoint->GetDOF(); ++dof) {
+                if( affect == 0 ) {
+                    vjacobian[dofindex+dof] = vjacobian[dofstride+dofindex+dof] = vjacobian[2*dofstride+dofindex+dof] = 0;
                 }
                 else {
-                    RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", (*itjoint)->GetType());
-                    vaxis = Vector(0,0,0);
+                    if( pjoint->IsRevolute(dof) ) {
+                        v = pjoint->GetAxis(dof);
+                    }
+                    else if( pjoint->IsPrismatic(dof) ) {
+                        v = Vector(0,0,0);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", pjoint->GetType());
+                        v = Vector(0,0,0);
+                    }
+                    vjacobian[dofindex+dof] = v.x; vjacobian[dofstride+dofindex+dof] = v.y; vjacobian[2*dofstride+dofindex+dof] = v.z;
                 }
-                (*itjoint)->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
-                FOREACH(itpartial,vpartials) {
-                    int dofindex = itpartial->first;
-                    if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                        Vector v = vaxis * itpartial->second;
-                        vjacobian[dofindex] += v.x; vjacobian[dofstride+dofindex] += v.y; vjacobian[2*dofstride+dofindex] += v.z;
+            }
+        }
+        else {
+            // add in the contributions from the passive joint
+            JointPtr pjoint = _vPassiveJoints.at(jointindex-_vecjoints.size());
+            for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
+                if( pjoint->IsMimic(idof) ) {
+                    Vector vaxis;
+                    if( pjoint->IsRevolute(idof) ) {
+                        vaxis = pjoint->GetAxis(idof);
+                    }
+                    else if( pjoint->IsPrismatic(idof) ) {
+                        vaxis = Vector(0,0,0);
+                    }
+                    else {
+                        RAVELOG_WARN("CalculateAngularVelocityJacobian joint %d not supported\n", pjoint->GetType());
+                        vaxis = Vector(0,0,0);
+                    }
+                    pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
+                    FOREACH(itpartial,vpartials) {
+                        int dofindex = itpartial->first;
+                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
+                            Vector v = vaxis * itpartial->second;
+                            vjacobian[dofindex] += v.x; vjacobian[dofstride+dofindex] += v.y; vjacobian[2*dofstride+dofindex] += v.z;
+                        }
                     }
                 }
             }
         }
+        curlink = _vAllPairsShortestPaths[offset+curlink].first;
     }
 }
 
@@ -1690,7 +1695,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
 
     // set accelerations of first link to 0 since it isn't actuated
-    vLinkAccelerations.at(0).first = -vgravity;
+    vLinkAccelerations.at(0).first = -vgravity + vLinkVelocities.at(0).second.cross(vLinkVelocities.at(0).first);
     vLinkAccelerations.at(0).second = Vector();
 
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
@@ -1829,8 +1834,8 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
         // hinge joints:
         // p = Mparent[0:3,3] + Mparent[0:3,0:3]*(Left[0:3,3] + Left[0:3,0:3]*Rot[0:3,0:3]*Right[0:3,3])
         // v = vparent + wparent.cross(p-Mparent[0:3,3]) + Mparent[0:3,0:3] * Left[0:3,0:3] * dq * axis.cross(Rot[0:3,0:3]*Right)
-        // wparent.cross(v) = wparent.cross(vparent) + wparent.cross(wparent.cross(p-Mparent[0:3,3])) + wparent.cross(Mparent...)
-        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(v-vparent-wparent.cross(wparent.cross(p-Mparent[0:3,3]))) + Mparent[0:3,0:3] * Left[0:3,0:3] * ddq * axis.cross(Rot[0:3,0:3]*Right)
+        // wparent.cross(v) = wparent.cross(vparent) + wparent.cross(wparent.cross(p-Mparent[0:3,3])) + wparent.cross(p-Mparent[0:3,3])
+        // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(v-vparent-wparent.cross(wparent.cross(p-Mparent[0:3,3]))) + Mparent[0:3,0:3] * Left[0:3,0:3] * (ddq * axis.cross(Rot[0:3,0:3]*Right) + dq * axis.cross(dq*axis.cross(Rot[0:3,0:3]*Right)))
         // w = wparent + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq
         // dw = wparent.diff(t) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*axis*dq).transpose() + Mparent[0:3,0:3]*Left[0:3,0:3]*axis*ddq
         // slider:
@@ -1838,15 +1843,16 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
         // dv = vparent.diff(t) + wparent.diff(t).cross(p-Mparent[0:3,3]).transpose() + wparent.cross(v-vparent) + wparent.cross(Mparent[0:3,0:3]*Left[0:3,0:3]*dq*axis) + Mparent[0:3,0:3]*Left[0:3,0:3]*ddq*axis
         // w = wparent
         // dw = wparent.diff(t)
+        Vector vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
         Vector qparentinv = quatInverse(tparent.rot);
         if( pjoint->GetType() == Joint::JointRevolute ) {
-            Vector gdw = tdelta.rotate(pjoint->GetInternalHierarchyAxis(0)*pdofaccelerations[0]);
-            Vector gw = tdelta.rotate(pjoint->GetInternalHierarchyAxis(0)*pdofvelocities[0]);
-            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross((vChildVelocities.first-vParentVelocities.first)*2-vParentVelocities.second.cross(xyzdelta)) + gdw.cross(tchild.trans-tdelta.trans);
+            Vector gdw = tdelta.rotate(vlocalaxis*pdofaccelerations[0]);
+            Vector gw = tdelta.rotate(vlocalaxis*pdofvelocities[0]);
+            vChildAccelerations.first = vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross((vChildVelocities.first-vParentVelocities.first)*2-vParentVelocities.second.cross(xyzdelta)) + gdw.cross(tchild.trans-tdelta.trans) + gw.cross(gw.cross(tchild.trans-tdelta.trans));
             vChildAccelerations.second = vParentAccelerations.second + vParentVelocities.second.cross(gw) + gdw;
         }
         else if( pjoint->GetType() == Joint::JointPrismatic ) {
-            Vector v = tdelta.rotate(pjoint->GetInternalHierarchyAxis(0));
+            Vector v = tdelta.rotate(vlocalaxis);
             vChildAccelerations.first= vParentAccelerations.first + vParentAccelerations.second.cross(xyzdelta) + vParentVelocities.second.cross(vChildVelocities.first-vParentVelocities.first + v*pdofvelocities[0]) + v*pdofaccelerations[0];
             vChildAccelerations.second = vParentAccelerations.second;
         }
