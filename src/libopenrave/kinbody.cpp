@@ -1639,24 +1639,26 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
 
-        //Vector vchildtoanchor = vLinkTransformations.at(childindex).trans - pjoint->GetAnchor();
-        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
-        Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass();
-        Vector vaccumforce = vLinkForceTorques.at(childindex).first + vcomforce;
-        Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex) + vcomtoanchor.cross(vLinkForceTorques.at(childindex).first) + vcomtoanchor.cross(vcomforce);
+        Vector vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM();
+        if( !!pjoint->GetHierarchyParentLink() ) {
+            vchildcomtoparentcom -= pjoint->GetHierarchyParentLink()->GetGlobalCOM();
+        }
+        Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass() + vLinkForceTorques.at(childindex).first;
+        Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
 
         if( !!pjoint->GetHierarchyParentLink() ) {
             int parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
-            vLinkForceTorques.at(parentindex).first += vaccumforce;
-            vLinkForceTorques.at(parentindex).second += vjointtorque;
+            vLinkForceTorques.at(parentindex).first += vcomforce;
+            vLinkForceTorques.at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
         }
 
         if( pjoint->GetDOFIndex() >= 0 ) {
+            Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
             if( pjoint->GetType() == Joint::JointHinge ) {
-                doftorques.at(pjoint->GetDOFIndex()) = vjointtorque.dot3(pjoint->GetAxis(0));
+                doftorques.at(pjoint->GetDOFIndex()) = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == Joint::JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) = vaccumforce.dot3(pjoint->GetAxis(0));
+                doftorques.at(pjoint->GetDOFIndex()) = pjoint->GetAxis(0).dot3(vcomforce);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported", pjoint->GetType(), ORE_Assert);
@@ -1665,7 +1667,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     }
 }
 
-void KinBody::GetLinkAccelerations(const std::vector<dReal>& vDOFAccelerations, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations) const
+void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations) const
 {
     CHECK_INTERNAL_COMPUTATION;
     if( _veclinks.size() == 0 ) {
@@ -1682,7 +1684,7 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>& vDOFAccelerations, 
     }
 }
 
-void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector<Transform>& vLinkTransformations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations) const
+void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>&vDOFVelocities, const std::vector<dReal>&vDOFAccelerations, const std::vector<Transform>&vLinkTransformations, const std::vector< std::pair<Vector, Vector> >&vLinkVelocities, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations) const
 {
     vLinkAccelerations.resize(_veclinks.size());
     if( _veclinks.size() == 0 ) {
@@ -2739,7 +2741,7 @@ bool KinBody::IsAttached(KinBodyConstPtr pbody) const
     return _IsAttached(pbody,dummy);
 }
 
-void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
+void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
 {
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
@@ -2750,7 +2752,7 @@ void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
     }
 }
 
-bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>& setChecked) const
+bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>&setChecked) const
 {
     if( !setChecked.insert(shared_kinbody_const()).second ) {
         return false;
@@ -3125,7 +3127,7 @@ void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues
     SetDOFValues(vdofvalues,t,checklimits);
 }
 
-void KinBody::GetConfigurationValues(std::vector<dReal>& v) const
+void KinBody::GetConfigurationValues(std::vector<dReal>&v) const
 {
     GetDOFValues(v);
     v.resize(GetDOF()+RaveGetAffineDOF(DOF_Transform));
@@ -3142,7 +3144,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecification(const std::str
     return spec;
 }
 
-ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>& indices, const std::string& interpolation) const
+ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const std::vector<int>&indices, const std::string& interpolation) const
 {
     CHECK_INTERNAL_COMPUTATION;
     ConfigurationSpecification spec;
@@ -3159,7 +3161,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
     return spec;
 }
 
-UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>& callback)
+UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback)
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody()));
     pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);

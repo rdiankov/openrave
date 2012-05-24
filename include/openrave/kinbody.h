@@ -1319,7 +1319,7 @@ private:
         The method uses Recursive Newton Euler algorithm from  Walker Orin and Corke.
         \param[out] doftorques The output torques.
         \param[in] dofaccelerations The dof accelerations of the current robot state.
-        \param[in] mapExternalForceTorque [optional] Specifies all the external forces/torques acting on the links.
+        \param[in] mapExternalForceTorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
      */
     virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& mapExternalForceTorque=ForceTorqueMap()); //, std::vector<dReal>& M, std::vector<dReal>& C, std::vector<dReal>& G) const;
 
