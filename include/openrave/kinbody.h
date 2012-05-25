@@ -375,10 +375,13 @@ protected:
         /// \param[in] angularvel is the rotation axis * angular speed
         virtual void SetVelocity(const Vector& linearvel, const Vector& angularvel);
 
-        /// get the velocity of the link
+        /// \brief get the velocity of the link
         /// \param[out] linearvel the translational velocity
         /// \param[out] angularvel is the rotation axis * angular speed
         virtual void GetVelocity(Vector& linearvel, Vector& angularvel) const;
+
+        /// \brief return the linear/angular velocity of the link
+        virtual std::pair<Vector,Vector> GetVelocity() const;
 
         //typedef std::list<GEOMPROPERTIES>::iterator GeomPtr;
         //typedef std::list<GEOMPROPERTIES>::const_iterator GeomConstPtr;
@@ -812,6 +815,12 @@ protected:
         /// \param[out] voutput the output values
         /// \return an internal error code, 0 if no error
         virtual int _Eval(int axis, uint32_t timederiv, const std::vector<dReal>& vdependentvalues, std::vector<dReal>& voutput);
+
+        /// \brief compute joint velocities given the parent and child link transformations/velocities
+        virtual void _GetVelocities(std::vector<dReal>& values, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const;
+
+        /// \brief Return the velocity of the specified joint axis only.
+        virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
         std::string _name;         ///< \see GetName
         boost::array<bool,3> _bIsCircular;            ///< \see IsCircular
@@ -1321,7 +1330,7 @@ private:
         \param[in] dofaccelerations The dof accelerations of the current robot state.
         \param[in] mapExternalForceTorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
      */
-    virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& mapExternalForceTorque=ForceTorqueMap()); //, std::vector<dReal>& M, std::vector<dReal>& C, std::vector<dReal>& G) const;
+    virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& mapExternalForceTorque=ForceTorqueMap()) const;
 
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
@@ -1485,10 +1494,15 @@ protected:
      */
     virtual void _ComputeInternalInformation();
 
+    /// \brief returns the dof velocities and link velocities
+    ///
+    /// \param[in] linktransforms the link transformations
+    virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities) const;
+
     /// \brief computes accelerations given all the necessary data of the robot. \see GetLinkAccelerations
     ///
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
-    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector<Transform>& linktransformations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
+    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///

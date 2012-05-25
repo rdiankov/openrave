@@ -1586,7 +1586,7 @@ void KinBody::CalculateAngularVelocityJacobian(int linkindex, boost::multi_array
     }
 }
 
-void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque)
+void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
     doftorques.resize(GetDOF());
@@ -1594,14 +1594,10 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         return;
     }
 
-    std::vector<Transform> vLinkTransformations;
-    std::vector<dReal> vDOFValues, vDOFVelocities;
+    std::vector<dReal> vDOFVelocities;
     std::vector<pair<Vector, Vector> > vLinkVelocities, vLinkAccelerations; // linear, angular
-    GetDOFValues(vDOFValues);
-    GetDOFVelocities(vDOFVelocities);
-    GetLinkTransformations(vLinkTransformations);
-    GetLinkVelocities(vLinkVelocities);
-    _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkTransformations, vLinkVelocities, vLinkAccelerations);
+    _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities);
+    _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations);
 
     // all valuess are in the global coordinate system
     // Given the velocity/acceleration of the object is on point A, to change to B do:
@@ -1610,7 +1606,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     // forward recursion
     std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkCOMMomentOfInertia(_veclinks.size());
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - vLinkTransformations.at(i).trans;
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_t.trans;
         Vector vangularaccel = vLinkAccelerations.at(i).second;
         Vector vangularvelocity = vLinkVelocities.at(i).second;
         vLinkCOMLinearAccelerations[i] = vLinkAccelerations.at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
@@ -1693,16 +1689,30 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
     }
     else {
         std::vector<dReal> vDOFVelocities;
-        std::vector<Transform> vLinkTransformations;
         std::vector<pair<Vector, Vector> > vLinkVelocities;
-        GetDOFVelocities(vDOFVelocities);
-        GetLinkTransformations(vLinkTransformations);
-        GetLinkVelocities(vLinkVelocities);
-        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkTransformations, vLinkVelocities, vLinkAccelerations);
+        _ComputeDOFLinkVelocities(vDOFVelocities,vLinkVelocities);
+        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations);
     }
 }
 
-void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>&vDOFVelocities, const std::vector<dReal>&vDOFAccelerations, const std::vector<Transform>&vLinkTransformations, const std::vector< std::pair<Vector, Vector> >&vLinkVelocities, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations) const
+void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities) const
+{
+    GetEnv()->GetPhysicsEngine()->GetLinkVelocities(shared_kinbody_const(),linkvelocities);
+    dofvelocities.resize(0);
+    if( (int)dofvelocities.capacity() < GetDOF() ) {
+        dofvelocities.reserve(GetDOF());
+    }
+    FOREACHC(it, _vDOFOrderedJoints) {
+        int parentindex = 0;
+        if( !!(*it)->_attachedbodies[0] ) {
+            parentindex = (*it)->_attachedbodies[0]->GetIndex();
+        }
+        int childindex = (*it)->_attachedbodies[0]->GetIndex();
+        (*it)->_GetVelocities(dofvelocities,true,linkvelocities.at(parentindex),linkvelocities.at(childindex));
+    }
+}
+
+void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>&vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >&vLinkVelocities, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations) const
 {
     vLinkAccelerations.resize(_veclinks.size());
     if( _veclinks.size() == 0 ) {
@@ -1827,26 +1837,20 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>&vDOFVelocities,
             pdofaccelerations = &vPassiveJointAccelerations.at(jointindex-(int)_vecjoints.size()).at(0);
         }
 
-        pair<Vector, Vector> vParentVelocities, vParentAccelerations;
-        Transform tparent;
-        if( !pjoint->GetHierarchyParentLink() ) {
-            tparent = vLinkTransformations.at(0);
-            vParentVelocities = vLinkVelocities.at(0);
-            vParentAccelerations = vLinkAccelerations.at(0);
-        }
-        else {
-            int index = pjoint->GetHierarchyParentLink()->GetIndex();
-            tparent = vLinkTransformations.at(index);
-            vParentVelocities = vLinkVelocities.at(index);
-            vParentAccelerations = vLinkAccelerations.at(index);
-        }
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-        Transform tchild = pjoint->GetHierarchyChildLink()->GetTransform();
+        const Transform& tchild = pjoint->GetHierarchyChildLink()->GetTransform();
         const pair<Vector, Vector>& vChildVelocities = vLinkVelocities.at(childindex);
-        Vector xyzdelta = tchild.trans - tparent.trans;
-        Transform tdelta = tparent * pjoint->GetInternalHierarchyLeftTransform();
-
         pair<Vector, Vector>& vChildAccelerations = vLinkAccelerations.at(childindex);
+
+        int parentindex = 0;
+        if( !!pjoint->GetHierarchyParentLink() ) {
+            parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
+        }
+
+        const pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
+        const pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
+        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_t.trans;
+        Transform tdelta = _veclinks.at(parentindex)->_t * pjoint->GetInternalHierarchyLeftTransform();
 
         // compute for global coordinate system
         // code for symbolic computation (python sympy)
@@ -1864,7 +1868,6 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>&vDOFVelocities,
         // w = wparent
         // dw = wparent.diff(t)
         Vector vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
-        Vector qparentinv = quatInverse(tparent.rot);
         if( pjoint->GetType() == Joint::JointRevolute ) {
             Vector gdw = tdelta.rotate(vlocalaxis*pdofaccelerations[0]);
             Vector gw = tdelta.rotate(vlocalaxis*pdofvelocities[0]);

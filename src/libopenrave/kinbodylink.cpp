@@ -798,6 +798,14 @@ void KinBody::Link::GetVelocity(Vector& linearvel, Vector& angularvel) const
     GetParent()->GetEnv()->GetPhysicsEngine()->GetLinkVelocity(shared_from_this(), linearvel, angularvel);
 }
 
+/// \brief return the linear/angular velocity of the link
+std::pair<Vector,Vector> KinBody::Link::GetVelocity() const
+{
+    std::pair<Vector,Vector> velocities;
+    GetParent()->GetEnv()->GetPhysicsEngine()->GetLinkVelocity(shared_from_this(), velocities.first, velocities.second);
+    return velocities;
+}
+
 KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)
 {
     OPENRAVE_ASSERT_OP(index, >=, 0);
