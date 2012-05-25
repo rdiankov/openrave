@@ -495,6 +495,25 @@ class TestKinematics(EnvironmentSetup):
                             Mdot += Mpartials[i]*dofvelnew[i]                            
                         SkewSymmetric = Mdot-2*C
                         assert(transdist(SkewSymmetric,-transpose(SkewSymmetric)) <= g_epsilon)
+
+                        # compute potential energy with respect to gravity
+                        env.GetPhysicsEngine().SetGravity(gravity)
+                        def ComputePotentialEnergy(body,dofvalues):
+                            gravity = body.GetEnv().GetPhysicsEngine().GetGravity()
+                            body.SetDOFValues(dofvalues,range(body.GetDOF()),checklimits=True)
+                            PE = 0.0
+                            for link in body.GetLinks():
+                                PE += dot(gravity,link.GetGlobalCOM()*link.GetMass())
+                            return PE
+                        
+                        # compute partial derivatives
+                        gravitypartials = []
+                        for index in range(body.GetDOF()):
+                            testdelta = zeros(body.GetDOF())
+                            testdelta[index]=deltastep
+                            PEdiff = (ComputePotentialEnergy(body,dofvaluesnew+testdelta)-ComputePotentialEnergy(body,dofvaluesnew-testdelta))/(2*deltastep)
+                            gravitypartials.append(PEdiff)
+                        assert( transdist(-torquegravity, gravitypartials) < 0.1*deltastep*len(gravitypartials))
                         
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
