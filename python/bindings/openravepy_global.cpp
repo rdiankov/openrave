@@ -633,9 +633,9 @@ public:
         return odata;
     }
 
-    void ClearCustomValues(const std::string& name=std::string())
+    size_t ClearCustomValues(const std::string& name=std::string())
     {
-        _param.ClearCustomValues(name);
+        return _param.ClearCustomValues(name);
     }
 
     object GetValues() const

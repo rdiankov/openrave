@@ -328,7 +328,7 @@ class TestKinematics(EnvironmentSetup):
     <Mass type="mimicgeom">
       <density>10000000</density>
     </Mass>
-    <Body name="Base" type="dynamic">
+   <Body name="Base" type="dynamic">
       <Translation>0.0  0.0  0.0</Translation>
       <Geom type="cylinder">
         <rotationaxis>1 0 0 90</rotationaxis>
@@ -341,7 +341,7 @@ class TestKinematics(EnvironmentSetup):
       <Translation>0 0 0</Translation>
       <Geom type="box">
         <Translation>0.1 0 0</Translation>
-        <Extents>0.1 0.00001 0.00001</Extents>
+        <Extents>0.1 0.0001 0.0001</Extents>
       </Geom> 
 	</Body>
     <Joint circular="true" name="Arm0" type="hinge">
@@ -359,7 +359,7 @@ class TestKinematics(EnvironmentSetup):
       <Translation>0.2 0 0</Translation>
       <Geom type="box">
         <Translation>0.1 0 0</Translation>
-        <Extents>0.1 0.00001 0.00001</Extents>
+        <Extents>0.1 0.0001 0.0001</Extents>
       </Geom>
     </Body>
     <Joint circular="true" name="Arm1" type="hinge">
@@ -395,45 +395,125 @@ class TestKinematics(EnvironmentSetup):
 
     def test_inversedynamics(self):
         self.log.info('verify inverse dynamics computations')
-        with self.env:
-            self.env.GetPhysicsEngine().SetGravity([0,0,-10])
-            for envfile in ['robots/wam7.kinbody.xml']:#'robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
-                self.env.Reset()
-                self.LoadEnv(envfile,{'skipgeometry':'1'})
-                body = [body for body in self.env.GetBodies() if body.GetDOF() > 0][0]
-                dt = 0.0001
+        env=self.env
+        with env:
+            env.GetPhysicsEngine().SetGravity([0,0,-10])
+            for envfile in ['robots/wam7.kinbody.xml', 'robots/barretthand.robot.xml', 'robots/barrettwam.robot.xml','robots/pr2-beta-static.zae']:
+                env.Reset()
+                self.LoadEnv(envfile)#,{'skipgeometry':'1'})
+                body = [body for body in env.GetBodies() if body.GetDOF() > 0][0]
+                deltastep = 1e-4
                 for idofvalues in range(10):
                     lower,upper = body.GetDOFLimits()
                     vellimits = body.GetDOFVelocityLimits()
-                    dofvaluesnew = randlimits(lower, upper)
+                    dofvaluesnew = randlimits(lower+2*deltastep, upper-2*deltastep)
                     Mreal = None
                     for idofvel in range(10):
-                        dofvelnew = randlimits(-vellimits+10*dt,vellimits-10*dt)
-                        dofvelnew[dofvaluesnew<lower+10*dt] = 0
-                        dofvelnew[dofvaluesnew>upper-10*dt] = 0
+                        dofvelnew = randlimits(-vellimits+10*deltastep,vellimits-10*deltastep)
+                        dofvelnew[dofvaluesnew<lower+10*deltastep] = 0
+                        dofvelnew[dofvaluesnew>upper-10*deltastep] = 0
                         link0vel = [random.rand(3)-0.5,random.rand(3)-0.5]
                         dofaccel = 10*random.rand(body.GetDOF())-5
-                        dofaccel[dofvaluesnew<lower+10*dt] = 0
-                        dofaccel[dofvaluesnew>upper-10*dt] = 0
+                        dofaccel[dofvaluesnew<lower+10*deltastep] = 0
+                        dofaccel[dofvaluesnew>upper-10*deltastep] = 0
+
+                        gravity = random.rand(3)*10-5
+                        env.GetPhysicsEngine().SetGravity(gravity)
                         body.SetDOFValues(dofvaluesnew)
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
+                        
                         torques = body.ComputeInverseDynamics(dofaccel)
                         # how to verify these torques?
                         # compute M(q) and check if output torques form a symmetric matrix
                         torquebase = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                        
                         M = []
                         for i in range(body.GetDOF()):
                             testaccel = zeros(body.GetDOF())
                             testaccel[i] = 1.0
                             M.append(body.ComputeInverseDynamics(testaccel)-torquebase)
                         M = array(M)
-                        assert(transdist(M,transpose(M)) <= 1e-15*M.shape[0]**2)
+                        assert(transdist(M,transpose(M)) <= 1e-14*M.shape[0]**2)
                         if Mreal is None:
                             Mreal = M
+                            assert(all(linalg.eigvals(Mreal)>=0))
                         else:
                             # should be constant with changes to velocity
-                            assert(transdist(M,Mreal) <= 1e-15*M.shape[0]**2)
-                        assert(transdist(dot(dofaccel,M)+torquebase,torques) <= 1e-14*len(torquebase))
+                            assert(transdist(M,Mreal) <= 1e-14*M.shape[0]**2)
+                        assert(transdist(dot(dofaccel,M)+torquebase,torques) <= 1e-13*len(torquebase))
+                        
+                        env.GetPhysicsEngine().SetGravity([0,0,0])
+                        torquenogravity = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                        body.SetDOFVelocities(dofvelnew,[0,0,0],[0,0,0],checklimits=True)
+                        torquenoexternal = body.ComputeInverseDynamics(zeros(body.GetDOF())) # base link angular velocity exerts external torque
+                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
+                        
+                        # compute the coriolis term: C_ij = 0.5*sum(dM_ij/dtheta_k + dM_ik/dtheta_j + dM_kj/dtheta_i)
+                        def ComputeDynamicsM(body,dofvalues):
+                            body.SetDOFValues(dofvalues,range(body.GetDOF()),checklimits=True)
+                            tb = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                            M = zeros((body.GetDOF(),body.GetDOF()))
+                            for index in range(body.GetDOF()):
+                                testaccel = zeros(body.GetDOF())
+                                testaccel[index] = 1.0
+                                M[:,index] = body.ComputeInverseDynamics(testaccel)-tb
+                            return M
+
+                        body.SetDOFVelocities(zeros(body.GetDOF()),[0,0,0],[0,0,0],checklimits=True)
+                        Mpartials = []
+                        for index in range(body.GetDOF()):
+                            testdelta = zeros(body.GetDOF())
+                            testdelta[index]=deltastep
+                            Mdiff = (ComputeDynamicsM(body,dofvaluesnew+testdelta) - ComputeDynamicsM(body,dofvaluesnew-testdelta))/(2*deltastep)
+                            Mpartials.append(Mdiff)
+
+                        randdelta = 10*deltastep*(random.rand(body.GetDOF())-1)
+                        Mtestdiff = ComputeDynamicsM(body,dofvaluesnew+randdelta)-ComputeDynamicsM(body,dofvaluesnew)
+                        Mexpecteddiff = zeros((body.GetDOF(),body.GetDOF()))
+                        for i in range(body.GetDOF()):
+                            Mexpecteddiff += Mpartials[i]*randdelta[i]
+                        assert( sum(abs(Mexpecteddiff-Mtestdiff)) < 5e-5 )
+
+                        C = zeros((body.GetDOF(),body.GetDOF()))
+                        for i in range(body.GetDOF()):
+                            for j in range(body.GetDOF()):
+                                for k in range(body.GetDOF()):
+                                    C[i,j] += 0.5*(Mpartials[k][i,j] + Mpartials[j][i,k] - Mpartials[i][k,j])*dofvelnew[k]
+                        assert( transdist(dot(C,dofvelnew), torquenoexternal) < g_epsilon*len(torquenoexternal))
+
+                        torquegravity = torquebase-torquenogravity
+                        
+                        body.SetDOFValues(dofvaluesnew,range(body.GetDOF()),checklimits=True)
+                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)    
+                        env.GetPhysicsEngine().SetGravity(2*gravity)
+                        torquegravity2 = body.ComputeInverseDynamics(zeros(body.GetDOF()))-torquenogravity
+                        assert(transdist(2*torquegravity,torquegravity2) <= g_epsilon)
+
+                        # check that diff(M) - 2*C is skew symmetric
+                        Mdot = zeros(Mreal.shape)
+                        for i in range(body.GetDOF()):
+                            Mdot += Mpartials[i]*dofvelnew[i]                            
+                        SkewSymmetric = Mdot-2*C
+                        assert(transdist(SkewSymmetric,-transpose(SkewSymmetric)) <= g_epsilon)
+
+                        # compute potential energy with respect to gravity
+                        env.GetPhysicsEngine().SetGravity(gravity)
+                        def ComputePotentialEnergy(body,dofvalues):
+                            gravity = body.GetEnv().GetPhysicsEngine().GetGravity()
+                            body.SetDOFValues(dofvalues,range(body.GetDOF()),checklimits=True)
+                            PE = 0.0
+                            for link in body.GetLinks():
+                                PE += dot(gravity,link.GetGlobalCOM()*link.GetMass())
+                            return PE
+                        
+                        # compute partial derivatives
+                        gravitypartials = []
+                        for index in range(body.GetDOF()):
+                            testdelta = zeros(body.GetDOF())
+                            testdelta[index]=deltastep
+                            PEdiff = (ComputePotentialEnergy(body,dofvaluesnew+testdelta)-ComputePotentialEnergy(body,dofvaluesnew-testdelta))/(2*deltastep)
+                            gravitypartials.append(PEdiff)
+                        assert( transdist(-torquegravity, gravitypartials) < 0.1*deltastep*len(gravitypartials))
                         
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
