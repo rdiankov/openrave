@@ -1380,12 +1380,10 @@ void KinBody::CalculateJacobian(int linkindex, const Vector& trans, vector<dReal
                     pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
                     FOREACH(itpartial,vpartials) {
                         int dofindex = itpartial->first;
-                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                            Vector v = vaxis * itpartial->second;
-                            vjacobian[dofindex] += v.x;
-                            vjacobian[dofstride+dofindex] += v.y;
-                            vjacobian[2*dofstride+dofindex] += v.z;
-                        }
+                        Vector v = vaxis * itpartial->second;
+                        vjacobian[dofindex] += v.x;
+                        vjacobian[dofstride+dofindex] += v.y;
+                        vjacobian[2*dofstride+dofindex] += v.z;
                     }
                 }
             }
@@ -1474,13 +1472,11 @@ void KinBody::CalculateRotationJacobian(int linkindex, const Vector& q, std::vec
                     pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
                     FOREACH(itpartial,vpartials) {
                         int dofindex = itpartial->first;
-                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                            Vector v = vaxis * itpartial->second;
-                            vjacobian[dofindex] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
-                            vjacobian[dofstride+dofindex] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
-                            vjacobian[2*dofstride+dofindex] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
-                            vjacobian[3*dofstride+dofindex] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
-                        }
+                        Vector v = vaxis * itpartial->second;
+                        vjacobian[dofindex] += dReal(0.5)*(-q.y*v.x - q.z*v.y - q.w*v.z);
+                        vjacobian[dofstride+dofindex] += dReal(0.5)*(q.x*v.x - q.z*v.z + q.w*v.y);
+                        vjacobian[2*dofstride+dofindex] += dReal(0.5)*(q.x*v.y + q.y*v.z - q.w*v.x);
+                        vjacobian[3*dofstride+dofindex] += dReal(0.5)*(q.x*v.z - q.y*v.y + q.z*v.x);
                     }
                 }
             }
@@ -1564,10 +1560,8 @@ void KinBody::CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>
                     pjoint->_ComputePartialVelocities(vpartials,idof,mapcachedpartials);
                     FOREACH(itpartial,vpartials) {
                         int dofindex = itpartial->first;
-                        if( DoesAffect(_vDOFIndices.at(dofindex),linkindex) ) {
-                            Vector v = vaxis * itpartial->second;
-                            vjacobian[dofindex] += v.x; vjacobian[dofstride+dofindex] += v.y; vjacobian[2*dofstride+dofindex] += v.z;
-                        }
+                        Vector v = vaxis * itpartial->second;
+                        vjacobian[dofindex] += v.x; vjacobian[dofstride+dofindex] += v.y; vjacobian[2*dofstride+dofindex] += v.z;
                     }
                 }
             }
@@ -1634,34 +1628,58 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
         doftorques[i] = 0;
     }
 
+    std::vector<std::pair<int,dReal> > vpartials;
+    std::map< std::pair<Joint::MIMIC::DOFFormat, int>, dReal > mapcachedpartials;
+
     // go backwards
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
         int childindex = pjoint->GetHierarchyChildLink()->GetIndex();
-
-        Vector vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM();
-        if( !!pjoint->GetHierarchyParentLink() ) {
-            vchildcomtoparentcom -= pjoint->GetHierarchyParentLink()->GetGlobalCOM();
-        }
         Vector vcomforce = vLinkCOMLinearAccelerations[childindex]*pjoint->GetHierarchyChildLink()->GetMass() + vLinkForceTorques.at(childindex).first;
         Vector vjointtorque = vLinkForceTorques.at(childindex).second + vLinkCOMMomentOfInertia.at(childindex);
 
         if( !!pjoint->GetHierarchyParentLink() ) {
+            Vector vchildcomtoparentcom = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetHierarchyParentLink()->GetGlobalCOM();
             int parentindex = pjoint->GetHierarchyParentLink()->GetIndex();
             vLinkForceTorques.at(parentindex).first += vcomforce;
             vLinkForceTorques.at(parentindex).second += vjointtorque + vchildcomtoparentcom.cross(vcomforce);
         }
 
+        Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
         if( pjoint->GetDOFIndex() >= 0 ) {
-            Vector vcomtoanchor = pjoint->GetHierarchyChildLink()->GetGlobalCOM() - pjoint->GetAnchor();
             if( pjoint->GetType() == Joint::JointHinge ) {
-                doftorques.at(pjoint->GetDOFIndex()) = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
+                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == Joint::JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) = pjoint->GetAxis(0).dot3(vcomforce);
+                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported", pjoint->GetType(), ORE_Assert);
+            }
+        }
+        else {
+            // passive joint, so have to transfer the torque to its dependent joints.
+            // TODO if there's more than one dependent joint, how do we split?
+            dReal faxistorque;
+            if( pjoint->GetType() == Joint::JointHinge ) {
+                faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
+            }
+            else if( pjoint->GetType() == Joint::JointSlider ) {
+                faxistorque = pjoint->GetAxis(0).dot3(vcomforce);
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported", pjoint->GetType(), ORE_Assert);
+            }
+
+            if( pjoint->IsMimic(0) ) {
+                pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
+                FOREACH(itpartial,vpartials) {
+                    int dofindex = itpartial->first;
+                    doftorques[dofindex] += itpartial->second*faxistorque;
+                }
+            }
+            else {
+                // joint is static, so can ignore
             }
         }
     }
