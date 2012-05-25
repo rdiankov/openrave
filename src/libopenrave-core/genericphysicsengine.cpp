@@ -106,9 +106,10 @@ public:
     }
 
     virtual void SetGravity(const Vector& gravity) {
+        _vgravity = gravity;
     }
     virtual Vector GetGravity() {
-        return Vector(0,0,0);
+        return _vgravity;
     }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
@@ -119,6 +120,9 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed) {
     }
+
+private:
+    Vector _vgravity;
 };
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
