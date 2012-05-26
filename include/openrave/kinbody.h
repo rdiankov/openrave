@@ -311,10 +311,10 @@ protected:
             return _tMassFrame.trans;
         }
 
-        /// \brief return inertia in link's local coordinate frame. The COM is GetLocalCOM()
+        /// \brief return inertia in link's local coordinate frame. The translation component is the the COM in the link's frame.
         virtual TransformMatrix GetLocalInertia() const;
 
-        // \brief return inertia in the global coordinate frame. The COM is GetCOM()
+        // \brief return inertia around the link's COM in the global coordinate frame.
         virtual TransformMatrix GetGlobalInertia() const;
 
         /// \deprecated (12/1/20)
@@ -1311,26 +1311,38 @@ private:
     /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
 
+    /// \brief link index and the linear forces and torques. Value.first is linear force acting on the link's COM and Value.second is torque
     typedef std::map<int, std::pair<Vector,Vector> > ForceTorqueMap;
+
     /** \brief Computes the inverse dynamics (torques) from the current robot position, velocity, and acceleration.
-
-        Q = M(dofvalues) * dofaccel + C(dofvalues,dofvel) * dofvel + F(dofvel) + G(dofvalues)
-
-        Where
-        Q - generalized forces associated with dofvalues
-        M - manipulator inertia tensor (symmetric joint-space inertia)
-        C - coriolis and centripetal effects
-        F - coulomb and viscous friction
-        G - gravity loading
 
         The dof values are ready from GetDOFValues() and GetDOFVelocities(). Because openrave does not have a state for robot acceleration,
         it has to be inserted as a parameter to this function. Acceleration due to gravitation is extracted from GetEnv()->GetPhysicsEngine()->GetGravity().
         The method uses Recursive Newton Euler algorithm from  Walker Orin and Corke.
         \param[out] doftorques The output torques.
-        \param[in] dofaccelerations The dof accelerations of the current robot state.
-        \param[in] mapExternalForceTorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
+        \param[in] dofaccelerations The dof accelerations of the current robot state. If the size is 0, assumes all accelerations are 0 (this should be faster)
+        \param[in] externalforcetorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
      */
-    virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& mapExternalForceTorque=ForceTorqueMap()) const;
+    virtual void ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
+
+    /** \brief Computes the separated inverse dynamics torque terms from the current robot position, velocity, and acceleration.
+
+        torques = M(dofvalues) * dofaccel + C(dofvalues,dofvel) * dofvel + G(dofvalues)
+
+        Where
+        torques - generalized forces associated with dofvalues
+        M - manipulator inertia tensor (symmetric joint-space inertia)
+        C - coriolis and centripetal effects
+        G - gravity loading + external forces due to externalforcetorque + base link angular acceleration contribution
+
+        The dof values are ready from GetDOFValues() and GetDOFVelocities(). Because openrave does not have a state for robot acceleration,
+        it has to be inserted as a parameter to this function. Acceleration due to gravitation is extracted from GetEnv()->GetPhysicsEngine()->GetGravity().
+        The method uses Recursive Newton Euler algorithm from  Walker Orin and Corke.
+        \param[out] doftorquecomponents A set of 3 torques [M(dofvalues) * dofaccel, C(dofvalues,dofvel) * dofvel, G(dofvalues)]
+        \param[in] dofaccelerations The dof accelerations of the current robot state. If the size is 0, assumes all accelerations are 0 (this should be faster)
+        \param[in] externalforcetorque [optional] Specifies all the external forces/torques acting on the links at their center of mass.
+     */
+    virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
 
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
@@ -1496,13 +1508,15 @@ protected:
 
     /// \brief returns the dof velocities and link velocities
     ///
-    /// \param[in] linktransforms the link transformations
-    virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities) const;
+    /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
+    virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities, bool usebaselinkvelocity=true) const;
 
     /// \brief computes accelerations given all the necessary data of the robot. \see GetLinkAccelerations
     ///
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
-    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
+    /// \param dofvelocities if size is 0, will assume all velocities are 0
+    /// \param dofaccelerations if size is 0, will assume all accelerations are 0
+    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations, const Vector& gravity) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///

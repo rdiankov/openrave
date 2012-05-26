@@ -27,7 +27,7 @@ Core
 
 * Added :meth:`.KinBody.GetLinkAccelerations` to compute link accelerations from dof accelerations.
 
-* Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics` (thanks to Quang-Cuong Pham)
+* Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics`. Can also return component-wise torques with **KinBody.ComputeInverseDynamics(accel,None,returncomponents=True)**  (thanks to Quang-Cuong Pham)
 
 Inverse Kinematics
 ------------------

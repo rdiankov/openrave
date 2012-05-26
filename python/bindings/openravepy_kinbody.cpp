@@ -1293,13 +1293,34 @@ public:
         return toPyArray(vjacobian,dims);
     }
 
-    object ComputeInverseDynamics(object odofaccelerations)
+    object ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque=object(), bool returncomponents=false)
     {
-        vector<dReal> vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
-        vector<dReal> vDOFTorques;
-        KinBody::ForceTorqueMap mapExternalForceTorque; // todo
-        _pbody->ComputeInverseDynamics(vDOFTorques,vDOFAccelerations,mapExternalForceTorque);
-        return toPyArray(vDOFTorques);
+        vector<dReal> vDOFAccelerations;
+        if( odofaccelerations != object() ) {
+            vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
+        }
+        KinBody::ForceTorqueMap mapExternalForceTorque;
+        if( oexternalforcetorque != object() ) {
+            boost::python::dict odict = (boost::python::dict)oexternalforcetorque;
+            boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+            vector<dReal> v;
+            for (int i = 0; i < boost::python::len(iterkeys); i++) {
+                int linkindex = boost::python::extract<int>(iterkeys[i]);
+                object oforcetorque = odict[iterkeys[i]];
+                OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
+                mapExternalForceTorque[linkindex] = make_pair(Vector(boost::python::extract<dReal>(oforcetorque[0]),boost::python::extract<dReal>(oforcetorque[1]),boost::python::extract<dReal>(oforcetorque[2])),Vector(boost::python::extract<dReal>(oforcetorque[3]),boost::python::extract<dReal>(oforcetorque[4]),boost::python::extract<dReal>(oforcetorque[5])));
+            }
+        }
+        if( returncomponents ) {
+            boost::array< vector<dReal>, 3> vDOFTorqueComponents;
+            _pbody->ComputeInverseDynamics(vDOFTorqueComponents,vDOFAccelerations,mapExternalForceTorque);
+            return boost::python::make_tuple(toPyArray(vDOFTorqueComponents[0]), toPyArray(vDOFTorqueComponents[1]), toPyArray(vDOFTorqueComponents[2]));
+        }
+        else {
+            vector<dReal> vDOFTorques;
+            _pbody->ComputeInverseDynamics(vDOFTorques,vDOFAccelerations,mapExternalForceTorque);
+            return toPyArray(vDOFTorques);
+        }
     }
 
     bool CheckSelfCollision() {
@@ -2435,6 +2456,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution,
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolutions, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
 
 namespace openravepy
 {
@@ -2606,6 +2628,7 @@ void init_openravepy_kinbody()
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
+        std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
                         .def("InitFromFile",&PyKinBody::InitFromFile,args("filename"),DOXY_FN(KinBody,InitFromFile))
                         .def("InitFromData",&PyKinBody::InitFromData,args("data"), DOXY_FN(KinBody,InitFromData))
@@ -2684,7 +2707,7 @@ void init_openravepy_kinbody()
                         .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
                         .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
                         .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
-                        .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, args("dofaccelerations"), DOXY_FN(KinBody, ComputeInverseDynamics))
+                        .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
                         .def("CheckSelfCollision",pkinbodyself, DOXY_FN(KinBody,CheckSelfCollision))
                         .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))

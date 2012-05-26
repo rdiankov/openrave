@@ -9,9 +9,9 @@ import time
 env=Environment()
 env.Load('robots/wam7.kinbody.xml')
 body = env.GetBodies()[0]
-
 N = 10000
 for itry in range(10):
+    env.GetPhysicsEngine().SetGravity([0,0,-10])
     lower,upper = body.GetDOFLimits()
     vellimits = body.GetDOFVelocityLimits()
     dofvaluesnew = lower+random.rand(len(lower))*(upper-lower)
@@ -23,6 +23,21 @@ for itry in range(10):
         body.SetDOFValues(dofvaluesnew)
         body.SetDOFVelocities(dofvelnew)
         torques = body.ComputeInverseDynamics(dofaccel)
-    print (time.time()-starttime)/N
-    
+    print 'ComputeInverseDynamics all', (time.time()-starttime)/N
+    starttime=time.time()
+    for itry in range(N):
+        body.SetDOFValues(dofvaluesnew)
+        body.SetDOFVelocities(dofvelnew)
+        tm,tc,te = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
+    print 'ComputeInverseDynamics components', (time.time()-starttime)/N
+    starttime=time.time()
+    for itry in range(N):
+        env.GetPhysicsEngine().SetGravity([0,0,-10])
+        body.SetDOFValues(dofvaluesnew)
+        body.SetDOFVelocities(dofvelnew)
+        tm,tc,te = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
+        env.GetPhysicsEngine().SetGravity([0,0,0])
+        body.SetDOFVelocities(zeros(body.GetDOF()))
+        t = body.ComputeInverseDynamics(dofvelnew)
+    print 'ComputeInverseDynamics special', (time.time()-starttime)/N    
 RaveDestroy()
