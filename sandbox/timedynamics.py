@@ -32,12 +32,14 @@ for itry in range(10):
     print 'ComputeInverseDynamics components', (time.time()-starttime)/N
     starttime=time.time()
     for itry in range(N):
-        env.GetPhysicsEngine().SetGravity([0,0,-10])
         body.SetDOFValues(dofvaluesnew)
         body.SetDOFVelocities(dofvelnew)
         tm,tc,te = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
-        env.GetPhysicsEngine().SetGravity([0,0,0])
-        body.SetDOFVelocities(zeros(body.GetDOF()))
-        t = body.ComputeInverseDynamics(dofvelnew)
+        tother = body.ComputeInverseDynamics(dofvelnew)-tc-te
+        # slower
+        #env.GetPhysicsEngine().SetGravity([0,0,-10])
+        #body.SetDOFVelocities(zeros(body.GetDOF()))
+        #tother = body.ComputeInverseDynamics(dofvelnew)
+        
     print 'ComputeInverseDynamics special', (time.time()-starttime)/N    
 RaveDestroy()
