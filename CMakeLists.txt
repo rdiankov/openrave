@@ -710,35 +710,38 @@ add_subdirectory(octave_matlab)
 
 if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
+  set(OPENRAVE_IKFAST_SUFFIX)
   if( PYTHON_EXECUTABLE )
-    set(SYMPY_MINIMUM_VERSION "0.6.3")
-    set(SYMPY_MAXIMUM_VERSION "0.6.7")
-    # check if sympy substitution is ok
+    # get the sympy version
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
-      OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _sympy_check_failed)
-    if( ${_sympy_check_failed} EQUAL 0 )
-      set(OPENRAVE_USE_LOCAL_SYMPY 0)
-    else()
-      # get the sympy version
-      execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
-        OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE _sympy_version_failed)
-      if( ${_sympy_version_failed} EQUAL 0 )
-        string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-        if( "${_sympy_version}" VERSION_GREATER "${SYMPY_MINIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MINIMUM_VERSION}" )
-          if( "${_sympy_version}" VERSION_LESS "${SYMPY_MAXIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MAXIMUM_VERSION}" )
-            message(STATUS "Found sympy version ${_sympy_version} >= ${SYMPY_MINIMUM_VERSION}, will patch this instead of installing local version (could have been previously installed by openrave?)")
-            set(OPENRAVE_USE_LOCAL_SYMPY 0)
-          endif()
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _sympy_version_failed)
+    if( ${_sympy_version_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+      message(STATUS "Found sympy version '${_sympy_version}'")
+      if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
+        set(OPENRAVE_USE_LOCAL_SYMPY 0)
+        if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
+          message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
+          set(OPENRAVE_IKFAST_SUFFIX "_sympy0.6")
+        else()
+          message(STATUS "Assuming sympy version 0.7.x or greater")
         endif()
-      else()
-        message(STATUS "failed to find python sympy system installation")
       endif()
+    else()
+      message(STATUS "failed to find python sympy system installation")
     endif()
   endif()
+
+      # check if sympy substitution is ok
+#      execute_process(
+#        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
+#        OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
+#        RESULT_VARIABLE _sympy_check_failed)
+#      if( ${_sympy_check_failed} EQUAL 0 )
+#        set(OPENRAVE_USE_LOCAL_SYMPY 0)
+#      else()
 
   if( OPENRAVE_USE_LOCAL_SYMPY )
     message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
@@ -746,7 +749,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
       message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
       execute_process(
-        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
+        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.7.1.tgz"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     endif()
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
@@ -861,7 +864,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   foreach(COMP ${CPACK_COMPONENTS_ALL})
     set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "${CPACK_DEBIAN_PACKAGE_RECOMMENDS}, ${COMP}")
   endforeach()
-  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.7.1.tgz sympy_0.7.1_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
   set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n")
   execute_process(COMMAND lsb_release -is
