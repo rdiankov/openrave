@@ -32,6 +32,8 @@ Core
 Inverse Kinematics
 ------------------
 
+* ikfast switch to sympy 0.7.x (old sympy 0.6.x files are still present, but will not be updated anymore)
+
 * Can add custom data to IkParameterization that is also passed to the ik filters. :meth:`.IkParameterization.SetCustomData`
 
 * Can use IkParameterization to :meth:`.Robot.Manipulator.CheckEndEffectorCollision` even if it isn't a Transform6D type.
