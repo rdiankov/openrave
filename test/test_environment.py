@@ -82,7 +82,7 @@ class TestEnvironment(EnvironmentSetup):
                         assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
 
     def test_collada(self):
-        self.log.info('test that collada import/export works')
+        self.log.info('test that collada import/export works for robots')
         epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
         env=self.env
         with env:
@@ -130,7 +130,7 @@ class TestEnvironment(EnvironmentSetup):
                             mimicjoints0 = [robot0.GetJointFromDOFIndex(index).GetName() for index in j0.GetMimicDOFIndices(idof)]
                             mimicjoints1 = [robot1.GetJointFromDOFIndex(index).GetName() for index in j1.GetMimicDOFIndices(idof)]
                             assert( mimicjoints0 == mimicjoints1 )
-                            # is it possible to compare equations?
+                            # is it possible to compare equations? perhaps just set random values and see if both robots behave the same
                             # assert( j0.GetMimicEquation(idof) == j1.GetMimicEquation(idof) )
                         #todo: GetResolution, GetWeight
                         #todo: ignore links
@@ -182,6 +182,49 @@ class TestEnvironment(EnvironmentSetup):
             robot1=env.GetRobot(oldname)
             # for now have to use this precision until collada-dom can store doubles
             assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= robot0.GetDOF()*1e-4 )
+
+    def test_colladascenes(self):
+        self.log.info('test that collada import/export works for scenes with multiple objects')
+        env=self.env
+        xmldata = """<kinbody name="a" scalegeometry="10">
+  <translation>1 1 1</translation>
+  <body name="b">
+    <mass type="mimicgeom">
+      <density>1000</density>
+    </mass>
+    <geom type="box">
+      <extents>0.2 0.4 0.5</extents>
+      <translation>1 0.01 0.02</translation>
+    </geom>
+    <geom type="box">
+      <extents>0.1 0.2 0.3</extents>
+      <translation>1.3 0.21 0.02</translation>
+    </geom>
+  </body>
+</kinbody>
+"""
+        body = env.ReadKinBodyData(xmldata)
+        env.Add(body)
+        env.Save('test_colladascenes.dae')
+
+        env2 = Environment()
+        env2.Load('test_colladascenes.dae')
+        assert(len(env2.GetBodies())==len(env.GetBodies()))
+        body2=env2.GetBodies()[0]
+        assert(body.GetName() == body2.GetName())
+        assert(len(body2.GetLinks())==len(body.GetLinks()))
+        link=body.GetLinks()[0]
+        link2=body2.GetLinks()[0]
+        assert(len(link2.GetGeometries())==len(link.GetGeometries()))
+
+        assert(transdist(link.ComputeAABB().pos(), link2.ComputeAABB().pos()) <= g_epsilon)
+        assert(transdist(link.ComputeAABB().extents(), link2.ComputeAABB().extents()) <= g_epsilon)
+        for ig,g in enumerate(link.GetGeometries()):
+            g2 = link2.GetGeometries()[ig]
+            ab = g.ComputeAABB(eye(4))
+            ab2 = g2.ComputeAABB(eye(4))
+            assert(transdist(ab.pos(), ab2.pos()) <= g_epsilon)
+            assert(transdist(ab.extents(), ab2.extents()) <= g_epsilon)
 
     def test_unicode(self):
         env=self.env

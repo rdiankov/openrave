@@ -29,6 +29,8 @@ Core
 
 * Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics`. Can also return component-wise torques with **KinBody.ComputeInverseDynamics(accel,None,returncomponents=True)**  (thanks to Quang-Cuong Pham)
 
+* Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties.GetCollisionMesh`.
+
 Inverse Kinematics
 ------------------
 

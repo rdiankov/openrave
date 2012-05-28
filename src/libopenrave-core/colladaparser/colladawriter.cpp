@@ -1115,6 +1115,7 @@ public:
     virtual domGeometryRef WriteGeometry(const KinBody::Link::GEOMPROPERTIES& geom, const string& parentid)
     {
         const KinBody::Link::TRIMESH& mesh = geom.GetCollisionMesh();
+        Transform t = geom.GetTransform();
 
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
@@ -1143,7 +1144,7 @@ public:
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {
-                        Vector v = geom.GetTransform() * mesh.vertices[ind];
+                        Vector v = t*mesh.vertices[ind];
                         parray->getValue()[3*ind+0] = v.x;
                         parray->getValue()[3*ind+1] = v.y;
                         parray->getValue()[3*ind+2] = v.z;

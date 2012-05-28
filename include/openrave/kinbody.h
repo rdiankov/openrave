@@ -160,7 +160,7 @@ public:
                 return ambientColor;
             }
 
-            /// \brief collision data of the specific object in its local coordinate system.
+            /// \brief trimesh representation of the collision data of this object in this local coordinate system
             ///
             /// Should be transformed by \ref GEOMPROPERTIES::GetTransform() before rendering.
             /// For spheres and cylinders, an appropriate discretization value is chosen.

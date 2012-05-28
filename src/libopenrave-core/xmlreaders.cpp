@@ -1036,15 +1036,14 @@ public:
                 _ss >> _geomtransparency;
             }
             else if( xmlname == _processingtag ) {
-                TransformMatrix tminv(_itgeomprop->_t.inverse());
-                TransformMatrix tm(_itgeomprop->_t);
-                tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.y; tm.m[2] *= _vScaleGeometry.z;
-                tm.m[4] *= _vScaleGeometry.x; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.z;
-                tm.m[8] *= _vScaleGeometry.x; tm.m[9] *= _vScaleGeometry.y; tm.m[10] *= _vScaleGeometry.z;
-                tm.trans *= _vScaleGeometry;
+                TransformMatrix tm(_itgeomprop->_t); tm.trans = Vector();
+                TransformMatrix tminv = tm.inverse();
+                tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
+                tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
+                tm.m[8] *= _vScaleGeometry.z; tm.m[9] *= _vScaleGeometry.z; tm.m[10] *= _vScaleGeometry.z;
                 TransformMatrix tmres = tminv * tm;
                 // have to scale in link space, so get scale in geomspace
-                Vector geomspacescale(RaveSqrt(tm.m[0]*tm.m[0]+tm.m[1]*tm.m[1]+tm.m[2]*tm.m[2]),RaveSqrt(tm.m[4]*tm.m[4]+tm.m[5]*tm.m[5]+tm.m[6]*tm.m[6]),RaveSqrt(tm.m[8]*tm.m[8]+tm.m[9]*tm.m[9]+tm.m[10]*tm.m[10]));
+                Vector geomspacescale(RaveSqrt(tm.m[0]*tm.m[0]+tm.m[4]*tm.m[4]+tm.m[8]*tm.m[8]),RaveSqrt(tm.m[1]*tm.m[1]+tm.m[5]*tm.m[5]+tm.m[9]*tm.m[9]),RaveSqrt(tm.m[2]*tm.m[2]+tm.m[6]*tm.m[6]+tm.m[10]*tm.m[10]));
 
                 std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
                 if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {

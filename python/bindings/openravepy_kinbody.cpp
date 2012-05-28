@@ -53,6 +53,9 @@ public:
             object GetCollisionMesh() {
                 return toPyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh());
             }
+            object ComputeAABB(object otransform) const {
+                return toPyAABB(_plink->GetGeometry(_geomindex).ComputeAABB(ExtractTransform(otransform)));
+            }
             void SetDraw(bool bDraw) {
                 _plink->GetGeometry(_geomindex).SetVisible(bDraw);
             }
@@ -2799,6 +2802,7 @@ void init_openravepy_kinbody()
                 scope geomproperties = class_<PyKinBody::PyLink::PyGeomProperties, boost::shared_ptr<PyKinBody::PyLink::PyGeomProperties> >("GeomProperties", DOXY_CLASS(KinBody::Link::GEOMPROPERTIES),no_init)
                                        .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetCollisionMesh))
                                        .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetCollisionMesh))
+                                       .def("ComputeAABB",&PyKinBody::PyLink::PyGeomProperties::ComputeAABB, args("transform"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,ComputeAABB))
                                        .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDraw))
                                        .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetTransparency))
                                        .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeomProperties::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDiffuseColor))
