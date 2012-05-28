@@ -186,7 +186,7 @@ public:
 #endif
         //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
         // have to release the GIL since this is an infinite loop
-        boost::shared_ptr<PythonThreadSaver> statesaver(new PythonThreadSaver());
+        openravepy::PythonThreadSaverPtr statesaver(new openravepy::PythonThreadSaver());
         bool bSuccess=false;
         try {
             bSuccess = _pviewer->main(bShow);

@@ -1225,7 +1225,7 @@ public:
     virtual ~PyManipulatorIKGoalSampler() {
     }
 
-    object Sample(bool ikreturn = false)
+    object Sample(bool ikreturn = false, bool releasegil = false)
     {
         if( ikreturn ) {
             IkReturnPtr pikreturn = _sampler->Sample();
@@ -1242,6 +1242,23 @@ public:
         return object();
     }
 
+    object SampleAll(bool releasegil = false)
+    {
+        boost::python::list oreturns;
+        std::list<IkReturnPtr> listreturns;
+        {
+            openravepy::PythonThreadSaverPtr statesaver;
+            if( releasegil ) {
+                statesaver.reset(new openravepy::PythonThreadSaver());
+            }
+            _sampler->SampleAll(listreturns);
+        }
+        FOREACH(it,listreturns) {
+            oreturns.append(openravepy::toPyIkReturn(**it));
+        }
+        return oreturns;
+    }
+
     OpenRAVE::planningutils::ManipulatorIKGoalSamplerPtr _sampler;
 };
 
@@ -1256,7 +1273,8 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planninguti
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 1)
 
 void init_openravepy_global()
 {
@@ -1581,7 +1599,8 @@ void init_openravepy_global()
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
-        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
+        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
+        .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
         ;
     }
 

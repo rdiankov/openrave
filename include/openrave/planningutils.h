@@ -222,6 +222,12 @@ public:
     virtual IkReturnPtr Sample();
     virtual bool Sample(std::vector<dReal>& vgoal);
 
+    /// \brief samples the rests of the samples until cannot be sampled anymore.
+    ///
+    /// \param vsamples vector is rest with samples
+    /// \return true if a sample was inserted into vsamples
+    bool SampleAll(std::list<IkReturnPtr>& samples);
+
     //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
 
 
