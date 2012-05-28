@@ -831,6 +831,16 @@ void raveLogVerbose(const string &s)
     raveLog(s,Level_Verbose);
 }
 
+void pyRaveSetDebugLevel(uint32_t level)
+{
+    OpenRAVE::RaveSetDebugLevel(level);
+}
+
+int pyRaveInitialize(bool bLoadAllPlugins=true, uint32_t level = Level_Info)
+{
+    return OpenRAVE::RaveInitialize(bLoadAllPlugins,level);
+}
+
 object RaveGetPluginInfo()
 {
     boost::python::list plugins;
@@ -1239,7 +1249,7 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 
 }
 
-BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 7)
@@ -1575,7 +1585,7 @@ void init_openravepy_global()
         ;
     }
 
-    def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
+    def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
     def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
@@ -1586,7 +1596,7 @@ void init_openravepy_global()
     def("RaveLogDebug",openravepy::raveLogDebug,args("log"),"Send a debug log to the openrave system");
     def("RaveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
     def("RaveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
-    def("RaveInitialize",RaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
+    def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
     def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));

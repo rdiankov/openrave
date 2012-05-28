@@ -65,7 +65,7 @@ def InitOpenRAVELogging():
     """
     levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
     log=logging.getLogger('openravepy')
-    log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()])
+    log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()&0xffff])
     if len(log.handlers) == 0:
         try:
             colorize=__import__('logutils.colorize',fromlist=['colorize'])
