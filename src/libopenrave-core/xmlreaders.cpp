@@ -980,8 +980,9 @@ public:
                 if( xmlname == "body" ) {
                     // directly apply transform to all geomteries
                     Transform tnew = _plink->GetTransform();
-                    FOREACH(itgeomprop, _plink->_listGeomProperties)
-                    itgeomprop->_t = tnew * itgeomprop->_t;
+                    FOREACH(itgeomprop, _plink->_listGeomProperties) {
+                        itgeomprop->_t = tnew * itgeomprop->_t;
+                    }
                     _plink->collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
                 }
@@ -1043,7 +1044,7 @@ public:
                 tm.m[8] *= _vScaleGeometry.z; tm.m[9] *= _vScaleGeometry.z; tm.m[10] *= _vScaleGeometry.z;
                 TransformMatrix tmres = tminv * tm;
                 // have to scale in link space, so get scale in geomspace
-                Vector geomspacescale(RaveSqrt(tm.m[0]*tm.m[0]+tm.m[4]*tm.m[4]+tm.m[8]*tm.m[8]),RaveSqrt(tm.m[1]*tm.m[1]+tm.m[5]*tm.m[5]+tm.m[9]*tm.m[9]),RaveSqrt(tm.m[2]*tm.m[2]+tm.m[6]*tm.m[6]+tm.m[10]*tm.m[10]));
+                Vector geomspacescale(RaveSqrt(tmres.m[0]*tmres.m[0]+tmres.m[4]*tmres.m[4]+tmres.m[8]*tmres.m[8]),RaveSqrt(tmres.m[1]*tmres.m[1]+tmres.m[5]*tmres.m[5]+tmres.m[9]*tmres.m[9]),RaveSqrt(tmres.m[2]*tmres.m[2]+tmres.m[6]*tmres.m[6]+tmres.m[10]*tmres.m[10]));
 
                 std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
                 if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
@@ -1094,8 +1095,8 @@ public:
                             if( _bGeomOverwriteTransparency ) {
                                 itnewgeom->ftransparency = _geomtransparency;
                             }
-                            _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
                             itnewgeom->_t.trans *= _vScaleGeometry;
+                            _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
                         }
                         listGeometries.front().vRenderScale = _renderfilename.second*geomspacescale;
                         listGeometries.front()._renderfilename = _renderfilename.first;
@@ -1118,8 +1119,8 @@ public:
                         FOREACH(it,_itgeomprop->collisionmesh.vertices) {
                             *it = tmres * *it;
                         }
-                        _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                         _itgeomprop->_t.trans *= _vScaleGeometry;
+                        _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     }
                 }
                 else {
@@ -1147,9 +1148,9 @@ public:
                     FOREACH(it,_itgeomprop->collisionmesh.vertices) {
                         *it = tmres * *it;
                     }
-                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     _itgeomprop->_t.trans *= _vScaleGeometry;
                     _itgeomprop->vGeomData *= geomspacescale;
+                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                 }
 
                 _itgeomprop = _plink->_listGeomProperties.end();
