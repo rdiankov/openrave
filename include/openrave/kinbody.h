@@ -1195,8 +1195,7 @@ private:
 
     /// \brief Returns the linear and angular velocities for each link
     ///
-    /// The velocities of the link frames with respect to the world coordinate system are returned.
-    /// \param[out]
+    /// \param[out] velocities The velocities of the link frames with respect to the world coordinate system are returned.
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
     /** \brief Returns the linear and angular accelerations for each link given the dof accelerations
@@ -1287,10 +1286,10 @@ private:
     /// \param linkindex of the link that the rotation is attached to
     /// \param position position in world space where to compute derivatives from.
     /// \param jacobian 3xDOF matrix
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, std::vector<dReal>& jacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& jacobian) const;
 
     /// \brief calls std::vector version of CalculateJacobian internally, a little inefficient since it copies memory
-    virtual void CalculateJacobian(int linkindex, const Vector& offset, boost::multi_array<dReal,2>& jacobian) const;
+    virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& jacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
     ///
@@ -1511,7 +1510,7 @@ protected:
     /// \param[in] usebaselinkvelocity if true, will compute all velocities using the base link velocity. otherwise will assume it is 0
     virtual void _ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::vector<std::pair<Vector,Vector> >& linkvelocities, bool usebaselinkvelocity=true) const;
 
-    /// \brief computes accelerations given all the necessary data of the robot. \see GetLinkAccelerations
+    /// \brief Computes accelerations of the links given all the necessary data of the robot. \see GetLinkAccelerations
     ///
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
     /// \param dofvelocities if size is 0, will assume all velocities are 0

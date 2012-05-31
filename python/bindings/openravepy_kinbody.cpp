@@ -1272,10 +1272,10 @@ public:
         _pbody->SetDOFTorques(vtorques,bAdd);
     }
 
-    object CalculateJacobian(int index, object offset)
+    object CalculateJacobian(int index, object oposition)
     {
         std::vector<dReal> vjacobian;
-        _pbody->CalculateJacobian(index,ExtractVector3(offset),vjacobian);
+        _pbody->CalculateJacobian(index,ExtractVector3(oposition),vjacobian);
         std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
         return toPyArray(vjacobian,dims);
     }
@@ -2774,7 +2774,7 @@ void init_openravepy_kinbody()
                         .def("SetJointTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
                         .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
                         .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
-                        .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","offset"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
+                        .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","position"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
                         .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
                         .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
