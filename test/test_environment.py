@@ -83,7 +83,7 @@ class TestEnvironment(EnvironmentSetup):
 
     def test_collada(self):
         self.log.info('test that collada import/export works for robots')
-        epsilon = 400*g_epsilon # because exporting, expect to lose precision, should fix this
+        epsilon = g_epsilon # only works if collada-dom is compiled with double precision
         env=self.env
         with env:
             for robotfile in g_robotfiles:
