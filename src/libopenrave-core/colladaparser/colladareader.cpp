@@ -17,6 +17,8 @@
 // functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
+//#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
 #include <dae/domAny.h>
@@ -25,7 +27,7 @@
 #include <1.5/dom/domConstants.h>
 #include <1.5/dom/domTriangles.h>
 #include <boost/lexical_cast.hpp>
-using namespace ColladaDOM150;
+//using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
 {
@@ -151,7 +153,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
         _bOpeningZAE = filename.find(".zae") == filename.size()-4;
-        _dom = (domCOLLADA*)_dae->open(filename);
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(filename));
         _bOpeningZAE = false;
         if (!_dom) {
             return false;
@@ -164,7 +166,7 @@ public:
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
-        _dom = (domCOLLADA*)_dae->openFromMemory(".",pdata.c_str());
+        _dom = daeSafeCast<domCOLLADA>(_dae->openFromMemory(".",pdata.c_str()));
         if (!_dom) {
             return false;
         }
