@@ -47,10 +47,17 @@
 #include <string>
 #include <vector>
 
+#if defined(IS_ASSIMP_POST_R1251)
+#include <assimp/types.h>
+#include <assimp/quaternion.h>
+#include <assimp/mesh.h>
+#include <assimp/anim.h>
+#else
 #include "aiTypes.h"
 #include "aiQuaternion.h"
 #include "aiMesh.h"
 #include "aiAnim.h"
+#endif
 
 namespace Assimp
 {

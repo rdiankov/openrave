@@ -44,8 +44,13 @@
 #ifndef AI_BYTESWAP_H_INC
 #define AI_BYTESWAP_H_INC
 
+#if defined(IS_ASSIMP_POST_R1251)
+#include <assimp/ai_assert.h>
+#include <assimp/types.h>
+#else
 #include "aiAssert.h"
 #include "aiTypes.h"
+#endif
 
 #if _MSC_VER >= 1400
 #include <stdlib.h>

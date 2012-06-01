@@ -23,6 +23,8 @@ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 # (but later on when installing)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
+set(LIB_SUFFIX CACHE STRING "suffix for the library directory need for x86-64 systems that use lib64 ")
+
 # The RPATH to be used when installing
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
 
@@ -452,7 +454,15 @@ else()
   set(CRLIBM_FOUND 0)
 endif()
 
-pkg_check_modules(ASSIMP assimp)
+if( MSVC )
+  # MSVC has prepackaged collada libraries
+  set(ASSIMP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
+endif()
+find_package(ASSIMP 2.0 PATHS ${ASSIMP_PATH})
+if( NOT ASSIMP_FOUND )
+  pkg_check_modules(ASSIMP assimp)
+endif()
+
 if( ASSIMP_FOUND )
   # For older versions of libassimp2, 
   # like the one in Ubuntu 12.04 
@@ -467,6 +477,9 @@ if( ASSIMP_FOUND )
   IS_ASSIMP_PRE_R896 
   )
   set(CMAKE_REQUIRED_LIBRARIES)
+  if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
+    set(IS_ASSIMP_POST_R1251 1)
+  endif()
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -538,11 +551,6 @@ if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
     set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
-  else()
-    # this is temporary since collada libraries changed (11/10/20)
-    set(COLLADA_DOM_LIBRARIES "" CACHE INTERNAL "collada libraries directories" FORCE)
-    set(COLLADA_DOM_DIR "" CACHE PATH "The directory containing a CMake configuration file for COLLADA_DOM." FORCE)
-    set(COLLADA_PATH "" CACHE PATH "collada root path" FORCE)
   endif()
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
   
@@ -848,7 +856,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
