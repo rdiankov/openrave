@@ -27,7 +27,7 @@ if( ASSIMP_FOUND )
     set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DIS_ASSIMP_POST_R1251")
   endif()
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
-  message(STATUS "Geometry Parsing: Using Open Asset Import Library (assimp ${ASSIMP_VERSION}, post=${IS_ASSIMP_POST_R1251})")
+  message(STATUS "Geometry Parsing: Using Open Asset Import Library (assimp ${ASSIMP_VERSION}")
   set(openrave_core_SOURCES ${openrave_core_SOURCES}  xfileparser/XFileParser.cpp xfileparser/XFileBindings.cpp)
 endif()
 

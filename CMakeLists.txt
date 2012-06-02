@@ -552,7 +552,7 @@ if( OPT_COLLADA )
     # MSVC has prepackaged collada libraries
     set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
   endif()
-  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
+  find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 1.4 PATHS ${COLLADA_PATH})
   
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )

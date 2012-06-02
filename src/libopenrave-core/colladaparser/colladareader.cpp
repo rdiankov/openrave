@@ -17,7 +17,8 @@
 // functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
-//#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+namespace ColladaDOM150 {} // declare in case earlier versions are used
 
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
@@ -27,7 +28,7 @@
 #include <1.5/dom/domConstants.h>
 #include <1.5/dom/domTriangles.h>
 #include <boost/lexical_cast.hpp>
-//using namespace ColladaDOM150;
+using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
 {

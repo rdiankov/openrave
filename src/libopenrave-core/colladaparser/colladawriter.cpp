@@ -17,6 +17,9 @@
 /// functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
+#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+namespace ColladaDOM150 {} // declare in case earlier versions are used
+
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
 #include <dae/domAny.h>
