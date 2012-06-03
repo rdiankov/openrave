@@ -136,7 +136,7 @@ OPENRAVE_PLUGIN_API void DestroyPlugin()
 
     CMakeLists_txt = """cmake_minimum_required (VERSION 2.6.0)
 project(%(pluginname)s)
-find_package(OpenRAVE REQUIRED)
+find_package(OpenRAVE @OPENRAVE_VERSION_MAJOR@.@OPENRAVE_VERSION_MINOR@ REQUIRED)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
