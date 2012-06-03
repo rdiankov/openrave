@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2009-2012 Rosen Diankov (rosen.diankov@gmail.com)
 # 

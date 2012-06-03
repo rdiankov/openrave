@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env @PYTHON_EXECUTABLE_NAME@
+# -*- coding: utf-8 -*-
 # Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -227,7 +228,7 @@ python testplugin.py
     open(os.path.join(plugindir,'FindOpenRAVE.cmake'),'w').write("""@FindOpenRAVE@""")
     
     if not options.usecore:
-        testplugin_py="""#!/usr/bin/env python
+        testplugin_py="""#!/usr/bin/env @PYTHON_EXECUTABLE_NAME@
 from openravepy import *
 RaveInitialize()
 RaveLoadPlugin('build/%s')
