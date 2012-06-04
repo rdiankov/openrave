@@ -836,8 +836,39 @@ void pyRaveSetDebugLevel(uint32_t level)
     OpenRAVE::RaveSetDebugLevel(level);
 }
 
-int pyRaveInitialize(bool bLoadAllPlugins=true, uint32_t level = Level_Info)
+int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
 {
+    int level = Level_Info;
+    if( olevel != object() ) {
+        // some version of boost python return true for extract::check, even through the actual conversion will throw an OverflowError
+        // therefore check for conversion compatibility starting at the longest signed integer
+        extract<int64_t> levelint64(olevel);
+        if( levelint64.check() ) {
+            level = static_cast<int>((int64_t)levelint64);
+        }
+        else {
+            extract<uint64_t> leveluint64(olevel);
+            if( leveluint64.check() ) {
+                RAVELOG_INFO("4\n");
+                level = static_cast<int>((uint64_t)leveluint64);
+            }
+            else {
+                extract<uint32_t> leveluint32(olevel);
+                if( leveluint32.check() ) {
+                    level = static_cast<int>((uint32_t)leveluint32);
+                }
+                else {
+                    extract<int> levelint32(olevel);
+                    if( levelint32.check() ) {
+                        level = (int)levelint32;
+                    }
+                    else {
+                        RAVELOG_WARN("failed to extract level from RaveInitialize call\n");
+                    }
+                }
+            }
+        }
+    }
     return OpenRAVE::RaveInitialize(bLoadAllPlugins,level);
 }
 
