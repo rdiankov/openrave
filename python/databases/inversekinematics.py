@@ -354,16 +354,21 @@ class InverseKinematicsModel(DatabaseGenerator):
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
-            for i in range(len(remainingindices) - dofexpected):
+            N = len(remainingindices)
+            for i in range(N - dofexpected):
                 if self.iktype == IkParameterizationType.Transform6D or self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
                     freeindices.append(remainingindices.pop(2))
                 elif self.iktype == IkParameterizationType.Lookat3D:
                     # usually head (rotation joints) are at the end
-                    freeindices.append(remainingindices.pop(0))
+                    #freeindices = remainingindices[len(remainingindices)-2:]
+                    #remainingindices=remainingindices[:-2]
+                    #len(remainingindices)
+                    freeindices.append(remainingindices.pop(-1))
                 elif self.iktype == IkParameterizationType.TranslationDirection5D:
                     # usually on arms, so remove furthest joints
-                    #freeindices.append(remainingindices.pop(-1))
-                    pass
+                    freeindices.append(remainingindices.pop(-1))
+                    #freeindices = remainingindices[len(remainingindices)-5:]
+                    #remainingindices=remainingindices[:-5]
                 else:
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
@@ -487,9 +492,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
                 iktype=IkParameterizationType.Ray4D
-            if freejoints is None:
-                # take the torso joint
-                freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
+#             if freejoints is None:
+#                 # take the torso joint
+#                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
         elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05' or self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
             if iktype==IkParameterizationType.Translation3D or (iktype==None and self.iktype==IkParameterizationType.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
@@ -511,6 +516,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if not dofindices[0] in self.manip.GetArmIndices():
                     raise LookupError("cannot find joint '%s(%d)' in solve joints: %s"%(jointname,dofindices[0],self.manip.GetArmIndices()))
                 freeindices.append(dofindices[0])
+        print 'getIndicesFromJointNames',freeindices,freejoints
         return freeindices
 
     def generate(self,iktype=None,freejoints=None,freeinc=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
@@ -655,6 +661,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             else:
                 self.solveindices,self.freeindices = self.getDefaultIndices()
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
+        print 'freeindices',self.solveindices
         if len(self.solveindices) != dofexpected:
             raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
 
