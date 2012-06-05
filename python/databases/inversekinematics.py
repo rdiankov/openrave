@@ -661,7 +661,6 @@ class InverseKinematicsModel(DatabaseGenerator):
             else:
                 self.solveindices,self.freeindices = self.getDefaultIndices()
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
-        print 'freeindices',self.solveindices
         if len(self.solveindices) != dofexpected:
             raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
 

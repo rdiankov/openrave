@@ -72,6 +72,10 @@ public:
             _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
         }
 
+        void SetExtraParameters(const std::string& s) {
+            _paramswrite->_sExtraParameters = s;
+        }
+
         string __repr__() {
             stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
@@ -230,6 +234,7 @@ void init_openravepy_planner()
         .def(init<>())
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
         .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
+        .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)

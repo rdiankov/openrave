@@ -193,12 +193,15 @@ class VisibilityModel(DatabaseGenerator):
                     conedirangles.append([float(s) for s in conediranglestring.split()])
         if not gmodel is None:
             preshapes = array([gmodel.grasps[0][gmodel.graspindices['igrasppreshape']]])
-        if preshapes is None:
-            with self.target:
-                self.target.Enable(False)
-                taskmanip = interfaces.TaskManipulation(self.robot)
-                final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
-            preshapes = array([final])
+        if len(self.manip.GetGripperIndices()) > 0:
+            if preshapes is None:
+                with self.target:
+                    self.target.Enable(False)
+                    taskmanip = interfaces.TaskManipulation(self.robot)
+                    final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
+                preshapes = array([final])
+        else:
+            preshapes = array(())
         self.generate(preshapes=preshapes,sphere=sphere,conedirangles=conedirangles)
         self.save()
     def generate(self,preshapes,sphere=None,conedirangles=None):
