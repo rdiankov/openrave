@@ -360,9 +360,10 @@ class InverseKinematicsModel(DatabaseGenerator):
                 elif self.iktype == IkParameterizationType.Lookat3D:
                     # usually head (rotation joints) are at the end
                     freeindices.append(remainingindices.pop(0))
-#                 elif self.iktype == IkParameterizationType.TranslationDirection5D:
-#                     # usually on arms, so remove furthest joints
-#                     freeindices.append(remainingindices.pop(-1))
+                elif self.iktype == IkParameterizationType.TranslationDirection5D:
+                    # usually on arms, so remove furthest joints
+                    #freeindices.append(remainingindices.pop(-1))
+                    pass
                 else:
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
