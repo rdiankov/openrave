@@ -590,6 +590,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("unrecognized joint type 0x%x", _type, ORE_InvalidArguments);
         }
+        _tLeftNoOffset = _tLeft;
+        _tRightNoOffset = _tRight;
     }
     else {
         _tLeftNoOffset.trans = vanchor;
