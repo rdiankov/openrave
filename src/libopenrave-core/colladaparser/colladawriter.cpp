@@ -1144,7 +1144,7 @@ public:
                     domFloat_arrayRef parray = daeSafeCast<domFloat_array>(pvertsource->add(COLLADA_ELEMENT_FLOAT_ARRAY));
                     parray->setId((parentid+string("_positions-array")).c_str());
                     parray->setCount(mesh.vertices.size());
-                    parray->setDigits(6);     // 6 decimal places
+                    parray->setDigits(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {

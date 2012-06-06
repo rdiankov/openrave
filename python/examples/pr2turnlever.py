@@ -111,17 +111,19 @@ def main(env,options):
         params.SetRobotActiveJoints(robot)
         params.SetExtraParameters('<workspacetraj><![CDATA[%s]]></workspacetraj>'%traj.serialize(0))
         planner.InitPlan(robot,params)
-
+        
         outputtraj = RaveCreateTrajectory(env,'')
         success=planner.PlanPath(outputtraj)
         assert(success)
 
-    # also create reverse the trajectory and try again
+    # also create reverse the trajectory and run infinitely
     trajectories = [outputtraj,planningutils.ReverseTrajectory(outputtraj)]
     while True:
         for traj in trajectories:
             robot.GetController().SetPath(traj)
             robot.WaitForController(0)
+        if options.testmode:
+            break
     
 from optparse import OptionParser
 from openravepy.misc import OpenRAVEGlobalArguments
@@ -132,7 +134,7 @@ def run(args=None):
 
     :param args: arguments for script to parse, if not specified will use sys.argv
     """
-    parser = OptionParser(description='Explicitly specify goals to get a simple navigation and manipulation demo.', usage='openrave.py --example pr2turnlever [options]')
+    parser = OptionParser(description='Shows how to set a workspace trajectory for the hand and have a robot plan it.', usage='openrave.py --example pr2turnlever [options]')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--scene',action="store",type='string',dest='scene',default='data/pr2test1.env.xml',
                       help='scene to load')

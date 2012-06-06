@@ -65,7 +65,9 @@ Misc
 
 * Added :meth:`.misc.OpenRAVEGlobalArguments.parseAndCreateThreadedUser` and :meth:`.misc.SetViewerUserThread` to allow viewer to be run in main thread while user functions are run in a different thread. All examples use this now.
 
-* Clang compilation
+* Added :mod:`.examples.pr2turnlever` example
+
+* Clang compiler compilation
 
 Version 0.6.4
 =============

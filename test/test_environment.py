@@ -89,10 +89,13 @@ class TestEnvironment(EnvironmentSetup):
             for robotfile in g_robotfiles:
                 env.Reset()
                 robot0=self.LoadRobot(robotfile)
-                robot0.SetTransform(eye(4))
+                # add a transform to test that offsets are handled correctly
+                Trobot = matrixFromAxisAngle([pi/4,0,0])
+                Trobot[0:3,3] = [1.0,2.0,3.0]
+                robot0.SetTransform(Trobot)
                 env.Save('test.zae')
                 robot1=self.LoadRobot('test.zae')
-                robot1.SetTransform(eye(4))
+                #robot1.SetTransform(eye(4))
                 assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
                 assert(len(robot0.GetPassiveJoints()) == len(robot1.GetPassiveJoints()))
                 assert(robot0.GetDOF()==robot1.GetDOF())
@@ -148,8 +151,8 @@ class TestEnvironment(EnvironmentSetup):
                     assert( len(link0.GetGeometries()) == len(link1.GetGeometries()) )
                     ab0=link0.ComputeAABB()
                     ab1=link1.ComputeAABB()
-                    assert(transdist(ab0.pos(),ab1.pos()) <= epsilon)
-                    assert(transdist(ab0.extents(),ab1.extents()) <= epsilon)
+                    assert(transdist(ab0.pos(),ab1.pos()) <= epsilon*200) # tesselation
+                    assert(transdist(ab0.extents(),ab1.extents()) <= epsilon*200) # tesselation
                     assert(abs(link0.GetMass()-link1.GetMass()) <= epsilon)
                     assert(transdist(link0.GetLocalMassFrame(),link1.GetLocalMassFrame()) <= epsilon)
                     assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)

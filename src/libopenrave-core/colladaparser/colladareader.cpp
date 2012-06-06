@@ -901,17 +901,8 @@ public:
                     itlinkbinding->_domlink = pdomlink;
                     itlinkbinding->_link = plink;
                     if( !!itlinkbinding->_nodephysicsoffset ) {
-                        // set the rigid offset to the transform of the link that the node points to
-                        // ...actually this might not be mentioned anywhere in the collada spec...
-                        // the target specification exists for rigid_objects to override the target.
-//                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
-//                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) == 0 ) {
-//                                if( !!itlinkbinding2->_link ) {
-//                                    trigidoffset = itlinkbinding2->_link->_t;
-//                                }
-//                                break;
-//                            }
-//                        }
+                        // set the rigid offset to the transform of the instance physics model parent
+                        trigidoffset = _ExtractFullTransform(itlinkbinding->_nodephysicsoffset);
                     }
                     break;
                 }

@@ -116,7 +116,7 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    bool PlanPath(PyTrajectoryBasePtr pytraj)
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj)
     {
         return _pplanner->PlanPath(openravepy::GetTrajectory(pytraj));
     }

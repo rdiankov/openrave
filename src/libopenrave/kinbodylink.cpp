@@ -374,7 +374,7 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
     case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*24.0f) + 3;
+        int numverts = (int)(fTessellation*48.0f) + 3;
         dReal dtheta = 2 * PI / (dReal)numverts;
         collisionmesh.vertices.push_back(Vector(0,0,len));
         collisionmesh.vertices.push_back(Vector(0,0,-len));
