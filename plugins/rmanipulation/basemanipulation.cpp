@@ -292,6 +292,11 @@ protected:
             }
         }
 
+        if( maxsteps <= 0 ) {
+            RAVELOG_WARN("maxsteps is not positive\n");
+            return false;
+        }
+
         params->minimumcompletetime = params->_fStepLength * minsteps;
         RAVELOG_DEBUG(str(boost::format("Starting MoveHandStraight dir=(%f,%f,%f)...")%direction.x%direction.y%direction.z));
         robot->RegrabAll();
