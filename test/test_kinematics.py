@@ -406,7 +406,7 @@ class TestKinematics(EnvironmentSetup):
                 for idofvalues in range(10):
                     lower,upper = body.GetDOFLimits()
                     vellimits = body.GetDOFVelocityLimits()
-                    dofvaluesnew = randlimits(lower+2*deltastep, upper-2*deltastep)
+                    dofvaluesnew = randlimits(numpy.minimum(lower+5*deltastep,upper), numpy.maximum(upper-5*deltastep,lower))
                     Mreal = None
                     for idofvel in range(10):
                         dofvelnew = randlimits(-vellimits+10*deltastep,vellimits-10*deltastep)
@@ -476,7 +476,7 @@ class TestKinematics(EnvironmentSetup):
                             Mdiff = (ComputeDynamicsM(body,dofvaluesnew+testdelta) - ComputeDynamicsM(body,dofvaluesnew-testdelta))/(2*deltastep)
                             Mpartials.append(Mdiff)
 
-                        randdelta = 10*deltastep*(random.rand(body.GetDOF())-1)
+                        randdelta = 8*deltastep*(random.rand(body.GetDOF())-1)
                         Mtestdiff = ComputeDynamicsM(body,dofvaluesnew+randdelta)-ComputeDynamicsM(body,dofvaluesnew)
                         Mexpecteddiff = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
