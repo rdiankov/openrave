@@ -42,6 +42,7 @@ import graspplanning
 import hanoi
 import inversekinematicspick
 import movehandstraight
+import pr2turnlever
 
 try:
     from PyQt4 import QtGui, QtCore

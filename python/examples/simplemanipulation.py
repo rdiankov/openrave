@@ -128,7 +128,7 @@ def run(args=None):
 
     :param args: arguments for script to parse, if not specified will use sys.argv
     """
-    parser = OptionParser(description='Explicitly specify goals to get a simple navigation and manipulation demo.', usage='openrave.py --example hanoi [options]')
+    parser = OptionParser(description='Explicitly specify goals to get a simple navigation and manipulation demo.', usage='openrave.py --example simplemanipulation [options]')
     OpenRAVEGlobalArguments.addOptions(parser)
     parser.add_option('--planner',action="store",type='string',dest='planner',default=None,
                       help='the planner to use')

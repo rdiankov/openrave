@@ -486,15 +486,15 @@ class InverseKinematicsModel(DatabaseGenerator):
         elif self.manip.GetKinematicsStructureHash() == 'c363859a2d7a151a22dc1e251d6d8669' or self.manip.GetKinematicsStructureHash() == '12ceb0aaa06143fe305efa6e48faae0b': # pr2
             if iktype == None:
                 iktype=IkParameterizationType.Transform6D
-            if freejoints is None:
+            if iktype == IkParameterizationType.Transform6D and freejoints is None:
                 # take the torso and roll joint
                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[ind]].GetName() for ind in [0,3]]
         elif self.manip.GetKinematicsStructureHash()=='a1e9aea0dc0fda631ca376c03d500927' or self.manip.GetKinematicsStructureHash()=='ceb6be51bd14f345e22997cc0bca9f2f': # pr2 cameras
             if iktype is None:
                 iktype=IkParameterizationType.Ray4D
-#             if freejoints is None:
-#                 # take the torso joint
-#                 freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
+                if freejoints is None:
+                    # take the torso joint
+                    freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
         elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05' or self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
             if iktype==IkParameterizationType.Translation3D or (iktype==None and self.iktype==IkParameterizationType.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
