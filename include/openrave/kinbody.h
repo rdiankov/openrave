@@ -1283,12 +1283,18 @@ private:
     ///
     /// Gets the jacobian with respect to a link by computing the partial differentials for all joints that in the path from the root node to GetLinks()[index]
     /// (doesn't touch the rest of the values)
-    /// \param linkindex of the link that the rotation is attached to
+    /// \param linkindex of the link that defines the frame the position is attached to
     /// \param position position in world space where to compute derivatives from.
     /// \param jacobian 3xDOF matrix
-    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& jacobian) const;
+    /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+    virtual void ComputeJacobianTranslation(int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
 
-    /// \brief calls std::vector version of CalculateJacobian internally, a little inefficient since it copies memory
+    /// \brief calls std::vector version of ComputeJacobian internally
+    virtual void CalculateJacobian(int linkindex, const Vector& position, std::vector<dReal>& jacobian) const {
+        ComputeJacobianTranslation(linkindex,position,jacobian);
+    }
+
+    /// \brief calls std::vector version of ComputeJacobian internally, a little inefficient since it copies memory
     virtual void CalculateJacobian(int linkindex, const Vector& position, boost::multi_array<dReal,2>& jacobian) const;
 
     /// \brief Computes the rotational jacobian as a quaternion with respect to an initial rotation.
@@ -1305,10 +1311,62 @@ private:
     ///
     /// \param linkindex of the link that the rotation is attached to
     /// \param vjacobian 3xDOF matrix
-    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& jacobian) const;
+    virtual void ComputeJacobianAxisAngle(int linkindex, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
+
+    /// \brief Computes the angular velocity jacobian of a specified link about the axes of world coordinates.
+    virtual void CalculateAngularVelocityJacobian(int linkindex, std::vector<dReal>& jacobian) const {
+        ComputeJacobianAxisAngle(linkindex,jacobian);
+    }
 
     /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
     virtual void CalculateAngularVelocityJacobian(int linkindex, boost::multi_array<dReal,2>& jacobian) const;
+
+    /** \brief Computes the DOFx3xDOF hessian of the linear translation
+
+        Arjang Hourtash. "The Kinematic Hessian and Higher Derivatives", IEEE Symposium on Computational Intelligence in Robotics and Automation (CIRA), 2005.
+
+        Can be used to find the world position acceleration
+        \code
+        accel = Jacobian * dofaccelerations + dofvelocities^T * Hessian * dofvelocities
+        \endcode
+
+        It can also be used for a second-order approximation of the position given delta dof values
+        \code
+        newposition = position + Jacobian * delta + 0.5 * delta^T * Hessian * delta
+        \endcode
+
+        H[i,j.k] = hessian[k+DOF*(j+3*i)]
+        delta[j] = sum_i sum_k values[i] * H[i,j,k] * values[k]
+
+        /// \param linkindex of the link that defines the frame the position is attached to
+        /// \param position position in world space where to compute derivatives from.
+        /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta translation
+        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+     */
+    virtual void ComputeHessianTranslation(int linkindex, const Vector& position, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
+
+    /** \brief Computes the DOFx3xDOF hessian of the rotation represented as angle-axis
+
+        Arjang Hourtash. "The Kinematic Hessian and Higher Derivatives", IEEE Symposium on Computational Intelligence in Robotics and Automation (CIRA), 2005.
+
+        Can be used to find the world axis-angle acceleration
+        \code
+        accel = Jacobian * dofaccelerations + dofvelocities^T * Hessian * dofvelocities
+        \endcode
+
+        It can also be used for a second-order approximation of the axis-angle given delta dof values
+        \code
+        newaxisangle = axisangle + Jacobian * delta + 0.5 * delta^T * Hessian * delta
+        \endcode
+
+        H[i,j.k] = hessian[k+DOF*(j+3*i)]
+        delta[j] = sum_i sum_k values[i] * H[i,j,k] * values[k]
+
+        /// \param linkindex of the link that defines the frame the position is attached to
+        /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta angle-axis
+        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+     */
+    virtual void ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
 
     /// \brief link index and the linear forces and torques. Value.first is linear force acting on the link's COM and Value.second is torque
     typedef std::map<int, std::pair<Vector,Vector> > ForceTorqueMap;

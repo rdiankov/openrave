@@ -525,6 +525,53 @@ class TestKinematics(EnvironmentSetup):
                         assert( transdist(-torquegravity, gravitypartials) < 0.1*deltastep*len(gravitypartials))
                         assert( transdist(torquegravity, testtorque_e-testtorque_e2) <= 1e-10 )
 
+    def test_hessian(self):
+        self.log.info('check the jacobian and hessian computation')
+        env=self.env
+        for envfile in ['robots/barrettwam.robot.xml']:#g_robotfiles:
+            env.Reset()
+            self.LoadEnv(envfile,{'skipgeometry':'1'})
+            body = env.GetBodies()[0]
+            lowerlimit,upperlimit = body.GetDOFLimits()
+            deltastep = 0.01
+            for i in range(100):
+                dofvalues = randlimits(numpy.minimum(lowerlimit+5*deltastep,upperlimit), numpy.maximum(upperlimit-5*deltastep,lowerlimit))
+                xyzoffset = random.rand(3)-0.5
+                for ilink,link in enumerate(body.GetLinks()):
+                    body.SetDOFValues(dofvalues)
+                    Jt = body.ComputeJacobianTranslation(ilink,xyzoffset)
+                    Ja = body.ComputeJacobianAxisAngle(ilink)
+                    Ht = body.ComputeHessianTranslation(ilink,xyzoffset)
+                    deltavalues = (random.rand(body.GetDOF())-0.5)*deltastep
+                    Tlink = link.GetTransform()
+                    errfirst = []
+                    errsecond = []
+                    mults = arange(1.0,10.0,1.0)
+                    for mult in mults:
+                        newdeltavalues = mult*deltavalues
+                        body.SetDOFValues(dofvalues+newdeltavalues)
+                        newdeltavalues = body.GetDOFValues()-dofvalues
+                        Tlink2 = link.GetTransform()
+                        xyzoffset2 = transformPoints(dot(Tlink2,linalg.inv(Tlink)),[xyzoffset])[0]
+                        realoffset = xyzoffset2 - xyzoffset
+                        errfirst.append(linalg.norm(dot(Jt,newdeltavalues) - realoffset))
+                        errsecond.append(linalg.norm(dot(Jt,newdeltavalues) + 0.5*dot(newdeltavalues,dot(Ht,newdeltavalues)) - realoffset))
+                        errmult = 1.0
+                        if errfirst[-1] > deltastep*1e-5:
+                            errmult = 4.0
+                        assert(errsecond[-1]*errmult<=errfirst[-1]) # should be way better
+                        if len(errfirst) > 2:
+                            assert(errfirst[-2]<=errfirst[-1]+1e-15)
+                            assert(errsecond[-2]<=errsecond[-1]+1e-15)
+                    # errfirst should be increasing linearly
+                    # errsecond should be increasing quadratically
+                    if errfirst[-1] > 1e-15:
+                        coeffs0,residuals, rank, singular_values, rcond=polyfit(mults,errfirst/errfirst[-1],2,full=True)
+                        assert(residuals<0.01)
+                    if errsecond[-1] > 1e-15:
+                        coeffs1,residuals, rank, singular_values, rcond=polyfit(mults,errsecond/errsecond[-1],3,full=True)
+                        assert(residuals<0.01)
+
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
         with self.env:

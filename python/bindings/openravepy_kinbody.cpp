@@ -1272,11 +1272,35 @@ public:
         _pbody->SetDOFTorques(vtorques,bAdd);
     }
 
+    object ComputeJacobianTranslation(int index, object oposition, object oindices=object())
+    {
+        vector<int> vindices;
+        if( oindices != object() ) {
+            vindices = ExtractArray<int>(oindices);
+        }
+        std::vector<dReal> vjacobian;
+        _pbody->ComputeJacobianTranslation(index,ExtractVector3(oposition),vjacobian,vindices);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = vjacobian.size()/3;
+        return toPyArray(vjacobian,dims);
+    }
+
+    object ComputeJacobianAxisAngle(int index, object oindices=object())
+    {
+        vector<int> vindices;
+        if( oindices != object() ) {
+            vindices = ExtractArray<int>(oindices);
+        }
+        std::vector<dReal> vjacobian;
+        _pbody->ComputeJacobianAxisAngle(index,vjacobian,vindices);
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = vjacobian.size()/3;
+        return toPyArray(vjacobian,dims);
+    }
+
     object CalculateJacobian(int index, object oposition)
     {
         std::vector<dReal> vjacobian;
         _pbody->CalculateJacobian(index,ExtractVector3(oposition),vjacobian);
-        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
+        std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = vjacobian.size()/3;
         return toPyArray(vjacobian,dims);
     }
 
@@ -1291,9 +1315,22 @@ public:
     object CalculateAngularVelocityJacobian(int index) const
     {
         std::vector<dReal> vjacobian;
-        _pbody->CalculateAngularVelocityJacobian(index,vjacobian);
+        _pbody->ComputeJacobianAxisAngle(index,vjacobian);
         std::vector<npy_intp> dims(2); dims[0] = 3; dims[1] = _pbody->GetDOF();
         return toPyArray(vjacobian,dims);
+    }
+
+    object ComputeHessianTranslation(int index, object oposition, object oindices=object())
+    {
+        vector<int> vindices;
+        if( oindices != object() ) {
+            vindices = ExtractArray<int>(oindices);
+        }
+        size_t dof = vindices.size() == 0 ? (size_t)_pbody->GetDOF() : vindices.size();
+        std::vector<dReal> vhessian;
+        _pbody->ComputeHessianTranslation(index,ExtractVector3(oposition),vhessian,vindices);
+        std::vector<npy_intp> dims(3); dims[0] = dof; dims[1] = 3; dims[2] = dof;
+        return toPyArray(vhessian,dims);
     }
 
     object ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque=object(), bool returncomponents=false)
@@ -2526,6 +2563,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution,
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolutions, 3, 5)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianTranslation_overloads, ComputeJacobianTranslation, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianAxisAngle_overloads, ComputeJacobianAxisAngle, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, ComputeHessianTranslation, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
 
 namespace openravepy
@@ -2774,9 +2814,12 @@ void init_openravepy_kinbody()
                         .def("SetJointTorques",&PyKinBody::SetDOFTorques,args("torques","add"), DOXY_FN(KinBody,SetDOFTorques))
                         .def("SetTransformWithJointValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
                         .def("SetTransformWithDOFValues",&PyKinBody::SetTransformWithDOFValues,args("transform","values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; const Transform; bool"))
+                        .def("ComputeJacobianTranslation",&PyKinBody::ComputeJacobianTranslation,ComputeJacobianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeJacobianTranslation)))
+                        .def("ComputeJacobianAxisAngle",&PyKinBody::ComputeJacobianAxisAngle,ComputeJacobianAxisAngle_overloads(args("linkindex","indices"), DOXY_FN(KinBody,ComputeJacobianAxisAngle)))
                         .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","position"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
                         .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
                         .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
+                        .def("ComputeHessianTranslation",&PyKinBody::ComputeHessianTranslation,ComputeHessianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeHessianTranslation)))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
                         .def("CheckSelfCollision",pkinbodyself, DOXY_FN(KinBody,CheckSelfCollision))
                         .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
