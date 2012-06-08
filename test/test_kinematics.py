@@ -139,9 +139,6 @@ class TestKinematics(EnvironmentSetup):
                                         raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
 
                                     if axisangledist(dot(Jangvel,deltavalues),axisAngleFromRotationMatrix(dot(Tlinknew[0:3,0:3], linalg.inv(Tlink[0:3,0:3])))) > 0.1*angthresh:
-                                        from IPython.Shell import IPShellEmbed
-                                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
-                                        ipshell(local_ns=locals())
                                         raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh))
 
     def test_bodyvelocities(self):
@@ -536,17 +533,19 @@ class TestKinematics(EnvironmentSetup):
             deltastep = 0.01
             for i in range(100):
                 dofvalues = randlimits(numpy.minimum(lowerlimit+5*deltastep,upperlimit), numpy.maximum(upperlimit-5*deltastep,lowerlimit))
-                xyzoffset = random.rand(3)-0.5
+                xyzoffset = ones(3)#random.rand(3)-0.5
                 for ilink,link in enumerate(body.GetLinks()):
                     body.SetDOFValues(dofvalues)
                     Jt = body.ComputeJacobianTranslation(ilink,xyzoffset)
                     Ja = body.ComputeJacobianAxisAngle(ilink)
                     Ht = body.ComputeHessianTranslation(ilink,xyzoffset)
+                    Ha = body.ComputeHessianAxisAngle(ilink)
                     deltavalues = (random.rand(body.GetDOF())-0.5)*deltastep
                     Tlink = link.GetTransform()
+                    axisangle0 = axisAngleFromRotationMatrix(Tlink[0:3,0:3])
                     errfirst = []
                     errsecond = []
-                    mults = arange(1.0,10.0,1.0)
+                    mults = arange(1.0,6.0,1.0)
                     for mult in mults:
                         newdeltavalues = mult*deltavalues
                         body.SetDOFValues(dofvalues+newdeltavalues)
@@ -558,11 +557,24 @@ class TestKinematics(EnvironmentSetup):
                         errsecond.append(linalg.norm(dot(Jt,newdeltavalues) + 0.5*dot(newdeltavalues,dot(Ht,newdeltavalues)) - realoffset))
                         errmult = 1.0
                         if errfirst[-1] > deltastep*1e-5:
-                            errmult = 4.0
+                            errmult = 3.0
+                        #print 'trans',errsecond[-1],errfirst[-1],linalg.norm(realoffset)
                         assert(errsecond[-1]*errmult<=errfirst[-1]) # should be way better
                         if len(errfirst) > 2:
                             assert(errfirst[-2]<=errfirst[-1]+1e-15)
                             assert(errsecond[-2]<=errsecond[-1]+1e-15)
+
+                        axisangle1 = axisAngleFromRotationMatrix(Tlink2[0:3,0:3])
+                        axisdelta = axisangle1-axisangle0
+                        firstdelta = dot(Ja,newdeltavalues)
+                        seconddelta = firstdelta + 0.5*dot(newdeltavalues,dot(Ha,newdeltavalues))
+                        angleerrorfirst = linalg.norm(firstdelta-axisdelta)
+                        angleerrorsecond = linalg.norm(seconddelta-axisdelta)
+                        #print angleerrorfirst,angleerrorsecond,linalg.norm(axisdelta)
+                        assert(angleerrorfirst <= 1.3*linalg.norm(axisdelta))
+                        assert(angleerrorsecond <= 1.3*linalg.norm(axisdelta))
+                        #assert(angleerrorsecond <= angleerrorfirst+1e-14) # for some reason not valid all the time
+                        
                     # errfirst should be increasing linearly
                     # errsecond should be increasing quadratically
                     if errfirst[-1] > 1e-15:
@@ -571,7 +583,7 @@ class TestKinematics(EnvironmentSetup):
                     if errsecond[-1] > 1e-15:
                         coeffs1,residuals, rank, singular_values, rcond=polyfit(mults,errsecond/errsecond[-1],3,full=True)
                         assert(residuals<0.01)
-
+                        
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
         with self.env:
