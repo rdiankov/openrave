@@ -127,7 +127,7 @@ The global functions are:
   // Computes all IK solutions given a end effector coordinates and the free joints.
   bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
   
-  // Computes the end effector coordinates givennn the joint values. This function is used to double check ik.
+  // Computes the end effector coordinates given the joint values. This function is used to double check ik.
   void fk(const IKReal* joints, IKReal* eetrans, IKReal* eerot);
   
   // returns the number of free parameters users has to set apriori
@@ -5770,7 +5770,7 @@ class IKFastSolver(AutoReloader):
                         D = M[k, k]*M[i, j] - M[i, k]*M[k, j]
 
                         if k > 0:
-                            if len(vars) > 0 and D != S.Zero:
+                            if len(vars) > 0 and D != S.Zero and not M[k-1, k-1].is_number:
                                 D,r = div(Poly(D,*vars),M[k-1, k-1])
                             else:
                                 D /= M[k-1, k-1]
