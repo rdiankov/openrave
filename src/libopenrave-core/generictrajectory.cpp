@@ -170,6 +170,7 @@ public:
         }
         BOOST_ASSERT(_spec.GetDOF()>0);
         OPENRAVE_ASSERT_FORMAT((data.size()%_spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%_spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( bOverwrite && index*_spec.GetDOF() < _vtrajdata.size() ) {
             size_t copysize = min(data.size(),_vtrajdata.size()-index*_spec.GetDOF());
             std::copy(data.begin(),data.begin()+copysize,_vtrajdata.begin()+index*_spec.GetDOF());
@@ -191,6 +192,7 @@ public:
         }
         BOOST_ASSERT(spec.GetDOF()>0);
         OPENRAVE_ASSERT_FORMAT((data.size()%spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( _spec == spec ) {
             Insert(index,data,bOverwrite);
         }

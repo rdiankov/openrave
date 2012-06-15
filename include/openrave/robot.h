@@ -40,9 +40,10 @@ public:
 public:
         virtual ~Manipulator();
 
-        /// \brief Return the transformation of the end effector (manipulator frame).
+        /// \brief Return the transformation of the manipulator frame
         ///
-        /// All inverse kinematics and grasping queries are specifying this frame.
+        /// The manipulator frame is defined by the the end effector link position * GetLocalToolTransform()
+        /// All inverse kinematics and jacobian queries are specifying this frame.
         virtual Transform GetTransform() const;
 
         virtual Transform GetEndEffectorTransform() const {
@@ -235,7 +236,9 @@ public:
         /// \brief return true if the body is being grabbed by any link on this manipulator
         virtual bool IsGrabbing(KinBodyConstPtr body) const;
 
-        /// \brief computes the jacobian of the manipulator arm indices from the current manipulator frame origin.
+        /// \brief computes the jacobian of the manipulator arm indices of the current manipulator frame world position.
+        ///
+        /// The manipulator frame is computed from Manipulator::GetTransform()
         virtual void CalculateJacobian(std::vector<dReal>& jacobian) const;
 
         /// \brief calls std::vector version of CalculateJacobian internally, a little inefficient since it copies memory
