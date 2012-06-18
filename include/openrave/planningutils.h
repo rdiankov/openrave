@@ -73,6 +73,7 @@ OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vect
 /** \brief Retime the trajectory points consisting of active dofs. <b>[multi-thread safe]</b>
 
     Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+    The velocities for the current trajectory are overwritten.
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
@@ -84,6 +85,7 @@ OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
 /** \brief Retime the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
 
     Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+    The velocities for the current trajectory are overwritten.
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param maxvelocities the max velocities of each dof
     \param maxaccelerations the max acceleration of each dof

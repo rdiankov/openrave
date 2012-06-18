@@ -201,7 +201,8 @@ Shows how to use a planner to close and open a gripper using planning.
   with env:
       robot.Grab(env.GetKinBody('mug4'))
 
-  manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices()))) # move manipulator to all zeros
+  # move manipulator to all zeros, set jitter to 0.04 since cup is initially colliding with table
+  manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices())),jitter=0.04)
 
 Custom IK Filters
 -----------------

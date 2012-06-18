@@ -20,6 +20,10 @@
 """
 from __future__ import with_statement # for python 2.5
 
+from sympy import __version__ as sympy_version
+if sympy_version < '0.7.0':
+    raise ImportError('ikfast needs sympy 0.7.x or greater')
+
 import sys, copy, time, datetime
 try:
     from openravepy.metaclass import AutoReloader
@@ -1246,7 +1250,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         return '}\n}\n'
 
     def generatePolynomialRoots(self, node):
-        D=node.poly.degree()
+        D=node.poly.degree(0)
         polyroots=self.using_polyroots(D)
         name = node.jointname
         polyvar = node.poly.gens[0].name

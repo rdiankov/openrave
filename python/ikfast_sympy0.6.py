@@ -326,9 +326,9 @@ CodeGenerators = {}
 # except ImportError:
 #     pass
 try:
-    import ikfast_generator_cpp
-    CodeGenerators['cpp'] = ikfast_generator_cpp.CodeGenerator
-    IkType = ikfast_generator_cpp.IkType
+    import ikfast_generator_cpp_sympy0.6
+    CodeGenerators['cpp'] = ikfast_generator_cpp_sympy0.6.CodeGenerator
+    IkType = ikfast_generator_cpp_sympy0.6.IkType
 except ImportError:
     pass
 

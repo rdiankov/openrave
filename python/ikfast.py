@@ -232,10 +232,15 @@ A. Most likely not, usually an iksolver finishes within 10 minutes.
 
 """
 from __future__ import with_statement # for python 2.5
+
+from sympy import __version__ as sympy_version
+if sympy_version < '0.7.0':
+    raise ImportError('ikfast needs sympy 0.7.x or greater')
+
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '57'
+__version__ = '58'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -254,11 +259,6 @@ try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
     pass
-
-from sympy import __version__ as sympy_version
-
-if sympy_version < '0.7.0':
-    raise ValueError('ikfast needs sympy 0.7.x or greater')
 
 try:
     import re # for latex cleanup
@@ -571,7 +571,7 @@ class AST:
             self.dictequations = []
             self.equationsused = []
         def numsolutions(self):
-            return self.poly.degree()
+            return self.poly.degree(0)
         def subs(self,solsubs):
             if self.jointeval is not None:
                 self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -2279,6 +2279,7 @@ class IKFastSolver(AutoReloader):
         rawpolyeqs2 = [None,None]
         coupledsolutions = None
         leftovervarstree = []
+        origendbranchtree = endbranchtree
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
@@ -2296,7 +2297,9 @@ class IKFastSolver(AutoReloader):
                         rawpolyeqs2[j] = rawpolyeqs
                 try:
                     if rawpolyeqs2[j] is not None:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[j],solvejointvars,endbranchtree=[AST.SolverSequence([leftovervarstree])])
+                        rawpolyeqs=rawpolyeqs2[j]
+                        endbranchtree=[AST.SolverSequence([leftovervarstree])]
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree)
                         break
                 except self.CannotSolveError, e:
                     log.warn('%s',e)
@@ -2317,7 +2320,7 @@ class IKFastSolver(AutoReloader):
             curvars.remove(var)
             solsubs += self.Variable(var).subs
         self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-        leftovervarstree += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
+        leftovervarstree += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
         return coupledsolutions
 
     def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None):
@@ -2522,8 +2525,6 @@ class IKFastSolver(AutoReloader):
             newreducedeqs.sort(cmp=lambda x,y: len(x.monoms()) - len(y.monoms()))
             ileftvar = 0
             leftvar = dummys[ileftvar]
-            coupledvars = dummys[:]
-            coupledvars.pop(ileftvar)
             exportcoeffeqs=None
             for ioffset in range(len(newreducedeqs)):
                 try:
@@ -2718,9 +2719,9 @@ class IKFastSolver(AutoReloader):
         reducedelayed = []
         for j in range(2):
             if len(usedvars[j]) <= 4:
-                leftsideeqs = [polyeq[j] for polyeq in polyeqs if polyeq[j].degree() > 0]
-                rightsideeqs = [polyeq[1-j] for polyeq in polyeqs if polyeq[j].degree() > 0]
-                if all([eq.degree() <= 2 for eq in leftsideeqs]):
+                leftsideeqs = [polyeq[j] for polyeq in polyeqs if sum(polyeq[j].degree_list()) > 0]
+                rightsideeqs = [polyeq[1-j] for polyeq in polyeqs if sum(polyeq[j].degree_list()) > 0]
+                if all([all(d <= 2 for d in eq.degree_list()) for eq in leftsideeqs]):
                     try:
                         numsymbolcoeffs, _computereducedequations = self.reduceBothSidesSymbolicallyDelayed(leftsideeqs,rightsideeqs)
                         reducedelayed.append([j,leftsideeqs,rightsideeqs,__builtin__.sum(numsymbolcoeffs), _computereducedequations])
@@ -2740,7 +2741,7 @@ class IKFastSolver(AutoReloader):
                     reducedeqs2,tree = self.reduceBothSidesInverseMatrix(leftsideeqs,rightsideeqs)
                 if len(reducedeqs2) > 0:
                     # success, add all the reduced equations
-                    reducedeqs += [[Poly(eq[0],*usedvars[j]),Poly(eq[1],*usedvars[1-j])] for eq in reducedeqs2] + [[Poly(S.Zero,*polyeq[j].gens),polyeq[1-j]-polyeq[j].as_expr()] for polyeq in polyeqs if polyeq[j].degree() == 0]
+                    reducedeqs += [[Poly(eq[0],*usedvars[j]),Poly(eq[1],*usedvars[1-j])] for eq in reducedeqs2] + [[Poly(S.Zero,*polyeq[j].gens),polyeq[1-j]-polyeq[j].as_expr()] for polyeq in polyeqs if sum(polyeq[j].degree_list()) == 0]
                     if len(reducedeqs) > 0:
                         break;
             except self.CannotSolveError,e:
@@ -3004,7 +3005,7 @@ class IKFastSolver(AutoReloader):
                 monom = [0]*len(newunknowns)
                 coeffs.append(-eqdict.get(tuple(monom),S.Zero))
                 systemcoeffs.append(coeffs)
-
+            
             detvars = [s for s,v in localsymbols] + self.pvars
             for eqindices in combinations(range(len(newleftsideeqs)),len(newunknowns)):
                 # very quick rejection
@@ -3020,8 +3021,7 @@ class IKFastSolver(AutoReloader):
                     solution=solve(eqused,newunknowns)
                 except IndexError:
                     # not enough equations?
-                    continue
-
+                    continue                
                 if solution is not None and all([self.isValidSolution(value.subs(localsymbols)) for key,value in solution.iteritems()]):
                     # substitute 
                     solsubs = []
@@ -3034,6 +3034,7 @@ class IKFastSolver(AutoReloader):
                     for i in othereqindices:
                         reducedeqs.append([S.Zero,(newleftsideeqs[i].subs(solsubs).subs(localsymbols)).as_expr().expand()])
                     break
+            
             # remove the dividesymbols from reducedeqs
             for sym,ivalue in dividesymbols:
                 value=1/ivalue
@@ -3043,9 +3044,9 @@ class IKFastSolver(AutoReloader):
                         neweq = S.Zero
                         peq = Poly(eq,sym)
                         for m,c in peq.terms():
-                            neweq += c*value**(peq.degree() - m[0])
+                            neweq += c*value**(peq.degree(0) - m[0])
                         reducedeqs[i][1] = neweq.expand()
-                        reducedeqs[i][0] = (reducedeqs[i][0]*value**peq.degree()).expand()
+                        reducedeqs[i][0] = (reducedeqs[i][0]*value**peq.degree(0)).expand()
             if len(reducedeqs) > 0:
                 log.info('finished with %d equations',len(reducedeqs))
             return reducedeqs
@@ -3067,17 +3068,28 @@ class IKFastSolver(AutoReloader):
                     # give up on optimization
                     RightEquations.append(peq[1])
                 else:
-                    RightEquations.append(peq[1].termwise(lambda m,c: self.simplifyTransform(c)))
+                    RightEquations.append(self.simplifyTransformPoly(peq[1]))
         
         if len(RightEquations) < 6:
             raise self.CannotSolveError('number of equations %d less than 6'%(len(RightEquations)))
 
         # sort with respect to the number of monomials
         RightEquations.sort(lambda x, y: len(x.monoms())-len(y.monoms()))
-
+        
         # substitute with dummy=tan(half angle)
         symbols = RightEquations[0].gens
         symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
+        unsolvedsymbols = []
+        for solvejointvar in solvejointvars:
+            testvars = self.Variable(solvejointvar).vars
+            if not any([v in symbols for v in testvars]):
+                unsolvedsymbols += testvars
+
+        # check that the coefficients of the reduced equations do not contain any unsolved variables
+        for peq in RightEquations:
+            if peq.has(*unsolvedsymbols):
+                raise self.CannotSolveError('found unsolved symbol being used so ignoring: %s'%peq)
+        
         log.info('solving simultaneously for symbols: %s',symbols)
 
         dummys = []
@@ -3165,7 +3177,7 @@ class IKFastSolver(AutoReloader):
                 for peq in newreducedeqs:
                     if all([m[monomindex] <= 1 for m in peq.monoms()]):
                         newpeq = Poly(peq,var)
-                        if newpeq.degree() > 0:
+                        if sum(newpeq.degree_list()) > 0:
                             singledegreeeqs.append(newpeq)
                         else:
                             AllEquations.append(peq.subs(self.invsubs).as_expr())
@@ -3174,14 +3186,23 @@ class IKFastSolver(AutoReloader):
 
                 log.info(str(AllEquations))
                 #sol=self.solvePairVariablesHalfAngle(AllEquations,usedvars[1],usedvars[2],[])
-            
+
         # choose which leftvar can determine the singularity of the following equations!
-        ileftvar = 0
-        leftvar = dummys[ileftvar]
-        coupledvars = dummys[:]
-        coupledvars.pop(ileftvar)
+        exportcoeffeqs = None
         getsubs = raghavansolutiontree[0].getsubs if len(raghavansolutiontree) > 0 else None
-        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
+        for ileftvar in range(len(dummys)):
+            leftvar = dummys[ileftvar]
+            try:
+                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
+                break
+            except self.CannotSolveError,e:
+                log.warn('failed with leftvar %s: %s',leftvar,e)
+
+        if exportcoeffeqs is None:
+            raise self.CannotSolveError('failed to solve dialytically')
+        if ileftvar > 0:
+            raise self.CannotSolveError('solving equations dialytically succeeded with var index %d, unfortunately code generation supports only index 0'%ileftvar)
+    
         jointevalcos=[d[1] for d in dummysubs if d[0].name[0] == 'c']
         jointevalsin=[d[1] for d in dummysubs if d[0].name[0] == 's']
         #jointeval=[d[1] for d in dummysubs if d[0].name[0] == 'j']
@@ -3521,17 +3542,17 @@ class IKFastSolver(AutoReloader):
             AllEquations = []
             for eq in reducedeqs:
                 peq = Poly(eq,tvar)
-                if peq.degree() == 0:
+                if sum(peq.degree_list()) == 0:
                     AllEquations.append(peq.TC().subs(self.invsubs).expand())
-                elif peq.degree() == 1 and peq.TC() == S.Zero:
+                elif sum(peq.degree_list()) == 1 and peq.TC() == S.Zero:
                     AllEquations.append(peq.LC().subs(self.invsubs).expand())
                 else:
                     # two substitutions: sin/(1+cos), (1-cos)/sin
                     neweq0 = S.Zero
                     neweq1 = S.Zero
                     for monoms,c in peq.terms():
-                        neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree()-monoms[0]))
-                        neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree()-monoms[0]))
+                        neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree(0)-monoms[0]))
+                        neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
                     AllEquations.append(neweq0.subs(self.invsubs).expand())
                     AllEquations.append(neweq1.subs(self.invsubs).expand())
             self.sortComplexity(AllEquations)
@@ -3555,8 +3576,23 @@ class IKFastSolver(AutoReloader):
 #             pass
 #         
 
-        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,0,getsubs=getsubs)
-        coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=[v.name for v in htvars],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
+        exportcoeffeqs = None
+        for ileftvar in range(len(htvars)):
+            try:
+                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
+                break
+            except self.CannotSolveError,e:
+                log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
+                
+        if exportcoeffeqs is None:
+            raise self.CannotSolveError('failed to solve dialytically')
+        
+        if ileftvar > 0:
+            raise self.CannotSolveError('solving equations dialytically succeeded with var index %d, unfortunately code generation supports only index 0'%ileftvar)
+        
+        exportvar = [htvars[ileftvar].name]
+        exportvar += [v.name for i,v in enumerate(htvars) if i != ileftvar]
+        coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in htvarsubs2],jointevalcos=[htvarsubs[2*i][1] for i in range(len(htvars))],jointevalsin=[htvarsubs[2*i+1][1] for i in range(len(htvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=exportvar,exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly8qep',rootmaxdim=16)
         coupledsolution.presetcheckforzeros = checkforzeros
         solutiontree.append(coupledsolution)
         self.usinglapack = True
@@ -3596,28 +3632,9 @@ class IKFastSolver(AutoReloader):
         polyeqs = [[eq[0].as_expr(),eq[1]] for eq in eqs]
         if len(polyeqs) < 8:
             raise self.CannotSolveError('solveKohliOsvatic: need 8 or more polyeqs')
-        
-        neweqs=[]
-        for i in range(0,8,2):
-            p0 = Poly(polyeqs[i][0],cvar,svar)
-            p0dict = p0.as_dict()
-            p1 = Poly(polyeqs[i+1][0],cvar,svar)
-            p1dict = p1.as_dict()
-            r0 = polyeqs[i][1].as_expr()
-            r1 = polyeqs[i+1][1].as_expr()
-            if self.equal(p0dict.get((1,0),S.Zero),-p1dict.get((0,1),S.Zero)) and self.equal(p0dict.get((0,1),S.Zero),p1dict.get((1,0),S.Zero)):
-                p0,p1 = p1,p0
-                p0dict,p1dict=p1dict,p0dict
-                r0,r1 = r1,r0
-            if self.equal(p0dict.get((1,0),S.Zero),p1dict.get((0,1),S.Zero)) and self.equal(p0dict.get((0,1),S.Zero),-p1dict.get((1,0),S.Zero)):
-                # p0+tvar*p1, p1-tvar*p0
-                # subs: tvar*svar + cvar = 1, svar-tvar*cvar=tvar
-                neweqs.append([Poly(p0dict.get((1,0),S.Zero) + p0dict.get((0,1),S.Zero)*tvar + p0.TC() + tvar*p1.TC(),*symbols), Poly(r0+tvar*r1,*othersymbols)])
-                neweqs.append([Poly(p0dict.get((1,0),S.Zero)*tvar - p0dict.get((0,1),S.Zero) - p0.TC()*tvar + p1.TC(),*symbols), Poly(r1-tvar*r0,*othersymbols)])
-        if len(neweqs) != 8:
-            raise self.CannotSolveError('coefficients of equations need to match! only got %d reduced equations'%len(neweqs))
 
         # solve the othereqs for symbols without the standalone symbols[2] and symbols[3]
+        reducedeqs = []
         for jother in range(len(othersymbols)/2):
             if jother == 0:
                 cosmonom = (1,0,0,0)
@@ -3643,9 +3660,10 @@ class IKFastSolver(AutoReloader):
                 if const != S.Zero:
                     rightsideeq = rightsideeq.sub(Poly.from_dict({(0,0,0,0,0,0):const},*rightsideeq.gens))
                     leftsideeq = leftsideeq.sub(Poly.from_dict({(0,0,0,0):const},*leftsideeq.gens))
+                # check that leftsideeq doesn't hold any terms with cosmonom and sinmonom?
                 rightsideeqs.append(rightsideeq)
                 leftsideeqs.append(leftsideeq)
-            # number of symbols for hiro robot is 16
+            # number of symbols for kawada-hiro robot is 16
             if len(othersymbols) > 2:
                 reducedeqs = self.reduceBothSidesSymbolically(leftsideeqs,rightsideeqs,usesymbols=False,maxsymbols=18)
                 for peq in reducedeqs:
@@ -3660,14 +3678,91 @@ class IKFastSolver(AutoReloader):
 
         finaleqs = []
         finaleqsymbols = symbols+othersymbols[2*jother:(2+2*jother)]
+        for peq0,eq1 in reducedeqs:
+            if peq0 == S.Zero:
+                finaleqs.append(Poly(eq1,*finaleqsymbols))
+
+        if len(finaleqs) >= 2:
+            # perhaps can solve finaleqs as is?
+            # transfer othersymbols[2*jother:(2+2*jother)] to the leftside
+            try:
+                leftsideeqs = []
+                rightsideeqs = []
+                for finaleq in finaleqs:
+                    peq=Poly(finaleq,*othersymbols[2*jother:(2+2*jother)])
+                    leftsideeqs.append(peq.sub(peq.TC()))
+                    rightsideeqs.append(-peq.TC())
+                reducedeqs2 = self.reduceBothSidesSymbolically(leftsideeqs,rightsideeqs,usesymbols=False,maxsymbols=18)
+                # find all the equations with left side = to zero
+                usedvars = set()
+                for symbol in symbols:
+                    usedvars.add(Symbol(symbol.name[1:]))
+                AllEquations = []
+                for eq0, eq1 in reducedeqs2:
+                    if eq0 == S.Zero:
+                        AllEquations.append(eq1.subs(self.invsubs))
+                if len(AllEquations) > 0:
+                    otherjointtrees = []
+                    tree = self.solveAllEquations(AllEquations,curvars=list(usedvars),othersolvedvars=[],solsubs=self.freevarsubs,endbranchtree=[AST.SolverSequence([otherjointtrees])])
+                    log.info('first solveAllEquations successful: %s',usedvars)
+#                     try:
+#                         # although things can be solved at this point, it yields a less optimal solution than if all variables were considered...
+#                         solsubs=list(self.freevarsubs)
+#                         for usedvar in usedvars:
+#                             solsubs += self.Variable(usedvar).subs
+#                         # solved, so substitute back into reducedeqs and see if anything new can be solved
+#                         otherusedvars = set()
+#                         for symbol in othersymbols:
+#                             otherusedvars.add(Symbol(symbol.name[1:]))
+#                         OtherAllEquations = []
+#                         for peq0,eq1 in reducedeqs:
+#                             OtherAllEquations.append((peq0.as_expr()-eq1).subs(self.invsubs).expand())
+#                         otherjointtrees += self.solveAllEquations(OtherAllEquations,curvars=list(otherusedvars),othersolvedvars=list(usedvars),solsubs=solsubs,endbranchtree=endbranchtree)
+#                         return tree, list(usedvars)+list(otherusedvars)
+#                     except self.CannotSolveError:
+                        # still have the initial solution
+                    otherjointtrees += endbranchtree
+                    return tree, list(usedvars)
+                
+            except self.CannotSolveError,e:
+                pass
+        
         log.info('build final equations for symbols: %s',finaleqsymbols)
+        neweqs=[]
+        for i in range(0,8,2):
+            p0 = Poly(polyeqs[i][0],cvar,svar)
+            p0dict = p0.as_dict()
+            p1 = Poly(polyeqs[i+1][0],cvar,svar)
+            p1dict = p1.as_dict()
+            r0 = polyeqs[i][1].as_expr()
+            r1 = polyeqs[i+1][1].as_expr()
+            if self.equal(p0dict.get((1,0),S.Zero),-p1dict.get((0,1),S.Zero)) and self.equal(p0dict.get((0,1),S.Zero),p1dict.get((1,0),S.Zero)):
+                p0,p1 = p1,p0
+                p0dict,p1dict=p1dict,p0dict
+                r0,r1 = r1,r0
+            if self.equal(p0dict.get((1,0),S.Zero),p1dict.get((0,1),S.Zero)) and self.equal(p0dict.get((0,1),S.Zero),-p1dict.get((1,0),S.Zero)):
+                # p0+tvar*p1, p1-tvar*p0
+                # subs: tvar*svar + cvar = 1, svar-tvar*cvar=tvar
+                neweqs.append([Poly(p0dict.get((1,0),S.Zero) + p0dict.get((0,1),S.Zero)*tvar + p0.TC() + tvar*p1.TC(),*symbols), Poly(r0+tvar*r1,*othersymbols)])
+                neweqs.append([Poly(p0dict.get((1,0),S.Zero)*tvar - p0dict.get((0,1),S.Zero) - p0.TC()*tvar + p1.TC(),*symbols), Poly(r1-tvar*r0,*othersymbols)])
+        if len(neweqs) != 8:
+            raise self.CannotSolveError('coefficients of equations need to match! only got %d reduced equations'%len(neweqs))
+    
         for eq0,eq1 in neweqs:
             commondenom = Poly(S.One,*self.pvars)
+            hasunknown = False
             for m,c in eq1.terms():
                 foundreq = [req[1] for req in reducedeqs if req[0].monoms()[0] == m]
                 if len(foundreq) > 0:
                     n,d = fraction(foundreq[0])
                     commondenom = Poly(lcm(commondenom,d),*self.pvars)
+                else:
+                    if m[2*(1-jother)] > 0 or m[2*(1-jother)+1] > 0:
+                        # perhaps there's a way to combine what's in reducedeqs?
+                        log.warn('unknown %s',m)
+                        hasunknown = True
+            if hasunknown:
+                continue
             commondenom = self.removecommonexprs(commondenom.as_expr(),onlygcd=True,onlynumbers=True)
             finaleq = eq0.as_expr()*commondenom
             for m,c in eq1.terms():
@@ -3677,7 +3772,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     finaleq = finaleq - Poly.from_dict({m:c*commondenom},*eq1.gens).as_expr()
             finaleqs.append(Poly(finaleq.expand(),*finaleqsymbols))
-
+                
         # finally do the half angle substitution with symbols
         # set:
         # j=othersymbols[2]*(1+dummys[0]**2)*(1+dummys[1]**2)
@@ -3719,7 +3814,6 @@ class IKFastSolver(AutoReloader):
         dummysubs.append((othersymbols[1+2*jother],sin(dummyjk)))
         dummysubs2.append((usedvars[-1],dummyjk))
 
-        ileftvar=0
         newreducedeqs = []
         for peq in finaleqs:
             eqnew = S.Zero
@@ -3735,7 +3829,20 @@ class IKFastSolver(AutoReloader):
                     eqnew += c*simplify(term*commonmult)
             newreducedeqs.append(Poly(eqnew,*dummys))
 
-        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
+        exportcoeffeqs = None
+        for ileftvar in range(len(dummys)):
+            leftvar = dummys[ileftvar]
+            try:
+                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
+                break
+            except self.CannotSolveError,e:
+                log.warn('failed with leftvar %s: %s',leftvar,e)
+
+        if exportcoeffeqs is None:
+            raise self.CannotSolveError('failed to solve dialytically')
+        if ileftvar > 0:
+            raise self.CannotSolveError('solving equations dialytically succeeded with var index %d, unfortunately code generation supports only index 0'%ileftvar)
+    
         coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in usedvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(usedvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(usedvars))],isHinges=[self.isHinge(v.name) for v in usedvars],exportvar=dummys[0:3]+[dummyjk],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly16lep',rootmaxdim=16)
         self.usinglapack = True
         return [coupledsolution]+endbranchtree,usedvars
@@ -3756,7 +3863,7 @@ class IKFastSolver(AutoReloader):
         origmonoms = set()
         maxdegree = 0
         for peq in newreducedeqs:
-            if peq.degree() == 0:
+            if sum(peq.degree_list()) == 0:
                 log.warn('solveDialytically: polynomial %s degree is 0',peq)
                 continue
             for m in peq.monoms():
@@ -3807,7 +3914,27 @@ class IKFastSolver(AutoReloader):
                     for i in range(B.shape[0]):
                         A2[i,B.shape[0]+i] = S.One
                     A2=A2.col_join((-C).row_join(-B))
-                    eigenvals2 = numpy.linalg.eigvals(numpy.array(numpy.array(A2),numpy.float64))
+                    eigenvals2,eigenvecs2 = numpy.linalg.eig(numpy.array(numpy.array(A2),numpy.float64))
+                    # check if solutions can actually be extracted
+                    # find all the zero eigenvalues
+                    roots = []
+                    numrepeating = 0
+                    for ieig,eigenvalue in enumerate(eigenvals2):
+                        if abs(numpy.imag(eigenvalue)) < 1e-12:
+                            if abs(numpy.real(eigenvalue)) > 1:
+                                ev = eigenvecs2[A.shape[0]:,ieig]
+                            else:
+                                ev = eigenvecs2[:A.shape[0],ieig]
+                            if abs(ev[0]) < 1e-14:
+                                continue
+                            br = ev[1:] / ev[0]
+                            dists = abs(numpy.array(roots) - numpy.real(eigenvalue))
+                            if any(dists<1e-7):
+                                numrepeating += 1
+                            roots.append(numpy.real(eigenvalue))
+                    if numrepeating > 0:
+                        log.info('found %d repeating roots in solveDialytically matrix: %s',numrepeating,roots)
+                        continue
                     linearlyindependent = True
                     break
             if not linearlyindependent:
@@ -3817,6 +3944,11 @@ class IKFastSolver(AutoReloader):
             return Mall,allmonoms
 
         return exportcoeffeqs,origmonoms
+
+    def simplifyTransformPoly(self,peq):
+        """simplifies the coefficients of the polynomial with simplifyTransform and returns the new polynomial
+        """
+        return peq.termwise(lambda m,c: self.simplifyTransform(c))
 
     def simplifyTransform(self,eq,othervars=None):
         """Attemps to simplify an equation given that variables from a rotation matrix have been used. There are 12 constraints that are tested:
@@ -4430,8 +4562,8 @@ class IKFastSolver(AutoReloader):
                 break
             leftvar = varsyms[ileftvar].htvar
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
-            mindegree = __builtin__.min([peq.degree() for peq in newpolyeqs])
-            maxdegree = __builtin__.max([peq.degree() for peq in newpolyeqs])
+            mindegree = __builtin__.min([max(peq.degree_list()) for peq in newpolyeqs])
+            maxdegree = __builtin__.max([max(peq.degree_list()) for peq in newpolyeqs])
             for peq in newpolyeqs:
                 if len(peq.monoms()) == 1:
                     possiblefinaleq = self.checkFinalEquation(Poly(peq.LC(),leftvar),subs)
@@ -4441,7 +4573,7 @@ class IKFastSolver(AutoReloader):
             for degree in range(mindegree,maxdegree+1):
                 if solutions[ileftvar] is not None or linearsolution is not None:
                     break
-                newpolyeqs2 = [peq for peq in newpolyeqs if peq.degree() <= degree]
+                newpolyeqs2 = [peq for peq in newpolyeqs if max(peq.degree_list()) <= degree]
                 if degree+1 <= len(newpolyeqs2):
                     # in order to avoid wrong solutions, have to get resultants for all equations
                     possibilities = []
@@ -4488,7 +4620,7 @@ class IKFastSolver(AutoReloader):
                                 pass
                             
                         # sort with respect to degree
-                        equationdegrees = [(peq.degree()*100000+self.codeComplexity(peq.as_expr()),peq) for peq in possibilities]
+                        equationdegrees = [(max(peq.degree_list())*100000+self.codeComplexity(peq.as_expr()),peq) for peq in possibilities]
                         equationdegrees.sort()
                         solutions[ileftvar] = [peq[1] for peq in equationdegrees]
                         break
@@ -4501,10 +4633,10 @@ class IKFastSolver(AutoReloader):
         ileftvar = None
         if solutions[0] is not None:
             if solutions[1] is not None:
-                if solutions[1][0].degree() < solutions[0][0].degree():
+                if max(solutions[1][0].degree_list()) < max(solutions[0][0].degree_list()):
                     pfinals = solutions[1]
                     ileftvar = 1
-                elif solutions[1][0].degree() == solutions[0][0].degree() and self.codeComplexity(solutions[1][0].as_expr()) < self.codeComplexity(solutions[0][0].as_expr()):
+                elif max(solutions[1][0].degree_list()) == max(solutions[0][0].degree_list()) and self.codeComplexity(solutions[1][0].as_expr()) < self.codeComplexity(solutions[0][0].as_expr()):
                     pfinals = solutions[1]
                     ileftvar = 1
                 else:
@@ -4561,7 +4693,7 @@ class IKFastSolver(AutoReloader):
                     eqadds = []
                     for arg in dettemp.args:
                         eqmuls = [Poly(arg2.subs(tempsubs),leftvar) for arg2 in arg.args]
-                        if eqmuls[0].degree() == 0:
+                        if sum(eqmuls[0].degree_list()) == 0:
                             eq = eqmuls.pop(0)
                             eqmuls[0] = eqmuls[0]*eq
                         while len(eqmuls) > 1:
@@ -4699,7 +4831,7 @@ class IKFastSolver(AutoReloader):
         varsubs = [(cos(solvevar),cvar),(sin(solvevar),svar)]
         othervarsubs = [(sin(v)**2,1-cos(v)**2) for v in othervars]
         eqpolys = [Poly(eq.subs(varsubs),cvar,svar) for eq in raweqns]
-        eqpolys = [eq for eq in eqpolys if eq.degree() == 1 and not eq.TC().has(solvevar)]
+        eqpolys = [eq for eq in eqpolys if sum(eq.degree_list()) == 1 and not eq.TC().has(solvevar)]
         #eqpolys.sort(lambda x,y: iksolver.codeComplexity(x) - iksolver.codeComplexity(y))
         partialsolutions = []
         neweqs = []
@@ -4751,7 +4883,7 @@ class IKFastSolver(AutoReloader):
             if peq.has(varsym.var):
                 raise self.CannotSolveError('expecting only sin and cos! %s'%peq)
             
-            if peq.degree() == 0:
+            if sum(peq.degree_list()) == 0:
                 continue
             
             # check if all terms are multiples of cos/sin
@@ -4799,7 +4931,7 @@ class IKFastSolver(AutoReloader):
             subs = []
         htvar = pfinal.gens[0]
         # remove all trivial 0s
-        while pfinal.degree() > 0 and pfinal.TC() == S.Zero:
+        while sum(pfinal.degree_list()) > 0 and pfinal.TC() == S.Zero:
             pfinalnew = Poly(S.Zero,htvar)
             for m,c in pfinal.terms():
                 if m[0] > 0:
@@ -4816,7 +4948,7 @@ class IKFastSolver(AutoReloader):
         for testconsistentvalue in self.testconsistentvalues:
             coeffs = []
             globalsymbols = [(s,v.subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
-            for degree in range(pfinal.degree(),-1,-1):
+            for degree in range(pfinal.degree(0),-1,-1):
                 coeffs.append(pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
                 if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
@@ -4864,7 +4996,7 @@ class IKFastSolver(AutoReloader):
             try:
                 ps = Poly(eqnew,varsym.svar)
                 pc = Poly(eqnew,varsym.cvar)
-                if ps.degree() > 0 or pc.degree() > 0 or ps.TC() == S.Zero or pc.TC() == S.Zero:
+                if sum(ps.degree_list()) > 0 or sum(pc.degree_list()) > 0 or ps.TC() == S.Zero or pc.TC() == S.Zero:
                     continue
             except PolynomialError:
                 continue
@@ -4895,7 +5027,7 @@ class IKFastSolver(AutoReloader):
                     continue
                 
                 # ignore any equations with degree 3 or more
-                if Poly(enew,varsym.svar).degree() > maxdegree or Poly(enew,varsym.cvar).degree() > maxdegree:
+                if max(Poly(enew,varsym.svar).degree_list()) > maxdegree or max(Poly(enew,varsym.cvar).degree_list()) > maxdegree:
                     log.debug('ignoring equation: ',enew)
                     continue
                 
@@ -5049,7 +5181,7 @@ class IKFastSolver(AutoReloader):
                 # ignore any equations with degree 3 or more 
                 ps = Poly(eqnew,varsym.svar)
                 pc = Poly(eqnew,varsym.cvar)
-                if ps.degree() > maxdegree or pc.degree() > maxdegree:
+                if max(ps.degree_list()) > maxdegree or max(pc.degree_list()) > maxdegree:
                     log.debug('cannot solve equation with high degree: %s',str(eqnew))
                     continue
                 if ps.TC() == S.Zero and len(ps.monoms()) > 0:
@@ -5194,7 +5326,7 @@ class IKFastSolver(AutoReloader):
                         continue
                     
                     peq = Poly(eq,*pairwisevars)
-                    if peq.degree() > 0 and self.codeComplexity(eq) > maxcomplexity:
+                    if max(peq.degree_list()) > 0 and self.codeComplexity(eq) > maxcomplexity:
                         # don't need such complex equations
                         continue
                     
@@ -5250,7 +5382,7 @@ class IKFastSolver(AutoReloader):
             polyunknown = []
             for rank,eq in orgeqns:
                 p = Poly(eq,unknownvars[2*ivar],unknownvars[2*ivar+1])
-                if p.degree() == 1 and __builtin__.sum(p.LM()) == 1:
+                if sum(p.degree_list()) == 1 and __builtin__.sum(p.LM()) == 1:
                     polyunknown.append((rank,p))
             if len(polyunknown) > 0:
                 break
@@ -5261,7 +5393,7 @@ class IKFastSolver(AutoReloader):
                 polyunknown = []
                 for rank,eq in orgeqns:
                     p = Poly(eq,unknownvars[2*ivar],unknownvars[2*ivar+1])
-                    polyunknown.append(p.subs(unknownvars[2*ivar+1]**2,1-unknownvars[2*ivar]**2))
+                    polyunknown.append(Poly(p.subs(unknownvars[2*ivar+1]**2,1-unknownvars[2*ivar]**2),unknownvars[2*ivar],unknownvars[2*ivar+1]))
                 if len(polyunknown) >= 2:
                     monomtoremove = [[polyunknown,(2,0)],[polyunknown,(1,1)]]
                     for curiter in range(2):
@@ -5471,7 +5603,7 @@ class IKFastSolver(AutoReloader):
             # try to reduce finaleq
             p0 = Poly(simpleterms[0],unknownvars[varindex],unknownvars[varindex+1])
             p1 = Poly(simpleterms[1],unknownvars[varindex],unknownvars[varindex+1])
-            if p0.degree() > 1 and p1.degree() > 1 and p0.degree() == p1.degree() and p0.LM() == p1.LM():
+            if max(p0.degree_list()) > 1 and max(p1.degree_list()) > 1 and max(p0.degree_list()) == max(p1.degree_list()) and p0.LM() == p1.LM():
                 finaleq = (p0*p1.LC()-p1*p0.LC()).as_expr()
                 finaleq = expand(simplify(finaleq.subs(allsymbols)))
                 if finaleq == S.Zero:

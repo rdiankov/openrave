@@ -208,7 +208,11 @@ class InverseKinematicsModel(DatabaseGenerator):
             for rigidlyattached in link.GetRigidlyAttachedLinks():
                 if rigidlyattached.IsStatic():
                     raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
-        self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
+        try:
+            self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
+        except ImportError,e:
+            log.warn('failed to import ikfast, so reverting to older version: %s',e)
+            self.ikfast = __import__('openravepy.ikfast_sympy0.6',fromlist=['openravepy'])
         for handler in log.handlers:
             self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
@@ -495,6 +499,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if freejoints is None:
                     # take the torso joint
                     freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
+        elif self.manip.GetKinematicsStructureHash()=='2640ae411e0c87b03f56bf289296f9d8' and iktype == IkParameterizationType.Lookat3D: # pr2 head_torso
+            if freejoints is None:
+                freejoints=[self.robot.GetJoints()[self.manip.GetArmIndices()[0]].GetName()]
         elif self.manip.GetKinematicsStructureHash()=='ab9d03903279e44bc692e896791bcd05' or self.manip.GetKinematicsStructureHash()=='afe50514bf09aff5f2a84beb078bafbd': # katana
             if iktype==IkParameterizationType.Translation3D or (iktype==None and self.iktype==IkParameterizationType.Translation3D):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]

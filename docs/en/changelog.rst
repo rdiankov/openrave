@@ -46,7 +46,7 @@ Inverse Kinematics
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
-* Fixed several ikfast bugs, upgraded version to 56
+* Fixed several ikfast bugs, upgraded version to 58
 
 Database
 --------

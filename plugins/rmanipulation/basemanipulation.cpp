@@ -380,7 +380,7 @@ protected:
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
-        dReal jitter = 0.03;
+        dReal jitter = 0.04;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
