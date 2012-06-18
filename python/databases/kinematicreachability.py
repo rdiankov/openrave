@@ -398,7 +398,7 @@ class ReachabilityModel(DatabaseGenerator):
             return self.kdtree3d
         else:
             if self.kdtree6d is None:
-                self.kdtree6d = self.QuaternionKDTree(self._GetValue(self.reachabilitystats),5.0)
+                self.kdtree6d = self.QuaternionKDTree(self._GetValue(self.reachabilitystats)[:,0:7],5.0)
             return self.kdtree6d
     @staticmethod
     def CreateOptionParser():
