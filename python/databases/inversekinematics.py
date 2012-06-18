@@ -212,7 +212,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         except ImportError,e:
             log.warn('failed to import ikfast, so reverting to older version: %s',e)
-            self.ikfast = __import__('openravepy.ikfast_sympy0.6',fromlist=['openravepy'])
+            self.ikfast = __import__('openravepy.ikfast_sympy0_6',fromlist=['openravepy'])
         for handler in log.handlers:
             self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')

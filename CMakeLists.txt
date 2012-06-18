@@ -720,7 +720,6 @@ add_subdirectory(octave_matlab)
 
 if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
-  set(OPENRAVE_IKFAST_SUFFIX)
   if( PYTHON_EXECUTABLE )
     # get the sympy version
     execute_process(
@@ -734,7 +733,6 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
         set(OPENRAVE_USE_LOCAL_SYMPY 0)
         if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
           message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
-          set(OPENRAVE_IKFAST_SUFFIX "_sympy0.6")
         else()
           message(STATUS "Assuming sympy version 0.7.x or greater")
         endif()
