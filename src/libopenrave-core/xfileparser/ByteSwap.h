@@ -44,7 +44,7 @@
 #ifndef AI_BYTESWAP_H_INC
 #define AI_BYTESWAP_H_INC
 
-#if defined(IS_ASSIMP_POST_R1251)
+#if defined(OPENRAVE_IS_ASSIMP3)
 #include <assimp/ai_assert.h>
 #include <assimp/types.h>
 #else

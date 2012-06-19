@@ -41,7 +41,7 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
-#if defined(IS_ASSIMP_POST_R1251)
+#if defined(OPENRAVE_IS_ASSIMP3)
 #include <assimp/scene.h>
 #include <assimp/LogStream.hpp>
 #include <assimp/DefaultLogger.hpp>

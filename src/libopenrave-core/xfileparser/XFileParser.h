@@ -46,7 +46,7 @@
 #include <string>
 #include <vector>
 
-#if defined(IS_ASSIMP_POST_R1251)
+#if defined(OPENRAVE_IS_ASSIMP3)
 #include <assimp/types.h>
 #else
 #include "aiTypes.h"

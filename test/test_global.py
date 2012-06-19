@@ -22,4 +22,21 @@ def test_pluginloading():
     assert(RaveCreateProblem(env,'ikfast') is not None)
 
 
+class RunTutorialExample(object):
+    def __init__(self,name,docname,args=[]):
+        self.name=name
+        self.args=args
+        self.description = 'test_programs.tutorialexample.%s.%s'%(name,docname)
+            
+    def __call__(self):
+        # turn off trajectory validation for now
+        #python 
+        RaveSetDebugLevel(RaveGetDebugLevel())
+        example = getattr(examples,self.name)
+        example.run(args=self.args+['--testmode',"--viewer="])
+
+
 # test all scripts in source/tutorials/openravepy_examples/*.py
+def test_tutorialexamples():
+    dir=os.path.join('..','docs','source','tutorials','openravepy_examples')
+    

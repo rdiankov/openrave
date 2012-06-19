@@ -16,7 +16,9 @@ Getting Started Tutorials
    - `Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_
    - `Octave/MATLAB`_ Scripting
 
-.. toctree::
-   :maxdepth: 2
+.. ifconfig:: language=='ja'
 
-   tutorials/japanese_tutorials
+  .. toctree::
+     :maxdepth: 2
+
+     tutorials/japanese_tutorials

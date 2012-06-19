@@ -41,10 +41,6 @@ master_doc = 'contents'
 project = u'OpenRAVE'
 copyright = u'2006-2012, Rosen Diankov and contributors'
 
-# If true, sectionauthor and moduleauthor directives will be shown in the
-# output. They are ignored by default.
-#show_authors = True
-
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
