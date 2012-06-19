@@ -1,8 +1,18 @@
-.. htmlonly::
-   
-   :Latest Stable Version: |version| (|release|)
-   :Latest Official Version: 0.6.4
-   :Last Updated: |today|
+.. ifconfig:: language=='ja'
+
+  .. htmlonly::   
+  
+    :最新公開版: 0.6.4
+    :最新安定版: |version| (|release|)
+    :更新日: |today|
+
+.. ifconfig:: language!='ja'
+
+  .. htmlonly::   
+  
+    :Latest Official Version: 0.6.4
+    :Latest Stable Version: |version| (|release|)
+    :Last Updated: |today|
 
 Welcome to Open Robotics Automation Virtual Environment
 =======================================================

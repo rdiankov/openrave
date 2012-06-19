@@ -1,0 +1,203 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# f0761bea66024b4f952cd334239d97f5
+#: ../../source/command_line_tools.rst:4
+msgid "Command Line Tools"
+msgstr ""
+
+# 877748fcf8e7434f930f9448e10b02d6
+#: ../../source/command_line_tools.rst:9
+msgid "openrave.py"
+msgstr ""
+
+# 946dc4f0149f4b58b1e0ea57295eaa47
+#: ../../source/command_line_tools.rst:11
+msgid ""
+"The openrave.py script is an attempt to make the command line parameters for "
+"openrave much simpler to use. It is a superset of the functions provided by "
+"the original *openrave* program, except it supports many other interesting "
+"features and provides a window to all openravepy functions. It can also "
+"automatically add openravepy to the PYTHONPATH making it simpler for users. "
+"Here are some features it supports:"
+msgstr ""
+
+# d103c35493524490ada511ac4d0f38cd
+#: ../../source/command_line_tools.rst:17
+msgid ""
+"Opening files with the **-i** option will now drop into the ipython "
+"interpreter after loading the particular files specified.  For example::"
+msgstr ""
+
+# 36e62679caa14422880ac4abb1662bac
+#: ../../source/command_line_tools.rst:21
+msgid "**Output**::"
+msgstr ""
+
+# 84fc140c6ee945498e368644f6e2e985
+#: ../../source/command_line_tools.rst:27
+msgid ""
+"The first robot in the scene is automatically loaded into the 'robot' "
+"variable, so it can be immediately used for scripting operations:"
+msgstr ""
+
+# 0032bdcc51924f97b3ba14e04635ae55
+#: ../../source/command_line_tools.rst:36
+msgid "Can start a database generation process::"
+msgstr ""
+
+# a2aa18a4f2174e21acc5ba484ed56271
+#: ../../source/command_line_tools.rst:40
+msgid "Can execute an example::"
+msgstr ""
+
+# 97de225643aa435ea4499b218dfdc191
+#: ../../source/command_line_tools.rst:44
+msgid "Can query all executable databases::"
+msgstr ""
+
+# 286a7dc81f3b4284a6c538b09615b8d6
+#: ../../source/command_line_tools.rst:48
+msgid "**Output**:"
+msgstr ""
+
+# c8ee4854668e419ca8e02919074989d9
+#: ../../source/command_line_tools.rst:52
+msgid "Can set custom collision, physics, and viewer::"
+msgstr ""
+
+# a7f083c571c34c1b8da923f4c46cd200
+#: ../../source/command_line_tools.rst:56
+msgid "Can set debug mode::"
+msgstr ""
+
+# 05cfd85ded4c4417935b367016c31ec2
+#: ../../source/command_line_tools.rst:60
+msgid "Can execute arbitrary python code::"
+msgstr ""
+
+# 959ee4bb6e8b4c7082fd9595bfa1869c
+#: ../../source/command_line_tools.rst:64
+msgid ""
+"Can execute arbitrary python code and step into the ipython interpreter::"
+msgstr ""
+
+# 392aa50ef7e14eb7a67c743ab26daa60
+#: ../../source/command_line_tools.rst:68
+msgid "Can execute arbitrary python code and exit::"
+msgstr ""
+
+# 069134574e314896882b860cf438a5e1
+#: ../../source/command_line_tools.rst:73
+msgid ""
+"Given that environment xml files can now contain tags for any interface, it "
+"is possible to setup all the used interfaces in the XML, open it with "
+"**openrave.py -i**, and immediately start introspecting on the state."
+msgstr ""
+
+# 4933f64a42a549eea85fb60ef53dc694
+# 13a3e6bced36450bbce58fdc5c170a96
+# 6515d190d061471eb1c270d022604d4e
+# e033ac7bcc554441872bf695557c9f9a
+# 53e3f67052f240fda265e2d13e726d67
+#: ../../source/command_line_tools.rst:76
+#: ../../source/command_line_tools.rst:108
+#: ../../source/command_line_tools.rst:126
+#: ../../source/command_line_tools.rst:140
+#: ../../source/command_line_tools.rst:152
+msgid "Command-line"
+msgstr ""
+
+# cc16ae6e067647a9b8e0cddafbff7b17
+#: ../../source/command_line_tools.rst:83
+msgid "openrave-robot.py"
+msgstr ""
+
+# 9582313dcae24efaa76a4f58a12e9176
+#: ../../source/command_line_tools.rst:85
+msgid ""
+"Queries information about OpenRAVE-loadable robots. Allows to query simple "
+"information for robot links, joints, manipulators, sensor as fast as "
+"possible."
+msgstr ""
+
+# f6d0965b6f4544ada24381f4186e315e
+#: ../../source/command_line_tools.rst:87
+msgid "For example, getting info of all the manipulators is as simple as:"
+msgstr ""
+
+# d9a56387ea7d402b8e67bd0a0782fbf2
+#: ../../source/command_line_tools.rst:93
+msgid "or can just get a list of the manipulator names:"
+msgstr ""
+
+# f30798c289ea4588aa41efe8d35da892
+#: ../../source/command_line_tools.rst:99
+msgid ""
+"Each robot can hold several different types of hashes depending on the "
+"information being queried. Hashes are retrieved with the **--hash** option:"
+msgstr ""
+
+# 7082c77bbb914e01857633f19de0e095
+#: ../../source/command_line_tools.rst:115
+msgid "openrave-createplugin.py"
+msgstr ""
+
+# 7072d6e20ebf45848bb00b6bfb93aef8
+#: ../../source/command_line_tools.rst:117
+msgid ""
+"Sets up a project directory and initial files for creating OpenRAVE plugins "
+"and executables."
+msgstr ""
+
+# f8afef10f59449539c19a83a9bb343cd
+#: ../../source/command_line_tools.rst:119
+msgid ""
+"This command line will create a plugin that offers a **MyNewModule** :class:"
+"`.ModuleBase`:"
+msgstr ""
+
+# 26123cd94f9346bcb4e669e4714517a0
+#: ../../source/command_line_tools.rst:133
+msgid "openrave"
+msgstr ""
+
+# bca78f359882446e8edafddb7dcbe5cf
+#: ../../source/command_line_tools.rst:135
+msgid ""
+"Simple executable written in C++ that can start an OpenRAVE environment and "
+"load modules. It provides simple configuration of parameters for easy "
+"testing."
+msgstr ""
+
+# db177b95b87a4c8aa0dbd70c3e93e087
+#: ../../source/command_line_tools.rst:137
+msgid "It is possible to save robots into"
+msgstr ""
+
+# d0f266b3771b4e808944e354615058e1
+#: ../../source/command_line_tools.rst:147
+msgid "openrave-config"
+msgstr ""
+
+# b2e3afb250c645f8808ea035dc1a3146
+#: ../../source/command_line_tools.rst:149
+msgid ""
+"Used to find the openrave installation directories, used libraries, headers, "
+"and shared files."
+msgstr ""

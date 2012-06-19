@@ -13,8 +13,7 @@ Installation
 
   apt-get remove python-sphinx
   apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng dia-common python-svn
-  easy_install --upgrade docutils
-  easy_install sphinx
+  sudo pip install --upgrade docutils sphinx sphinx-gettext-helper
 
 `doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ version 1.7.1 or later is required.
 
@@ -129,3 +128,19 @@ An image of all the robots in openrave can be extracted using the **build_ikdata
 
   cd docs
   python build_ikdatabase.py --outdir="en/ikfast" --ikfaststats=ikfaststats.pp
+
+Internationalization
+--------------------
+
+Use gettext internationalization to store separate translation files for each language `Sphinx Internationalization <http://sphinx.pocoo.org/latest/intl.html>`_, `Japanese Tutorial <http://d.hatena.ne.jp/tk0miya/20111203>`_.
+
+The translation PO files are stored in `https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/docs/locale`_. Anyone is welcome to send diff files of translations.
+
+In order to test how the translation looks for a specific language, execute
+
+.. code-block:: bash
+
+  ./build_sphinx_lang.bash XX
+
+where XX is the language code.
+

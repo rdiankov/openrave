@@ -53,12 +53,12 @@ def writetable(rows):
     xml += '\n\n'
     return xml
 
-def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
+def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
     width=480
     height=480
     focal = 10000.0 # bigger values make orthographic view
     robotname = os.path.split(os.path.splitext(robotfilename)[0])[1]
-    sourceoutputdir = os.path.join(lang,outputdir,robotname)
+    sourceoutputdir = os.path.join(outputdir,robotname)
     mkdir_recursive(sourceoutputdir)
     imagename = '%s.jpg'%robotname
     robot = None
@@ -204,7 +204,7 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
         rows.append(row)
     if rows is not None:
         robotxml += writetable(rows)
-    open(os.path.join(lang,outputdir,robotname+'.rst'),'w').write(robotxml)
+    open(os.path.join(outputdir,robotname+'.rst'),'w').write(robotxml)
     returnxml = """
 :ref:`%s`
 %s
@@ -220,8 +220,8 @@ def buildrobot(lang, outputdir, env, robotfilename, robotstats,buildoptions):
 """%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,outputdir,robotname)
     return returnxml,robotname
 
-def build(allstats,buildoptions,lang,outputdir,env):
-    mkdir_recursive(os.path.join(lang,outputdir))
+def build(allstats,buildoptions,outputdir,env):
+    mkdir_recursive(outputdir)
 
     # write each robot
     robotdict = dict()
@@ -238,7 +238,7 @@ def build(allstats,buildoptions,lang,outputdir,env):
     for robotfilename, robotstats in robotlist:
         # only show robots that don't have fial in their name
         if os.path.split(robotfilename)[1].find('fail') < 0:
-            xml,robotname = buildrobot(lang, outputdir,env,robotfilename, robotstats,buildoptions)
+            xml,robotname = buildrobot(outputdir,env,robotfilename, robotstats,buildoptions)
             robotxml += xml
             robotnames.append(robotname)
 
@@ -271,7 +271,7 @@ Robots
 """%(outputdir,buildoptions.jenkinsbuild_url, robotxml)
     for robotname in robotnames:
         text += '  %s/%s\n'%(outputdir,robotname)
-    open(os.path.join(lang,'robots.rst'),'w').write(text)
+    open(os.path.join(outputdir,'robots.rst'),'w').write(text)
 
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(buildoptions.numiktests))
     text="""
@@ -323,14 +323,12 @@ Degenerate configurations can frequently occur when the robot axes align, this p
 
 .. [1] The discretization of the free joint values depends on the robot manipulator and is given in each individual manipulator page.
 """%(ikfast.__version__, buildoptions.errorthreshold,freeparameters,buildoptions.minimumsuccess,buildoptions.maximumnosolutions)
-    open(os.path.join(lang,outputdir,'index.rst'),'w').write(text)
+    open(os.path.join(outputdir,'index.rst'),'w').write(text)
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds the ik database')
-    parser.add_option('--lang',action="store",type='string',dest='lang',default='en',
-                      help='Language folder.')
     parser.add_option('--outdir','--outputdir',action="store",type='string',dest='outputdir',default='ikfast',
-                      help='Output directory to write all interfaces reStructuredText files inside the language folder (default=%default).')
+                      help='Output directory to write all interfaces reStructuredText files inside the folder (default=%default).')
     parser.add_option('--ikfaststats',action="store",type='string',dest='ikfaststats',default='ikfaststats.pp',
                       help='The python pickled file containing ikfast statistics.')
     (options,args) = parser.parse_args()
@@ -352,6 +350,6 @@ if __name__ == "__main__":
         viewer=env.GetViewer()
         viewer.SetBkgndColor([0.94,0.99,0.99])
         viewer.SendCommand('SetFiguresInCamera 1')
-        build(allstats,buildoptions,options.lang,options.outputdir,env)
+        build(allstats,buildoptions,options.outputdir,env)
     finally:
         RaveDestroy()

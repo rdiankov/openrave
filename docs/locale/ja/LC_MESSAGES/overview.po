@@ -1,0 +1,213 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# c67d899a95e841fca44301a94f202a3c
+#: ../../source/overview.rst:4
+msgid "Overview"
+msgstr ""
+
+# 5f0ec90c6081401897b26b511cb69a6d
+#: ../../source/overview.rst:6
+msgid ""
+"OpenRAVE includes a seamless integration of simulation, visualization, "
+"planning, scripting and control. The plugin architecture allows users to "
+"easily write custom controllers or extend functionality. Using OpenRAVE "
+"plugins, any planning algorithm, robot control, or sensing-based subsystem "
+"can be distributed and dynamically loaded at run-time; this distributed "
+"nature frees developers from struggling with monolithic code-bases. Users of "
+"OpenRAVE can concentrate on the development of planning and scripting "
+"aspects of a problem without having to explicitly manage the details of "
+"robot kinematics and dynamics, collision detection, world updates, and robot "
+"control. OpenRAVE provides a powerful :ref:`Python API <package-openravepy>` "
+"for scripting demos, which makes it simple to control and monitor the demo "
+"and environment state. There are also interfaces for Octave and Matlab."
+msgstr ""
+
+# 3731566fa10e42879cd442b89fd5cb4b
+#: ../../source/overview.rst:16
+msgid "OpenRAVE's major design goals and features are:"
+msgstr ""
+
+# f77846fa309b4688b681576048d80151
+#: ../../source/overview.rst:18
+msgid ""
+"Have a plugin-based architecture that allows users to expand its "
+"functionality without having to recompile the base code. Most functionality "
+"should be offered as plugins, thus keeping the core as simple as possible."
+msgstr ""
+
+# a8e651aee6d441a9bc2c6bd3f310e987
+#: ../../source/overview.rst:20
+msgid ""
+"Offer many motion planning algorithm implementations that can be easily "
+"extended to new tasks."
+msgstr ""
+
+# 436b0309abc6427c9a121fdb80bcaf61
+#: ../../source/overview.rst:22
+msgid ""
+"Make it easy to debug components during run-time without having to recompile "
+"or restart the entire system in order to prevent flushing of the in-memory "
+"environment state."
+msgstr ""
+
+# 827be87a93ca4798a41eb9c32ec69642
+#: ../../source/overview.rst:24
+msgid ""
+"Allow the OpenRAVE core to be used as a simulation environment, as a high-"
+"level scripting environment, as a kinematics and dynamics backend module for "
+"robot con- trollers, or as a manipulation planning black box in a "
+"distributed robotics environment."
+msgstr ""
+
+# c71495eedf564c40a1cf082cca89d1eb
+#: ../../source/overview.rst:26
+msgid ""
+"Allow simple planning knowledgebases to be generated, stored, and retried."
+msgstr ""
+
+# 0b501f62cd534c40a813e1afcd5ee758
+#: ../../source/overview.rst:28
+msgid ""
+"Support a multi-threaded environment and allow easy parallelization of "
+"planners and other functions with minimal synchronization required on the "
+"user side."
+msgstr ""
+
+# 42d3a5c301b8433fa072f732d85039cd
+#: ../../source/overview.rst:30
+msgid ""
+"One of OpenRAVE’s strongest points when compared with other planning "
+"packages is the idea of being able to apply algorithms to any scenario with "
+"very little modification when robots or target objects change.  Users of "
+"OpenRAVE can concentrate on the development of planning and scripting "
+"aspects of a problem without having to explicitly manage the details of "
+"robot kinematics, dynamics, collision detection, world updates, sensor "
+"modeling, and robot control."
+msgstr ""
+
+# 8fafe94f4e8a43838bd492be66e07c05
+#: ../../source/overview.rst:36
+msgid ""
+"OpenRAVE has been used for planning on many real robotics systems. It's "
+"architcture makes it possible for planning-enabled robots to work "
+"consistently in a continuously changing and unpredictable environment. Many "
+"new layer of functionality have been developed that go beyond the basic "
+"kinematics, collision detection, and graphics interface requirements of "
+"classic robotics libraries. It provides a set of interfaces that let users "
+"modify existing functions and expand OpenRAVE-enabled modules without having "
+"to recompile OpenRAVE or deal with messy monolithic code-bases."
+msgstr ""
+
+# 0b03c7d7fbdc4321804dfae1cc2b76a1
+#: ../../source/overview.rst:44
+msgid ":ref:`package-databases`"
+msgstr ""
+
+# a3df4f0441d1435c806e8cfaa77a6525
+#: ../../source/overview.rst:46
+msgid ":ref:`ikfast_compiler`"
+msgstr ""
+
+# f2fdba1bbcc54447bb0fc81ff440e8e8
+#: ../../source/overview.rst:56
+msgid "History"
+msgstr ""
+
+# 2035e3bd71c44be7a2034b2037bb6ed5
+#: ../../source/overview.rst:58
+msgid ""
+"OpenRAVE was founded by `Rosen Diankov <http://www.programmingvision.com>`_ "
+"at the `Quality of Life Technology Center <http://www.cmu.edu/qolt>`_ in the "
+"`Carnegie Mellon University Robotics Institute <http://www.ri.cmu.edu/>`_. "
+"It was inspired from the RAVE simulator `James Kuffner <http://www.kuffner."
+"org/james/>`_ had started developing in 1995 and used for his experiments "
+"ever since. The OpenRAVE project was started in 2006 and is a complete "
+"rewrite of RAVE. It is actively being maintained at the `JSK Lab at "
+"University of Tokyo <http://www.jsk.t.u-tokyo.ac.jp/>`_."
+msgstr ""
+
+# f59b99e8f6c44a04ade6949c682726e3
+#: ../../source/overview.rst:66
+msgid "Developers/Contributors"
+msgstr ""
+
+# 957cc22f65cf4bf39a69d1bc0f9e2c1a
+#: ../../../AUTHORS:1
+msgid "`Rosen Diankov`_ - project leader"
+msgstr ""
+
+# b52493cbbc464ef8b905213c626ea928
+#: ../../../AUTHORS:4
+msgid "Contributors"
+msgstr ""
+
+# 3ddf63246d114e9498aa2254e04d1d7f
+#: ../../../AUTHORS:6
+msgid "Achint Aggarwal - dual manipulation"
+msgstr ""
+
+# 42127f6484764fd08f3db1e8f109af1d
+#: ../../../AUTHORS:7
+msgid "Dmitry Berenson - initial pqp collision checker"
+msgstr ""
+
+# 38dba7b370434b3ca9cebad85f9ea954
+#: ../../../AUTHORS:8
+msgid "Makoto Furukawa - japanese documentation"
+msgstr ""
+
+# e1b96ff91559479d801ceff652e56cef
+#: ../../../AUTHORS:9
+msgid "Juan Gonzalez - ode velocity controller"
+msgstr ""
+
+# d2f057264e094a3fb8e6b55f51a11ef5
+#: ../../../AUTHORS:10
+msgid "Beatriz Leon - help with physics and sensor interfaces"
+msgstr ""
+
+# 50cb43d24aac4ed9bc362dade8963b18
+#: ../../../AUTHORS:11
+msgid "Huan Liu - invaluable feedback, tutorial_inversereachability"
+msgstr ""
+
+# 6e442cf9796b4fd2ac8d253ebe22c6a9
+#: ../../../AUTHORS:12
+msgid "Gustavo Puche Rodríguez - collada help"
+msgstr ""
+
+# 3591e438769f4ce0909bf943ce0092c3
+#: ../../../AUTHORS:13
+msgid "Masaru Ryumae - initial japanese documentation"
+msgstr ""
+
+# e91f46cb45dd41d0a25971c16f8f7133
+#: ../../../AUTHORS:14
+msgid "Alan Tan - simplemanipulation python example"
+msgstr ""
+
+# 476bb24af389494f89a43db0e2580e83
+#: ../../../AUTHORS:15
+msgid "Atsushi Tsuda - multithreading of grasper plugin"
+msgstr ""
+
+# bd7c02d165ae488a8c312f318d366833
+#: ../../../AUTHORS:16
+msgid "Nick Hillier - bobcat model, ode physics additions"
+msgstr ""

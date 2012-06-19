@@ -9,3 +9,4 @@ OpenRAVE Architecture
    :maxdepth: 2
 
    interface_concepts
+   speed_up_planning

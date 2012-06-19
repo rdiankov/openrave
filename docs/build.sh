@@ -33,5 +33,4 @@ if [ "$1" == "internal" ]; then
     cd $curdir
 fi
 
-./build_sphinx.sh en
-#./build_sphinx.sh ja
+./build_sphinx.bash

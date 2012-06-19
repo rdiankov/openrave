@@ -127,10 +127,10 @@ dd {
     color: #060;
 }
 
-dt:target,
+/*dt:target,
 .highlight {
     background-color: #fbe54e;
-}
+}*/
 
 dl.class, dl.function {
     border-top: 2px solid #888;
@@ -517,4 +517,15 @@ ul.keywordmatches li.goodmatch a {
 
 .red {
     color: red;
+}
+
+.highlight pre {
+   overflow-x: auto;
+   border-width: 1px 0;
+   border-style: solid;
+   margin-top: 0;
+   margin-bottom: 0;
+   margin-left: 0;
+   margin-right: 0;
+   padding-top: 0;
 }

@@ -10,7 +10,7 @@ class ExamplePreBlockDirective(Directive):
     has_content = False
     def run(self):
         rawtext = """
-.. image:: ../../images/examples/%s.jpg
+.. image:: /../images/examples/%s.jpg
   :width: %d
 
 **Running the Example**::

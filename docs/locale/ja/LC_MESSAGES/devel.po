@@ -1,0 +1,1092 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 7ad9d394de1b4ac0ba810860829348a6
+#: ../../source/devel/adding_examples.rst:2
+msgid "Adding a Python Example"
+msgstr ""
+
+# 267ad1528b804fab88878d36105e3ccf
+#: ../../source/devel/adding_examples.rst:4
+msgid ""
+"This document is for developers that want to add an official openravepy "
+"example to the subversion repository. Adding an **example0** to the "
+"openravepy.examples module requires:"
+msgstr ""
+
+# ec4db2c885d440608dc0025731432f64
+#: ../../source/devel/adding_examples.rst:7
+msgid "Add example0.py to ``python/examples/`` directory"
+msgstr ""
+
+# d5d240728b7247238a94d5d84ede1dc2
+#: ../../source/devel/adding_examples.rst:9
+msgid "Add **import example0** to ``python/exmaples/__init__.py``"
+msgstr ""
+
+# f819036b0ec044e29c5a3d0174e7e77e
+#: ../../source/devel/adding_examples.rst:11
+msgid "Add to svn: using"
+msgstr ""
+
+# 994fb496394644c4869daaba1b0a7d71
+#: ../../source/devel/adding_examples.rst:17
+msgid "Once installed, make sure it is executable through"
+msgstr ""
+
+# cc04c0b9197c40498050591e985b9745
+#: ../../source/devel/adding_examples.rst:24
+msgid "Documentation"
+msgstr ""
+
+# d9df3b52c6d945d9804c1fa19f09056e
+#: ../../source/devel/adding_examples.rst:26
+msgid "Every example must follow this format when documenting it::"
+msgstr ""
+
+# aea2a99663834dd2870be35696c99ebf
+#: ../../source/devel/adding_examples.rst:37
+msgid ""
+"**examplepre-block** and **examplepost-block** are special sphinx extensions "
+"that add the example images, code, and execution instructions."
+msgstr ""
+
+# 60ae7453f64844d49a985951cd33f1f1
+#: ../../source/devel/adding_examples.rst:40
+msgid "Images"
+msgstr ""
+
+# 6540b693425b4d39a8f60966bde3601f
+#: ../../source/devel/adding_examples.rst:42
+msgid ""
+"All images should be put in the ``docs/images/examples`` directory and "
+"prefixed with the example name. The image that represents the example has to "
+"be in JPEG format and have the same name as the example:"
+msgstr ""
+
+# f22bd135c4394944a587d2ab809a70b4
+#: ../../source/devel/adding_examples.rst:44
+msgid "``docs/images/examples/example0.jpg``"
+msgstr ""
+
+# 81d6721849c54231ae40bc101605f16c
+#: ../../source/devel/adding_examples.rst:46
+msgid ""
+"This same image will be used as a thumb image on the examples gallery. It "
+"can be replaced with a different image by adding:"
+msgstr ""
+
+# a4853ea6fff341dbb113380ac93e1d05
+#: ../../source/devel/adding_examples.rst:48
+msgid "``docs/images/examples/example0_thumb.jpg``"
+msgstr ""
+
+# ae57ac27570040f5a50b82b6e7f6531d
+#: ../../source/devel/adding_examples.rst:50
+msgid "Other images part of the example can be:"
+msgstr ""
+
+# d6886881fac64a37900adf102267ae75
+#: ../../source/devel/adding_examples.rst:52
+msgid "``docs/images/examples/example0_myimage.png``"
+msgstr ""
+
+# 67c197f17aab415783d06127006cd60d
+#: ../../source/devel/adding_examples.rst:53
+msgid "``docs/images/examples/example0_anotherimage.jpg``"
+msgstr ""
+
+# c71f3da434694afea5f7dafcf6d8968d
+#: ../../source/devel/adding_examples.rst:55
+msgid "To reference an image use::"
+msgstr ""
+
+# 3c4be8d8096c47c192329213aba9bf55
+#: ../../source/devel/documentation_system.rst:2
+msgid "Documentation System"
+msgstr ""
+
+# 378678df947c4a62bc3484f52c4238b9
+#: ../../source/devel/documentation_system.rst:7
+msgid ""
+"Describes the OpenRAVE documentation system and all necessary function calls "
+"for generating and maintaining the documents. This is mean for developers."
+msgstr ""
+
+# f42bbbf5f21f404785707aa42a632762
+#: ../../source/devel/documentation_system.rst:10
+msgid "Installation"
+msgstr ""
+
+# 4f1ba153f0e7406f96f632a82ae7e236
+#: ../../source/devel/documentation_system.rst:18
+msgid ""
+"`doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ "
+"version 1.7.1 or later is required."
+msgstr ""
+
+# e9fb935650154126af0c771cf9886bdc
+#: ../../source/devel/documentation_system.rst:20
+msgid ""
+"`breathe <http://github.com/michaeljones/breathe>`_ is used for converting "
+"doxygen to python comments so that python users can be internal help for the "
+"C++ bindings. The breathe sources are in **docs/breathe**."
+msgstr ""
+
+# 36052480e61e485a9964e00718e4a154
+#: ../../source/devel/documentation_system.rst:22
+msgid "If using latex, install::"
+msgstr ""
+
+# c0cfca401f1e49d0ad4393632a798315
+#: ../../source/devel/documentation_system.rst:26
+msgid "For japanese fonts install::"
+msgstr ""
+
+# f3298385b3b743d8a4c7e1cfc5e13cfa
+#: ../../source/devel/documentation_system.rst:31
+msgid "Getting Started"
+msgstr ""
+
+# 3a8fc67097c5447fbf24d53686f55335
+#: ../../source/devel/documentation_system.rst:33
+msgid "OpenRAVE uses:"
+msgstr ""
+
+# 945312d62e3440d3971dc0a4b934885e
+#: ../../source/devel/documentation_system.rst:35
+msgid "doxygen for the core system and c++ documentation"
+msgstr ""
+
+# 8aa24b867487488dbd39e80ff1735d4a
+#: ../../source/devel/documentation_system.rst:36
+msgid "reStructuredText for all other documentation."
+msgstr ""
+
+# 63e5f89291c54bde9c68cacb801caa11
+#: ../../source/devel/documentation_system.rst:38
+msgid ""
+"The following script generates all documentation for English and Japanese:"
+msgstr ""
+
+# 26a53edd6413436ba887dc423606255c
+#: ../../source/devel/documentation_system.rst:45
+msgid "Upload the generated documentation to the server with:"
+msgstr ""
+
+# a81df4a822cf47b086d5014f090987ae
+#: ../../source/devel/documentation_system.rst:52
+msgid ""
+"Most build files are stored in the **docs/build** directory. All images are "
+"saved into **docs/images**, including automatically generated ones."
+msgstr ""
+
+# 1c9953fd9dab4983ab9a1ef9585c6fbb
+#: ../../source/devel/documentation_system.rst:55
+msgid ""
+"Because running **build.sh** can take a long time, developers should execute "
+"the individual commands pertaining to the part of the system they are "
+"maintaining. The commands are given in the following sections."
+msgstr ""
+
+# 75d6560594e34670b44c9a2865c72bee
+#: ../../source/devel/documentation_system.rst:58
+msgid "Python (reStructuredText)"
+msgstr ""
+
+# ed8066a568b5459ba89e840b11313120
+#: ../../source/devel/documentation_system.rst:60
+msgid "Compiling the python documentation is divided into several steps."
+msgstr ""
+
+# 9669ac82f0f2489a839276562aa93a41
+#: ../../source/devel/documentation_system.rst:62
+msgid ""
+"# Take in the doxygen comments from the C++ API and creates ``python/"
+"bindings/docstrings.cpp``, which is then compiled in the **openravepy_int** "
+"module."
+msgstr ""
+
+# f5dc212671294d0f880337e087386ff4
+#: ../../source/devel/documentation_system.rst:64
+msgid ""
+"# Generate rst files from all the openravepy modules using ``sphinx-"
+"autopackage-script/generate_modules.py``."
+msgstr ""
+
+# 7a633bbe810a46f3914beb3b2a48d0a8
+#: ../../source/devel/documentation_system.rst:66
+msgid ""
+"# Generate rst files from the interfaces documentation and testing results."
+msgstr ""
+
+# 5351f187fd67409f8b872195edcd1cb6
+#: ../../source/devel/documentation_system.rst:68
+msgid "# Compile with ``sphinx-build``"
+msgstr ""
+
+# 0e53ad6b3a334899b15fbdbfc532c1d7
+#: ../../source/devel/documentation_system.rst:70
+msgid "The entire script is:"
+msgstr ""
+
+# b289e6f87b9647209f8f3e61b325c5e5
+#: ../../source/devel/documentation_system.rst:75
+msgid ""
+"Because the documentation for openravepy is built from the install "
+"directory, whenever a change to the openravepy documentation made openrave "
+"has to be reinstalled with ``make install``."
+msgstr ""
+
+# dcc4cd73251b4e42ad21c33dc90654c1
+#: ../../source/devel/documentation_system.rst:78
+msgid "C++ Core Documentation (doxygen)"
+msgstr ""
+
+# d142e5a9d4b14c07bcafd10de03ae251
+#: ../../source/devel/documentation_system.rst:80
+msgid "Compiling HTML and Latex:"
+msgstr ""
+
+# 33b2980e21aa4b6f9d041d48edf668ff
+#: ../../source/devel/documentation_system.rst:89
+msgid "The **build_doxygen.py** script internally makes these calls:"
+msgstr ""
+
+# 94c8ba222c5249a3977bfa23868cb748
+#: ../../source/devel/documentation_system.rst:97
+msgid ""
+"The **build/Doxyfile.html.en** file is generated from **Doxyfile.html** and "
+"**Doxyfile.en**. The separation is necessary in order to provide better "
+"localization support for multiple languages."
+msgstr ""
+
+# a700ddbf1df74c5bbdbfcdaff5e9a1da
+#: ../../source/devel/documentation_system.rst:99
+msgid ""
+"The mainpage and bulk of the documentation is in **docs/mainpage.dox**. "
+"Installation instructions are in **docs/install.dox**."
+msgstr ""
+
+# 8d50e7af5ca84af599becbe9e5cb46cd
+#: ../../source/devel/documentation_system.rst:101
+msgid ""
+"Use the **\\en**, **\\ja**, **\\~** tags to switch between language modes."
+msgstr ""
+
+# 3e0e38b068654c458bd79bff6e9e557c
+#: ../../source/devel/documentation_system.rst:103
+msgid "To reference image in **docs/images/tutorial0_myimage.png**, write::"
+msgstr ""
+
+# c2e1835ad95846b59269f2294f3d6598
+#: ../../source/devel/documentation_system.rst:110
+msgid "Interfaces"
+msgstr ""
+
+# 35d5767fb7894bbe846bf79dab779c0c
+#: ../../source/devel/documentation_system.rst:112
+msgid "To build the webpage of interface descriptions, run"
+msgstr ""
+
+# 7b8c7e3570d84bee8ef0bf29f7122237
+#: ../../source/devel/documentation_system.rst:118
+msgid ""
+"This outputs a set of reStructuredText files, which can be used by sphinx to "
+"build up the page."
+msgstr ""
+
+# 23ed0a1a8ab84bb49446ce7fd66093d8
+#: ../../source/devel/documentation_system.rst:121
+msgid "Robots Database"
+msgstr ""
+
+# 7e6d59d6cfcd4fdb872c8542d9594aff
+#: ../../source/devel/documentation_system.rst:123
+msgid ""
+"Generate a set of webpages for each robot using the statistics file output "
+"from **test/test_ikfast.py**."
+msgstr ""
+
+# 0e77bb87cd0b4c2094198e2bda875618
+#: ../../source/devel/documentation_system.rst:125
+msgid ""
+"An image of all the robots in openrave can be extracted using the "
+"**build_ikdatabase.py** script:"
+msgstr ""
+
+# fe9af9d12b394a1d9ced3d7c5cd2b41d
+#: ../../source/devel/documentation_system.rst:133
+msgid "Internationalization"
+msgstr ""
+
+# e32607d2d3b044c78e2900e0e910f849
+#: ../../source/devel/documentation_system.rst:135
+msgid ""
+"Use gettext internationalization to store separate translation files for "
+"each language `Sphinx Internationalization <http://sphinx.pocoo.org/latest/"
+"intl.html>`_, `Japanese Tutorial <http://d.hatena.ne.jp/tk0miya/20111203>`_."
+msgstr ""
+
+# 33cbec1b954a4937bd80bb09faaf5145
+#: ../../source/devel/documentation_system.rst:137
+msgid ""
+"The translation PO files are stored in `https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/trunk/docs/locale`_. Anyone is welcome to send diff files "
+"of translations."
+msgstr ""
+
+# 00484f45d6fa44e6b45392dc97accd0c
+#: ../../source/devel/index.rst:4
+msgid "Developers Guide"
+msgstr ""
+
+# 7208f478699a479b8e3914340f14af70
+#: ../../source/devel/index.rst:6
+msgid "These pages are meant for OpenRAVE developers and contributors."
+msgstr ""
+
+# 37ee20afebc9456e966d670b6233340c
+#: ../../source/devel/index.rst:8
+msgid "Release information, milestones, and bug reports:"
+msgstr ""
+
+# 82b393a16b2a4b05816d75be0d877732
+#: ../../source/devel/index.rst:10
+msgid ""
+"`Trac - Manage tickets and milestones <http://sourceforge.net/apps/trac/"
+"openrave/>`_."
+msgstr ""
+
+# ebae5e0f9e824c3394fbcab03b6deaa1
+#: ../../source/devel/index.rst:12
+msgid ""
+"`Sourceforge - Source code and Releases <http://sourceforge.net/projects/"
+"openrave/>`_"
+msgstr ""
+
+# 63b027a341b14931862cd7d800c7b170
+#: ../../source/devel/index.rst:14
+msgid "Internal logistics, management, and quality control:"
+msgstr ""
+
+# 5d3e9309c5d1407a9fce0a6a7eb06e5a
+#: ../../source/devel/news.rst:2
+msgid "News System"
+msgstr ""
+
+# ea6c81a333eb496ca2cef2a5a991b88c
+#: ../../source/devel/news.rst:4
+msgid ""
+"The `OpenRAVE News Site <http://openrave.org/news>`_ uses `PyMOTW project "
+"<https://bitbucket.org/dhellmann/pymotw/>`_ for OpenRAVE announcements/blogs/"
+"news. `PyMOTW generated site <http://www.doughellmann.com/PyMOTW/>`_."
+msgstr ""
+
+# 7e02034fecac4a76884e57e73e88f8d7
+#: ../../source/devel/news.rst:6
+msgid "More information on this soon."
+msgstr ""
+
+# ca1376e614714e4dbb7fcc9dde5f8ddf
+#: ../../source/devel/releases.rst:4
+msgid "Release Organization"
+msgstr ""
+
+# 6857ecda9bbf409ea13558323a64f468
+#: ../../source/devel/releases.rst:6
+msgid ""
+"This page describes the OpenRAVE release organization and platform "
+"requirements. The :ref:`testing_framework` is responsible for auto-"
+"generating the releases and making them available to the general public."
+msgstr ""
+
+# a2db5b30d1fb467f8c8efe711b2e2b09
+#: ../../source/devel/releases.rst:8
+msgid "All releases are compiled, signed, and uploaded using:"
+msgstr ""
+
+# 270e0fc57ccb4260a6bb97811f15b2e1
+#: ../../source/devel/releases.rst:10
+msgid "email: openrave.testing@gmail.com"
+msgstr ""
+
+# 989b3cb1782447e998c5f7c3fa72a93d
+#: ../../source/devel/releases.rst:11
+msgid ""
+"sourceforge id: `openravetesting <https://sourceforge.net/users/"
+"openravetesting>`_"
+msgstr ""
+
+# ce28d0eff70e4d588a09eb9d4502d8a5
+#: ../../source/devel/releases.rst:12
+msgid "launchpad id: `openrave <https://launchpad.net/~openrave>`_"
+msgstr ""
+
+# 62f4d634267d4b4ea8efb1f26cc535e8
+#: ../../source/devel/releases.rst:13
+msgid ""
+"GPG id: ``OpenRAVE Testing (Testing and Releasing of OpenRAVE Packages) "
+"<openrave.testing@gmail.com>``"
+msgstr ""
+
+# a2198a04a0a74d20b37356e521386ab7
+#: ../../source/devel/releases.rst:16
+msgid "Versioning"
+msgstr ""
+
+# 2b884f544af4479f9a6d2091bd26d834
+#: ../../source/devel/releases.rst:18
+msgid ""
+"Official releases have all even MINOR/PATCH version numbers like 0.6.0, "
+"0.6.2, 0.8.0, 1.2.0. Development releases have odd version numbers like "
+"0.5.0, 0.5.1, 0.6.1, 0.8.3. Any API changes require the MINOR version to "
+"increase. OpenRAVE patch releases should always be binary compatible so that "
+"newer versions can read old plugins. In otherwords all 0.3.x releases should "
+"be binary compatible with each other. See `ABI Compatibility <http://www.ros."
+"org/reps/rep-0009.html>`_ for an excellent discussion."
+msgstr ""
+
+# 319068f290844ee2a2d415d2879d0c3a
+#: ../../source/devel/releases.rst:20
+msgid ""
+"Allow multiple openrave versions to be installed simultaneously. This "
+"requires using suffixing several files and executables with $MAJOR.$MINOR "
+"similar to how python and `boost <https://svn.boost.org/trac/boost/wiki/"
+"ImprovingPractices>`_ work."
+msgstr ""
+
+# 6cc20b1b14ab4f0289e1b95c245818fb
+#: ../../source/devel/releases.rst:22
+msgid ""
+"For Linux systems, SOVERSION is always \"0\" since the important version "
+"numbers are part of the library name itself."
+msgstr ""
+
+# e59926641513440d9b7ccb5ddd6c79c2
+#: ../../source/devel/releases.rst:24
+msgid ""
+"There is an `ABI compliance checker <http://ispras.linux-foundation.org/"
+"index.php/ABI_compliance_checker>`_ that can report compatibility errors.  "
+"The `API Sanity Autotest <http://ispras.linuxfoundation.org/index.php/"
+"API_Sanity_Autotest>`_ is also an interesting tool that runs functions with "
+"reasonable inputs based on a static analysis of the code."
+msgstr ""
+
+# 1acacacdb7a0400ba048d69a0089ab7b
+#: ../../source/devel/releases.rst:27
+msgid "Windows Installer"
+msgstr ""
+
+# c544cc85cb154b73a49e348c6c1dd28c
+#: ../../source/devel/releases.rst:29
+msgid ""
+"Official releases are uploaded on `Sourceforge <http://sourceforge.net/"
+"projects/openrave/files/>`_."
+msgstr ""
+
+# deb3c79517e543f7ae9e6b38cbc8ac34
+#: ../../source/devel/releases.rst:31
+msgid ""
+"Use `Nullsoft Scriptable Install System <http://nsis.sourceforge.net>`_ for "
+"generating an executable. Once the regular NSIS setup is run, install the "
+"`Large String Build <http://nsis.sourceforge.net/Special_Builds>`_. The NSI "
+"file is generated by running **release/generate_installer_windows.py** on "
+"the installation directory produced by cmake."
+msgstr ""
+
+# d9220f57c6a64370ab17eec161fc72a4
+#: ../../source/devel/releases.rst:33
+msgid "The installer:"
+msgstr ""
+
+# f5572d6969ff451aa3e13feb0b298659
+#: ../../source/devel/releases.rst:35
+msgid "automatically installs python, boost, numpy, and sympy,"
+msgstr ""
+
+# 945c9ceb26d14c4a8d147f6a1acc62cb
+#: ../../source/devel/releases.rst:36
+msgid "unpacks the openrave files in a user-specified location,"
+msgstr ""
+
+# 796a5209d26d4251920c8e9128b2ffe3
+#: ../../source/devel/releases.rst:37
+msgid "modifies **openrave/config.h** to point to the user-installed location,"
+msgstr ""
+
+# 6dc07eb2bac640b6a694a777d3890d72
+#: ../../source/devel/releases.rst:38
+msgid "adds options to install Octave/Python bindings,"
+msgstr ""
+
+# 1e0fe59bc0e24031941276a584c01814
+#: ../../source/devel/releases.rst:39
+msgid "registers the necessary DLLs and adds registry keys for OpenRAVE"
+msgstr ""
+
+# ed6c885c17e84dbcb9f2617dae3ab3f5
+#: ../../source/devel/releases.rst:40
+msgid ""
+"Under **HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\OpenRAVE** will be every OpenRAVE "
+"version that is installed. For example \"|version|\". Under that will be "
+"**InstallRoot**."
+msgstr ""
+
+# 9055ca6082c04e96b808d1169c3af90c
+#: ../../source/devel/releases.rst:41
+msgid "and modifies the PYTHONPATH and Path environment variables."
+msgstr ""
+
+# 9de9fc5f7047447580f9ba7e427c9b35
+#: ../../source/devel/releases.rst:43
+msgid ""
+"Note that the provides DLLs are all compiled in Multithreaded DLL runtime."
+msgstr ""
+
+# 9984d6bbe0c140e98fe8a78eb3bbc861
+#: ../../source/devel/releases.rst:46
+msgid "Debian Source Packages"
+msgstr ""
+
+# ce4062b58d544fd5adab03ba7e7fe1c4
+#: ../../source/devel/releases.rst:48
+msgid ""
+"`ppa:openrave/release <https://launchpad.net/~openrave/+archive/release>`_ - "
+"official release archive"
+msgstr ""
+
+# dd72742b46f44c5dad1b99351c2117f1
+#: ../../source/devel/releases.rst:50
+msgid ""
+"`ppa:openrave/testing <https://launchpad.net/~openrave/+archive/testing>`_ - "
+"testing archive holding the newest builds"
+msgstr ""
+
+# 012bc68cf3d34c079d93d65568eab3bd
+#: ../../source/devel/releases.rst:52
+msgid "Each package is separated into:"
+msgstr ""
+
+# 4eac48e6ac714b0fb78dde86b04241a3
+#: ../../source/devel/releases.rst:54
+msgid "openrave$V: all openrave related packages"
+msgstr ""
+
+# ef59e90c6d0e45478a8d21a227b37383
+#: ../../source/devel/releases.rst:55
+msgid "openrave$V-base: core libraries and tools"
+msgstr ""
+
+# 8684538257aa415cb80be93b252f85d6
+#: ../../source/devel/releases.rst:56
+msgid "openrave$V-data: basic scenes required for examples"
+msgstr ""
+
+# bdc0b0a4e355466e827ac430bc3c8244
+#: ../../source/devel/releases.rst:57
+msgid "openrave$V-dev: development files and examples"
+msgstr ""
+
+# 6f4cc22bf3b249ee8398d8cfcee8f27b
+#: ../../source/devel/releases.rst:58
+msgid "openrave$V-ikfast: Robot Kinematics Compiler"
+msgstr ""
+
+# 966343e4089f4bc4999d57593223b63b
+#: ../../source/devel/releases.rst:59
+msgid "openrave$V-octave: octave bindings"
+msgstr ""
+
+# 0816ea319cef4fd6a6bad326ca95019e
+#: ../../source/devel/releases.rst:60
+msgid "openrave$V-plugin-X: individual plugins and their versions"
+msgstr ""
+
+# 29a02594bd444b99adb5f27d15c35a6c
+#: ../../source/devel/releases.rst:61
+msgid "openrave$V-plugins-all: all plugins"
+msgstr ""
+
+# 86d2170ab8844b88bcbaabaf952ddcec
+#: ../../source/devel/releases.rst:62
+msgid "openrave$V-python: openravepy python bindings"
+msgstr ""
+
+# df7afd2068884e6183a6fb9d484f6685
+#: ../../source/devel/releases.rst:63
+msgid "openrave-robots-extra: extra robot CAD model files"
+msgstr ""
+
+# 344675afd59a46d784daebe433d2439d
+# 5e7355dc5f6542f5b72b16fa150a33f1
+#: ../../source/devel/releases.rst:66
+#: ../../source/devel/working_with_sources.rst:7
+msgid "Building"
+msgstr ""
+
+# 81cf04682a334b118cd5dfb3a0ee1519
+#: ../../source/devel/releases.rst:68
+msgid ""
+"Debian source packages for Ubuntu/Debian can be prepared by calling cmake "
+"with"
+msgstr ""
+
+# 42434a90aa5c4f219bac8e811fbb284c
+#: ../../source/devel/releases.rst:74
+msgid "To upload the packges on the server do"
+msgstr ""
+
+# a5c2600e98d946d89edda26ac110f92e
+#: ../../source/devel/releases.rst:80
+msgid ""
+"Many times, a special 4th distribution version number ``w`` is attached to "
+"the OpenRAVE version ``x.y.z``"
+msgstr ""
+
+# df051b390abc45868f85ac1656648886
+#: ../../source/devel/releases.rst:86
+msgid ""
+"It is possible to customize the PGP signer, the host to upload them, and "
+"what distributions to compile them for using"
+msgstr ""
+
+# 074af75e34194687b601abe7b48d9ffc
+#: ../../source/devel/releases.rst:93
+msgid ""
+"To compile and upload single precision side-by-side a double precision build "
+"do"
+msgstr ""
+
+# e4a5834f35f64557b62a82363e19ec63
+#: ../../source/devel/releases.rst:99
+msgid ""
+"`Ubuntu Debian Packaging Guide <https://wiki.ubuntu.com/PackagingGuide/"
+"Complete>`_"
+msgstr ""
+
+# 81caaec8ed2846f09998f38228a3ae65
+#: ../../source/devel/releases.rst:102
+msgid "Sourceforge Releases"
+msgstr ""
+
+# b211c74fb50941c3b62878394a5a2230
+#: ../../source/devel/releases.rst:104
+msgid "Releases source code and windows installers."
+msgstr ""
+
+# ef279cf8a9564130acdc50943f923594
+#: ../../source/devel/releases.rst:106
+msgid ""
+"Once a build is stable and all the release packages have been generated, "
+"they are uploaded to sourceforge using the **release/sendtosourceforge.sh** "
+"script:"
+msgstr ""
+
+# e4aff21ed28c4e44b336db613b8668d7
+#: ../../source/devel/releases.rst:112
+msgid "Release Process"
+msgstr ""
+
+# e123cbc35e9d41228ea89ddcc27ab99b
+#: ../../source/devel/releases.rst:114
+msgid ""
+"Run Jenkins and create the latest_stable tag, windows installers, and "
+"documentation"
+msgstr ""
+
+# 255d91a9fd9c40a7aba0009770d67f2e
+#: ../../source/devel/releases.rst:116
+msgid ""
+"Update and upload the documentation. Make sure to set the correct revision "
+"in **changelog.rst**, and change Latest Official Version in **index.rst**. "
+"To upload:"
+msgstr ""
+
+# 22a5f201ec134bf79d04adaf3cc2817a
+#: ../../source/devel/releases.rst:122
+msgid "Create svn tag:"
+msgstr ""
+
+# fa9f6828db804493b82a103b0c74af7a
+#: ../../source/devel/releases.rst:128
+msgid ""
+"sourceforge: Create a X.Y.Z folder inside the files and copy the latest "
+"uploaded files from Jenkins into it, remove the revision numbers from the "
+"filenames."
+msgstr ""
+
+# fadbd4adcde74b628175e641b0f2b4bd
+#: ../../source/devel/releases.rst:130
+msgid "Create the Debian packages in openrave/testing"
+msgstr ""
+
+# 0e49fee9ecb942249d6377b40883ddb7
+#: ../../source/devel/releases.rst:139
+msgid "Copy the debian packages from openrave/testing to openrave/release"
+msgstr ""
+
+# 524587a2dc594693ac2d86e7330f984d
+#: ../../source/devel/testing.rst:4
+msgid "OpenRAVE Testing Framework"
+msgstr ""
+
+# ec079faae2a747a7ac718ab50d1d6293
+#: ../../source/devel/testing.rst:6
+msgid ""
+"Using `python nose <http://somethingaboutorange.com/mrl/projects/nose>`_ for "
+"the testing framework."
+msgstr ""
+
+# 8721bce7f74d412188486b4257a03fa6
+#: ../../source/devel/testing.rst:8
+msgid ""
+"`OpenRAVE testing server <http://www.openrave.org/testing>`_ uses Jenkins "
+"and runs these tests, records statistics, and generates this documentation. "
+"The tests are run on **trunk**, and if deemed stable, the **stable** "
+"subversion tag is updated."
+msgstr ""
+
+# 12754536d1d04548bfa1e1a96f64e91c
+#: ../../source/devel/testing.rst:11
+msgid "Configuring"
+msgstr ""
+
+# 0536c491043946bca40c0091c4a4169f
+#: ../../source/devel/testing.rst:13
+msgid ""
+"Because it is not necessary to cater to the lowest common denominator, use "
+"easy_install to get latest test packages"
+msgstr ""
+
+# 68c1ee3061c44bbb9553e54ceeb8cfb7
+#: ../../source/devel/testing.rst:19
+msgid "**Optional** For entire testing harness:"
+msgstr ""
+
+# 528db3f36a56455eaf70bab52dbac529
+#: ../../source/devel/testing.rst:27
+msgid "Jenkins"
+msgstr ""
+
+# d2e2b58aca9644879dfa19254d0be835
+#: ../../source/devel/testing.rst:29
+msgid ""
+"If using Jenkins to run tests, the following Jenkins plugins should be "
+"installed:"
+msgstr ""
+
+# 45f6eb13ce61443da5d501749c7a25e2
+#: ../../source/devel/testing.rst:31
+msgid "CMake plugin"
+msgstr ""
+
+# c825a6be2a7c4a8cab593550e810ca6d
+#: ../../source/devel/testing.rst:32
+msgid "Measurement Plots"
+msgstr ""
+
+# e33e22b9d93b4a8d971aeab4c6db1b7b
+#: ../../source/devel/testing.rst:33
+msgid "Performance Publisher plugin"
+msgstr ""
+
+# f8905ddf29d64cc99401bc8c50431eb4
+#: ../../source/devel/testing.rst:34
+msgid "Post build task"
+msgstr ""
+
+# ad4e029cb6bd49558684c56b0b4155aa
+#: ../../source/devel/testing.rst:35
+msgid "Publish Over SSH"
+msgstr ""
+
+# 964a20ef7df24b51935480fd645751bb
+#: ../../source/devel/testing.rst:36
+msgid "Python Plugin"
+msgstr ""
+
+# 87eaff9a01d14c09a2449b9e9bec3336
+#: ../../source/devel/testing.rst:37
+msgid "SSH Slaves plugin"
+msgstr ""
+
+# 24b4496c5f27474c902f2fa0f0748738
+#: ../../source/devel/testing.rst:38
+msgid "Subversion Plug-in"
+msgstr ""
+
+# f7b9a3f21d224d59bf11a60fcc6ffc15
+#: ../../source/devel/testing.rst:39
+msgid "Subversion Release Manager plugin"
+msgstr ""
+
+# 277ea2a8433b4227ad55c41d6ee9a6f8
+#: ../../source/devel/testing.rst:40
+msgid "Subversion Tagging Plugin"
+msgstr ""
+
+# 288ebb77a25947598c96afb6ab4ae144
+#: ../../source/devel/testing.rst:41
+msgid "Edgewall Trac plugin"
+msgstr ""
+
+# ef962a302d004a6dbc8732011952e56b
+#: ../../source/devel/testing.rst:42
+msgid "Jenkins xUnit plugin"
+msgstr ""
+
+# e8da834112bd465b98e9434b9579c52e
+#: ../../source/devel/testing.rst:43
+msgid "Downstream buildview plugin"
+msgstr ""
+
+# 53ede7e7c06b4065a22c3856db77bf4b
+#: ../../source/devel/testing.rst:44
+msgid "Global Build Stats Plugin"
+msgstr ""
+
+# 0c965886fcfa4654a6f1724613690fe1
+#: ../../source/devel/testing.rst:45
+msgid "Dependency Graph View Plugin"
+msgstr ""
+
+# f38510f29dd44be8bd4b16783e38a715
+#: ../../source/devel/testing.rst:46
+msgid "Join Plugin"
+msgstr ""
+
+# 3f3867ac71364d319cf10ca0a19fa77e
+#: ../../source/devel/testing.rst:47
+msgid "Release Plugin"
+msgstr ""
+
+# 84513ecb46b94ae98237ed760775aefd
+#: ../../source/devel/testing.rst:48
+msgid "Parameterized Trigger Plugin"
+msgstr ""
+
+# 64e464f7694b414ea8e82c04f95f78c0
+#: ../../source/devel/testing.rst:50
+msgid ""
+"The tests are designed to output to Jenkins-friendly format using the python "
+"nose and `Jenkins xUnit <http://wiki.jenkins-ci.org/display/JENKINS/xUnit"
+"+Plugin>`_ plugins."
+msgstr ""
+
+# 65555dd1ec814fcf8238f152761ad652
+#: ../../source/devel/testing.rst:52
+msgid ""
+"Measurements and their history are recorded with the `Jenkins Measurement "
+"Plots Plugins <http://wiki.hudson-ci.org/display/HUDSON/Measurement+Plots"
+"+Plugin>`_. This is done by outputting the following xml on stdout:"
+msgstr ""
+
+# 3243e0f0a2c74951939888a92ff3f8f9
+#: ../../source/devel/testing.rst:59
+msgid "chroot"
+msgstr ""
+
+# 288e5ee11e73463bb3091450c481f76b
+#: ../../source/devel/testing.rst:61
+msgid ""
+"Can build entire ubuntu environments using `debootstrap <https://wiki.ubuntu."
+"com/DebootstrapChroot>`_."
+msgstr ""
+
+# c1a35588163645eda5f4743be93aac34
+#: ../../source/devel/testing.rst:64
+msgid "Tests"
+msgstr ""
+
+# 994ada60079842d0884d1d6f437998f0
+#: ../../source/devel/testing.rst:66
+msgid "To run, first install OpenRAVE into your path, then:"
+msgstr ""
+
+# 028230d8ba9c4b53ac2e7faeb977b495
+#: ../../source/devel/testing.rst:72
+msgid ""
+"For future: Running 'make test' in the root directory should setup the "
+"OpenRAVE environment from local **build** folder and run all tests."
+msgstr ""
+
+# 12a5c895095f40e29679ccfd56628e73
+#: ../../source/devel/testing.rst:75
+msgid "Basic Tests"
+msgstr ""
+
+# f03c59cc4ee043a8867c4b3ab64375fc
+#: ../../source/devel/testing.rst:77
+msgid "All these tests must pass for a release candidate:"
+msgstr ""
+
+# f2bd0cf531d04df78c1937ed57babb51
+#: ../../source/devel/testing.rst:79
+msgid "single precision, double precision"
+msgstr ""
+
+# ebd111e3a8114b8c8f96f84de177340f
+#: ../../source/devel/testing.rst:80
+msgid ""
+"compile wihtout python bindings, without octave bindings, without plugins, "
+"without collada"
+msgstr ""
+
+# cae4bca5a9344a73b16dfda841469fdd
+#: ../../source/devel/testing.rst:81
+msgid "boost versions: 1.35, 1.39, 1.44"
+msgstr ""
+
+# a89fad65c7f74b3dae1ca9695377bd4f
+#: ../../source/devel/testing.rst:82
+msgid "cmake versions: 2.6, 2.8"
+msgstr ""
+
+# ce82e5e260a94fc997bf448c8f6f2c98
+#: ../../source/devel/testing.rst:83
+msgid "32bit vs 64bit"
+msgstr ""
+
+# c0836b217f3f416395a25bc83e0ba068
+#: ../../source/devel/testing.rst:84
+msgid "Visual Studio 2005 (sp1), 2008, and 2010."
+msgstr ""
+
+# 02ff8d8b9dfa477fa74b0e4789e32f77
+#: ../../source/devel/testing.rst:85
+msgid "All exapmles/databases run without throwing exceptions"
+msgstr ""
+
+# 07a31ced76874359abec2956ca3ae120
+#: ../../source/devel/testing.rst:88
+msgid "IKFast"
+msgstr ""
+
+# 20ed9699529d42bda620a6f2c8f26122
+#: ../../source/devel/testing.rst:90
+msgid ""
+"Once building is successful, IKFast tests are run for every robot in its "
+"database using the **test/test_ikfast.py** script. The `statistics  <http://"
+"www.openrave.org/testing/job/openrave/>`_ are used to generate "
+"reStructuredText for the :ref:`robots` page. :ref:`ikfast-testing` goes into "
+"details about what is tested."
+msgstr ""
+
+# 8b9709a230494ddfab7e61b971be52ff
+#: ../../source/devel/working_with_sources.rst:2
+msgid "Working With the Source Code"
+msgstr ""
+
+# b217e24faeed45c2a95a146b9b0febe9
+#: ../../source/devel/working_with_sources.rst:4
+msgid "These guidelines are for OpenRAVE Developers using Linux."
+msgstr ""
+
+# 998dd82dc42747e191b2886f8afbb349
+#: ../../source/devel/working_with_sources.rst:9
+msgid "In order to compile debug, just do:"
+msgstr ""
+
+# eaf730797bc84c49b5eef1c8db39bd00
+#: ../../source/devel/working_with_sources.rst:15
+msgid ""
+"This will create a **builddebug** folder independent of the original "
+"**build** folder."
+msgstr ""
+
+# 01716704181b419fadeb4fdf51250781
+#: ../../source/devel/working_with_sources.rst:17
+msgid ""
+"Can setup `colorgcc <https://github.com/johannes/colorgcc>`_ and `ccache "
+"<http://ccache.samba.org/>`_  for easier development by executing the "
+"following **setupgcc.bash** script inside the **~/.bashrc** file:"
+msgstr ""
+
+# e057a74151044bf2bff8d920d941c040
+#: ../../source/devel/working_with_sources.rst:22
+msgid ""
+"Note that this will create symlinks to the compilers inside **/usr/local/"
+"bin**."
+msgstr ""
+
+# 098f81b0a6ac44b6b8d5a754256ce64a
+#: ../../source/devel/working_with_sources.rst:25
+msgid "Indenting C++ Files"
+msgstr ""
+
+# 42f22d64b9d843b3929b190ffeb9184b
+#: ../../source/devel/working_with_sources.rst:27
+msgid ""
+"OpenRAVE C++ code should automatically be run with `uncrustify <http://"
+"uncrustify.sourceforge.net/>`_ before being committed. Currently OpenRAVE "
+"requires uncrustify version >=0.57. First put :download:`.uncrustify.cfg "
+"<../../../sandbox/.uncrustify.cfg>` in your $HOME directory."
+msgstr ""
+
+# ca194ff304d5426b9ca720be24e861e4
+#: ../../source/devel/working_with_sources.rst:29
+msgid "Run a C++ file before committing to OpenRAVE:"
+msgstr ""
+
+# a90ab35361d7492dbb86c3446b14be52
+#: ../../source/devel/working_with_sources.rst:35
+msgid ""
+":ref:`emacs_automatic_indention` shows how to automate calling uncrustify "
+"when saving the C++ file in Emacs."
+msgstr ""
+
+# 8f94ffc79f84488793087d290be1e336
+#: ../../source/devel/working_with_sources.rst:38
+msgid "Auto-Completion"
+msgstr ""
+
+# 9cb41a9a63dd4bf9b668b1edda9e7c9f
+#: ../../source/devel/working_with_sources.rst:40
+msgid ""
+"To get auto-completion for the OpenRAVE C++ API using `Collection of Emacs "
+"Development Environment Tools (CEDEC) <http://cedet.sourceforge.net/>`_, "
+"make sure to put the following Lisp code in your **.emacs** file:"
+msgstr ""
+
+# 972cc91d257943b781af8a1eae709b97
+#: ../../source/devel/working_with_sources.rst:61
+msgid "Automatic Indention"
+msgstr ""
+
+# 91fd9f8e7b684216a91503ff982c6879
+#: ../../source/devel/working_with_sources.rst:63
+msgid ""
+"It is possible to setup emacs to automatically call **uncrustify** when "
+"saving a file by downloading the `emacs-uncrustify <https://github.com/glima/"
+"Emacs-uncrustify>`_  pakcage, setting its path in the emacs load path, and "
+"putting the following in your **.emacs** file:"
+msgstr ""
+
+# 405406a9ebbd433e983240b92c863004
+#: ../../source/devel/working_with_sources.rst:72
+msgid "Bookmarks"
+msgstr ""
+
+# cc0dff6d181f4427bb5a9ddac7370c92
+#: ../../source/devel/working_with_sources.rst:74
+msgid ""
+"Using the `bm.el <http://www.nongnu.org/bm/>`_ library for getting "
+"bookmarks. If using bookmarks with uncrustify, have to add the following "
+"code to your **.emacs** file:"
+msgstr ""

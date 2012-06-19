@@ -1,0 +1,461 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# b2bda18d51134dd2a32b1ff15a15349f
+#: ../../source/plugins.rst:4
+msgid "Plugins"
+msgstr ""
+
+# 821f96f9ad2849aca291ffdd7431eb6e
+#: ../../source/plugins.rst:8
+msgid "__internal__"
+msgstr ""
+
+# de22e57fad1d4faab3a5099dcb18c04a
+#: ../../source/plugins.rst:10
+msgid ""
+"Offers: :ref:`robot:GenericRobot <robot-genericrobot>` :ref:`physicsengine:"
+"GenericPhysicsEngine <physicsengine-genericphysicsengine>` :ref:"
+"`collisionchecker:GenericCollisionChecker <collisionchecker-"
+"genericcollisionchecker>` :ref:`trajectory:GenericTrajectory <trajectory-"
+"generictrajectory>`"
+msgstr ""
+
+# 7ceec395ed9a458a813cf98a737b572b
+# db43fb3d1343475380b3ef9ad9bec722
+# 730c1b5371624ac4b22e3e461b721a0e
+# 1e32fe3a820d4170bd1b40d15a83a469
+# c5647b2dd9e4439ea31dde0f630d63e7
+# 8c45e5e890c14ea29e7196a78b07ca85
+# d3b98e20ce154643a48f9404a1aacd4b
+# 9f777d43f05945bfa1451f6b0e325b90
+# 8897faf18be34e6ebde72598fe08d9f5
+# 12ed8684001f47feacec56581033004e
+# 10e9bb934bed4d8ca679566c648cc379
+# b5cc54b8839b40818c02131705890957
+# bcded7e235044ca9a12b68b7e7ac7f37
+# 1f2650945a3f4c7b95f820773c206372
+# 24b5b7c67d884d00b13205e97c10b640
+# c934bc9e515c4218bac62b15d961085a
+# 5d8d6a157b4a42ae90d30c30ea3ca0ab
+#: ../../source/plugins.rst:12 ../../source/plugins.rst:23
+#: ../../source/plugins.rst:36 ../../source/plugins.rst:49
+#: ../../source/plugins.rst:62 ../../source/plugins.rst:75
+#: ../../source/plugins.rst:88 ../../source/plugins.rst:101
+#: ../../source/plugins.rst:114 ../../source/plugins.rst:127
+#: ../../source/plugins.rst:140 ../../source/plugins.rst:151
+#: ../../source/plugins.rst:164 ../../source/plugins.rst:177
+#: ../../source/plugins.rst:190 ../../source/plugins.rst:203
+#: ../../source/plugins.rst:216
+msgid "OpenRAVE Version: 0.7.0"
+msgstr ""
+
+# 1bb5f0cacb57407daf812db0e3d87947
+#: ../../source/plugins.rst:14
+msgid "URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk"
+msgstr ""
+
+# b080d7c966b341c286ee69bde00334ed
+#: ../../source/plugins.rst:19
+msgid "basecontrollers"
+msgstr ""
+
+# 0a39b7e932b74f2aae1bcf006458e5fa
+#: ../../source/plugins.rst:21
+msgid ""
+"Offers: :ref:`controller:IdealController <controller-idealcontroller>` :ref:"
+"`controller:RedirectController <controller-redirectcontroller>`"
+msgstr ""
+
+# 65e6fe442d214c5994d105f0e81db0be
+#: ../../source/plugins.rst:25
+msgid "Core Plugin: Last updated r3244"
+msgstr ""
+
+# ab3bbf4da54a489aafeee86629d6c71a
+#: ../../source/plugins.rst:27
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"basecontrollers"
+msgstr ""
+
+# 6cd44cb0e2b844ca9c606bd97add256b
+#: ../../source/plugins.rst:32
+msgid "baserobots"
+msgstr ""
+
+# 340f7adb51b74e5a9360b806fc48d9a9
+#: ../../source/plugins.rst:34
+msgid "Offers: :ref:`robot:CollisionMapRobot <robot-collisionmaprobot>`"
+msgstr ""
+
+# 60a43bca23014902b71e921cbb80b5b8
+#: ../../source/plugins.rst:38
+msgid "Core Plugin: Last updated r3075"
+msgstr ""
+
+# e535e3cb3a1f4e3eafa57be8632d707a
+#: ../../source/plugins.rst:40
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"baserobots"
+msgstr ""
+
+# 8907021c16cd43dbade49a4af09bd45d
+#: ../../source/plugins.rst:45
+msgid "basesamplers"
+msgstr ""
+
+# 349c8837933144109423ffcfbf2ad402
+#: ../../source/plugins.rst:47
+msgid ""
+"Offers: :ref:`spacesampler:MT19937 <spacesampler-mt19937>` :ref:"
+"`spacesampler:Halton <spacesampler-halton>` :ref:`spacesampler:"
+"RobotConfiguration <spacesampler-robotconfiguration>`"
+msgstr ""
+
+# 85c524ab1a3744b392c80536d1ec5bd2
+#: ../../source/plugins.rst:51
+msgid "Core Plugin: Last updated r3095"
+msgstr ""
+
+# 74ccdf3c256747c1b8fd3c02ec9cf2f7
+#: ../../source/plugins.rst:53
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"basesamplers"
+msgstr ""
+
+# 05d15d84ef714bb38594bbe68bfd40e5
+#: ../../source/plugins.rst:58
+msgid "basesensors"
+msgstr ""
+
+# 31f42c2781b14124b943c2caf8ee16ec
+#: ../../source/plugins.rst:60
+msgid ""
+"Offers: :ref:`sensor:BaseLaser2D <sensor-baselaser2d>` :ref:`sensor:"
+"base_laser2d <sensor-base_laser2d>` :ref:`sensor:BaseSpinningLaser2D <sensor-"
+"basespinninglaser2d>` :ref:`sensor:BaseFlashLidar3D <sensor-"
+"baseflashlidar3d>` :ref:`sensor:base_laser3d <sensor-base_laser3d>` :ref:"
+"`sensor:BaseCamera <sensor-basecamera>` :ref:`sensor:base_pinhole_camera "
+"<sensor-base_pinhole_camera>`"
+msgstr ""
+
+# dec1d171d5d64534b8b0c531f117c858
+# 2b2bd49d450f49419786f1514d681890
+# 2b5cf076656842cb9aa53cc428cfbe56
+#: ../../source/plugins.rst:64 ../../source/plugins.rst:103
+#: ../../source/plugins.rst:129
+msgid "Core Plugin: Last updated r3223"
+msgstr ""
+
+# 33d3e80098324674b44ad818bb2f448b
+#: ../../source/plugins.rst:66
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"basesensors"
+msgstr ""
+
+# 8274a978c07d4b0ea2f5c78f2d4d463e
+#: ../../source/plugins.rst:71
+msgid "bulletrave"
+msgstr ""
+
+# c1bfde9c83ba41c2b47e432229d7eb9c
+#: ../../source/plugins.rst:73
+msgid ""
+"Offers: :ref:`physicsengine:bullet <physicsengine-bullet>` :ref:"
+"`collisionchecker:bullet <collisionchecker-bullet>`"
+msgstr ""
+
+# 64179944a7a649bbba77efc99e6204e5
+#: ../../source/plugins.rst:77
+msgid "Core Plugin: Last updated r3249"
+msgstr ""
+
+# 44a06c97f3fc4ba4b45eff1fd002e57a
+#: ../../source/plugins.rst:79
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"bulletrave"
+msgstr ""
+
+# ac84f7dad4374cc5807cea1ce1beac6f
+#: ../../source/plugins.rst:84
+msgid "dualmanipulation"
+msgstr ""
+
+# ab3ec21b977f4d6aba3380bc961908e8
+#: ../../source/plugins.rst:86
+msgid "Offers: :ref:`module:DualManipulation <module-dualmanipulation>`"
+msgstr ""
+
+# 3d8d087150634da0853e8550bad483aa
+# 7da6dfca890248229deb25e62d301e0b
+#: ../../source/plugins.rst:90 ../../source/plugins.rst:153
+msgid "Core Plugin: Last updated r3214"
+msgstr ""
+
+# 200f37371ec54c4d84fd340f38dea889
+#: ../../source/plugins.rst:92
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"dualmanipulation"
+msgstr ""
+
+# aa9e792939a3481a9f7f685b78f4f47a
+#: ../../source/plugins.rst:97
+msgid "grasper"
+msgstr ""
+
+# 2935052e4c61470c815d333240b83d97
+#: ../../source/plugins.rst:99
+msgid ""
+"Offers: :ref:`planner:Grasper <planner-grasper>` :ref:`module:Grasper "
+"<module-grasper>`"
+msgstr ""
+
+# 2536730a143f4a7f88cba545aee841f7
+#: ../../source/plugins.rst:105
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"grasper"
+msgstr ""
+
+# cc6fe17fb7254c009ad06d383b99fbaf
+#: ../../source/plugins.rst:110
+msgid "ikfastsolvers"
+msgstr ""
+
+# 8fa229cdd36040ca9580ccf4ca301c72
+#: ../../source/plugins.rst:112
+msgid ""
+"Offers: :ref:`module:ikfast <module-ikfast>` :ref:`iksolver:ikfast <iksolver-"
+"ikfast>` :ref:`iksolver:wam7ikfast <iksolver-wam7ikfast>` :ref:`iksolver:"
+"pa10ikfast <iksolver-pa10ikfast>` :ref:`iksolver:pumaikfast <iksolver-"
+"pumaikfast>` :ref:`iksolver:ikfast_pr2_head <iksolver-ikfast_pr2_head>` :ref:"
+"`iksolver:ikfast_pr2_head_torso <iksolver-ikfast_pr2_head_torso>` :ref:"
+"`iksolver:ikfast_pr2_rightarm <iksolver-ikfast_pr2_rightarm>` :ref:`iksolver:"
+"ikfast_pr2_rightarm_torso <iksolver-ikfast_pr2_rightarm_torso>` :ref:"
+"`iksolver:ikfast_pr2_leftarm <iksolver-ikfast_pr2_leftarm>` :ref:`iksolver:"
+"ikfast_pr2_leftarm_torso <iksolver-ikfast_pr2_leftarm_torso>` :ref:`iksolver:"
+"ikfast_schunk_lwa3 <iksolver-ikfast_schunk_lwa3>` :ref:`iksolver:"
+"ikfast_katana5d <iksolver-ikfast_katana5d>` :ref:`iksolver:"
+"ikfast_katana5d_trans <iksolver-ikfast_katana5d_trans>`"
+msgstr ""
+
+# 05451c9098da444ba21b7abb1b24d8f9
+#: ../../source/plugins.rst:116
+msgid "Core Plugin: Last updated r3320"
+msgstr ""
+
+# 3c2fe1c950564dc49071ae5baaef0231
+#: ../../source/plugins.rst:118
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"ikfastsolvers"
+msgstr ""
+
+# 191ef552d5184e3c9df63fe902a06207
+#: ../../source/plugins.rst:123
+msgid "logging"
+msgstr ""
+
+# b4d3e1fd4e114983b2f0d0261bf3c97f
+#: ../../source/plugins.rst:125
+msgid ""
+"Offers: :ref:`module:Logging <module-logging>` :ref:`module:ViewerRecorder "
+"<module-viewerrecorder>`"
+msgstr ""
+
+# 3c8d6a71165c4dfe82c7a225f0f3590f
+#: ../../source/plugins.rst:131
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"logging"
+msgstr ""
+
+# bfc747553038432fa839847fb98328fd
+#: ../../source/plugins.rst:136
+msgid "motionplanning"
+msgstr ""
+
+# 94eb5ce45b1642e5bf976b66d18b8f22
+#: ../../source/plugins.rst:138
+msgid ""
+"Offers: :ref:`planner:WorkspaceTrajectoryTracker <planner-"
+"workspacetrajectorytracker>` :ref:`planner:WorkspacePathTrackerGreedy "
+"<planner-workspacepathtrackergreedy>` :ref:`planner:WorkspacePathVerifier "
+"<planner-workspacepathverifier>` :ref:`module:WatermarkRecording <module-"
+"watermarkrecording>` :ref:`module:IkPlanning <module-ikplanning>` :ref:"
+"`module:DensoRobot <module-densorobot>` :ref:`module:MoveStraightFilter "
+"<module-movestraightfilter>` :ref:`module:LinearConnectFilter <module-"
+"linearconnectfilter>`"
+msgstr ""
+
+# a591e5c2ce8c4f998b20c39278c525d5
+#: ../../source/plugins.rst:142
+msgid ""
+"URL: https://svn.mujin.co.jp/trunk/ros/mujin/openrave_plugins/"
+"orp_motionplanning"
+msgstr ""
+
+# baa6aa908a8f4d7fbbe22984ee25f7bb
+#: ../../source/plugins.rst:147
+msgid "oderave"
+msgstr ""
+
+# 582a569580814c639c12278f83ca6594
+#: ../../source/plugins.rst:149
+msgid ""
+"Offers: :ref:`controller:odevelocity <controller-odevelocity>` :ref:"
+"`physicsengine:ode <physicsengine-ode>` :ref:`collisionchecker:ode "
+"<collisionchecker-ode>`"
+msgstr ""
+
+# 1713696957964d3a864e30b4aa9f219e
+#: ../../source/plugins.rst:155
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"oderave"
+msgstr ""
+
+# b0a441b375934bc599a493e75181d91b
+#: ../../source/plugins.rst:160
+msgid "pqprave"
+msgstr ""
+
+# b60e092e0ef2473e9966a9678a20c514
+#: ../../source/plugins.rst:162
+msgid "Offers: :ref:`collisionchecker:pqp <collisionchecker-pqp>`"
+msgstr ""
+
+# 108d66e4fbde426d8a0af28c37b499b5
+#: ../../source/plugins.rst:166
+msgid "Core Plugin: Last updated r3202"
+msgstr ""
+
+# 66f63a85d20f4e0bb75cca9baf59b436
+#: ../../source/plugins.rst:168
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"pqprave"
+msgstr ""
+
+# 57f6e23ede3b4d259aae73ad75e454b3
+#: ../../source/plugins.rst:173
+msgid "qtcoinrave"
+msgstr ""
+
+# c0e030b9b122458e806c90f1f1734da6
+#: ../../source/plugins.rst:175
+msgid ""
+"Offers: :ref:`module:IvModelLoader <module-ivmodelloader>` :ref:`viewer:"
+"QtCoin <viewer-qtcoin>` :ref:`viewer:QtCameraViewer <viewer-qtcameraviewer>`"
+msgstr ""
+
+# bd786710424b45598eeaa78ed4334756
+#: ../../source/plugins.rst:179
+msgid "Core Plugin: Last updated r3329"
+msgstr ""
+
+# 8da6da25fdd44a739f4157ff42844810
+#: ../../source/plugins.rst:181
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"qtcoinrave"
+msgstr ""
+
+# f2652d2b35e54792ad2bf7437d5f25c8
+#: ../../source/plugins.rst:186
+msgid "rmanipulation"
+msgstr ""
+
+# 1a92cf95f63c45d18532f0b4ef5e8304
+#: ../../source/plugins.rst:188
+msgid ""
+"Offers: :ref:`module:BaseManipulation <module-basemanipulation>` :ref:"
+"`module:TaskManipulation <module-taskmanipulation>` :ref:`module:TaskCaging "
+"<module-taskcaging>` :ref:`module:VisualFeedback <module-visualfeedback>`"
+msgstr ""
+
+# 67136d7444d74070b1b1a4d23e16e19c
+#: ../../source/plugins.rst:192
+msgid "Core Plugin: Last updated r3346"
+msgstr ""
+
+# ece44d65ee5d442b97aa541c1121cc42
+#: ../../source/plugins.rst:194
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"rmanipulation"
+msgstr ""
+
+# 3649234e4e5443ac9e083a4c355f6099
+#: ../../source/plugins.rst:199
+msgid "rplanners"
+msgstr ""
+
+# c3239702790c48528c136ef83039b7d7
+#: ../../source/plugins.rst:201
+msgid ""
+"Offers: :ref:`planner:RAStar <planner-rastar>` :ref:`planner:BiRRT <planner-"
+"birrt>` :ref:`planner:BasicRRT <planner-basicrrt>` :ref:`planner:"
+"ExplorationRRT <planner-explorationrrt>` :ref:`planner:GraspGradient "
+"<planner-graspgradient>` :ref:`planner:shortcut_linear <planner-"
+"shortcut_linear>` :ref:`planner:LinearTrajectoryRetimer <planner-"
+"lineartrajectoryretimer>` :ref:`planner:ParabolicTrajectoryRetimer <planner-"
+"parabolictrajectoryretimer>` :ref:`planner:WorkspaceTrajectoryTracker "
+"<planner-workspacetrajectorytracker>` :ref:`planner:ParabolicSmoother "
+"<planner-parabolicsmoother>`"
+msgstr ""
+
+# 9e967fae024248c7afbce0f54e109932
+#: ../../source/plugins.rst:205
+msgid "Core Plugin: Last updated r3336"
+msgstr ""
+
+# d14c15e97a1c46a6abb4a001a97f2fd0
+#: ../../source/plugins.rst:207
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"rplanners"
+msgstr ""
+
+# f689dad3c5a943cd9eb456014e7ff752
+#: ../../source/plugins.rst:212
+msgid "textserver"
+msgstr ""
+
+# 519763d7797a4946a4f0de7fc63a09c5
+#: ../../source/plugins.rst:214
+msgid "Offers: :ref:`module:textserver <module-textserver>`"
+msgstr ""
+
+# 1f78ce9f298841c5a198bc86b29778e7
+#: ../../source/plugins.rst:218
+msgid "Core Plugin: Last updated r3264"
+msgstr ""
+
+# 8d3ab5d7c99b469999bdfb1cf1f70cee
+#: ../../source/plugins.rst:220
+msgid ""
+"URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
+"textserver"
+msgstr ""

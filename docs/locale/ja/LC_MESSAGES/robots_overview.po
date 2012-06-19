@@ -1,0 +1,113 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 03fbd94939cf4a20911e37a62ede6d43
+#: ../../source/robots_overview.rst:4
+msgid "Robots Overview"
+msgstr ""
+
+# 6edfb27f9eed488d92cda167e0ccdd02
+#: ../../source/robots_overview.rst:6
+msgid ""
+":ref:`geometric_conventions` - Standards for the coordinate system and scale "
+"of the robot."
+msgstr ""
+
+# 77c43d609f8140b986584c6e091c5d24
+#: ../../source/robots_overview.rst:11
+msgid "Robot Repositories"
+msgstr ""
+
+# 50b60b51a29c4d49ae189d5187b2f9a7
+#: ../../source/robots_overview.rst:13
+msgid ""
+"Subversion: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/src/"
+"robots"
+msgstr ""
+
+# f091b4201b9944bd83bbb885ec9eb246
+#: ../../source/robots_overview.rst:15
+msgid ""
+"Subversion: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots"
+msgstr ""
+
+# fbf8d398c7b04d3d823c850355f6ffcb
+#: ../../source/robots_overview.rst:18
+msgid "File Formats"
+msgstr ""
+
+# 9da47dd667504449b8941c10d244864f
+#: ../../source/robots_overview.rst:21
+msgid "COLLADA"
+msgstr ""
+
+# f407c2d7d6bc489099174494a7444578
+#: ../../source/robots_overview.rst:23
+msgid ""
+"OpenRAVE fully supports the COLLADA file format for specifying robots and "
+"adds its own set of robot-specific extensions. The robot extensions include:"
+msgstr ""
+
+# 37b67f0b776b4d18a32b66537a817668
+#: ../../source/robots_overview.rst:25
+msgid "manipulators"
+msgstr ""
+
+# aa27f160b1bd4a939123b500fedaee32
+#: ../../source/robots_overview.rst:26
+msgid "sensors"
+msgstr ""
+
+# 9d2fda579b8247ecb6e274390d878d9c
+#: ../../source/robots_overview.rst:27
+msgid "planning-specific parameters"
+msgstr ""
+
+# 7718c1eccce8422c9f98724dc036dd7f
+#: ../../source/robots_overview.rst:29
+msgid "`COLLADA Robot Extensions`_ (*.dae, *.zae)"
+msgstr ""
+
+# 91fd96e1ea324bc0b161be72962b8732
+#: ../../source/robots_overview.rst:31
+msgid ""
+"Robots are standardized with the COLLADA 1.5 file format. OpenRAVE defines "
+"these for storing information like manipulators, sensors, and collision "
+"data. COLLADA files saved as **dae** store the raw XML, files stored as "
+"**zae** stored the compressed XML. In order to preserve space, all robots in "
+"OpenRAVE are stored as **zae**."
+msgstr ""
+
+# 4c49dc330b384dd9af4e684f15ab0f08
+#: ../../source/robots_overview.rst:34
+msgid "OpenRAVE XML"
+msgstr ""
+
+# 65169358cba1426fa01fca155d0960fe
+#: ../../source/robots_overview.rst:36
+msgid "`OpenRAVE XML`_ (\\*.xml)"
+msgstr ""
+
+# 5f64387f24fc4cf6979450efcb9fe9cb
+#: ../../source/robots_overview.rst:38
+msgid ""
+"Because COLLADA can be a little difficult to edit by hand, OpenRAVE also "
+"defines its own format to help users quickly get robots into the "
+"environment. It is possible to convert these custom robots into COLLADA "
+"using the following command:"
+msgstr ""
