@@ -17,6 +17,7 @@ import sys, os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath('sphinxext'))
+sys.path.append(os.path.abspath('openravepy'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -38,7 +39,11 @@ master_doc = 'contents'
 
 # General information about the project.
 project = u'OpenRAVE'
-copyright = u'2006-2011, Rosen Diankov'
+copyright = u'2006-2012, Rosen Diankov and contributors'
+
+# If true, sectionauthor and moduleauthor directives will be shown in the
+# output. They are ignored by default.
+#show_authors = True
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -85,6 +90,7 @@ show_authors = True
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+#pygments_style = 'trac'
 
 # A list of ignored prefixes for module index sorting.
 modindex_common_prefix = ['openravepy.','openravepy.databases.','openravepy.examples.','openravepy.interfaces.']
@@ -136,7 +142,10 @@ html_static_path = ['_static']
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
-#html_use_smartypants = True
+html_use_smartypants = True
+
+# HTML translator class for the builder
+#html_translator_class = "openravedocs.OpenRAVEHTMLTranslator"
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {'index':['localtoc.html','mailinglist.html','resources.html','sourcelink.html'],
@@ -209,9 +218,13 @@ pngmath_latex_preamble = """
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'http://docs.python.org/': None,
-    'http://docs.scipy.org/doc/numpy' : None
+    'python': ('http://docs.python.org/', None),
+    'sphinx': ('http://sphinx.pocoo.org/', None),
+    'numpy':('http://docs.scipy.org/doc/numpy',None),
 }
+
+# Python's docs don't change every week.
+intersphinx_cache_limit = 90 # days
 
 # added to the end of every file
 rst_epilog = """

@@ -30,25 +30,25 @@ if __name__ == "__main__":
     indexhtml = re.sub('<li><a href="examples.html"><span>Examples</span></a></li>','<li><a href="cpp_examples.html"><span>C++ Examples</span></a></li>',indexhtml)
     open(indexfilename,'w').write(indexhtml)
         
-    # for now only build for english
-    if lang == 'en':
-        os.system('doxygen build/Doxyfile.latex.%s'%lang)
-        refman_file = 'build/%s/coreapilatex/refman.tex'%lang
-        doctext = open(refman_file,'r').read()
-        lines = doctext.splitlines()
-    #     filedocindex = [i for i,s in enumerate(lines) if s.find('\\section{File Documentation}') >= 0][0]
-    #     if filedocindex >= 0:
-    #         lines.pop(filedocindex)
-    #         while filedocindex < len(lines):
-    #             if lines[filedocindex].find('\\input{') < 0:
-    #                 break
-    #             lines.pop(filedocindex)
-        doctext = '\n'.join(lines)
-        doctext = re.sub('\\\\section\{','\\clearemptydoublepage\n\\section{',doctext)
-        open(refman_file,'w').write(doctext)
-
-        os.chdir('build/%s/coreapilatex'%lang)
-        # yes, 3 times
-        os.system('pdflatex refman.tex')
-        os.system('pdflatex refman.tex')
-        os.system('pdflatex refman.tex')
+    # for now only build for english pdf
+#     if lang == 'en':
+#         os.system('doxygen build/Doxyfile.latex.%s'%lang)
+#         refman_file = 'build/%s/coreapilatex/refman.tex'%lang
+#         doctext = open(refman_file,'r').read()
+#         lines = doctext.splitlines()
+#     #     filedocindex = [i for i,s in enumerate(lines) if s.find('\\section{File Documentation}') >= 0][0]
+#     #     if filedocindex >= 0:
+#     #         lines.pop(filedocindex)
+#     #         while filedocindex < len(lines):
+#     #             if lines[filedocindex].find('\\input{') < 0:
+#     #                 break
+#     #             lines.pop(filedocindex)
+#         doctext = '\n'.join(lines)
+#         doctext = re.sub('\\\\section\{','\\clearemptydoublepage\n\\section{',doctext)
+#         open(refman_file,'w').write(doctext)
+# 
+#         os.chdir('build/%s/coreapilatex'%lang)
+#         # yes, 3 times
+#         os.system('pdflatex refman.tex')
+#         os.system('pdflatex refman.tex')
+#         os.system('pdflatex refman.tex')

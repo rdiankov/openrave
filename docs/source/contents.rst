@@ -16,5 +16,5 @@ Contents
    plugin_interfaces
    robots
    devel/index
-   openravepy/openravepy
+   en/openravepy/openravepy
    changelog

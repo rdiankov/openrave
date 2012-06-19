@@ -19,7 +19,7 @@ bash build_images.sh
 
 # doxygen
 python build_doxygen.py --lang=en
-cp build/en/latex/refman.pdf build/en/openrave.pdf
+#cp build/en/latex/refman.pdf build/en/openrave.pdf
 
 python build_doxygen.py --lang=ja
 #cp ja/latex/refman.pdf build/ja/openrave_ja.pdf
