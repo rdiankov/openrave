@@ -58,12 +58,11 @@ def main(env,options):
     if not ikmodel.load():
         ikmodel.autogenerate()
 
-    robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
-
-    basemanip=interfaces.BaseManipulation(robot)
-    taskmanip=interfaces.TaskManipulation(robot)
-
-    taskmanip.ReleaseFingers()
+    with env:
+        robot.SetActiveDOFs(ikmodel.manip.GetArmIndices())
+        basemanip=interfaces.BaseManipulation(robot)
+        taskmanip=interfaces.TaskManipulation(robot)
+        taskmanip.ReleaseFingers()
     robot.WaitForController(0)
 
     with env:
@@ -75,7 +74,6 @@ def main(env,options):
         # with KinBodyStateSaver(target):
         #     target.SetTransform(Ttarget1)
         #     raw_input('as')
-
         Tgrasp0 = dot(matrixFromAxisAngle([pi/2,0,0]),matrixFromAxisAngle([0,pi/2,0]))
         Tgrasp0[0:3,3] = dot(Ttarget0,Toffset)[0:3,3]
         Tgraspoffset = dot(linalg.inv(Ttarget0),Tgrasp0)
@@ -86,7 +84,6 @@ def main(env,options):
         assert(sol0 is not None)
         sol1=ikmodel.manip.FindIKSolution(Tgrasp1,IkFilterOptions.CheckEnvCollisions)
         assert(sol1 is not None)
-
         traj = RaveCreateTrajectory(env,'')
         spec = IkParameterization.GetConfigurationSpecificationFromType(IkParameterizationType.Transform6D,'linear')
         traj.Init(spec)

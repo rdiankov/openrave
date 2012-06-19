@@ -58,6 +58,8 @@ Viewer
 
 * Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
 
+* Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
+
 Misc
 ----
 
@@ -68,6 +70,8 @@ Misc
 * Added :mod:`.examples.pr2turnlever` example
 
 * Clang compiler compilation
+
+* Support doc internationalization using sphinx 1.1
 
 Version 0.6.4
 =============

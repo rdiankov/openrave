@@ -113,12 +113,12 @@ The common usage is to generate a C++ file that can be compiled into a stand-alo
 
 The C++ file uses the following defines:
 
-- IKFAST_CLIBRARY - Define this linking statically or dynamically to get correct visibility.
-- IKFAST_NO_MAIN - Remove the ``main`` function, usually used with IKFAST_CLIBRARY
-- IKFAST_ASSERT - Define in order to get a custom assert called when NaNs, divides by zero, and other invalid conditions are detected.
-- IKFAST_REAL - Use to force a custom real number type for IKReal.
-- IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
-- IKFAST_HEADER - specify a header file to include at the top. This would in the form of ``"header.h"``. In a compiler command line, it would look like: ``-DIKFAST_HEADER="\\\"header.h\\\""``
+* IKFAST_CLIBRARY - Define this linking statically or dynamically to get correct visibility.
+* IKFAST_NO_MAIN - Remove the ``main`` function, usually used with IKFAST_CLIBRARY
+* IKFAST_ASSERT - Define in order to get a custom assert called when NaNs, divides by zero, and other invalid conditions are detected.
+* IKFAST_REAL - Use to force a custom real number type for IKReal.
+* IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
+* IKFAST_HEADER - specify a header file to include at the top. This would in the form of ``"header.h"``. In a compiler command line, it would look like: ``-DIKFAST_HEADER="\\\"header.h\\\""``
 
 The global functions are:
 

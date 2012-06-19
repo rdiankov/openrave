@@ -20,6 +20,10 @@
 """
 from __future__ import with_statement # for python 2.5
 
+from sympy import __version__ as sympy_version
+if sympy_version >= '0.7.0':
+    raise ImportError('ikfast needs sympy 0.6.x')
+
 import sys, copy, time, datetime
 try:
     from openravepy.metaclass import AutoReloader

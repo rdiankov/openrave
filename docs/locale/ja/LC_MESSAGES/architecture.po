@@ -24,7 +24,7 @@ msgstr ""
 # 2c5d976b0d514281b37dcae97c7f74aa
 #: ../../source/architecture/index.rst:6
 msgid "`C++ Architecture`_"
-msgstr ""
+msgstr "C++アーキテクチャ"
 
 # dec2dc3100b94888931bb968de8b179d
 #: ../../source/architecture/interface_concepts.rst:4

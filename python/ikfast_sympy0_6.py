@@ -239,6 +239,10 @@ __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Lesser GPL, Version 3'
 __version__ = '56'
 
+from sympy import __version__ as sympy_version
+if sympy_version >= '0.7.0':
+    raise ImportError('ikfast needs sympy 0.6.x')
+    
 import sys, copy, time, math, datetime
 import __builtin__
 from optparse import OptionParser
@@ -256,11 +260,6 @@ try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
     pass
-
-from sympy import __version__ as sympy_version
-
-if sympy_version >= '0.7.0':
-    raise ValueError('ikfast needs sympy 0.6.x')
 
 try:
     import re # for latex cleanup

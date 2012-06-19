@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-19 19:43\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -349,6 +349,17 @@ msgid ""
 "The translation PO files are stored in `https://openrave.svn.sourceforge.net/"
 "svnroot/openrave/trunk/docs/locale`_. Anyone is welcome to send diff files "
 "of translations."
+msgstr ""
+
+# 8b7692e1cdbd4853a09a2f1300737f1a
+#: ../../source/devel/documentation_system.rst:139
+msgid ""
+"In order to test how the translation looks for a specific language, execute"
+msgstr ""
+
+# 9b87823832fd4a39ac39a5ff72cf4b8c
+#: ../../source/devel/documentation_system.rst:145
+msgid "where XX is the language code."
 msgstr ""
 
 # 00484f45d6fa44e6b45392dc97accd0c

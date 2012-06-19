@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-19 19:43\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -362,6 +362,7 @@ msgstr ""
 #: ../../source/interface_types/trajectory/generictrajectory.rst:21
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:23
 #: ../../source/interface_types/viewer/qtcoin.rst:35
+#: ../../source/interface_types/viewer/qtosg.rst:23
 msgid "help"
 msgstr ""
 
@@ -491,6 +492,7 @@ msgstr ""
 #: ../../source/interface_types/trajectory/generictrajectory.rst:23
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:25
 #: ../../source/interface_types/viewer/qtcoin.rst:37
+#: ../../source/interface_types/viewer/qtosg.rst:25
 msgid "display help commands."
 msgstr ""
 
@@ -3331,6 +3333,7 @@ msgstr ""
 # 097a493c44a141ad8ee104415dea7a91
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:6
 #: ../../source/interface_types/viewer/qtcoin.rst:6
+#: ../../source/interface_types/viewer/qtosg.rst:6
 msgid ":ref:`interface-viewer`"
 msgstr ""
 
@@ -3394,4 +3397,29 @@ msgstr ""
 msgid ""
 "Accepts 0/1 value that decides whether to render the figure plots in the "
 "camera image through GetCameraImage"
+msgstr ""
+
+# 04536201669449afb3ea96f41f32f194
+#: ../../source/interface_types/viewer/qtosg.rst:4
+msgid "qtosg - qtosgrave"
+msgstr ""
+
+# 527a73f5499d4ec6bf95d495575a4fa2
+#: ../../source/interface_types/viewer/qtosg.rst:8
+msgid ":ref:`plugin-qtosgrave`"
+msgstr ""
+
+# 23a00c981b3d4b1091295a64eaefde83
+#: ../../source/interface_types/viewer/qtosg.rst:10
+msgid "Gustavo Puche"
+msgstr ""
+
+# 6dc85bb3d3a94843ba30f89dc2490d91
+#: ../../source/interface_types/viewer/qtosg.rst:12
+msgid "Provides a viewer based on Open Scene Graph."
+msgstr ""
+
+# 03836aea3dec44de943a80929ed534d1
+#: ../../source/interface_types/viewer/qtosg.rst:16
+msgid "qtosg Commands"
 msgstr ""

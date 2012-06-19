@@ -96,7 +96,6 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
                 linewidth = 2
                 h = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb(float(j.GetDOFIndex())/(N[0]+N[1])))  for j in robot.GetJoints() if not j.IsStatic()]
                 hpassive = [env.drawlinelist(array([j.GetAnchor()-scale*j.GetAxis(0),j.GetAnchor()+scale*j.GetAxis(0)]),linewidth,floatRgb((jindex+N[0])/(N[0]+N[1])))  for jindex,j in enumerate(robot.GetPassiveJoints()) if not j.IsStatic()]
-
             K=[focal,focal,width/2,height/2]
             Lall = max(linalg.norm(ab.extents())*focal/(0.5*width),linalg.norm(ab.extents())*focal/(0.5*height))
             Lx = ab.extents()[0] + max(ab.extents()[1]*focal/(0.5*width),ab.extents()[2]*focal/(0.5*height))
@@ -110,6 +109,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
             Iy = viewer.GetCameraImage(width=width,height=height,transform=Ty,K=K)
             scipy.misc.pilutil.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
 
+    print 'writing ',robotname
     robotlink = 'robot-'+robotname
     robotxml = """.. _%s:\n\n%s Robot\n%s======
 
@@ -272,7 +272,6 @@ Robots
     for robotname in robotnames:
         text += '  %s/%s\n'%(outputdir,robotname)
     open(os.path.join(outputdir,'robots.rst'),'w').write(text)
-
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(buildoptions.numiktests))
     text="""
 .. _ikfast-database:

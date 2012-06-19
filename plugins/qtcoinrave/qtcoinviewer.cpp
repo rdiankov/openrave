@@ -2900,8 +2900,9 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
-        FOREACH(it,_listRemoveItems)
-        delete *it;
+        FOREACH(it,_listRemoveItems) {
+            delete *it;
+        }
         _listRemoveItems.clear();
     }
 }

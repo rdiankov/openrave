@@ -231,37 +231,32 @@ intersphinx_mapping = {
 # Python's docs don't change every week.
 intersphinx_cache_limit = 90 # days
 
-#import gettext
-#gettext.install('openravesphinx','locale',unicode=True)
-#gettext.bindtextdomain('openravesphinx','locale')
-        
+import gettext
+try:
+    if 'SPHINXLANGUAGE' in os.environ:
+        t = gettext.translation('openravesphinx','locale',languages=[os.environ['SPHINXLANGUAGE']])
+    else:
+        t = gettext.translation('openravesphinx','locale')
+except IOError:
+    # no translation file found?
+    t=gettext.NullTranslations()
+    
 # added to the end of every file
-rst_epilog = """
-.. _`Core C++ API`: ../coreapihtml/index.html
+rst_epilog = u''
+rst_epilog += u'.. _`%s`: ../coreapihtml/index.html\n\n'%t.ugettext('Core C++ API')
+rst_epilog += u'.. _`%s`: ../../coreapihtml/architecture_concepts.html\n\n'%t.ugettext('C++ Architecture')
+rst_epilog += u'.. _`%s`: ../../coreapihtml/interface_concepts.html\n\n'%t.ugettext('C++ Interface Concepts')
+rst_epilog += u'.. _`%s`: ../coreapihtml/arch_sensor.html\n\n'%t.ugettext('Sensor Concepts')
+rst_epilog += u'.. _`%s`: ../coreapihtml/FindOpenRAVE_8cmake-example.html\n\n'%t.ugettext('FindOpenRAVE.cmake')
+rst_epilog += u'.. _`%s`: http://sourceforge.net/projects/openrave/files/latest_stable\n\n'%t.ugettext('Installer Packages')
+rst_epilog += u'.. _`%s`: ../coreapihtml/installation.html\n\n'%t.ugettext('Compile/Install From Sources')
+rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB\n\n'%t.ugettext('Octave/MATLAB')
+rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki\n\n'%t.ugettext('Official Wiki')
+rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/Format:COLLADA\n\n'%t.ugettext('COLLADA Robot Extensions')
+rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/Format:XML\n\n'%t.ugettext('OpenRAVE XML')
+rst_epilog += u'.. _`%s`: http://www.openrave.org/testing\n\n'%t.ugettext('OpenRAVE Testing Server')
 
-.. _`コアC++ API`: ../coreapihtml/index.html
-
-.. _`C++ Architecture`: ../../coreapihtml/architecture_concepts.html
-
-.. _`C++ Interface Concepts`: ../../coreapihtml/interface_concepts.html
-
-.. _`Sensor Concepts`: ../coreapihtml/arch_sensor.html
-
-.. _`FindOpenRAVE.cmake`: ../coreapihtml/FindOpenRAVE_8cmake-example.html
-
-.. _`Installer Packages`: http://sourceforge.net/projects/openrave/files/latest_stable
-
-.. _`Compile/Install From Sources`: ../coreapihtml/installation.html
-
-.. _`Octave/MATLAB`: http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB
-
-.. _`Official Wiki`: http://openrave.programmingvision.com/wiki
-
-.. _`COLLADA Robot Extensions`: http://openrave.programmingvision.com/wiki/index.php/Format:COLLADA
-
-.. _`OpenRAVE XML`: http://openrave.programmingvision.com/wiki/index.php/Format:XML
-
-.. _`OpenRAVE Testing Server`: http://www.openrave.org/testing
+rst_epilog += u"""
 
 .. role:: red
 

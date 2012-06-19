@@ -1,17 +1,20 @@
 #!/bin/bash
 # argument $1 is language: en, ja
 export SPHINXLANGUAGE=$1
-
 rm -rf build/$SPHINXLANGUAGE/main
 
-echo "language='$SPHINXLANGUAGE'
+if [ "$SPHINXLANGUAGE" != "en" ]; then
+    echo "language='$SPHINXLANGUAGE'
 locale_dirs = ['locale']" > tempconf_$SPHINXLANGUAGE.py
-sphinx-gettext-helper -c tempconf_$SPHINXLANGUAGE.py -p build/locale --update --build --statistics
-if [ "$?" -ne 0 ]; then echo "sphinx-gettext-helper failed"; exit 1; fi
-rm -f tempconf_$SPHINXLANGUAGE.py
+    sphinx-gettext-helper -c tempconf_$SPHINXLANGUAGE.py -p build/locale --update --build --statistics
+    if [ "$?" -ne 0 ]; then echo "sphinx-gettext-helper failed"; exit 1; fi
+    rm -f tempconf_$SPHINXLANGUAGE.py
 
-# have to remove all doctrees in order for translations to be regenerated
-rm -rf build/$SPHINXLANGUAGE/main/.doctrees
+    msgfmt locale/$SPHINXLANGUAGE/LC_MESSAGES/openravesphinx.po -o locale/$SPHINXLANGUAGE/LC_MESSAGES/openravesphinx.mo
+
+    # have to remove all doctrees in order for translations to be regenerated
+    rm -rf build/$SPHINXLANGUAGE/main/.doctrees
+fi
 
 # manual method:
 # mkdir -p locale/$SPHINXLANGUAGE/LC_MESSAGES

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-19 19:43\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -60,8 +60,8 @@ msgstr ""
 #: ../../source/plugins.rst:114 ../../source/plugins.rst:127
 #: ../../source/plugins.rst:140 ../../source/plugins.rst:151
 #: ../../source/plugins.rst:164 ../../source/plugins.rst:177
-#: ../../source/plugins.rst:190 ../../source/plugins.rst:203
-#: ../../source/plugins.rst:216
+#: ../../source/plugins.rst:190 ../../source/plugins.rst:201
+#: ../../source/plugins.rst:214 ../../source/plugins.rst:227
 msgid "OpenRAVE Version: 0.7.0"
 msgstr ""
 
@@ -382,13 +382,23 @@ msgid ""
 "qtcoinrave"
 msgstr ""
 
-# f2652d2b35e54792ad2bf7437d5f25c8
+# 880a5c9ac5f14c648f0693031d7c0a70
 #: ../../source/plugins.rst:186
+msgid "qtosgrave"
+msgstr ""
+
+# 363d4d0e4d2542b39676755aee6b03ee
+#: ../../source/plugins.rst:188
+msgid "Offers: :ref:`viewer:qtosg <viewer-qtosg>`"
+msgstr ""
+
+# f2652d2b35e54792ad2bf7437d5f25c8
+#: ../../source/plugins.rst:197
 msgid "rmanipulation"
 msgstr ""
 
 # 1a92cf95f63c45d18532f0b4ef5e8304
-#: ../../source/plugins.rst:188
+#: ../../source/plugins.rst:199
 msgid ""
 "Offers: :ref:`module:BaseManipulation <module-basemanipulation>` :ref:"
 "`module:TaskManipulation <module-taskmanipulation>` :ref:`module:TaskCaging "
@@ -396,24 +406,24 @@ msgid ""
 msgstr ""
 
 # 67136d7444d74070b1b1a4d23e16e19c
-#: ../../source/plugins.rst:192
+#: ../../source/plugins.rst:203
 msgid "Core Plugin: Last updated r3346"
 msgstr ""
 
 # ece44d65ee5d442b97aa541c1121cc42
-#: ../../source/plugins.rst:194
+#: ../../source/plugins.rst:205
 msgid ""
 "URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
 "rmanipulation"
 msgstr ""
 
 # 3649234e4e5443ac9e083a4c355f6099
-#: ../../source/plugins.rst:199
+#: ../../source/plugins.rst:210
 msgid "rplanners"
 msgstr ""
 
 # c3239702790c48528c136ef83039b7d7
-#: ../../source/plugins.rst:201
+#: ../../source/plugins.rst:212
 msgid ""
 "Offers: :ref:`planner:RAStar <planner-rastar>` :ref:`planner:BiRRT <planner-"
 "birrt>` :ref:`planner:BasicRRT <planner-basicrrt>` :ref:`planner:"
@@ -427,34 +437,34 @@ msgid ""
 msgstr ""
 
 # 9e967fae024248c7afbce0f54e109932
-#: ../../source/plugins.rst:205
+#: ../../source/plugins.rst:216
 msgid "Core Plugin: Last updated r3336"
 msgstr ""
 
 # d14c15e97a1c46a6abb4a001a97f2fd0
-#: ../../source/plugins.rst:207
+#: ../../source/plugins.rst:218
 msgid ""
 "URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
 "rplanners"
 msgstr ""
 
 # f689dad3c5a943cd9eb456014e7ff752
-#: ../../source/plugins.rst:212
+#: ../../source/plugins.rst:223
 msgid "textserver"
 msgstr ""
 
 # 519763d7797a4946a4f0de7fc63a09c5
-#: ../../source/plugins.rst:214
+#: ../../source/plugins.rst:225
 msgid "Offers: :ref:`module:textserver <module-textserver>`"
 msgstr ""
 
 # 1f78ce9f298841c5a198bc86b29778e7
-#: ../../source/plugins.rst:218
+#: ../../source/plugins.rst:229
 msgid "Core Plugin: Last updated r3264"
 msgstr ""
 
 # 8d3ab5d7c99b469999bdfb1cf1f70cee
-#: ../../source/plugins.rst:220
+#: ../../source/plugins.rst:231
 msgid ""
 "URL: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/plugins/"
 "textserver"

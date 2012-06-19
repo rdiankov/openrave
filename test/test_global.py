@@ -21,3 +21,5 @@ def test_pluginloading():
     env=Environment()
     assert(RaveCreateProblem(env,'ikfast') is not None)
 
+
+# test all scripts in source/tutorials/openravepy_examples/*.py

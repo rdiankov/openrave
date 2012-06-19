@@ -21,6 +21,7 @@
 #include <map>
 #include <stdio.h>
 #include <exception>
+#include <cstdlib>
 
 #if BOOST_VERSION >= 103500
 //#define DOXY_ENUM(name) ,".. doxygenenum:: "#name"\n"
@@ -47,7 +48,7 @@ inline std::string InitializeLanguageCode()
             return "ja";
         }
     }
-    catch(const std::exception&) {
+    catch(const std::exception& e) {
     }
     return "en";
 }
@@ -58,6 +59,19 @@ inline const char* GetDoxygenComment(const char* type, const char* name, const c
 {
     static std::string s_langcode;
     static std::map<std::string, std::string> s_comments;
+    static int s_nReturnComments = 0;
+    if( s_nReturnComments == 0 ) {
+        char* p = getenv("OPENRAVE_INTERNAL_COMMENTS");
+        if( p != NULL && p[0] == '0' ) {
+            s_nReturnComments = -1;
+        }
+        else {
+            s_nReturnComments = 1;
+        }
+    }
+    if( s_nReturnComments < 0 ) {
+        return "";
+    }
     if( s_langcode.size() == 0 ) {
         s_langcode = InitializeLanguageCode();
     }
