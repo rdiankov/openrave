@@ -16,7 +16,7 @@ with env:
     env.StopSimulation()
     env.StartSimulation(timestep=0.001)
 
-while True:
+for itry in range(5):
     torques = 100*(numpy.random.rand(robot.GetDOF())-0.5)
     for i in range(100):
         robot.SetJointTorques(torques,True)

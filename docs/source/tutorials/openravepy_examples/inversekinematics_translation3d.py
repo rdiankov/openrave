@@ -1,6 +1,7 @@
 """Moves a robot in a random position, gets the end effector transform, and calls IK on it.
 """
 from openravepy import *
+import time
 env = Environment() # create the environment
 env.SetViewer('qtcoin') # start the viewer
 env.Load('data/katanatable.env.xml') # load a scene
@@ -19,9 +20,10 @@ with robot: # lock environment and save robot state
 
 h = env.plot3(Tee[0:3,3],10) # plot one point
 with robot: # save robot state
-    for sol in sols[::10]: # go through every 10th solution
+    raveLogInfo('%d solutions'%len(sols))
+    for sol in sols: # go through every solution
         robot.SetDOFValues(sol,manip.GetArmIndices()) # set the current solution
         env.UpdatePublishedBodies() # allow viewer to update new robot
-        raw_input('press any key')
+        time.sleep(10.0/len(sols))
 
 raveLogInfo('restored dof values: '+repr(robot.GetDOFValues())) # robot state is restored to original

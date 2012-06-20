@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+import imp
+
+log=logging.getLogger('openravepytest')
 
 @with_destroy
 def test_pluginloading():
@@ -21,22 +24,27 @@ def test_pluginloading():
     env=Environment()
     assert(RaveCreateProblem(env,'ikfast') is not None)
 
-
 class RunTutorialExample(object):
-    def __init__(self,name,docname,args=[]):
-        self.name=name
-        self.args=args
-        self.description = 'test_programs.tutorialexample.%s.%s'%(name,docname)
-            
-    def __call__(self):
-        # turn off trajectory validation for now
-        #python 
-        RaveSetDebugLevel(RaveGetDebugLevel())
-        example = getattr(examples,self.name)
-        example.run(args=self.args+['--testmode',"--viewer="])
-
+    __name__= 'test_global.tutorialexample'
+    def __call__(self,modulepath):
+        # import the module, and at the end call RaveDestroy?
+        modulename = os.path.split(modulepath)[1]
+        description = 'test_programs.tutorialexample.%s'%(modulename)
+        log.info('execute tutorial %s',modulepath)
+        RaveDestroy()
+        try:
+            fp, pathname, description = imp.find_module(modulepath)
+            module=imp.load_module(modulename, fp, pathname, description)
+        finally:
+            log.info('tutorial %s finished',modulepath)
+            if fp:
+                fp.close()
+            RaveDestroy()
 
 # test all scripts in source/tutorials/openravepy_examples/*.py
 def test_tutorialexamples():
-    dir=os.path.join('..','docs','source','tutorials','openravepy_examples')
-    
+    examplesdir=os.path.join('..','docs','source','tutorials','openravepy_examples')
+    for name in os.listdir(examplesdir):
+        basename,ext = os.path.splitext(name)
+        if ext.lower() == '.py':
+            yield RunTutorialExample(), os.path.join(examplesdir,basename)

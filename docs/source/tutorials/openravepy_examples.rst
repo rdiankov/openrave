@@ -84,7 +84,7 @@ Parabolic Retiming
 
 .. literalinclude:: openravepy_examples/parabolic_retiming.py
 
-Logging
--------
+Scene Logging
+-------------
 
-.. literalinclude:: openravepy_examples/logging.py
+.. literalinclude:: openravepy_examples/scene_logging.py

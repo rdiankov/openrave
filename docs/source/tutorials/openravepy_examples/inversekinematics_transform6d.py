@@ -1,7 +1,7 @@
 """Shows how to get all 6D IK solutions.
 """
 from openravepy import *
-import numpy
+import numpy, time
 env = Environment() # create the environment
 env.SetViewer('qtcoin') # start the viewer
 env.Load('data/pr2test1.env.xml') # load a scene
@@ -19,6 +19,6 @@ with env: # lock environment
         robot.SetDOFValues(sol,manip.GetArmIndices()) # set the current solution
         Tee = manip.GetEndEffectorTransform()
         env.UpdatePublishedBodies() # allow viewer to update new robot
-        raw_input('press any key')
+        time.sleep(10)
     
     raveLogInfo('Tee is: '+repr(Tee))

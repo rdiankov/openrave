@@ -22,6 +22,6 @@ taskprob.CloseFingers() # close fingers until collision
 robot.WaitForController(0) # wait
 with env:
     robot.Grab(env.GetKinBody('mug4'))
-
-# move manipulator to all zeros, set jitter to 0.04 since cup is initially colliding with table
-manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices())),jitter=0.04)
+    # move manipulator to all zeros, set jitter to 0.04 since cup is initially colliding with table
+    manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices())),jitter=0.04)
+robot.WaitForController(0) # wait

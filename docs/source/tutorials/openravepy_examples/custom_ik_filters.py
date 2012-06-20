@@ -13,13 +13,13 @@ if not ikmodel.load():
     ikmodel.autogenerate()
 
 maxtime = 0.1 # 100ms
-while True:
+for i in range(10):
     with env:
         robot.SetDOFValues(lower+numpy.random.rand(len(lower))*(upper-lower),manip.GetArmIndices()) # set a random values to just the arm
         incollision = not env.CheckCollision(robot) and not robot.CheckSelfCollision()
         starttime = time.time()
         def timeoutfilter(values, manip, ikparam):
-            return IkFilterReturn.Quit if time.time()-starttime > maxtime else IkFilterReturn.Success
+            return IkReturnAction.Quit if time.time()-starttime > maxtime else IkReturnAction.Success
         
         handle=manip.GetIkSolver().RegisterCustomFilter(0,timeoutfilter)
         success = manip.FindIKSolution(manip.GetIkParameterization(IkParameterization.Type.Transform6D),IkFilterOptions.CheckEnvCollisions)
