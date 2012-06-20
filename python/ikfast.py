@@ -240,7 +240,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '58'
+__version__ = '59'
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1664,27 +1664,56 @@ class IKFastSolver(AutoReloader):
                 LinksLeft.append(LinksRaw.pop(0))
         LinksLeftInv = [self.affineInverse(T) for T in LinksLeft]
         self.testconsistentvalues = None
-        # before passing to the solver, set big numbers to constants, this will greatly reduce computation times
+
         self.gsymbolgen = cse_main.numbered_symbols('gconst')
         self.globalsymbols = []
-#         for T in LinksRaw:
+
+        # before passing to the solver, set big numbers to constant variables, this will greatly reduce computation times
+#         numbersubs = []
+#         LinksRaw2 = []
+#         for Torig in LinksRaw:
+#             T = Matrix(Torig)
+#             #print axisAngleFromRotationMatrix(numpy.array(numpy.array(T[0:3,0:3]),numpy.float64))
 #             for i in range(12):
-#                 if T[i].is_number and len(str(T[i])) > 30:
-#                     sym = None
-#                     for c,v in self.globalsymbols:
-#                         if self.equal(v,T[i]):
-#                             sym = c
-#                             break
-#                     if sym is None:
+#                 ti = T[i]
+#                 if ti.is_number and len(str(ti)) > 30:
+#                     matchnumber = self.MatchSimilarFraction(ti,numbersubs)
+#                     if matchnumber is None:
 #                         sym = self.gsymbolgen.next()
-#                         log.info('adding global symbol %s=%s'%(sym,T[i]))
-#                         self.globalsymbols.append((sym,T[i]))
-#                     T[i] = sym
+#                         log.info('adding global symbol %s=%s'%(sym,ti))
+#                         numbersubs.append((sym,ti))
+#                         T[i] = sym
+#                     else:
+#                         T[i] = matchnumber
+#             LinksRaw2.append(T)
+#         if len(numbersubs) > 10:
+#             log.info('substituting %d global symbols',len(numbersubs))
+#             LinksRaw = LinksRaw2
+#             self.globalsymbols += numbersubs
         chaintree = solvefn(self, LinksRaw, jointvars, isolvejointvars)
         if self.useleftmultiply:
             chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
         chaintree.dictequations += self.globalsymbols
         return chaintree
+
+    def MatchSimilarFraction(self,num,numbersubs,matchlimit = 40):
+        """returns None if no appropriate match found
+        """
+        for c,v in numbersubs:
+            if self.equal(v,num):
+                return c
+        
+        # nothing matched, so check gcd
+        largestgcd = S.One
+        retnum = None
+        for c,v in numbersubs:
+            curgcd = gcd(v,num)
+            if len(str(curgcd)) > len(str(largestgcd)):
+                newfraction = (num/v)
+                if len(str(newfraction)) <= matchlimit:
+                    largestgcd = curgcd
+                    retnum = c * newfraction
+        return retnum
 
     def computeConsistentValues(self,jointvars,T,numsolutions=1,subs=None):
         possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
@@ -2130,14 +2159,57 @@ class IKFastSolver(AutoReloader):
         
         log.info('ikfast 6d: %s',solvejointvars)
 
-        tree = None
-        for T0links,T1links,transvars,rotvars,solveRotationFirst in self.iterateThreeIntersectingAxes(solvejointvars,Links, LinksInv):
-            try:
-                tree = self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
-                break
-            except (self.CannotSolveError,self.IKFeasibilityError), e:
-                log.warn('%s',e)
-                        
+        tree = self.TestIntersectingAxes(solvejointvars,Links, LinksInv,endbranchtree)
+        if tree is None:
+            sliderjointvars = [var for var in solvejointvars if not self.isHinge(var.name)]
+            if len(sliderjointvars) > 0:
+                ZeroMatrix = zeros(4)
+                for i,Tlink in enumerate(Links):
+                    if self.has(Tlink,*sliderjointvars):
+                        # try sliding left
+                        if i > 0:
+                            ileftsplit = None
+                            for isplit in range(i-1,-1,-1):
+                                M = self.multiplyMatrix(Links[isplit:i])
+                                if M*Tlink-Tlink*M != ZeroMatrix:
+                                    break
+                                if self.has(M,*solvejointvars):
+                                    # surpassed a variable!
+                                    ileftsplit = isplit
+                            if ileftsplit is not None:
+                                # try with the new order
+                                log.info('rearranging Links[%d] to Links[%d]',i,ileftsplit)
+                                NewLinks = list(Links)
+                                NewLinks[(ileftsplit+1):(i+1)] = Links[ileftsplit:i]
+                                NewLinks[ileftsplit] = Links[i]
+                                NewLinksInv = list(LinksInv)
+                                NewLinksInv[(ileftsplit+1):(i+1)] = Links[ileftsplit:i]
+                                NewLinksInv[ileftsplit] = LinksInv[i]
+                                tree = self.TestIntersectingAxes(solvejointvars,NewLinks, NewLinksInv,endbranchtree)
+                                if tree is not None:
+                                    break
+                        # try sliding right                            
+                        if i+1 < len(Links):
+                            irightsplit = None
+                            for isplit in range(i+1,len(Links)):
+                                M = self.multiplyMatrix(Links[i+1:(isplit+1)])
+                                if M*Tlink-Tlink*M != ZeroMatrix:
+                                    break
+                                if self.has(M,*solvejointvars):
+                                    # surpassed a variable!
+                                    irightsplit = isplit
+                            if irightsplit is not None:
+                                log.info('rearranging Links[%d] to Links[%d]',i,irightsplit)
+                                # try with the new order
+                                NewLinks = list(Links)
+                                NewLinks[i:irightsplit] = Links[(i+1):(irightsplit+1)]
+                                NewLinks[irightsplit] = Links[i]
+                                NewLinksInv = list(LinksInv)
+                                NewLinksInv[i:irightsplit] = LinksInv[(i+1):(irightsplit+1)]
+                                NewLinksInv[irightsplit] = LinksInv[i]
+                                tree = self.TestIntersectingAxes(solvejointvars,NewLinks, NewLinksInv,endbranchtree)
+                                if tree is not None:
+                                    break
         if tree is None:
             for T0links, T1links in self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv):
                 try:
@@ -2153,40 +2225,95 @@ class IKFastSolver(AutoReloader):
         chaintree.dictequations += self.ppsubs+self.npxyzsubs+self.rxpsubs
         return chaintree
 
+    def TestIntersectingAxes(self,solvejointvars,Links,LinksInv,endbranchtree):
+        for T0links,T1links,transvars,rotvars,solveRotationFirst in self.iterateThreeIntersectingAxes(solvejointvars,Links, LinksInv):
+            try:
+                return self.solve6DIntersectingAxes(T0links,T1links,transvars,rotvars,solveRotationFirst=solveRotationFirst, endbranchtree=endbranchtree)
+            except (self.CannotSolveError,self.IKFeasibilityError), e:
+                log.warn('%s',e)
+        return None
+
     def iterateThreeIntersectingAxes(self, solvejointvars, Links, LinksInv):
         """Search for 3 consectuive intersecting axes. If a robot has this condition, it makes a lot of IK computations simpler.
         """
-        ilinks = [i for i,Tlink in enumerate(Links) if self.has(Tlink,*solvejointvars)]
+        TestLinks=Links
+        TestLinksInv=LinksInv
+        ilinks = [i for i,Tlink in enumerate(TestLinks) if self.has(Tlink,*solvejointvars)]
+        hingejointvars = [var for var in solvejointvars if self.isHinge(var.name)]
+        polysymbols = []
+        for solvejointvar in solvejointvars:
+            polysymbols += [s[0] for s in self.Variable(solvejointvar).subs]
         for i in range(len(ilinks)-2):
             startindex = ilinks[i]
             endindex = ilinks[i+2]+1
-            T0links = Links[startindex:endindex]
+            T0links = TestLinks[startindex:endindex]
             T0 = self.multiplyMatrix(T0links)
+            # count number of variables in T0[0:3,0:3]
+            numVariablesInRotation = sum([self.has(T0[0:3,0:3],solvejointvar) for solvejointvar in solvejointvars])
+            if numVariablesInRotation < 3:
+                continue
             solveRotationFirst = None
-            if not self.has(T0[:3,3],*solvejointvars):
-                T1links = LinksInv[:startindex][::-1]
+            # sometimes the intersecting condition can be there, but is masked by small epsilon errors
+            # so set any coefficients in T0[:3,3] below self.precision precision to zero
+            translationeqs = [self.RoundEquationTerms(eq.expand()) for eq in T0[:3,3]]
+            if not self.has(translationeqs,*hingejointvars):
+                T1links = TestLinksInv[:startindex][::-1]
                 T1links.append(self.Tee)
-                T1links += LinksInv[endindex:][::-1]
+                T1links += TestLinksInv[endindex:][::-1]
                 solveRotationFirst = False
             else:
-                T0links = LinksInv[startindex:endindex][::-1]
+                T0links = TestLinksInv[startindex:endindex][::-1]
                 T0 = self.multiplyMatrix(T0links)
-                if not self.has(T0[:3,3],*solvejointvars):
-                    T1links = Links[endindex:]
+                translationeqs = [self.RoundEquationTerms(eq.expand()) for eq in T0[:3,3]]
+                if not self.has(translationeqs,*hingejointvars):
+                    T1links = TestLinks[endindex:]
                     T1links.append(self.Teeinv)
-                    T1links += Links[:startindex]
+                    T1links += TestLinks[:startindex]
                     solveRotationFirst = False
             if solveRotationFirst is not None:
                 rotvars = []
                 transvars = []
                 for svar in solvejointvars:
-                    if self.has(T0,svar):
+                    if self.has(T0[0:3,0:3],svar):
                         rotvars.append(svar)
                     else:
                         transvars.append(svar)
                 if len(rotvars) == 3 and len(transvars) == 3:
                     log.info('found 3 consecutive intersecting axes links[%d:%d], rotvars=%s, translationvars=%s',startindex, endindex, rotvars,transvars)
                     yield T0links,T1links,transvars,rotvars,solveRotationFirst
+
+    def RoundEquationTerms(self,eq,epsilon=None):
+        if eq.is_Add:
+            neweq = S.Zero
+            for subeq in eq.args:
+                neweq += self.RoundEquationTerms(subeq,epsilon)
+        elif eq.is_Mul:
+            neweq = self.RoundEquationTerms(eq.args[0])
+            for subeq in eq.args[1:]:
+                neweq *= self.RoundEquationTerms(subeq,epsilon)
+        elif eq.is_Function:
+            newargs = [self.RoundEquationTerms(subeq) for subeq in eq.args]
+            neweq = eq.func(*newargs)
+        elif eq.is_number:
+            if epsilon is None:
+                epsilon = 5*(10**-self.precision)
+            if abs(eq.evalf()) <= epsilon:
+                neweq = S.Zero
+            else:
+                neweq = eq
+        else:
+            neweq=eq
+        return neweq
+
+    def RoundPolynomialTerms(self,peq,epsilon):
+        terms = {}
+        for monom, coeff in peq.terms():
+            if not coeff.is_number or abs(coeff) > epsilon:
+                terms[monom] = coeff
+        if len(terms) == 0:
+            return Poly(S.Zero,peq.gens)
+
+        return peq.from_dict(terms, *peq.gens)
 
     def iterateThreeNonIntersectingAxes(self, solvejointvars, Links, LinksInv):
         """check for three consecutive non-intersecting axes.
@@ -2488,7 +2615,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     polyvars.append(v)
             polysubsinv = [(b,a) for a,b in polysubs]
-            rawpolyeqs = [Poly(eq.subs(polysubs),*polyvars).subs(trigsubs) for eq in AllEquations if eq.has(*curvars)]
+            rawpolyeqs = [Poly(Poly(eq.subs(polysubs),*polyvars).subs(trigsubs),*polyvars) for eq in AllEquations if eq.has(*curvars)]
 
             dummys = []
             dummysubs = []
@@ -2596,7 +2723,7 @@ class IKFastSolver(AutoReloader):
         self.sortComplexity(AllEquations)
         return AllEquations
         
-    def buildEquationsFromPositions(self,T1links,T1linksinv,transvars,othersolvedvars,uselength=True):
+    def buildEquationsFromPositions(self,T1links,T1linksinv,transvars,othersolvedvars,uselength=True,removesmallnumbers=True):
         Taccum = eye(4)
         numvarsdone = 1
         Positions = []
@@ -2614,6 +2741,11 @@ class IKFastSolver(AutoReloader):
         if len(Positions) == 0:
             Positions.append(zeros((3,1)))
             Positionsee.append(self.multiplyMatrix(T1links)[0:3,3])
+        if removesmallnumbers:
+            for i in range(len(Positions)):
+                for j in range(3):
+                    Positions[i][j] = self.RoundEquationTerms(Positions[i][j])
+                    Positionsee[i][j] = self.RoundEquationTerms(Positionsee[i][j])
         return self.buildEquationsFromTwoSides(Positions,Positionsee,transvars+othersolvedvars,uselength=uselength)
 
     def buildEquationsFromRotation(self,T0links,Ree,rotvars,othersolvedvars):
@@ -2705,9 +2837,9 @@ class IKFastSolver(AutoReloader):
                 poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
                 poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
                 if poly1 == S.Zero:
-                    polyeqs[i][j] = poly1
+                    polyeqs[i][j] = Poly(poly1,*usedvars[j])
                 else:
-                    polyeqs[i][j] = poly1.termwise(lambda m,c: self.simplifyTransform(c))
+                    polyeqs[i][j] = Poly(poly1,*usedvars[j]).termwise(lambda m,c: self.simplifyTransform(c))
         # remove all fractions? having big integers could blow things up...
         return polyeqs
 
@@ -3610,6 +3742,14 @@ class IKFastSolver(AutoReloader):
 
         symbols = list(rawpolyeqs[0][0].gens)
         othersymbols = list(rawpolyeqs[0][1].gens)
+        othersymbolsnames = []
+        for s in othersymbols:
+            testeq = s.subs(self.invsubs)
+            for solvejointvar in solvejointvars:
+                if testeq.has(solvejointvar):
+                    othersymbolsnames.append(solvejointvar)
+                    break
+        assert(len(othersymbols)==len(othersymbolsnames))
         symbolsubs = [(symbols[i].subs(self.invsubs),symbols[i]) for i in range(len(symbols))]
         if len(symbols) != 6:
             raise self.CannotSolveError('Kohli/Osvatic method requires 3 unknown variables')
@@ -3635,31 +3775,36 @@ class IKFastSolver(AutoReloader):
 
         # solve the othereqs for symbols without the standalone symbols[2] and symbols[3]
         reducedeqs = []
-        for jother in range(len(othersymbols)/2):
-            if jother == 0:
-                cosmonom = (1,0,0,0)
-                sinmonom = (0,1,0,0)
-            else:
-                cosmonom = (0,0,1,0)
-                sinmonom = (0,0,0,1)
+        othersymbolsnamesunique = list(set(othersymbolsnames)) # get the unique names
+        for jother in range(len(othersymbolsnamesunique)):
+            if not self.isHinge(othersymbolsnamesunique[jother].name):
+                continue
+            othervar=self.Variable(othersymbolsnamesunique[jother])
+            cosmonom = [0]*len(othersymbols)
+            cosmonom[othersymbols.index(othervar.cvar)] = 1
+            cosmonom = tuple(cosmonom)
+            sinmonom = [0]*len(othersymbols)
+            sinmonom[othersymbols.index(othervar.svar)] = 1
+            sinmonom = tuple(sinmonom)
             leftsideeqs = []
             rightsideeqs = []
+            finaleqsymbols = symbols + [othervar.cvar,othervar.svar]
             for eq0,eq1 in othereqs:
                 leftsideeq = Poly(eq1,*othersymbols)
                 leftsideeqdict = leftsideeq.as_dict()
-                rightsideeq = Poly(eq0,*(symbols+othersymbols[2*jother:(2*jother+2)]))
+                rightsideeq = Poly(eq0,*finaleqsymbols)
                 coscoeff = leftsideeqdict.get(cosmonom,S.Zero)
                 if coscoeff != S.Zero:
-                    rightsideeq = rightsideeq.sub(Poly.from_dict({(0,0,0,0,1,0):coscoeff},*rightsideeq.gens))
-                    leftsideeq = leftsideeq.sub(Poly.from_dict({cosmonom:coscoeff},*leftsideeq.gens))
+                    rightsideeq = rightsideeq - othervar.cvar*coscoeff
+                    leftsideeq = leftsideeq - othervar.cvar*coscoeff
                 sincoeff = leftsideeqdict.get(sinmonom,S.Zero)
                 if sincoeff != S.Zero:
-                    rightsideeq = rightsideeq.sub(Poly.from_dict({(0,0,0,0,0,1):sincoeff},*rightsideeq.gens))
-                    leftsideeq = leftsideeq.sub(Poly.from_dict({sinmonom:sincoeff},*leftsideeq.gens))
+                    rightsideeq = rightsideeq - othervar.svar*sincoeff
+                    leftsideeq = leftsideeq - othervar.svar*sincoeff
                 const = leftsideeq.TC()
                 if const != S.Zero:
-                    rightsideeq = rightsideeq.sub(Poly.from_dict({(0,0,0,0,0,0):const},*rightsideeq.gens))
-                    leftsideeq = leftsideeq.sub(Poly.from_dict({(0,0,0,0):const},*leftsideeq.gens))
+                    rightsideeq = rightsideeq - const
+                    leftsideeq = leftsideeq - const
                 # check that leftsideeq doesn't hold any terms with cosmonom and sinmonom?
                 rightsideeqs.append(rightsideeq)
                 leftsideeqs.append(leftsideeq)
@@ -3677,7 +3822,6 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('KohliOsvatic method: could not reduce the equations')
 
         finaleqs = []
-        finaleqsymbols = symbols+othersymbols[2*jother:(2+2*jother)]
         for peq0,eq1 in reducedeqs:
             if peq0 == S.Zero:
                 finaleqs.append(Poly(eq1,*finaleqsymbols))
@@ -3903,7 +4047,7 @@ class IKFastSolver(AutoReloader):
                     # have to explicitly evaluate since testsubs can be very complex
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     subs = subsvals+getsubs(subsvals)
-                A = Mall[maxdegree].subs(subs).evalf()
+                A = Mall[maxdegree].subs(subs).subs(self.globalsymbols).evalf()
                 eps = 10**-(self.precision-3)
                 eigenvals = numpy.linalg.eigvals(numpy.array(numpy.array(A),numpy.float64))
                 if all([Abs(f) > eps for f in eigenvals]):
@@ -4938,7 +5082,7 @@ class IKFastSolver(AutoReloader):
                     pfinalnew += c*htvar**(m[0]-1)
             pfinal = pfinalnew
         # check to see that LC is non-zero for at least one solution
-        if pfinal.LC().evalf() == S.Zero or all([pfinal.LC().subs(subs).subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
+        if pfinal.LC().evalf() == S.Zero or all([pfinal.LC().subs(subs).subs(self.globalsymbols).subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
             return None
 
         # sanity check that polynomial can produce a solution and is not actually very small values
@@ -4947,7 +5091,7 @@ class IKFastSolver(AutoReloader):
         pfinaldict = pfinal.as_dict()
         for testconsistentvalue in self.testconsistentvalues:
             coeffs = []
-            globalsymbols = [(s,v.subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
+            globalsymbols = [(s,v.subs(self.globalsymbols).subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
             for degree in range(pfinal.degree(0),-1,-1):
                 coeffs.append(pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
@@ -5095,7 +5239,7 @@ class IKFastSolver(AutoReloader):
                             testeqs = [svarfrac[1].subs(subs).subs(othersubs),cvarfrac[1].subs(subs).subs(othersubs)]
                         testsuccess = False
                         for testconsistentvalue in self.testconsistentvalues:
-                            if all([testeq.subs(testconsistentvalue).evalf()!=S.Zero for testeq in testeqs]):
+                            if all([testeq.subs(self.globalsymbols).subs(testconsistentvalue).evalf()!=S.Zero for testeq in testeqs]):
                                 testsuccess = True
                                 break
                         if not testsuccess:
@@ -5532,13 +5676,13 @@ class IKFastSolver(AutoReloader):
                             if self.codeComplexity(totaleq) < 4000:
                                 log.info('simplifying final equation to %d',self.codeComplexity(totaleq))
                                 totaleq = simplify(totaleq)
-                            ptotal_cos = Poly(totaleq,*polysymbols).subs(polysymbols[0]**2,1-polysymbols[1]**2).subs(polysymbols[1]**2,1-polysymbols[0]**2)
+                            ptotal_cos = Poly(Poly(totaleq,*polysymbols).subs(polysymbols[0]**2,1-polysymbols[1]**2).subs(polysymbols[1]**2,1-polysymbols[0]**2),*polysymbols)
                             ptotal_sin = Poly(S.Zero,*polysymbols)
                             for m,c in ptotal_cos.terms():
                                 if m[1] > 0:
                                     assert m[1] == 1
                                     ptotal_sin = ptotal_sin.sub(Poly.from_dict({(m[0],0):c},*ptotal_sin.gens))
-                                    ptotal_cos = ptotal_cos.sub(Poly.from_dict({m:c},*ptotal_cos))
+                                    ptotal_cos = ptotal_cos.sub(Poly.from_dict({m:c},*ptotal_cos.gens))
                             finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()
                             # sometimes denominators can accumulate
                             pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
@@ -5903,7 +6047,11 @@ class IKFastSolver(AutoReloader):
 
                         if k > 0:
                             if len(vars) > 0 and D != S.Zero and not M[k-1, k-1].is_number:
-                                D,r = div(Poly(D,*vars),M[k-1, k-1])
+                                try:
+                                    D,r = div(Poly(D,*vars),M[k-1, k-1])
+                                except UnificationFailed:
+                                    log.warn('unification failed, trying direct division')
+                                    D /= M[k-1, k-1]
                             else:
                                 D /= M[k-1, k-1]
 

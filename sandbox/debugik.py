@@ -1070,6 +1070,8 @@ def test_ik():
     import __builtin__
     from openravepy.ikfast import AST, combinations
     from itertools import izip
+    from openravepy import axisAngleFromRotationMatrix
+    numpy.set_printoptions(15)
     IkType=IkParameterizationType
     ikmodel=self
     self = solver
