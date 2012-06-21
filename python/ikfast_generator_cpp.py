@@ -1740,7 +1740,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                         code += ','
             return code + ')',sepcode
         elif expr.is_number:
-            return self.strprinter.doprint(expr.evalf()),sepcode
+            return 'IKReal('+self.strprinter.doprint(expr.evalf())+')',sepcode
         elif expr.is_Mul:
             code += '('
             for arg in expr.args:
