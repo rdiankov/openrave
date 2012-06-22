@@ -960,7 +960,7 @@ public:
 
                     domFloat_arrayRef parray = daeSafeCast<domFloat_array>(pvertsource->add(COLLADA_ELEMENT_FLOAT_ARRAY));
                     parray->setId((parentid+string("_positions-array")).c_str());
-                    parray->setCount(mesh.vertices.size());
+                    parray->setCount(3*mesh.vertices.size());
                     parray->setDigits(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     parray->getValue().setCount(3*mesh.vertices.size());
 
@@ -987,7 +987,7 @@ public:
 
                 domVerticesRef pverts = daeSafeCast<domVertices>(pdommesh->add(COLLADA_ELEMENT_VERTICES));
                 {
-                    pverts->setId("vertices");
+                    pverts->setId((parentid+string("_vertices")).c_str());
                     domInput_localRef pvertinput = daeSafeCast<domInput_local>(pverts->add(COLLADA_ELEMENT_INPUT));
                     pvertinput->setSemantic("POSITION");
                     pvertinput->setSource(domUrifragment(*pvertsource, string("#")+parentid+string("_positions")));
@@ -1001,7 +1001,7 @@ public:
                     domInput_local_offsetRef pvertoffset = daeSafeCast<domInput_local_offset>(ptris->add(COLLADA_ELEMENT_INPUT));
                     pvertoffset->setSemantic("VERTEX");
                     pvertoffset->setOffset(0);
-                    pvertoffset->setSource(domUrifragment(*pverts, string("#")+parentid+string("/vertices")));
+                    pvertoffset->setSource(domUrifragment(*pverts, string("#")+parentid+string("_vertices")));
                     domPRef pindices = daeSafeCast<domP>(ptris->add(COLLADA_ELEMENT_P));
                     pindices->getValue().setCount(mesh.indices.size());
                     for(size_t ind = 0; ind < mesh.indices.size(); ++ind)

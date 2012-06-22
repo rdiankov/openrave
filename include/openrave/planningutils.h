@@ -58,7 +58,7 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
  */
 OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
-/** \brief Smooth the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
+/** \brief Smooth the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
     Only initial and goal configurations are preserved.
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
@@ -70,7 +70,7 @@ OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
  */
 OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
-/** \brief Retime the trajectory points consisting of active dofs. <b>[multi-thread safe]</b>
+/** \brief Retime the trajectory points consisting of active dofs of the robot. <b>[multi-thread safe]</b>
 
     Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
     The velocities for the current trajectory are overwritten.
@@ -82,7 +82,7 @@ OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vect
  */
 OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
-/** \brief Retime the trajectory points consisting of affine dofs while avoiding collisions. <b>[multi-thread safe]</b>
+/** \brief Retime the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
     Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
     The velocities for the current trajectory are overwritten.
