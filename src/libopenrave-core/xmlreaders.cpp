@@ -3626,7 +3626,38 @@ public:
             if( _pcurreader->endElement(xmlname) ) {
                 if( !!_pinterface ) {
                     if( _bAddToEnvironment ) {
-                        _penv->Add(_pinterface);
+                        // set joint values if kinbody or robot
+                        if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
+                            boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
+                            BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
+                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
+                            _penv->Add(probot);
+                            if( !!robotreader->GetJointValues() ) {
+                                if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
+                                    RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
+                                }
+                                else {
+                                    probot->SetDOFValues(*robotreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
+                            KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
+                            BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
+                            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
+                            _penv->Add(pbody);
+                            if( !!kinbodyreader->GetJointValues() ) {
+                                if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
+                                    RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
+                                }
+                                else {
+                                    pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else {
+                            _penv->Add(_pinterface);
+                        }
                     }
                     return true;
                 }
