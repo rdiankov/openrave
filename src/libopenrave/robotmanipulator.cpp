@@ -674,7 +674,7 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
     RobotBasePtr probot(_probot);
     std::vector<dReal> vjacobian;
     probot->ComputeJacobianTranslation(_pEndEffector->GetIndex(), _pEndEffector->GetTransform() * _tLocalTool.trans, vjacobian, __varmdofindices);
-    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*__varmdofindices.size());
+    OPENRAVE_ASSERT_OP(vjacobian.size(),==,3*__varmdofindices.size());
     vector<dReal>::const_iterator itsrc = vjacobian.begin();
     FOREACH(itdst,mjacobian) {
         std::copy(itsrc,itsrc+__varmdofindices.size(),itdst->begin());
@@ -713,7 +713,7 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
     RobotBasePtr probot(_probot);
     std::vector<dReal> vjacobian;
     probot->ComputeJacobianAxisAngle(_pEndEffector->GetIndex(), vjacobian, __varmdofindices);
-    OPENRAVE_ASSERT_OP((int)vjacobian.size(),==,3*__varmdofindices.size());
+    OPENRAVE_ASSERT_OP(vjacobian.size(),==,3*__varmdofindices.size());
     vector<dReal>::const_iterator itsrc = vjacobian.begin();
     FOREACH(itdst,mjacobian) {
         std::copy(itsrc,itsrc+__varmdofindices.size(),itdst->begin());
