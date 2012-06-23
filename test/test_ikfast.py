@@ -230,7 +230,7 @@ def parseoptions(args=None):
     (options, parseargs) = parser.parse_args(args=args)
     
     if options.iktypes == '*':
-        options.iktypes = [iktype for value,iktype in IkParameterizationType.values.iteritems()]
+        options.iktypes = [IkParameterizationType.Transform6D, IkParameterizationType.Translation3D, Lookat3D, TranslationDirection5D, TranslationXYOrientation3D, TranslationLocalGlobal6D, TranslationZAxisAngle4D, TranslationXAxisAngleZNorm4D]
     else:
         iktypes = []
         for iktype in options.iktypes.split(','):
