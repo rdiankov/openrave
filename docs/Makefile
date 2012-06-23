@@ -1,13 +1,14 @@
-language?=en
 ikfaststats?=ikfaststats.pp
+openrave_version=$(shell openrave-config --version)
 doxycommands="STRIP_FROM_PATH = $(PWD)\\n\
-PROJECT_NUMBER = `openrave-config --version`\\n\
+PROJECT_NUMBER = $(openrave_version)\\n\
 ALIASES += openraveversion=`openrave-config --version`\\n\
 "
 
-openrave.org: sphinxjson_installed_$(language) doxygenhtml_installed_$(language)
+.PHONY: json_% json html_% html clean clean_doxygen clean_sphinx
 
-html: doxygenhtml_installed_$(language) sphinxhtml_installed_$(language)
+# this empty line prevents from any intermediate files from getting deleted.... weird
+.SECONDARY:
 
 images/openrave_architecture.pdf: images/openrave_architecture.dia
 	dia -e images/openrave_architecture.eps images/openrave_architecture.dia
@@ -34,17 +35,20 @@ images_base_installed:
 images_all_installed: images_base_installed images/openrave_architecture.pdf images/examples/visibilityplanning_framework.png images/openrave_architecture_jp.pdf images/openrave_documentation.png
 	touch images_all_installed
 
-doxygenhtml_installed_$(language): images_all_installed Doxyfile.html Doxyfile.$(language)
-	rm -f doxygenhtml_installed_$(language)
+build/%/coreapihtml/index.html: images_all_installed Doxyfile.html Doxyfile.%
+	rm -f doxygenhtml_installed_$*
 	mkdir -p build
-	echo "$(doxycommands)" | cat Doxyfile.html Doxyfile.$(language) - > build/Doxyfile.html.$(language)
-	echo "$(doxycommands)" | cat Doxyfile.latex Doxyfile.$(language) - > build/Doxyfile.latex.$(language)
-	doxygen build/Doxyfile.html.$(language)
-	python preprocess_doxygen.py --outdir=build/$(language)
-	cp -f ../resources/openrave_banner_dark.png build/$(language)/coreapihtml/
-	touch doxygenhtml_installed_$(language)
+	echo "$(doxycommands)" | cat Doxyfile.html Doxyfile.$* - > build/Doxyfile.html.$*
+	echo "$(doxycommands)" | cat Doxyfile.latex Doxyfile.$* - > build/Doxyfile.latex.$*
+	doxygen build/Doxyfile.html.$*
+	python preprocess_doxygen.py --outdir=build/$*
+	cp -f ../resources/openrave_banner_dark.png build/$*/coreapihtml/
+# store the symlinks for later zip compression
+	mkdir -p build/openravehtml-$(openrave_version)/$*
+	ln -f -s ../../$*/coreapihtml build/openravehtml-$(openrave_version)/$*/coreapihtml
+	touch doxygenhtml_installed_$*
 
-doxygenhtml: doxygenhtml_installed_$(language)
+doxygenhtml_installed_%: build/%/coreapihtml/index.html ;
 
 openravepy_changed:
 	touch openravepy_changed
@@ -64,7 +68,7 @@ source/openravepy/openravepy.rst: openravepy_changed
 	mkdir -p source/openravepy
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	PYTHONPATH=`pwd`:$PYTHONPATH python sphinx-autopackage-script/generate_modules.py --dest-dir=source/openravepy --suffix=rst --maxdepth=3 --no-toc --sep-files `pwd`/openravepy
-	rm openravepy
+	#rm -f openravepy
 
 source/ikfast/index.rst: $(ikfaststats)
 	python build_ikdatabase.py --ikfaststats=$(ikfaststats) --outdir=source/ikfast
@@ -74,10 +78,14 @@ ikfast: source/ikfast/index.rst
 # create/update internationalization files
 # have to set LANG to en, or otherwise the automodule stuff might not return english translations
 # set OPENRAVE_INTERNAL_COMMENTS=0 in order to avoid the doxygen translated comments from popping up in the translations
-build_locale_installed: openravepy_changed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py
+build/locale/index.pot: openravepy_changed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py
 	rm -f build_locale_installed
+	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	OPENRAVE_INTERNAL_COMMENTS=0 LANG=en_US.UTF-8 sphinx-build -D language=en -b gettext -c . source build/locale
+	#rm -f openravepy
 	touch build_locale_installed
+
+build_locale_installed: build/locale/index.pot ;
 
 # manual method:
 # mkdir -p locale/$SPHINXLANGUAGE/LC_MESSAGES
@@ -86,46 +94,75 @@ build_locale_installed: openravepy_changed source/*.rst source/devel/*.rst sourc
 # msgfmt locale/ja/LC_MESSAGES/environment_variables.po -o locale/ja/LC_MESSAGES/environment_variables.mo
 #
 # have to remove all doctrees in order for translations to be regenerated
-locale/$(language)/LC_MESSAGES/openravesphinx.mo: build_locale_installed
-ifneq ($(language),en)
-	echo "language='$(language)'\n\
-locale_dirs = ['locale']" > tempconf_$(language).py
-	sphinx-gettext-helper -c tempconf_$(language).py -p build/locale --update --build --statistics
-	rm -f tempconf_$(language).py
-	msgfmt locale/$(language)/LC_MESSAGES/openravesphinx.po -o locale/$(language)/LC_MESSAGES/openravesphinx.mo
-	rm -rf build/$(language)/sphinxmain/.doctrees build/$(language)/sphinxjson/.doctrees
-endif
+# filter out en
+$(filter-out locale/%/LC_MESSAGES/openravesphinx.mo, locale/en/LC_MESSAGES/openravesphinx.mo): build_locale_installed
+	echo "language='$*'\n\
+locale_dirs = ['locale']" > tempconf_$*.py
+	sphinx-gettext-helper -c tempconf_$*.py -p build/locale --update --build --statistics
+	rm -f tempconf_$*.py
+	msgfmt locale/$*/LC_MESSAGES/openravesphinx.po -o locale/$*/LC_MESSAGES/openravesphinx.mo
+	rm -rf build/$*/sphinxmain/.doctrees build/$*/sphinxjson/.doctrees
 
-sphinxjson_installed_$(language): build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/$(language)/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
-	rm -f sphinxjson_installed_$(language)
+# dummy
+locale/en/LC_MESSAGES/openravesphinx.mo:
+
+build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
+	rm -f sphinxjson_installed_$*
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$(language) -b json -c . source build/$(language)/sphinxjson
-	rm -f openravepy
-	touch sphinxjson_installed_$(language)
+	sphinx-build -D language=$* -b json -c . source build/$*/sphinxjson
+	#rm -f openravepy
+	# store the symlinks for later zip compression
+	mkdir -p build/openravejson-$(openrave_version)/$*
+	ln -f -s ../../$*/sphinxjson build/openravejson-$(openrave_version)/$*/sphinxjson
+	mkdir -p build/openravehtml-$(openrave_version)/$*
+	ln -f -s ../../$*/sphinxhtml build/openravehtml-$(openrave_version)/$*/sphinxhtml
+	touch sphinxjson_installed_$*
 
-sphinxjson: sphinxjson_installed_$(language)
+sphinxjson_installed_%: build/%/sphinxjson/index.fjson ;
 
-sphinxhtml_installed_$(language): build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/$(language)/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
-	rm -f sphinxhtml_installed_$(language)
+build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
+	rm -f sphinxhtml_installed_$*
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$(language) -b html -c . source build/$(language)/sphinxhtml
-	rm -f openravepy
-	touch sphinxhtml_installed_$(language)
+	sphinx-build -D language=$* -b html -c . source build/$*/sphinxhtml
+	#rm -f openravepy
+	touch sphinxhtml_installed_$*
 
-sphinxhtml: sphinxhtml_installed_$(language)
+sphinxhtml_installed_%: build/%/sphinxhtml/index.html ;
 
-sendtoserver: sphinxjson_installed_$(language) doxygenhtml_installed_$(language)
-	tar cjf openravedocs.tgz build/$(language)/coreapihtml build/$(language)/sphinxjson
-	scp openravedocs.tgz $server:$targetdir
-	ssh $server "cd $targetdir; rm -rf build; tar xjf openravedocs.tgz; mv -f en en_old; mv -f ja ja_old; mv build/en .; mv build/ja .; rm -rf en_old ja_old build"
+json_%: sphinxjson_installed_% doxygenhtml_installed_% ;
+json: json_en json_ja ;
+html_%: doxygenhtml_installed_% sphinxhtml_installed_% ;
+html: html_en html_ja ;
+
+# temporary directory with symlinks should already be created, so just zip it
+openravejsonzip_installed openravejson-$(openrave_version).zip: json
+	rm -rf openravejsonzip_installed
+	cd build; zip -r ../openravejson-$(openrave_version).zip openravejson-$(openrave_version)
+	touch openravejsonzip_installed
+
+openravejsonzip: openravejsonzip_installed openravejson-$(openrave_version).zip ;
+
+# temporary directory with symlinks should already be created, so just zip it
+openravehtmlzip_installed openravehtml-$(openrave_version).zip: html
+	rm -rf openravehtmlzip_installed
+	cd build; zip -r ../openravehtml-$(openrave_version).zip openravehtml-$(openrave_version)
+
+openravehtmlzip: openravehtmlzip_installed openravehtml-$(openrave_version).zip ;
+
+#openravedocs_html.zip: html_en html_ja
+
+#sendtoserver: jsonall htmlall
+#	tar cjf openravedocs.tgz build/$(language)/coreapihtml build/$(language)/sphinxjson
+#	scp openravedocs.tgz $server:$targetdir
+#	ssh $server "cd $targetdir; rm -rf build; tar xjf openravedocs.tgz; mv -f en en_old; mv -f ja ja_old; mv build/en .; mv build/ja .; rm -rf en_old ja_old build"
 #scp openravedocs.tgz diankov@programmingvision.com:"~/openrave/"
 #ssh diankov@programmingvision.com "cd ~/openrave; rm -rf build; tar xjf openravedocs.tgz; mv -f en en_old; mv -f ja ja_old; mv build/en .; mv build/ja .; rm -rf en_old ja_old build"
 
-clean_doxygen:
-	rm -rf build/Doxyfile.*.$(language) build/$(language)
+clean_doxygen_%:
+	rm -rf build/Doxyfile.*.$* build/$*
 
-clean_sphinx:
-	rm -rf _templates/examples.html _templates/databases.html _templates/database_generator_template.rst source/openravepy build/locale build/$(language)/sphinxhtml build/$(language)/sphinxjson
+clean_sphinx_%:
+	rm -rf _templates/examples.html _templates/databases.html _templates/database_generator_template.rst source/openravepy build/locale build/$*/sphinxhtml build/$*/sphinxjson
 
 clean:
 	rm -rf build *_installed_*

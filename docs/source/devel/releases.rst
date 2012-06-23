@@ -113,11 +113,13 @@ Release Process
 
 1. Run Jenkins and create the latest_stable tag, windows installers, and documentation
 
-2. Update and upload the documentation. Make sure to set the correct revision in **changelog.rst**, and change Latest Official Version in **index.rst**. To upload:
+2. Update and upload the documentation. Make sure to set the correct revision in **changelog.rst**, and change Latest Official Version in **index.rst**. To generate the zip files do:
 
 .. code-block:: bash
 
-  ./docs/sendtoserver.sh
+  LANG=en_US.UTF-8 make json_en html_en
+  LANG=ja_JP.UTF-8 make json_ja html_ja
+  make openravejsonzip openravehtmlzip
 
 3. Create svn tag:
 
