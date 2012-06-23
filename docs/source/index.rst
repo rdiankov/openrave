@@ -2,17 +2,15 @@
 
   .. htmlonly::   
   
-    :最新公開版: 0.6.4
-    :最新安定版: |version| (|release|)
+    :バージョン: |version| (|release|)
     :更新日: |today|
 
 .. ifconfig:: language!='ja'
 
   .. htmlonly::   
   
-    :Latest Official Version: 0.6.4
-    :Latest Stable Version: |version| (|release|)
-    :Last Updated: |today|
+    :Version: |version| (|release|)
+    :Created: |today|
 
 Welcome to Open Robotics Automation Virtual Environment
 =======================================================
@@ -33,6 +31,14 @@ Getting Started
 * :ref:`overview`
 
  * :ref:`architecture`, :ref:`interface_concepts`, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
+
+* `Examples <examples.html>`_
+
+* `Robots <robots.html>`_
+
+* `Plugin Interfaces <plugin_interfaces.html>`_
+
+* `Database Generators <database generators.html>`_
 
 Resources
 ---------

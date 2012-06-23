@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-23 13:22\n"
 "PO-Revision-Date: 2012-06-19 18:03+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -16,21 +16,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-# c88da9132c1e4dc9a133bba474f3db6e
+# 46999c76848d457dbf15c51378fac59f
 #: ../../source/description.rst:1
 msgid ""
 "OpenRAVE provides an environment for testing, developing, and deploying "
 "motion planning algorithms in real-world robotics applications. The main "
 "focus is on simulation and analysis of kinematic and geometric information "
 "related to motion planning. OpenRAVE's stand-alone nature allows is to be "
-"easily integrated into existing robotics systems."
-msgstr ""
-
-# 4016ef743fe54798bd8c5b7b757d85ec
-#: ../../source/description.rst:3
-msgid ""
-"It provides many command line tools to work with robots and planners, and "
-"the run-time core is small enough to be used inside controllers and bigger "
-"frameworks. An important target application is industrial robotics "
-"automation."
+"easily integrated into existing robotics systems. It provides many command "
+"line tools to work with robots and planners, and the run-time core is small "
+"enough to be used inside controllers and bigger frameworks. An important "
+"target application is industrial robotics automation."
 msgstr ""

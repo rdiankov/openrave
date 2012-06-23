@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-23 13:22\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -230,7 +230,6 @@ msgstr ""
 # 3072c8935bbe40a28c6deeeda60d5f9e
 # 39d2647f990f406e9779e148bd6f8bb9
 #: ../../source/tutorials/openravepy_beginning.rst:163
-#: ../../source/tutorials/openravepy_examples.rst:88
 msgid "Logging"
 msgstr ""
 
@@ -339,6 +338,11 @@ msgstr ""
 # b073b7422696482c8d1913493d46b947
 #: ../../source/tutorials/openravepy_examples.rst:83
 msgid "Parabolic Retiming"
+msgstr ""
+
+# 7dc0b94eddec4094b59926cd8080f15f
+#: ../../source/tutorials/openravepy_examples.rst:88
+msgid "Scene Logging"
 msgstr ""
 
 # dc615d33563f4efc8defbeacf321d11d

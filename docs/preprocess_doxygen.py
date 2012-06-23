@@ -18,14 +18,11 @@ from optparse import OptionParser
 
 if __name__ == "__main__":
     parser = OptionParser(description='Build the doxygen files', usage='%prog [options] latex_directory')
-    parser.add_option('--lang',action="store",type='string',dest='lang',default='en',
-                      help='Language folder.')
+    parser.add_option('--outdir',action="store",type='string',dest='outdir',default='build/en',
+                      help='Doxygen output folder.')
     (options, args) = parser.parse_args()
-    
-    lang = options.lang
-    os.system('doxygen build/Doxyfile.html.%s'%lang)
 
-    indexfilename = 'build/%s/coreapihtml/index.html'%lang
+    indexfilename =     os.path.join(options.outdir,'coreapihtml','index.html')
     indexhtml = open(indexfilename,'r').read()
     indexhtml = re.sub('<li><a href="examples.html"><span>Examples</span></a></li>','<li><a href="cpp_examples.html"><span>C++ Examples</span></a></li>',indexhtml)
     open(indexfilename,'w').write(indexhtml)

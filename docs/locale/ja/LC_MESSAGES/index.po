@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-23 17:36\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -16,23 +16,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-# c9e80d4675814963ab8137ba9465ac2c
-#: ../../source/index.rst:13
-msgid "0.6.4"
-msgstr ""
-
 # 629e011449ca4c52b7141376e57d02e6
-#: ../../source/index.rst:14
+#: ../../source/index.rst:12
 msgid "|version| (|release|)"
 msgstr ""
 
 # 98b76e4ffe044e149368a3d0563268df
-#: ../../source/index.rst:15
+#: ../../source/index.rst:13
 msgid "|today|"
 msgstr ""
 
 # 308c928f0fd24f45b0cf5802256f16c0
-#: ../../source/index.rst:18
+#: ../../source/index.rst:16
 msgid "Welcome to Open Robotics Automation Virtual Environment"
 msgstr "オープンロボットオートメーション仮想環境OpenRAVEへようこそ"
 
@@ -43,117 +38,147 @@ msgid ""
 "motion planning algorithms in real-world robotics applications. The main "
 "focus is on simulation and analysis of kinematic and geometric information "
 "related to motion planning. OpenRAVE's stand-alone nature allows is to be "
-"easily integrated into existing robotics systems."
-msgstr "OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし、そのテストと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環境を提供します。OpenRAVEはシミュレーション、可視化、動作計画、スクリプトと制御機能等の統合環境を備えています。そのプラグインアーキテクチャを使い、ユーザーは簡単にコントローラの変更や機能の拡張をすることができます。使用するプラグイン、動作計画アルゴリズム、ロボットの自律制御、またはセンシングを考慮した動作は個々のモジュールになっており、実行時に動的に呼び出されます。これによって開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘することから解放されます。さらにOpenRAVEのユーザーは、ロボットの運動学と動力学、幾何学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプトの開発に集中することができます。またOpenRAVEは、制御ドライバ、通信規格、認識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり、幾何学と動力学のシミュレーションと解析に焦点をおいているため、それらのシステムとも容易に共存することが可能です。"
-
-# 2f8cd9c2b3c348b493ffeadb2895c5cc
-#: ../../source/description.rst:3
-msgid ""
-"It provides many command line tools to work with robots and planners, and "
-"the run-time core is small enough to be used inside controllers and bigger "
-"frameworks. An important target application is industrial robotics "
-"automation."
-msgstr "多くのコマンドラインツールも提供しているし、コアの部分が小さいので、ロボットコントローラと他のフレームワークに導入しやすいです。一つの目標は産業用ロボットの分野で使用されることです。"
+"easily integrated into existing robotics systems. It provides many command "
+"line tools to work with robots and planners, and the run-time core is small "
+"enough to be used inside controllers and bigger frameworks. An important "
+"target application is industrial robotics automation."
+msgstr ""
+"OpenRAVEは現実世界の自律型ロボットアプリケーションをターゲットとし、そのテス"
+"トと開発のためのモーションプランニングと高度な知的アルゴリズムを備えた開発環"
+"境を提供します。OpenRAVEはシミュレーション、可視化、動作計画、スクリプトと制"
+"御機能等の統合環境を備えています。そのプラグインアーキテクチャを使い、ユー"
+"ザーは簡単にコントローラの変更や機能の拡張をすることができます。使用するプラ"
+"グイン、動作計画アルゴリズム、ロボットの自律制御、またはセンシングを考慮した"
+"動作は個々のモジュールになっており、実行時に動的に呼び出されます。これによっ"
+"て開発者は多くのモジュールが１つの大きな塊となった巨大なコードと格闘すること"
+"から解放されます。さらにOpenRAVEのユーザーは、ロボットの運動学と動力学、幾何"
+"学的干渉、環境変化、ロボット制御などの詳細が分からなくても知的動作とスクリプ"
+"トの開発に集中することができます。またOpenRAVEは、制御ドライバ、通信規格、認"
+"識システム等に焦点をあてた世の中に存在する他のロボットシステムとは異なり、幾"
+"何学と動力学のシミュレーションと解析に焦点をおいているため、それらのシステム"
+"とも容易に共存することが可能です。多くのコマンドラインツールも提供している"
+"し、コアの部分が小さいので、ロボットコントローラと他のフレームワークに導入し"
+"やすいです。一つの目標は産業用ロボットの分野で使用されることです。"
 
 # 2e4f9a38ecae46e5bee2326cecbc2913
-#: ../../source/index.rst:23
+#: ../../source/index.rst:21
 msgid "Getting Started"
 msgstr "初めに"
 
 # fee9efabb9304ec69cc207f57d656861
-#: ../../source/index.rst:25
+#: ../../source/index.rst:23
 msgid ":ref:`install`"
 msgstr ""
 
 # 3de95814da924e8a81a9e596f0bbe753
-#: ../../source/index.rst:27
+#: ../../source/index.rst:25
 msgid ""
 ":ref:`changelog`, `Roadmap <https://sourceforge.net/apps/trac/openrave/"
 "roadmap>`_"
 msgstr ""
 
 # 594add876a6a472292b93dd17382e87b
-#: ../../source/index.rst:29
+#: ../../source/index.rst:27
 msgid ":ref:`getting_started`"
 msgstr ""
 
 # 2b64235090fc46c3b5bc2585a353b0bb
-#: ../../source/index.rst:31
+#: ../../source/index.rst:29
 msgid ""
 ":ref:`openravepy_beginning`, :ref:`command_line_tools`, :ref:"
 "`writing_plugins`, :ref:`environment_variables`, `Octave/MATLAB`_"
 msgstr ""
 
 # 0855f5e83de4427c809dfb5efea26f49
-#: ../../source/index.rst:33
+#: ../../source/index.rst:31
 msgid ":ref:`overview`"
 msgstr ""
 
 # 5e71d01cd55a4c4db8737ed6febef3f4
-#: ../../source/index.rst:35
+#: ../../source/index.rst:33
 msgid ""
 ":ref:`architecture`, :ref:`interface_concepts`, :ref:`package-databases`, :"
 "ref:`robots_overview`, :ref:`geometric_conventions`"
 msgstr ""
 
+# 99a9c196496245f88cf85abb3f030fbf
+#: ../../source/index.rst:35
+msgid "`Examples <examples.html>`_"
+msgstr ""
+
+# 3862c1617b1142448ffa0b4d4b61d07c
+#: ../../source/index.rst:37
+msgid "`Robots <robots.html>`_"
+msgstr ""
+
+# 3c4e10c4a96e4f8fa8075a720ae07a96
+#: ../../source/index.rst:39
+msgid "`Plugin Interfaces <plugin_interfaces.html>`_"
+msgstr ""
+
+# 24f6119851ca471a8bb3549dfb5f89cb
+#: ../../source/index.rst:41
+msgid "`Database Generators <database generators.html>`_"
+msgstr ""
+
 # 1646a9b9713a4c74863e6ef9ff4090ac
-#: ../../source/index.rst:38
+#: ../../source/index.rst:44
 msgid "Resources"
 msgstr "リソース"
 
 # fe101d50efa94c2bba729e3766418d03
-#: ../../source/index.rst:40
+#: ../../source/index.rst:46
 msgid ""
 "This document is automatically generated for every release and binds "
 "together the following versioned resources:"
 msgstr "このサイトは自動生成され、以下のリソースを含めています。"
 
 # 53915cdb2f2a4a8186d5f7d5bef7d41c
-#: ../../source/index.rst:42
+#: ../../source/index.rst:48
 msgid "`Core C++ API`_ - generated by doxygen"
 msgstr "`コアC++ API`_ - doxygenで生成されました。"
 
 # 5d9d9ec4f4da4f61ad18d6480737439d
-#: ../../source/index.rst:43
+#: ../../source/index.rst:49
 msgid ""
 ":ref:`Python API <package-openravepy>` - generated by openravepy in-source "
 "comments"
 msgstr ""
 
 # ae55fa4f934449d8aa76c9d486e56fd1
-#: ../../source/index.rst:44
+#: ../../source/index.rst:50
 msgid ""
 ":ref:`plugin_interfaces` - generated by the interface descriptions and their "
 "supported commands"
 msgstr ""
 
 # cb886c9be8de4628bc76d32726217957
-#: ../../source/index.rst:45
+#: ../../source/index.rst:51
 msgid ""
 "`Database Generators <databases.html>`_ - generated by openravepy in-source "
 "comments"
 msgstr ""
 
 # 5a8240e8860b43178d3cfa7a4b0bbd5c
-#: ../../source/index.rst:46
+#: ../../source/index.rst:52
 msgid ""
 "`Examples <examples.html>`_ - generated by openravepy in-source comments"
 msgstr ""
 
 # 0b796277e1814df7a832719e7e5e5a9e
-#: ../../source/index.rst:47
+#: ../../source/index.rst:53
 msgid ""
 ":ref:`robots` - generated by running the database generators on the :ref:"
 "`robots_repositories`"
 msgstr ""
 
 # eef32327ee50445983b9f56393a5fb30
-#: ../../source/index.rst:50
+#: ../../source/index.rst:56
 msgid "Other"
 msgstr ""
 
 # aa6b79bb163348e7af4b464861e9a13d
-#: ../../source/index.rst:52
+#: ../../source/index.rst:58
 msgid ""
 "`Official Wiki`_ - latest news, projects using OpenRAVE, and how to link "
 "OpenRAVE with other systems. Users can freely add their own project "
@@ -161,17 +186,17 @@ msgid ""
 msgstr ""
 
 # 792392b256ca43fa9ee5c03c6f96f33f
-#: ../../source/index.rst:54
+#: ../../source/index.rst:60
 msgid ":ref:`developers_guide` - for core OpenRAVE development"
 msgstr ""
 
 # 64d77ab71928461190cc36e9afb4c7e4
-#: ../../source/index.rst:57
+#: ../../source/index.rst:63
 msgid "Licenses"
 msgstr ""
 
 # 296ce57e5d8947289352fed9b14b17f0
-#: ../../source/index.rst:59
+#: ../../source/index.rst:65
 msgid ""
 "The core C++ API is licenced under the `Lesser GPL <http://www.gnu.org/"
 "licenses/lgpl.html>`_, which allows the OpenRAVE developers to guarantee a "
@@ -179,7 +204,7 @@ msgid ""
 msgstr ""
 
 # e0125dfbc87b45f28dbb4e80acc7a999
-#: ../../source/index.rst:61
+#: ../../source/index.rst:67
 msgid ""
 "Most of the examples and scripts outside the core are licensed under `Apache "
 "License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>`_, "
@@ -187,32 +212,43 @@ msgid ""
 msgstr ""
 
 # 8a87599f25494a159f133de2c67717cd
-#: ../../source/index.rst:63
+#: ../../source/index.rst:69
 msgid ""
 "Documentation is under the `Creative Commons Attribution 3.0 <http://"
 "creativecommons.org/licenses/by/3.0/>`_."
 msgstr ""
 
 # c3105345f9584c67800518c2367d5f40
-#: ../../source/index.rst:65
+#: ../../source/index.rst:71
 msgid "Plugins can be released in any license the plugin authors choose to."
 msgstr ""
 
 # 438f86c48b7c4f2a90f2f458a67aa44f
-#: ../../source/index.rst:68
+#: ../../source/index.rst:74
 msgid "References"
 msgstr ""
 
 # 16f52f082ac546d7baa6be73bf829038
-#: ../../source/index.rst:70
+#: ../../source/index.rst:76
 msgid ""
 "Please support OpenRAVE development by referencing it in your works/"
 "publications/projects with::"
 msgstr ""
 
 # 00b5d64df08a4de28025f4b6a3faa1ec
-#: ../../source/index.rst:82
+#: ../../source/index.rst:88
 msgid ""
 "`Download PDF here <http://www.programmingvision.com/rosen_diankov_thesis."
 "pdf>`_."
 msgstr ""
+
+# 2f8cd9c2b3c348b493ffeadb2895c5cc
+#~ msgid ""
+#~ "It provides many command line tools to work with robots and planners, and "
+#~ "the run-time core is small enough to be used inside controllers and "
+#~ "bigger frameworks. An important target application is industrial robotics "
+#~ "automation."
+#~ msgstr ""
+#~ "多くのコマンドラインツールも提供しているし、コアの部分が小さいので、ロボッ"
+#~ "トコントローラと他のフレームワークに導入しやすいです。一つの目標は産業用ロ"
+#~ "ボットの分野で使用されることです。"

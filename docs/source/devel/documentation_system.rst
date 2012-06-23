@@ -4,7 +4,9 @@ Documentation System
 .. image:: ../../images/openrave_documentation.png
   :width: 640
 
-Describes the OpenRAVE documentation system and all necessary function calls for generating and maintaining the documents. This is mean for developers.
+Describes the OpenRAVE documentation system and all necessary function calls for generating and maintaining the documents. Meant for developers.
+
+Because documentation is uploaded to `http://www.openrave.org/docs`_, its HTML/CSS is managed by :ref:`openrave.org` system.
 
 Installation
 ------------
@@ -35,31 +37,36 @@ OpenRAVE uses:
 * doxygen for the core system and c++ documentation
 * reStructuredText for all other documentation.
 
-The following script generates all documentation for English and Japanese:
+Go into **docs** directory and execute following script to generate all documentation for all the English language:
 
 .. code-block:: bash
 
-  cd docs
-  ./build.sh
+  LANG=en_US.UTF-8 make language=en html
 
-Upload the generated documentation to the server with:
+If c++ header files documentation changed, then have to call with a rebuild to openravepy docs:
 
 .. code-block:: bash
 
-  cd docs
-  ./sendtoserver.sh
+  LANG=en_US.UTF-8 make language=en internal
+
+After complete, upload the generated documentation to the server with:
+
+.. code-block:: bash
+
+   cd docs
+   LANG=en_US.UTF-8 make language=en sendtoserver
 
 Most build files are stored in the **docs/build** directory.
 All images are saved into **docs/images**, including automatically generated ones.
 
-Because running **build.sh** can take a long time, developers should execute the individual commands pertaining to the part of the system they are maintaining. The commands are given in the following sections.
+Because generation can take a long time, developers should execute the individual commands pertaining to the part of the system they are maintaining. The commands are given in the following sections.
 
 Python (reStructuredText)
 -------------------------
 
 Compiling the python documentation is divided into several steps.
 
-# Take in the doxygen comments from the C++ API and creates ``python/bindings/docstrings.cpp``, which is then compiled in the **openravepy_int** module.
+# Take in the doxygen comments from the C++ API and creates ``python/bindings/docstrings.cpp``, which is then compiled into the **openravepy_int** module.
 
 # Generate rst files from all the openravepy modules using ``sphinx-autopackage-script/generate_modules.py``.
 
@@ -67,10 +74,11 @@ Compiling the python documentation is divided into several steps.
 
 # Compile with ``sphinx-build``
 
-The entire script is:
+In order to generate files managed by openrave.org, it has to be called with:
 
-.. literalinclude:: ../../build_sphinx.sh
-  :language: bash
+.. code-block:: bash
+
+    LANG=en_US.UTF-8 make language=en sphinxjson
 
 Because the documentation for openravepy is built from the install directory, whenever a change to the openravepy documentation made openrave has to be reinstalled with ``make install``.
 
@@ -82,11 +90,11 @@ Compiling HTML and Latex:
 .. code-block:: bash
 
   cd docs
-  python build_doxygen.py --lang=en
+  LANG=en_US.UTF-8 make language=en doxygenhtml
   firefox build/en/coreapihtml/index.html
   evince build/en/coreapilatex/refman.pdf
 
-The **build_doxygen.py** script internally makes these calls:
+The script internally makes these calls:
 
 .. code-block:: bash
 
@@ -105,7 +113,6 @@ To reference image in **docs/images/tutorial0_myimage.png**, write::
   \image html tutorial0_myimage.png
   \image latex tutorial0_myimage.png "My Caption" width=15cm
 
-
 Interfaces
 ----------
 
@@ -113,7 +120,7 @@ To build the webpage of interface descriptions, run
 
 .. code-block:: bash
 
-  python build_interfaces.py
+  LANG=en_US.UTF-8 make language=en source/interface_types
 
 This outputs a set of reStructuredText files, which can be used by sphinx to build up the page.
 
@@ -127,7 +134,7 @@ An image of all the robots in openrave can be extracted using the **build_ikdata
 .. code-block:: bash
 
   cd docs
-  python build_ikdatabase.py --outdir="en/ikfast" --ikfaststats=ikfaststats.pp
+  LANG=en_US.UTF-8 make language=en ikfaststats=ikfaststats.pp ikfast
 
 Internationalization
 --------------------
@@ -136,11 +143,10 @@ Use gettext internationalization to store separate translation files for each la
 
 The translation PO files are stored in `https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/docs/locale`_. Anyone is welcome to send diff files of translations.
 
-In order to test how the translation looks for a specific language, execute
+In order to test how the translation looks for the Japanese language, execute
 
 .. code-block:: bash
 
-  ./build_sphinx_lang.bash XX
+  LANG=ja_JP.UTF-8 make language=ja html
 
-where XX is the language code.
-
+Note that both **LANG** and **language** have to be set.
