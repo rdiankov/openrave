@@ -19,7 +19,6 @@ import os, sys, operator
 import scipy
 import shutil
 import pysvn
-from openravepy.misc import mkdir_recursive
 from openravepy import ikfast
 
 imagedir = 'images/robots'
@@ -59,7 +58,10 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
     focal = 10000.0 # bigger values make orthographic view
     robotname = os.path.split(os.path.splitext(robotfilename)[0])[1]
     sourceoutputdir = os.path.join(outputdir,robotname)
-    mkdir_recursive(sourceoutputdir)
+    try:
+        os.makedirs(sourceoutputdir)
+    except OSError:
+        pass
     imagename = '%s.jpg'%robotname
     robot = None
     roboturl = ''
@@ -211,17 +213,20 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
 **IK parameterizations:** %d, **Success:** %d%%
 
-.. image:: %s/%s
+.. image:: ../%s/%s
   :width: 640
-  :target: %s/%s.html
+  :target: %s.html
 
 ----
 
-"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,outputdir,robotname)
+"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,robotname)
     return returnxml,robotname
 
 def build(allstats,buildoptions,outputdir,env):
-    mkdir_recursive(outputdir)
+    try:
+        os.makedirs(outputdir)
+    except OSError:
+        pass
 
     # write each robot
     robotdict = dict()
@@ -341,7 +346,10 @@ if __name__ == "__main__":
     except OSError:
         pass
 
-    mkdir_recursive(imagedir)
+    try:
+        os.makedirs(imagedir)
+    except OSError:
+        pass
     allstats,buildoptions = pickle.load(open(options.ikfaststats,'r'))
     env=Environment()
     try:

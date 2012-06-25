@@ -10,6 +10,8 @@ ALIASES += openraveversion=`openrave-config --version`\\n\
 # this empty line prevents from any intermediate files from getting deleted.... weird
 .SECONDARY:
 
+all: html_en
+
 images/openrave_architecture.pdf: images/openrave_architecture.dia
 	dia -e images/openrave_architecture.eps images/openrave_architecture.dia
 	dia -e images/openrave_architecture.png -s 700 images/openrave_architecture.dia
@@ -70,10 +72,12 @@ source/openravepy/openravepy.rst: openravepy_changed
 	PYTHONPATH=`pwd`:$PYTHONPATH python sphinx-autopackage-script/generate_modules.py --dest-dir=source/openravepy --suffix=rst --maxdepth=3 --no-toc --sep-files `pwd`/openravepy
 	#rm -f openravepy
 
-source/ikfast/index.rst: $(ikfaststats)
+source/ikfast/index.rst: $(ikfaststats) build_ikdatabase.py
+	rm -f ikfast_installed openravepy # need to remove openravepy link since ikfaststats.pp has object links with the real openravepy dir
 	python build_ikdatabase.py --ikfaststats=$(ikfaststats) --outdir=source/ikfast
+	touch ikfast_installed
 
-ikfast: source/ikfast/index.rst
+ikfast_installed: source/ikfast/index.rst ;
 
 # create/update internationalization files
 # have to set LANG to en, or otherwise the automodule stuff might not return english translations
@@ -106,7 +110,7 @@ locale_dirs = ['locale']" > tempconf_$*.py
 # dummy
 locale/en/LC_MESSAGES/openravesphinx.mo:
 
-build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
+build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
 	rm -f sphinxjson_installed_$*
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	sphinx-build -D language=$* -b json -c . source build/$*/sphinxjson
@@ -120,7 +124,7 @@ build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel
 
 sphinxjson_installed_%: build/%/sphinxjson/index.fjson ;
 
-build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast
+build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
 	rm -f sphinxhtml_installed_$*
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	sphinx-build -D language=$* -b html -c . source build/$*/sphinxhtml
@@ -130,12 +134,13 @@ build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/
 sphinxhtml_installed_%: build/%/sphinxhtml/index.html ;
 
 json_%: sphinxjson_installed_% doxygenhtml_installed_% ;
-json: json_en json_ja ;
+
+jsonall: json_en json_ja ;
 html_%: doxygenhtml_installed_% sphinxhtml_installed_% ;
-html: html_en html_ja ;
+htmlall: html_en html_ja ;
 
 # temporary directory with symlinks should already be created, so just zip it
-openravejsonzip_installed openravejson-$(openrave_version).zip: json
+openravejsonzip_installed openravejson-$(openrave_version).zip: jsonall
 	rm -rf openravejsonzip_installed
 	cd build; zip -r ../openravejson-$(openrave_version).zip openravejson-$(openrave_version)
 	touch openravejsonzip_installed
@@ -143,13 +148,11 @@ openravejsonzip_installed openravejson-$(openrave_version).zip: json
 openravejsonzip: openravejsonzip_installed openravejson-$(openrave_version).zip ;
 
 # temporary directory with symlinks should already be created, so just zip it
-openravehtmlzip_installed openravehtml-$(openrave_version).zip: html
+openravehtmlzip_installed openravehtml-$(openrave_version).zip: htmlall
 	rm -rf openravehtmlzip_installed
 	cd build; zip -r ../openravehtml-$(openrave_version).zip openravehtml-$(openrave_version)
 
 openravehtmlzip: openravehtmlzip_installed openravehtml-$(openrave_version).zip ;
-
-#openravedocs_html.zip: html_en html_ja
 
 #sendtoserver: jsonall htmlall
 #	tar cjf openravedocs.tgz build/$(language)/coreapihtml build/$(language)/sphinxjson

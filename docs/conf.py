@@ -154,7 +154,7 @@ html_sidebars = {'index':['localtoc.html','mailinglist.html','resources.html','s
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
-html_additional_pages = {'databases':'databases.html','examples':'examples.html'}
+html_additional_pages = {}#'databases':'databases.html' }#,'examples':'examples.html'}
 
 # If false, no module index is generated.
 #html_use_modindex = True
@@ -241,6 +241,7 @@ except IOError:
 rst_epilog = u''
 rst_epilog += u'.. _`%s`: ../coreapihtml/index.html\n\n'%t.ugettext('Core C++ API')
 rst_epilog += u'.. _`%s`: ../../coreapihtml/architecture_concepts.html\n\n'%t.ugettext('C++ Architecture')
+rst_epilog += u'.. _`%s`: ../../coreapihtml/cpp_examples.html\n\n'%t.ugettext('C++ Examples Page')
 rst_epilog += u'.. _`%s`: ../../coreapihtml/interface_concepts.html\n\n'%t.ugettext('C++ Interface Concepts')
 rst_epilog += u'.. _`%s`: ../coreapihtml/arch_sensor.html\n\n'%t.ugettext('Sensor Concepts')
 rst_epilog += u'.. _`%s`: ../coreapihtml/FindOpenRAVE_8cmake-example.html\n\n'%t.ugettext('FindOpenRAVE.cmake')
