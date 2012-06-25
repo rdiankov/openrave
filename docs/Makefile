@@ -110,28 +110,30 @@ locale_dirs = ['locale']" > tempconf_$*.py
 # dummy
 locale/en/LC_MESSAGES/openravesphinx.mo:
 
-build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
-	rm -f sphinxjson_installed_$*
+build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
+	rm -f sphinxjson_installed_$* build/$*/sphinxjson/index.fjson
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	sphinx-build -D language=$* -b json -c . source build/$*/sphinxjson
 	#rm -f openravepy
 	# store the symlinks for later zip compression
 	mkdir -p build/openravejson-$(openrave_version)/$*
+	rm -f build/openravejson-$(openrave_version)/$*/sphinxjson
 	ln -f -s ../../$*/sphinxjson build/openravejson-$(openrave_version)/$*/sphinxjson
-	mkdir -p build/openravehtml-$(openrave_version)/$*
-	ln -f -s ../../$*/sphinxhtml build/openravehtml-$(openrave_version)/$*/sphinxhtml
 	touch sphinxjson_installed_$*
 
-sphinxjson_installed_%: build/%/sphinxjson/index.fjson ;
+sphinxjson_installed_%: build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson ;
 
-build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
-	rm -f sphinxhtml_installed_$*
+build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: build_locale_installed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py
+	rm -f sphinxhtml_installed_$* build/$*/sphinxhtml/index.html
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	sphinx-build -D language=$* -b html -c . source build/$*/sphinxhtml
 	#rm -f openravepy
+	mkdir -p build/openravehtml-$(openrave_version)/$*
+	rm -f build/openravehtml-$(openrave_version)/$*/sphinxhtml
+	ln -f -s ../../$*/sphinxhtml build/openravehtml-$(openrave_version)/$*/sphinxhtml
 	touch sphinxhtml_installed_$*
 
-sphinxhtml_installed_%: build/%/sphinxhtml/index.html ;
+sphinxhtml_installed_%: build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html ;
 
 json_%: sphinxjson_installed_% doxygenhtml_installed_% ;
 
