@@ -609,6 +609,15 @@ public:
             pkinbody->__struri = _filename;
         }
 
+        // check if kmodel has asset/subject, if yes, then set it to the description
+        if( !!kmodel->getAsset() ) {
+            if( !!kmodel->getAsset()->getSubject() ) {
+                if( !!kmodel->getAsset()->getSubject()->getValue() ) {
+                    pkinbody->SetDescription(kmodel->getAsset()->getSubject()->getValue());
+                }
+            }
+        }
+
         // find matching visual node
         domNodeRef pvisualnode;
         FOREACH(it, bindings.listModelBindings) {

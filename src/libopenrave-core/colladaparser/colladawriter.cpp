@@ -708,6 +708,14 @@ public:
         kmodel->setId(kmodelid.c_str());
         kmodel->setName(pbody->GetName().c_str());
 
+        // add description
+        {
+            domAssetRef kmodelinfo = daeSafeCast<domAsset>(kmodel->add(COLLADA_ELEMENT_ASSET));
+            domAsset::domSubjectRef subject = daeSafeCast<domAsset::domSubject>(kmodelinfo->add(COLLADA_ELEMENT_SUBJECT));
+            subject->setValue(pbody->GetDescription().c_str());
+        }
+
+        //kmodel->getAsset();
         domKinematics_model_techniqueRef ktec = daeSafeCast<domKinematics_model_technique>(kmodel->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         KinBody::KinBodyStateSaver saver(pbody);

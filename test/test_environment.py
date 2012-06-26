@@ -85,6 +85,7 @@ class TestEnvironment(EnvironmentSetup):
         self.log.info('test that collada import/export works for robots')
         epsilon = g_epsilon # only works if collada-dom is compiled with double precision
         env=self.env
+        testdesc='asdfa{}<>ff\nffas\nff<f>'
         with env:
             for robotfile in g_robotfiles:
                 env.Reset()
@@ -93,12 +94,14 @@ class TestEnvironment(EnvironmentSetup):
                 Trobot = matrixFromAxisAngle([pi/4,0,0])
                 Trobot[0:3,3] = [1.0,2.0,3.0]
                 robot0.SetTransform(Trobot)
+                robot0.SetDescription(testdesc)
                 env.Save('test.zae')
                 robot1=self.LoadRobot('test.zae')
                 #robot1.SetTransform(eye(4))
                 assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
                 assert(len(robot0.GetPassiveJoints()) == len(robot1.GetPassiveJoints()))
                 assert(robot0.GetDOF()==robot1.GetDOF())
+                assert(robot1.GetDescription()=robot0.GetDescription())
                 robot1.SetDOFValues(robot0.GetDOFValues()) # in case
                 joints0 = robot0.GetJoints()+robot0.GetPassiveJoints()
                 joints1 = robot1.GetJoints()+robot1.GetPassiveJoints()
