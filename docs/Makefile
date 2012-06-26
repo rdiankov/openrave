@@ -143,7 +143,7 @@ htmlall: html_en html_ja ;
 
 # temporary directory with symlinks should already be created, so just zip it
 openravejsonzip_installed openravejson-$(openrave_version).zip: jsonall
-	rm -rf openravejsonzip_installed
+	rm -f openravejsonzip_installed
 	cd build; zip -r ../openravejson-$(openrave_version).zip openravejson-$(openrave_version)
 	touch openravejsonzip_installed
 
@@ -151,10 +151,20 @@ openravejsonzip: openravejsonzip_installed openravejson-$(openrave_version).zip 
 
 # temporary directory with symlinks should already be created, so just zip it
 openravehtmlzip_installed openravehtml-$(openrave_version).zip: htmlall
-	rm -rf openravehtmlzip_installed
+	rm -f openravehtmlzip_installed
 	cd build; zip -r ../openravehtml-$(openrave_version).zip openravehtml-$(openrave_version)
 
 openravehtmlzip: openravehtmlzip_installed openravehtml-$(openrave_version).zip ;
+
+openravejson-latest_stable.zip openravehtml-latest_stable.zip: jsonall htmlall
+	rm -f latest_stablezip
+	ln -s -f openravejson-$(openrave_version) build/openravejson-latest_stable
+	ln -s -f openravehtml-$(openrave_version) build/openravehtml-latest_stable
+	cd build; zip -r ../openravejson-latest_stable.zip openravejson-latest_stable
+	cd build; zip -r ../openravehtml-latest_stable.zip openravehtml-latest_stable
+	touch latest_stablezip
+
+latest_stablezip: openravejson-latest_stable.zip openravehtml-latest_stable.zip ;
 
 #sendtoserver: jsonall htmlall
 #	tar cjf openravedocs.tgz build/$(language)/coreapihtml build/$(language)/sphinxjson
