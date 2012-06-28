@@ -85,7 +85,7 @@ ikfast_installed: source/ikfast/index.rst ;
 build/locale/index.pot: openravepy_changed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py
 	rm -f build_locale_installed
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	OPENRAVE_INTERNAL_COMMENTS=0 LANG=en_US.UTF-8 sphinx-build -t nonjson -D language=en -b gettext -c . source build/locale
+	OPENRAVE_INTERNAL_COMMENTS=0 LANG=en_US.UTF-8 sphinx-build -t gettext -D language=en -b gettext -c . source build/locale
 	#rm -f openravepy
 	touch build_locale_installed
 
@@ -116,7 +116,7 @@ locale_dirs = ['locale']" > tempconf_$*.py
 build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/*.mo
 	rm -f sphinxjson_installed_$* build/$*/sphinxjson/index.fjson
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$* -t json -b json -c . source build/$*/sphinxjson
+	sphinx-build -D language=$* -t jsontag -b json -c . source build/$*/sphinxjson
 	#rm -f openravepy
 	# store the symlinks for later zip compression
 	mkdir -p build/openravejson-$(openrave_version)/$*
@@ -129,7 +129,7 @@ sphinxjson_installed_%: build/openravejson-$(openrave_version)/%/sphinxjson buil
 build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/*.mo
 	rm -f sphinxhtml_installed_$* build/$*/sphinxhtml/index.html
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$* -t nonjson -b html -c . source build/$*/sphinxhtml
+	sphinx-build -D language=$* -t htmltag -b html -c . source build/$*/sphinxhtml
 	#rm -f openravepy
 	mkdir -p build/openravehtml-$(openrave_version)/$*
 	rm -f build/openravehtml-$(openrave_version)/$*/sphinxhtml

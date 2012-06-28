@@ -3,11 +3,11 @@
 Interface Concepts
 ==================
 
-.. only:: nonjson
+.. only:: htmltag or gettext
 
   `C++ Interface Concepts <../../coreapihtml/interface_concepts.html>`_
 
-.. only:: json
+.. only:: jsontag or gettext
 
   `C++ Interface Concepts <../coreapihtml/interface_concepts.html>`_
 

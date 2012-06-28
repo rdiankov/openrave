@@ -12,12 +12,12 @@ Getting Started Tutorials
    command_line_tools
    environment_variables
 
-.. only:: nonjson
+.. only:: htmltag or gettext
 
    - `Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_
    - `Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB>`_ Scripting
 
-.. only:: json
+.. only:: jsontag or gettext
 
    - `Writing and Using Controllers in C++ <coreapihtml/arch_controller.html>`_
    - `Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB>`_ Scripting

@@ -3,11 +3,11 @@
 OpenRAVE Architecture
 =====================
 
-.. only:: nonjson
+.. only:: htmltag or gettext
 
   `C++ Architecture < ../../coreapihtml/architecture_concepts.html>`_
 
-.. only:: json
+.. only:: jsontag or gettext
 
   `C++ Architecture <../coreapihtml/architecture_concepts.html>`_
 

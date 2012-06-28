@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 19:36\n"
+"POT-Creation-Date: 2012-06-28 19:58\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -998,6 +998,13 @@ msgstr ""
 #: ../../source/tutorials/writing_plugins.rst:43
 msgid ""
 "`Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins."
+"html>`_"
+msgstr ""
+
+# 8ab8565b06b041f29b7ace09fec40def
+#: ../../source/tutorials/writing_plugins.rst:47
+msgid ""
+"`Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins."
 "html>`_"
 msgstr ""
 

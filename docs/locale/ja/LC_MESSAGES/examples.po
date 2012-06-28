@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 19:36\n"
+"POT-Creation-Date: 2012-06-28 19:58\n"
 "PO-Revision-Date: 2012-06-28 18:14+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -29,6 +29,11 @@ msgstr ""
 # f73c9ab26bb54b65a3490a2710eecfec
 #: ../../source/examples.rst:10
 msgid "`C++ Examples Page <../coreapihtml/cpp_examples.html>`_"
+msgstr ""
+
+# f73c9ab26bb54b65a3490a2710eecfec
+#: ../../source/examples.rst:14
+msgid "`C++ Examples Page <coreapihtml/cpp_examples.html>`_"
 msgstr ""
 
 # 20b0068813b0469cac849000fbddc03c
