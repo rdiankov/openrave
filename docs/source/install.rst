@@ -43,4 +43,4 @@ Get latest stable source code (constantly updated):
 
   svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
 
-`Compile/Install From Sources`_
+`Compile/Install From Sources <../coreapihtml/installation.html>`_

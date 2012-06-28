@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-23 17:36\n"
+"POT-Creation-Date: 2012-06-28 18:10\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -199,9 +199,9 @@ msgid ""
 "to openravepy docs:"
 msgstr ""
 
-# 2608086bf94747af95bdd23f1641d55b
+# b4b242ba78454a9da18480dcd3d7f73f
 #: ../../source/devel/documentation_system.rst:52
-msgid "After complete, upload the generated documentation to the server with:"
+msgid "Create the packages to be sent to the doc server:"
 msgstr ""
 
 # a81df4a822cf47b086d5014f090987ae
@@ -737,21 +737,21 @@ msgid ""
 "documentation"
 msgstr ""
 
-# 255d91a9fd9c40a7aba0009770d67f2e
+# 3b001dc7aa4b4bbc94a82f9d3f7f3420
 #: ../../source/devel/releases.rst:116
 msgid ""
 "Update and upload the documentation. Make sure to set the correct revision "
 "in **changelog.rst**, and change Latest Official Version in **index.rst**. "
-"To upload:"
+"To generate the zip files do:"
 msgstr ""
 
 # 22a5f201ec134bf79d04adaf3cc2817a
-#: ../../source/devel/releases.rst:122
+#: ../../source/devel/releases.rst:124
 msgid "Create svn tag:"
 msgstr ""
 
 # fa9f6828db804493b82a103b0c74af7a
-#: ../../source/devel/releases.rst:128
+#: ../../source/devel/releases.rst:130
 msgid ""
 "sourceforge: Create a X.Y.Z folder inside the files and copy the latest "
 "uploaded files from Jenkins into it, remove the revision numbers from the "
@@ -759,12 +759,12 @@ msgid ""
 msgstr ""
 
 # fadbd4adcde74b628175e641b0f2b4bd
-#: ../../source/devel/releases.rst:130
+#: ../../source/devel/releases.rst:132
 msgid "Create the Debian packages in openrave/testing"
 msgstr ""
 
 # 0e49fee9ecb942249d6377b40883ddb7
-#: ../../source/devel/releases.rst:139
+#: ../../source/devel/releases.rst:141
 msgid "Copy the debian packages from openrave/testing to openrave/release"
 msgstr ""
 

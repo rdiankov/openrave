@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-28 18:10\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -69,7 +69,7 @@ msgstr ""
 msgid "Get latest stable source code (constantly updated):"
 msgstr ""
 
-# 92595d4bac1041cbbe31e7481932d719
+# 32e893bff2bc4cbeb0cdd87829665a39
 #: ../../source/install.rst:46
-msgid "`Compile/Install From Sources`_"
+msgid "`Compile/Install From Sources <../coreapihtml/installation.html>`_"
 msgstr ""

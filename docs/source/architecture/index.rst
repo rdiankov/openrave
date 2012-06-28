@@ -3,7 +3,7 @@
 OpenRAVE Architecture
 =====================
 
-`C++ Architecture`_
+`C++ Architecture < ../../coreapihtml/architecture_concepts.html>`_
 
 .. toctree::
    :maxdepth: 2

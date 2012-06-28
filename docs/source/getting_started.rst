@@ -14,7 +14,7 @@ Getting Started Tutorials
 
 .. htmlonly::
    - `Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_
-   - `Octave/MATLAB`_ Scripting
+   - `Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB>`_ Scripting
 
 .. ifconfig:: language=='ja'
 

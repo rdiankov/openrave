@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 19:43\n"
+"POT-Creation-Date: 2012-06-28 18:10\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -78,9 +78,11 @@ msgstr ""
 msgid "planning-specific parameters"
 msgstr ""
 
-# 4afe9061dfa347d4a81ce161a66f9f47
+# a112e82025304919852e448e200365c2
 #: ../../source/robots_overview.rst:29
-msgid "`COLLADA Robot Extensions`_ (\\*.dae, \\*.zae)"
+msgid ""
+"`COLLADA Robot Extensions <http://openrave.programmingvision.com/wiki/index."
+"php/Format:COLLADA>`_ (\\*.dae, \\*.zae)"
 msgstr ""
 
 # 91fd96e1ea324bc0b161be72962b8732
@@ -98,9 +100,11 @@ msgstr ""
 msgid "OpenRAVE XML"
 msgstr ""
 
-# 65169358cba1426fa01fca155d0960fe
+# c87bf8c5f0a246f285f58a1fc48a0587
 #: ../../source/robots_overview.rst:36
-msgid "`OpenRAVE XML`_ (\\*.xml)"
+msgid ""
+"`OpenRAVE XML <http://openrave.programmingvision.com/wiki/index.php/Format:"
+"XML>`_ (\\*.xml)"
 msgstr ""
 
 # 5f64387f24fc4cf6979450efcb9fe9cb

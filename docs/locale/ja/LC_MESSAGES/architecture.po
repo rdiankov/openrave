@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-19 17:57\n"
+"POT-Creation-Date: 2012-06-28 18:10\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -21,19 +21,19 @@ msgstr ""
 msgid "OpenRAVE Architecture"
 msgstr ""
 
-# 2c5d976b0d514281b37dcae97c7f74aa
+# 668fef5d06ab438381b61113026627b0
 #: ../../source/architecture/index.rst:6
-msgid "`C++ Architecture`_"
-msgstr "C++アーキテクチャ"
+msgid "`C++ Architecture < ../../coreapihtml/architecture_concepts.html>`_"
+msgstr ""
 
 # dec2dc3100b94888931bb968de8b179d
 #: ../../source/architecture/interface_concepts.rst:4
 msgid "Interface Concepts"
 msgstr ""
 
-# 1b2f33ce56964d17a815f214e86f467e
+# 3118313cee6a463ba77f7c0fbd00f5ca
 #: ../../source/architecture/interface_concepts.rst:6
-msgid "`C++ Interface Concepts`_"
+msgid "`C++ Interface Concepts <../../coreapihtml/interface_concepts.html>`_"
 msgstr ""
 
 # 7da4276c6ed34248a49e5f47885af38e
@@ -279,3 +279,7 @@ msgid ""
 "**count** - number of waypoints. although the number can be deduced from the "
 "size of the data, this is a precaution if the user wants to specify a subset."
 msgstr ""
+
+# 2c5d976b0d514281b37dcae97c7f74aa
+#~ msgid "`C++ Architecture`_"
+#~ msgstr "C++アーキテクチャ"

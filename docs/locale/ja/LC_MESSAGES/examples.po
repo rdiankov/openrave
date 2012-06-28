@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2012-06-28 18:10\n"
-"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"PO-Revision-Date: 2012-06-28 18:14+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
 "MIME-Version: 1.0\n"
@@ -16,20 +16,22 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-# 9d22c8edf0bb40c9a80418bf9adccfce
-#: ../../source/getting_started.rst:4
-msgid "Getting Started Tutorials"
+# ab3001f204de4bd6bc305427d6421377
+#: ../../source/examples.rst:4
+msgid "Examples"
 msgstr ""
 
-# 70a90893b7dc4f0db18b0dd76d2c8818
-#: ../../source/getting_started.rst:16
-msgid ""
-"`Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_"
+# e07d5525eba0478e8c75c2ed1964733c
+#: ../../source/examples.rst:6
+msgid ":ref:`getting_started`"
 msgstr ""
 
-# 50aa7b73e14745e8840dcfabdb4ed20d
-#: ../../source/getting_started.rst:17
-msgid ""
-"`Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/"
-"OctaveMATLAB>`_ Scripting"
+# f73c9ab26bb54b65a3490a2710eecfec
+#: ../../source/examples.rst:8
+msgid "`C++ Examples Page <../../coreapihtml/cpp_examples.html>`_"
+msgstr ""
+
+# 20b0068813b0469cac849000fbddc03c
+#: ../../source/examples.rst:11
+msgid "Python Examples"
 msgstr ""

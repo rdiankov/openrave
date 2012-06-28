@@ -191,7 +191,7 @@ htmlhelp_basename = 'openravedoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('openravepy', 'openrave.tex', u'openrave Documentation',
+  ('openravepy', 'openrave.tex', u'OpenRAVE Documentation',
    u'author', 'manual'),
 ]
 
@@ -238,22 +238,7 @@ except IOError:
     t=gettext.NullTranslations()
     
 # added to the end of every file
-rst_epilog = u''
-rst_epilog += u'.. _`%s`: ../coreapihtml/index.html\n\n'%t.ugettext('Core C++ API')
-rst_epilog += u'.. _`%s`: ../../coreapihtml/architecture_concepts.html\n\n'%t.ugettext('C++ Architecture')
-rst_epilog += u'.. _`%s`: ../../coreapihtml/cpp_examples.html\n\n'%t.ugettext('C++ Examples Page')
-rst_epilog += u'.. _`%s`: ../../coreapihtml/interface_concepts.html\n\n'%t.ugettext('C++ Interface Concepts')
-rst_epilog += u'.. _`%s`: ../coreapihtml/arch_sensor.html\n\n'%t.ugettext('Sensor Concepts')
-rst_epilog += u'.. _`%s`: ../coreapihtml/FindOpenRAVE_8cmake-example.html\n\n'%t.ugettext('FindOpenRAVE.cmake')
-rst_epilog += u'.. _`%s`: http://sourceforge.net/projects/openrave/files/latest_stable\n\n'%t.ugettext('Installer Packages')
-rst_epilog += u'.. _`%s`: ../coreapihtml/installation.html\n\n'%t.ugettext('Compile/Install From Sources')
-rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB\n\n'%t.ugettext('Octave/MATLAB')
-rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki\n\n'%t.ugettext('Official Wiki')
-rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/Format:COLLADA\n\n'%t.ugettext('COLLADA Robot Extensions')
-rst_epilog += u'.. _`%s`: http://openrave.programmingvision.com/wiki/index.php/Format:XML\n\n'%t.ugettext('OpenRAVE XML')
-rst_epilog += u'.. _`%s`: http://www.openrave.org/testing\n\n'%t.ugettext('OpenRAVE Testing Server')
-
-rst_epilog += u"""
+rst_epilog = u"""
 
 .. role:: red
 
