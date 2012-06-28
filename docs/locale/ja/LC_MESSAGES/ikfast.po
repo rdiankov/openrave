@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 18:10\n"
+"POT-Creation-Date: 2012-06-28 19:44\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -3602,12 +3602,12 @@ msgid "IKFast Robot Database"
 msgstr ""
 
 # 6705b7f666fa4fdbbb323cba374c0b60
-#: ../../source/ikfast/index.rst:9
+#: ../../source/ikfast/index.rst:7
 msgid "**59**"
 msgstr ""
 
 # 161b204e401d487d906a67ef73d2e7c5
-#: ../../source/ikfast/index.rst:11
+#: ../../source/ikfast/index.rst:9
 msgid ""
 "Inverse kinematics statistics using :ref:`ikfast_compiler`. All possible "
 "permutations of the :ref:`supported inverse kinematics types <ikfast_types>` "
@@ -3615,68 +3615,68 @@ msgid ""
 msgstr ""
 
 # 7e6ae1a926ef4def8bf13480aa126768
-#: ../../source/ikfast/index.rst:16
+#: ../../source/ikfast/index.rst:14
 msgid "IKFast Performance Testing"
 msgstr ""
 
 # a49c48377a704ce5a8479a1b5e6344e1
-#: ../../source/ikfast/index.rst:18
+#: ../../source/ikfast/index.rst:16
 msgid "There are four different ways of calling the IK solver:"
 msgstr ""
 
 # 4778da56e63b48688425fd543a41561b
-#: ../../source/ikfast/index.rst:20
+#: ../../source/ikfast/index.rst:18
 msgid ""
 "GetSolution(*goal*) - call with just the end effector parameterization, "
 "return the first solution found within limits."
 msgstr ""
 
 # dd008cfe55454749b7fcb3b240fbd938
-#: ../../source/ikfast/index.rst:21
+#: ../../source/ikfast/index.rst:19
 msgid ""
 "GetSolution(*goal*,*free*) - call with end effector parameterization and "
 "specify all free joint values, return the first solution found within limits."
 msgstr ""
 
 # 6c8e977e05c04fc883eb0b31115bbd65
-#: ../../source/ikfast/index.rst:22
+#: ../../source/ikfast/index.rst:20
 msgid ""
 "GetSolutions(*goal*) - call with just the end effector parameterization, "
 "return all solutions searching through all free joint values."
 msgstr ""
 
 # bc4e993437e14b7987e0a1c48300b3ce
-#: ../../source/ikfast/index.rst:23
+#: ../../source/ikfast/index.rst:21
 msgid ""
 "GetSolutions(*goal*,*free*) - call with end effector parameterization and "
 "specify all free joint values, return all possible solutions."
 msgstr ""
 
 # 3b51ff485adf427fae58ef9cefd0f83a
-#: ../../source/ikfast/index.rst:25
+#: ../../source/ikfast/index.rst:23
 msgid "The following algorithm tests these four calls by:"
 msgstr ""
 
 # df22714711744ebb9dfae1980671d8a8
-#: ../../source/ikfast/index.rst:27
+#: ../../source/ikfast/index.rst:25
 msgid ""
 "Randomly sample a robot configuration and compute the correct "
 "parameterization of the end effector *goal* and free joint values *free*."
 msgstr ""
 
 # 52c59e6130e244dbb148f0f268999113
-#: ../../source/ikfast/index.rst:28
+#: ../../source/ikfast/index.rst:26
 msgid "Move the robot to a random position."
 msgstr ""
 
 # eab1deef382745a297f80590227d430d
-#: ../../source/ikfast/index.rst:29
+#: ../../source/ikfast/index.rst:27
 msgid ""
 "Call GetSolution(*goal*), GetSolutions(*goal*), GetSolutions(*goal*,*free*)"
 msgstr ""
 
 # 7624af27448d440e9924adea4648d65b
-#: ../../source/ikfast/index.rst:30
+#: ../../source/ikfast/index.rst:28
 msgid ""
 "Call GetSolution(*goal*,*free_random*) and GetSolutions(*goal*,"
 "*free_random*). Check that the returned solutions have same values as free "
@@ -3684,7 +3684,7 @@ msgid ""
 msgstr ""
 
 # 4e8c32fc70c54de98dbfe7febd6e242f
-#: ../../source/ikfast/index.rst:32
+#: ../../source/ikfast/index.rst:30
 msgid ""
 "For every end effector parameterization and a returned solution, set the "
 "returned solution on the robot and compute the error between the original "
@@ -3697,49 +3697,49 @@ msgid ""
 msgstr ""
 
 # c7490d1f2e8246c1b8e12a4f8a74fe56
-#: ../../source/ikfast/index.rst:34
+#: ../../source/ikfast/index.rst:32
 msgid ""
 "The number of tests is determined by the number of free parameters: 0 free - "
 "10000 tests, 1 free - 7000 tests, 2 free - 200 tests"
 msgstr ""
 
 # 9efa0c3f52cd43c7852b04b60b4b2ade
-#: ../../source/ikfast/index.rst:36
+#: ../../source/ikfast/index.rst:34
 msgid ""
 "Four values are extracted to measure the performance of a generated IK "
 "solver:"
 msgstr ""
 
 # 3d86e7c4a0374e829f64787a7353ea26
-#: ../../source/ikfast/index.rst:38
+#: ../../source/ikfast/index.rst:36
 msgid ""
 "wrong rate - number of parameterizations where at least one wrong solution "
 "was returned."
 msgstr ""
 
 # d92e5cac83ce4e2eb1526f24aed637b6
-#: ../../source/ikfast/index.rst:39
+#: ../../source/ikfast/index.rst:37
 msgid ""
 "success rate - number of parameterizations where all returned solutions are "
 "correct"
 msgstr ""
 
 # 5cf57d2759514aca96892c0c8ee49e09
-#: ../../source/ikfast/index.rst:40
+#: ../../source/ikfast/index.rst:38
 msgid ""
 "no solution rate - number of parameterizations where no solutions were found "
 "within limits"
 msgstr ""
 
 # 05684301e8dd4090bcce0f68d4278cfc
-#: ../../source/ikfast/index.rst:41
+#: ../../source/ikfast/index.rst:39
 msgid ""
 "missing solution rate - number of parameterizations where the specific "
 "sampled solution was not returned, but at least one solution was found."
 msgstr ""
 
 # bdddd4c0cf9345689218413b77863455
-#: ../../source/ikfast/index.rst:43
+#: ../../source/ikfast/index.rst:41
 msgid ""
 "An IK is **successful** if the wrong rate is 0, success rate is > 0.400000, "
 "and the no solution rate is < 0.600000. The raw function call run-time is "
@@ -3747,7 +3747,7 @@ msgid ""
 msgstr ""
 
 # d094a65ee014406fa1133d1baf9f6507
-#: ../../source/ikfast/index.rst:46
+#: ../../source/ikfast/index.rst:44
 msgid ""
 "Degenerate configurations can frequently occur when the robot axes align, "
 "this produces a lot of divide by zero conditions inside the IK. In order to "
@@ -3756,7 +3756,7 @@ msgid ""
 msgstr ""
 
 # 749123caeb7a46868b2bd77269e35a26
-#: ../../source/ikfast/index.rst:48
+#: ../../source/ikfast/index.rst:46
 msgid ""
 "The discretization of the free joint values depends on the robot manipulator "
 "and is given in each individual manipulator page."
