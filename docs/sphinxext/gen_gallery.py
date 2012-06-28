@@ -32,9 +32,9 @@ class GalleryDirective(Directive):
     def run(self):
         gallerytype = self.arguments[0]
         includedocstring = True
-        maxwidth = self.options.get('image-width',630 if gallerytype == 'database' else 200)
+        maxwidth = self.options.get('image-width',630 if gallerytype == 'databases' else 200)
         maxheight = self.options.get('image-height',150)
-        maxcolumns = self.options.get('columns',1 if gallerytype == 'database' else 3)
+        maxcolumns = self.options.get('columns',1 if gallerytype == 'databases' else 3)
 
         #self.state.document.settings.env.images
         #builder=self.state.document.settings.env.app.builder
