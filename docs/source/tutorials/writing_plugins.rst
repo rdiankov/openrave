@@ -38,7 +38,13 @@ By default, the new plugin/executable is stored in the **build** folder. The fol
 
 For more details, please see
 
-`Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins.html>`_
+.. only:: nonjson
+
+  `Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins.html>`_
+
+.. only:: json
+
+  `Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins.html>`_
 
 Programs
 --------

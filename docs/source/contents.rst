@@ -1,7 +1,7 @@
 Contents
 ========
 
-.. htmlonly::
+.. only:: html
    
    :Release: |version|
    :Date: |today|

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 18:10\n"
+"POT-Creation-Date: 2012-06-28 19:36\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -22,13 +22,13 @@ msgid "Getting Started Tutorials"
 msgstr ""
 
 # 70a90893b7dc4f0db18b0dd76d2c8818
-#: ../../source/getting_started.rst:16
+#: ../../source/getting_started.rst:17
 msgid ""
 "`Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_"
 msgstr ""
 
 # 50aa7b73e14745e8840dcfabdb4ed20d
-#: ../../source/getting_started.rst:17
+#: ../../source/getting_started.rst:18
 msgid ""
 "`Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/"
 "OctaveMATLAB>`_ Scripting"

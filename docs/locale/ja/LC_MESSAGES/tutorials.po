@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-23 13:22\n"
+"POT-Creation-Date: 2012-06-28 19:36\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -995,19 +995,19 @@ msgid "For more details, please see"
 msgstr ""
 
 # 021c866982784656a25f56879587353c
-#: ../../source/tutorials/writing_plugins.rst:41
+#: ../../source/tutorials/writing_plugins.rst:43
 msgid ""
 "`Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins."
 "html>`_"
 msgstr ""
 
 # ca424d5d096f427daeb412b761a0786c
-#: ../../source/tutorials/writing_plugins.rst:44
+#: ../../source/tutorials/writing_plugins.rst:50
 msgid "Programs"
 msgstr ""
 
 # 2dbbe891dce24b3aa930db928b122314
-#: ../../source/tutorials/writing_plugins.rst:46
+#: ../../source/tutorials/writing_plugins.rst:52
 msgid ""
 "It is also possible to create and use OpenRAVE inside a program by linking "
 "with the **openrave-core** library. The simplest way to create an example "
@@ -1015,7 +1015,7 @@ msgid ""
 msgstr ""
 
 # ae4f665f08f444c2b25617d909f044a5
-#: ../../source/tutorials/writing_plugins.rst:53
+#: ../../source/tutorials/writing_plugins.rst:59
 msgid ""
 "This will create a simple program that creates the OpenRAVE Environment and "
 "Loads a scene. The environment is created without attaching any viewer."

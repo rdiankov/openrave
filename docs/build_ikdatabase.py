@@ -284,9 +284,7 @@ Robots
 IKFast Robot Database
 =====================
 
-.. htmlonly::
-
-   :Release: **%s**
+  :Release: **%s**
 
 Inverse kinematics statistics using :ref:`ikfast_compiler`. All possible permutations of the :ref:`supported inverse kinematics types <ikfast_types>` and the robot manipulators are tested.
 

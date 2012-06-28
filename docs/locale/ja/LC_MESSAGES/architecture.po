@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 18:10\n"
+"POT-Creation-Date: 2012-06-28 19:36\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -22,7 +22,7 @@ msgid "OpenRAVE Architecture"
 msgstr ""
 
 # 668fef5d06ab438381b61113026627b0
-#: ../../source/architecture/index.rst:6
+#: ../../source/architecture/index.rst:8
 msgid "`C++ Architecture < ../../coreapihtml/architecture_concepts.html>`_"
 msgstr ""
 
@@ -32,7 +32,7 @@ msgid "Interface Concepts"
 msgstr ""
 
 # 3118313cee6a463ba77f7c0fbd00f5ca
-#: ../../source/architecture/interface_concepts.rst:6
+#: ../../source/architecture/interface_concepts.rst:8
 msgid "`C++ Interface Concepts <../../coreapihtml/interface_concepts.html>`_"
 msgstr ""
 
