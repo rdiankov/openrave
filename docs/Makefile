@@ -82,10 +82,10 @@ ikfast_installed: source/ikfast/index.rst ;
 # create/update internationalization files
 # have to set LANG to en, or otherwise the automodule stuff might not return english translations
 # set OPENRAVE_INTERNAL_COMMENTS=0 in order to avoid the doxygen translated comments from popping up in the translations
-build/locale/index.pot: openravepy_changed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py
+build/locale/index.pot: openravepy_changed source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py source/openravepy/openravepy.rst
 	rm -f build_locale_installed
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	OPENRAVE_INTERNAL_COMMENTS=0 LANG=en_US.UTF-8 sphinx-build -t gettext -D language=en -b gettext -c . source build/locale
+	OPENRAVE_INTERNAL_COMMENTS=0 LANG=en_US.UTF-8 PYTHONPATH=`pwd`:$(PYTHONPATH) sphinx-build -t gettext -D language=en -b gettext -c . source build/locale
 	#rm -f openravepy
 	touch build_locale_installed
 
@@ -113,10 +113,10 @@ locale_dirs = ['locale']" > tempconf_$*.py
 	msgfmt locale/$*/LC_MESSAGES/openravesphinx.po -o locale/$*/LC_MESSAGES/openravesphinx.mo
 	rm -rf build/$*/sphinxhtml/.doctrees build/$*/sphinxjson/.doctrees
 
-build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/*.mo locale/%/LC_MESSAGES/*.po
+build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/*.mo locale/%/LC_MESSAGES/*.po source/openravepy/openravepy.rst
 	rm -f sphinxjson_installed_$* build/$*/sphinxjson/index.fjson
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$* -t jsontag -b json -c . source build/$*/sphinxjson
+	PYTHONPATH=`pwd`:$(PYTHONPATH) sphinx-build -D language=$* -t jsontag -b json -c . source build/$*/sphinxjson
 	#rm -f openravepy
 	# store the symlinks for later zip compression
 	mkdir -p build/openravejson-$(openrave_version)/$*
@@ -126,10 +126,10 @@ build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjs
 
 sphinxjson_installed_%: build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson ;
 
-build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/openravesphinx.mo
+build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py locale/%/LC_MESSAGES/openravesphinx.mo source/openravepy/openravepy.rst
 	rm -f sphinxhtml_installed_$* build/$*/sphinxhtml/index.html
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
-	sphinx-build -D language=$* -t htmltag -b html -c . source build/$*/sphinxhtml
+	PYTHONPATH=`pwd`:$(PYTHONPATH) sphinx-build -D language=$* -t htmltag -b html -c . source build/$*/sphinxhtml
 	#rm -f openravepy
 	mkdir -p build/openravehtml-$(openrave_version)/$*
 	rm -f build/openravehtml-$(openrave_version)/$*/sphinxhtml

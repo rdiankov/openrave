@@ -14,7 +14,9 @@ Contents
    install
    getting_started
    plugin_interfaces
-   robots
+   ikfast/robots
+   databases
+   examples
    devel/index
    openravepy/openravepy
    changelog

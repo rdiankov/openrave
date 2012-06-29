@@ -15,11 +15,17 @@ Install
 
 .. code-block:: bash
 
-  apt-get install postgresql postgresql-client libpq-dev memcached python-dev
+  apt-get install postgresql postgresql-client libpq-dev memcached python-dev gettext
   pip install -r deploy-requirements.txt
 
 If you only need to deploy, and don't need to test any changes, you can use local-requirements.txt
 
+Dependencies for Apache Webserver Deployment:
+
+.. code-block:: bash
+
+  apt-get install libapache2-mod-wsgi
+  a2enmod wsgi
 
 3. Set up databases, as per django_website/settings/www.py
 
@@ -53,7 +59,13 @@ Re-index the documents::
   ./manage.py update_docs
 
 
-8. Finally::
+8. Internationalization. For Japanese, edit **locale/ja_JP/LC_MESSAGES/django.po** file
+
+  django-admin.py makemessages --locale=ja_JP
+  django-admin.py compilemessages --locale=ja_JP
+
+
+9. Finally::
 
     python manage.py runserver
 

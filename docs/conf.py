@@ -98,7 +98,8 @@ modindex_common_prefix = ['openravepy.','openravepy.databases.','openravepy.exam
 # japanese tutorial: http://d.hatena.ne.jp/tk0miya/20111203
 needs_sphinx='1.1'
 
-#autodoc_default_flags = ['members','show-inheritance']
+autodoc_default_flags = ['members','show-inheritance','undoc-members']
+autoclass_content = 'both'
 
 # -- Options for HTML output ---------------------------------------------------
 

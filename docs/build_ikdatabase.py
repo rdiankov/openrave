@@ -283,7 +283,7 @@ Robots
 
 """%(outputdir,buildoptions.jenkinsbuild_url, robotxml)
     for robotname in robotnames:
-        text += '  %s/%s\n'%(outputdir,robotname)
+        text += '  %s\n'%(robotname)
     open(os.path.join(outputdir,'robots.rst'),'w').write(text)
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(buildoptions.numiktests))
     text="""
