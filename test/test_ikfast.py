@@ -209,7 +209,7 @@ def parseoptions(args=None):
                       help='Number of tests for testing the generated IK for correctness. Because test times increase exponentially with number of free joints, the iktests is an array of values indexec by the number of free joints. (default=%default)')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
                       help='Debug level for python nose (smaller values allow more text).')
-    parser.add_option('--maxfreejoints',action='store',type='int',dest='maxfreejoints',default=2,
+    parser.add_option('--maxfreejoints',action='store',type='int',dest='maxfreejoints',default=1,
                       help='max free joints to allow, 3 or more will take too long to evaluate, and most likely will never be used in real life (default=%default)')
     parser.add_option('--iktypes',action='store',type='string',dest='iktypes',default='Transform6D',
                       help='IK types to test for. Can be a comma separated list of the specific names or * for all (default=%default)')

@@ -1,16 +1,5 @@
-.. ifconfig:: language=='ja'
-
-  .. only:: html
-  
-    :バージョン: |version| (|release|)
-    :更新日: |today|
-
-.. ifconfig:: language!='ja'
-
-  .. only:: html
-  
-    :Version: |version| (|release|)
-    :Created: |today|
+  :Version: |version| (|release|)
+  :Created: |today|
 
 Welcome to Open Robotics Automation Virtual Environment
 =======================================================
