@@ -43,8 +43,9 @@ class RunTutorialExample(object):
 
 # test all scripts in source/tutorials/openravepy_examples/*.py
 def test_tutorialexamples():
+    ignore_examples = ['saving_viewer_image', 'recording_videos']
     examplesdir=os.path.join('..','docs','source','tutorials','openravepy_examples')
     for name in os.listdir(examplesdir):
         basename,ext = os.path.splitext(name)
-        if ext.lower() == '.py':
-            yield RunTutorialExample(), os.path.join(examplesdir,basename)
+        if not basename in ignore_examples and ext.lower() == '.py':
+                yield RunTutorialExample(), os.path.join(examplesdir,basename)

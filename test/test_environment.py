@@ -101,7 +101,7 @@ class TestEnvironment(EnvironmentSetup):
                 assert(len(robot0.GetJoints())==len(robot1.GetJoints()))
                 assert(len(robot0.GetPassiveJoints()) == len(robot1.GetPassiveJoints()))
                 assert(robot0.GetDOF()==robot1.GetDOF())
-                assert(robot1.GetDescription()=robot0.GetDescription())
+                assert(robot1.GetDescription()==robot0.GetDescription())
                 robot1.SetDOFValues(robot0.GetDOFValues()) # in case
                 joints0 = robot0.GetJoints()+robot0.GetPassiveJoints()
                 joints1 = robot1.GetJoints()+robot1.GetPassiveJoints()
