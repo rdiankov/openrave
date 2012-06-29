@@ -28,6 +28,11 @@ if( ASSIMP_FOUND )
   endif()
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${ASSIMP_LINK_FLAGS} ${ASSIMP_LDFLAGS_OTHER}")
   message(STATUS "Geometry Parsing: Using Open Asset Import Library ${ASSIMP_VERSION}")
+  
+  if( ZLIB_FOUND )
+    set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_HAS_ZLIB")
+    set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${ZLIB_LIBRARIES})
+  endif()
   set(openrave_core_SOURCES ${openrave_core_SOURCES}  xfileparser/XFileParser.cpp xfileparser/XFileBindings.cpp)
 endif()
 
