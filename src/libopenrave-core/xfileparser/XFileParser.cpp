@@ -57,6 +57,10 @@
 #include <boost/static_assert.hpp>
 #include <boost/lexical_cast.hpp>
 
+#if defined(OPENRAVE_IS_ASSIMP3)
+#include <assimp/LogStream.hpp>
+#include <assimp/DefaultLogger.hpp>
+#else
 #include "DefaultLogger.h"
 //#include "IOStream.h"
 //#include "IOSystem.h"
@@ -64,6 +68,7 @@
 #include "aiPostProcess.h"
 #include "assimp.hpp"
 //#include "../include/export.hpp"
+#endif
 
 #define DeadlyImportError openrave_exception
 
@@ -77,15 +82,8 @@
 using namespace Assimp;
 using namespace Assimp::XFile;
 
-#ifndef ASSIMP_BUILD_NO_COMPRESSED_X
-
-//#   ifdef ASSIMP_BUILD_NO_OWN_ZLIB
-//#       include <zlib.h>
-//#   else
-//#       include "../contrib/zlib/zlib.h"
-//#   endif
-
-#include <zip.h> // compressed files
+#ifdef OPENRAVE_HAS_ZLIB
+#include <zlib.h> // compressed files
 
 // Magic identifier for MSZIP compressed data
 #define MSZIP_MAGIC 0x4B43
@@ -105,7 +103,7 @@ static void  dummy_free  (void* /*opaque*/, void* address)  {
 
 // ------------------------------------------------------------------------------------------------
 // Constructor. Creates a data structure out of the XFile given in the memory block.
-XFileParser::XFileParser( const std::string& pBuffer)
+XFileParserOpenRAVE::XFileParserOpenRAVE( const std::string& pBuffer)
 {
     mMajorVersion = mMinorVersion = 0;
     mIsBinaryFormat = false;
@@ -169,7 +167,7 @@ XFileParser::XFileParser( const std::string& pBuffer)
     // If this is a compressed X file, apply the inflate algorithm to it
     if (compressed)
     {
-#ifdef ASSIMP_BUILD_NO_COMPRESSED_X
+#ifndef OPENRAVE_HAS_ZLIB
         throw DeadlyImportError("Assimp was built without compressed X support");
 #else
         /* ///////////////////////////////////////////////////////////////////////
@@ -287,14 +285,14 @@ XFileParser::XFileParser( const std::string& pBuffer)
 
 // ------------------------------------------------------------------------------------------------
 // Destructor. Destroys all imported data along with it
-XFileParser::~XFileParser()
+XFileParserOpenRAVE::~XFileParserOpenRAVE()
 {
     // kill everything we created
     delete mScene;
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseFile()
+void XFileParserOpenRAVE::ParseFile()
 {
     bool running = true;
     while( running )
@@ -345,7 +343,7 @@ void XFileParser::ParseFile()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectTemplate()
+void XFileParserOpenRAVE::ParseDataObjectTemplate()
 {
     // parse a template data object. Currently not stored.
     std::string name;
@@ -369,7 +367,7 @@ void XFileParser::ParseDataObjectTemplate()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectFrame( Node* pParent)
+void XFileParserOpenRAVE::ParseDataObjectFrame( Node* pParent)
 {
     // A coordinate frame, or "frame of reference." The Frame template
     // is open and can contain any object. The Direct3D extensions (D3DX)
@@ -419,10 +417,10 @@ void XFileParser::ParseDataObjectFrame( Node* pParent)
             ThrowException( "Unexpected end of file reached while parsing frame");
 
         if( objectName == "}")
-            break;                                                                                                                                                                  // frame finished
+            break;                                                                                                                                                                                                                                                                                                                                                      // frame finished
         else
         if( objectName == "Frame")
-            ParseDataObjectFrame( node);                                                                                                                                                                                                                                                                                                                                                  // child frame
+            ParseDataObjectFrame( node);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // child frame
         else
         if( objectName == "FrameTransformMatrix")
             ParseDataObjectTransformationMatrix( node->mTrafoMatrix);
@@ -446,7 +444,7 @@ void XFileParser::ParseDataObjectFrame( Node* pParent)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectTransformationMatrix( aiMatrix4x4& pMatrix)
+void XFileParserOpenRAVE::ParseDataObjectTransformationMatrix( aiMatrix4x4& pMatrix)
 {
     // read header, we're not interested if it has a name
     readHeadOfDataObject();
@@ -466,7 +464,7 @@ void XFileParser::ParseDataObjectTransformationMatrix( aiMatrix4x4& pMatrix)
     CheckForClosingBrace();
 }
 
-void XFileParser::ParseDataObjectFramePivot(XFile::FramePivot* pivot)
+void XFileParserOpenRAVE::ParseDataObjectFramePivot(XFile::FramePivot* pivot)
 {
     readHeadOfDataObject(&pivot->mName);
     pivot->mType = ReadInt();
@@ -487,7 +485,7 @@ void XFileParser::ParseDataObjectFramePivot(XFile::FramePivot* pivot)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
+void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
 {
     std::string name;
     readHeadOfDataObject( &name);
@@ -526,7 +524,7 @@ void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
             ThrowException( "Unexpected end of file while parsing mesh structure");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                              // mesh finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // mesh finished
         else
         if( objectName == "MeshNormals")
             ParseDataObjectMeshNormals( pMesh);
@@ -541,7 +539,7 @@ void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
             ParseDataObjectMeshMaterialList( pMesh);
         else
         if( objectName == "VertexDuplicationIndices")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                               // we'll ignore vertex duplication indices
+            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // we'll ignore vertex duplication indices
         else
         if( objectName == "XSkinMeshHeader")
             ParseDataObjectSkinMeshHeader( pMesh);
@@ -557,7 +555,7 @@ void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectSkinWeights( Mesh *pMesh)
+void XFileParserOpenRAVE::ParseDataObjectSkinWeights( Mesh *pMesh)
 {
     readHeadOfDataObject();
 
@@ -598,7 +596,7 @@ void XFileParser::ParseDataObjectSkinWeights( Mesh *pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectSkinMeshHeader( Mesh* /*pMesh*/ )
+void XFileParserOpenRAVE::ParseDataObjectSkinMeshHeader( Mesh* /*pMesh*/ )
 {
     readHeadOfDataObject();
 
@@ -610,7 +608,7 @@ void XFileParser::ParseDataObjectSkinMeshHeader( Mesh* /*pMesh*/ )
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMeshNormals( Mesh* pMesh)
+void XFileParserOpenRAVE::ParseDataObjectMeshNormals( Mesh* pMesh)
 {
     readHeadOfDataObject();
 
@@ -643,7 +641,7 @@ void XFileParser::ParseDataObjectMeshNormals( Mesh* pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMeshTextureCoords( Mesh* pMesh)
+void XFileParserOpenRAVE::ParseDataObjectMeshTextureCoords( Mesh* pMesh)
 {
     readHeadOfDataObject();
     if( pMesh->mNumTextures + 1 > AI_MAX_NUMBER_OF_TEXTURECOORDS)
@@ -663,7 +661,7 @@ void XFileParser::ParseDataObjectMeshTextureCoords( Mesh* pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMeshVertexColors( Mesh* pMesh)
+void XFileParserOpenRAVE::ParseDataObjectMeshVertexColors( Mesh* pMesh)
 {
     readHeadOfDataObject();
     if( pMesh->mNumColorSets + 1 > AI_MAX_NUMBER_OF_COLOR_SETS)
@@ -696,7 +694,7 @@ void XFileParser::ParseDataObjectMeshVertexColors( Mesh* pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMeshMaterialList( Mesh* pMesh)
+void XFileParserOpenRAVE::ParseDataObjectMeshMaterialList( Mesh* pMesh)
 {
     readHeadOfDataObject();
 
@@ -735,7 +733,7 @@ void XFileParser::ParseDataObjectMeshMaterialList( Mesh* pMesh)
             ThrowException( "Unexpected end of file while parsing mesh material list.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                              // material list finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material list finished
         else
         if( objectName == "{")
         {
@@ -765,7 +763,7 @@ void XFileParser::ParseDataObjectMeshMaterialList( Mesh* pMesh)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectMaterial( Material* pMaterial)
+void XFileParserOpenRAVE::ParseDataObjectMaterial( Material* pMaterial)
 {
     std::string matName;
     readHeadOfDataObject( &matName);
@@ -789,7 +787,7 @@ void XFileParser::ParseDataObjectMaterial( Material* pMaterial)
             ThrowException( "Unexpected end of file while parsing mesh material");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                              // material finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material finished
         else
         if( objectName == "TextureFilename" || objectName == "TextureFileName")
         {
@@ -813,7 +811,7 @@ void XFileParser::ParseDataObjectMaterial( Material* pMaterial)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectAnimTicksPerSecond()
+void XFileParserOpenRAVE::ParseDataObjectAnimTicksPerSecond()
 {
     readHeadOfDataObject();
     mScene->mAnimTicksPerSecond = ReadInt();
@@ -821,7 +819,7 @@ void XFileParser::ParseDataObjectAnimTicksPerSecond()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectAnimationSet()
+void XFileParserOpenRAVE::ParseDataObjectAnimationSet()
 {
     std::string animName;
     readHeadOfDataObject( &animName);
@@ -838,7 +836,7 @@ void XFileParser::ParseDataObjectAnimationSet()
             ThrowException( "Unexpected end of file while parsing animation set.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                              // animation set finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation set finished
         else
         if( objectName == "Animation")
             ParseDataObjectAnimation( anim);
@@ -851,7 +849,7 @@ void XFileParser::ParseDataObjectAnimationSet()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectAnimation( Animation* pAnim)
+void XFileParserOpenRAVE::ParseDataObjectAnimation( Animation* pAnim)
 {
     readHeadOfDataObject();
     AnimBone* banim = new AnimBone;
@@ -866,13 +864,13 @@ void XFileParser::ParseDataObjectAnimation( Animation* pAnim)
             ThrowException( "Unexpected end of file while parsing animation.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                              // animation finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation finished
         else
         if( objectName == "AnimationKey")
             ParseDataObjectAnimationKey( banim);
         else
         if( objectName == "AnimationOptions")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                        // not interested
+            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // not interested
         else
         if( objectName == "{")
         {
@@ -888,7 +886,7 @@ void XFileParser::ParseDataObjectAnimation( Animation* pAnim)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
+void XFileParserOpenRAVE::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
 {
     readHeadOfDataObject();
 
@@ -980,7 +978,7 @@ void XFileParser::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectTextureFilename( std::string& pName)
+void XFileParserOpenRAVE::ParseDataObjectTextureFilename( std::string& pName)
 {
     readHeadOfDataObject();
     GetNextTokenAsString( pName);
@@ -998,7 +996,7 @@ void XFileParser::ParseDataObjectTextureFilename( std::string& pName)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseUnknownDataObject()
+void XFileParserOpenRAVE::ParseUnknownDataObject()
 {
     // find opening delimiter
     bool running = true;
@@ -1032,7 +1030,7 @@ void XFileParser::ParseUnknownDataObject()
 
 // ------------------------------------------------------------------------------------------------
 //! checks for closing curly brace
-void XFileParser::CheckForClosingBrace()
+void XFileParserOpenRAVE::CheckForClosingBrace()
 {
     if( GetNextToken() != "}")
         ThrowException( "Closing brace expected.");
@@ -1040,7 +1038,7 @@ void XFileParser::CheckForClosingBrace()
 
 // ------------------------------------------------------------------------------------------------
 //! checks for one following semicolon
-void XFileParser::CheckForSemicolon()
+void XFileParserOpenRAVE::CheckForSemicolon()
 {
     if( mIsBinaryFormat)
         return;
@@ -1051,7 +1049,7 @@ void XFileParser::CheckForSemicolon()
 
 // ------------------------------------------------------------------------------------------------
 //! checks for a separator char, either a ',' or a ';'
-void XFileParser::CheckForSeparator()
+void XFileParserOpenRAVE::CheckForSeparator()
 {
     if( mIsBinaryFormat)
         return;
@@ -1063,7 +1061,7 @@ void XFileParser::CheckForSeparator()
 
 // ------------------------------------------------------------------------------------------------
 // tests and possibly consumes a separator char, but does nothing if there was no separator
-void XFileParser::TestForSeparator()
+void XFileParserOpenRAVE::TestForSeparator()
 {
     if( mIsBinaryFormat)
         return;
@@ -1078,7 +1076,7 @@ void XFileParser::TestForSeparator()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::readHeadOfDataObject( std::string* poName)
+void XFileParserOpenRAVE::readHeadOfDataObject( std::string* poName)
 {
     std::string nameOrBrace = GetNextToken();
     if( nameOrBrace != "{")
@@ -1092,7 +1090,7 @@ void XFileParser::readHeadOfDataObject( std::string* poName)
 }
 
 // ------------------------------------------------------------------------------------------------
-std::string XFileParser::GetNextToken()
+std::string XFileParserOpenRAVE::GetNextToken()
 {
     std::string s;
 
@@ -1218,7 +1216,7 @@ std::string XFileParser::GetNextToken()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::FindNextNoneWhiteSpace()
+void XFileParserOpenRAVE::FindNextNoneWhiteSpace()
 {
     if( mIsBinaryFormat)
         return;
@@ -1245,7 +1243,7 @@ void XFileParser::FindNextNoneWhiteSpace()
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::GetNextTokenAsString( std::string& poString)
+void XFileParserOpenRAVE::GetNextTokenAsString( std::string& poString)
 {
     if( mIsBinaryFormat)
     {
@@ -1273,7 +1271,7 @@ void XFileParser::GetNextTokenAsString( std::string& poString)
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ReadUntilEndOfLine()
+void XFileParserOpenRAVE::ReadUntilEndOfLine()
 {
     if( mIsBinaryFormat)
         return;
@@ -1291,7 +1289,7 @@ void XFileParser::ReadUntilEndOfLine()
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned short XFileParser::ReadBinWord()
+unsigned short XFileParserOpenRAVE::ReadBinWord()
 {
     assert(End - P >= 2);
     const unsigned char* q = (const unsigned char*) P;
@@ -1301,7 +1299,7 @@ unsigned short XFileParser::ReadBinWord()
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned int XFileParser::ReadBinDWord()
+unsigned int XFileParserOpenRAVE::ReadBinDWord()
 {
     assert(End - P >= 4);
     const unsigned char* q = (const unsigned char*) P;
@@ -1311,7 +1309,7 @@ unsigned int XFileParser::ReadBinDWord()
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned int XFileParser::ReadInt()
+unsigned int XFileParserOpenRAVE::ReadInt()
 {
     if( mIsBinaryFormat)
     {
@@ -1365,7 +1363,7 @@ unsigned int XFileParser::ReadInt()
 }
 
 // ------------------------------------------------------------------------------------------------
-float XFileParser::ReadFloat()
+float XFileParserOpenRAVE::ReadFloat()
 {
     if( mIsBinaryFormat)
     {
@@ -1429,7 +1427,7 @@ float XFileParser::ReadFloat()
 }
 
 // ------------------------------------------------------------------------------------------------
-aiVector2D XFileParser::ReadVector2()
+aiVector2D XFileParserOpenRAVE::ReadVector2()
 {
     aiVector2D vector;
     vector.x = ReadFloat();
@@ -1440,7 +1438,7 @@ aiVector2D XFileParser::ReadVector2()
 }
 
 // ------------------------------------------------------------------------------------------------
-aiVector3D XFileParser::ReadVector3()
+aiVector3D XFileParserOpenRAVE::ReadVector3()
 {
     aiVector3D vector;
     vector.x = ReadFloat();
@@ -1452,7 +1450,7 @@ aiVector3D XFileParser::ReadVector3()
 }
 
 // ------------------------------------------------------------------------------------------------
-aiColor4D XFileParser::ReadRGBA()
+aiColor4D XFileParserOpenRAVE::ReadRGBA()
 {
     aiColor4D color;
     color.r = ReadFloat();
@@ -1465,7 +1463,7 @@ aiColor4D XFileParser::ReadRGBA()
 }
 
 // ------------------------------------------------------------------------------------------------
-aiColor3D XFileParser::ReadRGB()
+aiColor3D XFileParserOpenRAVE::ReadRGB()
 {
     aiColor3D color;
     color.r = ReadFloat();
@@ -1478,7 +1476,7 @@ aiColor3D XFileParser::ReadRGB()
 
 // ------------------------------------------------------------------------------------------------
 // Throws an exception with a line number and the given text.
-void XFileParser::ThrowException( const std::string& pText)
+void XFileParserOpenRAVE::ThrowException( const std::string& pText)
 {
     if( mIsBinaryFormat)
         throw DeadlyImportError( pText);
@@ -1489,7 +1487,7 @@ void XFileParser::ThrowException( const std::string& pText)
 
 // ------------------------------------------------------------------------------------------------
 // Filters the imported hierarchy for some degenerated cases that some exporters produce.
-void XFileParser::FilterHierarchy( XFile::Node* pNode)
+void XFileParserOpenRAVE::FilterHierarchy( XFile::Node* pNode)
 {
     // if the node has just a single unnamed child containing a mesh, remove
     // the anonymous node inbetween. The 3DSMax kwXport plugin seems to produce this

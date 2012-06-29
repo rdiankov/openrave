@@ -147,7 +147,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
         _bOpeningZAE = filename.find(".zae") == filename.size()-4;
-        _dom = _dae->open(filename);
+        _dom = (domCOLLADA*)_dae->open(filename);
         _bOpeningZAE = false;
         if (!_dom) {
             return false;
@@ -160,7 +160,7 @@ public:
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
-        _dom = _dae->openFromMemory(".",pdata.c_str());
+        _dom = (domCOLLADA*)_dae->openFromMemory(".",pdata.c_str());
         if (!_dom) {
             return false;
         }

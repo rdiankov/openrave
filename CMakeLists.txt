@@ -5,7 +5,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
 set (OPENRAVE_VERSION_MINOR 6)
-set (OPENRAVE_VERSION_PATCH 4)
+set (OPENRAVE_VERSION_PATCH 6)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -442,7 +442,29 @@ else()
   set(CRLIBM_FOUND 0)
 endif()
 
-pkg_check_modules(ASSIMP assimp)
+find_package(ASSIMP)
+if( NOT ASSIMP_FOUND )
+  pkg_check_modules(ASSIMP assimp)
+endif()
+
+if( ASSIMP_FOUND )
+  # For older versions of libassimp2, 
+  # like the one in Ubuntu 12.04 
+  set(CMAKE_REQUIRED_LIBRARIES assimp) 
+  check_cxx_source_compiles(" 
+  #include <assimp/Logger.h> 
+  int main() 
+  { 
+      Assimp::Logger::WARN; 
+      return 0; 
+  }" 
+  IS_ASSIMP_PRE_R896 
+  )
+  set(CMAKE_REQUIRED_LIBRARIES)
+  if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
+    set(IS_ASSIMP3 1)
+  endif()
+endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   check_cxx_source_runs("

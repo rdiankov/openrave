@@ -10,6 +10,22 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Version 0.6.6
+=============
+
+Subversion Revision: r3397
+
+Initial Release: 2012/06/29
+
+Misc
+----
+
+- Assimp 3 compatibility
+
+- Collada 2.4 compatibility
+
+- fparser 4.5 compatibility
+
 Version 0.6.4
 =============
 

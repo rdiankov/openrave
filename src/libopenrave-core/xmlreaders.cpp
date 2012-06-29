@@ -41,7 +41,13 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
-#ifdef OPENRAVE_ASSIMP
+#if defined(OPENRAVE_IS_ASSIMP3)
+#include <assimp/scene.h>
+#include <assimp/LogStream.hpp>
+#include <assimp/DefaultLogger.hpp>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#elif defined(OPENRAVE_ASSIMP)
 #include <assimp.hpp>
 #include <aiScene.h>
 #include <aiPostProcess.h>

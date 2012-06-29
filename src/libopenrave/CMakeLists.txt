@@ -22,7 +22,7 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBR
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
-                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
+                                  COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL -DFP_DISABLE_EVAL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
 target_link_libraries(libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
 if( MSVC )
@@ -50,7 +50,7 @@ if( OPT_STATIC )
                                            SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                            VERSION ${OPENRAVE_VERSION}
                                            CLEAN_DIRECT_OUTPUT 1
-                                           COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS}"
+                                           COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DFP_DISABLE_EVAL"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
   
   target_link_libraries(libopenrave_static ${openrave_libraries} ${FPARSER_LIBRARIES})
