@@ -63,7 +63,7 @@ openravepy_internal_doc: openravepy_changed
 	python build_openravepy_internal.py --languagecode en --languagecode ja
 	touch openravepy_internal_doc
 
-source/interface_types.rst source/interface_types: openrave_plugins_changed
+source/interface_types.rst source/interface_types: openrave_plugins_changed build_interfaces.py
 	python build_interfaces.py --outdir=source
 
 source/openravepy/openravepy.rst: openravepy_changed

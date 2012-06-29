@@ -213,13 +213,21 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
 **IK parameterizations:** %d, **Success:** %d%%
 
-.. image:: ../%s/%s
-  :width: 640
-  :target: %s.html
+.. only:: htmltag
+
+  .. image:: ../%s/%s
+    :width: 640
+    :target: %s.html
+
+.. only:: jsontag
+
+  .. image:: ../%s/%s
+    :width: 640
+    :target: ../%s
 
 ----
 
-"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,robotname)
+"""%(robotlink,'~'*(len(robotlink)+7),len(robotstats),100*float(successes)/len(robotstats),imagelinkdir,imagename,robotname,imagelinkdir,imagename,robotname)
     return returnxml,robotname
 
 def build(allstats,buildoptions,outputdir,env):

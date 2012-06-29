@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-23 13:22\n"
+"POT-Creation-Date: 2012-06-29 16:15\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -47,42 +47,42 @@ msgid "module"
 msgstr ""
 
 # cdd670f53e4442ed9b2612ee04358a3c
-#: ../../source/interface_types.rst:87
+#: ../../source/interface_types.rst:83
 msgid "physicsengine"
 msgstr ""
 
 # 55fbaa7cee3e4d59995f4959fff71fb3
-#: ../../source/interface_types.rst:99
+#: ../../source/interface_types.rst:95
 msgid "planner"
 msgstr ""
 
 # e0d854cdbd37479ea9cdceb6603adeda
-#: ../../source/interface_types.rst:122
+#: ../../source/interface_types.rst:115
 msgid "robot"
 msgstr ""
 
 # 19a098c6a7794fcb9b1052112612bc91
-#: ../../source/interface_types.rst:133
+#: ../../source/interface_types.rst:126
 msgid "sensor"
 msgstr ""
 
 # c75b8973f40347ce9470eac4415ab32a
-#: ../../source/interface_types.rst:149
+#: ../../source/interface_types.rst:142
 msgid "sensorsystem"
 msgstr ""
 
 # a64af577cd4149c39a1860d8c888bdc3
-#: ../../source/interface_types.rst:158
+#: ../../source/interface_types.rst:151
 msgid "spacesampler"
 msgstr ""
 
 # 6043f752ce124801acd9827646e3a515
-#: ../../source/interface_types.rst:170
+#: ../../source/interface_types.rst:163
 msgid "trajectory"
 msgstr ""
 
 # 0eaae922c97740529963f9cccf0da2ad
-#: ../../source/interface_types.rst:180
+#: ../../source/interface_types.rst:173
 msgid "viewer"
 msgstr ""
 
@@ -182,14 +182,10 @@ msgstr ""
 #: ../../source/interface_types/iksolver/pumaikfast.rst:10
 #: ../../source/interface_types/iksolver/wam7ikfast.rst:10
 #: ../../source/interface_types/module/basemanipulation.rst:10
-#: ../../source/interface_types/module/densorobot.rst:10
 #: ../../source/interface_types/module/grasper.rst:10
 #: ../../source/interface_types/module/ikfast.rst:10
-#: ../../source/interface_types/module/ikplanning.rst:10
 #: ../../source/interface_types/module/ivmodelloader.rst:10
-#: ../../source/interface_types/module/linearconnectfilter.rst:10
 #: ../../source/interface_types/module/logging.rst:10
-#: ../../source/interface_types/module/movestraightfilter.rst:10
 #: ../../source/interface_types/module/taskcaging.rst:10
 #: ../../source/interface_types/module/taskmanipulation.rst:10
 #: ../../source/interface_types/module/textserver.rst:10
@@ -204,8 +200,6 @@ msgstr ""
 #: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:10
 #: ../../source/interface_types/planner/rastar.rst:10
 #: ../../source/interface_types/planner/shortcut_linear.rst:10
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:10
-#: ../../source/interface_types/planner/workspacepathverifier.rst:10
 #: ../../source/interface_types/planner/workspacetrajectorytracker.rst:10
 #: ../../source/interface_types/robot/collisionmaprobot.rst:10
 #: ../../source/interface_types/robot/genericrobot.rst:10
@@ -317,15 +311,11 @@ msgstr ""
 #: ../../source/interface_types/iksolver/pumaikfast.rst:47
 #: ../../source/interface_types/iksolver/wam7ikfast.rst:47
 #: ../../source/interface_types/module/basemanipulation.rst:34
-#: ../../source/interface_types/module/densorobot.rst:23
 #: ../../source/interface_types/module/dualmanipulation.rst:34
 #: ../../source/interface_types/module/grasper.rst:78
 #: ../../source/interface_types/module/ikfast.rst:63
-#: ../../source/interface_types/module/ikplanning.rst:34
 #: ../../source/interface_types/module/ivmodelloader.rst:23
-#: ../../source/interface_types/module/linearconnectfilter.rst:28
 #: ../../source/interface_types/module/logging.rst:23
-#: ../../source/interface_types/module/movestraightfilter.rst:30
 #: ../../source/interface_types/module/taskcaging.rst:52
 #: ../../source/interface_types/module/taskmanipulation.rst:97
 #: ../../source/interface_types/module/textserver.rst:23
@@ -344,9 +334,7 @@ msgstr ""
 #: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:23
 #: ../../source/interface_types/planner/rastar.rst:25
 #: ../../source/interface_types/planner/shortcut_linear.rst:23
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:54
-#: ../../source/interface_types/planner/workspacepathverifier.rst:25
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:54
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:40
 #: ../../source/interface_types/robot/collisionmaprobot.rst:51
 #: ../../source/interface_types/robot/genericrobot.rst:23
 #: ../../source/interface_types/sensor/base_laser2d.rst:38
@@ -446,15 +434,11 @@ msgstr ""
 #: ../../source/interface_types/iksolver/pumaikfast.rst:49
 #: ../../source/interface_types/iksolver/wam7ikfast.rst:49
 #: ../../source/interface_types/module/basemanipulation.rst:36
-#: ../../source/interface_types/module/densorobot.rst:25
 #: ../../source/interface_types/module/dualmanipulation.rst:36
 #: ../../source/interface_types/module/grasper.rst:80
 #: ../../source/interface_types/module/ikfast.rst:65
-#: ../../source/interface_types/module/ikplanning.rst:36
 #: ../../source/interface_types/module/ivmodelloader.rst:25
-#: ../../source/interface_types/module/linearconnectfilter.rst:30
 #: ../../source/interface_types/module/logging.rst:25
-#: ../../source/interface_types/module/movestraightfilter.rst:32
 #: ../../source/interface_types/module/taskcaging.rst:54
 #: ../../source/interface_types/module/taskmanipulation.rst:99
 #: ../../source/interface_types/module/textserver.rst:25
@@ -473,9 +457,7 @@ msgstr ""
 #: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:25
 #: ../../source/interface_types/planner/rastar.rst:27
 #: ../../source/interface_types/planner/shortcut_linear.rst:25
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:56
-#: ../../source/interface_types/planner/workspacepathverifier.rst:27
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:56
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:42
 #: ../../source/interface_types/robot/collisionmaprobot.rst:53
 #: ../../source/interface_types/robot/genericrobot.rst:25
 #: ../../source/interface_types/sensor/base_laser2d.rst:40
@@ -1114,15 +1096,11 @@ msgstr ""
 # 46464843f76c450b933e4f8ddccbaac2
 # 359d761e42d94a319fc7c28aa42f2345
 #: ../../source/interface_types/module/basemanipulation.rst:6
-#: ../../source/interface_types/module/densorobot.rst:6
 #: ../../source/interface_types/module/dualmanipulation.rst:6
 #: ../../source/interface_types/module/grasper.rst:6
 #: ../../source/interface_types/module/ikfast.rst:6
-#: ../../source/interface_types/module/ikplanning.rst:6
 #: ../../source/interface_types/module/ivmodelloader.rst:6
-#: ../../source/interface_types/module/linearconnectfilter.rst:6
 #: ../../source/interface_types/module/logging.rst:6
-#: ../../source/interface_types/module/movestraightfilter.rst:6
 #: ../../source/interface_types/module/taskcaging.rst:6
 #: ../../source/interface_types/module/taskmanipulation.rst:6
 #: ../../source/interface_types/module/textserver.rst:6
@@ -1328,7 +1306,6 @@ msgstr ""
 # 529faebff73d447c87316ba17064face
 # 806cd162807347efb1393117d356ea5a
 #: ../../source/interface_types/module/basemanipulation.rst:165
-#: ../../source/interface_types/module/ikplanning.rst:78
 msgid "SetPostProcessing"
 msgstr ""
 
@@ -1345,40 +1322,6 @@ msgstr ""
 # 68336e1c2c95412b99c07920c8bd3aaf
 #: ../../source/interface_types/module/basemanipulation.rst:178
 msgid "Execute a trajectory from a file on the local filesystem"
-msgstr ""
-
-# 27fbc8e46d1c41fb803ea3781f450064
-#: ../../source/interface_types/module/densorobot.rst:4
-msgid "DensoRobot - motionplanning"
-msgstr ""
-
-# ab017a1484b9412da77717b691eb5fd9
-# b47cd59442ed41bf877edabd1a656936
-# 4d47ee0fb3064f4997bdc8af6d96d64b
-# 25e476c7234a4f3a8f56006649c2d202
-# b89f5bdd384440a2a066759458acf58b
-# 1613e972ea014549b55d8b4c88c6c564
-#: ../../source/interface_types/module/densorobot.rst:8
-#: ../../source/interface_types/module/ikplanning.rst:8
-#: ../../source/interface_types/module/linearconnectfilter.rst:8
-#: ../../source/interface_types/module/movestraightfilter.rst:8
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:8
-#: ../../source/interface_types/planner/workspacepathverifier.rst:8
-msgid ":ref:`plugin-motionplanning`"
-msgstr ""
-
-# 3ef845c46aba43168735a5bcba292638
-#: ../../source/interface_types/module/densorobot.rst:12
-msgid ""
-"Denso-robot specific module. When instantiated with a robot, will set a "
-"filter that looks for densofigure custom values. The first parameter of a "
-"densofigure entry is the figure index, the second (optinal) is the mask of "
-"what bits in the figure are valid."
-msgstr ""
-
-# b6b5faf04afe440fa3a00f295776ccc2
-#: ../../source/interface_types/module/densorobot.rst:16
-msgid "DensoRobot Commands"
 msgstr ""
 
 # 7a0b762615554d33b3e2f76c93073992
@@ -1634,70 +1577,6 @@ msgstr ""
 msgid "return the set of time measurements made in nano-seconds"
 msgstr ""
 
-# 8999709fadc1490787325d3c4eb631ee
-#: ../../source/interface_types/module/ikplanning.rst:4
-msgid "IkPlanning - motionplanning"
-msgstr ""
-
-# c974c2dc311f4491ac2c53e3f8604424
-#: ../../source/interface_types/module/ikplanning.rst:12
-msgid "planning with IK"
-msgstr ""
-
-# 2c4e76778b7641cea13b9054b9f9076d
-#: ../../source/interface_types/module/ikplanning.rst:16
-msgid "IkPlanning Commands"
-msgstr ""
-
-# 8163d400a35c408d9ca870ae9132f5e3
-#: ../../source/interface_types/module/ikplanning.rst:23
-msgid "EvaluateTrajectorySmoothness"
-msgstr ""
-
-# 9b924ac6023541628cc1bc1d0f5b7b8a
-#: ../../source/interface_types/module/ikplanning.rst:25
-msgid "trajectory smoothness measure"
-msgstr ""
-
-# abe4d0e3d6a640838195d91d35d60214
-#: ../../source/interface_types/module/ikplanning.rst:45
-msgid "MoveManipulatorWithCup"
-msgstr ""
-
-# 252fc7eff07b47338eb9a31cf022445c
-#: ../../source/interface_types/module/ikplanning.rst:47
-msgid "moves the manipulator while maintaining rotation constraints of the cup"
-msgstr ""
-
-# 7d03fbc4fc6b4542b1dce39a0c2d8d2a
-#: ../../source/interface_types/module/ikplanning.rst:56
-msgid "MoveWorkspaceTrajectory"
-msgstr ""
-
-# c281708ac0544784b7a35f4076c12967
-#: ../../source/interface_types/module/ikplanning.rst:58
-msgid "moves manipulator to track workspace"
-msgstr ""
-
-# a76971a4240e43b0a643da9fcdfe8f2f
-#: ../../source/interface_types/module/ikplanning.rst:67
-msgid "PlanToIKPosition"
-msgstr ""
-
-# 3bf0c134431e4dc3b9b5f874b5254aed
-#: ../../source/interface_types/module/ikplanning.rst:69
-msgid ""
-"moves manipulator to/from ik positions. If initdir/goaldir is used, the "
-"robot will move straight along the initpos+initdir -> initpos, and goalpos"
-"+goaldir -> goalpos. It is very important to note that the inputs passed to "
-"the planner without the moving directions should be specified as is."
-msgstr ""
-
-# d3764ce6f43c4fb79b01d39428bbe64f
-#: ../../source/interface_types/module/ikplanning.rst:80
-msgid "Sets post processing parameters for all planners"
-msgstr ""
-
 # be320b1501af4ca8b2355141bd226580
 #: ../../source/interface_types/module/ivmodelloader.rst:4
 msgid "IvModelLoader - qtcoinrave"
@@ -1735,57 +1614,6 @@ msgstr ""
 msgid "Returns the triangle mesh given a model filename"
 msgstr ""
 
-# fc1779ac186040b8a5399749f1aec140
-#: ../../source/interface_types/module/linearconnectfilter.rst:4
-msgid "LinearConnectFilter - motionplanning"
-msgstr ""
-
-# b8704344d5d643e096df2b0f1c140776
-#: ../../source/interface_types/module/linearconnectfilter.rst:12
-msgid ""
-"Filter for guaranteeing that linearlying interpolating the previous "
-"configuration to the current give is continuous and the manipulator doesn't "
-"deviate much from its path. Filter does not check for collisions."
-msgstr ""
-
-# 2f373a14ede243d5a6a92a8b14ff1544
-#: ../../source/interface_types/module/linearconnectfilter.rst:14
-msgid ""
-"Uses **prevdofvalues**, **prevdofvelocity**, "
-"**previkparam_transform=ikparam_**, **prevcacheid**, "
-"**ikparamvel_transform=ikparam_**, **elapsedtimefromprev** custom ik data. "
-"If prevcacheid is present, it allows the previous data to be cached as long "
-"as prevcacheid does not change."
-msgstr ""
-
-# 9240b711fab64668bea90346444d3eee
-#: ../../source/interface_types/module/linearconnectfilter.rst:16
-msgid ""
-"If the filter has velocity information, then it will return (through "
-"IkReturn) the velocity space computed for an ik solution, values only valid "
-"if IK succeeded. The return value consists of **velocitybase** vectory and "
-"**velocitynullspace** space of basis vectors. The basis vectors are scaled "
-"so that all valid coefficients of the vectors are in [-1,1]. If velocity "
-"informaiton is present, will also return the switch points of a minimum "
-"acceleration parabolic segments in **minaccelpoints**. The format is [time,"
-"jointvalues,jointvelocities]"
-msgstr ""
-
-# 8b777ce8b69e4791ae2143e6e107ded1
-#: ../../source/interface_types/module/linearconnectfilter.rst:21
-msgid "LinearConnectFilter Commands"
-msgstr ""
-
-# fc55cd5884df42b1b9dcb671ca32a230
-#: ../../source/interface_types/module/linearconnectfilter.rst:39
-msgid "SetFilterParameters"
-msgstr ""
-
-# 726f8463f7c449cc871f0a0cb6013742
-#: ../../source/interface_types/module/linearconnectfilter.rst:41
-msgid "set parameters for the filter function"
-msgstr ""
-
 # ba081fadb3e4442e87f85fd64f3f0461
 #: ../../source/interface_types/module/logging.rst:4
 msgid "Logging - logging"
@@ -1819,61 +1647,6 @@ msgid ""
 "Saves the entire scene in an xml file. If paths are relative, should only be "
 "opened from the dirctory openrave was launched in Usage: [filename %s] "
 "[absolute (default is relative)]"
-msgstr ""
-
-# 363f58b14ed34e09b308c91aed78adac
-#: ../../source/interface_types/module/movestraightfilter.rst:4
-msgid "MoveStraightFilter - motionplanning"
-msgstr ""
-
-# cad47e289daa4fb982b7250259e4bd0b
-#: ../../source/interface_types/module/movestraightfilter.rst:12
-msgid ""
-"Filter for guaranteeing the robot hand can kinematically move in a straight "
-"direction. main arguments:"
-msgstr ""
-
-# fd9975e580d846899f2d630edeb8f748
-#: ../../source/interface_types/module/movestraightfilter.rst:14
-msgid "robot name"
-msgstr ""
-
-# e23315e4943e467fa16beae77445e5ce
-#: ../../source/interface_types/module/movestraightfilter.rst:15
-msgid "connect type mask. 1 for approach direction, 2 for connecting."
-msgstr ""
-
-# eaa75e58bc304cc4b756338b827d9b45
-#: ../../source/interface_types/module/movestraightfilter.rst:17
-msgid ""
-"Uses 'approach%d_transform=direction_' and 'approach%d_transform=ikparam_' "
-"for approaching while always starting at the current IK solution. Outputs "
-"'approach%dvalues' through IkReturn."
-msgstr ""
-
-# d786029433b546a4a96aca45da9e8937
-#: ../../source/interface_types/module/movestraightfilter.rst:19
-msgid ""
-"To linearly interpolate the workspace ikparameterizations uses 'connectwork%"
-"d_transform=ikparam_'. The planner starts where the previous approach ended, "
-"or if approach0 is used, starts at the current IK solution. Outputs "
-"'connectwork%dvalues' through IkReturn."
-msgstr ""
-
-# adcec01e0bfa45998248c738393f56c6
-#: ../../source/interface_types/module/movestraightfilter.rst:23
-msgid "MoveStraightFilter Commands"
-msgstr ""
-
-# 63c23221cd474092b08e40a9581b10aa
-#: ../../source/interface_types/module/movestraightfilter.rst:41
-msgid "SetApproachPlannerParameters"
-msgstr ""
-
-# d496b8bcf28b4fc5b3d297f786b5df59
-#: ../../source/interface_types/module/movestraightfilter.rst:43
-msgid ""
-"set parameters for the approach planner to be called for every IK solution"
 msgstr ""
 
 # 9fd3632ef54e470abe8f9cf2c12b7ca1
@@ -2482,8 +2255,6 @@ msgstr ""
 #: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:6
 #: ../../source/interface_types/planner/rastar.rst:6
 #: ../../source/interface_types/planner/shortcut_linear.rst:6
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:6
-#: ../../source/interface_types/planner/workspacepathverifier.rst:6
 #: ../../source/interface_types/planner/workspacetrajectorytracker.rst:6
 msgid ":ref:`interface-planner`"
 msgstr ""
@@ -2716,14 +2487,12 @@ msgstr ""
 msgid "shortcut_linear Commands"
 msgstr ""
 
-# fce96388b1154f3a875c41407e79c26b
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:4
-msgid "WorkspacePathTrackerGreedy - motionplanning"
+# 81e1d09f26954ab68bcc4c7c0fc3b3a9
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:4
+msgid "WorkspaceTrajectoryTracker - rplanners"
 msgstr ""
 
-# c3b08fa1cf4049508a4ae2682016acd2
-# cfc89371d2ce42e8befc9ef458f457df
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:12
+# 66b18743b19249fca2da2471570a5e18
 #: ../../source/interface_types/planner/workspacetrajectorytracker.rst:12
 msgid ""
 "Given a workspace trajectory of the end effector of a manipulator (active "
@@ -2731,26 +2500,18 @@ msgid ""
 "tracks it using analytical inverse kinematics. Options can be specified to "
 "prioritize trajectory time, trajectory smoothness, and planning time In the "
 "simplest case, the workspace trajectory can be a straight line from one "
-"point to another. If PlannerParameters::vgoalconfig is specified, will try "
-"to have the robot end in that configuraiton; if it isn't possible, then the "
-"planner will fail. vgoalconfig has to match with the final IK of workspace "
-"trajectory. The workspace trajectory also supports manipulators with just "
-"Rotation3D or Translation3D inverse kinematics solvers. In this case, only "
-"the corresponding workspace end effector values are used (ie for Rotation3D, "
-"the translations are ignored)."
+"point to another."
 msgstr ""
 
 # 25bed5b56ada492f9fa28d546afb1278
 # 9c8bf52df1b94a5da8fbade7c5846e2f
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:19
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:19
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:17
 msgid "Planner Parameters"
 msgstr ""
 
 # 03f8fb19ec0349a2aac1f7f1e581de07
 # 89b78418904b46b9937cfa6668db7bd6
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:21
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:21
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:19
 msgid ""
 "**dReal maxdeviationangle** - the maximum angle the next iksolution can "
 "deviate from the expected direction computed by the jacobian."
@@ -2758,15 +2519,13 @@ msgstr ""
 
 # 9ebea536620b46ab970a7935b30c2a48
 # 90cfa6942db54e1ab8baf33f5a309c08
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:23
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:23
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:21
 msgid "**bool maintaintiming** - maintain timing with input trajectory"
 msgstr ""
 
 # c3bf5fdabee6441591fe0cea3b82449e
 # d040c890e5b64c1695370fe77c53535a
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:25
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:25
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:23
 msgid ""
 "**dReal ignorefirstcollision** - if > 0, will allow the robot to be in "
 "environment collision for the initial 'ignorefirstcollision' seconds of the "
@@ -2778,8 +2537,7 @@ msgstr ""
 
 # b81a84c20ca3459d86ad4ba5d50b7785
 # 9cb78ae649d649abb427c22752ce08c6
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:27
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:27
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:25
 msgid ""
 "**dReal minimumcompletetime** - specifies the minimum trajectory that must "
 "be followed for planner to declare success. If 0, then the entire trajectory "
@@ -2788,71 +2546,14 @@ msgstr ""
 
 # 9c3e2dae5d514d1b9833ff88ebe95fd6
 # 4768d6dc1c08414ca168caff839543f0
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:29
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:29
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:27
 msgid ""
 "**TrajectoryBasePtr workspacetraj** - workspace trajectory of the end "
 "effector, needs to hold 'ikparam_values' groups"
 msgstr ""
 
-# 585ad26207de4b07abd920be308e9769
-# 68d179986a864a30b4faa2ed9e3978e6
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:30
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:30
-msgid ""
-"**Vector conveyorspeed** - velocity of the coordinate system. used if object "
-"is on is moving at a constant speed on a conveyor"
-msgstr ""
-
-# 3beeb96d18e3496c925d6f5e5cb69a4f
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:36
-msgid "WorkspacePathTrackerGreedy Commands"
-msgstr ""
-
-# 680aafb45cf2418588eb831f9d9b89c9
-# 942623a4a0bb49d6b58b594015109f05
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:43
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:43
-msgid "GetPlannerStatus"
-msgstr ""
-
-# a71c3aae1f534a50beda19bc779a3d5e
-# 8e5d7df124dc4b8d922b1f1cc909dfb9
-#: ../../source/interface_types/planner/workspacepathtrackergreedy.rst:45
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:45
-msgid ""
-"returns 1 if the ik led the robot to a different goal than the one specified "
-"in vgoalconfig. This means the same workspace trajectory can fail for the "
-"same reason no matter how slow it goes?"
-msgstr ""
-
-# 1c0ae77ce0244b26963aeae84a918496
-#: ../../source/interface_types/planner/workspacepathverifier.rst:4
-msgid "WorkspacePathVerifier - motionplanning"
-msgstr ""
-
-# b8afb50eeb094abf8490a275dcc1ea9d
-#: ../../source/interface_types/planner/workspacepathverifier.rst:12
-msgid ""
-"Given a discrete non-timed workspace trajectory points of the end effector "
-"of a manipulator (active manipulator of the robot), finds a configuration "
-"space trajectory that tracks it smoothing and continuously using analytical "
-"inverse kinematics. The planner returns a non-timed configuration path as a "
-"result, which can be used to test the validity of a trajectory"
-msgstr ""
-
-# 4abd24de093842098f7b0b9b15aacb79
-#: ../../source/interface_types/planner/workspacepathverifier.rst:18
-msgid "WorkspacePathVerifier Commands"
-msgstr ""
-
-# 81e1d09f26954ab68bcc4c7c0fc3b3a9
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:4
-msgid "WorkspaceTrajectoryTracker - rplanners"
-msgstr ""
-
 # 2ac250576e064d46b00f32044b6fca6e
-#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:36
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:33
 msgid "WorkspaceTrajectoryTracker Commands"
 msgstr ""
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 18:10\n"
+"POT-Creation-Date: 2012-06-29 16:22\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -1013,6 +1013,23 @@ msgid ""
 "www.openrave.org/testing/job/openrave/>`_ are used to generate "
 "reStructuredText for the :ref:`robots` page. :ref:`ikfast-testing` goes into "
 "details about what is tested."
+msgstr ""
+
+# ea10dd83248c4083b7cf1081393ee3b9
+#: ../../source/devel/website.rst:2
+msgid "Managing openrave.org"
+msgstr ""
+
+# 74a06c5773c44ee0891b722c51567a54
+#: ../../source/devel/website.rst:4
+msgid ""
+"openrave.org uses Django for managing documentation, news, and blogs. The "
+"code is maintained at::"
+msgstr ""
+
+# ff442b919de1429e8f1489b0a37a4ede
+#: ../../source/devel/website.rst:9
+msgid "Installation."
 msgstr ""
 
 # 8b9709a230494ddfab7e61b971be52ff
