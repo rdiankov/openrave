@@ -3060,6 +3060,12 @@ class IKFastSolver(AutoReloader):
         if len(leftsideeqs) < len(allmonoms):
             raise self.CannotSolveError('left side has too few equations for the number of variables %d<%d'%(len(leftsideeqs),len(allmonoms)))
         
+        if len(allmonoms) == 0:
+            def _returnequations():
+                return [[left,right] for left,right in izip(leftsideeqs,rightsideeqs)]
+            
+            return 0, _returnequations
+        
         unknownvars = leftsideeqs[0].gens
         newleftsideeqs = []
         numsymbolcoeffs = []

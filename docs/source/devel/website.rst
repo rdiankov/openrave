@@ -15,8 +15,8 @@ Install
 
 .. code-block:: bash
 
+  apt-get install postgresql postgresql-client libpq-dev memcached python-dev
   pip install -r deploy-requirements.txt
-  apt-get install postgresql
 
 If you only need to deploy, and don't need to test any changes, you can use local-requirements.txt
 
