@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-29 16:22\n"
+"POT-Creation-Date: 2012-06-29 16:27\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -410,24 +410,6 @@ msgstr ""
 # 63b027a341b14931862cd7d800c7b170
 #: ../../source/devel/index.rst:14
 msgid "Internal logistics, management, and quality control:"
-msgstr ""
-
-# 5d3e9309c5d1407a9fce0a6a7eb06e5a
-#: ../../source/devel/news.rst:2
-msgid "News System"
-msgstr ""
-
-# ea6c81a333eb496ca2cef2a5a991b88c
-#: ../../source/devel/news.rst:4
-msgid ""
-"The `OpenRAVE News Site <http://openrave.org/news>`_ uses `PyMOTW project "
-"<https://bitbucket.org/dhellmann/pymotw/>`_ for OpenRAVE announcements/blogs/"
-"news. `PyMOTW generated site <http://www.doughellmann.com/PyMOTW/>`_."
-msgstr ""
-
-# 7e02034fecac4a76884e57e73e88f8d7
-#: ../../source/devel/news.rst:6
-msgid "More information on this soon."
 msgstr ""
 
 # ca1376e614714e4dbb7fcc9dde5f8ddf
@@ -1027,9 +1009,158 @@ msgid ""
 "code is maintained at::"
 msgstr ""
 
+# e57387bf3ca64ad5b15e441a04492e55
+#: ../../source/devel/website.rst:8
+msgid ""
+"Using system similar to `djangoproject.com <https://github.com/django/"
+"djangoproject.com>`_"
+msgstr ""
+
 # ff442b919de1429e8f1489b0a37a4ede
-#: ../../source/devel/website.rst:9
-msgid "Installation."
+#: ../../source/devel/website.rst:11
+msgid "Install"
+msgstr ""
+
+# c9f00ca6712e46a6bce4fbe7213f6cad
+#: ../../source/devel/website.rst:13
+msgid "Create a virtualenv"
+msgstr ""
+
+# 4b73e334726b4c61aec0d6d63d51e908
+#: ../../source/devel/website.rst:14
+msgid "Install dependencies:"
+msgstr ""
+
+# 48446b5c564a44278f1c2ad1f3201287
+#: ../../source/devel/website.rst:21
+msgid ""
+"If you only need to deploy, and don't need to test any changes, you can use "
+"local-requirements.txt"
+msgstr ""
+
+# 6406e675a50e475ba4812b86d6ebe92a
+#: ../../source/devel/website.rst:24
+msgid "Set up databases, as per django_website/settings/www.py"
+msgstr ""
+
+# dc333330f4f543fdb2119d855eae6e61
+#: ../../source/devel/website.rst:26
+msgid ""
+"Create a 'openrave.org_secrets.json' file in the directoy above the "
+"checkout, containing something like::"
+msgstr ""
+
+# 8cc1639275e94a7f9cc228f650d20f87
+#: ../../source/devel/website.rst:32
+msgid "Initial DB Setup::"
+msgstr ""
+
+# d7107c7cd0f84da3ab29a72509560e68
+#: ../../source/devel/website.rst:37
+msgid "Future DB Update::"
+msgstr ""
+
+# 4fc596140a6045f2937df81bdc6c47c8
+#: ../../source/devel/website.rst:42
+msgid "For Docs::"
+msgstr ""
+
+# d3c9f29b99d6404eae43c770f162600d
+#: ../../source/devel/website.rst:44
+msgid "./manage.py loaddata doc_releases.json ./manage.py update_docs"
+msgstr ""
+
+# 8f02d33c583741e99eaef8df4ba3decf
+#: ../../source/devel/website.rst:47
+msgid "For adding new document::"
+msgstr ""
+
+# aa458cec3065469696282dad177a9d1a
+#: ../../source/devel/website.rst:49
+msgid ""
+"DJANGO_SETTINGS_MODULE=openrave_website.settings python -c \"from "
+"openrave_website.docs import models; models.DocumentRelease.objects.create"
+"(lang='en',version='0.7.0', scm=models.DocumentRelease.SVN, scm_url='https://"
+"openrave.svn.sourceforge.net/svnroot/openrave/tags/0.7.0', is_default=False);"
+"\""
+msgstr ""
+
+# b00fe8ec20f94dc4ae65a1294a587433
+#: ../../source/devel/website.rst:51
+msgid "Re-index the documents::"
+msgstr ""
+
+# c942df34f96e41429f34a6c17ae1e835
+#: ../../source/devel/website.rst:56
+msgid "Finally::"
+msgstr ""
+
+# 781056da75c344a1814e6274f4b6a485
+#: ../../source/devel/website.rst:61
+msgid "Creating PostgreSQL Database"
+msgstr ""
+
+# 994e61c1439b465c841635c0702c0229
+#: ../../source/devel/website.rst:69
+msgid "Editing"
+msgstr ""
+
+# e479113a31e04e5ca9fa08d381e055c0
+#: ../../source/devel/website.rst:71
+msgid ""
+"All HTML templates are in **openrave_website/templates**. `Tutorial on HTML "
+"+ Django syntax template language <https://docs.djangoproject.com/en/1.4/"
+"topics/templates/>`_"
+msgstr ""
+
+# e98caf8ba39c4fe099eba07d574b946c
+#: ../../source/devel/website.rst:73
+msgid ""
+"Only write English in the HTML files and only inside these translation "
+"blocks:"
+msgstr ""
+
+# f8a2da4587314a9a94ba4b25234a9b4b
+#: ../../source/devel/website.rst:75
+msgid ""
+"`trans <https://docs.djangoproject.com/en/1.4/topics/i18n/translation/#std:"
+"templatetag-trans>`_"
+msgstr ""
+
+# 437efe46003b43f69029b49bd20541ed
+#: ../../source/devel/website.rst:77
+msgid ""
+"`blocktrans <https://docs.djangoproject.com/en/1.4/topics/i18n/translation/"
+"#blocktrans-template-tag>`_"
+msgstr ""
+
+# ff8a7dfadbe44c918821c3e33cdd538d
+#: ../../source/devel/website.rst:79
+msgid ""
+"Videos and image filenames should also be written within the translation "
+"blocks so that we can substitute them with the language equivalent."
+msgstr ""
+
+# a3e243c128094f1aa6d9a117d28aaa1e
+#: ../../source/devel/website.rst:82
+msgid "Translating to Japanese"
+msgstr ""
+
+# 4175eefedd68474fb4bed2212cf4d71f
+#: ../../source/devel/website.rst:84
+msgid "When English templates are done, execute::"
+msgstr ""
+
+# e2dbabec4b984484be0ba4f3ca43f86b
+#: ../../source/devel/website.rst:88
+msgid ""
+"Open **locale/ja_JP/LC_MESSAGES/django.po** and edit the translations. When "
+"done execute::"
+msgstr ""
+
+# 26fe7f332c8b4c5fb46c67e72db3cdea
+#: ../../source/devel/website.rst:92
+msgid "Restart the mujinwww server and the new translation should be visible!"
 msgstr ""
 
 # 8b9709a230494ddfab7e61b971be52ff
