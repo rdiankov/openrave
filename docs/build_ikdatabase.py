@@ -223,7 +223,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
   .. image:: ../%s/%s
     :width: 640
-    :target: ../%s
+    :target: ../%s/
 
 ----
 
