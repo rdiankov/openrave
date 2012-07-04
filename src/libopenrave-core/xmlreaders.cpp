@@ -41,7 +41,13 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
-#ifdef OPENRAVE_ASSIMP
+#if defined(OPENRAVE_IS_ASSIMP3)
+#include <assimp/scene.h>
+#include <assimp/LogStream.hpp>
+#include <assimp/DefaultLogger.hpp>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#elif defined(OPENRAVE_ASSIMP)
 #include <assimp.hpp>
 #include <aiScene.h>
 #include <aiPostProcess.h>
@@ -980,8 +986,9 @@ public:
                 if( xmlname == "body" ) {
                     // directly apply transform to all geomteries
                     Transform tnew = _plink->GetTransform();
-                    FOREACH(itgeomprop, _plink->_listGeomProperties)
-                    itgeomprop->_t = tnew * itgeomprop->_t;
+                    FOREACH(itgeomprop, _plink->_listGeomProperties) {
+                        itgeomprop->_t = tnew * itgeomprop->_t;
+                    }
                     _plink->collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
                 }
@@ -1036,15 +1043,14 @@ public:
                 _ss >> _geomtransparency;
             }
             else if( xmlname == _processingtag ) {
-                TransformMatrix tminv(_itgeomprop->_t.inverse());
-                TransformMatrix tm(_itgeomprop->_t);
-                tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.y; tm.m[2] *= _vScaleGeometry.z;
-                tm.m[4] *= _vScaleGeometry.x; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.z;
-                tm.m[8] *= _vScaleGeometry.x; tm.m[9] *= _vScaleGeometry.y; tm.m[10] *= _vScaleGeometry.z;
-                tm.trans *= _vScaleGeometry;
+                TransformMatrix tm(_itgeomprop->_t); tm.trans = Vector();
+                TransformMatrix tminv = tm.inverse();
+                tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
+                tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
+                tm.m[8] *= _vScaleGeometry.z; tm.m[9] *= _vScaleGeometry.z; tm.m[10] *= _vScaleGeometry.z;
                 TransformMatrix tmres = tminv * tm;
                 // have to scale in link space, so get scale in geomspace
-                Vector geomspacescale(RaveSqrt(tm.m[0]*tm.m[0]+tm.m[1]*tm.m[1]+tm.m[2]*tm.m[2]),RaveSqrt(tm.m[4]*tm.m[4]+tm.m[5]*tm.m[5]+tm.m[6]*tm.m[6]),RaveSqrt(tm.m[8]*tm.m[8]+tm.m[9]*tm.m[9]+tm.m[10]*tm.m[10]));
+                Vector geomspacescale(RaveSqrt(tmres.m[0]*tmres.m[0]+tmres.m[4]*tmres.m[4]+tmres.m[8]*tmres.m[8]),RaveSqrt(tmres.m[1]*tmres.m[1]+tmres.m[5]*tmres.m[5]+tmres.m[9]*tmres.m[9]),RaveSqrt(tmres.m[2]*tmres.m[2]+tmres.m[6]*tmres.m[6]+tmres.m[10]*tmres.m[10]));
 
                 std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
                 if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
@@ -1095,8 +1101,8 @@ public:
                             if( _bGeomOverwriteTransparency ) {
                                 itnewgeom->ftransparency = _geomtransparency;
                             }
-                            _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
                             itnewgeom->_t.trans *= _vScaleGeometry;
+                            _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
                         }
                         listGeometries.front().vRenderScale = _renderfilename.second*geomspacescale;
                         listGeometries.front()._renderfilename = _renderfilename.first;
@@ -1119,8 +1125,8 @@ public:
                         FOREACH(it,_itgeomprop->collisionmesh.vertices) {
                             *it = tmres * *it;
                         }
-                        _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                         _itgeomprop->_t.trans *= _vScaleGeometry;
+                        _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     }
                 }
                 else {
@@ -1148,9 +1154,9 @@ public:
                     FOREACH(it,_itgeomprop->collisionmesh.vertices) {
                         *it = tmres * *it;
                     }
-                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                     _itgeomprop->_t.trans *= _vScaleGeometry;
                     _itgeomprop->vGeomData *= geomspacescale;
+                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
                 }
 
                 _itgeomprop = _plink->_listGeomProperties.end();
@@ -3620,7 +3626,38 @@ public:
             if( _pcurreader->endElement(xmlname) ) {
                 if( !!_pinterface ) {
                     if( _bAddToEnvironment ) {
-                        _penv->Add(_pinterface);
+                        // set joint values if kinbody or robot
+                        if( !!boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader) ) {
+                            boost::shared_ptr<RobotXMLReader> robotreader = boost::dynamic_pointer_cast<RobotXMLReader>(_pcurreader);
+                            BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_Robot);
+                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_pinterface);
+                            _penv->Add(probot);
+                            if( !!robotreader->GetJointValues() ) {
+                                if( (int)robotreader->GetJointValues()->size() != probot->GetDOF() ) {
+                                    RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, robot=%s")%robotreader->GetJointValues()->size()%probot->GetDOF()%probot->GetName()));
+                                }
+                                else {
+                                    probot->SetDOFValues(*robotreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else if( !!boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader) ) {
+                            KinBodyXMLReaderPtr kinbodyreader = boost::dynamic_pointer_cast<KinBodyXMLReader>(_pcurreader);
+                            BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_KinBody);
+                            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_pinterface);
+                            _penv->Add(pbody);
+                            if( !!kinbodyreader->GetJointValues() ) {
+                                if( (int)kinbodyreader->GetJointValues()->size() != pbody->GetDOF() ) {
+                                    RAVELOG_WARN(str(boost::format("<jointvalues> wrong number of values %d!=%d, body=%s")%kinbodyreader->GetJointValues()->size()%pbody->GetDOF()%pbody->GetName()));
+                                }
+                                else {
+                                    pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else {
+                            _penv->Add(_pinterface);
+                        }
                     }
                     return true;
                 }

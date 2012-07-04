@@ -1,0 +1,41 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-28 19:58\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 9d22c8edf0bb40c9a80418bf9adccfce
+#: ../../source/getting_started.rst:4
+msgid "Getting Started Tutorials"
+msgstr ""
+
+# 70a90893b7dc4f0db18b0dd76d2c8818
+#: ../../source/getting_started.rst:17
+msgid ""
+"`Writing and Using Controllers in C++ <../coreapihtml/arch_controller.html>`_"
+msgstr ""
+
+# 50aa7b73e14745e8840dcfabdb4ed20d
+#: ../../source/getting_started.rst:18 ../../source/getting_started.rst:23
+msgid ""
+"`Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/"
+"OctaveMATLAB>`_ Scripting"
+msgstr ""
+
+# 7ec6458d9525401b9f3d3fbb64676a04
+#: ../../source/getting_started.rst:22
+msgid ""
+"`Writing and Using Controllers in C++ <coreapihtml/arch_controller.html>`_"
+msgstr ""

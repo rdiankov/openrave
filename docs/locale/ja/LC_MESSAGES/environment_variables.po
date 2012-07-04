@@ -1,0 +1,64 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 45b602c2799f4d689ec3ac2d1bf89085
+#: ../../source/environment_variables.rst:4
+msgid "Environment Variables"
+msgstr "環境変数"
+
+# 90f9b76c54ca4d988d5af3c03d16788e
+#: ../../source/environment_variables.rst:8
+msgid ""
+"Search paths/URLs for loading robot/environment/model files. The robots and "
+"scenes installed with OpenRAVE will be always accessible, so there's no need "
+"to specify them again."
+msgstr "ここに設定されたディレクトリのCAD・ロボットファイルを探索し読み出します。デフォルトは ``$OPENRAVE_INSTALL/share/openrave`` ですので、これは再度設定する必要はありません。"
+
+# 26c647058ce243519c9605f8ede56999
+# 225bc19b80b94d84a3a9405da26b5143
+# 6af36d2274504d9387f22144bd55adca
+#: ../../source/environment_variables.rst:10
+#: ../../source/environment_variables.rst:16
+#: ../../source/environment_variables.rst:26
+msgid "Use ':' to separate each directory (';' for Windows)."
+msgstr "複数のディレクトリを設定する場合、個々のディレクトリは ':' （Windows環境の場合は ';' ）を使って分けてください。"
+
+# 05ed45ba1fff4b03a6388864d9e7cf17
+#: ../../source/environment_variables.rst:14
+msgid ""
+"Search paths for loading database files created by the openrave database "
+"system. Databases are used to store useful information/statistics about the "
+"robot, target object, and sensors that take a long time to pre-compute or "
+"rely on real-world data. When writing, the first valid directory is used. If "
+"environment variable is not set, then $OPENRAVE_HOME is used."
+msgstr "知識ベースが保存されているところ。OpenRAVEの固有データとは、逆運動学の解析結果のようなロボットの事前に計算された結果や生成されたデータベース等のことです。指定されていない場合、 ``$OPENRAVE_HOME`` が使われます。"
+
+# f6d3d34389b746a9b3dc9f0729afb0e8
+#: ../../source/environment_variables.rst:20
+msgid ""
+"Used to set the directory of the openrave local cache and log files. The "
+"default directory is ``$HOME/.openrave``."
+msgstr "OpenRAVEの固有データとログファイルを保存する場所を指定しています。デフォルトのディレクトリは ``$HOME/.openrave`` です。"
+
+# ee1557dcda9a473a903cc88f02bf7b14
+#: ../../source/environment_variables.rst:24
+msgid ""
+"At startup, OpenRAVE searches for every shared object/dll plugin in these "
+"directories and loads them. The default plugins are always loaded, so there "
+"is no need to include them again."
+msgstr "OpenRAVEは起動時に、ここに設定されたディレクトリの全てのshared object/dllプラグインを探索し読み出します。デフォルトのプラグインは常に読み出されますので、設定する必要はありません。"

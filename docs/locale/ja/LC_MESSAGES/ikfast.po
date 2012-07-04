@@ -1,0 +1,5822 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-29 16:15\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 3ffa7a6b0fec42138845fbd211af105f
+#: ../../source/ikfast/barrett-wam.rst:4
+msgid "barrett-wam Robot"
+msgstr ""
+
+# 7c0a65063f8f4b6ba5c8e65e53313404
+#: ../../source/ikfast/barrett-wam.rst:9
+msgid ""
+"**filename:** `robots/barrett-wam.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/barrett-wam.zae>`_"
+msgstr ""
+
+# d573dbbe57a14a27b5ec419799175191
+# 2608ba21cfe84ca1990e1dad95ad290f
+# 534131273b8e49459d60bb80798788c0
+# 1f36ab974dc0426aaebaabffe62af87f
+# 4df926b9ea35464fb9e44be7c266c503
+# 1fa1938f0c2c485caeb12bffa45eaba6
+# 81069d1116bb41bfbd076645373872a4
+# fbd3ff9c012b4f7a8588d85c0c1d88d6
+# 7e85053686634c3d8f7133a43181c81a
+# 8ca4a879206d4a0b96b5e0103fac5f75
+# 5c4cebd2773c421d95ce570a9b1479e0
+# 168afe141328490a8da14fda0bf939f8
+# 7e8eb9a382bd4e69bb45f00e10492772
+# 8aac13792c4a4721844bd1e957f678a3
+# 8e1650fefb65462bbe46094af6c45d89
+#: ../../source/ikfast/barrett-wam.rst:11
+#: ../../source/ikfast/barrett-wam4.rst:11
+#: ../../source/ikfast/darpa-arm.rst:11
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:11
+#: ../../source/ikfast/kawada-hironx.rst:11
+#: ../../source/ikfast/kuka-kr30l16.rst:11
+#: ../../source/ikfast/kuka-kr5-r650.rst:11
+#: ../../source/ikfast/kuka-kr5-r850.rst:11
+#: ../../source/ikfast/kuka-youbot.rst:11
+#: ../../source/ikfast/mitsubishi-pa10.rst:11
+#: ../../source/ikfast/neuronics-katana.rst:11
+#: ../../source/ikfast/pr2-beta-static.rst:11
+#: ../../source/ikfast/schunk-lwa3.rst:11
+#: ../../source/ikfast/unimation-pumaarm.rst:11
+msgid ":ref:`ikfast_generatedcpp`"
+msgstr ""
+
+# 067026a8c07b4368b5152553f0aef9ca
+# 70b0537e6e2841b4bd24aa8fc9309628
+# 59d818be84264107a16cc05340df45c6
+# b357779b5cb64551bb22de0a14bafc3e
+# 0ab0949ed0ef4dcd88f0aa7fb592ea1d
+# ec07119e1bc64cc0a40d50150052ca57
+# 4c80258775184960b2cb279d65a3c0f5
+# abb35acc9e9946449f195351a7f2461d
+#: ../../source/ikfast/barrett-wam.rst:14
+#: ../../source/ikfast/barrett-wam4.rst:14
+#: ../../source/ikfast/kuka-kr30l16.rst:14
+#: ../../source/ikfast/kuka-kr5-r650.rst:14
+#: ../../source/ikfast/kuka-kr5-r850.rst:14
+#: ../../source/ikfast/kuka-youbot.rst:14
+#: ../../source/ikfast/neuronics-katana.rst:14
+msgid "**arm** Manipulator"
+msgstr ""
+
+# 8d4fef6f36cf4e2183bb4243fc119ea1
+# 34b0695eb2854d83a96be1d045bd36a1
+# 259a32ea2617412a9063f84237d3a61c
+#: ../../source/ikfast/barrett-wam.rst:16
+#: ../../source/ikfast/mitsubishi-pa10.rst:16
+#: ../../source/ikfast/schunk-lwa3.rst:16
+msgid "Manipulator Indices: [0 1 2 3 4 5 6]"
+msgstr ""
+
+# 2d50b4f94cc648c69cb0ca726d89b824
+# 99af38439d3c4d43985f7ac4acfb8e57
+# 4fc3e8ba1a8f45ce802996c025e1561f
+# 78fe01bfaff94733a81f6a563a4cafd1
+# 27cc93d5fa38477eb195909a7e3dbf02
+# 24704696ad8a42a9a1101820c12d5034
+# e5886ed80d364607af641c19962e58f0
+# 0c0ffaba358f4c97be86f41cf93bce51
+# 72b767a3b1cd4edb80a06602e2887a14
+# 1cba2107b5d7407480b7e79dfb27d25f
+# 769621f02fc24a7586bce25698eb9fc3
+# 2c57401d36064b1dad348be9574e1e9b
+# b38cc577a69e44279074f51d87bb8279
+# 614e26b1d3744397b815bab8aac442ec
+# 78a9ad5bc8c54e069a5d851c0b0d1620
+# d4b654924cdb4f7c87a27ba6f5957362
+#: ../../source/ikfast/barrett-wam.rst:19 ../../source/ikfast/darpa-arm.rst:19
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:19
+#: ../../source/ikfast/kawada-hironx.rst:46
+#: ../../source/ikfast/kuka-kr30l16.rst:19
+#: ../../source/ikfast/kuka-kr5-r650.rst:19
+#: ../../source/ikfast/kuka-kr5-r850.rst:19
+#: ../../source/ikfast/mitsubishi-pa10.rst:19
+#: ../../source/ikfast/pr2-beta-static.rst:66
+#: ../../source/ikfast/pr2-beta-static.rst:140
+#: ../../source/ikfast/pr2-beta-static.rst:228
+#: ../../source/ikfast/schunk-lwa3.rst:19
+#: ../../source/ikfast/unimation-pumaarm.rst:19
+msgid "Transform6D IK"
+msgstr ""
+
+# b281900252c944d5a48762d660a04358
+# 1f96b0c840d04ce3923e61f8be10a481
+# d951cacdca6f4f84bfe48f45327b72b0
+# d3d3dfc6e0ef4d8d9d43fdd311cce16b
+# c1819b2f322947fa818011e445f9d0f5
+# c9c70fdb2a29497e8c318cadd2a2d405
+# b6a4cf00c3e141abbf5d93ff7b461bb0
+# 34a74dc72e2f448c873281f3efbdbfc7
+# 1296f8ffbdbc4b83a6d72a0d5cdb6710
+# 3af008ebd2be4ae6b20f35c09380bcd3
+# a1092ce264fa42bea31ea074f2c3ddb1
+# 237ed6a6f2f24d6580f88f9e78ce68a5
+# 084ac9a9cd134d8a91a2141da2db0fad
+# a5d09378dba8498c896d8e61cf177fb7
+# a45f2a8a6136479296408086d6e47f27
+# 6f94cda12d0b426faa367e203c6457b1
+# cea9b61e0c2841f2bb67430ba82fa333
+# 3b300032f37c4795b0a8be633878ad88
+# c8a2ee6190174aed849a21451ef116ad
+# 3d5536f444a04278b3e29b9db93bc3c1
+# cc7201c1c75c4ce2897450c0d5c77684
+# ceba35d410c441a5aa67a4363ab51a53
+# a243173511bc4da99a138f38b024489e
+# 77a87e458c62468fb49b78f2926455d1
+# 97f6cfc29bc14f95af7659b694cf6fc6
+# cbf3085e2c804c67acaa1cc28c70b258
+# b4b5fd80d22242a18cdfd7ed38cc3ad4
+# ed3e32c4601e47dc9d411f7a6a524660
+# 6bb8270fc21c4e04ba956189bd8ff735
+# ebff31213f564e4291ecc894b8b4e4c3
+# f3a93ba054564a6c80beb1dc4311e1f0
+# 3272ff71f1d048d4b63d1aeb83dd9ee5
+# 4b4aea4609f04d8bbe0326b9fc95c09b
+# 2848f4844b8b43f7aced9d5f029f9c18
+# 5af28bbbe6974014afd9308c6c1f3468
+# fcbb151a4c944aa096e7ff22b4a131f9
+# 90aaa8eee6494520b7f1bd3876f16609
+# cbdd8293e2c9489b82a9b0eb864b393f
+# 9361c7a03e0542e2b1c9d13d86b75d58
+# 78bb2f66e6dd4f6cac7f8e9739c209c6
+# 3fb4adfdf2be4fad86fa98ab3c2f73fa
+# 0929dd3796c44fd6bac027ffdf962a73
+# 8f2a9da4c6964571887d825ada523022
+# bd46417dfafa4901b7d0ee84c99525a4
+# b2bf4f91466c4c0a8c16f1b3e221d2eb
+# 14de481cfb36408d97313eee1fd8f4f7
+# c7a77bf0fb454311bf484b20520a76c3
+# 2a9fabdbbb034d88bd68d41233054085
+# 22e30604b0e94a14900024ee283e75a5
+# 3acffece4fd5411c93d4be1620816ba8
+# ca8665b1df0c42fb96e832444eb1e98b
+# 3c2d1c31fa094af996ce454c148347a8
+# 0711247ed1d445d3889b0874ba1f87cc
+# 85ac283d0bb64aa09b1b52416bf6e6b2
+# d2d0bb15bbcf4fa9a59ce9b0a45a5710
+# a2b8cb80c0a74b1dbb6a7cadc78e8ddc
+# 7092a819de2d4383b07876a272472465
+# d7d00cec710247ca8a63fb71310baa2b
+# 99fe4cdec2744160927c8aea5719dd94
+# cb2c73ca719f4a53aeabd6204777172d
+# ae59d14c641549b8aa5fa25150161b4f
+# 5dcb87fb482244578d0239e8df185427
+# c183ca6af17e44f6b42dd0afc12b051d
+# ec13afee3887499bbab8e1d158160f4a
+# 75a997fbcfe7480baeeaeb013bee76b1
+# 20a4113867e842859202e9e476a7e53c
+# 06bed541d3454db29e258b17f958e065
+# 549863152dc74c45a33780716f5b25f8
+# df66437b1ce748e08bb99193901ea777
+# 09ec18b1c74447fe87fe2a468d7484ca
+# 006e71e7729645a9aabe5d4171a26c29
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "free indices"
+msgstr ""
+
+# 25e73099eab140eeba903457d4b60f1d
+# 0ae82069b1f644bd8aab1e0f6a5994c0
+# e950d61c443740879963a936936af2c4
+# 331e1152022544cc9c0c00012a71c108
+# a7fb43090c4e48e7970afdc9b7f12183
+# 9b3da417eb334461931799f3aae7736b
+# 94b2d985593e4a1d977b32d31b64f8fb
+# 56466d3752c34760a9cbc2358c00d157
+# 8b7a88fce5f14fb6ae929eeae0be37a9
+# a1cb77d58d054e16b76c035eeeef54c9
+# f55f3e731a824b4ea82c33de06023c35
+# 99c30142a75746ff99b37e81dd1d034a
+# af82c8a3032d4112b0bd961c583c25bc
+# 6369df510657458794fff63b3a75b2a6
+# 71f6bea9314f4a8487eb3af7b92efdc4
+# a5c019d2281d45e397b17417bc80c757
+# 3568b04159154118bdb45786909a3b62
+# 976c595a01334b4c913f4d030ffc12d5
+# 977e03721aaf47899386d05d0e4286b1
+# 0ddd2e9f1b0543f580296765cce07867
+# c5e09c93529f4c6298c435f3f6ac9362
+# 6ea930983d984acf8b4074a10ecea6c0
+# 6119781cff384d19acea87bc0ead4cc5
+# e992fbdb620c412f9bbf16f367fa75f7
+# cde5ec6f233b4878b2a63d60dec73349
+# ddf0fef4e790489b9a5bfa0594fe200e
+# 3dd9be6d7e7d4f75b033d15f3fbe9e5d
+# 3e3810629f8846abb67e3cf080b4bd70
+# 3e51062950b64438906749a958e9d63a
+# a4d292d8c433429d811a7e8e5e3b7e88
+# 5cce800810c94528a012c553141b9405
+# 01f7ff4c2af64f4f89827692d62e6379
+# 26ae8409c2354b958acf3afb37905c36
+# ece1fe5895824feeb97a969a32924cff
+# 9d7406a820ef4d87950ceebc5a477ced
+# 53ecbf12d09a4091bc34a57274f4ca34
+# a0f9513451cc428dad63b3cd13c2b3f9
+# 114a765f09834d2196444e75583a24da
+# c86143150a574c45b5c0d8224205a5f5
+# d3424c110b3c49d49188e330da2b83c0
+# 331b6b34f2f84bcfa583c1d1927db5a8
+# 2f6f278fad874615a08f36a81e0ff590
+# a1830f79c1bc4ed6bba0a5497262768b
+# f619c8e3aeaf41f08084b18e72223171
+# 3b9212f1fdbe48dc8eeeaa7ce5a64980
+# 6040f3bd5e5e40f0b2e3b2557ec4c611
+# c15b8159d9814b1e8dee1ce843c9161b
+# 8c415f0d159f4fe6880b0a493c7160de
+# 3a5a4b71a7a248c18aa4f156a06da703
+# a8a366e03cbc49c387b00dcb6cb332df
+# d03c87dea63d4f819d6b27b5172da37c
+# 53eff82359d84c7998123e58755d0610
+# a720dc6a51fa4087a827cb2e8cb48fff
+# f4c772575b2a447a995b51c854e7a65e
+# af43f7c6253a430d83d7ec9d1aff2a21
+# 1c3a23ca61864775a56c44098e3eabd7
+# d79af199dd2d47b7a6f452b5672d5232
+# 71cb392cee114cdc9e6684710893fdc8
+# 83b780ad21224609b512de9b9eae14aa
+# 09bc361be7704f7ca8a98272d3122b30
+# 928c2d477e22434da2ab001ee13c1c0a
+# 27b6cbba2f56470aa5fdb1ffc76203d7
+# 61ee5ac4264242ebb9225b2299539e15
+# 42d10c9847f24d30bc35e123f05fa986
+# 8cad5b00bb0b4c2694bc672fe146b302
+# 96718d06338c449fbb6a3e2cea072591
+# df83dc3dc15b4acaa24164ccc997cdfd
+# daecc73170f84cd29a9af52590a570c6
+# 92965f45d8cc4f879f1078c648640674
+# c8a05f9e15724c02aacc368dad2c7e86
+# 70ae0c77b0ca4560b18438600ac1a3f3
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "success rate"
+msgstr ""
+
+# 98b8330a60a7424ab0075aeb9173fe2f
+# f26b5c6312564aa4a91973cebbdf12b5
+# f6fda18fd5134cd1af8f64280ebb14c4
+# 242d3226e8984fe7857ff04eddaf8e25
+# 79704fcd685841c088c2ad8ea04f1401
+# 33d55871c67b43519f4021985bec5475
+# 171f6e9545d14b948de7299c0111a404
+# 6b82cb63ccb94b2bb616d4b15e4645cf
+# d7b0820a0e8342eab6d04eeabae51b66
+# d2857a4f53c148f4a77c49950835f4c6
+# fa5aa2fea1974f938ba918a99d87757a
+# 4b5dbeca8fe64b09abd866aeef107a2d
+# f6a5950adf514a86a325f8e8f41a2468
+# ae8030bf457843bd8ad61796d086cda6
+# 725f4dc5199c48cc9bf0881fc55a2856
+# 4fd2e5215d5749c7a397f2381482c167
+# 853dc3506d12498b8f8962023cb921ab
+# a64ba521f1cf44938b67cd99cbf4b8ce
+# b1449c5ceb58448e9eb2d23a7f09053f
+# e849d13381844b02a53ac85fa60e34b4
+# 1f6dc1b9551f465d8c775ec026f67ef5
+# 1596419dc1d84f89be6fa09b69ed2691
+# 9c69c8ca3c0247ab880c861013bc1e1c
+# 57b0548dc5c04f12998c137ef6fb28e5
+# 34b1bb2f16414850a60dbad2855507ee
+# 47d6fd34d20f48fcbc04c5a8ec18fbd5
+# a5a3ca97749d4aaabdbfcfca6edf3cff
+# cb61477c5fc7462d8c33f59abbfe9c6c
+# 02b424ce27f34f208b0dec19f0fb3761
+# eb70addd7f2c4884bb34979e089d5f1e
+# bb39f6f933dc4b1fa69ae7bd33c29eb4
+# 3d6efb51004b43a18808a9c1d722a9e7
+# e19a935080754a918853a8108e078c65
+# dc85dad2c478462891ae236bc374755e
+# 9d1e78371105443d94736e045339284b
+# 5f69a591a6fa43f2ba84b3e28d2f5f07
+# 725e277d6e8d43fb9ff76e2c7ebaa033
+# 5cd1e0ce62634313bebd8caf5063e082
+# b995ef22d5b34b49915d63a5f8a3df4d
+# 7724b1c2a4ab42eeaae143c5e79190a6
+# 26b73959b59149a39655f8d773e46d3f
+# b0b8c8cb71784089898354f2b08c7b4d
+# 10297a91e4d945a8aaf3446ca2f68243
+# cad694a493c64fdd94a41ef8653d5f10
+# 94e10b9eed6449cb9de5af2630232ed4
+# 328961dea3e84459ad5e76daba88d490
+# baf9244e515c46d48dd2eed01238ceab
+# 3b3f1f00415c4e208933dbef9f59c1e5
+# c66d20a1525044d993226f8d2a6c53af
+# 5085d0d55e75424b8d259f36c16f9fb1
+# 18168169ae3c42e99af546c5989b71f3
+# 8fa09cafe96c4b1082b9b1a0c918a7a1
+# 5dbe29ae468d4a87bc2cc0dfbeef9410
+# 36d6db922a0547f3ab5996f5c739e06d
+# c70b53f389b34a0dad9cf4cb7909b603
+# 75799519f86e47e684e9ad7ce5960796
+# 82497419ad504c159a6681d2116c4b6d
+# 1dd23b361c6446a78ca8a3cd42f81e2f
+# ac3f663446194fb58109bd12bf1595b9
+# c2bef516afdd47169e5e334b431cc4e1
+# 7d9d5187b44f4874aec76cc30e8a1be0
+# 8db6972f075c43f1838fd07efe1c3a24
+# 2c83999da63f43bc85612909203fddef
+# a369294d2b774cbe9204547ced2f74df
+# ede4245f00be4dd29ecbf282aad840b4
+# 587128ce9ddf4ba9a888aa560ed44a34
+# 72b66b337a354e799baf061e53427205
+# e34ffa9bc9214a87864ce8a64471b27f
+# ef9db412847549498687b66e0d5f767a
+# 2259d38825ad46328e76bf2e56559269
+# 2ef5e6f45bab4d138d9b0db4fd0c4bbe
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "wrong rate"
+msgstr ""
+
+# ec56365f79134b9b8904a49d47be545c
+# b0376909e08248628795a25127042436
+# 866d30bad4a94258891509f693a13c18
+# b7404331bdc246c185aff185d2ff15fd
+# 68365d23228b46ba94a2d65986a0b548
+# dad87ff5c3db4d84a53c8e4052e4bd63
+# 28287b4a6a364e25b89ec5ac1e82c042
+# 80389b235d374968a3dc9678778a154b
+# 59374b62c3b84b5ca2b3ddd393c3b1d7
+# f98660b3327a4884a76f3859a532c596
+# 48a4882f32354aeeaf0a89f0f5450d97
+# 2d96a315aea345cdac9f08626393a249
+# 73bc2b0b357e4b46954346eaa7b70f9a
+# d4207bc5a7154cc3bc0c4cce2e519a66
+# dc8f90b122ae43bdbf96864094407d9f
+# f3c044b44ae345e3b97f033b49c7c9aa
+# d18a83ca1822478a91b9cd650fec0b16
+# e32793ce43d24890b0223ad67ad31858
+# 4d81e7796de1459f9709fc1f5691ab7b
+# 3a85745c03724aeca27b170dd31dee43
+# 279cb54beedc407cb87b113c953535be
+# 939b3df2672949a589333562a9e40cac
+# 2e1108af49574d88ba0c65e7877e3627
+# 5aeea059f3f34d2993cf3a54c2dbd92d
+# ee576e75cdb1415bac4a6346fa28bf9a
+# 3b3b7ae51b7d4f1491e732556b18883d
+# c45470f1a5e44d97b35f7d07900793fe
+# 626bb2e9f0fe44789ab187f842926060
+# 3703dcba498a4ee685e2a74a754507fe
+# 208a45d9562843f391c62197dde3311c
+# fd1a94d835fd4d58b4ce50be5976d7f7
+# a27af5fa6d1646329f6b0a0f5153ab88
+# c4966798090e4e9db04ade152fd8cd25
+# 90b16319a6c54a92989f9d46196827b4
+# 401129c6460640e8a047e6e335f4d4bf
+# 001541ed14fe40caaad1ec5fed792777
+# 23eab3040643409197b2cb357d3e963c
+# 3263d72a171b4042a9a21965af395a73
+# 53f239fa25a64bc3ac1cf66ccca2bfe4
+# 26ff99b18dcc4ff4ab91c92931c5b8a7
+# 3dc93c4bbbd842b28b6662494996dd40
+# 3d082e80afe44437be627770a740fca4
+# 5185484354f540da90ea10a092c3ef96
+# 0e362247b94446ccae078e7f2c003651
+# 91144cd6d50b4bfdaeac1e26c0d6cbba
+# 7834b22dd7d249eba777c415a98a1f64
+# 40d40e6e6ebc4eb5a08bf60d9d3b44ff
+# f655fa17873a4e2384efbcb23de4c015
+# ad9879c81eec4223a676aac8416d94c1
+# c7b32f2316204cf2b86ae45cec5b25f2
+# 89dc3e5fee73444a8cd41a11313f064e
+# 4e7111f6a3ab4f4792f12bca0bfbb6bb
+# c21423f35bef4d2aae3b574a5e6221e4
+# 691cd73ecf3c403a91288cce7212c37b
+# 6601f1449f004e36beb9ab0de895019d
+# c40618b446764feab9d1ce80cd8fb7a4
+# c6a00dd7835745e79913e6858a61b16b
+# 18be40195ba3446bb34c196c7dc63f99
+# 33a827876e3d4118a8ab3d627205ca78
+# 6d33fefabfaa4cb9810f1cd4c7820066
+# d291a06c02144a09828f178c05bd5b67
+# 5ff8c9776da548bab286a42f4750a1d3
+# becb8b033ff844bd8ea5019091d69a5e
+# 565de87970364570b7a1f134f8b41215
+# 5fe8b0963c834d0ca15b827b48f3ae5d
+# 2676edde06c5499c95725b74dfadf1da
+# 9e191998a4d54a02a2a13380c023ec62
+# 8407c09ea46b4bbfb5f4a35d75f1bf4d
+# 445d6eda284a4123a068587d27c0aa58
+# 2a45e96d619f447896cb79318e79cefc
+# 88c597c61d414e399abcfd02befc4d5f
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "mean time (s)"
+msgstr ""
+
+# fca2f3f2eff94caba07e8ebdd39291c9
+# 4b7cdbdde09247488d7d1a94222962bc
+# acb77defde3e49be91baf980a4d87103
+# d3fb5f7dea10466bab6bd9ada72f6e74
+# 8e206bdf32c24c7ab796fcb46f20e524
+# af2eed8f95204b768cd3291ee38362a4
+# 3347decaef2642968458cf6735d6ff0d
+# e1189a4e261f4273abc1c1034b79319b
+# e6c207ddcac04c95ab2c33b0fb484161
+# 466dacf54def485099104a0c8241f297
+# a692c96287c440f19969f9edf511ca87
+# 675235d132584bb78b35689caa70c2e3
+# adaa55c97ca246a5ae6d0f028df58174
+# dced396226d941699a59f1df558a9b32
+# 4e2c14f7ee394af98186737c8b0700b9
+# a2f647d0a68940818fba07ebc74a4abb
+# 1d3b1cc7b92c4a4392692f1ed84829b1
+# 3b3e87b36eb64c73b2ec66c22edf73c4
+# 0992ffea7af74231beb3431eab412649
+# 02635af81642461388b4ca74a29a4017
+# fe4448b26810481a81a9b2298d391a14
+# 6cdc3baabeca40df96134b1c2adc1fc8
+# 18a9567359294f5f964a53613452d312
+# 45b7f2f0ef9a4109a96c7047e194ea8b
+# 7c54970ca21e49c6a2aa669e361ee290
+# 3e2fe756043243e0b33598d165b11b30
+# f9ddca2ae714428f81f5c9d3e5e8e760
+# 69cd6f6df9d84ec49b2b35e4fd9bf6b9
+# 07eae2307d464f2e98bcc4f2b72576a6
+# 10004a0ac63a41d6ba7650d9ea29c309
+# 425c79fa3deb401eafe7b7d343da3fff
+# cc2eb6a8800d4ea9bf0f220b22e14eee
+# d2683c07e4c6475e8e5212a6a9ba0a9b
+# ca3d9f4f17df41ac981aa9edefdec457
+# db1bb077c416432f8cfc1fbad4a90cca
+# 97d45db8cd1042dfbed14ff7573f1e9f
+# 11132846e7334e6c9e4c6942f7e6942c
+# bd08e227631b49b48e3a1b36e4be0f4d
+# 420ba2793a54435e8cee8f49b57995d8
+# 3a1aa4493e5a478fa514490889c69cca
+# 43c7205aec7540beb7964cf4fabf5ea3
+# 21da1546694940e7a58c3e432194acb0
+# 34a651d5174a40ee91b9e61cd72d4b22
+# 80fb556eeada4b32900bf0303f63ded4
+# ae813f9536bb4b13b073bb06e76ad15e
+# 5e79236f32fd460989f47adf6e6e5088
+# 48d1f8b952b84ef9826c46be8088ccc7
+# 890a6288c1b941df9f3a1acc219e404b
+# 1327b17549334e4ca028383327a4f9ee
+# f4ce493fabe14d06adaf0236802a10e8
+# 67a7bcfd50304a48b7d913c10c7804fa
+# 8e12d480ac34465b8112812870fabfd5
+# 43aec9671b78415f99657dabddbb6015
+# a5bea2371cd24e74a91c9c3c399d677a
+# c17b308b4f4646a98c0fdd6d01eca731
+# f143558fce96429aa069188e1fb3daf9
+# 9d95fc83f2c24db9b46ae247b9a0a3b1
+# 5ce1012144144a84a373b8a7ae85ef49
+# ef64f5fb60914cefb942b80223436325
+# e9abb21764bd48b8b13aa814e4ba95c0
+# 5ef70e2199a74536b499434d429ed47d
+# 404d76ec3c804355961a6be42c6437be
+# 9d7438b0ce85498db679858b1b5b84ec
+# 3c800419da614009868031e8df96b5ae
+# bee94ad298ba4a0bb44061885e792092
+# 013891a8aece42d9a9674250413c3ab4
+# 1272e79eab104750933a820c1d162220
+# e8c203ac060d474099723fc073a8af2d
+# ed688f2f54c446248ddd26c5549f2fac
+# 7ec3b995c2ed483daf396623de0623ad
+# 9db1460b68f9476da8dfae9bd45726c0
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "max time (s)"
+msgstr ""
+
+# b5b0e46acdab462fab17d7208de35b33
+# dafcd64bc5ad42c5a03ba6613e2971fa
+# 8e4b31fa7b1f42d595d10925155c551a
+# 71cb22335d8d4be496465de0d5dd1da2
+# 48e839f757a9481680397e8eedabe9d4
+# 88cc3cced2874651b2d1ae142ab8ee31
+# 74751101575c4f5dbc00ec3795697e2c
+# 6423768872134243ab9e9f8abcb3ea81
+# 3f1a7b343b5340f3944ca35b54f1fc47
+# d87a9be254074b87b421a1fb81001579
+# 4976827f011a4dba883f34d18ed4472b
+# 14187fe8c485410393239848fe7fdfac
+# ba6f235b818b4d73942a47745503a942
+# 0b8870bd3fea45d69006a76673eb4cdb
+# bf17d5e4b2f84832b4307a2034ecae7f
+# bd3c08b7fa1543e2ba8b1f5d81228801
+# 764ec4588584439dbf9e026716234842
+# 0b4d78a6486f4de587dc4da730310ce8
+# 1595e84d3006423d9991293fe1c6ba0c
+# 58758a8b819049b0bbb765016be5808d
+# c56499cbe6d8469cb4fb7a3459097a7d
+# 04f2cc7156af42ecbe303a362dca0507
+# 81df6b9abbe74425b8408eaa08afb75d
+# 9f2abf416d0d4c7582578fb16fded302
+# e0e48d6adb634f209d2d1820a63a10c7
+# fdbb29cb2bef4d73962b9d1e9afd26c0
+# 48cb57417875449191c8a0771c673d0a
+# 761a5db4e63d4b63a9a49b99055947ec
+# 53658c95db9b4dd5860ee76a02d30028
+# 17e3fdf87a3b4e1788c7e6f5a068de4b
+# 241b28a6d6e64d13841ced0a43348a4f
+# 9b85f29f72914470a7529d508c974d20
+# 24b47c06da8240609b7c1a28662fc2eb
+# 8de86dc86f4645c9ae26c9190f5279f2
+# 2e28980fdcbb4d2ca9837608d435f0dd
+# a0d121902d6b45049223cae40deb6a5c
+# 90152565b1d04d90968ce6b8a6693f65
+# 2960555a87334ded8882969a375b6de5
+# 3d316fa9941d4c03a01b04202dd5f925
+# 675383f8c404497db87f7e02d7a7303e
+# 5b73d588368b41bc908cf9968e3dcb8d
+# 2ee6ba9330ac43b7b1489981166487c7
+# c8ac0cb72dfb4a3bb86949d20bef3d35
+# 112e4a85f3b244159d88b4e9d8c6d2b3
+# 579d68f433474b0493998ce135209214
+# f32b657895c14056af26d2f291aef16b
+# 1049607ed34449dca6e3d9d295435409
+# 513b26d616ef4186aead9f09ebadfd0f
+# 08babc44c97d4a4a98294f2a96d8355f
+# fab8c820bbff4e6ba11895b062356c73
+# 52803e9421574a108d10fce59bdeb503
+# 8ad6ac62f6e5484aa14a256e515b0ce7
+# cb44b9f90a454cabad50afdac3bed520
+# 30dba03e737a46f6bd08bb0c6d817764
+# a6b925b648f345e7a2c25da0370d4958
+# 1ea7bb5be092419bbb1bf2928ebdb1bd
+# 6a645778065946c69133d1c57aad8fcc
+# fa12666fc7c54a3a8121065dd01a8028
+# ab9666adcec344ae92658268b023eafb
+# e20708caf76f40b4bfcf6dabe27449b9
+# 944b3ee847a74c34bd49fa5b09f9f2fa
+# 5b9fee7724aa4be19b1f2c45aa06a1f0
+# 46d454001c684a5cbf9674e7b07e21d6
+# fbb738fff7434291b46098ed32e6067b
+# 94523868cb284a198c2591652f12f1d0
+# ca54096ce02145cb91ef65fa909a2a23
+# 5cca6a1a8eca48ed8009bf6691ab36b7
+# 115eddd1346f4d90881d01b9d70f3d47
+# 291e9bf60ac144d3ac82a19ae0093644
+# 4c9daaee8a76495293a57da0fa25674d
+# bd569eafc1e844b8a6609fbc6ae9bc52
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "source"
+msgstr ""
+
+# e9f19312e4f84c09a0260bfd50289ce2
+# 8fd83e62a93745f0826c723c286504fc
+# 6775558cbf154ab0bfb3da62389427d1
+# c06025f47986450d8fae5f96931d20e1
+# eff6a1971f43409996ef17ab598c88d7
+# b401ba5719224215a8f8c2379a6067fd
+# 16d99452b05f4ab5ab0a29701b8eb86e
+# 844c9e2dc4234bd9b32d50f6ec948b41
+# 5c7e9c57430d4fc588159aa5d344e3c1
+# 5d829237a7ba44d58d7264b37e92254c
+# 77c781a681c241e093fd75f12acb0219
+# c970ce71a5a440acbef285b03f69289d
+# 516a4976a87e4a68acbd4fdeae7c221f
+# 88b043b7c6334858a8272e8178ff1bac
+# 31f67671b7a740258a1ef130c4885dda
+# 588699f72b7642119833db28a0e27a7f
+# b7b2eaf39af043669382d7745ee1ce8e
+# 7f9b2d478c894d54852b0f5565202c12
+# 05fee5f958954f7693aee064adee19b7
+# bfae59a6141749a09bdfeb15a02a3aad
+# 7ec10c86afe041748254913bcc6a8285
+# cad1b25a71c840bc89f7bb6e0272da9f
+# 7c4d27752e4b45dea534d54190dbcd67
+# ef7dfbad7dda4554a85f0e695f26e5eb
+# 53e34b33da0b4fbf9d25c0f27bfc48b1
+# c070f8d5acce406492dbeb64df465c00
+# ca8d603d795c41018c202662c313f156
+# 074ba1567e9a4fcd870e82a648fcd41c
+# 49d4094bc19d4cc6b3dfce0f22e8eecc
+# f72b8f4143794318aefd0cf52c80618e
+# 7a19b1789b384840a1706cc701031f08
+# 319e554c78ed4dcbb467a394fb4fb51a
+# 310ea7585fb343a6ad7dfc830e86a221
+# fa23375ff3f7463a880f0a816838aa41
+# 7c70ce2821ac46a6b486ceac8f15d158
+# efa05821b21f4fe9bbc6846464aa229b
+# 953df1ed72e0402687a1fc4699bf0330
+# 39afde5df60741d0ac4b166659980f9b
+# 61f7c14f716745258289417c9b8c0607
+# 9c419a871563477bb15dcf8273b9b748
+# b791d385130d40d4915c935147d2288b
+# a8805147d0d9453c80385cbf6140d510
+# bd17287dfae84df7bc1ebe68f43d1a17
+# 0d570cb336f24f74b40121653c790252
+# bb4fb1e546de44a386bb6132c8d71c7b
+# 05e2238809dc413e8c13c992fae88ff6
+# c4099edfae0844769596fb2f18aa3259
+# 99051f61212b4ae5a742898def652204
+# 47385bda8ad04ad7a0c8f37f24c91771
+# 9e273f27c9b64bef907925941d4fc218
+# 3d088bdfd8414edc89a3972688fcd343
+# 97a7f0619dc0472ba5b7bef4d1464d70
+# ecdb7328240541f4835cd058e9ceb45f
+# 75eedeb9fc5e4b83b83ad512f99417ad
+# c40f2cae78ee424fb64f01515fbc1eca
+# 2d51f7ab6ea34b3ca493fa6e8793356e
+# 1c7e784570424aa7806cf761b4aba897
+# 8aef945c91bc4434ab962b06bf7df4c2
+# 948ddbaeb7114a4f8a0982cc92717031
+# bb2f4b8f72804c62a1a9c37d0c5274d8
+# ead1ffe01ea045578b98cd5d665d6d61
+# 045a3094808e4166a994f7b63bd7e648
+# 4e57cdb9c3a0421c8c66626430edac42
+# 3619990064b24af48c905ebb43ce93e7
+# d4031f9a387d4942a0786d05bd4ac510
+# 9a3819b3634b4306a913effad73b5c86
+# cf8d0ce95d4547fab7bcc3787a04bc2c
+# 8144ba9af0b4461bb634dbc32fb1b7c4
+# 8035a76e8f4848ab814878a7503c69a1
+# 7c07fd0ec771452980f27bd848d6d3c5
+# 9cc9893fe86c4652835ffd234ea95af5
+#: ../../source/ikfast/barrett-wam.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:22
+#: ../../source/ikfast/barrett-wam4.rst:36
+#: ../../source/ikfast/darpa-arm.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:46
+#: ../../source/ikfast/kawada-hironx.rst:22
+#: ../../source/ikfast/kawada-hironx.rst:34
+#: ../../source/ikfast/kawada-hironx.rst:49
+#: ../../source/ikfast/kawada-hironx.rst:61
+#: ../../source/ikfast/kuka-kr30l16.rst:22
+#: ../../source/ikfast/kuka-kr30l16.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:22
+#: ../../source/ikfast/kuka-kr5-r650.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:46
+#: ../../source/ikfast/kuka-kr5-r850.rst:22
+#: ../../source/ikfast/kuka-kr5-r850.rst:32
+#: ../../source/ikfast/kuka-kr5-r850.rst:46
+#: ../../source/ikfast/kuka-youbot.rst:22
+#: ../../source/ikfast/kuka-youbot.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:22
+#: ../../source/ikfast/neuronics-katana.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:46
+#: ../../source/ikfast/neuronics-katana.rst:73
+#: ../../source/ikfast/neuronics-katana.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:22
+#: ../../source/ikfast/pr2-beta-static.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:44
+#: ../../source/ikfast/pr2-beta-static.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:69
+#: ../../source/ikfast/pr2-beta-static.rst:83
+#: ../../source/ikfast/pr2-beta-static.rst:100
+#: ../../source/ikfast/pr2-beta-static.rst:118
+#: ../../source/ikfast/pr2-beta-static.rst:128
+#: ../../source/ikfast/pr2-beta-static.rst:143
+#: ../../source/ikfast/pr2-beta-static.rst:167
+#: ../../source/ikfast/pr2-beta-static.rst:181
+#: ../../source/ikfast/pr2-beta-static.rst:198
+#: ../../source/ikfast/pr2-beta-static.rst:216
+#: ../../source/ikfast/pr2-beta-static.rst:231
+#: ../../source/ikfast/schunk-lwa3.rst:22
+#: ../../source/ikfast/schunk-lwa3.rst:42
+#: ../../source/ikfast/unimation-pumaarm.rst:22
+#: ../../source/ikfast/unimation-pumaarm.rst:32
+msgid "detailed results"
+msgstr ""
+
+# ae7cdeac94ee4959833ed6a24bf9448b
+# 55604a036b0e46d59a9eee66aa3405f7
+# 50ca70510a804997b2514c3a5082959b
+# 4485eeb8d37647bfa7e413d9d12b8412
+# 043c2040d4434304ae4ecb00cf62b3a2
+# 6fa7679d4d7344698985c2e655391e69
+# 3854645948ec4a08844fad3343785134
+# 7ea72c05ee7949589312421a75d0eb77
+# de266e7c4ed747818bb1671029f08f5d
+# 2dc85ffc58dd42178597feed68097fa3
+# c63359579bbd4fdea469ebcc258aec7a
+# 66d25021d55044ec8b887f8b9539def7
+# 372a436ca49b42ad8a61d25da4adb68a
+# 520584eff6dc4702acbd1f600daeaa50
+#: ../../source/ikfast/barrett-wam.rst:24
+#: ../../source/ikfast/barrett-wam4.rst:24
+#: ../../source/ikfast/kawada-hironx.rst:36
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+#: ../../source/ikfast/schunk-lwa3.rst:24
+msgid "0"
+msgstr ""
+
+# 45f455c3acf8434d8e6998da8151fe8a
+# 2aecbd8b470c452ab4d9ed406a99d19b
+# 100247f499644eb4bdcd8f4f5e3547db
+# 049c2054bf5640128c18ae63b69cbdaf
+# 93a5795469e2442b9b19e8c788dda556
+# c891a133bc4d4a84bed24a27ba854773
+# 9ce904a4bfcb4a4d955dc12e02c1bdac
+# 50f257b9a544487082d19b7df4c2ac34
+# 5fc1623a409e42778bb9cdf6f065245e
+# bf4ca9dbc5da46acbdbcd2cc3c9e3595
+# e06c7cb1a28445979563d2e5d0ac749f
+# 395481d931d2455b9c0efd3058155bbd
+# b2ea6ed122b448069b0153373c29512e
+# 1465a129cb0a45e5ba211ac0d5ab189a
+# ecaae3ae141343a1b0251f54cf225f14
+# dba89a091b6f485ab3e6c08dc87c3c17
+# 5f2d4a3da8ad4609ac8f6c814e11c817
+# b84f23da79044d7d912abe17fb7481f8
+# a50450c751f7495e9da1264335d95a7b
+# a30d76377fc04cf48d0a306147a2e50a
+# 119bb8d418824144bfbc920d4354aeea
+# 36ceeb394e924ef09c54242b9c29aff8
+# 757531630dc14621ade9853812b8843e
+# 560f29c360e840b6955616cdc9171b6d
+# 9335a2b05a1b44699cb45c6e8536be1e
+# 66d75ec567a3489386a3ab2c3f8f6662
+# cfb5606f081b4be99712c4e21ca6a633
+# 6330481f232f4987819ad469396e8c54
+# eb10740a1a3a46f8aa37e89f9895d60a
+# cb4029ecd59c443b9a94ab2ee09d41cf
+# 5b2575a2deab49cabf6c09479e2a3314
+# 49f18e9a37494dc5b6cd5b54890aa03e
+# 59076ce1b9a84eeeaa756c6c3d7a0c32
+# 6516997172d34a168c8b3e42cc10be98
+# 1f3961efdda04bb192a1b5da74410a8c
+# 8332ea3ef968475a9ba55c8f908a392f
+# 0953807bf55d4b1cb848386cddbbb60e
+# 03cdf9dad7a2440bbda41e7410ba0646
+# 7401fe58630d4ebeb659d92f6670a344
+# 9724bf9eb3aa42fa88705ce6ea5787cc
+# 6002e08fccf5453ca0c30be18630757a
+# c026cb8a655044838c9252150cadc955
+# 3b267b080bc34516b7876def946f7fb9
+# 3332155a4f6d4c06b9b7fc7421a3a233
+# 97857bf0897249f6a158958d5eefaa29
+# 7f3d850f258b41e2bc3f7724a7e24204
+# 3cb32ab2ca0240988b854642667a26b1
+# 4a993115aed648e0b6c568bca7b12a40
+# a1de61415cf4426fb1485294b021f59f
+# c48ce8fa73844112a98f0977f9abf28b
+# 8ee58c2e9ec14a348f0816f0d8c43bb9
+# 19cddd9ac26647a79173218d733a11b0
+# ab7239ae52f8410bbb6bfc33f8e50934
+# 2ec1929706084d2e93501fafa8313a82
+# d93a534bf5e74a89896163575153f53a
+# 53fb899cc7a649afb78aa799e8d4674f
+# d9adfd7ad8e44423befd0afe96a4ee26
+# 59e699b161884c3eaffaf6cb67653d1e
+# c996844d0c8243d0879fa0e5d63957af
+# cceb97a91ea2445cb94329ab6888a613
+# bfc11bbc85ea445a812c53328fe9eaa4
+# aaac7ade52cc4153a06160f89737decd
+#: ../../source/ikfast/barrett-wam.rst:24
+#: ../../source/ikfast/barrett-wam.rst:34
+#: ../../source/ikfast/barrett-wam4.rst:24
+#: ../../source/ikfast/barrett-wam4.rst:38
+#: ../../source/ikfast/darpa-arm.rst:24 ../../source/ikfast/darpa-arm.rst:34
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+#: ../../source/ikfast/kawada-hironx.rst:24
+#: ../../source/ikfast/kawada-hironx.rst:36
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+#: ../../source/ikfast/kuka-youbot.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:52
+#: ../../source/ikfast/kuka-youbot.rst:54
+#: ../../source/ikfast/kuka-youbot.rst:56
+#: ../../source/ikfast/kuka-youbot.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:48
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/neuronics-katana.rst:52
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:60
+#: ../../source/ikfast/neuronics-katana.rst:89
+#: ../../source/ikfast/neuronics-katana.rst:91
+#: ../../source/ikfast/neuronics-katana.rst:93
+#: ../../source/ikfast/neuronics-katana.rst:95
+#: ../../source/ikfast/neuronics-katana.rst:97
+#: ../../source/ikfast/pr2-beta-static.rst:36
+#: ../../source/ikfast/pr2-beta-static.rst:46
+#: ../../source/ikfast/pr2-beta-static.rst:56
+#: ../../source/ikfast/pr2-beta-static.rst:110
+#: ../../source/ikfast/pr2-beta-static.rst:130
+#: ../../source/ikfast/pr2-beta-static.rst:208
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+msgid "1.0000"
+msgstr ""
+
+# a829d1000eca469cb4cf1741b3d7db73
+# 6d1d5d81bb284991b914ffc61679d99e
+# 0c5b8436aeee4041a79d41f8d5b77f6c
+# 195d2e1b277d49fab53d8df2515d832e
+# 17ae408b1e7e4162b3232c74b88c141d
+# abe0d7e2b6fa49e98f97ad698242c610
+# dcc28ff216984d99a6aba63e7d18b41f
+# 05ea7fc983834e0789266c30079380fb
+# aa3f5af2001c4a81810795531de1c2bd
+# eb971fe0cbf94994bbe058ec91309d79
+# e57bd11ef1364badb3fd06881f031af9
+# 797774d8fc6f4d23ae5a7f013af6e17a
+# ede9755a91a942d4a6c80d36d9487d6c
+# 8e2cc38e2c5841d2a00e6a6d930169f3
+# d95f9f8cdfe74df5b3008cf8e4472b26
+# 79ebd3f2732c4439aaa1be73b1732682
+# 93b6a4c84dc84a2796d18e2a135b3fec
+# e4e34a666cb243e1a11665f127b141d9
+# 6383cb0d73ca4a3fb22918139f9e9ebd
+# 95eac2608455442ebe2fb74cca4faec2
+# 5e3ef58636d34463a46690cd6ae2e004
+# 9320d6a13c5e44b3acae2a391392654e
+# e5ae0b2ef0c84f15bc71a490d69ca4bd
+# d7e5d9745bee4f4f8bc17a5b76d3f3da
+# ad790efb32c643c0a3d4c7991de22024
+# f684f0bc2c1a45ad872f297bea29e837
+# 35dd1668b8424deea817eb1a70b1b5bd
+# 350b4eebc52143bdbe5fd957152188a1
+# 01b49d60c21b4da697cd5d72391ca2a7
+# a2793047055141e9b3ca7d2b8bfe9b94
+# 55f5995a0dbe483296c57c6f19cb7bcd
+# 2b5b8c75eaeb42578a6e871ef086e46e
+# cfa37b43b4934dc8bd29fc63fc8536bb
+# 0dbfb49a328e45d9807a243235e5690d
+# 7dbb5dd467524e839dce6a79a4bafcf5
+# b23722a4c7be441eaf89dfe5e63a3eb0
+# 3ac867bcdc0f41d08f12ff4c5d00155d
+# 1b61f781809444d88355aa615b97017f
+# 0820ba497671406bb858b6d897463318
+# 45d467d7689f45f0b3deda0db4a95cdf
+# cb51fda38715414d93e303556d5a3cf4
+# 2867e1bd1d954985849282d101eb22e8
+# ffa6df033acc4907b4085ed0f22ba657
+# 60084766ccfc4302b472d18ee69e356b
+# b01caecf5c774f9f8f267009ba996ca6
+# 4ccc7d6253084d38a9487eb40e822edf
+# f2d4edd230a3430f9274a93130796645
+# aa1885bed22544a9833166d3842b719b
+# ca4d0861d645402bb9faa24fcc2d337b
+# e30082f39412455eab6fb2e087f8f75f
+# f19a8779cba1416aba9bbfd92326d3b6
+# e084e3b5f2db4e71b46097bb294d90f7
+# 898e4387f338452fb30441e46a47a2f2
+# 6bc140e17d7540eeb4a020defbef6dd5
+# 8c37a0730db54879a83b56b60c8c67df
+# 29c36bcfe9bd4f5f82851ba4cd85244d
+# dd18a7cd13fe4e70baed0aefaca932d2
+# 40a699f92a51404eaf0d2f6adc793a03
+# 62de1bdf846247b9ab14193d915692d0
+# 2910c1d643594196ace976a229e94944
+# a49d73a392904628aec2e2dd17a7cb0d
+# c11d35ee8b3649c6834d9bfb613c0d60
+# c311e1036c5446acab8eee277dd785c3
+# b34744fff2b44276ac44952f91f1162a
+# ca9f786ae6b54b4285ccd013e6a7cbdd
+# 2fc56ddc2bd14f5bb6972eb51d420029
+# c942025b91664cfab38b64f85e34c1d9
+# c6bbd392b17c4a0e812310fdeb0948b7
+# b6faa64b5d19475a99134d7e2619d9d2
+# e2a64a28bb044dd3af5990ee36afe811
+# 1243b07c85e243a4873fb060b0fd55c1
+# 624bf53695b24858935ea2244b3e6681
+# 4b73d3aced11432bb8f26c853db3fe35
+# 540882d930f84f18b9e148097ef0cc1f
+# f57c9170f10945e3a585bd9d8de363c3
+# eb0755bed80e45708d46c5349ef44ebc
+# 9a4919d382b2481fb022d2aeb8653eaf
+# 48b13a99df154e119fe1dba6c4e05c5d
+# ab65b8469b604006a698528b2bc6bc6a
+# fa26fc610c2946c9aa380cab2dfee763
+# 87ed20c94451497d950cf6d7f851f9de
+# 0fc7737395f64d85b4e1f34a710b3ac5
+# 4d7c0f13a349473488d459d43cfa0aef
+# 918c2edda74948068bcfd5824931eb94
+# 525a105e33df441aa6131e17a9d0a63e
+# 5f62819cabf744f8bb1cd1b7a58bc198
+# adf32cc7231d43f7b1dc2761c9d3725a
+# 62e9e4c25df64154bbffd62ae32146f8
+# f0484f07dec94f1fb92d016878900da7
+# d68d09fbf8dd4a23b55f3c4d90d865eb
+# 202aae919e5b419b8dc23325070336e1
+# b3f7d1b2e41946ee919eee28c0c434e5
+# 01cc2c9f521e40a4afd28b2beb73a2ae
+# 70198503f7234a3f89d03d2f9c802d6c
+# 83a0926b43314149a9e6b660d5469dbc
+# 25b563e507874d21a99af3896b6f2d66
+# a42b48fda47d4001887025fd999a8335
+# 30360823586c4929887820b4d86af87b
+# 5ef82fca1fa8406198fc41f5cfb4a92b
+# 32d2214e553b4c80b14bf327a29c9500
+# e3b2ed99cce7452b91d3b99a81d16715
+# 8f63513e1a62469783691e3a0950fcc2
+# d6e4d16be2be427caf391fbfedadaff7
+# a279540d7c46464d9e14fe59c5e50937
+# 997940336c33449db99343446055ddd1
+# d4e71fde95804d4e99516680c324d0ee
+# 10268ab0b2c04d8b9e6eea8b750cf176
+# e4361197b2b84c98b8a85ab286e20bad
+# 309a6558be08404991b8a2964c53030d
+# 3b6b6a5ea8e74d8e8a89d06674ed6d2d
+# b30114e8db794d79b359b5a6c2b88640
+# e366f0516ba842eb82620146d848934c
+# f174d7035b9947c6ba3ae5c59108e5bb
+# 06e3abb6f3f24035b87375be3c2aabb1
+# 898fbb3417354aa9899041cb1b2004fa
+# 751ae821640b4e9f9ab6cf518fe7bbc8
+# 17eab6a2668b457081ef94e6e8b6fe9c
+# 42d8a09f04df46ba807f0c33ecb7b7e2
+# b7bcd7bb29a94778b3e79c35a1db191d
+# efa319aff4d64063a712d4c72ee510fb
+# 2681b3b52e5b49c3b9fc71aead8c524c
+# 401a3593647446a88e57e07cff522eb0
+# da73e960ada048f68560a24bb3a6f6d9
+# fe0bc3432d8848adbd644b9e451f319d
+# 409f8af174ee41fcac1a4a350e6341a3
+# 3a8c02c112004e78aa518ac6f22590d7
+# 91dee25e63cf4bb181042dd518f67a69
+# a8a1bfbcc62f483fa1576f5a7011f807
+# c1a640c45c2a435c9004bb03a9b93649
+# abaa944b32aa48ffb31f8d85ab39cfd4
+# da26bab551424a79af83cc22552b776d
+# 47b0c2ea222249e79ea9c9393403dc20
+# 20884d82d94645c181f1d49fa2421b2c
+# dbe49fd47f714494a8d9548722092f24
+# 6f6a670952a4421197697f4d16371520
+# 7b7bf488b7d3453fb7da079f4c016ec7
+# c9ba01b06f1f4318b51cb3337e6f29b1
+# 846d53fb73b840a49453dc05b77a763a
+# ca4e7c3d4f174f1698caa32b0dbf82cd
+# 23902a25f3d64b28983c1016e3e7b61a
+# 70f2ef8c3ea049ca920085dc43947bcf
+# 7b4df6966cb44493974358439960bf7b
+# cedae01810f24eedb1b24e6aa070b73f
+# 868fe54eb2ee4528bc28083eb34f05cb
+# 81295194cb5c415aa2243cad80251acf
+# 9ccc703e7a134b5f9642e8d324ee13f1
+# 9a0bfc9f381842c3a7a53e3ac6ef0dfd
+# 0ba3350727e041d5ad7528efcd5762bd
+# 11573015cdab4567bb9c9cee98c73604
+# c20d5d8230df49a398122283e40b5617
+# c76d5f38adaf4d7cb1a4579f0ec15c72
+# 106fc18441824f28863448d294d1c833
+# dd31c0081300470caee34aa89556416e
+# f1016ec711c848478a886e5683c5a92e
+# 1e130806b5a841ec9a04df5b6ad640d7
+# a5ff0a1935254439af2cadae55395ab8
+# 3f83839ce22e4532a55560f2f9c9efd3
+# 35bbe070076741f3849f2fc71a2ddb90
+# 75066697611a4c00a692b8299f97a9fe
+# 99feb54f213b49be9a1b860721d59c54
+# 49ff958f5dd546d6ab6a03fe5e54ec1f
+# 5ef389a5d3374949b636c319a9bc7e48
+# 9f97a3a81abf47cb871ceee125ba8e53
+# 2e94395cdada411aaf83c48782f1d7af
+# 763e9432c9d04e14af824606441115a6
+# 0711c7f0022d4506a1874dbbd16ffb85
+# 19473cc2b90e409588b7a86ab7ff1613
+# 8258a14a4ad94b26880f185d0d0e39bf
+# 55ddf72db4134fbf82e0142cd6dee9ea
+# d317ef3237164a1e8d08e885a19c7128
+# 93e96a18239741848bdaf4375b34ea8d
+# d83d801700644a3b937ba92d4fab19b5
+# dfc56cc8288c4140825df428b20275a6
+# 01559d63ca9c42c1bbaf03fb0e07c9eb
+# ab91046b6662495eba034f5691b2d094
+# 67ea36a56e144e84a3e4a9a293e516a7
+# 4fec43287e734b249f49212037b9b79e
+# b7ab315fe68c43399cea36df66f1cdf7
+# df41b1d30a384282b44ffeb973316d6b
+# 2419d7fc0fb54475918eb5962caa8f12
+# f7257d2782f04682a7ef7e5f723af789
+# 5247b1c2a6c041a8b572a1df9cb6bfcf
+# 833420d05df7481cabfab1c5f0582bfe
+# bce4a7fccdac4b118cd7a78b4982d6a4
+# 8f591378f8a64e52843336025653ff00
+# 21f8b65034304a78b9a61f651f96c7d0
+# 8fcc4f76f8b64db39902f109527f56e3
+# fa5e292163bf4ad28d55dd9391fa1067
+# 40a35ef89b694f0883eb991e66f7115a
+# 913baf9de6ab417ab7f19e55c0e0761b
+# 9e9491a205ca48da9a40846951cdc974
+# bf21345b090a401c8b0b0ac2953502a7
+# f222970de4de4db6867bca48973eb186
+# 5dd60a88ead14973936bedb6086a6900
+# 9182be5f92af411b8cc7b62eea7ea087
+# 831c7e37821447f585af0893be35d926
+# 7254bc689bbf4f61aabcf293f4eae4ca
+# 4826d8d23869440c942e8c1ba6add4b0
+# cba6b74d0847434f8cacc0512385c92e
+# 4076b0d196414ce4be72535c033b078f
+# 74593f7d25504cebbed3100b0e646fc6
+# 7249c03d67b44b9f82bc16f4de7b8d1c
+# 48c3c5f81f2b47879193ebeac2906166
+# 6815001e517a4f59ab36dfbe5bc27fd9
+# 6eadcea720af48fc998805c404f1e653
+# 3a8aff3aa7194c0eac9d9c7fed4e2e54
+# c43372f343cd4c44b6da6fc97d28ec71
+# 72fd21496bcf4b8abcd5c905aab1503d
+# c7ca4a2aabe14d4ebe2ef0e211ab6ec6
+# 639c75da5ffc4533a2bc5bb1bf63930e
+# 70cf67ae988648d69b1718c704a197cf
+# a1faf0bfcc9941009d42f2c0f9f7be21
+# 84987893f772450cbc6c40f279b1554a
+# f5547d004d684aeb8a347a7c673cce64
+# f68b41bc4f874aa9b5f679eac48dc5f5
+# 9a711df99ab14edc8bc2a9d7751f242b
+# 8fd42df43ef34a2987515a4953bac542
+# 3761f6b8a9784fb89f45ecb0c87c22b6
+# e88e47af4324459aa6ec3583fe34215f
+# 921505b543384801a782932578cd7753
+# bfdce53d5ebe49808669a0e2a8a6ed8b
+# 5634349d8afe4ea6ba774b1e4d0e1b96
+# e02d375ecf0e4848bbd404083f36c9c2
+# aae28db570534755965c97d3db95f48c
+# b5ef4089f69e4134903d3fce06629b08
+# d726067ee03142d898196f079d579e15
+# 710fb1b9c80d4fecb433a868093699ae
+# 598c3f0b2dec4c1dbf543aafa5bced8e
+# d55a9be07bb94e568a02d75a760dbabd
+# f859fa50e4844645bfbf65f1ac8a68e5
+# b8a9bf52d2e64807b7f4c1b5b047932b
+# 633d20dd08f24591917913da9eefe945
+# 5ab93e970c424e20865070afe5a27f43
+# 6c4f9fe28e804115b2ad3cab498e7c1a
+# 7a7abd0008a64595b47a7a21de214d74
+# 897712b18dd34b3dbde285362abc4dbc
+# a41e725aa7f5460eb2d9ca0cbf7a2742
+# a3763cff610d45c8bdd88e17e2d4e727
+# 7e86dc75d2954035947e370e5127cc1d
+# 50e9217ac2e6401087c69eb555643f65
+# 1285887b132f49c3bb288682dd9ed6da
+# dff3edb8f2d640699b5cb5cbaba380a1
+# 48f339ee1644469d93f5c1dd7b5be08f
+# 1f3a25ceabec4574bc437d29a5b00d85
+# 1765ea78a40d437d90d2efe2f7a4ad4c
+# 4f1dbcea87e241ab923ee60eaa196644
+# eff44a02520040e5ab696acb0fedd4e4
+# 37b35b2cc3f04cc3b1986bc695b5bda1
+# 4a9d41b70c8e45e89c26059be906ee0f
+# 379e301785274e9487704e7736ca3f33
+# aef3edab08264474819d5587874ea869
+#: ../../source/ikfast/barrett-wam.rst:24
+#: ../../source/ikfast/barrett-wam.rst:26
+#: ../../source/ikfast/barrett-wam.rst:28
+#: ../../source/ikfast/barrett-wam.rst:30
+#: ../../source/ikfast/barrett-wam.rst:32
+#: ../../source/ikfast/barrett-wam.rst:34
+#: ../../source/ikfast/barrett-wam4.rst:24
+#: ../../source/ikfast/barrett-wam4.rst:26
+#: ../../source/ikfast/barrett-wam4.rst:28
+#: ../../source/ikfast/barrett-wam4.rst:38
+#: ../../source/ikfast/darpa-arm.rst:24 ../../source/ikfast/darpa-arm.rst:26
+#: ../../source/ikfast/darpa-arm.rst:28 ../../source/ikfast/darpa-arm.rst:30
+#: ../../source/ikfast/darpa-arm.rst:32 ../../source/ikfast/darpa-arm.rst:34
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+#: ../../source/ikfast/kawada-hironx.rst:24
+#: ../../source/ikfast/kawada-hironx.rst:36
+#: ../../source/ikfast/kawada-hironx.rst:51
+#: ../../source/ikfast/kawada-hironx.rst:63
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+#: ../../source/ikfast/kuka-youbot.rst:24
+#: ../../source/ikfast/kuka-youbot.rst:26
+#: ../../source/ikfast/kuka-youbot.rst:28
+#: ../../source/ikfast/kuka-youbot.rst:30
+#: ../../source/ikfast/kuka-youbot.rst:32
+#: ../../source/ikfast/kuka-youbot.rst:34
+#: ../../source/ikfast/kuka-youbot.rst:36
+#: ../../source/ikfast/kuka-youbot.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:40
+#: ../../source/ikfast/kuka-youbot.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:52
+#: ../../source/ikfast/kuka-youbot.rst:54
+#: ../../source/ikfast/kuka-youbot.rst:56
+#: ../../source/ikfast/kuka-youbot.rst:58
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:38
+#: ../../source/ikfast/neuronics-katana.rst:48
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/neuronics-katana.rst:52
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:60
+#: ../../source/ikfast/neuronics-katana.rst:75
+#: ../../source/ikfast/neuronics-katana.rst:77
+#: ../../source/ikfast/neuronics-katana.rst:79
+#: ../../source/ikfast/neuronics-katana.rst:89
+#: ../../source/ikfast/neuronics-katana.rst:91
+#: ../../source/ikfast/neuronics-katana.rst:93
+#: ../../source/ikfast/neuronics-katana.rst:95
+#: ../../source/ikfast/neuronics-katana.rst:97
+#: ../../source/ikfast/pr2-beta-static.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:36
+#: ../../source/ikfast/pr2-beta-static.rst:46
+#: ../../source/ikfast/pr2-beta-static.rst:56
+#: ../../source/ikfast/pr2-beta-static.rst:71
+#: ../../source/ikfast/pr2-beta-static.rst:73
+#: ../../source/ikfast/pr2-beta-static.rst:75
+#: ../../source/ikfast/pr2-beta-static.rst:85
+#: ../../source/ikfast/pr2-beta-static.rst:87
+#: ../../source/ikfast/pr2-beta-static.rst:102
+#: ../../source/ikfast/pr2-beta-static.rst:104
+#: ../../source/ikfast/pr2-beta-static.rst:106
+#: ../../source/ikfast/pr2-beta-static.rst:108
+#: ../../source/ikfast/pr2-beta-static.rst:110
+#: ../../source/ikfast/pr2-beta-static.rst:120
+#: ../../source/ikfast/pr2-beta-static.rst:130
+#: ../../source/ikfast/pr2-beta-static.rst:145
+#: ../../source/ikfast/pr2-beta-static.rst:147
+#: ../../source/ikfast/pr2-beta-static.rst:149
+#: ../../source/ikfast/pr2-beta-static.rst:151
+#: ../../source/ikfast/pr2-beta-static.rst:153
+#: ../../source/ikfast/pr2-beta-static.rst:155
+#: ../../source/ikfast/pr2-beta-static.rst:157
+#: ../../source/ikfast/pr2-beta-static.rst:169
+#: ../../source/ikfast/pr2-beta-static.rst:171
+#: ../../source/ikfast/pr2-beta-static.rst:173
+#: ../../source/ikfast/pr2-beta-static.rst:183
+#: ../../source/ikfast/pr2-beta-static.rst:185
+#: ../../source/ikfast/pr2-beta-static.rst:200
+#: ../../source/ikfast/pr2-beta-static.rst:202
+#: ../../source/ikfast/pr2-beta-static.rst:204
+#: ../../source/ikfast/pr2-beta-static.rst:206
+#: ../../source/ikfast/pr2-beta-static.rst:208
+#: ../../source/ikfast/pr2-beta-static.rst:218
+#: ../../source/ikfast/pr2-beta-static.rst:233
+#: ../../source/ikfast/pr2-beta-static.rst:235
+#: ../../source/ikfast/pr2-beta-static.rst:237
+#: ../../source/ikfast/pr2-beta-static.rst:239
+#: ../../source/ikfast/pr2-beta-static.rst:241
+#: ../../source/ikfast/pr2-beta-static.rst:243
+#: ../../source/ikfast/pr2-beta-static.rst:245
+#: ../../source/ikfast/pr2-beta-static.rst:247
+#: ../../source/ikfast/schunk-lwa3.rst:24
+#: ../../source/ikfast/schunk-lwa3.rst:26
+#: ../../source/ikfast/schunk-lwa3.rst:28
+#: ../../source/ikfast/schunk-lwa3.rst:30
+#: ../../source/ikfast/schunk-lwa3.rst:32
+#: ../../source/ikfast/schunk-lwa3.rst:34
+#: ../../source/ikfast/schunk-lwa3.rst:44
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid "0.0000"
+msgstr ""
+
+# 3112503c518e48a59cf4b0f9f4cb659c
+# baadbc37d3f949e5acaa367c5b5c8479
+#: ../../source/ikfast/barrett-wam.rst:24
+#: ../../source/ikfast/barrett-wam.rst:26
+#: ../../source/ikfast/barrett-wam.rst:32
+#: ../../source/ikfast/barrett-wam.rst:34
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:153
+#: ../../source/ikfast/pr2-beta-static.rst:239
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid "0.000016"
+msgstr ""
+
+# f63de3b8e97741c9b2187c281cbae8ac
+# 7b1270262d2c409cb412c659f6139b7e
+# 50ee93b84f9b4a04a80300b1d2ae7443
+# 586d5dc571a6440eac188f66c1b8ea93
+#: ../../source/ikfast/barrett-wam.rst:24
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid "0.004005"
+msgstr ""
+
+# 9937488564864718b00f51b61971fbae
+#: ../../source/ikfast/barrett-wam.rst:24
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.1_2_3_4_5_6_f0.cpp>`"
+msgstr ""
+
+# d75bffbd232c4a83bfaf81be04d1a869
+#: ../../source/ikfast/barrett-wam.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Shoulder_Yaw_0___>`_"
+msgstr ""
+
+# 62a07f08643c44058f0e921535e045d2
+# 6f9b57100dca4366841087ee7c2ecbb5
+# 11b314d0c67d4cdd84611299c5ce70fb
+# bce6f9dedcf246b391635b511e1655bb
+# 539563ca8402475b9dd813fa79176c6f
+# 9cc3375b5f1e4e598b2492f90e203819
+# 720c55f965394ba3b0b614e81dd5518d
+# ddc798b6721c4df2b8f98ec8835b54a7
+# 08fb7a4af697465ba62221b91635717c
+# 8a7fdfa8964b4d5fa5041aa67fe62079
+# f24773adee1b40829e682fb9c6ca4fb2
+# 136779f5a28649a6a2e20a2181d2e919
+# 93263ff6463343368f191e2aa1f26500
+# c6106c76f53948e287be696cfcecef7d
+#: ../../source/ikfast/barrett-wam.rst:26
+#: ../../source/ikfast/barrett-wam4.rst:26
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+#: ../../source/ikfast/schunk-lwa3.rst:26
+msgid "1"
+msgstr ""
+
+# e562518c49d54fe7b5f62e607e29af67
+# ae2d9df0d5e9498da21f753bbc53568f
+# 9d990729b6dd45738e1ef9827d7baf5f
+# dc4a3f800fdd448a914f3824db4db36f
+# 7323153208d7437ab9d5243ef69d51fd
+#: ../../source/ikfast/barrett-wam.rst:26
+#: ../../source/ikfast/kuka-youbot.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:102
+#: ../../source/ikfast/pr2-beta-static.rst:104
+msgid "0.9800"
+msgstr ""
+
+# acc671d058d14360be56300ca4ef00b7
+# 34e2c2e982dd481d9c45e1458e41d920
+# d0b84064cc47443b8cd41601336986d0
+#: ../../source/ikfast/barrett-wam.rst:26
+#: ../../source/ikfast/pr2-beta-static.rst:153
+#: ../../source/ikfast/schunk-lwa3.rst:32
+msgid "0.006006"
+msgstr ""
+
+# 90c80847185740e2ba8cda2afce51d70
+#: ../../source/ikfast/barrett-wam.rst:26
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.0_2_3_4_5_6_f1.cpp>`"
+msgstr ""
+
+# 179fdeda849546e29938a76ffdce332c
+#: ../../source/ikfast/barrett-wam.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Shoulder_Pitch_1___>`_"
+msgstr ""
+
+# c895e4d97dcb4d00a0e204413a7713a4
+# 4e86a40fe7f5410fbda5b4888e0a9d5c
+# 948dce8f45fa4a91960a1cab3226aa13
+# d8f213bef0ec49b48f2edb024a5ab158
+# 359be0bf43694c67b1bd69b082ebdf70
+# 804ff3832daa4fafa14138759c3df64c
+# 6497b51e7f374712b4cfabbe576b31b2
+# 75fd35b544e945cdb1c66330a6bcd51d
+# 3918697596764629b071d168395b5be5
+# 70b437cd69b34f7dacd207aeff567de2
+# 57e9960899c94765b2ba10b705285dcb
+#: ../../source/ikfast/barrett-wam.rst:28
+#: ../../source/ikfast/barrett-wam4.rst:28
+#: ../../source/ikfast/barrett-wam4.rst:38
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid "2"
+msgstr ""
+
+# b125d67d2cb34ce987f78bf05f03bbd7
+# 1623766f13464135b4390b47e9281d3c
+# eca68b24137843e7ae22a56508c9a32a
+# de2f2e88653d493c8928f49505b49e98
+# 115b70a790474d54b71a47e7c96bfa45
+# a8479aa7b53e4da2a682aa91a722dce5
+# 5a23f5cd24204d8ca53b77eec7cef2db
+# 9331bf1f60ce44f4b7e97324158ebaa3
+# 30ee9c113d8d4a33b4173f24667829b6
+# 8b826a2419214443bd0ea36b5cbcfb4a
+# 19c4b24db2354483a63f979a46b92591
+# 3e30b5f18d6b42bb8ab6d10f50560759
+# c3d4c7923b6041238204804539ccbc15
+# f04d5842b7f845bb95f01f5f8a7b5138
+#: ../../source/ikfast/barrett-wam.rst:28
+msgid "0.9850"
+msgstr ""
+
+# 03aeedbf3a7d4debb490db17c54d39d8
+# c15c2a92c9034c878126936b345cc87f
+# 10c164b766854fa8ab03a83d121baca2
+# 05d6e6b2e5cd46a18f30f6f38da6a401
+# 1144990510484e6990642061c996b110
+# d2a42a68e89e4fa3a6b29f3c261e9e0a
+#: ../../source/ikfast/barrett-wam.rst:28
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+#: ../../source/ikfast/schunk-lwa3.rst:24
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid "0.000018"
+msgstr ""
+
+# c5918bb0d1d645f5a9684bf4c2c1edec
+# b495eb39e23645479be1f83c93221d6c
+# 97841cb723d84815a6808c6c6d3953e5
+# 2372e44f03e24f6b9c1950fe59ab351a
+# e249d9e770724c188d58d18f53237652
+# a1032ff22c864cd7834d08264d5a7926
+# 481dad465081469fb660b5dc5ae60f07
+#: ../../source/ikfast/barrett-wam.rst:28 ../../source/ikfast/darpa-arm.rst:24
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+#: ../../source/ikfast/neuronics-katana.rst:60
+#: ../../source/ikfast/pr2-beta-static.rst:73
+#: ../../source/ikfast/pr2-beta-static.rst:155
+#: ../../source/ikfast/pr2-beta-static.rst:204
+msgid "0.003006"
+msgstr ""
+
+# 4ef0a446693e46e38ef940303fbf84f5
+#: ../../source/ikfast/barrett-wam.rst:28
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.0_1_3_4_5_6_f2.cpp>`"
+msgstr ""
+
+# 254b05b46da14deab94ce562dcb8d517
+#: ../../source/ikfast/barrett-wam.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Shoulder_Roll_2___>`_"
+msgstr ""
+
+# cf52e5d4fff345e0a1c27d0754019cdd
+# 72279f41d62c4d6ba48bd4466d83a65e
+# 4981dd1db5964c2ba92f2175424625cf
+# 3f0144a89f154872a82ff15e9a34582a
+#: ../../source/ikfast/barrett-wam.rst:30 ../../source/ikfast/darpa-arm.rst:24
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid "4"
+msgstr ""
+
+# 2ade4727bf1d4236a8f7aef01c40e5d6
+#: ../../source/ikfast/barrett-wam.rst:30
+msgid "0.9852"
+msgstr ""
+
+# b35190988d8247fb9f9dd0cd133aa686
+# a7b9b509902f46238dccded01fdec839
+# 95fdac2db8cc4f5795ee154aac76b33b
+# 129a6de8ad714ee9b3dce978245d1a05
+# 9d5d7a28651c4a8c9e3fe42251ba967b
+# ad36a8b7747b40069ef54adeb1daea5a
+# 882d31d55a63485b9c0ba0a937d76835
+# 04cf2f0b531b42e7a5c69047d1b92ac2
+# 8b1489028c664eb0a5a8f4c0c4da22f1
+# 23c46109ed4242fab41b77e08e8e93e3
+#: ../../source/ikfast/barrett-wam.rst:30 ../../source/ikfast/darpa-arm.rst:32
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:73
+#: ../../source/ikfast/pr2-beta-static.rst:147
+#: ../../source/ikfast/pr2-beta-static.rst:151
+#: ../../source/ikfast/pr2-beta-static.rst:235
+#: ../../source/ikfast/pr2-beta-static.rst:243
+#: ../../source/ikfast/schunk-lwa3.rst:26
+#: ../../source/ikfast/schunk-lwa3.rst:32
+msgid "0.000017"
+msgstr ""
+
+# c2cacff144ac4a6aa8e314162a94d6f3
+# 98f29d53b8974123881f79fd62921e0f
+# 8c177a8d22b9444fbb63f69f262ce96c
+# 14cd65f1ac4e40b797b6e6c2f8c1c098
+# 42ba75deed5f4a36b27ea0b163cdf50c
+# cac6eba1a5024a3d92eb16b9a88e4ff0
+# 2a6ba17928d240ceac95f113bd31d316
+#: ../../source/ikfast/barrett-wam.rst:30 ../../source/ikfast/darpa-arm.rst:28
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:75
+#: ../../source/ikfast/pr2-beta-static.rst:147
+#: ../../source/ikfast/pr2-beta-static.rst:239
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid "0.005007"
+msgstr ""
+
+# 648a31dcfb5e4acfa8251acb52d12aa0
+#: ../../source/ikfast/barrett-wam.rst:30
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.0_1_2_3_5_6_f4.cpp>`"
+msgstr ""
+
+# 371ebb212a4c48b8860e00e1fd4c610f
+#: ../../source/ikfast/barrett-wam.rst:30
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Wrist_Yaw_4___>`_"
+msgstr ""
+
+# 0d3a913143d94ea78dd75b656d680873
+# 3455f48b9bb34eb48b5b08a3b987ac3a
+# 0b682c9c39db4dfca35ea9d8f9c7933f
+# a4daace8429e4c4f9f2a768b17f891a4
+#: ../../source/ikfast/barrett-wam.rst:32 ../../source/ikfast/darpa-arm.rst:26
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+#: ../../source/ikfast/schunk-lwa3.rst:32
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid "5"
+msgstr ""
+
+# 111dc5963d004e9593b0b22ddaab5006
+#: ../../source/ikfast/barrett-wam.rst:32
+msgid "0.9705"
+msgstr ""
+
+# dd2bf864d5814bd4a8629e36c4b73588
+# 583c295e502f451a8b447fb6fd6108d6
+# d6f4356a389a4e0ca44b263a761cef6f
+# 8dcccd7fff73412d9c9539f2852ac141
+#: ../../source/ikfast/barrett-wam.rst:32 ../../source/ikfast/darpa-arm.rst:32
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:169
+msgid "0.004008"
+msgstr ""
+
+# 15238a478b4d401ba69015cd8efadf34
+#: ../../source/ikfast/barrett-wam.rst:32
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.0_1_2_3_4_6_f5.cpp>`"
+msgstr ""
+
+# 6be2c4ada41e44bfba16480878e8a251
+#: ../../source/ikfast/barrett-wam.rst:32
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Wrist_Pitch_5___>`_"
+msgstr ""
+
+# c4594664e1844d2db660cdc187cc7b61
+# 926c00dffea043e29a6d9cd426447f83
+# 0d4108d7757042df81009e6fd569db09
+# 509e4c632f5e4cb79737fc1ea7803d3c
+#: ../../source/ikfast/barrett-wam.rst:34 ../../source/ikfast/darpa-arm.rst:28
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid "6"
+msgstr ""
+
+# 9f63479cfb8b412d89d6b189c41350de
+# 691d5de9b43840dea0f31fde146d10f6
+# 0f91f1bdc1084e22998eaa3ec62baf3a
+# e1abf1d0cde7448aada1499be9cb2620
+# d065f602fc6d4abd8f8ed2f571692a05
+#: ../../source/ikfast/barrett-wam.rst:34 ../../source/ikfast/darpa-arm.rst:26
+#: ../../source/ikfast/pr2-beta-static.rst:151
+#: ../../source/ikfast/pr2-beta-static.rst:173
+#: ../../source/ikfast/schunk-lwa3.rst:24
+msgid "0.004007"
+msgstr ""
+
+# d1c354630ec84eb294c87d874665ddc5
+#: ../../source/ikfast/barrett-wam.rst:34
+msgid ""
+":download:`C++ Code <barrett-wam/ikfast59.Transform6D.0_1_2_3_4_5_f6.cpp>`"
+msgstr ""
+
+# 5573db919e1a455899e7ca8924fdff01
+#: ../../source/ikfast/barrett-wam.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam__arm/_Transform6D_free__Wrist_Roll_6___>`_"
+msgstr ""
+
+# 7efee08879d3489890c83a7855792826
+#: ../../source/ikfast/barrett-wam4.rst:4
+msgid "barrett-wam4 Robot"
+msgstr ""
+
+# 74aa2f62ba394184ae418911d7130599
+#: ../../source/ikfast/barrett-wam4.rst:9
+msgid ""
+"**filename:** `robots/barrett-wam4.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/barrett-wam4.zae>`_"
+msgstr ""
+
+# 01c5fe2fbc2c48b7afffe50054e04088
+#: ../../source/ikfast/barrett-wam4.rst:16
+msgid "Manipulator Indices: [0 1 2 3]"
+msgstr ""
+
+# 1287cc3021274bb6bd4a6e6a3d1f5076
+# ef0e537ac7e04f83bf79ddf4324ace68
+# d6ad398f2cb44704b7b4ba2c64623c89
+# 9536cdf12f894c47adfd56afe586da2a
+# d6f9ea23eb7e4d9fbc4c50f29c5cf130
+# cdee3b9ef6c54bedba0cf33e94bfa8db
+# 8a5eab4c2ec24210ab19c05518393563
+#: ../../source/ikfast/barrett-wam4.rst:19
+#: ../../source/ikfast/kuka-youbot.rst:19
+#: ../../source/ikfast/neuronics-katana.rst:19
+#: ../../source/ikfast/neuronics-katana.rst:70
+#: ../../source/ikfast/pr2-beta-static.rst:41
+#: ../../source/ikfast/pr2-beta-static.rst:97
+#: ../../source/ikfast/pr2-beta-static.rst:195
+msgid "Translation3D IK"
+msgstr ""
+
+# c2baf850cd304ef4be8a13d89e91dee1
+# 1379a7a18c8a4981a577a19d26e43d16
+# e2ac52e4b072437696cacd636c1aec32
+#: ../../source/ikfast/barrett-wam4.rst:24
+#: ../../source/ikfast/kawada-hironx.rst:36
+#: ../../source/ikfast/kuka-youbot.rst:24
+#: ../../source/ikfast/kuka-youbot.rst:34
+#: ../../source/ikfast/neuronics-katana.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:75
+#: ../../source/ikfast/neuronics-katana.rst:77
+#: ../../source/ikfast/neuronics-katana.rst:79
+#: ../../source/ikfast/pr2-beta-static.rst:106
+#: ../../source/ikfast/pr2-beta-static.rst:200
+#: ../../source/ikfast/pr2-beta-static.rst:204
+msgid "0.000005"
+msgstr ""
+
+# 5461110a54f24a1da59db11e1cfbb1f1
+#: ../../source/ikfast/barrett-wam4.rst:24
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:58
+#: ../../source/ikfast/pr2-beta-static.rst:71
+msgid "0.002005"
+msgstr ""
+
+# 984ba748deb44c38a6f18d459b08a7fd
+#: ../../source/ikfast/barrett-wam4.rst:24
+msgid ":download:`C++ Code <barrett-wam4/ikfast59.Translation3D.1_2_3_f0.cpp>`"
+msgstr ""
+
+# 1398215b490c43c893896f39451814aa
+#: ../../source/ikfast/barrett-wam4.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam4__arm/_Translation3D_free__Shoulder_Yaw_0___>`_"
+msgstr ""
+
+# 0b8784114f194044976c00fffe7b36af
+#: ../../source/ikfast/barrett-wam4.rst:26
+msgid "0.9798"
+msgstr ""
+
+# ccb038a28333423eaac8e84bdb3da0db
+# 19e38e15bfbe4efbbfbf9f1a3cd4da38
+#: ../../source/ikfast/barrett-wam4.rst:26
+#: ../../source/ikfast/barrett-wam4.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:28
+#: ../../source/ikfast/kuka-youbot.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:40
+#: ../../source/ikfast/kuka-youbot.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:104
+msgid "0.000006"
+msgstr ""
+
+# d674e965bbde40e58c5c9d281363ab77
+# 131de96fd216458ab66485d1bb932058
+# ef478c7f2f814b269da04be8db892bcb
+# 9feccefab2254e029b0013a9d9f699ac
+# a15b0da87a964a4ea7396dd55df4942c
+# 1960770fe8f441beb44fde950be5c135
+# 5eb002b7b46a4e298192c46f762ec3a1
+#: ../../source/ikfast/barrett-wam4.rst:26
+#: ../../source/ikfast/kuka-youbot.rst:26
+#: ../../source/ikfast/kuka-youbot.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:52
+#: ../../source/ikfast/pr2-beta-static.rst:108
+#: ../../source/ikfast/pr2-beta-static.rst:130
+#: ../../source/ikfast/pr2-beta-static.rst:202
+msgid "0.004003"
+msgstr ""
+
+# 53068d0394c64068b9f8e93d89926ed6
+#: ../../source/ikfast/barrett-wam4.rst:26
+msgid ":download:`C++ Code <barrett-wam4/ikfast59.Translation3D.0_2_3_f1.cpp>`"
+msgstr ""
+
+# 8a32ba5cf14f49ae8416c5eb22bbb039
+#: ../../source/ikfast/barrett-wam4.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam4__arm/"
+"_Translation3D_free__Shoulder_Pitch_1___>`_"
+msgstr ""
+
+# c09c72c217d44c1e99a594cc7d5f956a
+# 642c72554a704e6d8fa0ba652a78ade0
+#: ../../source/ikfast/barrett-wam4.rst:28
+#: ../../source/ikfast/darpa-arm.rst:30
+msgid "0.9858"
+msgstr ""
+
+# 8eed00650d6443ceb99c6a415a827e88
+# e2b6edcb30c84be0a4b9e7f10950b52a
+# 0e1641a1ca5646fc924a088354f6dc2a
+# 7e8edcd8c56a4176961c9509ef0196b8
+# 71027759c345463a8200e4612fe61c82
+# d5fceeebd30943d0908fd3da14598142
+# 6e91591e8df54ea79192862159336508
+# a6d342f282a947ceb856646d8388b9df
+# e930992624b241f4b18fd14066e2fe48
+# d772005e9d6e4645a0143644f6dd1cf4
+# 0862d7d41160484b834dacbcf2dd12e4
+# 5f0e24f4d03c42bcb5ec890a80326c2f
+# e6bc2529c94246babba2b34341b462fc
+# dd89ecf230024fe49075fa8e1fc9f1f6
+# 126dac58c0d543e8b9fa5022880d85f9
+# d82abe6dd3c54e4bb44b37d006d4163e
+# 8dd261c08549452e9be35289c89cdbe7
+# a50927203f6d4b20a7874ddf7e8d3d9f
+#: ../../source/ikfast/barrett-wam4.rst:28
+#: ../../source/ikfast/kuka-youbot.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:97
+#: ../../source/ikfast/pr2-beta-static.rst:202
+msgid "0.000007"
+msgstr ""
+
+# 0899ede69ef74746943f60ff132f0425
+# 4436cc858af84e18952e97802b2e467a
+# 6306fd2e50784dc1a34132b0015a6fb5
+# 92574629c76347cca2b606efad20145b
+# fcccc6144e5b464ca3ee46399962e86b
+# b5c9854504ec4831bb059e066201e315
+# 312526e124794b48a28d64e97e77025c
+#: ../../source/ikfast/barrett-wam4.rst:28
+#: ../../source/ikfast/barrett-wam4.rst:38
+#: ../../source/ikfast/kawada-hironx.rst:24
+#: ../../source/ikfast/kuka-youbot.rst:28
+#: ../../source/ikfast/pr2-beta-static.rst:104
+#: ../../source/ikfast/pr2-beta-static.rst:185
+#: ../../source/ikfast/pr2-beta-static.rst:206
+msgid "0.003003"
+msgstr ""
+
+# 6439f61b8ec845fbb26a26f0ef3dd609
+#: ../../source/ikfast/barrett-wam4.rst:28
+msgid ":download:`C++ Code <barrett-wam4/ikfast59.Translation3D.0_1_3_f2.cpp>`"
+msgstr ""
+
+# 1fa0c31a83e94c34a5505a05368a6593
+#: ../../source/ikfast/barrett-wam4.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam4__arm/"
+"_Translation3D_free__Shoulder_Roll_2___>`_"
+msgstr ""
+
+# 34fac393bd0c4733af5c7f5eba56c61e
+# ad1de29a702d409988c6ff7a03d3a098
+# 1886a5b836fc4713815c341b00826438
+# cc87da6ce1d4400f98f387af505e56e2
+# d08b7b3e868d4daf826b09f4bdee0f94
+# e7cde5f2a5b344e0bd9ba3cc25d409c5
+# 189b986fde5a45a4b8f02eed95cec416
+# f5311755c9c942eeb4f440b00df6b209
+#: ../../source/ikfast/barrett-wam4.rst:33
+#: ../../source/ikfast/kuka-youbot.rst:45
+#: ../../source/ikfast/neuronics-katana.rst:43
+#: ../../source/ikfast/neuronics-katana.rst:84
+#: ../../source/ikfast/pr2-beta-static.rst:51
+#: ../../source/ikfast/pr2-beta-static.rst:125
+msgid "TranslationLocalGlobal6D IK"
+msgstr ""
+
+# a09a53f9969949518c10070d042d9643
+#: ../../source/ikfast/barrett-wam4.rst:38
+msgid ""
+":download:`C++ Code <barrett-wam4/ikfast59.TranslationLocalGlobal6D.0_1_3_f2."
+"cpp>`"
+msgstr ""
+
+# d4d4a2e9b5574a90a6501205ebcada54
+#: ../../source/ikfast/barrett-wam4.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/barrett-wam4__arm/"
+"_TranslationLocalGlobal6D_free__Shoulder_Roll_2___>`_"
+msgstr ""
+
+# 8b5b91ad019f4348ac6ffe92937207af
+#: ../../source/ikfast/darpa-arm.rst:4
+msgid "darpa-arm Robot"
+msgstr ""
+
+# 72137ad4a53842e0b7ba5aef9c285fc2
+#: ../../source/ikfast/darpa-arm.rst:9
+msgid ""
+"**filename:** `robots/darpa-arm.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/darpa-arm.zae>`_"
+msgstr ""
+
+# 47b70500f55e486e84468a2c96f70589
+# 285e96ce741a4ea39b79afaa81ed4aa5
+# e338444174844b629fe030349cab71bb
+#: ../../source/ikfast/darpa-arm.rst:14
+#: ../../source/ikfast/kawada-hironx.rst:56
+#: ../../source/ikfast/pr2-beta-static.rst:162
+msgid "**rightarm** Manipulator"
+msgstr ""
+
+# 7c14510df971494d8fff5912fba4c7a3
+#: ../../source/ikfast/darpa-arm.rst:16
+msgid "Manipulator Indices: [ 4  5  6  7  8  9 10]"
+msgstr ""
+
+# a104f6e0650c4774a9b71ca8d6e06c31
+# 908f5e438ece4ba1a367ef9c9e61bccb
+#: ../../source/ikfast/darpa-arm.rst:24
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+msgid "0.000012"
+msgstr ""
+
+# 58382cd79688452b89f48a5a24faf2a5
+#: ../../source/ikfast/darpa-arm.rst:24
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.5_6_7_8_9_10_f4.cpp>`"
+msgstr ""
+
+# 828d6cf3743f4da9b01f6d9855a206fb
+#: ../../source/ikfast/darpa-arm.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_YawJoint_4___>`_"
+msgstr ""
+
+# 77fa1fc12f7040a58c6bf1206c3d721a
+#: ../../source/ikfast/darpa-arm.rst:26
+msgid "0.9785"
+msgstr ""
+
+# 78fcb783c8fa49deb54e73f06ac43c73
+# 5ae076b78b3b45f8bd6017d061b4a9d4
+#: ../../source/ikfast/darpa-arm.rst:26
+#: ../../source/ikfast/pr2-beta-static.rst:241
+msgid "0.000015"
+msgstr ""
+
+# 39a663e7bad4436cb74dd276aacb6acb
+#: ../../source/ikfast/darpa-arm.rst:26
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.4_6_7_8_9_10_f5.cpp>`"
+msgstr ""
+
+# 98bab21badad4c77b0385c217b917d70
+#: ../../source/ikfast/darpa-arm.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_ShoulderPitchJoint_5___>`_"
+msgstr ""
+
+# f3d12583d53e43e1939765a9b3ebbd1b
+#: ../../source/ikfast/darpa-arm.rst:28
+msgid "0.9838"
+msgstr ""
+
+# ac2342c289a54a00ab7ae5db29026170
+# 8b4c2c4ced104097a657508aff866ec7
+#: ../../source/ikfast/darpa-arm.rst:28
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+msgid "0.000020"
+msgstr ""
+
+# 209c272de65f4e8a97a9ae7df3f12cea
+#: ../../source/ikfast/darpa-arm.rst:28
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.4_5_7_8_9_10_f6.cpp>`"
+msgstr ""
+
+# 36bdc806c2bf4b6f9d34f1aad0a198f7
+#: ../../source/ikfast/darpa-arm.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_ShoulderYawJoint_6___>`_"
+msgstr ""
+
+# 1bf4c01de19a43f5abd6fc90e494eabf
+# 0183e21e0b9043338777d82823e9fc12
+#: ../../source/ikfast/darpa-arm.rst:30
+msgid "8"
+msgstr ""
+
+# 3a05d16f63f14af9813adba290ebcded
+# e6a11c09102d4c20a60443a0b9ac503c
+#: ../../source/ikfast/darpa-arm.rst:30 ../../source/ikfast/darpa-arm.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:155
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid "0.000013"
+msgstr ""
+
+# b49899a531d94523a8548fb1f7d7525f
+# f1469183c2ea4f518cde6c7695259e2f
+#: ../../source/ikfast/darpa-arm.rst:30
+#: ../../source/ikfast/neuronics-katana.rst:97
+msgid "0.002006"
+msgstr ""
+
+# 59e6839f9ec240b2b712cbb822bfda33
+#: ../../source/ikfast/darpa-arm.rst:30
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.4_5_6_7_9_10_f8.cpp>`"
+msgstr ""
+
+# a235d1896d2a42e6823ed19eb28a23af
+#: ../../source/ikfast/darpa-arm.rst:30
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_UpperWristYawJoint_8___>`_"
+msgstr ""
+
+# 55cca416c92e4288ac22383ad380338e
+#: ../../source/ikfast/darpa-arm.rst:32
+msgid "9"
+msgstr ""
+
+# fe39804a51914e6795ddb2314f256812
+#: ../../source/ikfast/darpa-arm.rst:32
+msgid "0.9742"
+msgstr ""
+
+# 246f1ba7a4d54cd881a85dc0e6fa3606
+#: ../../source/ikfast/darpa-arm.rst:32
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.4_5_6_7_8_10_f9.cpp>`"
+msgstr ""
+
+# fcaa1a7b9e91497bb81cca43a1affd64
+#: ../../source/ikfast/darpa-arm.rst:32
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_UpperWristPitchJoint_9___>`_"
+msgstr ""
+
+# a7eb9e00efd5427894c14dfcba6d76e3
+#: ../../source/ikfast/darpa-arm.rst:34
+msgid "10"
+msgstr ""
+
+# 16273560693a43bc9ffb473b37d17c4f
+# 93e02b8820c246e8a9917c4e76b5c8ed
+# 198674ffb4f34aa2acec5935789197ad
+#: ../../source/ikfast/darpa-arm.rst:34
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:58
+msgid "0.003004"
+msgstr ""
+
+# c6f0b2f3cc59492f8dedcbb7b853e42a
+#: ../../source/ikfast/darpa-arm.rst:34
+msgid ""
+":download:`C++ Code <darpa-arm/ikfast59.Transform6D.4_5_6_7_8_9_f10.cpp>`"
+msgstr ""
+
+# 1c9b697d65064510b21176955fda46c2
+#: ../../source/ikfast/darpa-arm.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/darpa-arm__rightarm/"
+"_Transform6D_free__DarmSim_RightArm_WAM_LowerWristYawJoint_10___>`_"
+msgstr ""
+
+# 9e426a1664324024861936e23c9f1982
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:4
+msgid "exactdynamics-manusarmleft Robot"
+msgstr ""
+
+# e2a70504fd3e4502b46a7a3fe4661265
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:9
+msgid ""
+"**filename:** `robots/exactdynamics-manusarmleft.zae <https://openrave.svn."
+"sourceforge.net/svnroot/openrave/data/robots/exactdynamics-manusarmleft."
+"zae>`_"
+msgstr ""
+
+# 13cc2d507a934bfa89bc6930341ea82c
+# cad8ed9abf194cbe83305acfc042fa86
+# 08573066bef6427dba2e0ffb5370d749
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:14
+#: ../../source/ikfast/kawada-hironx.rst:41
+#: ../../source/ikfast/pr2-beta-static.rst:61
+msgid "**leftarm** Manipulator"
+msgstr ""
+
+# 39764fbadde04bd3854f8420ab497eb9
+# 8128c19b3e5c484c87fef00379d1be6e
+# 1c8e8fba93e742989f6ebca9a2d70d3d
+# 6660fac503e84158a65dafe99ec2dbe9
+# 77048cd35e094b2da29988e6c3716529
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:16
+#: ../../source/ikfast/kuka-kr30l16.rst:16
+#: ../../source/ikfast/kuka-kr5-r650.rst:16
+#: ../../source/ikfast/kuka-kr5-r850.rst:16
+#: ../../source/ikfast/unimation-pumaarm.rst:16
+msgid "Manipulator Indices: [0 1 2 3 4 5]"
+msgstr ""
+
+# fbfa6ac21ea544a2adec9475e6948794
+# f051ba4d56f44ec091d5d920b1f5c5fd
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+msgid "0.9890"
+msgstr ""
+
+# b1b1eb3439824ca3ad5c7ae567f299de
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+msgid "0.006005"
+msgstr ""
+
+# f06de5b355b8429d9bf4c964dbc9bcc9
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"Transform6D.0_1_2_3_4_5.cpp>`"
+msgstr ""
+
+# 83173861ea514c8689d75105456221a1
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_Transform6D_free____>`_"
+msgstr ""
+
+# bd1542f77aa140ceb53555fcb887760c
+# 8ccb40cf73814701aa4af44a10baf117
+# 319aae586df34abe8f0ccf26c60d9beb
+# 18dfe71c2a5d45a9acdfc44c3969898c
+# f0fc491683cf4c6aa745332325fcb13f
+# 8b83c7c1b14a4e7b9791072e6f098fdb
+# f3f212e360424bdf81dad4746410009c
+# eda0a477b26e42f58e6ff196f859493a
+# 5035b7b376ed476cb7fd7901fd295f87
+# b58cdec8e62a4b08b983a82f4ad6a962
+# ff927bb97d274efdb156ca271071cf36
+# d9849de7d8304a26b4bc4dd398b43db8
+# 6173389069124dd3a1083c8895c8deb1
+# e315807ddc8f484a9dbc2edc9a407867
+# c3fc1d8084cb4685b07a950dcb7b96e9
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:29
+#: ../../source/ikfast/kuka-kr30l16.rst:29
+#: ../../source/ikfast/kuka-kr5-r650.rst:29
+#: ../../source/ikfast/kuka-kr5-r850.rst:29
+#: ../../source/ikfast/neuronics-katana.rst:33
+#: ../../source/ikfast/pr2-beta-static.rst:80
+#: ../../source/ikfast/pr2-beta-static.rst:115
+#: ../../source/ikfast/pr2-beta-static.rst:178
+#: ../../source/ikfast/pr2-beta-static.rst:213
+#: ../../source/ikfast/schunk-lwa3.rst:39
+#: ../../source/ikfast/unimation-pumaarm.rst:29
+msgid "TranslationDirection5D IK"
+msgstr ""
+
+# 1cb07ff9fce749a8901521b4ac1d3c11
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+msgid "3"
+msgstr ""
+
+# a9abed972cb1498e80bf9848b06b8204
+# 2933db52538b48cbbeee20448e664a8e
+# 713e83e6e23f4068b8e07cd9ec1dd8e9
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+#: ../../source/ikfast/pr2-beta-static.rst:183
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid ":red:`1.0000`"
+msgstr ""
+
+# 9ca25af7a52d43adb1e6cd9cc6af8bff
+# 28e304547137420ca6dd9fdccfe1d506
+# 68b01d9049bb4084ad1bdd7586f76e8d
+# fe19ad5a28ec4c7eabf2b86402a2dc20
+# 7c16e3f59eff49128226d54a02bb7f15
+# 747dfb2f44ed45fbae0f417b4b07429f
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:71
+#: ../../source/ikfast/pr2-beta-static.rst:237
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid "0.000014"
+msgstr ""
+
+# be4d6dfefa5f418d8cd38fc5d4cfcc9d
+# ec0603c26776491c87a01c7ed8ccbac8
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+msgid "0.005005"
+msgstr ""
+
+# e2d6ec610c064c10a15501f597639584
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"TranslationDirection5D.0_1_2_4_5_f3.cpp>`"
+msgstr ""
+
+# 38e32fc6b78546d0aef2659732fc7023
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_TranslationDirection5D_free__lJ3_3___>`_"
+msgstr ""
+
+# 0f6bd888a01d4e2fbf3d7d91659d1ff3
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+msgid "0.0047"
+msgstr ""
+
+# 3e94cb6518be446297e2d7c9c8825e56
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+msgid ":red:`0.9952`"
+msgstr ""
+
+# fbb2c5aba2944dbf818de2c8ac9103aa
+# 7689654b2d9542698ee8503d5e94c53b
+# 7b148533cc28435a92f4b9cbe78b3d73
+# 8041a34b40774cd0aa0546265d2af442
+# a57a5b053f504794a68a953204a3ffe2
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+msgid "0.000009"
+msgstr ""
+
+# 2badcb32bcbd430ebbbf4fb6ebfdfde6
+# 692223941bcd4e69b92a6357c3d06586
+# 5d0ceaf3cb1d45bc9d02eea58c7fad7e
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid "0.003005"
+msgstr ""
+
+# 71859ecfc1f94b60b409936207e17de3
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"TranslationDirection5D.0_1_2_3_5_f4.cpp>`"
+msgstr ""
+
+# 07d8881b7e5b40a58df4fb587f67c90e
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_TranslationDirection5D_free__lJ4_4___>`_"
+msgstr ""
+
+# 8d2eff980b0847558c8efdf82fc5a476
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+msgid "0.0053"
+msgstr ""
+
+# c2e88daae92c48ee96d8663d45b67003
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+msgid ":red:`0.9948`"
+msgstr ""
+
+# e9b83b87cac743e3a1eba53f8615aac3
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"TranslationDirection5D.0_1_2_3_4_f5.cpp>`"
+msgstr ""
+
+# 20b769a5934a4c72afeb95c01f3608f6
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_TranslationDirection5D_free__lJ5_5___>`_"
+msgstr ""
+
+# ebf0d399aa1a45e59a8f2aed107f2f28
+# 983ccaef2e8e4438a087e3c998306812
+# cd4dabb21426453b8a6682b7ae8815bc
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:43
+#: ../../source/ikfast/kuka-kr5-r650.rst:43
+#: ../../source/ikfast/kuka-kr5-r850.rst:43
+msgid "TranslationZAxisAngle4D IK"
+msgstr ""
+
+# ec5e61dc0ef74e4b93c70a7383e9eaa4
+# a23c3480f0c84b9f91d362e754b34c40
+# 62640e8af82543a6bed72d50fa19272e
+# 004e0305a0f0456694f704bb4b0f2a11
+# b33839d84a1847b683c2ff35873a6e17
+# ae51b023f1c449d88d887d6362478196
+# 444ac23b53f9403e93a19d652c33dc69
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+#: ../../source/ikfast/kuka-youbot.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:60
+#: ../../source/ikfast/neuronics-katana.rst:79
+msgid "3,4"
+msgstr ""
+
+# b58a2f92c43a47ba891d9d6c1b801878
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"TranslationZAxisAngle4D.0_1_2_5_f3_4.cpp>`"
+msgstr ""
+
+# fc5d29bff7964b829cd3b2785b742ce2
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:48
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_TranslationZAxisAngle4D_free__lJ3_3___lJ4_4___>`_"
+msgstr ""
+
+# 91c3977f79f3460caa645d26af0036b3
+# cf7d828c6e614b1cac5810fd1858ca83
+# a7092413a79340118dc7b37aef160517
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:56
+msgid "3,5"
+msgstr ""
+
+# 3945ef02e2fa4dcc841953b1cfa95260
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+#: ../../source/ikfast/kuka-youbot.rst:32
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid "0.000011"
+msgstr ""
+
+# 3e1492fddbdb4cc79a9e05ce05444336
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+msgid "0.002384"
+msgstr ""
+
+# c97fb0243dda4ce29198336035f86f22
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+msgid ""
+":download:`C++ Code <exactdynamics-manusarmleft/ikfast59."
+"TranslationZAxisAngle4D.0_1_2_4_f3_5.cpp>`"
+msgstr ""
+
+# 79e5c28031f14228ab0009c2b829e7ca
+#: ../../source/ikfast/exactdynamics-manusarmleft.rst:50
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/exactdynamics-manusarmleft__leftarm/"
+"_TranslationZAxisAngle4D_free__lJ3_3___lJ5_5___>`_"
+msgstr ""
+
+# 97c4745b6db04cc9a94d386588f4686e
+#: ../../source/ikfast/index.rst:5
+msgid "IKFast Robot Database"
+msgstr ""
+
+# 6705b7f666fa4fdbbb323cba374c0b60
+#: ../../source/ikfast/index.rst:7
+msgid "**59**"
+msgstr ""
+
+# 161b204e401d487d906a67ef73d2e7c5
+#: ../../source/ikfast/index.rst:9
+msgid ""
+"Inverse kinematics statistics using :ref:`ikfast_compiler`. All possible "
+"permutations of the :ref:`supported inverse kinematics types <ikfast_types>` "
+"and the robot manipulators are tested."
+msgstr ""
+
+# 7e6ae1a926ef4def8bf13480aa126768
+#: ../../source/ikfast/index.rst:14
+msgid "IKFast Performance Testing"
+msgstr ""
+
+# a49c48377a704ce5a8479a1b5e6344e1
+#: ../../source/ikfast/index.rst:16
+msgid "There are four different ways of calling the IK solver:"
+msgstr ""
+
+# 4778da56e63b48688425fd543a41561b
+#: ../../source/ikfast/index.rst:18
+msgid ""
+"GetSolution(*goal*) - call with just the end effector parameterization, "
+"return the first solution found within limits."
+msgstr ""
+
+# dd008cfe55454749b7fcb3b240fbd938
+#: ../../source/ikfast/index.rst:19
+msgid ""
+"GetSolution(*goal*,*free*) - call with end effector parameterization and "
+"specify all free joint values, return the first solution found within limits."
+msgstr ""
+
+# 6c8e977e05c04fc883eb0b31115bbd65
+#: ../../source/ikfast/index.rst:20
+msgid ""
+"GetSolutions(*goal*) - call with just the end effector parameterization, "
+"return all solutions searching through all free joint values."
+msgstr ""
+
+# bc4e993437e14b7987e0a1c48300b3ce
+#: ../../source/ikfast/index.rst:21
+msgid ""
+"GetSolutions(*goal*,*free*) - call with end effector parameterization and "
+"specify all free joint values, return all possible solutions."
+msgstr ""
+
+# 3b51ff485adf427fae58ef9cefd0f83a
+#: ../../source/ikfast/index.rst:23
+msgid "The following algorithm tests these four calls by:"
+msgstr ""
+
+# df22714711744ebb9dfae1980671d8a8
+#: ../../source/ikfast/index.rst:25
+msgid ""
+"Randomly sample a robot configuration and compute the correct "
+"parameterization of the end effector *goal* and free joint values *free*."
+msgstr ""
+
+# 52c59e6130e244dbb148f0f268999113
+#: ../../source/ikfast/index.rst:26
+msgid "Move the robot to a random position."
+msgstr ""
+
+# eab1deef382745a297f80590227d430d
+#: ../../source/ikfast/index.rst:27
+msgid ""
+"Call GetSolution(*goal*), GetSolutions(*goal*), GetSolutions(*goal*,*free*)"
+msgstr ""
+
+# 7624af27448d440e9924adea4648d65b
+#: ../../source/ikfast/index.rst:28
+msgid ""
+"Call GetSolution(*goal*,*free_random*) and GetSolutions(*goal*,"
+"*free_random*). Check that the returned solutions have same values as free "
+"parameters."
+msgstr ""
+
+# 4e8c32fc70c54de98dbfe7febd6e242f
+#: ../../source/ikfast/index.rst:30
+msgid ""
+"For every end effector parameterization and a returned solution, set the "
+"returned solution on the robot and compute the error between the original "
+"end effector and the new end effector. If the error is *greater than "
+"0.001000*, then the IK is wrong and the iteration is a *failure*. If no "
+"wrong solutions were returned and at least one correct IK solution is found "
+"within limits, then the iteration is a *success*. When the free values are "
+"not specified, the IK solver will discretize the range of the freevalues and "
+"test with all possible combinations [1]_."
+msgstr ""
+
+# fc7e9d75a55244f1b7fc3c917e7eb205
+#: ../../source/ikfast/index.rst:32
+msgid ""
+"The number of tests is determined by the number of free parameters: 0 free - "
+"10000 tests, 1 free - 4000 tests, 2 free - 500 tests"
+msgstr ""
+
+# 9efa0c3f52cd43c7852b04b60b4b2ade
+#: ../../source/ikfast/index.rst:34
+msgid ""
+"Four values are extracted to measure the performance of a generated IK "
+"solver:"
+msgstr ""
+
+# 3d86e7c4a0374e829f64787a7353ea26
+#: ../../source/ikfast/index.rst:36
+msgid ""
+"wrong rate - number of parameterizations where at least one wrong solution "
+"was returned."
+msgstr ""
+
+# d92e5cac83ce4e2eb1526f24aed637b6
+#: ../../source/ikfast/index.rst:37
+msgid ""
+"success rate - number of parameterizations where all returned solutions are "
+"correct"
+msgstr ""
+
+# 5cf57d2759514aca96892c0c8ee49e09
+#: ../../source/ikfast/index.rst:38
+msgid ""
+"no solution rate - number of parameterizations where no solutions were found "
+"within limits"
+msgstr ""
+
+# 05684301e8dd4090bcce0f68d4278cfc
+#: ../../source/ikfast/index.rst:39
+msgid ""
+"missing solution rate - number of parameterizations where the specific "
+"sampled solution was not returned, but at least one solution was found."
+msgstr ""
+
+# bdddd4c0cf9345689218413b77863455
+#: ../../source/ikfast/index.rst:41
+msgid ""
+"An IK is **successful** if the wrong rate is 0, success rate is > 0.400000, "
+"and the no solution rate is < 0.600000. The raw function call run-time is "
+"also recorded."
+msgstr ""
+
+# d094a65ee014406fa1133d1baf9f6507
+#: ../../source/ikfast/index.rst:44
+msgid ""
+"Degenerate configurations can frequently occur when the robot axes align, "
+"this produces a lot of divide by zero conditions inside the IK. In order to "
+"check all such code paths, the configuration sampler common tests angles 0, "
+"pi/2, pi, and -pi/2."
+msgstr ""
+
+# 749123caeb7a46868b2bd77269e35a26
+#: ../../source/ikfast/index.rst:46
+msgid ""
+"The discretization of the free joint values depends on the robot manipulator "
+"and is given in each individual manipulator page."
+msgstr ""
+
+# 9b6d1c82cfb34eda8a228058716f9cc2
+#: ../../source/ikfast/kawada-hironx.rst:4
+msgid "kawada-hironx Robot"
+msgstr ""
+
+# 79881e9b676f459e9b47381960892756
+#: ../../source/ikfast/kawada-hironx.rst:9
+msgid ""
+"**filename:** `robots/kawada-hironx.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/data/robots/kawada-hironx.zae>`_"
+msgstr ""
+
+# 5b5f35b6878945969f1738c6550d4f6a
+# d62b3d9625ab44f48c46fe320e1a9532
+#: ../../source/ikfast/kawada-hironx.rst:14
+#: ../../source/ikfast/pr2-beta-static.rst:14
+msgid "**head** Manipulator"
+msgstr ""
+
+# 9f1469e851d24eec9f5ddd53674a7c43
+#: ../../source/ikfast/kawada-hironx.rst:16
+msgid "Manipulator Indices: [1 2]"
+msgstr ""
+
+# 0b5d4ad3e555496e8fac1aacf78d9c7d
+# 005e9c3b8d654466b10e615c8b05906a
+# d8436e1627504735a163265a905b16b3
+# 14f195a0cb954be4a7fd4f15ea75a353
+# 0133401b968d4303baad3d9c8322b6f5
+# 71437487acbe462ab0dd223337cae709
+#: ../../source/ikfast/kawada-hironx.rst:19
+#: ../../source/ikfast/pr2-beta-static.rst:19
+msgid "Lookat3D IK"
+msgstr ""
+
+# ef4f7a3547884b638536cff0510e9eb6
+# 3560098e67f241cea06680a515723c2d
+# 7ed202d00d9140e5b40fcd685d8d1d05
+# 342b99345215455e8e0472aa7f532a1a
+# fc13562150f242e9864b5dbe303c7b1b
+# 4d44084a6a7b41b3b44b255665cd2f1b
+# 891062778ad34f45a94234a0f03f77e7
+# 8fb23a9b57b94712abf60f93112fe4dc
+# 7db97ac502054011b33c32019dfed558
+# c8a17a6f74994c4fbb4fc0cce38b9d71
+# 4c9503b734b3470082577bac33367c00
+# 7269a0558e81473ba8771065791121be
+# cf5c1855920b4064bfc1ba19f4baac4a
+#: ../../source/ikfast/kawada-hironx.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/pr2-beta-static.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:36
+#: ../../source/ikfast/pr2-beta-static.rst:46
+#: ../../source/ikfast/pr2-beta-static.rst:56
+msgid "0.000004"
+msgstr ""
+
+# 11c9204533e44e518d6dd483ce216bc0
+#: ../../source/ikfast/kawada-hironx.rst:24
+msgid ":download:`C++ Code <kawada-hironx/ikfast59.Lookat3D.1_2.cpp>`"
+msgstr ""
+
+# 5409ce9e144943c393c0ac3263748f4c
+#: ../../source/ikfast/kawada-hironx.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kawada-hironx__head/_Lookat3D_free____>`_"
+msgstr ""
+
+# 414bae7efee148418fa30441055214e7
+# 20f3b9a0bdf44d45847a73002dd0f975
+#: ../../source/ikfast/kawada-hironx.rst:29
+#: ../../source/ikfast/pr2-beta-static.rst:29
+msgid "**head_torso** Manipulator"
+msgstr ""
+
+# a30e998296944ba299a41fcd46212d14
+# 64c80f2232f24afb8159b7baac3e5d70
+#: ../../source/ikfast/kawada-hironx.rst:31
+msgid "Manipulator Indices: [0 1 2]"
+msgstr ""
+
+# 361e9cea8d5a41228a1a5823e55f88e6
+# a0ac18a306d047e9a0119abd027422be
+# a11d3ac4a5ac49ddac07761480ae1e2a
+# efd86557bfa3420786136b6bdc328574
+# f3ba98552bc94e3e8b8e06ede81e84fe
+#: ../../source/ikfast/kawada-hironx.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:48
+#: ../../source/ikfast/pr2-beta-static.rst:36
+#: ../../source/ikfast/pr2-beta-static.rst:106
+msgid "0.004002"
+msgstr ""
+
+# acb0179517b24b91b8f84912a8ac5cbe
+#: ../../source/ikfast/kawada-hironx.rst:36
+msgid ":download:`C++ Code <kawada-hironx/ikfast59.Lookat3D.1_2_f0.cpp>`"
+msgstr ""
+
+# 750da3efc310463f9c9c62acd86b1b8e
+#: ../../source/ikfast/kawada-hironx.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kawada-hironx__head_torso/"
+"_Lookat3D_free__CHEST_JOINT0_0___>`_"
+msgstr ""
+
+# d3a3f175face4cb9b560c00a4fd04b5f
+#: ../../source/ikfast/kawada-hironx.rst:43
+msgid "Manipulator Indices: [13 14 15 16 17 18]"
+msgstr ""
+
+# 2fdaaa372cac4455887aa4c5d8e933af
+#: ../../source/ikfast/kawada-hironx.rst:51
+msgid "0.9979"
+msgstr ""
+
+# ef6c25651ed14a52815e093a632ab47c
+#: ../../source/ikfast/kawada-hironx.rst:51
+msgid "0.000655"
+msgstr ""
+
+# 20260a8c98d443a7bcc4797921e08aac
+#: ../../source/ikfast/kawada-hironx.rst:51
+msgid "0.004207"
+msgstr ""
+
+# b9ae7f74cc244646bb42e833bd73c22f
+#: ../../source/ikfast/kawada-hironx.rst:51
+msgid ""
+":download:`C++ Code <kawada-hironx/ikfast59.Transform6D.13_14_15_16_17_18."
+"cpp>`"
+msgstr ""
+
+# f1297d893fc54ec5a0911e65115e7c82
+#: ../../source/ikfast/kawada-hironx.rst:51
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kawada-hironx__leftarm/_Transform6D_free____>`_"
+msgstr ""
+
+# 422f8117553d466bbbc4aa2d8179d724
+#: ../../source/ikfast/kawada-hironx.rst:58
+msgid "Manipulator Indices: [3 4 5 6 7 8]"
+msgstr ""
+
+# aef6d6357a794f9ab252129ec12b4a57
+#: ../../source/ikfast/kawada-hironx.rst:63
+msgid "0.9969"
+msgstr ""
+
+# 8a0618ae4368470e9889b3d639682d31
+#: ../../source/ikfast/kawada-hironx.rst:63
+msgid "0.000654"
+msgstr ""
+
+# b1799ed5370d4cd9bd11466760781ce7
+#: ../../source/ikfast/kawada-hironx.rst:63
+msgid "0.003291"
+msgstr ""
+
+# c75e41b15c2547539ebc0aaa6cf70902
+#: ../../source/ikfast/kawada-hironx.rst:63
+msgid ""
+":download:`C++ Code <kawada-hironx/ikfast59.Transform6D.3_4_5_6_7_8.cpp>`"
+msgstr ""
+
+# 7b94f0cacd7749edb9031a3860d31c24
+#: ../../source/ikfast/kawada-hironx.rst:63
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kawada-hironx__rightarm/_Transform6D_free____>`_"
+msgstr ""
+
+# ddb9190c750c4cf09d4ebf2a07251653
+#: ../../source/ikfast/kuka-kr30l16.rst:4
+msgid "kuka-kr30l16 Robot"
+msgstr ""
+
+# f9538c83de084a4e88b9c967054bb12c
+#: ../../source/ikfast/kuka-kr30l16.rst:9
+msgid ""
+"**filename:** `robots/kuka-kr30l16.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/kuka-kr30l16.zae>`_"
+msgstr ""
+
+# 76bc6393e5854f96bf117fae766b5848
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+msgid "0.9986"
+msgstr ""
+
+# 26ff6b6e1f2743b7b25a54c1ae1dcfa7
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+msgid ""
+":download:`C++ Code <kuka-kr30l16/ikfast59.Transform6D.0_1_2_3_4_5.cpp>`"
+msgstr ""
+
+# f7f677aa98444f44ae924d0c22c4ecf6
+#: ../../source/ikfast/kuka-kr30l16.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr30l16__arm/_Transform6D_free____>`_"
+msgstr ""
+
+# 22de77fb25a44e02b9399bf877eca318
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+msgid "0.9055"
+msgstr ""
+
+# 23d82f4db55346e39d72f8983a6f69ab
+# 00c4c488cd5043d2b64f68d53a662d57
+# 6fdb029f9e5f4501a46b6d82ec5d1c24
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid "0.000311"
+msgstr ""
+
+# f80acaf0319c48b4a54e5b498c8a35ae
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+msgid "0.006104"
+msgstr ""
+
+# 0366f5cb0aec4a44b16182f0426cd23f
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+msgid ""
+":download:`C++ Code <kuka-kr30l16/ikfast59."
+"TranslationDirection5D.1_2_3_4_5_f0.cpp>`"
+msgstr ""
+
+# 709c2aa1b7684530aa73c2a5e3bbf0ab
+#: ../../source/ikfast/kuka-kr30l16.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr30l16__arm/_TranslationDirection5D_free__j0_0___>`_"
+msgstr ""
+
+# 48501d66aca349c983d94ccab0016778
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+msgid "0.9818"
+msgstr ""
+
+# 772efb144aaf4af39b45ae42cdd6309e
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+msgid "0.000378"
+msgstr ""
+
+# 262f7c18f7e44271917cdcdcc5f374dc
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+msgid "0.005103"
+msgstr ""
+
+# bca15847c6cd49d190badad86378a01f
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+msgid ""
+":download:`C++ Code <kuka-kr30l16/ikfast59."
+"TranslationDirection5D.0_2_3_4_5_f1.cpp>`"
+msgstr ""
+
+# b07b20b3e9bd400794ea63ea3777e40e
+#: ../../source/ikfast/kuka-kr30l16.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr30l16__arm/_TranslationDirection5D_free__j1_1___>`_"
+msgstr ""
+
+# 0134f2a0e0174df3aba7d95da832dbcc
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+msgid "0.9898"
+msgstr ""
+
+# 4d3291ab4cc24e6f9930fc76a248d216
+# 6c5edb990e304b2cb8f900e3227606ca
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+#: ../../source/ikfast/pr2-beta-static.rst:85
+msgid "0.000297"
+msgstr ""
+
+# dd7796e600154af19099312426e723af
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+msgid "0.003108"
+msgstr ""
+
+# 8cacdce4a4f9417c84e57fa2801a0962
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+msgid ""
+":download:`C++ Code <kuka-kr30l16/ikfast59."
+"TranslationDirection5D.0_1_3_4_5_f2.cpp>`"
+msgstr ""
+
+# 9705014bcf6a4dff8546e9716b5e6449
+#: ../../source/ikfast/kuka-kr30l16.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr30l16__arm/_TranslationDirection5D_free__j2_2___>`_"
+msgstr ""
+
+# 9847abe0a165411297cb9833eb5a47e1
+#: ../../source/ikfast/kuka-kr5-r650.rst:4
+msgid "kuka-kr5-r650 Robot"
+msgstr ""
+
+# 52161c91f48f4b8b9a4a3c20e869f8c3
+#: ../../source/ikfast/kuka-kr5-r650.rst:9
+msgid ""
+"**filename:** `robots/kuka-kr5-r650.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/data/robots/kuka-kr5-r650.zae>`_"
+msgstr ""
+
+# b4e12eb45e4c4422a109c4c830128898
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+msgid "0.9991"
+msgstr ""
+
+# 338db0e062974d298b239d4ba264e22d
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59.Transform6D.0_1_2_3_4_5.cpp>`"
+msgstr ""
+
+# a4fb82d7e30a4a39bc357c10b16f5b11
+#: ../../source/ikfast/kuka-kr5-r650.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/_Transform6D_free____>`_"
+msgstr ""
+
+# 6cf47b8acc2f48d7847d1d412adaf19e
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+msgid "0.9555"
+msgstr ""
+
+# 9350e4b57e85469d93a924c1565a5c08
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+msgid "0.000316"
+msgstr ""
+
+# 96b302c894524b78bd48013be39373d5
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+msgid "0.003111"
+msgstr ""
+
+# 402f0aa575984748a60a10e2ffe6dbd2
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationDirection5D.1_2_3_4_5_f0.cpp>`"
+msgstr ""
+
+# e23ed2212ddf430cb9422f630bc376ff
+#: ../../source/ikfast/kuka-kr5-r650.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/_TranslationDirection5D_free__j0_0___>`_"
+msgstr ""
+
+# c06beaafaaa441109b67e2c0a064b2cb
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+msgid "0.9872"
+msgstr ""
+
+# eff7033630d84a8eaccabccb01dc55c1
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+msgid "0.003114"
+msgstr ""
+
+# 6122843db11240aca797b1562cf3c804
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationDirection5D.0_2_3_4_5_f1.cpp>`"
+msgstr ""
+
+# e250e6a5feca40e59961772bbef4b021
+#: ../../source/ikfast/kuka-kr5-r650.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/_TranslationDirection5D_free__j1_1___>`_"
+msgstr ""
+
+# c481190f81544f14b8d168e7905419f8
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+msgid "0.9915"
+msgstr ""
+
+# e1adb93203114ea3b9240bd541fa0a09
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+msgid "0.000416"
+msgstr ""
+
+# 3f9cc2fefe9e4b5a823be8da7ec735be
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+msgid "0.006110"
+msgstr ""
+
+# 843a65e954de4af0a8b037bde870e2e6
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationDirection5D.0_1_3_4_5_f2.cpp>`"
+msgstr ""
+
+# 5b6ce8decdae4b5b816702ade4a366fd
+#: ../../source/ikfast/kuka-kr5-r650.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/_TranslationDirection5D_free__j2_2___>`_"
+msgstr ""
+
+# b5942b6e7b764cfa88170d00d939521c
+# 0b4a495c1e774a7a9d21a94cc1f61830
+# 4feab84e9dd44e3bbbf98a9ae46ad232
+# 44ccd26e11164df5ad0eb6a6cff6a45d
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+#: ../../source/ikfast/neuronics-katana.rst:52
+#: ../../source/ikfast/neuronics-katana.rst:91
+msgid "0,3"
+msgstr ""
+
+# cd1cc1b210dd4f8f9ad4161e152bac00
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+msgid "0.000076"
+msgstr ""
+
+# 395b0a61b1cb455085ca4a42020a7fba
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+msgid "0.003033"
+msgstr ""
+
+# e6f847d6738f47908c9c08648396e802
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationZAxisAngle4D.1_2_4_5_f0_3.cpp>`"
+msgstr ""
+
+# 97f7d58b1e89402b89ba432ca8893114
+#: ../../source/ikfast/kuka-kr5-r650.rst:48
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/"
+"_TranslationZAxisAngle4D_free__j0_0___j3_3___>`_"
+msgstr ""
+
+# b56fb13727654a8481cda0a150171d14
+# ffadc9e234d34c1cbbee7c7ef12c4e1f
+# cce659158ecf4079b02874517c1bcc4f
+# caad3abf74604293a7b09fce885dfd39
+# a2643ad117b549eeb4d8294fe115a006
+# 5181a26d116940088ed854e31c2aedcf
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+#: ../../source/ikfast/kuka-youbot.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:75
+#: ../../source/ikfast/neuronics-katana.rst:93
+msgid "1,4"
+msgstr ""
+
+# a503b8d9d6714e0688800b4403ecc921
+# 5cc4ecd0406c4a5fa16a3db196438a85
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+msgid "0.000073"
+msgstr ""
+
+# 5b9198c8896b4011a5e55d7596611277
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+msgid "0.003046"
+msgstr ""
+
+# ac674d1eb27044b8b0c321c16d411e30
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationZAxisAngle4D.0_2_3_5_f1_4.cpp>`"
+msgstr ""
+
+# fc9f61c7adc74fb192b22a9684d2228b
+#: ../../source/ikfast/kuka-kr5-r650.rst:50
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/"
+"_TranslationZAxisAngle4D_free__j1_1___j4_4___>`_"
+msgstr ""
+
+# 9181b9b1b16b45dc92f83933dc832e4f
+# c64cdfe4b4b846f682492f7ae6cba15a
+# 415f8ee6faeb4e96bef833a958a2f471
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+#: ../../source/ikfast/pr2-beta-static.rst:200
+#: ../../source/ikfast/pr2-beta-static.rst:233
+msgid "0.003007"
+msgstr ""
+
+# 0a6428d485ff4fa9b87f78eaa53bd2cb
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+msgid ""
+":download:`C++ Code <kuka-kr5-r650/ikfast59."
+"TranslationZAxisAngle4D.0_1_2_5_f3_4.cpp>`"
+msgstr ""
+
+# 42b5b2adfbc44693b5522e7c9ef5fade
+#: ../../source/ikfast/kuka-kr5-r650.rst:52
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r650__arm/"
+"_TranslationZAxisAngle4D_free__j3_3___j4_4___>`_"
+msgstr ""
+
+# a14afe3f24b841adb994cf5c07b2ec78
+#: ../../source/ikfast/kuka-kr5-r850.rst:4
+msgid "kuka-kr5-r850 Robot"
+msgstr ""
+
+# d90a8df510ed4e978cabbae1d887dcab
+#: ../../source/ikfast/kuka-kr5-r850.rst:9
+msgid ""
+"**filename:** `robots/kuka-kr5-r850.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/data/robots/kuka-kr5-r850.zae>`_"
+msgstr ""
+
+# 0f3280a0a9fc4d24b132302f246b74d1
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+msgid "0.9987"
+msgstr ""
+
+# 7be9d2e5aa7d45fc998c517a2bd298c9
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+msgid "0.000021"
+msgstr ""
+
+# 524b8148f2a94d5a873d11d504982c50
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+msgid ""
+":download:`C++ Code <kuka-kr5-r850/ikfast59.Transform6D.0_1_2_3_4_5.cpp>`"
+msgstr ""
+
+# bfc60fa454e945779f20a79a5cd73581
+#: ../../source/ikfast/kuka-kr5-r850.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r850__arm/_Transform6D_free____>`_"
+msgstr ""
+
+# 50f64010b1df476e9d0352675eb46f11
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+msgid "0.9527"
+msgstr ""
+
+# ed25b57f5ed24b8385dc2b3caf4ea4fb
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+msgid "0.000298"
+msgstr ""
+
+# 22ae0097c94046a8aa338f64eea33672
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+msgid "0.002112"
+msgstr ""
+
+# 91cbe0fad8b5404e91a07382514e71b6
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+msgid ""
+":download:`C++ Code <kuka-kr5-r850/ikfast59."
+"TranslationDirection5D.1_2_3_4_5_f0.cpp>`"
+msgstr ""
+
+# 045ef139581f43f69fc5e6b478bd23c8
+#: ../../source/ikfast/kuka-kr5-r850.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r850__arm/_TranslationDirection5D_free__j0_0___>`_"
+msgstr ""
+
+# 715e769a7097440f9e2c4279108275e1
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+msgid "0.000334"
+msgstr ""
+
+# 15ae5f9b372c46c482222cf00567f308
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+msgid "0.005107"
+msgstr ""
+
+# c020aebbf39b414ba9f1197aa5816e18
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+msgid ""
+":download:`C++ Code <kuka-kr5-r850/ikfast59."
+"TranslationDirection5D.0_2_3_4_5_f1.cpp>`"
+msgstr ""
+
+# 685eeee708564b48b1c40863db7cd040
+#: ../../source/ikfast/kuka-kr5-r850.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r850__arm/_TranslationDirection5D_free__j1_1___>`_"
+msgstr ""
+
+# 946ac39989cd4effb871c9a5f6a61817
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+msgid "0.9902"
+msgstr ""
+
+# 4365e94c34ac49eaaf5671abfde12420
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+msgid "0.000295"
+msgstr ""
+
+# 52b357ca4e5c480bbcf3bc8c404845e1
+# 8d55535fae41433bbd96a44984cebd02
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+#: ../../source/ikfast/pr2-beta-static.rst:218
+msgid "0.003106"
+msgstr ""
+
+# 64077ab5bddc48f69f61671ebff3ec2f
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+msgid ""
+":download:`C++ Code <kuka-kr5-r850/ikfast59."
+"TranslationDirection5D.0_1_3_4_5_f2.cpp>`"
+msgstr ""
+
+# 665555cafa234c5bbacaec3eb3927cbc
+#: ../../source/ikfast/kuka-kr5-r850.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r850__arm/_TranslationDirection5D_free__j2_2___>`_"
+msgstr ""
+
+# d65df231f1e14c58a9bbfce6eb42be57
+# b3bc03c30a214f82ba59b5a21edbd3ba
+# 8e651f448bf540aea62539cef35c8824
+# 07310909103e4751af67dff8335b1205
+# 4e954292fa6e41cb9c3155b3cb090966
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+#: ../../source/ikfast/kuka-youbot.rst:26
+#: ../../source/ikfast/kuka-youbot.rst:52
+msgid "1,3"
+msgstr ""
+
+# 870dd28c1d5f4060a2987153ab96651e
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+msgid "0.000096"
+msgstr ""
+
+# 8bc326d78ea042ec9863dd8f009a7399
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+msgid "0.006024"
+msgstr ""
+
+# bc55b7c0748d4902ba15bcf88bf3de06
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+msgid ""
+":download:`C++ Code <kuka-kr5-r850/ikfast59."
+"TranslationZAxisAngle4D.0_2_4_5_f1_3.cpp>`"
+msgstr ""
+
+# ca9d0d7b99f143b98f97e307d4580814
+#: ../../source/ikfast/kuka-kr5-r850.rst:48
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-kr5-r850__arm/"
+"_TranslationZAxisAngle4D_free__j1_1___j3_3___>`_"
+msgstr ""
+
+# 5a64806b71844e1194672945f44180d9
+#: ../../source/ikfast/kuka-youbot.rst:4
+msgid "kuka-youbot Robot"
+msgstr ""
+
+# 298bb1e9db8c4496b4481750cd641604
+#: ../../source/ikfast/kuka-youbot.rst:9
+msgid ""
+"**filename:** `robots/kuka-youbot.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/kuka-youbot.zae>`_"
+msgstr ""
+
+# 0cf05f26d5f44899b467e6386fef2b58
+#: ../../source/ikfast/kuka-youbot.rst:16
+msgid "Manipulator Indices: [1 2 3 4 5]"
+msgstr ""
+
+# f33c2e96b56a45cebded43d4bed1d171
+# bdc09866d6a044f4b6f2682699cf98ff
+# d1137d6723fa4ee28006f946c53f26da
+# 523ae1447ef94ae1bbce1d69799b8c12
+# 15aec3b16ea341b1beae80a0bc267149
+# 872807f92fe642859864f2edbf9a01a1
+# 05608c4b239f48fb9943f084f50f76ad
+# ea826720d9e245f7bf8325acaab17b01
+# 426c6715440e47119e524258331785d5
+#: ../../source/ikfast/kuka-youbot.rst:24
+#: ../../source/ikfast/kuka-youbot.rst:50
+msgid "1,2"
+msgstr ""
+
+# 5fe3583cc5c84a0d9f61151c1585ae61
+#: ../../source/ikfast/kuka-youbot.rst:24
+msgid "0.3060"
+msgstr ""
+
+# 233ed09c60314c02b7c25cd9eaaffae4
+# 8b9394d3791c4fe984a31646f2ce69aa
+# 759a89cb470e4752be10c2b38969d0a5
+# 54054df789ee444da76fbbd404e5a57f
+# b52aa3166a034b3aa8719b562732f0f0
+# 4b43e1f959774a01959c27d9b1b76f4d
+# 6afc8f671611479fb4b68d5ced0e8d61
+#: ../../source/ikfast/kuka-youbot.rst:24
+#: ../../source/ikfast/kuka-youbot.rst:34
+#: ../../source/ikfast/kuka-youbot.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:40
+#: ../../source/ikfast/kuka-youbot.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/pr2-beta-static.rst:102
+msgid "0.002004"
+msgstr ""
+
+# d5eb684e165f46ed888ed590386a4481
+#: ../../source/ikfast/kuka-youbot.rst:24
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.3_4_5_f1_2.cpp>`"
+msgstr ""
+
+# 0f75ad12b9b24d55aecbc1321c32ae22
+#: ../../source/ikfast/kuka-youbot.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_1_joint_1___arm_2_joint_2___>`_"
+msgstr ""
+
+# 6740117316a24b6ba17774ba8910b58d
+#: ../../source/ikfast/kuka-youbot.rst:26
+msgid "0.3240"
+msgstr ""
+
+# f1b6e366983c4e038c2e5cc5a2f7ecc4
+# b38ef103aa084306b3505d84786b2836
+# aa08a877a2a747599f0cd04fa825848b
+#: ../../source/ikfast/kuka-youbot.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:60
+msgid "0.000010"
+msgstr ""
+
+# ccad6ab1062240dfa37920297305364d
+#: ../../source/ikfast/kuka-youbot.rst:26
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.2_4_5_f1_3.cpp>`"
+msgstr ""
+
+# 72faa59317e54930b5cd9b838b64f4a4
+#: ../../source/ikfast/kuka-youbot.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_1_joint_1___arm_3_joint_3___>`_"
+msgstr ""
+
+# bcdb86c36d5f4fb7bc4d0b72276db404
+#: ../../source/ikfast/kuka-youbot.rst:28
+msgid "0.3360"
+msgstr ""
+
+# 8dbcdec25d644033a7fcb9543ac14f5c
+#: ../../source/ikfast/kuka-youbot.rst:28
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.2_3_5_f1_4.cpp>`"
+msgstr ""
+
+# 733dd5a9253c423bb49c7cb32788a20e
+#: ../../source/ikfast/kuka-youbot.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_1_joint_1___arm_4_joint_4___>`_"
+msgstr ""
+
+# a34e216936724f759d90e53252ef8d1e
+# 8a7135a8b103437298d1081f85d22b4e
+# 57944070baf94cf2aef626dac1a64376
+# a9cca069a83d47c18762a8b1d465f16a
+# 7191fcc735624eabaf839442617adde2
+# 0095bac3a577496f81467f26d9cca6df
+# e70137e7c1ba4469a069beb116aeb989
+# bd2e65498eee4a7e8c7a809cf54a6f98
+#: ../../source/ikfast/kuka-youbot.rst:30
+#: ../../source/ikfast/neuronics-katana.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:95
+msgid "2,3"
+msgstr ""
+
+# 6d047488f7de44668265645b442a6613
+#: ../../source/ikfast/kuka-youbot.rst:30
+msgid "0.0040"
+msgstr ""
+
+# ce7a3a1b5f794c90ac3a03fd2d197200
+#: ../../source/ikfast/kuka-youbot.rst:30
+msgid "0.000031"
+msgstr ""
+
+# 8bb574b5ebb2458f947ce979f5b2494e
+#: ../../source/ikfast/kuka-youbot.rst:30
+msgid "0.003173"
+msgstr ""
+
+# 0e20c73aa7104543be1e1c7f69b8a047
+#: ../../source/ikfast/kuka-youbot.rst:30
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_4_5_f2_3.cpp>`"
+msgstr ""
+
+# d04f7b4dea094d61aefeeacea156a0ba
+#: ../../source/ikfast/kuka-youbot.rst:30
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_2_joint_2___arm_3_joint_3___>`_"
+msgstr ""
+
+# cd2cd3df05d8401d91ef7f5d36e45190
+# 0da488e0ac1c4d4e9d465c1f05e5e3ca
+# 0750748f505249a59d86046a9492f1a8
+# a8988381951e4270a0c14e356968d1e4
+# eee58fa348aa46b984d2622663a11418
+# 124bc5d6e09c43b389032a47c4535572
+#: ../../source/ikfast/kuka-youbot.rst:32
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:77
+#: ../../source/ikfast/neuronics-katana.rst:97
+msgid "2,4"
+msgstr ""
+
+# fac00cdaae41448a882b29f7e536ecb4
+#: ../../source/ikfast/kuka-youbot.rst:32
+msgid "0.0400"
+msgstr ""
+
+# 56af2b58a7894965a78960ac65cdfaf0
+#: ../../source/ikfast/kuka-youbot.rst:32
+msgid "0.002138"
+msgstr ""
+
+# c0a8e5aff25b4fa2a891a8fe12fadd28
+#: ../../source/ikfast/kuka-youbot.rst:32
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_3_5_f2_4.cpp>`"
+msgstr ""
+
+# b602a6f8dc204a028867e66e3fa5ccce
+#: ../../source/ikfast/kuka-youbot.rst:32
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_2_joint_2___arm_4_joint_4___>`_"
+msgstr ""
+
+# b9eb8b02aba5445baa1eadaa27299caa
+# 84f43e565ffc4da481948bf41871d890
+#: ../../source/ikfast/kuka-youbot.rst:34
+#: ../../source/ikfast/kuka-youbot.rst:54
+msgid "2,5"
+msgstr ""
+
+# 87c2a2ceb9c04fec9993ad5f7de65f93
+#: ../../source/ikfast/kuka-youbot.rst:34
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_3_4_f2_5.cpp>`"
+msgstr ""
+
+# 89b2fb9173894a0dbab7e1c6ce0f8319
+#: ../../source/ikfast/kuka-youbot.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_2_joint_2___arm_5_joint_5___>`_"
+msgstr ""
+
+# 2e54da274fa04488ade363509d469e02
+#: ../../source/ikfast/kuka-youbot.rst:36
+msgid "0.0800"
+msgstr ""
+
+# e6e03917ee9c45f4b47ed56fd6c23802
+# 9c5cf01c425441a4960ba205ffa2b8f2
+# 8930e421fbb84b579928cd05f9326284
+# d3d90beff3d64ee3aaa212e51f08a51a
+# 39c4e20eed154a398ef1f84adfb5013e
+# 349bb345ba9c4aff8e0343ebdd7ce3f5
+# 67ba4792c0934ad4971673e476ec324a
+# 812c4b40f97d4339ade04699db0b604b
+# 50f424f0d76142dc9a685b1e3aaeef38
+# 9d3e13ddd1f04fcc938d47c99a909f82
+# 2ff8a57029024d3b91b0328495785191
+# 4093fff737eb440b965b052da9c448f5
+# 7b0c1dc139484d00899459d23f152252
+# c4c94a78a39c4edb93d384123a07928f
+# 7d8da0dd203c4d1385abdf6def742e81
+# fd80b618eb9e43cf808afd21a52e7e8f
+# 7a7bf05db70d4456ac07d8973e57fa4e
+# 1f8cdb333e39424787089ba0787db023
+# 5be13f2acd144b4689cfaa0418e3470c
+# 2e657f283ec54815aab8dbbf527a29fe
+# 8589e8ab483740b4b9344d99aadcaad2
+# d821d6ea8f3b49d18b8a702895d90867
+# 53d05cb2a5e54886a8aa49bf7ec08156
+# 0844b33e0a474ec5ac9b89081fb10ee5
+# 9dfeb3802fd34900982237b44ced17c5
+# aa3bbfa1ff3947079f328960bf5e51b6
+# dbd99e77ffa94ff7a67921cee11a62d8
+# 28525e0dddce43fdb458856d8b7756ba
+# 396d8c06271f4ae9b0dcde8511f2e5fc
+# 43f0b3a9caeb4be18a00a56adc0b904e
+# ec86045edc95421882ae9ba54542fc0e
+# 0e2fcd2f12ac43e8b839f4ca6f9a6608
+# 68bd762f12e142c09161d35faaad7e3c
+# dea11415211844fd8f0225743495b949
+# 432c5126d8924232bbc70b1715102dd8
+#: ../../source/ikfast/kuka-youbot.rst:36
+#: ../../source/ikfast/neuronics-katana.rst:48
+#: ../../source/ikfast/neuronics-katana.rst:89
+#: ../../source/ikfast/pr2-beta-static.rst:102
+msgid "0.000003"
+msgstr ""
+
+# 89e05b3d426843048d62b71ebc726954
+#: ../../source/ikfast/kuka-youbot.rst:36
+msgid "0.002100"
+msgstr ""
+
+# b4b33a80e8b54d5d95d5496d305c8169
+#: ../../source/ikfast/kuka-youbot.rst:36
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_2_5_f3_4.cpp>`"
+msgstr ""
+
+# 07f6d4bc032b460f9678e7ee16fb875c
+#: ../../source/ikfast/kuka-youbot.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_3_joint_3___arm_4_joint_4___>`_"
+msgstr ""
+
+# b601e73403bf45f3bc0521aff2cf604c
+# 71c1355af34f4ba5b26eb9ac22090c07
+#: ../../source/ikfast/kuka-youbot.rst:38
+#: ../../source/ikfast/kuka-youbot.rst:40
+msgid "0.9980"
+msgstr ""
+
+# 787ea198723246cdb1031b4f6f3f1c72
+#: ../../source/ikfast/kuka-youbot.rst:38
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_2_4_f3_5.cpp>`"
+msgstr ""
+
+# 96df5c734b66479fa41310d77f3195d0
+#: ../../source/ikfast/kuka-youbot.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_3_joint_3___arm_5_joint_5___>`_"
+msgstr ""
+
+# ea8e6ca8b49d47538cf47e687e9e6545
+# 49a04ef3909f4d96afd37787c19b362b
+# 87fab63e587746a49a3476c83dc7af20
+#: ../../source/ikfast/kuka-youbot.rst:40
+#: ../../source/ikfast/kuka-youbot.rst:58
+msgid "4,5"
+msgstr ""
+
+# 80b356512a3e4c60a340b1a3887468a9
+#: ../../source/ikfast/kuka-youbot.rst:40
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59.Translation3D.1_2_3_f4_5.cpp>`"
+msgstr ""
+
+# b6365b4485864abdb8ad77bb10ea1145
+#: ../../source/ikfast/kuka-youbot.rst:40
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_Translation3D_free__arm_4_joint_4___arm_5_joint_5___>`_"
+msgstr ""
+
+# 66c99b3b14d243b0b25a0aaf7f0a4160
+#: ../../source/ikfast/kuka-youbot.rst:50
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59."
+"TranslationLocalGlobal6D.3_4_5_f1_2.cpp>`"
+msgstr ""
+
+# 31cf2f9a840749f48151da76a31f48d1
+#: ../../source/ikfast/kuka-youbot.rst:50
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_TranslationLocalGlobal6D_free__arm_1_joint_1___arm_2_joint_2___>`_"
+msgstr ""
+
+# 93d11d0705dc47f1aa815b7aff7b5d56
+# cf1829ea807849419c0938d1ae746b23
+# 9246b0ec1ac849639824a66b2a55231b
+# b41ed22cbcc2427882d4de31535ad378
+# fa184d28d7d04155a8a44706d0788f11
+# 53a075a44f694d71afcf51030bc7c030
+# 744c5575ab3c4a6daa2a69e950a89f42
+# fa2ecca6a8e240d596e92a5cacb01883
+# 8706d5d41e4c4723a87f7da3a3c2a15c
+# 5aaecdfc1d6e4f53b5a7f075475fa2ca
+# d20ba3145f9240d4beff19e47534a468
+# e9cf5534af974a628d6d461c995931cb
+# 860d089106e342ab99a7095c997f512b
+# 87aa1a7b6dde40ceb9a5995ab5dd8503
+# 2b78141293a14a5480c5719caf027dbb
+# 751299eb9e9a497ca8d10cfabfa61389
+# 846815a14ee34a3b8c5fb8fdddb24a96
+# 85b62e49ffbc4442a84d81fc9f7eabb7
+# d14f1b8f32ef41a880590e157a334ddf
+# 934d8457a0864c27a81f7497712b627e
+# e2bd8febf05b4e57a41224765153dc8e
+# e753dc7c42f847ac9f90aa7494b9ba9b
+# 3a1d4872053d4c6b8cdb495719000116
+# 0db48340640644278a5fe01b0a6d75ec
+# cc1bd8135e9d4c3d980562b9c92c7653
+# feb6586c627d48818ad76cdeb20b941e
+# e70f2d37f6eb4365a0d27be851075261
+# 677526c01c36418c8295df56dedef902
+#: ../../source/ikfast/kuka-youbot.rst:52
+#: ../../source/ikfast/kuka-youbot.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:93
+#: ../../source/ikfast/pr2-beta-static.rst:108
+#: ../../source/ikfast/pr2-beta-static.rst:130
+#: ../../source/ikfast/pr2-beta-static.rst:206
+msgid "0.000008"
+msgstr ""
+
+# e72ada2d290e47f294a734f554ae1b2d
+#: ../../source/ikfast/kuka-youbot.rst:52
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59."
+"TranslationLocalGlobal6D.2_4_5_f1_3.cpp>`"
+msgstr ""
+
+# ab4f862d765245e7bd243b0c811be3da
+#: ../../source/ikfast/kuka-youbot.rst:52
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_TranslationLocalGlobal6D_free__arm_1_joint_1___arm_3_joint_3___>`_"
+msgstr ""
+
+# 9546ed86d30a403eab2650a54f01fb4b
+#: ../../source/ikfast/kuka-youbot.rst:54
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59."
+"TranslationLocalGlobal6D.1_3_4_f2_5.cpp>`"
+msgstr ""
+
+# e3a776076ad3460b8d923319733fb56e
+#: ../../source/ikfast/kuka-youbot.rst:54
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_TranslationLocalGlobal6D_free__arm_2_joint_2___arm_5_joint_5___>`_"
+msgstr ""
+
+# a55df0615d01422b84dd07683b20ca68
+#: ../../source/ikfast/kuka-youbot.rst:56
+msgid "0.002261"
+msgstr ""
+
+# de650a8489c14382b513e6a050634dee
+#: ../../source/ikfast/kuka-youbot.rst:56
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59."
+"TranslationLocalGlobal6D.1_2_4_f3_5.cpp>`"
+msgstr ""
+
+# 1dfc4602053945acaf222816a0daf728
+#: ../../source/ikfast/kuka-youbot.rst:56
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_TranslationLocalGlobal6D_free__arm_3_joint_3___arm_5_joint_5___>`_"
+msgstr ""
+
+# 9ac3d885f65e4ad4bbe50131ccfee3e7
+#: ../../source/ikfast/kuka-youbot.rst:58
+msgid ""
+":download:`C++ Code <kuka-youbot/ikfast59."
+"TranslationLocalGlobal6D.1_2_3_f4_5.cpp>`"
+msgstr ""
+
+# ce84e01d08764193ad88de6ebb1d0ad9
+#: ../../source/ikfast/kuka-youbot.rst:58
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/kuka-youbot__arm/"
+"_TranslationLocalGlobal6D_free__arm_4_joint_4___arm_5_joint_5___>`_"
+msgstr ""
+
+# 180242db3fc241a395bacbf4bd442be0
+#: ../../source/ikfast/mitsubishi-pa10.rst:4
+msgid "mitsubishi-pa10 Robot"
+msgstr ""
+
+# 4d39cc76eb3f47ebb9d123879d36ba6c
+#: ../../source/ikfast/mitsubishi-pa10.rst:9
+msgid ""
+"**filename:** `robots/mitsubishi-pa10.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/data/robots/mitsubishi-pa10.zae>`_"
+msgstr ""
+
+# 894ef41dad4b4450aa21f666431086c5
+# 45fe03303d014f119ae8e75768e548d5
+# 6ac48a455985461eade710efd450a397
+#: ../../source/ikfast/mitsubishi-pa10.rst:14
+#: ../../source/ikfast/schunk-lwa3.rst:14
+#: ../../source/ikfast/unimation-pumaarm.rst:14
+msgid "**arm_nogripper** Manipulator"
+msgstr ""
+
+# 423854868fc14b7790e9ccab76542e72
+# dc789943ecb5472eb3b3618fdc1ac671
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+msgid "0.9150"
+msgstr ""
+
+# a36ee81021dc48fe993be1c54a086557
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+msgid "0.002113"
+msgstr ""
+
+# 04c4797513c14b27a64320f5fcc88359
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+msgid ""
+":download:`C++ Code <mitsubishi-pa10/ikfast59.Transform6D.1_2_3_4_5_6_f0."
+"cpp>`"
+msgstr ""
+
+# 1c7983cae16c4f65a4e4cd8378dad025
+#: ../../source/ikfast/mitsubishi-pa10.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/mitsubishi-pa10__arm_nogripper/"
+"_Transform6D_free__S1_0___>`_"
+msgstr ""
+
+# dad1dc41157c42d7a3539f249212376d
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+msgid "0.8848"
+msgstr ""
+
+# efb588158e0848bfa75b9dc7dae6906f
+# 28c40cc0911f477c959b8cde6a71fabd
+# 8cb6a8cb7776483d9d8379f482bbfec6
+# 37eae19607ec4a42a7c125657962bb7d
+# 579cf3c8a210442c9894f9c0c0555967
+# e538dc32dce74517b4b214cbed400da9
+# 114fd4fd98234371b10120583a07c588
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+#: ../../source/ikfast/pr2-beta-static.rst:145
+#: ../../source/ikfast/pr2-beta-static.rst:149
+#: ../../source/ikfast/pr2-beta-static.rst:241
+#: ../../source/ikfast/pr2-beta-static.rst:243
+#: ../../source/ikfast/schunk-lwa3.rst:26
+msgid "0.004006"
+msgstr ""
+
+# 02e91919285c45a78d53f36b24a36669
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+msgid ""
+":download:`C++ Code <mitsubishi-pa10/ikfast59.Transform6D.0_2_3_4_5_6_f1."
+"cpp>`"
+msgstr ""
+
+# 1047e46842f64e42b955acd63e6c778e
+#: ../../source/ikfast/mitsubishi-pa10.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/mitsubishi-pa10__arm_nogripper/"
+"_Transform6D_free__S2_1___>`_"
+msgstr ""
+
+# 8ec5bd1090f6480faea011941d32331a
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+msgid "0.9790"
+msgstr ""
+
+# 11f37ce22a524b85b0f5c3efe9ca0874
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+msgid ""
+":download:`C++ Code <mitsubishi-pa10/ikfast59.Transform6D.0_1_3_4_5_6_f2."
+"cpp>`"
+msgstr ""
+
+# 7f71efdb07cf4e36bc4e9150eed54c63
+#: ../../source/ikfast/mitsubishi-pa10.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/mitsubishi-pa10__arm_nogripper/"
+"_Transform6D_free__S3_2___>`_"
+msgstr ""
+
+# 5c24e04327904a32bafac8f5c9c72b53
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+msgid "0.9825"
+msgstr ""
+
+# e8bf9226acc34206acccbf2042823e9b
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+msgid ""
+":download:`C++ Code <mitsubishi-pa10/ikfast59.Transform6D.0_1_2_3_5_6_f4."
+"cpp>`"
+msgstr ""
+
+# b1636cf6b29f4e52aa5078ffa534f87c
+#: ../../source/ikfast/mitsubishi-pa10.rst:30
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/mitsubishi-pa10__arm_nogripper/"
+"_Transform6D_free__E2_4___>`_"
+msgstr ""
+
+# 257ed0a259f340ef8e3942fb7dcf66fd
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+msgid "0.9002"
+msgstr ""
+
+# d9a756d5d2104029b0cbfa32108556de
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+msgid ""
+":download:`C++ Code <mitsubishi-pa10/ikfast59.Transform6D.0_1_2_3_4_6_f5."
+"cpp>`"
+msgstr ""
+
+# 84a7108df6f140a69f01ce93c57d0f9d
+#: ../../source/ikfast/mitsubishi-pa10.rst:32
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/mitsubishi-pa10__arm_nogripper/"
+"_Transform6D_free__W1_5___>`_"
+msgstr ""
+
+# 515ab78fa0284c9589e9a55b74d6f7a4
+#: ../../source/ikfast/neuronics-katana.rst:4
+msgid "neuronics-katana Robot"
+msgstr ""
+
+# 2c6a619642944bc597209f4dc62f7968
+#: ../../source/ikfast/neuronics-katana.rst:9
+msgid ""
+"**filename:** `robots/neuronics-katana.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/data/robots/neuronics-katana.zae>`_"
+msgstr ""
+
+# 699dc78e90524870b4bcebb6a5b6d397
+# 573a93bb049f42fd986623531941032d
+#: ../../source/ikfast/neuronics-katana.rst:16
+#: ../../source/ikfast/neuronics-katana.rst:67
+msgid "Manipulator Indices: [0 1 2 3 4]"
+msgstr ""
+
+# 0290457c36f649b989efa899e390ae00
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:151
+#: ../../source/ikfast/pr2-beta-static.rst:239
+#: ../../source/ikfast/pr2-beta-static.rst:241
+msgid "0.9760"
+msgstr ""
+
+# c0edbebaa0e4498f86941051bf2ba727
+# 38dad5d416644690883791e8054c75f2
+#: ../../source/ikfast/neuronics-katana.rst:24
+#: ../../source/ikfast/neuronics-katana.rst:75
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59.Translation3D.0_2_3_f1_4.cpp>`"
+msgstr ""
+
+# 46797d77aada4ef88808fdc8632f476f
+#: ../../source/ikfast/neuronics-katana.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_Translation3D_free__j2_1___j5_4___>`_"
+msgstr ""
+
+# e235e1ec6620414186e859260ff5165f
+# 07f7f0388abc4d0eac82d2cb0510af1c
+# d19068a0ff524ac3a4e036a7f3039c6e
+# 00d1d747c3594a2c89e14e192b567900
+# e1fd23ad5522477bb6f9ac012f0499ea
+# 704dd2004e6e4b1b8e68e9fd3d6cd2f5
+# f930bd0aa73c49658ffabbbb06f0669e
+# 6fb9ec45f450449fba14c97ef59e6e15
+# a6e501bd9ea346628aa255b9b0d2c9e8
+# 006f1a8559be47a9959c06fd2b4b678b
+# 74c4374264af42d8af9606e785efd036
+# 18d4425819474f6c86dffdfa5abc70ca
+# f61ff41f6a964db9a017ef3adba4d3b2
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:77
+#: ../../source/ikfast/pr2-beta-static.rst:202
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid "0.9900"
+msgstr ""
+
+# 68d3403098264509952456a71d8434b6
+# 2b355fa812484825a0e0670f5f23832c
+#: ../../source/ikfast/neuronics-katana.rst:26
+#: ../../source/ikfast/neuronics-katana.rst:77
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59.Translation3D.0_1_3_f2_4.cpp>`"
+msgstr ""
+
+# be0ac93edc474517b0fc82a2a2b72c7d
+#: ../../source/ikfast/neuronics-katana.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_Translation3D_free__j3_2___j5_4___>`_"
+msgstr ""
+
+# ab1079faa0dd41dabdefd97ff7f8b81c
+#: ../../source/ikfast/neuronics-katana.rst:28
+msgid "0.002303"
+msgstr ""
+
+# f33e87f283674c09850c19e34bf18c7d
+# c9170012b0dc4466871ebcc7523e9609
+#: ../../source/ikfast/neuronics-katana.rst:28
+#: ../../source/ikfast/neuronics-katana.rst:79
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59.Translation3D.0_1_2_f3_4.cpp>`"
+msgstr ""
+
+# 4d7aaeb2d1f14a499f3874d297084fb6
+#: ../../source/ikfast/neuronics-katana.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_Translation3D_free__j4_3___j5_4___>`_"
+msgstr ""
+
+# 13ecebbf760c4558954c668b97f8e91b
+#: ../../source/ikfast/neuronics-katana.rst:38
+msgid "0.9411"
+msgstr ""
+
+# 2dd4a37363744ddf914abb62a9fcd79c
+#: ../../source/ikfast/neuronics-katana.rst:38
+msgid "0.000038"
+msgstr ""
+
+# 174269dcd4a44c0386315d8b443b2807
+#: ../../source/ikfast/neuronics-katana.rst:38
+msgid "0.002219"
+msgstr ""
+
+# cc69227fd30348f5b68dd07e84ddca46
+#: ../../source/ikfast/neuronics-katana.rst:38
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationDirection5D.0_1_2_3_4.cpp>`"
+msgstr ""
+
+# 5c469da612fb4d52a0dd016ed99a071a
+#: ../../source/ikfast/neuronics-katana.rst:38
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/_TranslationDirection5D_free____>`_"
+msgstr ""
+
+# 34e20eae61404a5ba03fafc10267b5a3
+# 3d711e8aa43d4700be34ad0d4772350d
+# 3945c28a5a5e4c299354f77cfff62d93
+# 2f8f5b2a4e8c4120931dcd3ebca98470
+# aac40c9ff8b54c5d801bdc96ad181814
+#: ../../source/ikfast/neuronics-katana.rst:48
+msgid "0,1"
+msgstr ""
+
+# a60cf652d0044221a556b300385d028a
+#: ../../source/ikfast/neuronics-katana.rst:48
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.2_3_4_f0_1.cpp>`"
+msgstr ""
+
+# ffc715e14e2f4afd92e3ec2c069985b3
+#: ../../source/ikfast/neuronics-katana.rst:48
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j1_0___j2_1___>`_"
+msgstr ""
+
+# 0e60b88d69d94862a27beed75fd6d386
+# 5c12dfb90c5045aba642716f70ce10ab
+# 34d494f5475244959bbc15a609944b91
+# 96c53756465d42b7bf93d954670eda09
+# 6489f5921d5a4ca0acb7613626c145e1
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/neuronics-katana.rst:89
+msgid "0,2"
+msgstr ""
+
+# 305e2d104a394aa58d90fdbc29c24584
+# cc7958a8ed244ae3a62983807e15ec32
+# a0474b62222b48109c35decbd7b94468
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/pr2-beta-static.rst:24
+#: ../../source/ikfast/pr2-beta-static.rst:56
+msgid "0.003002"
+msgstr ""
+
+# eca2fda670804cf4bbfa88be47fbc6bf
+# 90c29beb3ff94762af178931f5fa17d9
+#: ../../source/ikfast/neuronics-katana.rst:50
+#: ../../source/ikfast/neuronics-katana.rst:89
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.1_3_4_f0_2.cpp>`"
+msgstr ""
+
+# ed3dedb9acd34e0e96429787c392f836
+#: ../../source/ikfast/neuronics-katana.rst:50
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j1_0___j3_2___>`_"
+msgstr ""
+
+# b7faec02d89d449ba932bf81b7ab6dda
+# 95653f28bcee49a6b0c93bbc5920bdfb
+# a5d946318739410c9a3c830cb724425e
+# 77ece9337a354cd98307687dd8ff5d50
+# 8692914536ec47bc85e0a1c3ec5019bd
+# 30fd1b6b9159418c97d66d72dd6dafcf
+# 301682f40f9d426da576dc17dc06e654
+# 3b8e972cfe834cadbc29515465ca683a
+# fe46d9da3a914d2c92132c3b5672c4ad
+# c1bb7756d07c41d2abc6142c965b3951
+# f666e7c3fcb543cb99b8341b52dc6690
+# 7c215b7033614aca80407daeb6afbeed
+# f3c1c1ad0c1249ad93c2e421437f79de
+# b73d8d56da0e4cd89852b2878c53aa23
+# 8f801eddd71e4d1b9aeb0da7990f3a76
+# c27f8684912241bfa850e55580de7b2a
+# c41e0fd0e05541b2a80365f77cb7e7e8
+# 1c190f4a06a84723b989f86048838def
+# 6bd0c3581a3a459cb543a877e4ccd2dc
+# 6266ed5db2964d0a948a6f45bb47ced4
+# 3980afec0a1d42c6aaf1d53075fb0f09
+# 468e1dd9fc4f49e5b8bf2ace03aa1f7a
+# bf20d785cfad492c9441a03f26c7229d
+# 871e56c3e3144812ad329f92c9a713e1
+# 9cac43211d5045fd98fd979f40f5686a
+# 4230ca96cdf54c169adef7bc3f3ab063
+# a59e5086ae694521beab7a4d40eb8fc5
+# 30fedbe1ce8c4520836948f7bff38569
+#: ../../source/ikfast/neuronics-katana.rst:52
+#: ../../source/ikfast/pr2-beta-static.rst:185
+msgid "0.000001"
+msgstr ""
+
+# 383ec9edb4794059be377db4f471f80d
+#: ../../source/ikfast/neuronics-katana.rst:52
+msgid "0.002001"
+msgstr ""
+
+# 800aeca362b54cabaed1eb9b63d9181e
+# 3dd78d8b9be840558b7f1e14a4eb4aef
+#: ../../source/ikfast/neuronics-katana.rst:52
+#: ../../source/ikfast/neuronics-katana.rst:91
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.1_2_4_f0_3.cpp>`"
+msgstr ""
+
+# 3ed8c8f56e4643ae8fd07705d137ba25
+#: ../../source/ikfast/neuronics-katana.rst:52
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j1_0___j4_3___>`_"
+msgstr ""
+
+# e6910f925ec0475c8a37feeb820717bb
+# 13f804b1850e4e0c9837d412586ff854
+#: ../../source/ikfast/neuronics-katana.rst:54
+#: ../../source/ikfast/neuronics-katana.rst:93
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.0_2_3_f1_4.cpp>`"
+msgstr ""
+
+# 6910f13612f141cab7277e935b2fd170
+#: ../../source/ikfast/neuronics-katana.rst:54
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j2_1___j5_4___>`_"
+msgstr ""
+
+# b298822bbf9a461492fec7417f1f11c2
+# bbdfc15d23c64935ba79c51c8548f44e
+# 846455c7d31f4d0da2fe19e8e2af0c98
+# 7168205ed3714604a67df1702b26583d
+# e80b62783b0f403f96851b58316db2d7
+# c12096b12bf34a2ca0c189497bb02fbd
+# f2d876a3c77847aca39ceb6cd9c54ba4
+# 32f4f2f6e38e4d098b0be4bb13519f48
+# de99439dcbcf42af83572e0f42a3b1a0
+# 2809e5e559014e67870865e2be81a8c7
+# d0c4da69a01c4c26a3419e48e1238e75
+# 18749737b82d4befaa3c7491666efa89
+# 0d49e0a263ac4b22a615053bf5eda917
+# 3798000968b14a6fa7334c2f569ee592
+#: ../../source/ikfast/neuronics-katana.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:91
+#: ../../source/ikfast/neuronics-katana.rst:95
+msgid "0.000000"
+msgstr ""
+
+# 976feccb8de34b8bac12d9ae4001c986
+# aaeaf2e827f742bfa634883150898297
+#: ../../source/ikfast/neuronics-katana.rst:56
+#: ../../source/ikfast/neuronics-katana.rst:95
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.0_1_4_f2_3.cpp>`"
+msgstr ""
+
+# e7e7b25ee4364bf7a425a2e51e9ec7f7
+#: ../../source/ikfast/neuronics-katana.rst:56
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j3_2___j4_3___>`_"
+msgstr ""
+
+# 022c3cee84b246fa94d384222ad7a58b
+# 273c3aea73da496b8c6749512a3d769c
+#: ../../source/ikfast/neuronics-katana.rst:58
+#: ../../source/ikfast/neuronics-katana.rst:97
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.0_1_3_f2_4.cpp>`"
+msgstr ""
+
+# 295905d43ca640ed81a60199b5b6d77b
+#: ../../source/ikfast/neuronics-katana.rst:58
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j3_2___j5_4___>`_"
+msgstr ""
+
+# b77b3c3639444f42a26b5168badb318b
+#: ../../source/ikfast/neuronics-katana.rst:60
+msgid ""
+":download:`C++ Code <neuronics-katana/ikfast59."
+"TranslationLocalGlobal6D.0_1_2_f3_4.cpp>`"
+msgstr ""
+
+# d8ad126c981b4389a1700173d2ad61b2
+#: ../../source/ikfast/neuronics-katana.rst:60
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__arm/"
+"_TranslationLocalGlobal6D_free__j4_3___j5_4___>`_"
+msgstr ""
+
+# 1f8ee8e41a634756a93fa4483ea10027
+#: ../../source/ikfast/neuronics-katana.rst:65
+msgid "**armgrasp** Manipulator"
+msgstr ""
+
+# 61c5bf10115744f18006b52b223df01e
+#: ../../source/ikfast/neuronics-katana.rst:75
+#: ../../source/ikfast/pr2-beta-static.rst:153
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid "0.9780"
+msgstr ""
+
+# fc207486ce0c4089aafe107fef2abdad
+#: ../../source/ikfast/neuronics-katana.rst:75
+msgid "0.003101"
+msgstr ""
+
+# 3b1d90c72aea49e48fb4bd05987924d8
+#: ../../source/ikfast/neuronics-katana.rst:75
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_Translation3D_free__j2_1___j5_4___>`_"
+msgstr ""
+
+# 5c365dfc92794ed584726001e5b7a769
+# 13a9aa9327904129824e9762f42c3352
+#: ../../source/ikfast/neuronics-katana.rst:77
+#: ../../source/ikfast/neuronics-katana.rst:79
+msgid "0.002003"
+msgstr ""
+
+# f042b65a846f415e8e0385be7cd925ba
+#: ../../source/ikfast/neuronics-katana.rst:77
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_Translation3D_free__j3_2___j5_4___>`_"
+msgstr ""
+
+# c4e8452cdb0e41519d6465faae317d07
+#: ../../source/ikfast/neuronics-katana.rst:79
+msgid "0.9880"
+msgstr ""
+
+# aea8287644154f2cb8b563092d33e846
+#: ../../source/ikfast/neuronics-katana.rst:79
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_Translation3D_free__j4_3___j5_4___>`_"
+msgstr ""
+
+# 4f514540db9348b7b7eade549e784f9d
+#: ../../source/ikfast/neuronics-katana.rst:89
+msgid "0.002162"
+msgstr ""
+
+# b2b33c6414f845d2b73b4a0fd0f6566c
+#: ../../source/ikfast/neuronics-katana.rst:89
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_TranslationLocalGlobal6D_free__j1_0___j3_2___>`_"
+msgstr ""
+
+# c14a09ed0eec42aa8d4a650fa62ee9d1
+#: ../../source/ikfast/neuronics-katana.rst:91
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_TranslationLocalGlobal6D_free__j1_0___j4_3___>`_"
+msgstr ""
+
+# 8536bbb5c2064550ad63276feb7a3d6f
+#: ../../source/ikfast/neuronics-katana.rst:93
+msgid "0.004004"
+msgstr ""
+
+# eba688795ac04e628c6933d9967c7e13
+#: ../../source/ikfast/neuronics-katana.rst:93
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_TranslationLocalGlobal6D_free__j2_1___j5_4___>`_"
+msgstr ""
+
+# 5fe1b7f60f044edba8949f9a4caae02a
+#: ../../source/ikfast/neuronics-katana.rst:95
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_TranslationLocalGlobal6D_free__j3_2___j4_3___>`_"
+msgstr ""
+
+# cfbd28b54f184046a1a369484f661061
+#: ../../source/ikfast/neuronics-katana.rst:97
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/neuronics-katana__armgrasp/"
+"_TranslationLocalGlobal6D_free__j3_2___j5_4___>`_"
+msgstr ""
+
+# d59f27bbec62401d8c02fba7df0a033f
+#: ../../source/ikfast/pr2-beta-static.rst:4
+msgid "pr2-beta-static Robot"
+msgstr ""
+
+# 29cc3c4804c648b79339506ab4266b3c
+#: ../../source/ikfast/pr2-beta-static.rst:9
+msgid ""
+"**filename:** `robots/pr2-beta-static.zae <https://openrave.svn.sourceforge."
+"net/svnroot/openrave/trunk/src/robots/pr2-beta-static.zae>`_"
+msgstr ""
+
+# 0d6717824de244fcaad3c02a78604574
+#: ../../source/ikfast/pr2-beta-static.rst:16
+msgid "Manipulator Indices: [13 14]"
+msgstr ""
+
+# 65a4c947b71f427da5aab3c5d91fa282
+#: ../../source/ikfast/pr2-beta-static.rst:24
+msgid "0.9997"
+msgstr ""
+
+# 3f837dfeb7b2424582765e6847905b1e
+#: ../../source/ikfast/pr2-beta-static.rst:24
+msgid ":download:`C++ Code <pr2-beta-static/ikfast59.Lookat3D.13_14.cpp>`"
+msgstr ""
+
+# b1b7bfcde7244be6b42bca0339d2d967
+#: ../../source/ikfast/pr2-beta-static.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__head/_Lookat3D_free____>`_"
+msgstr ""
+
+# 868896fd452649f99a1ad1d3e3a66562
+#: ../../source/ikfast/pr2-beta-static.rst:31
+msgid "Manipulator Indices: [12 13 14]"
+msgstr ""
+
+# 9097bc660c2a4eaeb13f0bcfc2028288
+# ac21948c70cd48e89d63b858676d0a80
+#: ../../source/ikfast/pr2-beta-static.rst:36
+msgid "12"
+msgstr ""
+
+# 2152de3d3c6e4852a25066f05946619d
+#: ../../source/ikfast/pr2-beta-static.rst:36
+msgid ":download:`C++ Code <pr2-beta-static/ikfast59.Lookat3D.13_14_f12.cpp>`"
+msgstr ""
+
+# 423909493e414f769b6040e1318e80bd
+#: ../../source/ikfast/pr2-beta-static.rst:36
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__head_torso/"
+"_Lookat3D_free__torso_lift_joint_12___>`_"
+msgstr ""
+
+# 90f4dba9011c483380ce5072258a2bf2
+#: ../../source/ikfast/pr2-beta-static.rst:46
+msgid "0.004896"
+msgstr ""
+
+# 61d8b353574b4f86a04d67974b98b711
+#: ../../source/ikfast/pr2-beta-static.rst:46
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.12_13_14.cpp>`"
+msgstr ""
+
+# b76d6122f98c413fb6e37aeedf4cd842
+#: ../../source/ikfast/pr2-beta-static.rst:46
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__head_torso/_Translation3D_free____>`_"
+msgstr ""
+
+# 6ebdd6a40b23420d8ab353b727df183b
+#: ../../source/ikfast/pr2-beta-static.rst:56
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationLocalGlobal6D.12_13_14.cpp>`"
+msgstr ""
+
+# b5a4cdad136a4cf3b9870c85b2adf541
+#: ../../source/ikfast/pr2-beta-static.rst:56
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__head_torso/"
+"_TranslationLocalGlobal6D_free____>`_"
+msgstr ""
+
+# 3fc71891f56045f2bd5f7f76dc1416ab
+#: ../../source/ikfast/pr2-beta-static.rst:63
+msgid "Manipulator Indices: [15 16 17 18 19 20 21]"
+msgstr ""
+
+# d0118c0b5cf44555a6e2d0d36d061589
+#: ../../source/ikfast/pr2-beta-static.rst:71
+msgid "15"
+msgstr ""
+
+# ae830b844d3a45b083b9d1006614e063
+#: ../../source/ikfast/pr2-beta-static.rst:71
+msgid "0.8383"
+msgstr ""
+
+# 35fb77235ea34113937794df44c6872a
+#: ../../source/ikfast/pr2-beta-static.rst:71
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.16_17_18_19_20_21_f15.cpp>`"
+msgstr ""
+
+# 7cd489fe95d44516a2ff75c97ff1c632
+#: ../../source/ikfast/pr2-beta-static.rst:71
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm/"
+"_Transform6D_free__l_shoulder_pan_joint_15___>`_"
+msgstr ""
+
+# a3c489a8fbc649fd9c5578450a2bff9a
+#: ../../source/ikfast/pr2-beta-static.rst:73
+msgid "16"
+msgstr ""
+
+# a4bcd8113e8c424189cabf3a12a4fca8
+#: ../../source/ikfast/pr2-beta-static.rst:73
+msgid "0.8297"
+msgstr ""
+
+# 90358ec744b24c3b94718bfd15f4a173
+#: ../../source/ikfast/pr2-beta-static.rst:73
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.15_17_18_19_20_21_f16.cpp>`"
+msgstr ""
+
+# 07dbdfa773ee4594a0c4c4c3ea217b32
+#: ../../source/ikfast/pr2-beta-static.rst:73
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm/"
+"_Transform6D_free__l_shoulder_lift_joint_16___>`_"
+msgstr ""
+
+# 1de441da7e2f415fbf0c3e7a3231942e
+# 53b9cf71bd2f4af69a28a5b1c452f498
+#: ../../source/ikfast/pr2-beta-static.rst:75
+msgid "18"
+msgstr ""
+
+# 9a70507d1d6746eeaa0267d775d448a4
+#: ../../source/ikfast/pr2-beta-static.rst:75
+msgid "0.5590"
+msgstr ""
+
+# 87661e2b2d4b4b04814b17f31125e24d
+# 7a3bf4a436784418aa05cfaa7fc8a619
+# c7139ae7a9cc4a5e89b71be5c35efced
+# 5836d74f09764fa0971b58560e1088ca
+# c46fc807fc034721abd85dcbba2779ff
+# 5928692941f446faad3e3b90635515a1
+# 1edccc6774184eb9af2aed2720a988ec
+#: ../../source/ikfast/pr2-beta-static.rst:75
+#: ../../source/ikfast/pr2-beta-static.rst:145
+#: ../../source/ikfast/pr2-beta-static.rst:149
+#: ../../source/ikfast/pr2-beta-static.rst:169
+#: ../../source/ikfast/pr2-beta-static.rst:173
+#: ../../source/ikfast/pr2-beta-static.rst:233
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+msgid "0.000019"
+msgstr ""
+
+# 4ce83ddbf04b4aad8f6d1a65bde122c8
+#: ../../source/ikfast/pr2-beta-static.rst:75
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.15_16_17_19_20_21_f18.cpp>`"
+msgstr ""
+
+# fa2418415a704cdda5cee6b71564a2c1
+#: ../../source/ikfast/pr2-beta-static.rst:75
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm/"
+"_Transform6D_free__l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# a6d5583cb3e348f29e6ebdbf68d979e0
+#: ../../source/ikfast/pr2-beta-static.rst:85
+msgid "17,20"
+msgstr ""
+
+# b1c0302cff2740f188e595f1daa1ab17
+#: ../../source/ikfast/pr2-beta-static.rst:85
+msgid "0.002145"
+msgstr ""
+
+# b5d06ce49ea14182bbadedf64f133f05
+#: ../../source/ikfast/pr2-beta-static.rst:85
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.15_16_18_19_21_f17_20.cpp>`"
+msgstr ""
+
+# 3c5c7e2b03c944c7873a37debef25096
+#: ../../source/ikfast/pr2-beta-static.rst:85
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm/"
+"_TranslationDirection5D_free__l_upper_arm_roll_joint_17___l_wrist_flex_joint_20___>`_"
+msgstr ""
+
+# 7aa09cfafee44085ba763cce41ea4bf4
+#: ../../source/ikfast/pr2-beta-static.rst:87
+msgid "18,20"
+msgstr ""
+
+# ba2b90ca3f2a4f2995b56ae62079df13
+# b9ae4f2566574dbfa13b7e8469cd62b8
+# 62f08b27aab14b0e9f9f9ace9bff3893
+# 54fce8c4584a463fa8d2621a78c4cfc6
+# a34c753089e642ab90421ade034e84a5
+# 1451818ba362453faddd59db7a20a1c0
+# 7b9520f7db6f467397304c11e71c00e6
+# 60e4be9779f942779e30d2d3512656e5
+# 5cf8916097fb436a8b938eec89fceb6d
+# 507a075d5a73453ab722129c129e79f7
+# e223a027dc3a4dd49ee352dde738d635
+# 7771fa50adbb4cb49e3d9a1c9da1954d
+# bd9205e511a94cc8942415e38910f5c5
+# 9798b292a1594a02b67d333ebee88656
+# 169d236598f5474ab25ee6f08375c3e7
+# f6584d90ab544e38a3540402e691998f
+# d76de53aca4d4d1d909fb3f41ab0be00
+# 214a4231412a4156bb7a2f357e65afa0
+# 4ca088eba2e34a1e80f819801b21596b
+# da0bdd8038844ffc9ee4953c6b70266e
+# 351d75293a524f0e926c0355f1cb7015
+# f9212c38ddb549ae8a79df30f7ab8991
+# 53365b25f8954652add9960a9dea9049
+# 72df4f87c5e947a397dc5949d9ac571d
+# 7d637cfee2a747c080c26671b944718d
+# ef195a6c9be345429508ce6c48dbc5bf
+# 80f6de30b60d4b65a10d47cb9b4a939c
+# a1d4fbf867f84ce9bedfe9f74568c5f2
+# 02f7f9edd83a4878bb03f68d8c99fa03
+# a49f306c56fb476c96722d16da6eb5ca
+# c2bf116a1b934ab9836b119f7311e0aa
+# 52bf7a270c8448f38e1d420508b1b971
+# 62f5c6106d7149029ca4344dcc227a5e
+# 932b28fae29244d295cd9336021509e1
+# f881f9dccce34f7eba47ec8a3f385375
+# c5fe756401cd4ea980d6715a21c4b413
+# c4de568c4a4e4c2c91ab84d67f572c57
+# 8d2c503c5b674cbe8f0b762708555996
+# 9040262988bc40b3ac508e8fc0602eb2
+# 922741674eb343dda5222a3ec3c50ef4
+# 64956750976a41be8fac95e134f31bc2
+# ccb3b3b70022433dac70bf1f772fc90e
+# fc6763f739b64c7eb73ca18813755a2e
+# 7b8b260a85e1409cb6f6c4e99d98ebee
+# c355e9f9574c4f57abde8130bf4b5457
+# 4f1b6beff90f4704b86b9a70f0d223c9
+# ae2a4926c1604290bec06d2612d6c007
+# 74378e38dae3482696d255dfc5ee17e6
+# b41f04bf7a67417d9c9cfcd5fc4207de
+# 98cd9b3dc1c0445b98783ba3b0e5f736
+# 69e7e5132cf94f8c9698d57d3a210f27
+# 6937e9c70a6d46ed9a2a9d863f733272
+#: ../../source/ikfast/pr2-beta-static.rst:87
+msgid "0.000002"
+msgstr ""
+
+# 972f8d92a2ff4081b112088ff2fca23f
+#: ../../source/ikfast/pr2-beta-static.rst:87
+msgid "0.004001"
+msgstr ""
+
+# 952c1019bed74fb3a0b3a8684923d4c5
+#: ../../source/ikfast/pr2-beta-static.rst:87
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.15_16_17_19_21_f18_20.cpp>`"
+msgstr ""
+
+# 3b2f17114a354c88aebef36252ba3f94
+#: ../../source/ikfast/pr2-beta-static.rst:87
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm/"
+"_TranslationDirection5D_free__l_elbow_flex_joint_18___l_wrist_flex_joint_20___>`_"
+msgstr ""
+
+# 91940ecf5019488fa3ed92b261ab8f9a
+#: ../../source/ikfast/pr2-beta-static.rst:92
+msgid "**leftarm_camera** Manipulator"
+msgstr ""
+
+# 9108fb738c2e4373b2a7589cd8461c22
+#: ../../source/ikfast/pr2-beta-static.rst:94
+msgid "Manipulator Indices: [15 16 17 18 19]"
+msgstr ""
+
+# 23aeccb5102642f19abfb3b323a64e9c
+# 64a292ee840549b089e0289710732c97
+# 09648388a41a489bae182fce076028b7
+# b3977ca790654f70beb5dfe6c907b3ae
+#: ../../source/ikfast/pr2-beta-static.rst:102
+#: ../../source/ikfast/pr2-beta-static.rst:153
+msgid "15,17"
+msgstr ""
+
+# a9fddd4990cb44efa14fcdbef579132d
+#: ../../source/ikfast/pr2-beta-static.rst:102
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.16_18_19_f15_17."
+"cpp>`"
+msgstr ""
+
+# e8b9d92fecd64c5d9935e20cfa417376
+#: ../../source/ikfast/pr2-beta-static.rst:102
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_Translation3D_free__l_shoulder_pan_joint_15___l_upper_arm_roll_joint_17___>`_"
+msgstr ""
+
+# e1c80b9bde34416999eb3e27b08e8740
+# 0f36e995d4df4be7828d1c27fa7f441c
+# 05a6152d1d074ec1a742621b85dfc3f2
+#: ../../source/ikfast/pr2-beta-static.rst:104
+#: ../../source/ikfast/pr2-beta-static.rst:130
+#: ../../source/ikfast/pr2-beta-static.rst:155
+msgid "15,18"
+msgstr ""
+
+# 8e79a94a8e3146e5af4db140c0e26a86
+#: ../../source/ikfast/pr2-beta-static.rst:104
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.16_17_19_f15_18."
+"cpp>`"
+msgstr ""
+
+# c3ca1397ce4a4c1589bf65b145487096
+#: ../../source/ikfast/pr2-beta-static.rst:104
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_Translation3D_free__l_shoulder_pan_joint_15___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# c6903417252f4cbaa0029f5216f07256
+# 6352858126b24658af1b3ac705c9278c
+# 5441aa4793d7449f9af639e8cdbca806
+# 7cd9fefd7bf64574b31e5737013b768e
+#: ../../source/ikfast/pr2-beta-static.rst:106
+msgid "16,17"
+msgstr ""
+
+# 7b683fb7291e43aab247f575a53beef1
+# c5cfc8d427834d9aa587f8f13d1b9dc1
+#: ../../source/ikfast/pr2-beta-static.rst:106
+#: ../../source/ikfast/pr2-beta-static.rst:206
+msgid "0.9580"
+msgstr ""
+
+# 14d8292042eb4a62a965a497f3903f1f
+#: ../../source/ikfast/pr2-beta-static.rst:106
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.15_18_19_f16_17."
+"cpp>`"
+msgstr ""
+
+# 16f3e0b9211746a59eab70b73228718c
+#: ../../source/ikfast/pr2-beta-static.rst:106
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_Translation3D_free__l_shoulder_lift_joint_16___l_upper_arm_roll_joint_17___>`_"
+msgstr ""
+
+# d681604574884910af43d4affd29bc5e
+# d71a8517f72d4a10846e79e0cc0a4e54
+# 8fdc62c989174452af42570803609b89
+#: ../../source/ikfast/pr2-beta-static.rst:108
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid "16,18"
+msgstr ""
+
+# 3481062c96c34465b6543c40159ea5ab
+#: ../../source/ikfast/pr2-beta-static.rst:108
+msgid "0.9540"
+msgstr ""
+
+# 077c25185c4245368778c85f08767b91
+#: ../../source/ikfast/pr2-beta-static.rst:108
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.15_17_19_f16_18."
+"cpp>`"
+msgstr ""
+
+# a5a6338518774821b5979f00690e6621
+#: ../../source/ikfast/pr2-beta-static.rst:108
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_Translation3D_free__l_shoulder_lift_joint_16___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# c77c5f37414347398800c530d1169b43
+# 82052f0fbcdf4ddaa7d38b80a12084e5
+#: ../../source/ikfast/pr2-beta-static.rst:110
+msgid "17,18"
+msgstr ""
+
+# a257ad752dfa4e70a2587717dba7c089
+#: ../../source/ikfast/pr2-beta-static.rst:110
+msgid "0.000391"
+msgstr ""
+
+# 005d1862c92f41449b23bc926a716531
+#: ../../source/ikfast/pr2-beta-static.rst:110
+msgid "0.004124"
+msgstr ""
+
+# 6c0d93eecbc9491c97786e5357529b8f
+#: ../../source/ikfast/pr2-beta-static.rst:110
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.15_16_19_f17_18."
+"cpp>`"
+msgstr ""
+
+# 0264e83e34e0439aaf412236cc041a24
+#: ../../source/ikfast/pr2-beta-static.rst:110
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_Translation3D_free__l_upper_arm_roll_joint_17___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# b302aa29cfae4eed8afc30cb571c010a
+#: ../../source/ikfast/pr2-beta-static.rst:120
+msgid "0.9940"
+msgstr ""
+
+# 6c44cd9bb1aa4386b24c3ac5402ae75a
+# f2374f0c1c914ec0be207928e6011fc4
+#: ../../source/ikfast/pr2-beta-static.rst:120
+#: ../../source/ikfast/pr2-beta-static.rst:183
+msgid "0.000405"
+msgstr ""
+
+# 45d6eabd11224240b36c571410f97494
+#: ../../source/ikfast/pr2-beta-static.rst:120
+msgid "0.006105"
+msgstr ""
+
+# ec000ad585554358909e377b8272bc29
+#: ../../source/ikfast/pr2-beta-static.rst:120
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.15_16_17_18_19.cpp>`"
+msgstr ""
+
+# deff8900bd2e4f43946985d3c0fb67b5
+#: ../../source/ikfast/pr2-beta-static.rst:120
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_TranslationDirection5D_free____>`_"
+msgstr ""
+
+# ad83442535c34250880414f11d75d77e
+#: ../../source/ikfast/pr2-beta-static.rst:130
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationLocalGlobal6D.16_17_19_f15_18.cpp>`"
+msgstr ""
+
+# 35d18c89dbe6420eacf12f918ad1537e
+#: ../../source/ikfast/pr2-beta-static.rst:130
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_camera/"
+"_TranslationLocalGlobal6D_free__l_shoulder_pan_joint_15___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# 4f91a80a5afb4c8d8bf0ba253723467c
+# 8c4b6554481448d3af5123c43edcfd5d
+#: ../../source/ikfast/pr2-beta-static.rst:135
+msgid "**leftarm_torso** Manipulator"
+msgstr ""
+
+# 8e20de5d320642a6896983e4efdc3957
+#: ../../source/ikfast/pr2-beta-static.rst:137
+msgid "Manipulator Indices: [12 15 16 17 18 19 20 21]"
+msgstr ""
+
+# 6847840a82af43aeae51f072f5afcb5d
+#: ../../source/ikfast/pr2-beta-static.rst:145
+msgid "12,15"
+msgstr ""
+
+# a0a6b0d4967b44d0b95d5e0c8346d7aa
+# f963620543894d33a536cae7f7bdf289
+#: ../../source/ikfast/pr2-beta-static.rst:145
+#: ../../source/ikfast/pr2-beta-static.rst:243
+msgid "0.9680"
+msgstr ""
+
+# 02c6c0da8c054cf983c95c723d4bded7
+#: ../../source/ikfast/pr2-beta-static.rst:145
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.16_17_18_19_20_21_f12_15.cpp>`"
+msgstr ""
+
+# 3ffc9d6b9fa348e19687713ca11fa6d5
+#: ../../source/ikfast/pr2-beta-static.rst:145
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___l_shoulder_pan_joint_15___>`_"
+msgstr ""
+
+# 537711fa41334a1b99829d9b100deed7
+#: ../../source/ikfast/pr2-beta-static.rst:147
+msgid "12,16"
+msgstr ""
+
+# 2ced7a318d5b4efeb6b265e0432c3999
+# c71e2f23772d403cb6eff7d8c71c5741
+#: ../../source/ikfast/pr2-beta-static.rst:147
+#: ../../source/ikfast/pr2-beta-static.rst:155
+msgid "0.9620"
+msgstr ""
+
+# 9516da742ffb43c891034e37fba82f33
+#: ../../source/ikfast/pr2-beta-static.rst:147
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.15_17_18_19_20_21_f12_16.cpp>`"
+msgstr ""
+
+# b94a7eb1cfdd4325b8d57475dfae45ae
+#: ../../source/ikfast/pr2-beta-static.rst:147
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___l_shoulder_lift_joint_16___>`_"
+msgstr ""
+
+# 380a127e22bf4d589230e539720af85c
+#: ../../source/ikfast/pr2-beta-static.rst:149
+msgid "12,18"
+msgstr ""
+
+# db9f0b5c9fb440318c47ed92ecc8856e
+#: ../../source/ikfast/pr2-beta-static.rst:149
+msgid "0.9240"
+msgstr ""
+
+# 1006a55a0f2247ca976e8829863e471e
+#: ../../source/ikfast/pr2-beta-static.rst:149
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.15_16_17_19_20_21_f12_18.cpp>`"
+msgstr ""
+
+# db2156e89c554d438896620df16e7530
+#: ../../source/ikfast/pr2-beta-static.rst:149
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# e9dbe484c7d0402ea6e216fa16cedec6
+# b6ac96d6cc6e4ace863c4b804020f007
+#: ../../source/ikfast/pr2-beta-static.rst:151
+msgid "15,16"
+msgstr ""
+
+# 984795429a2e44a8ac955ef5b18006cd
+#: ../../source/ikfast/pr2-beta-static.rst:151
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_17_18_19_20_21_f15_16.cpp>`"
+msgstr ""
+
+# 214922bb07ee4cf18c2607e9b9ee8b62
+#: ../../source/ikfast/pr2-beta-static.rst:151
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__l_shoulder_pan_joint_15___l_shoulder_lift_joint_16___>`_"
+msgstr ""
+
+# bb4ca0e107294bc0b042f86dc7bfafe9
+#: ../../source/ikfast/pr2-beta-static.rst:153
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_16_18_19_20_21_f15_17.cpp>`"
+msgstr ""
+
+# 6555fe9351d747658ee981c4eeac44b1
+#: ../../source/ikfast/pr2-beta-static.rst:153
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__l_shoulder_pan_joint_15___l_upper_arm_roll_joint_17___>`_"
+msgstr ""
+
+# ab1bb5b115d14215b726b8bf71ef225d
+#: ../../source/ikfast/pr2-beta-static.rst:155
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_16_17_19_20_21_f15_18.cpp>`"
+msgstr ""
+
+# d9a46de88f4c42be9959052bd538bac0
+#: ../../source/ikfast/pr2-beta-static.rst:155
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__l_shoulder_pan_joint_15___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# 7462ab571b5e4cc0b04a829d1bf3b5d4
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid "0.000028"
+msgstr ""
+
+# 08ce5268a8b14a28870608cbe81af1b4
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid "0.004024"
+msgstr ""
+
+# e3d4d5789fb946dfa80a207c5c2a6306
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_15_17_19_20_21_f16_18.cpp>`"
+msgstr ""
+
+# 407da93d61914eaba8b73a9357055353
+#: ../../source/ikfast/pr2-beta-static.rst:157
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__leftarm_torso/"
+"_Transform6D_free__l_shoulder_lift_joint_16___l_elbow_flex_joint_18___>`_"
+msgstr ""
+
+# 639a8b61e1234c35ae632c23cacbac65
+#: ../../source/ikfast/pr2-beta-static.rst:164
+msgid "Manipulator Indices: [27 28 29 30 31 32 33]"
+msgstr ""
+
+# 5f50149fb9bc45ff9f2711b0e0bcae61
+#: ../../source/ikfast/pr2-beta-static.rst:169
+msgid "27"
+msgstr ""
+
+# 1cad87f837bf48cbad5308c106ec2687
+#: ../../source/ikfast/pr2-beta-static.rst:169
+msgid "0.8468"
+msgstr ""
+
+# 7cc940aa91dc472fa1a6c5c0133b076a
+#: ../../source/ikfast/pr2-beta-static.rst:169
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.28_29_30_31_32_33_f27.cpp>`"
+msgstr ""
+
+# 2afd74b8acb14ab39049e857a4a6db7a
+#: ../../source/ikfast/pr2-beta-static.rst:169
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm/"
+"_Transform6D_free__r_shoulder_pan_joint_27___>`_"
+msgstr ""
+
+# 9b28bcec77414af18180b0a4e430d0ee
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid "28"
+msgstr ""
+
+# c1af2ceb15374e3c9a3b2cea34044ffe
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid "0.8300"
+msgstr ""
+
+# 8adda5216ad349d78598ec92321b317e
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.27_29_30_31_32_33_f28.cpp>`"
+msgstr ""
+
+# d96c8d7f42ae4a608693a81d6a89023a
+#: ../../source/ikfast/pr2-beta-static.rst:171
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm/"
+"_Transform6D_free__r_shoulder_lift_joint_28___>`_"
+msgstr ""
+
+# e6ada57bd8844dcea385c7611f425cab
+#: ../../source/ikfast/pr2-beta-static.rst:173
+msgid "30"
+msgstr ""
+
+# 2f50ff02084d4d3d95502a4b502f2ffb
+#: ../../source/ikfast/pr2-beta-static.rst:173
+msgid "0.5723"
+msgstr ""
+
+# 07883f3f1b854f828a2f5b14a8a61f43
+#: ../../source/ikfast/pr2-beta-static.rst:173
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.27_28_29_31_32_33_f30.cpp>`"
+msgstr ""
+
+# fe590008080f42dc8e5a594e1e3ec64e
+#: ../../source/ikfast/pr2-beta-static.rst:173
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm/"
+"_Transform6D_free__r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# a9df1df62ca74815a163b0edbc5cb172
+#: ../../source/ikfast/pr2-beta-static.rst:183
+msgid "29,33"
+msgstr ""
+
+# 4b70b46d5bf34d549b038d06d3809377
+# fc3b37a4241f4e83b06937e7cd05c56e
+#: ../../source/ikfast/pr2-beta-static.rst:183
+#: ../../source/ikfast/pr2-beta-static.rst:208
+msgid "0.005105"
+msgstr ""
+
+# 03e870d777604dbab7a53c945098d32f
+#: ../../source/ikfast/pr2-beta-static.rst:183
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.27_28_30_31_32_f29_33.cpp>`"
+msgstr ""
+
+# 360a86f61ca847b389727a267f3e8db2
+#: ../../source/ikfast/pr2-beta-static.rst:183
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm/"
+"_TranslationDirection5D_free__r_upper_arm_roll_joint_29___r_wrist_roll_joint_33___>`_"
+msgstr ""
+
+# 19a9fcff533142c5bec5a193c8b7ccc3
+#: ../../source/ikfast/pr2-beta-static.rst:185
+msgid "30,32"
+msgstr ""
+
+# db65793351d9433e993913ef44017872
+#: ../../source/ikfast/pr2-beta-static.rst:185
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.27_28_29_31_33_f30_32.cpp>`"
+msgstr ""
+
+# 1611331c3bb04e128439d86658d64744
+#: ../../source/ikfast/pr2-beta-static.rst:185
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm/"
+"_TranslationDirection5D_free__r_elbow_flex_joint_30___r_wrist_flex_joint_32___>`_"
+msgstr ""
+
+# a32234b008824b20a52b7a665411d340
+#: ../../source/ikfast/pr2-beta-static.rst:190
+msgid "**rightarm_camera** Manipulator"
+msgstr ""
+
+# 9224a44092bb49c8ae727ab993ec1b41
+#: ../../source/ikfast/pr2-beta-static.rst:192
+msgid "Manipulator Indices: [27 28 29 30 31]"
+msgstr ""
+
+# e38a2e07dcfb4558b9134dbc6f87049f
+# 4bd2f0dea69d4aa1b5542a9438e6a2fd
+# 35703a618eb24accb2c61ba4676b45f6
+# d9bdb4783d374ab792f29c9690f5c5bb
+#: ../../source/ikfast/pr2-beta-static.rst:200
+#: ../../source/ikfast/pr2-beta-static.rst:241
+msgid "27,29"
+msgstr ""
+
+# 44bf908fe8b745ec9ce46cd53aa4026a
+#: ../../source/ikfast/pr2-beta-static.rst:200
+msgid "0.9960"
+msgstr ""
+
+# 137fa64c8b7c4be29440500d927ce6a9
+#: ../../source/ikfast/pr2-beta-static.rst:200
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.28_30_31_f27_29."
+"cpp>`"
+msgstr ""
+
+# 229bc6ff324d401a937943e23568b163
+#: ../../source/ikfast/pr2-beta-static.rst:200
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_Translation3D_free__r_shoulder_pan_joint_27___r_upper_arm_roll_joint_29___>`_"
+msgstr ""
+
+# b08c79ecd05a4013b4fc658924a3b4af
+# ad85180bde9e4ede89d57bddaefea58f
+# 042065a68cbf4ab8867ad6ecc25017a8
+# a64ad77274a34381b4da19ab5e461ed3
+#: ../../source/ikfast/pr2-beta-static.rst:202
+#: ../../source/ikfast/pr2-beta-static.rst:243
+msgid "27,30"
+msgstr ""
+
+# 63da5fc74d07432385984a186e02cdfa
+#: ../../source/ikfast/pr2-beta-static.rst:202
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.28_29_31_f27_30."
+"cpp>`"
+msgstr ""
+
+# 4ccdf051015a41c68f759695700eedb7
+#: ../../source/ikfast/pr2-beta-static.rst:202
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_Translation3D_free__r_shoulder_pan_joint_27___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# 4d923893538c435380642298dbe02d23
+# 05188384ba054dc28d90740e5ff80dc1
+# bcfa7cf9aba04dca9fbc1450939249b9
+# 4a0943a798fd4cd19949239922ebe119
+#: ../../source/ikfast/pr2-beta-static.rst:204
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid "28,29"
+msgstr ""
+
+# 9ef0d0d6b9d14a6c868e586e379556f2
+#: ../../source/ikfast/pr2-beta-static.rst:204
+msgid "0.9560"
+msgstr ""
+
+# ef9195d71c21464ab89ba9fe2dbfb940
+#: ../../source/ikfast/pr2-beta-static.rst:204
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.27_30_31_f28_29."
+"cpp>`"
+msgstr ""
+
+# f6d211acf6d345339bbf3ae346cf24df
+#: ../../source/ikfast/pr2-beta-static.rst:204
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_Translation3D_free__r_shoulder_lift_joint_28___r_upper_arm_roll_joint_29___>`_"
+msgstr ""
+
+# ffcdd54820d042f4b0c442a8d861741c
+# fc0bdf17ae7444cc960b9c4104c8d110
+# 28aa7735ca784a92b512b7f49d11e7d5
+#: ../../source/ikfast/pr2-beta-static.rst:206
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid "28,30"
+msgstr ""
+
+# 7178a3fdf4a04cec9e844bcac904f4ff
+#: ../../source/ikfast/pr2-beta-static.rst:206
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.27_29_31_f28_30."
+"cpp>`"
+msgstr ""
+
+# 6b53119006ff4f488b5ac10276cb5d87
+#: ../../source/ikfast/pr2-beta-static.rst:206
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_Translation3D_free__r_shoulder_lift_joint_28___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# 54dfef266e85438e89e80c4af81eac66
+# b16d39b119714b7ea409e98504377c1e
+#: ../../source/ikfast/pr2-beta-static.rst:208
+msgid "29,30"
+msgstr ""
+
+# d8405425b79f468c9da9fa18c62e394d
+#: ../../source/ikfast/pr2-beta-static.rst:208
+msgid "0.000390"
+msgstr ""
+
+# ac3bc63104864016b7468d8c03dd10ec
+#: ../../source/ikfast/pr2-beta-static.rst:208
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59.Translation3D.27_28_31_f29_30."
+"cpp>`"
+msgstr ""
+
+# d946038b935241008bf803dcb1cf1011
+#: ../../source/ikfast/pr2-beta-static.rst:208
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_Translation3D_free__r_upper_arm_roll_joint_29___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# d106050cbd5149c8bb363658723dd459
+#: ../../source/ikfast/pr2-beta-static.rst:218
+msgid "0.9937"
+msgstr ""
+
+# 13342d14eaf94db5a517e6dd1839f7de
+#: ../../source/ikfast/pr2-beta-static.rst:218
+msgid "0.000306"
+msgstr ""
+
+# a94fa9d72205413eabbd24e40ba4f57a
+#: ../../source/ikfast/pr2-beta-static.rst:218
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"TranslationDirection5D.27_28_29_30_31.cpp>`"
+msgstr ""
+
+# afb6a9eccad44c018a4546d3f06673b8
+#: ../../source/ikfast/pr2-beta-static.rst:218
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_camera/"
+"_TranslationDirection5D_free____>`_"
+msgstr ""
+
+# 7adc554d23f043cf851a25c532991b1f
+# d5decea0353c4c98bc9f8759d2bbbc43
+#: ../../source/ikfast/pr2-beta-static.rst:223
+msgid "**rightarm_torso** Manipulator"
+msgstr ""
+
+# d0ec97cc714847a0bdac8b46c56e6219
+#: ../../source/ikfast/pr2-beta-static.rst:225
+msgid "Manipulator Indices: [12 27 28 29 30 31 32 33]"
+msgstr ""
+
+# 39b2af92b2384c9ba6823d21004c8d4b
+#: ../../source/ikfast/pr2-beta-static.rst:233
+msgid "12,27"
+msgstr ""
+
+# 32dcf88240e44fe4a64e355da19cc7ce
+# 187e13e149be4c32a3fa4044faa3d245
+#: ../../source/ikfast/pr2-beta-static.rst:233
+#: ../../source/ikfast/pr2-beta-static.rst:235
+msgid "0.9660"
+msgstr ""
+
+# 50a7296f8908431b9419dba32ba62805
+#: ../../source/ikfast/pr2-beta-static.rst:233
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.28_29_30_31_32_33_f12_27.cpp>`"
+msgstr ""
+
+# bfca62b51336421ca232f7f5f627c54d
+#: ../../source/ikfast/pr2-beta-static.rst:233
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___r_shoulder_pan_joint_27___>`_"
+msgstr ""
+
+# 15c61d8946ef4d1d95a879c81649f25b
+#: ../../source/ikfast/pr2-beta-static.rst:235
+msgid "12,28"
+msgstr ""
+
+# 85cbc5c249864b4eb79494ff0d454674
+#: ../../source/ikfast/pr2-beta-static.rst:235
+msgid "0.004041"
+msgstr ""
+
+# baa648ab6b984c08be1d471309be1af0
+#: ../../source/ikfast/pr2-beta-static.rst:235
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.27_29_30_31_32_33_f12_28.cpp>`"
+msgstr ""
+
+# 103f0cdcb73243b3ac5f627a36bf7dc3
+#: ../../source/ikfast/pr2-beta-static.rst:235
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___r_shoulder_lift_joint_28___>`_"
+msgstr ""
+
+# 712e8fa024d6441ebb6effd09159f4eb
+#: ../../source/ikfast/pr2-beta-static.rst:237
+msgid "12,30"
+msgstr ""
+
+# 6ce6cf95573b44bf9d40e1509958a66b
+#: ../../source/ikfast/pr2-beta-static.rst:237
+msgid "0.9060"
+msgstr ""
+
+# 80652b09b04b4da48663d1df5a566e6e
+#: ../../source/ikfast/pr2-beta-static.rst:237
+msgid "0.003008"
+msgstr ""
+
+# 01fa3de7d71446a1bfb73c19c3d0236c
+#: ../../source/ikfast/pr2-beta-static.rst:237
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.27_28_29_31_32_33_f12_30.cpp>`"
+msgstr ""
+
+# fbe702f99cdf497e8b05776eef824a6f
+#: ../../source/ikfast/pr2-beta-static.rst:237
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__torso_lift_joint_12___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# 860da9f0fcdd470e99dff69a8b6186eb
+# bab04cf88917484f857908845c13b9ae
+#: ../../source/ikfast/pr2-beta-static.rst:239
+msgid "27,28"
+msgstr ""
+
+# cc11af56328c4c02ab1e21ac60675e48
+#: ../../source/ikfast/pr2-beta-static.rst:239
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_29_30_31_32_33_f27_28.cpp>`"
+msgstr ""
+
+# 632f761f0dc94aa99714f675e5a0bef9
+#: ../../source/ikfast/pr2-beta-static.rst:239
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__r_shoulder_pan_joint_27___r_shoulder_lift_joint_28___>`_"
+msgstr ""
+
+# ddd1da649e934d56818dea1c849bfece
+#: ../../source/ikfast/pr2-beta-static.rst:241
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_28_30_31_32_33_f27_29.cpp>`"
+msgstr ""
+
+# 8cb4e32f973445569c31d95ffd1430d6
+#: ../../source/ikfast/pr2-beta-static.rst:241
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__r_shoulder_pan_joint_27___r_upper_arm_roll_joint_29___>`_"
+msgstr ""
+
+# 29fd50b5ca4247998b4a45a5b84cfd64
+#: ../../source/ikfast/pr2-beta-static.rst:243
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_28_29_31_32_33_f27_30.cpp>`"
+msgstr ""
+
+# 3317453172cd4bfa8bb60d73ddaacc84
+#: ../../source/ikfast/pr2-beta-static.rst:243
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__r_shoulder_pan_joint_27___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# b30db6ec340a40a696092f591030874e
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid "0.003127"
+msgstr ""
+
+# 5d46cb6466194ce9b42ea6c0866fc91b
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_27_30_31_32_33_f28_29.cpp>`"
+msgstr ""
+
+# ba24d9a9d20b4770ae4c5dd641f1c9c9
+#: ../../source/ikfast/pr2-beta-static.rst:245
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__r_shoulder_lift_joint_28___r_upper_arm_roll_joint_29___>`_"
+msgstr ""
+
+# eb81e61a14344afdb9728cb6167ab05f
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid "0.9740"
+msgstr ""
+
+# cede397f3ba34f9eabc5584ba1fbfb00
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid "0.000029"
+msgstr ""
+
+# b68666cd10484f38a28d351e03cb1930
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid ""
+":download:`C++ Code <pr2-beta-static/ikfast59."
+"Transform6D.12_27_29_31_32_33_f28_30.cpp>`"
+msgstr ""
+
+# 75ee4388c0094df09245eabf8540e61c
+#: ../../source/ikfast/pr2-beta-static.rst:247
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/pr2-beta-static__rightarm_torso/"
+"_Transform6D_free__r_shoulder_lift_joint_28___r_elbow_flex_joint_30___>`_"
+msgstr ""
+
+# f1e32541eec04ca5b7efa56d82e47512
+#: ../../source/ikfast/robots.rst:5
+msgid "Robots Database"
+msgstr ""
+
+# 2f3b339dff004f348a75259fa471941e
+#: ../../source/ikfast/robots.rst:7
+msgid ""
+"A database of robots and statistics automatically generated by the `OpenRAVE "
+"Testing Server <http://www.openrave.org/testing>`_ for each OpenRAVE "
+"release. URL links to the robot files and results history are provided."
+msgstr ""
+
+# bbc0bb3f30294ef984596763471a2574
+#: ../../source/ikfast/robots.rst:16
+msgid "Robots"
+msgstr ""
+
+# 34abb5b1e2914f8994b0c8cb54f3af89
+#: ../../source/ikfast/robots.rst:18
+msgid ""
+"`[testing run] <http://www.openrave.org/testing/job/openrave/"
+"lastSuccessfulBuild/>`_"
+msgstr ""
+
+# 7bc6675c3df84384a45c3ecfafb15acb
+#: ../../source/ikfast/robots.rst:22
+msgid ":ref:`robot-barrett-wam`"
+msgstr ""
+
+# 2cd07c39bfb24afa8c659c34e0f93e71
+# 3db2ce037b06410ba243833286e1b1ab
+#: ../../source/ikfast/robots.rst:24 ../../source/ikfast/robots.rst:64
+msgid "**IK parameterizations:** 6, **Success:** 100%"
+msgstr ""
+
+# ec84606dcd1944c198f9b1edf1a5de5d
+#: ../../source/ikfast/robots.rst:42
+msgid ":ref:`robot-barrett-wam4`"
+msgstr ""
+
+# 5348b530f9c24aaabcfee36aa0366748
+# b5bb5fdfd2a545098a3914ce7725f79a
+# 048beb2592394f018bd7c01fd887ba40
+# 868c37826ec14b2c860c6f14efe8cc6e
+#: ../../source/ikfast/robots.rst:44 ../../source/ikfast/robots.rst:104
+#: ../../source/ikfast/robots.rst:124
+msgid "**IK parameterizations:** 4, **Success:** 100%"
+msgstr ""
+
+# dab7afcde8164573b26ecd6b96cf992f
+#: ../../source/ikfast/robots.rst:62
+msgid ":ref:`robot-darpa-arm`"
+msgstr ""
+
+# 74ee90f2907747ca8d4ae32a5ab7dfd3
+#: ../../source/ikfast/robots.rst:82
+msgid ":ref:`robot-exactdynamics-manusarmleft`"
+msgstr ""
+
+# adbde887ee0041f3a0030ec9621df392
+#: ../../source/ikfast/robots.rst:84
+msgid "**IK parameterizations:** 6, **Success:** 50%"
+msgstr ""
+
+# 98b38d4b67834af28e0732e9e70093c3
+#: ../../source/ikfast/robots.rst:102
+msgid ":ref:`robot-kawada-hironx`"
+msgstr ""
+
+# f0cf5deed8174c3eb2c80e216aed6bd9
+#: ../../source/ikfast/robots.rst:122
+msgid ":ref:`robot-kuka-kr30l16`"
+msgstr ""
+
+# ebfc0ce15c454fcc8df608036775a0bb
+#: ../../source/ikfast/robots.rst:142
+msgid ":ref:`robot-kuka-kr5-r650`"
+msgstr ""
+
+# c5e50a932f1f4c4e99263240e84cbc9d
+# df2d872edf48476baee2beeb7819594d
+#: ../../source/ikfast/robots.rst:144 ../../source/ikfast/robots.rst:264
+msgid "**IK parameterizations:** 7, **Success:** 100%"
+msgstr ""
+
+# 5b41bdc95cda4690824379eec2d35344
+#: ../../source/ikfast/robots.rst:162
+msgid ":ref:`robot-kuka-kr5-r850`"
+msgstr ""
+
+# 50aa2eaa23cd4113a8cbb659cbd3ce38
+# 89ee2f71c096467ea1d5c06f578647ad
+#: ../../source/ikfast/robots.rst:164 ../../source/ikfast/robots.rst:204
+msgid "**IK parameterizations:** 5, **Success:** 100%"
+msgstr ""
+
+# 8910977490e74494930c6a1dfcbf7dc6
+#: ../../source/ikfast/robots.rst:182
+msgid ":ref:`robot-kuka-youbot`"
+msgstr ""
+
+# 0bba0c69241f441bb47d09b99c36d4a9
+#: ../../source/ikfast/robots.rst:184
+msgid "**IK parameterizations:** 14, **Success:** 100%"
+msgstr ""
+
+# 9bd6a2da1d504cf7bedc244c436e50ce
+#: ../../source/ikfast/robots.rst:202
+msgid ":ref:`robot-mitsubishi-pa10`"
+msgstr ""
+
+# 87c540b20a804f07b4da04b01e839348
+#: ../../source/ikfast/robots.rst:222
+msgid ":ref:`robot-neuronics-katana`"
+msgstr ""
+
+# 662ca5c92e9349e88c45df6c35196138
+#: ../../source/ikfast/robots.rst:224
+msgid "**IK parameterizations:** 19, **Success:** 100%"
+msgstr ""
+
+# df674d2e5ab6480a8f0730a1abac0b32
+#: ../../source/ikfast/robots.rst:242
+msgid ":ref:`robot-pr2-beta-static`"
+msgstr ""
+
+# 81adbe3261a84ef994a150698cc1bdf8
+#: ../../source/ikfast/robots.rst:244
+msgid "**IK parameterizations:** 42, **Success:** 97%"
+msgstr ""
+
+# 16204a42218a422b85fb83090236bbb4
+#: ../../source/ikfast/robots.rst:262
+msgid ":ref:`robot-schunk-lwa3`"
+msgstr ""
+
+# 1c281bc7760449f88a8b0efeaefca36f
+#: ../../source/ikfast/robots.rst:282
+msgid ":ref:`robot-unimation-pumaarm`"
+msgstr ""
+
+# bb60ea3aa7d9493f8ff0331e9e51ea0f
+#: ../../source/ikfast/robots.rst:284
+msgid "**IK parameterizations:** 2, **Success:** 50%"
+msgstr ""
+
+# f754e1e67217426d8b03b43d63737bd1
+#: ../../source/ikfast/schunk-lwa3.rst:4
+msgid "schunk-lwa3 Robot"
+msgstr ""
+
+# 1e627f3c67eb4a4eaacaf0ae72917487
+#: ../../source/ikfast/schunk-lwa3.rst:9
+msgid ""
+"**filename:** `robots/schunk-lwa3.zae <https://openrave.svn.sourceforge.net/"
+"svnroot/openrave/data/robots/schunk-lwa3.zae>`_"
+msgstr ""
+
+# f28f00d181a04be188028992692ecc55
+#: ../../source/ikfast/schunk-lwa3.rst:24
+msgid "0.9215"
+msgstr ""
+
+# 1f7d93c1b0e84f52a74accd30ebcafa5
+#: ../../source/ikfast/schunk-lwa3.rst:24
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.1_2_3_4_5_6_f0.cpp>`"
+msgstr ""
+
+# f714381154d04a43bb303b93c305c21d
+#: ../../source/ikfast/schunk-lwa3.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j0_0___>`_"
+msgstr ""
+
+# 75bf00c42f084daaa9e9fbc9a7bbfdaa
+#: ../../source/ikfast/schunk-lwa3.rst:26
+msgid "0.8950"
+msgstr ""
+
+# 299db7bee4ca488c96e937ee164864c1
+#: ../../source/ikfast/schunk-lwa3.rst:26
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.0_2_3_4_5_6_f1.cpp>`"
+msgstr ""
+
+# e574284a250442d4a25c2db71f0f7a94
+#: ../../source/ikfast/schunk-lwa3.rst:26
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j1_1___>`_"
+msgstr ""
+
+# eb4233dca232485b97fd94dd806fa450
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid "0.9762"
+msgstr ""
+
+# a1e78214e9f343919f804f62cb11f84c
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.0_1_3_4_5_6_f2.cpp>`"
+msgstr ""
+
+# 2baea985c0c0477883eb703c0a6fa844
+#: ../../source/ikfast/schunk-lwa3.rst:28
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j2_2___>`_"
+msgstr ""
+
+# 0ada0aa2d00b4ce5a2d00bc0ce080c23
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid "0.9673"
+msgstr ""
+
+# bafa2f74251740578608439ad08f69ae
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid "0.005009"
+msgstr ""
+
+# a91a35c56ae94a8ca40ccd4efbf52d11
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.0_1_2_3_5_6_f4.cpp>`"
+msgstr ""
+
+# d1dbe191e3ba42f8a6e71aae4eb6c47b
+#: ../../source/ikfast/schunk-lwa3.rst:30
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j4_4___>`_"
+msgstr ""
+
+# 5c105e1c69114b5e955a5d4c50639806
+#: ../../source/ikfast/schunk-lwa3.rst:32
+msgid "0.9045"
+msgstr ""
+
+# dea44fe2c44249a8954c3ccd8e814d4b
+#: ../../source/ikfast/schunk-lwa3.rst:32
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.0_1_2_3_4_6_f5.cpp>`"
+msgstr ""
+
+# 0c7a75a607b5411881ab9f04ce1901b8
+#: ../../source/ikfast/schunk-lwa3.rst:32
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j5_5___>`_"
+msgstr ""
+
+# 4adaffb09bef496db4adba9d31335f68
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid "0.9223"
+msgstr ""
+
+# a3d1562b26f14a8ea0b7c30246b139ad
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid "0.002007"
+msgstr ""
+
+# edbe25b0994647f69f78da21dfa95033
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59.Transform6D.0_1_2_3_4_5_f6.cpp>`"
+msgstr ""
+
+# e1f11ea426214961848a380f08ec8e0c
+#: ../../source/ikfast/schunk-lwa3.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/_Transform6D_free__j6_6___>`_"
+msgstr ""
+
+# a7b59efd16984670ac1fcb2c1d976bf7
+# 778d025313d74c25932c426b7d7e4633
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid "0,6"
+msgstr ""
+
+# bd4432309fe741f5810eb66f9f1f794e
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid "0.9260"
+msgstr ""
+
+# 8566ef70e67148b080c3ab251baa6e15
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid "0.000026"
+msgstr ""
+
+# 3ab7a07d3f3248b29ddb6aa43dec1877
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid "0.005011"
+msgstr ""
+
+# 5aa8e52ab4ec4cadbdabd8d8010db28a
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid ""
+":download:`C++ Code <schunk-lwa3/ikfast59."
+"TranslationDirection5D.1_2_3_4_5_f0_6.cpp>`"
+msgstr ""
+
+# 5d79a744e67f4bcc8bfaa628eed396ee
+#: ../../source/ikfast/schunk-lwa3.rst:44
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/schunk-lwa3__arm_nogripper/"
+"_TranslationDirection5D_free__j0_0___j6_6___>`_"
+msgstr ""
+
+# 5b4181ace3ef4335881b394ba6891d7e
+#: ../../source/ikfast/unimation-pumaarm.rst:4
+msgid "unimation-pumaarm Robot"
+msgstr ""
+
+# 7bf278a696da43518c502c7b34da1edb
+#: ../../source/ikfast/unimation-pumaarm.rst:9
+msgid ""
+"**filename:** `robots/unimation-pumaarm.zae <https://openrave.svn."
+"sourceforge.net/svnroot/openrave/data/robots/unimation-pumaarm.zae>`_"
+msgstr ""
+
+# 7c9d2e30daf24664b93960fb0d1bd0e6
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+msgid ""
+":download:`C++ Code <unimation-pumaarm/ikfast59.Transform6D.0_1_2_3_4_5.cpp>`"
+msgstr ""
+
+# 16b0b7a80c1546b8adf8a67fdcb9f657
+#: ../../source/ikfast/unimation-pumaarm.rst:24
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/unimation-pumaarm__arm_nogripper/_Transform6D_free____>`_"
+msgstr ""
+
+# 670540aab7154ff4bf28ea4a1b707535
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid "0.005006"
+msgstr ""
+
+# d143a85371ec4d2a89f200bd497bb485
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid ""
+":download:`C++ Code <unimation-pumaarm/ikfast59."
+"TranslationDirection5D.0_1_2_3_4_f5.cpp>`"
+msgstr ""
+
+# 4c67b6fb37cc490b8e717280e0a4490a
+#: ../../source/ikfast/unimation-pumaarm.rst:34
+msgid ""
+"`View <http://www.openrave.org/testing/job/openrave/lastSuccessfulBuild/"
+"testReport/(root)/unimation-pumaarm__arm_nogripper/"
+"_TranslationDirection5D_free__J5_5___>`_"
+msgstr ""

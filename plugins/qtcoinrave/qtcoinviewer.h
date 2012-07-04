@@ -161,6 +161,7 @@ public:
     virtual void _DeleteItemCallback(Item* pItem)
     {
         boost::mutex::scoped_lock lock(_mutexItems);
+        pItem->PrepForDeletion();
         _listRemoveItems.push_back(pItem);
     }
 

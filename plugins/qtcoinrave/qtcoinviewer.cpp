@@ -1099,7 +1099,7 @@ boost::shared_ptr<void> QtCoinViewer::LockGUI()
 {
     boost::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
     while(!_bInIdleThread) {
-        Sleep(1);
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }
     return lock;
 }
@@ -2394,8 +2394,8 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
 #else
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
-    uint64_t basetime = GetMicroTime();
-    while(GetMicroTime()-basetime<timeout ) {
+    uint64_t basetime = utils::GetMicroTime();
+    while(utils::GetMicroTime()-basetime<timeout ) {
         lockenv->try_lock();
         if( !!*lockenv ) {
             break;
@@ -2405,8 +2405,9 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
         }
     }
 
-    if( !*lockenv )
+    if( !*lockenv ) {
         lockenv.reset();
+    }
     return lockenv;
 }
 
@@ -2462,7 +2463,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     // frame counting
     static int nToNextFPSUpdate = 1;
     static int UPDATE_FRAMES = 16;
-    static uint32_t basetime = GetMilliTime();
+    static uint32_t basetime = utils::GetMilliTime();
     static uint32_t nFrame = 0;
     static float fFPS = 0;
 
@@ -2473,7 +2474,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     //    }
 
     if( --nToNextFPSUpdate <= 0 ) {
-        uint32_t newtime = GetMilliTime();
+        uint32_t newtime = utils::GetMilliTime();
         fFPS = UPDATE_FRAMES * 1000.0f / (float)max((int)(newtime-basetime),1);
         basetime = newtime;
         if( fFPS < 16 ) {
@@ -2695,8 +2696,8 @@ void QtCoinViewer::UpdateFromModel()
                         //                            xt.sec += 1;
                         //                        }
                         //                        lockenv.timed_lock(xt);
-                        uint64_t basetime = GetMicroTime();
-                        while(GetMicroTime()-basetime<1000 ) {
+                        uint64_t basetime = utils::GetMicroTime();
+                        while(utils::GetMicroTime()-basetime<1000 ) {
                             lockenv.try_lock();
                             if( !!lockenv )
                                 break;
@@ -2899,8 +2900,9 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
-        FOREACH(it,_listRemoveItems)
-        delete *it;
+        FOREACH(it,_listRemoveItems) {
+            delete *it;
+        }
         _listRemoveItems.clear();
     }
 }

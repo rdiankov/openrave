@@ -1066,8 +1066,12 @@ def detdialytically():
 
 def test_ik():
     from sympy import *
+    import numpy
     import __builtin__
     from openravepy.ikfast import AST, combinations
+    from itertools import izip
+    from openravepy import axisAngleFromRotationMatrix
+    numpy.set_printoptions(15)
     IkType=IkParameterizationType
     ikmodel=self
     self = solver

@@ -292,6 +292,11 @@ protected:
             }
         }
 
+        if( maxsteps <= 0 ) {
+            RAVELOG_WARN("maxsteps is not positive\n");
+            return false;
+        }
+
         params->minimumcompletetime = params->_fStepLength * minsteps;
         RAVELOG_DEBUG(str(boost::format("Starting MoveHandStraight dir=(%f,%f,%f)...")%direction.x%direction.y%direction.z));
         robot->RegrabAll();
@@ -375,7 +380,7 @@ protected:
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
-        dReal jitter = 0.03;
+        dReal jitter = 0.04;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;

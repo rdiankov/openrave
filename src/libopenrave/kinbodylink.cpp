@@ -374,7 +374,7 @@ bool KinBody::Link::GEOMPROPERTIES::InitCollisionMesh(float fTessellation)
     case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*24.0f) + 3;
+        int numverts = (int)(fTessellation*48.0f) + 3;
         dReal dtheta = 2 * PI / (dReal)numverts;
         collisionmesh.vertices.push_back(Vector(0,0,len));
         collisionmesh.vertices.push_back(Vector(0,0,-len));
@@ -796,6 +796,14 @@ void KinBody::Link::SetVelocity(const Vector& linearvel, const Vector& angularve
 void KinBody::Link::GetVelocity(Vector& linearvel, Vector& angularvel) const
 {
     GetParent()->GetEnv()->GetPhysicsEngine()->GetLinkVelocity(shared_from_this(), linearvel, angularvel);
+}
+
+/// \brief return the linear/angular velocity of the link
+std::pair<Vector,Vector> KinBody::Link::GetVelocity() const
+{
+    std::pair<Vector,Vector> velocities;
+    GetParent()->GetEnv()->GetPhysicsEngine()->GetLinkVelocity(shared_from_this(), velocities.first, velocities.second);
+    return velocities;
 }
 
 KinBody::Link::GEOMPROPERTIES& KinBody::Link::GetGeometry(int index)

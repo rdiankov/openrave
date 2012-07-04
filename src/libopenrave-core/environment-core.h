@@ -282,6 +282,7 @@ public:
         RAVELOG_DEBUG("resetting raveviewer\n");
         FOREACH(itviewer, listViewers) {
             // don't reset the viewer since it can already be dead
+            // todo: this call could lead into a deadlock if a SIGINT got called from the viewer thread
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();
@@ -1944,58 +1945,87 @@ protected:
         uint64_t nLastSleptTime = utils::GetMicroTime();
         while( _bInit ) {
             bool bNeedSleep = true;
-
+            boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv;
             if( _bEnableSimulation ) {
                 bNeedSleep = false;
-                EnvironmentMutex::scoped_lock lockenv(GetMutex());
-                int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
-                try {
-                    StepSimulation(_fDeltaSimTime);
-                }
-                catch(const std::exception &ex) {
-                    RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
-                }
-                uint64_t passedtime = utils::GetMicroTime()-_nSimStartTime;
-                int64_t sleeptime = _nCurSimTime-passedtime;
-                if( _bRealTime ) {
-                    if(( sleeptime > 2*deltasimtime) &&( sleeptime > 2000) ) {
-                        lockenv.unlock();
-                        // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                        usleep( max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2),1000) );
-                        //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
+                lockenv = _LockEnvironmentWithTimeout(100000);
+                if( !!lockenv ) {
+                    int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
+                    try {
+                        StepSimulation(_fDeltaSimTime);
+                    }
+                    catch(const std::exception &ex) {
+                        RAVELOG_ERROR("simulation thread exception: %s\n",ex.what());
+                    }
+                    uint64_t passedtime = utils::GetMicroTime()-_nSimStartTime;
+                    int64_t sleeptime = _nCurSimTime-passedtime;
+                    if( _bRealTime ) {
+                        if(( sleeptime > 2*deltasimtime) &&( sleeptime > 2000) ) {
+                            lockenv.reset();
+                            // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
+                            boost::this_thread::sleep (boost::posix_time::microseconds(max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2),1000)));
+                            //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
+                            nLastSleptTime = utils::GetMicroTime();
+                        }
+                        else if( sleeptime < -3*deltasimtime ) {
+                            // simulation is getting late, so catch up
+                            //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
+                            _nSimStartTime += -sleeptime;     //deltasimtime;
+                        }
+                    }
+                    else {
                         nLastSleptTime = utils::GetMicroTime();
                     }
-                    else if( sleeptime < -3*deltasimtime ) {
-                        // simulation is getting late, so catch up
-                        //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
-                        _nSimStartTime += -sleeptime;     //deltasimtime;
-                    }
-                }
-                else {
-                    nLastSleptTime = utils::GetMicroTime();
-                }
 
-                //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
+                    //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
+                }
             }
 
             if( utils::GetMicroTime()-nLastSleptTime > 20000 ) {     // 100000 freezes the environment
-                usleep(1000);
+                lockenv.reset();
+                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
                 bNeedSleep = false;
                 nLastSleptTime = utils::GetMicroTime();
             }
 
             if( utils::GetMicroTime()-nLastUpdateTime > 10000 ) {
-                EnvironmentMutex::scoped_lock lockenv(GetMutex());
-                nLastUpdateTime = utils::GetMicroTime();
-                UpdatePublishedBodies();
+                if( !lockenv ) {
+                    lockenv = _LockEnvironmentWithTimeout(100000);
+                }
+                if( !!lockenv ) {
+                    nLastUpdateTime = utils::GetMicroTime();
+                    UpdatePublishedBodies();
+                }
             }
 
+            lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
-                usleep(1000);
+                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
             }
         }
     }
 
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironmentWithTimeout(uint64_t timeout)
+    {
+        // try to acquire the lock
+#if BOOST_VERSION >= 103500
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),boost::defer_lock_t()));
+#else
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetMutex(),false));
+#endif
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<timeout ) {
+            lockenv->try_lock();
+            if( !!*lockenv ) {
+                break;
+            }
+        }
+
+        if( !*lockenv ) {
+            lockenv.reset();
+        }
+        return lockenv;
+    }
     static bool _IsColladaFile(const std::string& filename)
     {
         size_t len = filename.size();

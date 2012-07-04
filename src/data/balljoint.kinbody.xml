@@ -11,7 +11,7 @@
       <extents>1 0.1 0.1</extents>
     </geom>
   </body>
-  <joint type="spherical">
+  <joint name="joint0" type="spherical">
     <body>b0</body>
     <body>b1</body>
     <anchor>1 0 0</anchor>

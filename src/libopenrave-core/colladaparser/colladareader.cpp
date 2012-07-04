@@ -17,14 +17,18 @@
 // functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
+#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+namespace ColladaDOM150 {} // declare in case earlier versions are used
+
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
-#include <dom/domCOLLADA.h>
 #include <dae/domAny.h>
-#include <dom/domConstants.h>
-#include <dom/domTriangles.h>
 #include <dae/daeStandardURIResolver.h>
+#include <1.5/dom/domCOLLADA.h>
+#include <1.5/dom/domConstants.h>
+#include <1.5/dom/domTriangles.h>
 #include <boost/lexical_cast.hpp>
+using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
 {
@@ -136,6 +140,9 @@ public:
         _bOpeningZAE = false;
         _bSkipGeometry = false;
         _fGlobalScale = 1;
+        if( sizeof(daeFloat) == 4 ) {
+            RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
+        }
     }
     virtual ~ColladaReader() {
         _dae.reset();
@@ -147,7 +154,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
         _bOpeningZAE = filename.find(".zae") == filename.size()-4;
-        _dom = _dae->open(filename);
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(filename));
         _bOpeningZAE = false;
         if (!_dom) {
             return false;
@@ -160,7 +167,7 @@ public:
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
-        _dom = _dae->openFromMemory(".",pdata.c_str());
+        _dom = daeSafeCast<domCOLLADA>(_dae->openFromMemory(".",pdata.c_str()));
         if (!_dom) {
             return false;
         }
@@ -202,6 +209,7 @@ public:
     /// \brief Extract all possible collada scene objects into the environment
     bool Extract()
     {
+        uint64_t starttime = utils::GetNanoPerformanceTime();
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
             return false;
@@ -260,6 +268,7 @@ public:
             }
         }
 
+        RAVELOG_VERBOSE("collada read time %fs\n",(utils::GetNanoPerformanceTime()-starttime)*1e-9);
         return true;
     }
 
@@ -600,6 +609,15 @@ public:
             pkinbody->__struri = _filename;
         }
 
+        // check if kmodel has asset/subject, if yes, then set it to the description
+        if( !!kmodel->getAsset() ) {
+            if( !!kmodel->getAsset()->getSubject() ) {
+                if( !!kmodel->getAsset()->getSubject()->getValue() ) {
+                    pkinbody->SetDescription(kmodel->getAsset()->getSubject()->getValue());
+                }
+            }
+        }
+
         // find matching visual node
         domNodeRef pvisualnode;
         FOREACH(it, bindings.listModelBindings) {
@@ -892,17 +910,8 @@ public:
                     itlinkbinding->_domlink = pdomlink;
                     itlinkbinding->_link = plink;
                     if( !!itlinkbinding->_nodephysicsoffset ) {
-                        // set the rigid offset to the transform of the link that the node points to
-                        // ...actually this might not be mentioned anywhere in the collada spec...
-                        // the target specification exists for rigid_objects to override the target.
-//                        FOREACH(itlinkbinding2, bindings.listLinkBindings) {
-//                            if( !!itlinkbinding2->_node->getID() && strcmp(itlinkbinding2->_node->getID(),itlinkbinding->_nodephysicsoffset->getID()) == 0 ) {
-//                                if( !!itlinkbinding2->_link ) {
-//                                    trigidoffset = itlinkbinding2->_link->_t;
-//                                }
-//                                break;
-//                            }
-//                        }
+                        // set the rigid offset to the transform of the instance physics model parent
+                        trigidoffset = _ExtractFullTransform(itlinkbinding->_nodephysicsoffset);
                     }
                     break;
                 }

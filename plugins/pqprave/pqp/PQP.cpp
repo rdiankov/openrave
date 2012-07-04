@@ -243,17 +243,17 @@ PQP_Model::EndModel()
 int
 PQP_Model::MemUsage(int msg)
 {
-    int mem_bv_list = sizeof(BV)*num_bvs;
-    int mem_tri_list = sizeof(Tri)*num_tris;
+    size_t mem_bv_list = sizeof(BV)*num_bvs;
+    size_t mem_tri_list = sizeof(Tri)*num_tris;
 
-    int total_mem = mem_bv_list + mem_tri_list + sizeof(PQP_Model);
+    size_t total_mem = mem_bv_list + mem_tri_list + sizeof(PQP_Model);
 
     if (msg)
     {
-        fprintf(stderr,"Total for model %x: %d bytes\n", this, total_mem);
-        fprintf(stderr,"BVs: %d alloced, take %d bytes each\n",
+        fprintf(stderr,"Total for model %p: %lu bytes\n", this, total_mem);
+        fprintf(stderr,"BVs: %d alloced, take %lu bytes each\n",
                 num_bvs, sizeof(BV));
-        fprintf(stderr,"Tris: %d alloced, take %d bytes each\n",
+        fprintf(stderr,"Tris: %d alloced, take %lu bytes each\n",
                 num_tris, sizeof(Tri));
     }
 

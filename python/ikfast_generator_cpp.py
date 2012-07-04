@@ -20,6 +20,10 @@
 """
 from __future__ import with_statement # for python 2.5
 
+from sympy import __version__ as sympy_version
+if sympy_version < '0.7.0':
+    raise ImportError('ikfast needs sympy 0.7.x or greater')
+
 import sys, copy, time, datetime
 try:
     from openravepy.metaclass import AutoReloader
@@ -71,7 +75,7 @@ import logging
 log = logging.getLogger('ikfast')
 
 from sympy.core import function # for sympy 0.7.1+
-class fmod(core.function.Function):
+class fmod(function.Function):
     nargs = 2
     is_real = True
     is_Function = True
@@ -109,12 +113,11 @@ def customcse(rawexprs,symbols=None):
     if symbols is None:
         symbols = cse_main.numbered_symbols('x')
     # fractions can get big, so evaluate as many decimals as possible
-    complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
     reduced_exprs = []
     allexprs = []
     for expr in rawexprs:
         evalexpr = evalNumbers(expr)
-        complexity = evalexpr.count_ops().subs(complexitysubs)
+        complexity = evalexpr.count_ops()
         # need to threshold complexity or otherwise cse will not terminate
         if complexity > 300:
             reduced_exprs.append(evalexpr)
@@ -1067,7 +1070,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 if acceptfreevars:
                     m = None
                     for freevar in self.freevars:
-                        if expr.has_any_symbols(Symbol(freevar)):
+                        if expr.has(Symbol(freevar)):
                             # has free variables, so have to look for a*freevar+b form
                             a = Wild('a',exclude=[Symbol(freevar)])
                             b = Wild('b',exclude=[Symbol(freevar)])
@@ -1082,8 +1085,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                             else:
                                 log.error('failed to extract free variable %s for %s from: eq=%s', freevar,node.jointname, expr)
     #                             m = dict()
-    #                             m[a] = Real(-1,30)
-    #                             m[b] = Real(0,30)
+    #                             m[a] = Float(-1,30)
+    #                             m[b] = Float(0,30)
 
                 equations.append(expr)
                 names.append('%sarray[%d]'%(name,allnumsolutions+i))
@@ -1247,10 +1250,10 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         return '}\n}\n'
 
     def generatePolynomialRoots(self, node):
-        D=node.poly.degree
+        D=node.poly.degree(0)
         polyroots=self.using_polyroots(D)
         name = node.jointname
-        polyvar = node.poly.symbols[0].name
+        polyvar = node.poly.gens[0].name
         code = 'IKReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
         numevals = 0
         if node.postcheckforzeros is not None:
@@ -1264,7 +1267,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         for var,value in node.dictequations:
             code += 'IKReal %s;\n'%var
             code += self.writeEquations(lambda k: var,value)
-        code += self.writeEquations(lambda i: 'op[%d]'%(i),[node.poly.coeff(i) for i in range(D,-1,-1)])
+        polydict = node.poly.as_dict()
+        code += self.writeEquations(lambda i: 'op[%d]'%(i),[polydict.get((i,),S.Zero) for i in range(D,-1,-1)])
         code += "%s(op,zeror,numroots);\n"%(polyroots)
         code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
         code += 'int numsolutions = 0;\n'
@@ -1619,8 +1623,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             allexprs = [allexprs]
         code = ''
         # calling cse on many long expressions will freeze it, so try to divide the problem
-        complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
-        complexity = [expr.count_ops().subs(complexitysubs) for expr in allexprs]
+        complexity = [expr.count_ops() for expr in allexprs]
         complexitythresh = 4000
         exprs = []
         curcomplexity = 0
@@ -1637,11 +1640,10 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code = ''
         replacements,reduced_exprs = customcse(exprs,symbols=self.symbolgen)
         N = len(self.dictequations[0])
-        complexitysubs = [(Symbol('POW'),1),(Symbol('ADD'),1),(Symbol('MUL'),1)]
         for rep in replacements:
             comparerep = rep[1].subs(self.dictequations[0]).expand()
             found = False
-            complexity = rep[1].count_ops().subs(complexitysubs)
+            complexity = rep[1].count_ops()
             maxcomplexity = 3 if N > 1000 else 2
             if complexity > maxcomplexity: # check only long expressions
                 for i in range(N):
@@ -1667,7 +1669,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code = ''
         sepcode = ''
         if expr.is_Function:
-            if expr.func == abs:
+            if expr.func == Abs:
                 code += 'IKabs('
                 code2,sepcode = self.writeExprCode(expr.args[0])
                 code += code2
@@ -1738,7 +1740,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                         code += ','
             return code + ')',sepcode
         elif expr.is_number:
-            return self.strprinter.doprint(expr.evalf()),sepcode
+            return 'IKReal('+self.strprinter.doprint(expr.evalf())+')',sepcode
         elif expr.is_Mul:
             code += '('
             for arg in expr.args:

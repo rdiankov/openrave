@@ -1381,6 +1381,20 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
     return IkReturnPtr();
 }
 
+bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples)
+{
+    // currently this is a very slow implementation...
+    samples.clear();
+    while(true) {
+        IkReturnPtr ikreturn = Sample();
+        if( !ikreturn ) {
+            break;
+        }
+        samples.push_back(ikreturn);
+    }
+    return samples.size()>0;
+}
+
 int ManipulatorIKGoalSampler::GetIkParameterizationIndex(int index)
 {
     BOOST_ASSERT(index >= 0 && index < (int)_listreturnedsamples.size());

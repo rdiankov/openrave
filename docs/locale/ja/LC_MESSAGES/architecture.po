@@ -1,0 +1,295 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-28 19:58\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# a5d558cf8bdf4930a9260fdb188f2b67
+#: ../../source/architecture/index.rst:4
+msgid "OpenRAVE Architecture"
+msgstr ""
+
+# 668fef5d06ab438381b61113026627b0
+#: ../../source/architecture/index.rst:8
+msgid "`C++ Architecture < ../../coreapihtml/architecture_concepts.html>`_"
+msgstr ""
+
+# 8f070f7a83004c798f1d61d18ceed7ec
+#: ../../source/architecture/index.rst:12
+msgid "`C++ Architecture <../coreapihtml/architecture_concepts.html>`_"
+msgstr ""
+
+# dec2dc3100b94888931bb968de8b179d
+#: ../../source/architecture/interface_concepts.rst:4
+msgid "Interface Concepts"
+msgstr ""
+
+# 3118313cee6a463ba77f7c0fbd00f5ca
+#: ../../source/architecture/interface_concepts.rst:8
+msgid "`C++ Interface Concepts <../../coreapihtml/interface_concepts.html>`_"
+msgstr ""
+
+# 7482355ba6714c12955283dbffd8102f
+#: ../../source/architecture/interface_concepts.rst:12
+msgid "`C++ Interface Concepts <../coreapihtml/interface_concepts.html>`_"
+msgstr ""
+
+# 7da4276c6ed34248a49e5f47885af38e
+#: ../../source/architecture/speed_up_planning.rst:4
+msgid "Ways to Speed up Planning"
+msgstr ""
+
+# b9a3fda2e76640daab0a80112a081b50
+#: ../../source/architecture/speed_up_planning.rst:6
+msgid ""
+"This page attempts to answer a commonly asked question: *The planning "
+"algorithm is SLOW, what can we do?!*"
+msgstr ""
+
+# 3a5dfed4d5094f649b8d2065306173bb
+#: ../../source/architecture/speed_up_planning.rst:8
+msgid ""
+"Create a :mod:`.databases.linkstatistics` model and tune the xyzdelta that "
+"controls the joint resolutions/weights. Can also manually tweak the joint "
+"resolutions and weights via `.KinBody.SetDOFWeights` and `.KinBody.Joint."
+"SetResolution`."
+msgstr ""
+
+# c5639d914141463ba21b909718ad8a82
+#: ../../source/architecture/speed_up_planning.rst:10
+msgid ""
+"Each planner has the following parameters in its :class:`.Planner."
+"PlannerParameters` structure that can be tweaked:"
+msgstr ""
+
+# a1e228981c344a6ebd4396acff7063f6
+#: ../../source/architecture/speed_up_planning.rst:12
+msgid ""
+"Planner.PlannerParameters._fStepLength - max step length for each tree "
+"extension"
+msgstr ""
+
+# 9bb423a096004e09819a446b9b4fed93
+#: ../../source/architecture/speed_up_planning.rst:13
+msgid ""
+"Planner.PlannerParameters._nMaxIterations - max number of iterations to "
+"search"
+msgstr ""
+
+# 635043540b6a4b808515f5523a78d134
+#: ../../source/architecture/speed_up_planning.rst:15
+msgid ""
+"Each planner usually has a post-processing planner that does the smoothing/"
+"retiming of the path. The parameters to control are"
+msgstr ""
+
+# 93f11580346d4d3faa28dd1bdfc8afa6
+#: ../../source/architecture/speed_up_planning.rst:16
+msgid "Planner.PlannerParameters._sPostProcessingPlanner"
+msgstr ""
+
+# 8b259ac9c0f04f81934332cd35865c1a
+#: ../../source/architecture/speed_up_planning.rst:17
+msgid "Planner.PlannerParameters._sPostProcessingParameters"
+msgstr ""
+
+# 9987410c1a974a23a71a64e81fe045fb
+#: ../../source/architecture/speed_up_planning.rst:24
+msgid ""
+"The smoothers has several other parameters, which are written in the "
+"TrajectoryTimingParameters structure inside the rplanners plugin"
+msgstr ""
+
+# c9a427bbc78847ef959e94deae7f76fd
+#: ../../source/architecture/speed_up_planning.rst:26
+msgid ""
+"Add as many pairs of links of the robot that will never collide as "
+"\"adjacent links\" (both OpenRAVE XML and COLLADA specifications support "
+"this)."
+msgstr ""
+
+# fcc14b9339744938b3e37198274368b4
+#: ../../source/architecture/speed_up_planning.rst:28
+msgid ""
+"Temporarily disable KinBody objects via :meth:`.KinBody.Enable` (False) for "
+"kinematic bodies that are too far from the robot or robot could never "
+"collide with them."
+msgstr ""
+
+# 084719a1562c4416809ec61e518593ec
+#: ../../source/architecture/speed_up_planning.rst:30
+msgid "Use primitive shapes (boxes/cylinders/spheres) as much as possible!"
+msgstr ""
+
+# bfb6b4577cf3414fadfde4f54e2f36b3
+#: ../../source/architecture/trajectory.rst:4
+msgid "Trajectory Concepts"
+msgstr ""
+
+# 86adae396df54dd2a3e7b840bfa463a9
+#: ../../source/architecture/trajectory.rst:6
+msgid "Reference: :class:`.Trajectory`"
+msgstr ""
+
+# b253c8246a3e43dab7acf82f884bea59
+#: ../../source/architecture/trajectory.rst:8
+msgid ""
+"A trajectory is a path between a set of configuration space points. It "
+"performs smoothing and filtering on this path."
+msgstr ""
+
+# f2d0af3ccfb94426a25811b65ee2f936
+#: ../../source/architecture/trajectory.rst:11
+msgid ""
+"A trajectory holds **waypoints** of different pieces of data and their "
+"corresponding **interpolation method**. A waypoint can specify robot joints, "
+"timestamps, body transformations, events, etc. Subclasses of trajectories "
+"have differnet way of executing and interpolating the waypoints. A "
+"trajectory is just the executor, it is **not** responsible for re-timing and "
+"re-adjusting its path, which is a planner's job. **A trajectory cannot be "
+"executed without timestamps being present.**"
+msgstr ""
+
+# ea735a43e9a240de93d45ea63b0fb409
+#: ../../source/architecture/trajectory.rst:17
+msgid "Usage Cases"
+msgstr ""
+
+# bbe9eadb3dc448daacf878ad8e0c41d5
+#: ../../source/architecture/trajectory.rst:19
+msgid ""
+"Planner fills the trajectory class with timestamps, interpolation methods, "
+"and waypoints. It should be up to user to select trajectory class that will "
+"best execute this data."
+msgstr ""
+
+# 29239bf377fb49108b5c23021f34e1b5
+#: ../../source/architecture/trajectory.rst:22
+msgid ""
+"Users can create, append, retime, and serialize trajectories both in C++ and "
+"Python."
+msgstr ""
+
+# c912564b400c4680806a0524257036db
+#: ../../source/architecture/trajectory.rst:24
+msgid ""
+"Store arbitrary animations of an environment. Support for any configuration "
+"space similar to PlannerParameters so that multiple bodies and affine "
+"transformations are supported. For example, a robot opening door requires "
+"the robot joints and the door to move together."
+msgstr ""
+
+# 1a01ec41acda417097cdb27e68c69221
+#: ../../source/architecture/trajectory.rst:28
+msgid ""
+"Sample a trajectory at any time. Easily set the scene as the trajectory "
+"dictates it. How would this affect robot controllers?"
+msgstr ""
+
+# ed93f03f6cdb44f680f41313ebb5fc65
+#: ../../source/architecture/trajectory.rst:31
+msgid ""
+"It should be possible to play back the trajectory classes without loading "
+"any robots or any environment data. A real controller, on robot side, can "
+"link with openrave-core and use the trajectory class for interpolating "
+"incoming trajectory data."
+msgstr ""
+
+# 4572d75e339448bba4975ce8742bbd6e
+#: ../../source/architecture/trajectory.rst:36
+msgid "Details"
+msgstr ""
+
+# 06b686e28365488c90fed67b301efe3d
+#: ../../source/architecture/trajectory.rst:38
+msgid ""
+"Every trajectory has a :class:`.ConfigurationSpecification` that defines "
+"what is stored in each point. This allows points to hold any type of custom "
+"information and to synchronize better with the configuration spaces of the "
+"planners. Use the :meth:`.Trajectory.GetConfigurationSpecification` to get "
+"the details of what data is in the trajectory and its dimensions."
+msgstr ""
+
+# 42048e3ae47c429fa81a9d52e1d542b3
+#: ../../source/architecture/trajectory.rst:44
+msgid "Playback"
+msgstr ""
+
+# d355985980d94f149e31b5d54ea1610a
+#: ../../source/architecture/trajectory.rst:46
+msgid ""
+"Every point should have a **deltatime** value that specifies the time it "
+"takes to go to it given the previous point, and **velocity** information for "
+"each data point. The first point's deltatime should be 0. In order to "
+"playback a set of waypoints within the robot's velocity and acceleration "
+"limits, use the :meth:`.planningutils.RetimeActiveDOFTrajectory` or :meth:`."
+"planningutils.RetimeAffineTrajectory`. If your configuraiton already has "
+"time data, but not velocities, you can specify **hastimestamps=True** to the "
+"parameters."
+msgstr ""
+
+# cc5ca08a5d6540cdbabe298e6e283021
+#: ../../source/architecture/trajectory.rst:51
+msgid "Trajectory Serialization"
+msgstr ""
+
+# b643416c585649cd96734b9dd825d08f
+#: ../../source/architecture/trajectory.rst:53
+msgid "The file format for exporting the trajectory is in XML:"
+msgstr ""
+
+# 569ddffd1f02442ebd8f71907a492019
+#: ../../source/architecture/trajectory.rst:70
+msgid "configuration tag"
+msgstr ""
+
+# 268eb252fbfc442a8e23bdbbb1b0396d
+#: ../../source/architecture/trajectory.rst:72
+msgid ""
+"First tags specified. The configuration describes one type of data inside "
+"the trajectory and how it is stored and processed. See :class:`."
+"ConfigurationSpecification` for details on the individual attributes. In "
+"trajectories a group **name=\"deltatime\"** should be present if the "
+"trajectory is to be executed. The deltatime values always need to be "
+"positive."
+msgstr ""
+
+# 58db1abde85343a6a1706ba89dbd073f
+#: ../../source/architecture/trajectory.rst:77
+msgid "data tag"
+msgstr ""
+
+# cbadc2af3c1b4ac2b70e597bfd680342
+#: ../../source/architecture/trajectory.rst:79
+msgid ""
+"The raw data of the trajectory, there is **count** x **dof** values. "
+"Multiple data tags can be present"
+msgstr ""
+
+# a1edf37a1f3d418a932b18dacd831cd9
+#: ../../source/architecture/trajectory.rst:81
+msgid "attributes:"
+msgstr ""
+
+# 689fc0bddd734b4087491b1ead47ed3a
+#: ../../source/architecture/trajectory.rst:83
+msgid ""
+"**count** - number of waypoints. although the number can be deduced from the "
+"size of the data, this is a precaution if the user wants to specify a subset."
+msgstr ""
+
+# 2c5d976b0d514281b37dcae97c7f74aa
+#~ msgid "`C++ Architecture`_"
+#~ msgstr "C++アーキテクチャ"

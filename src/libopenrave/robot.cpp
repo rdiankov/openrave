@@ -887,12 +887,15 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
     int dofstride = GetActiveDOF();
     vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
+        if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+            ComputeJacobianTranslation(index, offset, vjacobian, _vActiveDOFIndices);
+            return;
+        }
+        // have to copy
         std::vector<dReal> vjacobianjoints;
-        CalculateJacobian(index, offset, vjacobianjoints);
-        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            vjacobian[i] = vjacobianjoints[_vActiveDOFIndices[i]];
-            vjacobian[dofstride+i] = vjacobianjoints[GetDOF()+_vActiveDOFIndices[i]];
-            vjacobian[2*dofstride+i] = vjacobianjoints[2*GetDOF()+_vActiveDOFIndices[i]];
+        ComputeJacobianTranslation(index, offset, vjacobianjoints, _vActiveDOFIndices);
+        for(size_t i = 0; i < 3; ++i) {
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
         }
     }
 
@@ -1007,7 +1010,7 @@ void RobotBase::CalculateActiveJacobian(int linkindex, const Vector& offset, boo
 void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateJacobian(index, q, vjacobian);
+        CalculateRotationJacobian(index, q, vjacobian);
         return;
     }
     int dofstride = GetActiveDOF();
@@ -1087,19 +1090,22 @@ void RobotBase::CalculateActiveRotationJacobian(int linkindex, const Vector& q, 
 void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& vjacobian) const
 {
     if( _nActiveDOF < 0 ) {
-        CalculateAngularVelocityJacobian(index, vjacobian);
+        ComputeJacobianAxisAngle(index, vjacobian);
         return;
     }
 
     int dofstride = GetActiveDOF();
     vjacobian.resize(3*dofstride);
     if( _vActiveDOFIndices.size() != 0 ) {
+        if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+            ComputeJacobianAxisAngle(index, vjacobian, _vActiveDOFIndices);
+            return;
+        }
+        // have to copy
         std::vector<dReal> vjacobianjoints;
-        CalculateAngularVelocityJacobian(index, vjacobianjoints);
-        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            vjacobian[i] = vjacobianjoints[_vActiveDOFIndices[i]];
-            vjacobian[dofstride+i] = vjacobianjoints[GetDOF()+_vActiveDOFIndices[i]];
-            vjacobian[2*dofstride+i] = vjacobianjoints[2*GetDOF()+_vActiveDOFIndices[i]];
+        ComputeJacobianAxisAngle(index, vjacobianjoints, _vActiveDOFIndices);
+        for(size_t i = 0; i < 3; ++i) {
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
         }
     }
 

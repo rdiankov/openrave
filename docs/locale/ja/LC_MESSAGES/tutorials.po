@@ -1,0 +1,1029 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-28 19:58\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 7cf98e50a1904accabe22a64bd1a0769
+#: ../../source/tutorials/japanese_tutorials.rst:2
+msgid "Japanese Tutorials"
+msgstr ""
+
+# 99b4a8f20bb34b7a87bdab3fad7a1330
+#: ../../source/tutorials/openravepy_beginning.rst:4
+msgid "Beginning with openravepy"
+msgstr ""
+
+# 65c1b367d27e4dd080e658a0ec8a6a78
+#: ../../source/tutorials/openravepy_beginning.rst:7
+msgid "Getting Started"
+msgstr ""
+
+# b5d822f80f394137b0fdf26c637e16fb
+#: ../../source/tutorials/openravepy_beginning.rst:9
+msgid ""
+":ref:`package-openravepy` allows Python to use the C++ API seamlessly. The "
+"bindings are developed using the `Boost.Python <http://www.boost.org/doc/"
+"libs/release/libs/python/doc>`_ library. Because openravepy directly links "
+"with OpenRAVE instead of going through the network, it allows much faster "
+"execution times in a much more natural setting. In fact, most of the python "
+"bindings match the exactly C++ header files exactly."
+msgstr ""
+
+# 41ca730b720f4eccb1dff8d9249b9e41
+#: ../../source/tutorials/openravepy_beginning.rst:15
+msgid "The main components are:"
+msgstr ""
+
+# 8af7480e3e9b4978aae9eaa737b46af3
+#: ../../source/tutorials/openravepy_beginning.rst:17
+msgid ""
+":mod:`openravepy_int` - provides C++ internal bindinings, is generated using "
+"Boost Python."
+msgstr ""
+
+# bb46805936ec4360a0cbd5c35576cd97
+#: ../../source/tutorials/openravepy_beginning.rst:18
+msgid ""
+":mod:`openravepy_ext` - provides useful functions/classes to be used by rest "
+"of classes"
+msgstr ""
+
+# dc376887ff424aefacea0684257bb1e9
+#: ../../source/tutorials/openravepy_beginning.rst:20
+msgid "There are 3 major subcomponents:"
+msgstr ""
+
+# b01618aed0b140b3af4a423c615d0fc2
+#: ../../source/tutorials/openravepy_beginning.rst:22
+msgid ":ref:`package-databases` - database generators"
+msgstr ""
+
+# 1d313c1b264441c2b209d5356a431949
+#: ../../source/tutorials/openravepy_beginning.rst:23
+msgid ":ref:`package-examples` - runnable examples"
+msgstr ""
+
+# 6bc4bded3c674536abae933491e606d9
+#: ../../source/tutorials/openravepy_beginning.rst:24
+msgid ""
+":ref:`package-interfaces` - bindings to interfaces offered through OpenRAVE "
+"plugins."
+msgstr ""
+
+# 4d766d0cb3d24d8cb013f876707be1c8
+#: ../../source/tutorials/openravepy_beginning.rst:26
+msgid ""
+"**openravepy** can be found in ``C:\\\\Program Files\\\\openrave\\\\share\\"
+"\\openrave`` on Windows. For unix-based systems, the follow command can be "
+"used to retrieve the path:"
+msgstr ""
+
+# 9636eb13e627462780381d321d561a2a
+#: ../../source/tutorials/openravepy_beginning.rst:32
+msgid ""
+"When directly importing openravepy, this path needs to be added into the "
+"**PYTHONPATH** environment variable. For unix-based systems, it would look "
+"like:"
+msgstr ""
+
+# 0fedad9e72874012a878dfdb830e7b57
+#: ../../source/tutorials/openravepy_beginning.rst:38
+msgid ""
+"All the examples are stored in the ``openravepy/examples`` directory. For "
+"example, the simplest planning example hanoi can be found in ``openravepy/"
+"examples/hanoi.py`` and executed by:"
+msgstr ""
+
+# 07c161467d944eb488f47071ad76f236
+#: ../../source/tutorials/openravepy_beginning.rst:45
+msgid ""
+"OpenRAVE should automatically pop up and the puma arm will attempt to grasp "
+"the pegs on the table."
+msgstr ""
+
+# 409bc7622aa44982910b28cf0a2b3df4
+#: ../../source/tutorials/openravepy_beginning.rst:48
+msgid ""
+"The docstrings for each function and class are automatically compiled from "
+"the C++ documentation. In the python interpreter, simply type:"
+msgstr ""
+
+# b7e9f9f3bae44cfcaa7d1d10cf8656d0
+#: ../../source/tutorials/openravepy_beginning.rst:57
+msgid "Exceptions"
+msgstr ""
+
+# feeb91932bdc4f37a8bb3868b1c5e4b3
+#: ../../source/tutorials/openravepy_beginning.rst:59
+msgid ""
+"OpenRAVE C++ exceptions in the form of the openrave_exception class are "
+"automatically translated to a :class:`.openrave_exception` class in python. "
+"An openrave exception can be caught by:"
+msgstr ""
+
+# 618bdda30b0446ee886d883586b095c1
+#: ../../source/tutorials/openravepy_beginning.rst:71
+msgid "Locking/Thread-safety Mechanisms"
+msgstr ""
+
+# 9b8481a7b0b74a10bfd6ff7c5ad47f8a
+#: ../../source/tutorials/openravepy_beginning.rst:73
+msgid ""
+"When doing heavy operations, the environment should **always be locked** to "
+"keep other users from changing it. All environment methods are **multi-"
+"thread safe**, but any other method to kinbodies, robots, controllers, "
+"planners, etc are **not thread safe**! If the documentation does not say "
+"multi-thread safe, **don't use the method without locking the environment**!"
+msgstr ""
+
+# f58d63b44d3f46e587dc7972d4b10dba
+#: ../../source/tutorials/openravepy_beginning.rst:76
+msgid ""
+"Locking is done with **Environment.Lock(dolock)**. Scoped locking can be "
+"implemented using a try/finally block or the python **with** statement:"
+msgstr ""
+
+# 6e11a2aa2a2f49e58a8da4bae865334f
+#: ../../source/tutorials/openravepy_beginning.rst:87
+msgid ""
+"In the same spirit, the **with** statement used on boides/robots "
+"simultaneously locks the environment and preserves their state:"
+msgstr ""
+
+# f4e0b8027c004bf58f531456f0134b57
+#: ../../source/tutorials/openravepy_beginning.rst:98
+msgid ""
+"For those who want to reduce the number of environment locks, they can use "
+"the new :class:`.KinBodyStateSaver` and :class:`.RobotStateSaver` classes:"
+msgstr ""
+
+# 5fab13564d074fa49d3f5e7b593058b4
+#: ../../source/tutorials/openravepy_beginning.rst:110
+msgid "Initialization"
+msgstr ""
+
+# d70b178d32044b9f96e2d276005bdb5f
+#: ../../source/tutorials/openravepy_beginning.rst:112
+msgid ""
+":func:`.RaveInitialize` initializes the OpenRAVE runtime and provides many "
+"options for configuring it. Options include what plugins to load at startup. "
+"If the runtime has not been initialized when creating :class:`."
+"Environment`, :func:`.RaveInitialize` is automatically called."
+msgstr ""
+
+# a3bcb3bd26f84fd384cb5d7ed77715a0
+#: ../../source/tutorials/openravepy_beginning.rst:114
+msgid ""
+"The following example shows how to start the runtime and load only one "
+"plugin:"
+msgstr ""
+
+# 5bd3b0373a5348e6904b420983b44e78
+#: ../../source/tutorials/openravepy_beginning.rst:126
+msgid "Destruction"
+msgstr ""
+
+# 75f620b229c04b92aa4f906675b25a9d
+#: ../../source/tutorials/openravepy_beginning.rst:128
+msgid ""
+"Due to circular dependencies with the internal OpenRAVE resources, :class:`."
+"Environment` instances must be excplicitly destroyed using `Environment."
+"Destroy`. In order to guarantee it is always called, users are recommended "
+"to use **try/finally**:"
+msgstr ""
+
+# d8d45d1abb6c495cb1d281c3e5ab7e4d
+#: ../../source/tutorials/openravepy_beginning.rst:138
+msgid ""
+"In addition, the OpenRAVE runtime managing plugin resources and environments "
+"has to be explicitly destroyed using :func:`.RaveDestroy` when users are "
+"shutting down the program; it destroys all environments and unloads all "
+"plugins:"
+msgstr ""
+
+# c53860013017438e9d8bbb0640068e3f
+#: ../../source/tutorials/openravepy_beginning.rst:151
+msgid "Loading Different Versions"
+msgstr ""
+
+# 88919ec3cfea42a5b84eb4a9a689f2c0
+#: ../../source/tutorials/openravepy_beginning.rst:153
+msgid ""
+"If multiple openrave versions are installed, then it is possible to select "
+"which version of openravepy by setting the **__openravepy_version__** "
+"variable to the desired version before importing anything. For example:"
+msgstr ""
+
+# 3072c8935bbe40a28c6deeeda60d5f9e
+# 39d2647f990f406e9779e148bd6f8bb9
+#: ../../source/tutorials/openravepy_beginning.rst:163
+msgid "Logging"
+msgstr ""
+
+# 484da963a366451ea84f5862aa987e0e
+#: ../../source/tutorials/openravepy_beginning.rst:165
+msgid ""
+"It is possible to set the logging levels of internal OpenRAVE using the "
+"DebugLevel enum:"
+msgstr ""
+
+# 72813c739b5a4adb8100b781a5680579
+#: ../../source/tutorials/openravepy_beginning.rst:171
+msgid ""
+"A lot of the OpenRAVE Python bindings use the python logging module "
+"directly. In order to initialize it with the correct output handles and have "
+"it sync with the internal OpenRAVE logging level, use the following command:"
+msgstr ""
+
+# a619bce206f04a7ba860bcad52d19842
+#: ../../source/tutorials/openravepy_examples.rst:2
+msgid "Quick examples in openravepy"
+msgstr ""
+
+# ab6bdb98aaff4d99be54d3503912917e
+#: ../../source/tutorials/openravepy_examples.rst:4
+msgid ""
+"Short snippets of code to help get the feel for OpenRAVE functionality. Code "
+"can be directly executed inside the python interpreter."
+msgstr ""
+
+# a7f57b3cbf724dd2a61f59fa61ba999a
+#: ../../source/tutorials/openravepy_examples.rst:8
+msgid "Simple Environment Loading"
+msgstr ""
+
+# 3663a148a3824fddac647c2b1e285974
+#: ../../source/tutorials/openravepy_examples.rst:13
+msgid "Rotating Body"
+msgstr ""
+
+# 19def5e2ecb4497d82cba8773fa6bdee
+#: ../../source/tutorials/openravepy_examples.rst:18
+msgid "Creating/Updating a Body"
+msgstr ""
+
+# a9858cb2c07c4b26bf4e05b281be8a85
+#: ../../source/tutorials/openravepy_examples.rst:23
+msgid "Using a BiRRT Planner"
+msgstr ""
+
+# d4e5e19d2068454082a8adf8d6afc5e0
+#: ../../source/tutorials/openravepy_examples.rst:28
+msgid "Inverse Kinematics: Transform6D"
+msgstr ""
+
+# 3ca7f302e83d4888b28e62127a908c64
+#: ../../source/tutorials/openravepy_examples.rst:33
+msgid "Inverse Kinematics: Translation3D"
+msgstr ""
+
+# 74a6ba9d1cb947c3ab99b3344b09a777
+#: ../../source/tutorials/openravepy_examples.rst:38
+msgid "Plan to End Effector Position"
+msgstr ""
+
+# f5469ef8b0f84ccba15098ba2f3f606a
+#: ../../source/tutorials/openravepy_examples.rst:43
+msgid "Grabbing Object with Planner"
+msgstr ""
+
+# 7508368326a449479ffa3bf478d9adc7
+#: ../../source/tutorials/openravepy_examples.rst:48
+msgid "Custom IK Filters"
+msgstr ""
+
+# 1b865998b3d748739095dfdcb925aa48
+#: ../../source/tutorials/openravepy_examples.rst:53
+msgid "Sending Torques to a Physics Engine"
+msgstr ""
+
+# 2268a03ab9c44827af84de4a0cf8c186
+#: ../../source/tutorials/openravepy_examples.rst:58
+msgid "Testing a Grasp"
+msgstr ""
+
+# 67098bd3fed44d0891a8a52d7db65aa1
+#: ../../source/tutorials/openravepy_examples.rst:63
+msgid "Returning a Trajectory"
+msgstr ""
+
+# 607c870d04cd4786b1f3b3848c42b03e
+#: ../../source/tutorials/openravepy_examples.rst:68
+msgid "Using Link Statistics"
+msgstr ""
+
+# 67e7f9c186184efd9e7def7d8ed57f09
+#: ../../source/tutorials/openravepy_examples.rst:73
+msgid "Saving Viewer Image"
+msgstr ""
+
+# 636ff5546fa84cc5a3b7dda814b285d5
+#: ../../source/tutorials/openravepy_examples.rst:78
+msgid "Recording Videos"
+msgstr ""
+
+# b073b7422696482c8d1913493d46b947
+#: ../../source/tutorials/openravepy_examples.rst:83
+msgid "Parabolic Retiming"
+msgstr ""
+
+# 7dc0b94eddec4094b59926cd8080f15f
+#: ../../source/tutorials/openravepy_examples.rst:88
+msgid "Scene Logging"
+msgstr ""
+
+# dc615d33563f4efc8defbeacf321d11d
+#: ../../source/tutorials/tutorial_001.rst:2
+msgid "チュートリアル001：シミュレーション環境への物体の読み込み"
+msgstr ""
+
+# 34061bb2d822417f92265b1b7fc9bc37
+# ca0a24b297c244ed9e95bbdfff4a1963
+# b089fa3245064bd6838155096afef325
+# 59c680d9a933462dbd37cdef79bcd671
+#: ../../source/tutorials/tutorial_001.rst:4
+#: ../../source/tutorials/tutorial_002.rst:4
+#: ../../source/tutorials/tutorial_003.rst:4
+#: ../../source/tutorials/tutorial_004.rst:4
+msgid "古川誠"
+msgstr ""
+
+# 4f51fb7a5fe949caa878d4ad69dd3798
+# d6f9fab096b348d59e37dea09db09cb5
+# dcc7cd56bddd4e829ed6721d48240ba0
+# 384d0f48b7f44544913b8bf8a13accc3
+#: ../../source/tutorials/tutorial_001.rst:18
+#: ../../source/tutorials/tutorial_002.rst:44
+#: ../../source/tutorials/tutorial_003.rst:52
+#: ../../source/tutorials/tutorial_004.rst:52
+msgid "実行"
+msgstr ""
+
+# 7cac0b2b066646ee8dd6ab2dfdc45521
+# 2ac7d47b791d4cc08b85c53f45d2b33b
+# c18f6272d42b413ea1e816998972bc9b
+# dcea3a9d83874961af75fdb8a5a602d7
+#: ../../source/tutorials/tutorial_001.rst:21
+#: ../../source/tutorials/tutorial_002.rst:47
+#: ../../source/tutorials/tutorial_003.rst:55
+#: ../../source/tutorials/tutorial_004.rst:55
+msgid "実行方法"
+msgstr ""
+
+# d242e0e9731f4ddcad7f0b078d91ec61
+#: ../../source/tutorials/tutorial_001.rst:23
+msgid "openrave.pyから直接実行する方法"
+msgstr ""
+
+# ba590c3737a74437add0a27b76e07214
+#: ../../source/tutorials/tutorial_001.rst:29
+msgid "pythonからコマンドラインで実行する方法"
+msgstr ""
+
+# 4fda1145933a4d9cac2f7ced70d67b6b
+#: ../../source/tutorials/tutorial_001.rst:31
+msgid ""
+"OpenRAVEでは，よりインタラクティブな機能を持ったipythonの使用を推奨していま"
+"す．ipythonを立ち上げソースコードを順番に入力（コピー＆ペースト）して実行して"
+"ください．"
+msgstr ""
+
+# a6a68e7d7d714a3d8ba80cf8533ea1bb
+# 4aca510e80b64c9abb221fa301455d28
+# 04cc218223594b10930b5eaee6358c52
+# 4d608bf536344e86b2102cdbb1075f61
+#: ../../source/tutorials/tutorial_001.rst:38
+#: ../../source/tutorials/tutorial_002.rst:54
+#: ../../source/tutorials/tutorial_003.rst:62
+#: ../../source/tutorials/tutorial_004.rst:62
+msgid "内容説明"
+msgstr ""
+
+# 106b66eac42f4178b678fd9e7b289c5e
+# 2b460441662d41e48cf9fe80bc103c6e
+# 3a5f656128e9437eb1ea8115e60e8bea
+# 314e9baad6cb461d88e2b6badd16b442
+#: ../../source/tutorials/tutorial_001.rst:40
+#: ../../source/tutorials/tutorial_002.rst:56
+#: ../../source/tutorials/tutorial_003.rst:64
+#: ../../source/tutorials/tutorial_004.rst:64
+msgid ""
+"チュートリアルを実行すると，OpenRAVEのGUIが立ち上がり，下のような画像が現れま"
+"す．"
+msgstr ""
+
+# a3b9c2294aa64579baed3e1d2fc0838c
+# 78a6dce1aff147a08a8aa41ca86a6449
+# fe93b050b9984b91a8689c8258d61e8f
+# 210662eac8ed45a78282b06b10f49916
+#: ../../source/tutorials/tutorial_001.rst:46
+#: ../../source/tutorials/tutorial_002.rst:79
+#: ../../source/tutorials/tutorial_003.rst:90
+#: ../../source/tutorials/tutorial_004.rst:128
+msgid "解説"
+msgstr ""
+
+# 1260d1965af244d4a17a903bc1a17210
+#: ../../source/tutorials/tutorial_001.rst:52
+msgid "openravepyから，Enviromentのモジュールをインポートしています．"
+msgstr ""
+
+# d8ee890bfa3d4260997648378a2d5144
+#: ../../source/tutorials/tutorial_001.rst:58
+msgid "numpyから，eyeのモジュールをインポートしています．"
+msgstr ""
+
+# b213c368f9ce484abf48656d4950350f
+#: ../../source/tutorials/tutorial_001.rst:64
+msgid ""
+"OpenRAVEシミュレーションの基本となる，Enviromentのインスタンスを作成していま"
+"す．"
+msgstr ""
+
+# 635f8685b328453b92ba9c41555b0bd3
+#: ../../source/tutorials/tutorial_001.rst:70
+msgid "ビューワとしてqtcoinを設定しています．"
+msgstr ""
+
+# f2fc56cc2f754cf49760a988686e8f1b
+#: ../../source/tutorials/tutorial_001.rst:76
+msgid ""
+"OpenRAVEがインストールされているフォルダ（$INSTALL/share/openrave）には，予め"
+"いくつかの物体，ロボット，環境のファイルが提供されています．\\n 今回はこの中"
+"のdataフォルダからmug1.kinbody.xmlをロードしています．"
+msgstr ""
+
+# 0538db24dd754b38a79cfc9dc8a316e2
+#: ../../source/tutorials/tutorial_001.rst:83
+msgid ""
+"設定したオブジェクトをシミュレーション環境に加えています．この段階で初めて"
+"ビューワに表示されます．"
+msgstr ""
+
+# 91573172b5cf4cd2b7c8435999c22b11
+#: ../../source/tutorials/tutorial_001.rst:89
+msgid ""
+"オブジェクトの位置姿勢をセットしています．今回は4x4の単位行列(eye(4))ですの"
+"で，回転・移動なしとなります．\\n 以上がオブジェクトを環境に加える基本的な方"
+"法です．"
+msgstr ""
+
+# 33a2d4a4fd4340ce9d5cdef5c9dddf62
+#: ../../source/tutorials/tutorial_001.rst:97
+msgid "最後に、キー入力を待って環境をリセットします．"
+msgstr ""
+
+# b8c6333f5df14c5cb4df6b9c7860e3ef
+#: ../../source/tutorials/tutorial_001.rst:100
+msgid "覚えておくべきこと"
+msgstr ""
+
+# 59b8a25fd63c4f089167446f9d66209f
+#: ../../source/tutorials/tutorial_001.rst:102
+msgid ""
+"pythonからコマンドラインで実行している場合は、OpenRAVEを安全に終了するために"
+"最後に次のコマンドを必ず実行してください．"
+msgstr ""
+
+# 311e459b2d374be7b5e7f0ad78e4f055
+#: ../../source/tutorials/tutorial_001.rst:108
+msgid ""
+"他の利用可能なビューワは端末から以下のコマンドで調べることができます．\\n ま"
+"た，逆運動学の解析などでビューワが必要ない場合，ビューワなしで実行することも"
+"可能です．その場合は，SetViewerを呼び出す必要はありません．"
+msgstr ""
+
+# 9bee0a30cb764e5b85a6f707d9785bf5
+#: ../../source/tutorials/tutorial_001.rst:115
+msgid ""
+"pythonを起動しなくても，以下のコマンドで同じ事を端末から直接実行することも可"
+"能ですます．"
+msgstr ""
+
+# 77dfe874911543f8a666474c8245326e
+#: ../../source/tutorials/tutorial_001.rst:121
+msgid ""
+"さらにこの後，物体の移動などを続けたい場合はそのままipythonにドロップインする"
+"ことが可能です．その場合は-iオプションを指定して下さい．"
+msgstr ""
+
+# e86e2aa1c6154543ae7608d4e87db817
+#: ../../source/tutorials/tutorial_001.rst:127
+msgid "他の実行可能なexampleは端末から以下のコマンドで調べることができます．"
+msgstr ""
+
+# 199de25dc9d14650a35bf7c3fdb9486d
+#: ../../source/tutorials/tutorial_001.rst:134
+msgid "覚えておくと便利なこと"
+msgstr ""
+
+# 9b54d517182447408cb797d633ac41ed
+#: ../../source/tutorials/tutorial_001.rst:136
+msgid ""
+"ipythonを終了するにはexit()またはquit()です．Ctrl+Dのショートカットも使用でき"
+"ます．"
+msgstr ""
+
+# 867c9683000043be9aef9372de0407cb
+# aa03b1a8e6cf40c0b91d289c18266751
+# 58aaad6898af4605aacbd68f6f8008db
+# 2b47dcc98c1a40a8b05492132f534f19
+#: ../../source/tutorials/tutorial_001.rst:139
+#: ../../source/tutorials/tutorial_002.rst:201
+#: ../../source/tutorials/tutorial_003.rst:171
+#: ../../source/tutorials/tutorial_004.rst:214
+msgid "関連関数"
+msgstr ""
+
+# 5512fb1319494135a03b51cab81aa4a2
+#: ../../source/tutorials/tutorial_001.rst:141
+msgid ""
+":class:`.Environment` , :meth:`.Environment.SetViewer` , :meth:`.Environment."
+"ReadKinBodyXMLFile` , :meth:`.Environment.AddKinBody` , :meth:`.KinBody."
+"SetTransform` , :meth:`.Environment.Reset` , :meth:`.Environment.Destroy`"
+msgstr ""
+
+# 499da318db3149d2ab241162e53118de
+# a482225372634e669fd267f29aea4a80
+# 51d99c5870444162b79af1d0b647f2cb
+# 8a58f413094c47029ccb4314c47e6eeb
+#: ../../source/tutorials/tutorial_001.rst:144
+#: ../../source/tutorials/tutorial_002.rst:206
+#: ../../source/tutorials/tutorial_003.rst:176
+#: ../../source/tutorials/tutorial_004.rst:219
+msgid "関連チュートリアル"
+msgstr ""
+
+# 62d05bced3f945ac8b755b7e867d3cc5
+#: ../../source/tutorials/tutorial_001.rst:146
+msgid ":mod:`.tutorial_002` - 環境に読み込んだ物体の移動"
+msgstr ""
+
+# b158530a5a1d4c25a1eafa471d4eb457
+#: ../../source/tutorials/tutorial_002.rst:2
+msgid "チュートリアル002：環境に読み込んだ物体の移動"
+msgstr ""
+
+# 2b59a54a453f496a9204c6f320555cff
+#: ../../source/tutorials/tutorial_002.rst:61
+msgid ""
+"いま同じ場所に２つのマグカップを読み出してしまったため，重なってしまいまし"
+"た．このため，青いマグカップを移動させてみましょう．\\n 物体を移動するには変"
+"換行列を使う方法と，poseを使う方法の２種類があります．まずは変換行列を使って"
+"移動させます．\\n キーを１回押すと青いマグカップが移動し，移動前後の変換行列"
+"を出力します．"
+msgstr ""
+
+# 9fbad491ae014ea0b6e7410e8b25c6a5
+#: ../../source/tutorials/tutorial_002.rst:68
+msgid ""
+"次にposeを使って移動させます．キーを１回押すと青いマグカップが再度移動し，移"
+"動前後のposeを出力します．"
+msgstr ""
+
+# 92b826a0b4044f29ab572d8f36874585
+#: ../../source/tutorials/tutorial_002.rst:73
+msgid "この次からは，キーを押す度に青いマグカップがランダムに移動します．"
+msgstr ""
+
+# 36f20faa2ae14da4aaeab5fdfd537641
+#: ../../source/tutorials/tutorial_002.rst:85
+msgid ""
+"openravepyから，EnvironmentとposeFromMatrixのモジュールをインポートしていま"
+"す．"
+msgstr ""
+
+# 845ee401ae9f4b4c803771b67c746959
+#: ../../source/tutorials/tutorial_002.rst:91
+msgid ""
+"numpy.randomからrandのモジュールを読み込んでいます．後で物体の位置をランダム"
+"に生成するのに使用します．"
+msgstr ""
+
+# dba8bacfb1014742beff364844743682
+#: ../../source/tutorials/tutorial_002.rst:98
+msgid ""
+"dataフォルダからmug1.kinbody.xmlとmug2.kinbody.xmlの２つをロードし，環境に加"
+"えています．"
+msgstr ""
+
+# 4c44203afd0545258f01334888f40d4f
+#: ../../source/tutorials/tutorial_002.rst:105
+msgid ""
+"`Environment.GetBodies` 関数を使って環境にある全ての物体を読み出し，0番目の物"
+"体（mug1：青いマグカップ）をbody1としてインスタンスを作成しています．"
+msgstr ""
+
+# 87e0eb19288f4dc6ae7af04862c794a8
+#: ../../source/tutorials/tutorial_002.rst:111
+msgid ""
+"物体の名前がわかっていれば `Environment.GetKinBody` 関数を使って直接インスタ"
+"ンスを作成することもできます．上の例ではmug2（赤いマグカップ）をbody2としてい"
+"ます．"
+msgstr ""
+
+# 072256eadb524d50a9d42cd57c47d497
+#: ../../source/tutorials/tutorial_002.rst:117
+msgid ""
+"物体の位置姿勢をSetする方法はtutorial_001で説明した変換行列を用いる方法の他"
+"に，poseを用いる方法があります．\\n poseは7つの数字からなるList（もしくは"
+"array）で，はじめの4つの数字が回転，後の3つの数字が移動を表しています．"
+msgstr ""
+
+# 196674c727e64828a06b1a840a125925
+#: ../../source/tutorials/tutorial_002.rst:124
+msgid "pythonの標準関数であるraw_inputはキーボードから入力を待ちます．"
+msgstr ""
+
+# 1ba0053fc16244cda540cb4798fcd3f3
+#: ../../source/tutorials/tutorial_002.rst:132
+msgid ""
+"環境から `KinBody.GetTransform` 関数を使ってbody1の現在の変換行列をtran1に読"
+"み出し，移動前の変換行列を出力しています．\\n 4×4の変換行列を使った物体の回転"
+"と移動では，左上の3×3の行列が回転，右上の3×1の行列が移動を示しています．"
+msgstr ""
+
+# 9d832433b31c40899c3ab244e1150dcc
+#: ../../source/tutorials/tutorial_002.rst:142
+msgid ""
+"その後X軸の移動を示す変換行列に+0.2を代入し，環境に反映されて物体が移動して移"
+"動後の変換行列が出力されます．"
+msgstr ""
+
+# eeb6a030f7b64b91bddf01fbfc3f29c5
+#: ../../source/tutorials/tutorial_002.rst:157
+msgid ""
+"X軸の移動は変換行列の0行3列目（tran1[0,3]）なので，そこが+0.2になっていること"
+"が確認できます．\\n その他，Y軸の移動は1行3列目（tran1[1,3]），Z軸の移動は2行"
+"3列目（tran1[2,3]）です．"
+msgstr ""
+
+# bd8eb2f37a794878a58a1da131f97c02
+#: ../../source/tutorials/tutorial_002.rst:167
+msgid ""
+"`poseFromMatrix` 関数を使って現在の変換行列tran1からpose1に変換して，移動前の"
+"poseを出力しています．"
+msgstr ""
+
+# 3a2a6103f0ac4ace9c5e2cef390e9fb1
+#: ../../source/tutorials/tutorial_002.rst:176
+msgid ""
+"その後Y軸の移動を示すposeに+0.1を代入し，環境に反映されて物体が移動して移動後"
+"のposeが出力されます．"
+msgstr ""
+
+# 11ecc9f6acd34965814779f7af1a658c
+#: ../../source/tutorials/tutorial_002.rst:185
+msgid ""
+"Y軸の移動はposeの5列目（pose1[5]）なので，そこが0.1となっていることが確認でき"
+"ます．\\n その他，X軸の移動は4列目（pose1[4]），Z軸の移動は6列目（pose1[6]）"
+"です．"
+msgstr ""
+
+# a07e9ea8eb0c4ee295d52fe7f8fdb80e
+#: ../../source/tutorials/tutorial_002.rst:197
+msgid ""
+"最後はrand関数を使って物体の位置をランダムに作成し移動し，現在の位置とposeを"
+"出力します．"
+msgstr ""
+
+# af645b84b9444aad892180d4eccca11f
+#: ../../source/tutorials/tutorial_002.rst:203
+msgid ""
+":meth:`.Environment.GetBodies` , :meth:`.Environment.GetKinBody` , :meth:`."
+"KinBody.GetTransform` , :func:`.poseFromMatrix`"
+msgstr ""
+
+# 36e240144a604758aab09637c5e3957b
+# 6d31d8cfa4d04d96bde5e484e3ec8528
+#: ../../source/tutorials/tutorial_002.rst:208
+#: ../../source/tutorials/tutorial_004.rst:221
+msgid ":mod:`.tutorial_003` - 環境に読み込んだ物体の回転（回転行列）"
+msgstr ""
+
+# 3d0fc6e3d50a44e483d9eca593071375
+# 6705b085e47141b1bf5188838ea4b474
+#: ../../source/tutorials/tutorial_002.rst:209
+#: ../../source/tutorials/tutorial_003.rst:178
+msgid ":mod:`.tutorial_004` - 環境に読み込んだ物体の回転（クォータニオン）"
+msgstr ""
+
+# 126c39e471a54106be515c8a6a17a885
+#: ../../source/tutorials/tutorial_003.rst:2
+msgid "チュートリアル003：環境に読み込んだ物体の回転（回転行列）"
+msgstr ""
+
+# e6ac5d6528d84dca81132ed6920cdb35
+# b87e41374c1b49e8bbfa965ed97e43a9
+#: ../../source/tutorials/tutorial_003.rst:69
+#: ../../source/tutorials/tutorial_004.rst:69
+msgid ""
+"画面内で矢印は座標軸を表し，RGBの色はそれぞれXYZ軸に対応しています．\\n X軸の"
+"回転角度を入力してみましょう．矢印の向きに向かって反時計まわりがプラスの回転"
+"方向です．"
+msgstr ""
+
+# a4c1f66aafd24b61b08e3e22dafe3cff
+# d455ac4a2fb1447487e977bb137208a8
+#: ../../source/tutorials/tutorial_003.rst:75
+#: ../../source/tutorials/tutorial_004.rst:75
+msgid ""
+"例ではX軸に-45度回転させました．新しく現れた黄色の矢印はカップの上方向が回転"
+"した結果の向きを示しています．\\n 次にY軸の回転角度を入力してみましょう．"
+msgstr ""
+
+# 1c08f072a67c4f629d9ff7230b8348a1
+# 02bf3dfc000e4386b1bc984d85ec5180
+#: ../../source/tutorials/tutorial_003.rst:81
+#: ../../source/tutorials/tutorial_004.rst:81
+msgid ""
+"例ではY軸に+45度回転させました．黄色の矢印は先ほどと同じくカップの上方向が回"
+"転した結果の向きを示しています．\\n 次に何かキーを押してみましょう．"
+msgstr ""
+
+# 7ba02e30b8eb40e4a0ef66fb298bfebe
+# 52bb44f0b4bd4f85b5d9a9052e5a83f1
+#: ../../source/tutorials/tutorial_003.rst:87
+#: ../../source/tutorials/tutorial_004.rst:87
+msgid ""
+"この次からは，キーを押す度に先ほどの黄色の矢印を軸にしてマグカップが回転しな"
+"がら移動します．"
+msgstr ""
+
+# 62afed93cb88461983cb650b5830facf
+#: ../../source/tutorials/tutorial_003.rst:96
+msgid ""
+"openravepyから `Environment` , `rotationMatrixFromAxisAngle` , "
+"`axisAngleFromRotationMatrix` ,  `matrixFromAxisAngle` のモジュールを読み込ん"
+"でいます．"
+msgstr ""
+
+# 73f6a40951534aa7a2e44b157c9647d7
+# 477e4f3b68084f1eb4eb9e4d276f6d61
+#: ../../source/tutorials/tutorial_003.rst:102
+#: ../../source/tutorials/tutorial_004.rst:140
+msgid "numpyから必要なモジュールを読み込んでいます．"
+msgstr ""
+
+# 3480ee068cf741f696e7a63b2dc0aeb2
+# 4923d61f58514f52a019648d66b10cee
+#: ../../source/tutorials/tutorial_003.rst:111
+#: ../../source/tutorials/tutorial_004.rst:155
+msgid "矢印を描画するには `Environment.drawarrow` を使います．"
+msgstr ""
+
+# 40c61791020040c49520394da8b51d43
+# 49f131aefff2443681028c40af5a898a
+#: ../../source/tutorials/tutorial_003.rst:117
+#: ../../source/tutorials/tutorial_004.rst:161
+msgid "X軸の回転角度のキー入力を待ち，degに代入します．"
+msgstr ""
+
+# c0f852d886164e90a1793c6654c5347d
+#: ../../source/tutorials/tutorial_003.rst:123
+msgid ""
+"`rotationMatrixFromAxisAngle` を使ってX軸で入力された角度（deg）回転する回転"
+"行列rot_matを作成しています．\\n AxisAngleは例のように([単位ベクトル] , 角度"
+"(rad))でも指定することが可能です．"
+msgstr ""
+
+# f08f6e7557d6479686a913efc5072fe7
+#: ../../source/tutorials/tutorial_003.rst:130
+msgid ""
+"`axisAngleFromRotationMatrix` を使って実際のAxisAngleの値（3列のベクトル値）"
+"を出力します．"
+msgstr ""
+
+# c81d4c600c6e4ba0b9c9f191cde6bea3
+#: ../../source/tutorials/tutorial_003.rst:137
+msgid ""
+"変換行列(tran)から現在の回転行列を切り出し，dot関数で回転行列(rot_mat)の掛け"
+"算をして，それを再び変換行列に代入して新たな姿勢をセットしています．"
+msgstr ""
+
+# 656e0b8095ae42e083e17355c9d68b4c
+#: ../../source/tutorials/tutorial_003.rst:144
+msgid ""
+"カップの上方向（Z軸方向）を回転させて，黄色い矢印を表示させています．\\n"
+msgstr ""
+
+# 561616c9412349caa6b81f9e01a5a810
+# 435866d9a0b24c4f8ff4bab1e36315a4
+#: ../../source/tutorials/tutorial_003.rst:156
+#: ../../source/tutorials/tutorial_004.rst:200
+msgid "Y軸の回転に関しても同様に行います．"
+msgstr ""
+
+# 85fe8d863ce649af960cc193269833df
+#: ../../source/tutorials/tutorial_003.rst:167
+msgid ""
+"Tdelta（Z軸の回転と移動）を作成し，dot関数で現在の変換行列tranとの掛け算をし"
+"て，それを再びtranに代入して新たな姿勢をセットしています．\\n これによりキー"
+"が入力される度に，カップの回転軸（黄色い矢印）で回転しながら移動します．\\n"
+msgstr ""
+
+# 42f7397c0fdc435081ad6f163140b3f3
+#: ../../source/tutorials/tutorial_003.rst:173
+msgid ""
+":meth:`.Environment.drawarrow` , :func:`.rotationMatrixFromAxisAngle` , :"
+"func:`.axisAngleFromRotationMatrix` , :func:`.matrixFromAxisAngle` , :func:`."
+"matrixFromPose` , :func:`.matrixFromQuat` , :func:`."
+"quatFromRotationMatrix` , :func:`.rotationMatrixFromQuat`"
+msgstr ""
+
+# 2367946addbc4b2a87a785426e687089
+#: ../../source/tutorials/tutorial_004.rst:2
+msgid "チュートリアル004：環境に読み込んだ物体の回転（クォータニオン）"
+msgstr ""
+
+# 8ddf9032e3ab4cdc86ba15d5a547f237
+#: ../../source/tutorials/tutorial_004.rst:90
+msgid "ソースコード"
+msgstr ""
+
+# 9a8067c44fb7448c967b54a4b87f5da1
+#: ../../source/tutorials/tutorial_004.rst:134
+msgid ""
+"openravepyから `Environment` , `poseFromMatrix` , `quatFromAxisAngle` , "
+"`axisAngleFromQuat` , `quatRotate` , `quatMult` , `poseMult` のモジュールを読"
+"み込んでいます．"
+msgstr ""
+
+# fdcd788cb788418ba9e4d4bb3a8a2a1d
+#: ../../source/tutorials/tutorial_004.rst:146
+msgid "`poseFromMatrix` を使って変換行列からposeを求めています．"
+msgstr ""
+
+# 543b7e6bea574182a61747105dd2243c
+#: ../../source/tutorials/tutorial_004.rst:167
+msgid ""
+"`quatFromAxisAngle` を使ってX軸で入力された角度（deg）回転するクォータニオン"
+"rot_quatを作成しています．\\n AxisAngleは例のように([単位ベクトル] , 角度"
+"(rad))でも指定することが可能です．"
+msgstr ""
+
+# d4b3369ff3924468a824772ece7dd63a
+#: ../../source/tutorials/tutorial_004.rst:174
+msgid ""
+"`axisAngleFromQuat` を使って実際のAxisAngleの値（3列のベクトル値）を出力しま"
+"す．"
+msgstr ""
+
+# e58d27152f97447dafd057bbd71e8fcd
+#: ../../source/tutorials/tutorial_004.rst:181
+msgid ""
+"poseから現在のクォータニオンを切り出し， `quatMult` 関数でクォータニオン"
+"(rot_quat)の掛け算をして，それを再びクォータニオンに代入して新たな姿勢をセッ"
+"トしています．"
+msgstr ""
+
+# e445ecfa69a04843bfcc8169d0a53212
+#: ../../source/tutorials/tutorial_004.rst:188
+msgid ""
+"カップの上方向（Z軸方向）を `quatRotate` で回転させて，黄色い矢印を表示させて"
+"います．\\n"
+msgstr ""
+
+# c520470c348f40b9a274fa7a1a118096
+#: ../../source/tutorials/tutorial_004.rst:210
+msgid ""
+"posedelta（Z軸の回転と移動）を作成し， `poseMult` で現在のposeとの掛け算をし"
+"て，それを再びposeに代入して新たな姿勢をセットしています．\\n これによりキー"
+"が入力される度に，カップの回転軸（黄色い矢印）で回転しながら移動します．\\n"
+msgstr ""
+
+# 85d0ca9adcb64b45aa2eebd9adf2b366
+#: ../../source/tutorials/tutorial_004.rst:216
+msgid ""
+":func:`.poseFromMatrix` , :func:`.quatFromAxisAngle` , :func:`."
+"axisAngleFromQuat` , :func:`.quatRotate` , :func:`.quatMult` , :func:`."
+"poseMult` , :func:`.matrixFromPose` , :func:`.matrixFromQuat` , :func:`."
+"quatFromRotationMatrix` , :func:`.rotationMatrixFromQuat`"
+msgstr ""
+
+# 4f1c3278a8044e6daf029c552db9f0d8
+#: ../../source/tutorials/writing_plugins.rst:4
+msgid "Writing OpenRAVE Programs"
+msgstr ""
+
+# 3a6f19ed91914a23aeba5f1506bbc487
+#: ../../source/tutorials/writing_plugins.rst:7
+msgid "Plugins"
+msgstr ""
+
+# cda832da76a940e6be9a9fdb78862b4f
+#: ../../source/tutorials/writing_plugins.rst:9
+msgid ""
+"Creating OpenRAVE plugins allows others to use your work by just "
+"instantiating the interfaces through the **RaveCreateX** methods. Although "
+"it is highly recommended to start working with Python/Octave, eventually "
+"users should create plugins to offer their functionality through them."
+msgstr ""
+
+# 565d48add74e4b139a18cf16f00297dd
+#: ../../source/tutorials/writing_plugins.rst:11
+msgid ""
+"The simplest way to create a plugin is through the :ref:`tool-openrave-"
+"createplugin` program:"
+msgstr ""
+
+# acfbe61ba8e04f5ca7c8cfd546de0648
+#: ../../source/tutorials/writing_plugins.rst:13
+msgid ""
+"For example, the following command will create a plugin that offers "
+"**MyNewModule** :class:`.Module`:"
+msgstr ""
+
+# 904a46d0e784477380d16543a0290ff6
+#: ../../source/tutorials/writing_plugins.rst:19
+msgid ""
+"This creates a **myplugin** directory where all the files are written in. In "
+"order to compile and test it do:"
+msgstr ""
+
+# 55734be6d7cc4e58b71bee3a7fb14ce0
+#: ../../source/tutorials/writing_plugins.rst:27
+msgid ""
+"By default, the new plugin/executable is stored in the **build** folder. The "
+"following files are created to help users get started:"
+msgstr ""
+
+# 752402f8376444a78618a2c1ac9fb413
+#: ../../source/tutorials/writing_plugins.rst:29
+msgid ""
+"**CMakeLists.txt** - used to create Makefiles and Visual Studio solutions"
+msgstr ""
+
+# 2d5f0595bea04fd09cffe6da50df754e
+#: ../../source/tutorials/writing_plugins.rst:31
+msgid "**Makefile** - for Unix users, type 'make' to build the CMake project."
+msgstr ""
+
+# bcc1537f6f7142a482529d8c1f8cffda
+#: ../../source/tutorials/writing_plugins.rst:33
+msgid "**myplugin.cpp** - main C++ file"
+msgstr ""
+
+# 26b7b038ad16412e85701b3e64c67c3a
+#: ../../source/tutorials/writing_plugins.rst:35
+msgid ""
+"**testplugin.py** - will load the plugin inside OpenRAVE and call its "
+"SendCommand method."
+msgstr ""
+
+# a1f4bda1f5ba44609cb7b081f3111a6c
+#: ../../source/tutorials/writing_plugins.rst:37
+msgid "**scenes/robots** - directories holding scene and robot files"
+msgstr ""
+
+# 4db94e4739864851acc0c4aaa801db5e
+#: ../../source/tutorials/writing_plugins.rst:39
+msgid "For more details, please see"
+msgstr ""
+
+# 021c866982784656a25f56879587353c
+#: ../../source/tutorials/writing_plugins.rst:43
+msgid ""
+"`Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins."
+"html>`_"
+msgstr ""
+
+# 8ab8565b06b041f29b7ace09fec40def
+#: ../../source/tutorials/writing_plugins.rst:47
+msgid ""
+"`Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins."
+"html>`_"
+msgstr ""
+
+# ca424d5d096f427daeb412b761a0786c
+#: ../../source/tutorials/writing_plugins.rst:50
+msgid "Programs"
+msgstr ""
+
+# 2dbbe891dce24b3aa930db928b122314
+#: ../../source/tutorials/writing_plugins.rst:52
+msgid ""
+"It is also possible to create and use OpenRAVE inside a program by linking "
+"with the **openrave-core** library. The simplest way to create an example "
+"program is:"
+msgstr ""
+
+# ae4f665f08f444c2b25617d909f044a5
+#: ../../source/tutorials/writing_plugins.rst:59
+msgid ""
+"This will create a simple program that creates the OpenRAVE Environment and "
+"Loads a scene. The environment is created without attaching any viewer."
+msgstr ""

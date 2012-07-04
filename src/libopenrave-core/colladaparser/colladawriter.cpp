@@ -17,15 +17,19 @@
 /// functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
+#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+namespace ColladaDOM150 {} // declare in case earlier versions are used
+
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
-#include <dom/domCOLLADA.h>
 #include <dae/domAny.h>
-#include <dom/domConstants.h>
-#include <dom/domTriangles.h>
 #include <dae/daeDocument.h>
-#include <dom/domTypes.h>
-#include <dom/domElements.h>
+#include <1.5/dom/domCOLLADA.h>
+#include <1.5/dom/domConstants.h>
+#include <1.5/dom/domTriangles.h>
+#include <1.5/dom/domTypes.h>
+#include <1.5/dom/domElements.h>
+using namespace ColladaDOM150;
 
 #include <locale>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -39,13 +43,6 @@
 #include <libxml/parserInternals.h> // only for xmlNewInputFromFile()
 #include <libxml/tree.h>
 #include <libxml/xmlmemory.h>
-
-#include <zip.h> // for saving compressed files
-#ifdef _WIN32
-#include <iowin32.h>
-#else
-#include <unistd.h>
-#endif
 
 /// \brief converts raw XML data to DAE using libxml2
 namespace XMLtoDAE
@@ -343,184 +340,8 @@ public:
 
     virtual void Save(const string& filename)
     {
-        bool bcompress = filename.size() >= 4 && filename[filename.size()-4] == '.' && ::tolower(filename[filename.size()-3]) == 'z' && ::tolower(filename[filename.size()-2]) == 'a' && ::tolower(filename[filename.size()-1]) == 'e';
-        if( !bcompress ) {
-            if(!_collada->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
-                throw openrave_exception(str(boost::format("failed to save collada file to %s")%filename));
-            }
-            return;
-        }
-        vector<uint8_t> buf(16384);     // write in 16K chunks
-        std::string savefilenameinzip;
-        size_t namestart = filename.find_last_of(s_filesep);
-        if( namestart == string::npos ) {
-            namestart = 0;
-        }
-        else {
-            namestart+=1;
-        }
-        if(namestart+4>=filename.size()) {
-            throw openrave_exception(str(boost::format("bad filename: %s")%filename),ORE_InvalidArguments);
-        }
-        savefilenameinzip = filename.substr(namestart,filename.size()-namestart-4);
-        savefilenameinzip += ".dae";
-
-#ifdef _WIN32
-        char lpPathBuffer[MAX_PATH]={ 0};
-        char szTempName[MAX_PATH]={ 0};
-        if( GetTempPath(MAX_PATH, lpPathBuffer) == 0 ) {
-            throw openrave_exception("GetTempPath failed");
-        }
-        if( GetTempFileName(lpPathBuffer, "openrave_rawdae", 0, szTempName) == 0 ) {
-            throw openrave_exception("GetTempFileName failed");
-        }
-        string rawfilename = szTempName;
-#else
-        // unix environment
-        class UnlinkFilename
-        {
-public:
-            UnlinkFilename(const std::string& filename) : _filename(filename) {
-            }
-            virtual ~UnlinkFilename() {
-                unlink(_filename.c_str());
-            }
-            std::string _filename;
-        };
-
-#if HAVE_MKSTEMP
-        string rawfilename = "/tmp/openrave_rawdaeXXXXXX";
-
-        int fd = mkstemp(&rawfilename[0]);
-        if( fd == -1 ) {
-            throw openrave_exception(str(boost::format("failed to create temporary file with template %s")%rawfilename));
-        }
-        close(fd);
-#else
-        bool bfoundfile = false;
-        for(int iter = 0; iter < 1000; ++iter) {
-            rawfilename = str(boost::format("openrave_rawdae%d.dae")%name%rand());
-            if( !!std::ifstream(rawfilename.c_str())) {
-                bfoundfile = true;
-                break;
-            }
-        }
-        if( !bfoundfile ) {
-            throw openrave_exception(str(boost::format("failed to create temporary file with template %s")%rawfilename));
-        }
-#endif
-        UnlinkFilename unlinkfilename(rawfilename);
-#endif
-
-        rawfilename += ".dae";
-        if( !_collada->writeTo(_doc->getDocumentURI()->getURI(), rawfilename.c_str()) ) {
-            throw openrave_exception(str(boost::format("failed to save collada file to %s")%rawfilename));
-        }
-
-        zipFile zf;
-#ifdef _WIN32
-        zlib_filefunc64_def ffunc;
-        fill_win32_filefunc64A(&ffunc);
-        zf = zipOpen2_64(filename.c_str(),APPEND_STATUS_CREATE,NULL,&ffunc);
-#else
-        zf = zipOpen64(filename.c_str(),APPEND_STATUS_CREATE);
-#endif
-        if (!zf) {
-            throw openrave_exception(str(boost::format("error opening %s")%filename));
-        }
-
-        FILE * fin=NULL;
-        time_t curtime = time(NULL);
-        struct tm* timeofday = localtime(&curtime);
-        zip_fileinfo zi;
-        zi.tmz_date.tm_sec = timeofday->tm_sec;
-        zi.tmz_date.tm_min = timeofday->tm_min;
-        zi.tmz_date.tm_hour = timeofday->tm_hour;
-        zi.tmz_date.tm_mday = timeofday->tm_mday;
-        zi.tmz_date.tm_mon = timeofday->tm_mon;
-        zi.tmz_date.tm_year = timeofday->tm_year;
-        zi.dosDate = 0;
-        zi.internal_fa = 0;
-        zi.external_fa = 0;
-
-        int zip64=0;
-        fin = fopen64(rawfilename.c_str(), "rb");
-        if(!!fin) {
-            fseeko64(fin, 0, SEEK_END);
-            ZPOS64_T pos = ftello64(fin);
-            if(pos >= 0xffffffff) {
-                zip64 = 1;
-            }
-            fclose(fin); fin = NULL;
-        }
-
-        char* password=NULL;
-        unsigned long crcFile=0;
-        int opt_compress_level = 9;
-        int err = zipOpenNewFileInZip3_64(zf,savefilenameinzip.c_str(),&zi,NULL,0,NULL,0,"collada file generated by openrave",Z_DEFLATED, opt_compress_level,0,-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,password,crcFile, zip64);
-        if (err != ZIP_OK) {
-            RAVELOG_WARN(str(boost::format("zipOpenNewFileInZip3_64 error %d")%err));
-        }
-        else {
-            fin = fopen64(rawfilename.c_str(),"rb");
-            if (fin==NULL) {
-                err=ZIP_ERRNO;
-                RAVELOG_WARN(str(boost::format("error in opening %s in zipfile")%rawfilename));
-            }
-        }
-
-        if( err == ZIP_OK ) {
-            size_t size_read=0;
-            do {
-                err = ZIP_OK;
-                size_read = fread(&buf[0],1,buf.size(),fin);
-                if (size_read < buf.size()) {
-                    if (feof(fin)==0) {
-                        RAVELOG_WARN(str(boost::format("error in reading %s")%rawfilename));
-                        err = ZIP_ERRNO;
-                    }
-                }
-                if (size_read>0) {
-                    err = zipWriteInFileInZip (zf,&buf[0],size_read);
-                    if (err<0) {
-                        RAVELOG_WARN(str(boost::format("error in writing %s in the zipfile")%rawfilename));
-                    }
-                }
-            } while ((err == ZIP_OK) && (size_read>0));
-        }
-        if (fin) {
-            fclose(fin);
-        }
-        if (err<0) {
-            RAVELOG_WARN(str(boost::format("error in writing: %d")%err));
-            err=ZIP_ERRNO;
-        }
-        else {
-            err = zipCloseFileInZip(zf);
-            if (err!=ZIP_OK) {
-                RAVELOG_WARN(str(boost::format("error in closing %s in the zipfile")%rawfilename));
-            }
-        }
-        if (err<0) {
-            RAVELOG_WARN(str(boost::format("error in writing %s in the zipfile")%rawfilename));
-        }
-
-        // add the manifest
-        string smanifest = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<dae_root>./";
-        smanifest += savefilenameinzip;
-        smanifest += "</dae_root>\n";
-        err = zipOpenNewFileInZip3_64(zf,"manifest.xml",&zi,NULL,0,NULL,0,NULL,Z_DEFLATED, opt_compress_level,0,-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,password,crcFile, zip64);
-        if (err == ZIP_OK) {
-            err = zipWriteInFileInZip (zf,&smanifest[0],smanifest.size());
-            err = zipCloseFileInZip(zf);
-        }
-        if (err<0) {
-            RAVELOG_WARN(str(boost::format("error in writing manifest.xml in the zipfile: %d")%err));
-        }
-
-        int errclose = zipClose(zf,NULL);
-        if (errclose != ZIP_OK) {
-            throw openrave_exception(str(boost::format("error in closing %s")%filename));
+        if(!_collada->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
+            throw openrave_exception(str(boost::format("failed to save collada file to %s")%filename));
         }
     }
 
@@ -887,6 +708,14 @@ public:
         kmodel->setId(kmodelid.c_str());
         kmodel->setName(pbody->GetName().c_str());
 
+        // add description
+        {
+            domAssetRef kmodelinfo = daeSafeCast<domAsset>(kmodel->add(COLLADA_ELEMENT_ASSET));
+            domAsset::domSubjectRef subject = daeSafeCast<domAsset::domSubject>(kmodelinfo->add(COLLADA_ELEMENT_SUBJECT));
+            subject->setValue(pbody->GetDescription().c_str());
+        }
+
+        //kmodel->getAsset();
         domKinematics_model_techniqueRef ktec = daeSafeCast<domKinematics_model_technique>(kmodel->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         KinBody::KinBodyStateSaver saver(pbody);
@@ -1115,6 +944,7 @@ public:
     virtual domGeometryRef WriteGeometry(const KinBody::Link::GEOMPROPERTIES& geom, const string& parentid)
     {
         const KinBody::Link::TRIMESH& mesh = geom.GetCollisionMesh();
+        Transform t = geom.GetTransform();
 
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
@@ -1138,12 +968,12 @@ public:
 
                     domFloat_arrayRef parray = daeSafeCast<domFloat_array>(pvertsource->add(COLLADA_ELEMENT_FLOAT_ARRAY));
                     parray->setId((parentid+string("_positions-array")).c_str());
-                    parray->setCount(mesh.vertices.size());
-                    parray->setDigits(6);     // 6 decimal places
+                    parray->setCount(3*mesh.vertices.size());
+                    parray->setDigits(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     parray->getValue().setCount(3*mesh.vertices.size());
 
                     for(size_t ind = 0; ind < mesh.vertices.size(); ++ind) {
-                        Vector v = geom.GetTransform() * mesh.vertices[ind];
+                        Vector v = t*mesh.vertices[ind];
                         parray->getValue()[3*ind+0] = v.x;
                         parray->getValue()[3*ind+1] = v.y;
                         parray->getValue()[3*ind+2] = v.z;
@@ -1165,7 +995,7 @@ public:
 
                 domVerticesRef pverts = daeSafeCast<domVertices>(pdommesh->add(COLLADA_ELEMENT_VERTICES));
                 {
-                    pverts->setId("vertices");
+                    pverts->setId((parentid+string("_vertices")).c_str());
                     domInput_localRef pvertinput = daeSafeCast<domInput_local>(pverts->add(COLLADA_ELEMENT_INPUT));
                     pvertinput->setSemantic("POSITION");
                     pvertinput->setSource(domUrifragment(*pvertsource, string("#")+parentid+string("_positions")));
@@ -1179,7 +1009,7 @@ public:
                     domInput_local_offsetRef pvertoffset = daeSafeCast<domInput_local_offset>(ptris->add(COLLADA_ELEMENT_INPUT));
                     pvertoffset->setSemantic("VERTEX");
                     pvertoffset->setOffset(0);
-                    pvertoffset->setSource(domUrifragment(*pverts, string("#")+parentid+string("/vertices")));
+                    pvertoffset->setSource(domUrifragment(*pverts, string("#")+parentid+string("_vertices")));
                     domPRef pindices = daeSafeCast<domP>(ptris->add(COLLADA_ELEMENT_P));
                     pindices->getValue().setCount(mesh.indices.size());
                     for(size_t ind = 0; ind < mesh.indices.size(); ++ind)

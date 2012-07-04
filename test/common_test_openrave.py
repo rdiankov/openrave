@@ -43,7 +43,7 @@ def setup_module(module):
     if hasattr(os,'putenv'):
         os.putenv('OPENRAVE_DATABASE',dbdir)
         os.putenv('OPENRAVE_HOME',dbdir)
-    RaveInitialize(load_all_plugins=True, level=int32(DebugLevel.Info)|int32(DebugLevel.VerifyPlans))
+    RaveInitialize(load_all_plugins=True, level=DebugLevel.Info|DebugLevel.VerifyPlans)
     if hasattr(os.path,'samefile'):
         assert(os.path.samefile(RaveGetHomeDirectory(),dbdir))
     else:

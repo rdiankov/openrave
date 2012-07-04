@@ -1,0 +1,134 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-19 17:57\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# a20714eba47b4246bc2ac9986b52dd57
+#: ../../source/geometric_conventions.rst:4
+msgid "Conventions and Guidelines"
+msgstr ""
+
+# 47578de8589d465c8ff49720364f6817
+#: ../../source/geometric_conventions.rst:6
+msgid ""
+"This is the set of conventions all users are highly recommended to follow. "
+"Sticking to them will guarantee that OpenRAVE modules can inter-operate with "
+"each other."
+msgstr ""
+
+# 129cde23ccd34f7ba2635c26c912bad3
+#: ../../source/geometric_conventions.rst:9
+msgid "Geometric Conventions"
+msgstr ""
+
+# 2a1317577d614008a857882faa3187e6
+#: ../../source/geometric_conventions.rst:11
+msgid ""
+"Internal matrices are in column-order, row-major format. If this is "
+"confusing, check out this guide. This means affine matrix representation is "
+"using the standard math way. All matrices are serialized in column-major "
+"format, this is to make it simpler for Octave/Matlab to convert between "
+"matrices. Note that python expects row-major matrices, which require "
+"transposition when passed around the two interfaces."
+msgstr ""
+
+# 4eec2a927cfe4bf4b4d83c06d63033bd
+#: ../../source/geometric_conventions.rst:13
+msgid ""
+"Quaternions, the preferred way of representing rotations, are defined with "
+"the scalar value as the first component. For example [w x y z] or [cos "
+"sin*axis]."
+msgstr ""
+
+# 8c575c22c3fc4ee6869bf4e566da1dfa
+#: ../../source/geometric_conventions.rst:15
+msgid ""
+"A pose is an affine transformation specified as a quaternion and "
+"translation. It serializes into 7 values, the first 4 being the quaternion."
+msgstr ""
+
+# 6c5f46ba03cf495db1f0b52702f126a3
+#: ../../source/geometric_conventions.rst:17
+msgid ""
+"Distances between two rotations is :math:`\\cos^{-1} | q_1 \\cdot q_2 |`, "
+"where each rotation is represented as a quaternion. For rotations close to "
+"each other, this is sometimes approximated as: :math:`\\min\\left( | q1 - q2 "
+"| \\; , \\; | q1 + q2 |\\right)`."
+msgstr ""
+
+# 5bd82a40ba934e7aa0e8ff804198cc40
+#: ../../source/geometric_conventions.rst:19
+msgid "Joint axis rotation is counter-cockwise."
+msgstr ""
+
+# e321873635a54d22be7cc74fc697c6ce
+#: ../../source/geometric_conventions.rst:22
+msgid "Robot Conventions"
+msgstr ""
+
+# 4b3a11460c084d9a87023adab257a4a2
+#: ../../source/geometric_conventions.rst:24
+msgid ""
+"A robot's up direction is on the positive z-axis, forward direction is the "
+"positive x-axis."
+msgstr ""
+
+# 2c9330d4e84d4fde8c53b1a321e25450
+#: ../../source/geometric_conventions.rst:26
+msgid "Mobile manipulation is performed in the XY plane."
+msgstr ""
+
+# 21f3494aa9d544ebbf99dced3e2828ef
+#: ../../source/geometric_conventions.rst:28
+msgid ""
+"The origin of a robot should be defined so that its base perfectly rests on "
+"a floor at z=0, and its rotation around the z-axis is the center of rotation "
+"when the base makes a natural in-place turn."
+msgstr ""
+
+# 5b1a5e82271a4af494a4b7a5c5d6f88e
+#: ../../source/geometric_conventions.rst:30
+msgid ""
+"All objects/robots of human-environment scale should be specified in meters. "
+"There are many default thresholds and parameters that assume this "
+"convention, and not following it will result in explosion of computation. A "
+"more general convention is that the unit should be chosen so that the arm "
+"length of the robot is closest to 1."
+msgstr ""
+
+# 35197763dd994166add8d99e5c640375
+#: ../../source/geometric_conventions.rst:32
+msgid ""
+"Every link/manipulator/sensor/joint in a robot/kinbody should have a name "
+"that will differentiate it from the others."
+msgstr ""
+
+# ec92e2e1905845f7956c8aeb92f43291
+#: ../../source/geometric_conventions.rst:34
+msgid ""
+"The initial configuration of the robot when first loaded in the scene "
+"**cannot** be in self-collision."
+msgstr ""
+
+# 13153b0d81214cc0a55870c8640b7178
+#: ../../source/geometric_conventions.rst:37
+msgid "Environment Conventions"
+msgstr ""
+
+# af0cf59265194c5fb309b4ea84533152
+#: ../../source/geometric_conventions.rst:39
+msgid "Every body added to the environment should have a unique name."
+msgstr ""

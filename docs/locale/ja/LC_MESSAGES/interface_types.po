@@ -1,0 +1,3098 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-29 16:15\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 6ed21217c44e49e099c3935645ec92e0
+#: ../../source/interface_types.rst:4
+msgid "Interface Types"
+msgstr ""
+
+# bff681a05ce84441afe5da2ed260e246
+#: ../../source/interface_types.rst:8
+msgid "collisionchecker"
+msgstr ""
+
+# feb21a8dce50460992210ef7286eb91a
+#: ../../source/interface_types.rst:21
+msgid "controller"
+msgstr ""
+
+# 79b22c0c7467487bbf8a4885bc196a6b
+#: ../../source/interface_types.rst:33
+msgid "iksolver"
+msgstr ""
+
+# 703697112f4347ef9012f27a579c84ac
+#: ../../source/interface_types.rst:54
+msgid "kinbody"
+msgstr ""
+
+# f6f53d2ad9ae405dbebd293c682586f7
+#: ../../source/interface_types.rst:63
+msgid "module"
+msgstr ""
+
+# cdd670f53e4442ed9b2612ee04358a3c
+#: ../../source/interface_types.rst:83
+msgid "physicsengine"
+msgstr ""
+
+# 55fbaa7cee3e4d59995f4959fff71fb3
+#: ../../source/interface_types.rst:95
+msgid "planner"
+msgstr ""
+
+# e0d854cdbd37479ea9cdceb6603adeda
+#: ../../source/interface_types.rst:115
+msgid "robot"
+msgstr ""
+
+# 19a098c6a7794fcb9b1052112612bc91
+#: ../../source/interface_types.rst:126
+msgid "sensor"
+msgstr ""
+
+# c75b8973f40347ce9470eac4415ab32a
+#: ../../source/interface_types.rst:142
+msgid "sensorsystem"
+msgstr ""
+
+# a64af577cd4149c39a1860d8c888bdc3
+#: ../../source/interface_types.rst:151
+msgid "spacesampler"
+msgstr ""
+
+# 6043f752ce124801acd9827646e3a515
+#: ../../source/interface_types.rst:163
+msgid "trajectory"
+msgstr ""
+
+# 0eaae922c97740529963f9cccf0da2ad
+#: ../../source/interface_types.rst:173
+msgid "viewer"
+msgstr ""
+
+# fa793775e9b9479cae68545d6f4b576e
+# 2fe897c5425847cdab133fae100c730d
+#: ../../source/interface_types/collisionchecker/bullet.rst:4
+#: ../../source/interface_types/physicsengine/bullet.rst:4
+msgid "bullet - bulletrave"
+msgstr ""
+
+# f01c2f9e6d0e4d389b0ec902b600585a
+# 5e7f08d247b24226bbdcfb2319ac0be7
+# 977fa8d981c44123aaa7192f664cf352
+# 8a27ab051db84a14b840fedfaaa27175
+#: ../../source/interface_types/collisionchecker/bullet.rst:6
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:6
+#: ../../source/interface_types/collisionchecker/ode.rst:6
+#: ../../source/interface_types/collisionchecker/pqp.rst:6
+msgid ":ref:`interface-collisionchecker`"
+msgstr ""
+
+# 653c27fdc6064b7ebaa454893f6db072
+# f6771f56942c43949fc3552a3699bf3f
+#: ../../source/interface_types/collisionchecker/bullet.rst:8
+#: ../../source/interface_types/physicsengine/bullet.rst:8
+msgid ":ref:`plugin-bulletrave`"
+msgstr ""
+
+# bd76b906214e40eaa2451f36ceff5ed9
+# 99456f938b344dab8e2a6514102a8838
+# d04a44705fc24ad1a103b626173b7937
+# 5ffa8a1ca6594b1696168c3d1d7d946f
+# ba590ddb3f544c35b1f70b63ec5ca6a5
+# 29478b30e4874e2d93e1e816566643c2
+# 9bc79fa0f2834c4a814853cb7cd10d5a
+# 2eb78afa41c24118a4009e1d793879ab
+# 1cf816958987413fa73ddbc49f596b6c
+# f71dfb978ade40cb9dd4a845e7ec8ba5
+# 164be137a9a44859a7e7cafad04ed27b
+# 8975b5053fd948a89b06b032457eff94
+# 39d59792ebf64c1bb7e0e9ede1157ab7
+# dca6c318469947db817ca66f9b455ed1
+# 290eeb30507a478a9bfb1a33ca512432
+# 924b73a781bd446a9f926a1e2ec4196c
+# a2c95a41be034a12b58b522e574a8df2
+# 9e2f9f2c63d845a9a4224c1aa7633b16
+# 444c99d53ac445b185c2a491359c2e01
+# 014c869b616d44c1899f212a3703bf99
+# 14c2fd8c9ff541d4bb225991ed164b17
+# b3c5b3187cbc41d2bc1ac22b0047f533
+# 15bf0302a38f434cb2dccd7fef08b08f
+# 0cbeffb55bd8447c9fd63097a7108e79
+# f50bea73c4b743759cda46ed1df124a9
+# 9143ff3414684b229b91fbb2a1d88a34
+# e7e51f18d779458d9767be752e9f9005
+# c8092983a6d84d72bb717ba5d9406a91
+# cfffd3184a70438ca1093d088f7dab21
+# 7a2d6a60b9e949f7aab8c5a67eb4e2da
+# 680a05deec384df8abea44ea37196b6b
+# 38b5d40d876a4b82aefad03bbaaaf8ce
+# a20b6cab9dbe4909bfc165e6b11b4835
+# e106f2a4b07742cd8e0d056cf2eabac1
+# 8cf3bcf4769b4817b35632b0d1f2d03e
+# 51d88e4cf09d44cf8263f63fc3968208
+# 20db3063f1134917ac0bdec4dc9a6837
+# e0dbd95b4c954ec386d780c2d9ed03bb
+# e51a637661b243ba9306ce586e16d3d6
+# 2ffa2c1d062a40389f6132704d3b30cb
+# 256eaa68d22544f9acff279fde5d65c6
+# 98a0caa7f8ce422590c9545c60916301
+# 85bdf91c94c44ecf82f8e69ec1799f1b
+# 05a3312083b1440abd6a7a035ef9ed93
+# 6cbf278fb2c2494899814af8b99fa458
+# c56295514633471a80538a8c95eebb99
+# 3ae7da3eace24b19a8fb0634fa71ec1f
+# 984bca5868cb48f1978fa1d5c36397ce
+# 7741863bba4a49a3ac967108aa2cdbaa
+# f0dfc7a36f9146a0b7fe1c24e284cdeb
+# 16274618a4024bb7a9780fbdd7d1dfdd
+# e213f5bb08624a39bc916578142a223d
+# 4f16a9bf15ad40f5a2e6a8f0770bfa8c
+# ee127b0d06944809b1d7c443bf482dd0
+#: ../../source/interface_types/collisionchecker/bullet.rst:10
+#: ../../source/interface_types/collisionchecker/ode.rst:10
+#: ../../source/interface_types/controller/idealcontroller.rst:10
+#: ../../source/interface_types/controller/redirectcontroller.rst:10
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:10
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:10
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:10
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:10
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:10
+#: ../../source/interface_types/iksolver/pumaikfast.rst:10
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:10
+#: ../../source/interface_types/module/basemanipulation.rst:10
+#: ../../source/interface_types/module/grasper.rst:10
+#: ../../source/interface_types/module/ikfast.rst:10
+#: ../../source/interface_types/module/ivmodelloader.rst:10
+#: ../../source/interface_types/module/logging.rst:10
+#: ../../source/interface_types/module/taskcaging.rst:10
+#: ../../source/interface_types/module/taskmanipulation.rst:10
+#: ../../source/interface_types/module/textserver.rst:10
+#: ../../source/interface_types/module/viewerrecorder.rst:10
+#: ../../source/interface_types/module/visualfeedback.rst:10
+#: ../../source/interface_types/physicsengine/ode.rst:10
+#: ../../source/interface_types/planner/birrt.rst:10
+#: ../../source/interface_types/planner/explorationrrt.rst:10
+#: ../../source/interface_types/planner/graspgradient.rst:10
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:10
+#: ../../source/interface_types/planner/parabolicsmoother.rst:10
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:10
+#: ../../source/interface_types/planner/rastar.rst:10
+#: ../../source/interface_types/planner/shortcut_linear.rst:10
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:10
+#: ../../source/interface_types/robot/collisionmaprobot.rst:10
+#: ../../source/interface_types/robot/genericrobot.rst:10
+#: ../../source/interface_types/sensor/base_laser2d.rst:10
+#: ../../source/interface_types/sensor/base_laser3d.rst:10
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:10
+#: ../../source/interface_types/sensor/basecamera.rst:10
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:10
+#: ../../source/interface_types/sensor/baselaser2d.rst:10
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:10
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:10
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:10
+#: ../../source/interface_types/viewer/qtcoin.rst:10
+msgid "Rosen Diankov"
+msgstr ""
+
+# c584c23420f14a71919a3e3500c023e5
+#: ../../source/interface_types/collisionchecker/bullet.rst:12
+msgid ""
+"Collision checker from the `Bullet Physics Package <http://bulletphysics."
+"org>`"
+msgstr ""
+
+# 48b6dab6c0a440c3974a12452357e14f
+# bc3b4258c2ce45e890792831aa4650c6
+#: ../../source/interface_types/collisionchecker/bullet.rst:16
+#: ../../source/interface_types/physicsengine/bullet.rst:17
+msgid "bullet Commands"
+msgstr ""
+
+# 7535d2310f5a49028821898b99b68b23
+# e4c8e547de0843c484e60e6257d9a27f
+# cb866b5997d74b10b48d0668be0b94a9
+# 55140a25c89d4c6382c838b9b1350c40
+# 8a8604efbe3849a78e26ed34f9c5de63
+# a20a486164654555b8e0614d8e0c7c88
+# a3ce12905d604e26b609bb8392be88d4
+# b1c07708fcf34e7baf45be5c57f06416
+# c59296914d264d7b83784259c233b7e2
+# 1a3aa9204a4145c6a6eb47c1d97e19c9
+# 5e36e1ef2def45ca9bee86baf467d540
+# 01efd70252e34515b55272e081ef3d21
+# 8b6f7d1e59274469b07a2679ff210553
+# 926e49f19dde47f6b363b1d560bb140e
+# 89fc97ed6561434ca808aa19da287edb
+# d551e09c719143d7a14fbcdbaf211985
+# 700aa10697d3498ead02e16aea59303d
+# cf2f4b06afbb4ad38439095fa80f6731
+# 6e224f3b3f3741539b1e77e091925a32
+# 05429b976f6e4fcd9a99b1a9749ea95e
+# 9b6a500766954ac4907b4f34777953c2
+# fb56b4a431ee4fb4ae9892eb4f735c45
+# 76075760ab514810abdd1e22048caed3
+# 74801761e56e4915a872821962350090
+# fc5d24440fe44d7bac563576ad6da07c
+# 8863a5fb744c42bb9dc38e3d5be260c8
+# 016ca9eccd744d55a375847de0bb9fae
+# b5dc5d0e06404aa2bde52432a98ad470
+# 6d0f68bdbe814750831e2b7c94ae9037
+# 11ab893e51e94454be7e17195326f78d
+# 129c8420b7544046b20ca6320bc5db16
+# 3d4b7d511c5542ab8f1f759df8cbee5d
+# 128d78781a9044079c8dc19b6d6fa546
+# 7458d76234e647b1ac6ee8046d022707
+# 9166e8c20dc84c34abd09e5bd0172990
+# 7d3c6a077a6742f7bedfc64beef4f6f6
+# 87dd21d415fc46ff94e8438c83dbda1b
+# 319fa42d48f440d89a73aa9e3c86afbd
+# 0a9cc686659b42cc83b4fce50cff0027
+# fed498a300ed4bfcb1342ef4597acab5
+# 35911479b02c43f99a138807a88e2723
+# 13144803e29a4291a0e83c6d82223419
+# 147cc8c03380451084e72a84f75d15c3
+# 99ded8d62cef4a4892dbe205f6090088
+# c6f9a05d3cab48f1bd8507f09bcae547
+# 6a9ff0215e184e7fae289876b8ff26b5
+# 391060c5e32a40c7b6b6683273e434e0
+# 0a5f66a816ac4435bc0fbeeded0e1278
+# d0e5d353d5d24875a6bfd88622288010
+# 90af095841814e2e96437527ab3e8ede
+# 5e577f358c0943698b96be829fdf617b
+# 654b376e017a42d6b401f107d28db072
+# 20357863116f4e5392e1f2d7fc3a38a5
+# ff710169adbf4567ba7b81b6fa077127
+# 57fea962690f4ce5bf93c990a7d62dc4
+# b976aa1bbf804f819667133f67fe4592
+# 28f13e06cabf4fcdb47b1bedde934e44
+# 111842c858a642b6a58d5d7d8b3dd842
+# 8de2423db8d24435aedcddc4fb08efdf
+# ba940b8232154dcba3028cb071e6827b
+# ada0ca3577f64bfa8052b744ec6decb9
+# 43b5a45d26384fc988673c7a1a214d72
+# bec8461401af46f7997a189a6d9e843b
+#: ../../source/interface_types/collisionchecker/bullet.rst:23
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:21
+#: ../../source/interface_types/collisionchecker/ode.rst:23
+#: ../../source/interface_types/collisionchecker/pqp.rst:23
+#: ../../source/interface_types/controller/idealcontroller.rst:35
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:47
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:47
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:47
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:47
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:47
+#: ../../source/interface_types/iksolver/pumaikfast.rst:47
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:47
+#: ../../source/interface_types/module/basemanipulation.rst:34
+#: ../../source/interface_types/module/dualmanipulation.rst:34
+#: ../../source/interface_types/module/grasper.rst:78
+#: ../../source/interface_types/module/ikfast.rst:63
+#: ../../source/interface_types/module/ivmodelloader.rst:23
+#: ../../source/interface_types/module/logging.rst:23
+#: ../../source/interface_types/module/taskcaging.rst:52
+#: ../../source/interface_types/module/taskmanipulation.rst:97
+#: ../../source/interface_types/module/textserver.rst:23
+#: ../../source/interface_types/module/viewerrecorder.rst:34
+#: ../../source/interface_types/module/visualfeedback.rst:56
+#: ../../source/interface_types/physicsengine/bullet.rst:24
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:21
+#: ../../source/interface_types/physicsengine/ode.rst:39
+#: ../../source/interface_types/planner/basicrrt.rst:43
+#: ../../source/interface_types/planner/birrt.rst:48
+#: ../../source/interface_types/planner/explorationrrt.rst:45
+#: ../../source/interface_types/planner/grasper.rst:23
+#: ../../source/interface_types/planner/graspgradient.rst:23
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:23
+#: ../../source/interface_types/planner/parabolicsmoother.rst:26
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:23
+#: ../../source/interface_types/planner/rastar.rst:25
+#: ../../source/interface_types/planner/shortcut_linear.rst:23
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:40
+#: ../../source/interface_types/robot/collisionmaprobot.rst:51
+#: ../../source/interface_types/robot/genericrobot.rst:23
+#: ../../source/interface_types/sensor/base_laser2d.rst:38
+#: ../../source/interface_types/sensor/base_laser3d.rst:41
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:23
+#: ../../source/interface_types/sensor/basecamera.rst:23
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:41
+#: ../../source/interface_types/sensor/baselaser2d.rst:38
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:41
+#: ../../source/interface_types/spacesampler/halton.rst:31
+#: ../../source/interface_types/spacesampler/mt19937.rst:23
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:28
+#: ../../source/interface_types/trajectory/generictrajectory.rst:21
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:23
+#: ../../source/interface_types/viewer/qtcoin.rst:35
+msgid "help"
+msgstr ""
+
+# 647e1507fd624d16bf5d36facfa7c466
+# 0fef3a6a35c648cd80dd18b49be69791
+# 3c4c9cd34a454010b52415559e1aa5cf
+# 95173f996c33435893e6db0e3ea98665
+# 27a627d24a75460abae0ccfaa688d9d7
+# f18ebcf3092546cd80139b5f23d32cfa
+# 5923cb45ec43419196949b496b5f0733
+# 9f7f7f9ec76341cb9df981268bc248ad
+# fa87c887bdee481b9523f37e01c36093
+# 04eeb37a81b44eaabae6695a5ae030cf
+# 2fdad6f4c1274653a00acbbbceb1b0b2
+# 7e30399e103b46538987889f5974d8cc
+# 23161c8811864d369581eece57e39519
+# d8b65dacff894409bd60c9caa6f6d501
+# 7b6eb1bea4f14a17911fbd89968aec19
+# 8229fcdbda4b44b2b451fd1eefd76d5d
+# 97b14c16c7da44378a54ddac1c370526
+# 7e0acd8a970041dba0ecaae02a6cd545
+# 3b6b518f67e34ce69b02dfcc8efaa0e1
+# 51f4873be70145d09efd619156c4d85c
+# 4defcaa981774b038f672e310bab6aeb
+# 20e84d92f876408386e236e244454846
+# f398c995e8f345119582c14493397090
+# 492d76db3d164059893f2b59a2b8c6ba
+# b4bce15e9ca34025b3e642905083bc92
+# e01b72ab7eb34be79f29b8539aafadfe
+# 834b17f97e5e44a59e6f42cae4dcbff5
+# 269777a0c72e4a948a3ec068e6647718
+# e6f48e90239045bfb9481c13209de84a
+# f985924ed174407e91bd0e111cb731a6
+# 65673f8dfbb34c61afb235182ee34f1a
+# 99c600c6c6bb4f809f9db2a1594cdcef
+# 4e1dce457f8046da9df645c0bad0d3eb
+# f35f61ce9edf4c22a2acdd859023646e
+# 4e55a3f1743b42ac98d8aca294280088
+# be386fc6bc384b6b8181f35ac1d90fcb
+# 87a04d67ce5242289f2d60110d95171c
+# 887a07edd65e4f3ab284aed8711fb2dd
+# d803feb01116419ca3a58e70c93eb74b
+# 3ff759cf66e84991829fb753c6f2aec9
+# cc109d9581294dc7b0c71e6113991f3f
+# 1272080720a445fe97649293b2b5e6a2
+# b201ac0d33564a4da11f907a591a53dc
+# 9b33ffd6d4ae40bdb0ea41ff7ed97cd0
+# d91c2685089a4f69beddc7a7af5a52df
+# 2618d0375ef0444c99d8e09e996d624d
+# 63128ce102b8408491668e87a0d585a5
+# 2c56dc90864d495492d6ff8a73e408c6
+# ce58a1a2733e4a61b7349d70c92d0c5a
+# a6bde70d96e6471ca3a1cf39ebfbe651
+# 10e657e4049f471eab2b0e379f64c800
+# 2c68515ad55246e7887ba7d88d43010a
+# a1b00c1fc37948448fe29b701d517ef9
+# 88922a5d13fc449482de40481c5b5875
+# 59247c7220a04a91be97e294131de743
+# 82343f991d92462fa6692d2c8aebfe04
+# 16ab7cefcc684c8d81b8b8dcf0866e88
+# 28f6fc662f6a484db0a003fdf1a3faf0
+# 1186bcf601b24608bcfd06f181478816
+# 04ac5440d764421f918056e151f1a012
+# d67393523577487296f2bd71bed9c993
+# 86a392e7b11646ceac85666b9bc34c85
+# 9d2bb2502a46407f91fc3384c4c45c9c
+#: ../../source/interface_types/collisionchecker/bullet.rst:25
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:23
+#: ../../source/interface_types/collisionchecker/ode.rst:25
+#: ../../source/interface_types/collisionchecker/pqp.rst:25
+#: ../../source/interface_types/controller/idealcontroller.rst:37
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:49
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:49
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:49
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:49
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:49
+#: ../../source/interface_types/iksolver/pumaikfast.rst:49
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:49
+#: ../../source/interface_types/module/basemanipulation.rst:36
+#: ../../source/interface_types/module/dualmanipulation.rst:36
+#: ../../source/interface_types/module/grasper.rst:80
+#: ../../source/interface_types/module/ikfast.rst:65
+#: ../../source/interface_types/module/ivmodelloader.rst:25
+#: ../../source/interface_types/module/logging.rst:25
+#: ../../source/interface_types/module/taskcaging.rst:54
+#: ../../source/interface_types/module/taskmanipulation.rst:99
+#: ../../source/interface_types/module/textserver.rst:25
+#: ../../source/interface_types/module/viewerrecorder.rst:36
+#: ../../source/interface_types/module/visualfeedback.rst:58
+#: ../../source/interface_types/physicsengine/bullet.rst:26
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:23
+#: ../../source/interface_types/physicsengine/ode.rst:41
+#: ../../source/interface_types/planner/basicrrt.rst:45
+#: ../../source/interface_types/planner/birrt.rst:50
+#: ../../source/interface_types/planner/explorationrrt.rst:47
+#: ../../source/interface_types/planner/grasper.rst:25
+#: ../../source/interface_types/planner/graspgradient.rst:25
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:25
+#: ../../source/interface_types/planner/parabolicsmoother.rst:28
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:25
+#: ../../source/interface_types/planner/rastar.rst:27
+#: ../../source/interface_types/planner/shortcut_linear.rst:25
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:42
+#: ../../source/interface_types/robot/collisionmaprobot.rst:53
+#: ../../source/interface_types/robot/genericrobot.rst:25
+#: ../../source/interface_types/sensor/base_laser2d.rst:40
+#: ../../source/interface_types/sensor/base_laser3d.rst:43
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:25
+#: ../../source/interface_types/sensor/basecamera.rst:25
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:43
+#: ../../source/interface_types/sensor/baselaser2d.rst:40
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:43
+#: ../../source/interface_types/spacesampler/halton.rst:33
+#: ../../source/interface_types/spacesampler/mt19937.rst:25
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:30
+#: ../../source/interface_types/trajectory/generictrajectory.rst:23
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:25
+#: ../../source/interface_types/viewer/qtcoin.rst:37
+msgid "display help commands."
+msgstr ""
+
+# 24f3946c63dd4e8fb78c0bc5dd8d70e7
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:4
+msgid "GenericCollisionChecker - __internal__"
+msgstr ""
+
+# 130489129c814f47a8c74206831b901d
+# 27aa8f161577461da0b6648e61e77d31
+# 1731d32fb7dc4c818b2402c2fe129675
+# b2b89c0c1736449eba0564591946dfb3
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:8
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:8
+#: ../../source/interface_types/robot/genericrobot.rst:8
+#: ../../source/interface_types/trajectory/generictrajectory.rst:8
+msgid ":ref:`plugin-__internal__`"
+msgstr ""
+
+# a745af55e8a941e49ada5153d42b6a90
+# 8b49a014cee94db9bb9b780c140dfa44
+# 5c8a45f177454070b9ba8c6361f6b2ce
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:10
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:10
+#: ../../source/interface_types/trajectory/generictrajectory.rst:10
+msgid "Not documented yet."
+msgstr ""
+
+# b69a5aa53ee545e29afdaa9c0c4fd0cb
+#: ../../source/interface_types/collisionchecker/genericcollisionchecker.rst:14
+msgid "GenericCollisionChecker Commands"
+msgstr ""
+
+# c8b53327c4224a2b8a7fa1b9ca8a4967
+# f01b6e8285e94c7b8cc28d8ddea8d4ca
+#: ../../source/interface_types/collisionchecker/ode.rst:4
+#: ../../source/interface_types/physicsengine/ode.rst:4
+msgid "ode - oderave"
+msgstr ""
+
+# f4277e91c3b546d3a11d812f051cb2be
+# f56c27ae2a4b4f5ebdcbf4eac992a0a5
+# 7cd2f4c348ae418a96cb8e2cf087a9d3
+#: ../../source/interface_types/collisionchecker/ode.rst:8
+#: ../../source/interface_types/controller/odevelocity.rst:8
+#: ../../source/interface_types/physicsengine/ode.rst:8
+msgid ":ref:`plugin-oderave`"
+msgstr ""
+
+# 215baf4292454f7da6e367d146d6e903
+#: ../../source/interface_types/collisionchecker/ode.rst:12
+msgid ""
+"Open Dynamics Engine collision checker (fast, but inaccurate for triangle "
+"meshes)"
+msgstr ""
+
+# fcf14c0c32d14c3bae038fc300968532
+# 9f99ab2f25cd4daa9a96f9511736b617
+#: ../../source/interface_types/collisionchecker/ode.rst:16
+#: ../../source/interface_types/physicsengine/ode.rst:32
+msgid "ode Commands"
+msgstr ""
+
+# a7f16517ba014b5aacec153fefd0721b
+#: ../../source/interface_types/collisionchecker/ode.rst:34
+msgid "SetMaxContacts"
+msgstr ""
+
+# 04043516395045dfb140bf357ae65471
+#: ../../source/interface_types/collisionchecker/ode.rst:36
+msgid ""
+"sets the maximum contacts that can be returned by the checker (limit is 255)"
+msgstr ""
+
+# e3307b54cac04db3a3807a1076af9af2
+#: ../../source/interface_types/collisionchecker/pqp.rst:4
+msgid "pqp - pqprave"
+msgstr ""
+
+# bd48cc26cd504d2c8e1eb6ffc12035bd
+#: ../../source/interface_types/collisionchecker/pqp.rst:8
+msgid ":ref:`plugin-pqprave`"
+msgstr ""
+
+# 9d8c1b4381044d36a4ab3bfca89de5ac
+#: ../../source/interface_types/collisionchecker/pqp.rst:10
+msgid "Dmitry Berenson, Rosen Diankov"
+msgstr ""
+
+# 16569dd63e524e53a8720563ce7011f1
+#: ../../source/interface_types/collisionchecker/pqp.rst:12
+msgid "PQP collision checker, slow but allows distance queries to objects."
+msgstr ""
+
+# 962f9b86595d489d8c8b9d5a42cdde8c
+#: ../../source/interface_types/collisionchecker/pqp.rst:16
+msgid "pqp Commands"
+msgstr ""
+
+# a14ff21cf5554cb786c849488a72c0f6
+#: ../../source/interface_types/controller/idealcontroller.rst:4
+msgid "IdealController - basecontrollers"
+msgstr ""
+
+# 7898f03a930b45e3bc6d380c1c672857
+# 91710bb9d21b47199e592599cbea87a8
+# d0c3c05e3160462e8ff8f8c98dfedaa3
+#: ../../source/interface_types/controller/idealcontroller.rst:6
+#: ../../source/interface_types/controller/odevelocity.rst:6
+#: ../../source/interface_types/controller/redirectcontroller.rst:6
+msgid ":ref:`interface-controller`"
+msgstr ""
+
+# a52e9f519c234f2890c3225ef793613f
+# 0019bc9426a149dab191c5d7b7ec189e
+#: ../../source/interface_types/controller/idealcontroller.rst:8
+#: ../../source/interface_types/controller/redirectcontroller.rst:8
+msgid ":ref:`plugin-basecontrollers`"
+msgstr ""
+
+# 084a327d9a1f424ea2f0006e63000a10
+#: ../../source/interface_types/controller/idealcontroller.rst:12
+msgid ""
+"Ideal controller used for planning and non-physics simulations. Forces exact "
+"robot positions."
+msgstr ""
+
+# ee1fc2587a3949948e830d18b70fd9d8
+#: ../../source/interface_types/controller/idealcontroller.rst:14
+msgid ""
+"If ef ControllerBase::SetPath is called and the trajectory finishes, then "
+"the controller will continue to set the trajectory's final joint values and "
+"transformation until one of three things happens:"
+msgstr ""
+
+# 7d99c34c2fb44372b93e262641b22efa
+#: ../../source/interface_types/controller/idealcontroller.rst:17
+msgid "ControllerBase::SetPath is called."
+msgstr ""
+
+# f690b5d4d91f4df890f6255b0af86933
+#: ../../source/interface_types/controller/idealcontroller.rst:19
+msgid "ControllerBase::SetDesired is called."
+msgstr ""
+
+# c9494709eed5438582f092908e7507c9
+#: ../../source/interface_types/controller/idealcontroller.rst:21
+msgid "ControllerBase::Reset is called resetting everything"
+msgstr ""
+
+# 4330a9b7980c47bc8123bf09066b8327
+#: ../../source/interface_types/controller/idealcontroller.rst:23
+msgid ""
+"If SetDesired is called, only joint values will be set at every timestep "
+"leaving the transformation alone."
+msgstr ""
+
+# 0c2aedc54e6548c49f3414787ea807fd
+#: ../../source/interface_types/controller/idealcontroller.rst:28
+msgid "IdealController Commands"
+msgstr ""
+
+# 6636c9f60c6b4bb499be88613857e962
+#: ../../source/interface_types/controller/idealcontroller.rst:46
+msgid "Pause"
+msgstr ""
+
+# d26f45b49a00454abe27307137592285
+#: ../../source/interface_types/controller/idealcontroller.rst:48
+msgid "pauses the controller from reacting to commands"
+msgstr ""
+
+# 278a1feab0bd49ddaef58a65e21ca455
+#: ../../source/interface_types/controller/idealcontroller.rst:57
+msgid "SetCheckCollisions"
+msgstr ""
+
+# ad27d78f6c4d44fdac20ef6ca891b114
+#: ../../source/interface_types/controller/idealcontroller.rst:59
+msgid "If set, will check if the robot gets into a collision during movement"
+msgstr ""
+
+# 8c4ef594b8fd402986dfff251a0c87cd
+#: ../../source/interface_types/controller/idealcontroller.rst:68
+msgid "SetThrowExceptions"
+msgstr ""
+
+# c6a2ef647d95426e83c41cb9ee30fa9c
+#: ../../source/interface_types/controller/idealcontroller.rst:70
+msgid "If set, will throw exceptions instead of print warnings. Format is:"
+msgstr ""
+
+# bf8681bffb5146af813b03ef00016d4e
+#: ../../source/interface_types/controller/idealcontroller.rst:72
+msgid "[0/1]"
+msgstr ""
+
+# 1be11c88017749b79ffc3de375e1822f
+#: ../../source/interface_types/controller/odevelocity.rst:4
+msgid "odevelocity - oderave"
+msgstr ""
+
+# f70b0337c55d4264ad8d32afc2423945
+#: ../../source/interface_types/controller/odevelocity.rst:10
+msgid "Juan Gonzalez and Rosen Diankov"
+msgstr ""
+
+# 4563da0277f54554a95c74e2ff95f73e
+#: ../../source/interface_types/controller/odevelocity.rst:12
+msgid "ODE Velocity controller."
+msgstr ""
+
+# f6c74e2de9d44f02b4e7bdc817ba4fd0
+#: ../../source/interface_types/controller/redirectcontroller.rst:4
+msgid "RedirectController - basecontrollers"
+msgstr ""
+
+# d9712140d98a4c138b810b58a958f6ff
+#: ../../source/interface_types/controller/redirectcontroller.rst:12
+msgid ""
+"Redirects all input and output to another controller (this avoides cloning "
+"the other controller while still allowing it to be used from cloned "
+"environments)"
+msgstr ""
+
+# b5809ba261da4bc98a1efbe55b588513
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:4
+msgid "ikfast_katana5d - ikfastsolvers"
+msgstr ""
+
+# b63597c1f6ab4ffb94ae0c66bb06f736
+# 8df46b2aa1374a938d2636ca3e1a1722
+# 809a469eff2e401e926d9c55eb784f04
+# 7801ab6c23184472ba56d2586e969c0d
+# 3dace7586be54810ac6439542e92d862
+# c15ff1f4450342ab92a4e5275d92c0c8
+# 4baf19d6608a4225a47366c6dcae3a23
+# f855c673802b4f299e38ed1771418cd9
+# bd21da69fa924cfd98a0308a645d343e
+# 53515af39cf04159b17276b1795d6718
+# dbb03cd4f6e045a78c70f9c14b882eeb
+# afc0aad3553944c9b5e14a2bec86e2b3
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:6
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:6
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:6
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:6
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:6
+#: ../../source/interface_types/iksolver/pumaikfast.rst:6
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:6
+msgid ":ref:`interface-iksolver`"
+msgstr ""
+
+# fac56c46c64d4796af241009c32033db
+# 69dad7f65f444a9c972e2d96a725be3e
+# 67cd2f377fe24004a15295712e24d9d3
+# 7031aadba594472fa072dc6df8a20b6a
+# 780330bf7a2f4ed5b18e507cb56ac2d8
+# 7c90c96b1414422a87c892619137449b
+# ce10d5b024f44f158a71bc5b458a8b1a
+# 70b59e1babaf409ca5c8117d2013c395
+# 95da8beb84e94e368abc2408ba338f34
+# a1ab4344d2a0432f8a47bac3ecb85721
+# 41b2be21ac89478f84c3269b4a796469
+# 9cdb0949902a48828e14465bc0da1145
+# 72d83818ba2245bba26a8feda8fd17da
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:8
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:8
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:8
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:8
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:8
+#: ../../source/interface_types/iksolver/pumaikfast.rst:8
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:8
+#: ../../source/interface_types/module/ikfast.rst:8
+msgid ":ref:`plugin-ikfastsolvers`"
+msgstr ""
+
+# 83ec40cb51464465b24ea82c4556e438
+# d8a9b1edba1642239a63474121832333
+# e253bb37883245feba1666f8c4676b49
+# 2dcf9e57413647b18e6446f5a2c2a891
+# a593647b2c1848289d24f6b22f87c9d0
+# 3d7b1f3bf1db4780a7f324ef0c707273
+# ac6d900591ea48a2b4dd8c29eae29372
+# d3f3a83786c0407abbc1b3123c9ca758
+# 2aed08605811446cb2f6ceef1c6f834d
+# 5a8c47456bdb46e2a39e5412594199ac
+# 58ee5c2085d54dbda7430eac35779db4
+# a7d7306ce0694a0f82b6082f67877819
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:12
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:12
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:12
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:12
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:12
+#: ../../source/interface_types/iksolver/pumaikfast.rst:12
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:12
+msgid ""
+"An OpenRAVE wrapper for the ikfast generated files. If 6D IK is used, will "
+"check if the end effector and other independent links are in collision "
+"before manipulator link collisions. If they are, the IK will terminate with "
+"failure immediately. Because checking collisions is the slowest part of the "
+"IK, the custom filter function run before collision checking."
+msgstr ""
+
+# 591d47bc05734f318214c67ffe2471f3
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:18
+msgid "ikfast_katana5d Commands"
+msgstr ""
+
+# 35e6b3507b2040729ea5600c3e265a93
+# 3c311303ac654a70bfdef0995da0be3a
+# df29e5be3cb940119a6c8596986fddaf
+# 63bc668a09e646dca82cb5ff4000d320
+# cc7c97e9787d45b29923fdef32ad8959
+# 135a87207b0743a9ae78189b8679bf0b
+# 6a5f629e4fcf45d2becf8dff3609d327
+# 650f6272dad34228a5d44bf3d11ef3b6
+# 995948b8dc5249a1ac392c35271aaae0
+# 8c49693946854de3b920adc34bb1b2b4
+# 4e948ff6f4a9402197c9eb3704738402
+# c29c5afc60d843bd9b2fd39c72ae297d
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:25
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:25
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:25
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:25
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:25
+#: ../../source/interface_types/iksolver/pumaikfast.rst:25
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:25
+msgid "GetRobotLinkStateRepeatCount"
+msgstr ""
+
+# d81cbfcde74948b8a09b282547cd7250
+# 9458402061bd4dbbbbb51c6254f5b6aa
+# ac211da64c7a48daaf9b19c39a9ff755
+# 36f25fb2f2864789993aa3ca727fd5b6
+# daf8e05e0a0a46a988ae16613448a66b
+# 5049f4cee492463baef9f133bbacccdb
+# 0ee30db1870e4eb58be4dcdffb6e98d1
+# 6ff5fb2395994de094432ae0b8ce3324
+# 247d5cded84b467a8cb092ddd8d6e995
+# 9e722567ea3542ae95d8874e2b1f72d3
+# c77f8c6e63474774bc2b97c219ddc0ae
+# ef2e97b347104b39b1fc4285a1e52df5
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:27
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:27
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:27
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:27
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:27
+#: ../../source/interface_types/iksolver/pumaikfast.rst:27
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:27
+msgid ""
+"**Can only be called by a custom filter during a Solve function call.**. "
+"Returns 1 if the filter was called already with the same robot link "
+"positions, 0 otherwise. This is useful in saving computation."
+msgstr ""
+
+# 28ff76593b0847b5bd25aea2d146e1a7
+# 582770800d7741b6b0e413f8adebecd7
+# ebf1d464fe144701933f36db0516aa22
+# ebc9a65d5c8e4b529a3d078c1a6636f6
+# 56d148ca8ee04a4bb989eb4bb41fbdfd
+# d07e3f37939c4fd090e543f69ecd4b84
+# bc87c414b4a94e52b945f7ba43531f38
+# f6c5de93069d4114b8a4a326d78a2ddb
+# 48ee386962b74472b2c0cf1472fbb488
+# 7b78dfbc518342b5b61577a4c5debad4
+# 31114f9dbb8c441e83aff95810fc438a
+# 158b7e4922564ee0b31eb4884e40bbde
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:36
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:36
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:36
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:36
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:36
+#: ../../source/interface_types/iksolver/pumaikfast.rst:36
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:36
+msgid "GetSolutionIndices"
+msgstr ""
+
+# 5b924072f44441a885b3d95d9d72cc76
+# eb900be2e81f497c96736519a9996bc4
+# 3f521431f29f42c8b5ca590d22f6c3ee
+# 471eead880744818b2ba45765296a2d0
+# c13dbe9ec5c44fd8b56c30e5fcf6724f
+# 4f9460c29b27400e90ff92a0bed45bed
+# ff211295d8f9452c9f34c995e921d3f5
+# 18e8ce52fb94405faf4058c43ff9add7
+# 59298074552f4a71b8c331e30cac00a8
+# e5a2ebfe95d44198a7ff7e6cd3e857b4
+# 5ace7036e418471a80852ab1c986ac7d
+# 151c019af1d6478083de591cba783882
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:38
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:38
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:38
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:38
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:38
+#: ../../source/interface_types/iksolver/pumaikfast.rst:38
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:38
+msgid ""
+"**Can only be called by a custom filter during a Solve function call.** Gets "
+"the indices of the current solution being considered. if large-range joints "
+"wrap around, (index>>16) holds the index. So (index&0xffff) is unique to "
+"robot link pose, while (index>>16) describes the repetition."
+msgstr ""
+
+# c7f85423e3054e768f5e94d24c200bf7
+# e30af62ecc37461893f162c644930836
+# 6dc5480101d5442b8303d2ee0c516470
+# ed29725df5074e36854f85ec394dc8c4
+# f668bc3ce15c45ae9f00ac943502ea46
+# 0df89945edf64f4e8f4c70b32c38b242
+# 892f9ff000904755b0dcefaec857be66
+# c626be5d2967461195ad11f8b6be34da
+# 2585571b944f4fc7b5da7b3780aa8cc8
+# 11f5719769cd4279bf1de2e161946280
+# ec6f7934ce0b4e69bb496c2cf2cfc8fc
+# c2f1b5ac74104a8eaae3364b83645189
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:58
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:58
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:58
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:58
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:58
+#: ../../source/interface_types/iksolver/pumaikfast.rst:58
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:58
+msgid "SetIkThreshold"
+msgstr ""
+
+# c813dabfa3ee485ca4d29da80fd5af13
+# 66e0abc4ecbb496099a5590a6b4dadaa
+# ea74ec6ec92b4348b38303e6415684a5
+# 7edad7959a3e41b68934a1af2a3d6062
+# 13c1d60b9e7249b99ee87ec9907193d3
+# c9c395a150534d97ac0ebb5e0d768b30
+# 253611ac3fcc40e9b47715dbdaea0d5f
+# 499d3931360240bd9953e2af74cfce07
+# 3f40d520c2ac43788c7f0ffe353e6e99
+# ac2417edae1a4a0fbf412c0fdce139ce
+# fc6a4c57804847869c42656f7c1cd356
+# 4854e58a4cf74b86af21136afbfc9d2f
+#: ../../source/interface_types/iksolver/ikfast_katana5d.rst:60
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:60
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:60
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:60
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:60
+#: ../../source/interface_types/iksolver/pumaikfast.rst:60
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:60
+msgid "sets the ik threshold for validating returned ik solutions"
+msgstr ""
+
+# b34702baac904b5097222da9e8171189
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:4
+msgid "ikfast_katana5d_trans - ikfastsolvers"
+msgstr ""
+
+# 17ced2679f4e4cda816f6efdf3172877
+#: ../../source/interface_types/iksolver/ikfast_katana5d_trans.rst:18
+msgid "ikfast_katana5d_trans Commands"
+msgstr ""
+
+# b2aa17c5b47f48638a9c0f2cef05c01d
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:4
+msgid "ikfast_pr2_head - ikfastsolvers"
+msgstr ""
+
+# f5e790883b3f418fa969b4ca47791f53
+#: ../../source/interface_types/iksolver/ikfast_pr2_head.rst:18
+msgid "ikfast_pr2_head Commands"
+msgstr ""
+
+# b7220a6ca7294a9ebcd6cb257d41b52d
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:4
+msgid "ikfast_pr2_head_torso - ikfastsolvers"
+msgstr ""
+
+# 187e746c4bfb444bac88dd7f61d9abac
+#: ../../source/interface_types/iksolver/ikfast_pr2_head_torso.rst:18
+msgid "ikfast_pr2_head_torso Commands"
+msgstr ""
+
+# 08ce499aa9ab414788b07468747ab537
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:4
+msgid "ikfast_pr2_leftarm - ikfastsolvers"
+msgstr ""
+
+# 59ab60491039473591d0f491a6c20ac9
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm.rst:18
+msgid "ikfast_pr2_leftarm Commands"
+msgstr ""
+
+# 4d9968fdee734a42b3a6af7ff353f0c5
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:4
+msgid "ikfast_pr2_leftarm_torso - ikfastsolvers"
+msgstr ""
+
+# 419fc92e708946609933d767582f13bd
+#: ../../source/interface_types/iksolver/ikfast_pr2_leftarm_torso.rst:18
+msgid "ikfast_pr2_leftarm_torso Commands"
+msgstr ""
+
+# 9b310fdf9fe54edba9d3ac46d578e588
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:4
+msgid "ikfast_pr2_rightarm - ikfastsolvers"
+msgstr ""
+
+# e02f51a19a6744318dd9ee71ff00a28f
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm.rst:18
+msgid "ikfast_pr2_rightarm Commands"
+msgstr ""
+
+# 14012afef59a49cc90c5fc61d3e3d8b7
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:4
+msgid "ikfast_pr2_rightarm_torso - ikfastsolvers"
+msgstr ""
+
+# af0423e9e32347a6ad0158c3127c03ec
+#: ../../source/interface_types/iksolver/ikfast_pr2_rightarm_torso.rst:18
+msgid "ikfast_pr2_rightarm_torso Commands"
+msgstr ""
+
+# cb90f83500a6426684d0f5ba5831893c
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:4
+msgid "ikfast_schunk_lwa3 - ikfastsolvers"
+msgstr ""
+
+# 0195bfa9282c408c8d0abd01443b4650
+#: ../../source/interface_types/iksolver/ikfast_schunk_lwa3.rst:18
+msgid "ikfast_schunk_lwa3 Commands"
+msgstr ""
+
+# 19e5f5270e1742bfb600009b8d7fadd9
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:4
+msgid "pa10ikfast - ikfastsolvers"
+msgstr ""
+
+# 90eeb4af2d87411aaec3fc05577e6e98
+#: ../../source/interface_types/iksolver/pa10ikfast.rst:18
+msgid "pa10ikfast Commands"
+msgstr ""
+
+# a24934868d594a3381422f12e3ef06c9
+#: ../../source/interface_types/iksolver/pumaikfast.rst:4
+msgid "pumaikfast - ikfastsolvers"
+msgstr ""
+
+# 92c907d51e2d4cd9a172d788b35b0305
+#: ../../source/interface_types/iksolver/pumaikfast.rst:18
+msgid "pumaikfast Commands"
+msgstr ""
+
+# 82b26f6c03544e1b82c69cad155fcc1f
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:4
+msgid "wam7ikfast - ikfastsolvers"
+msgstr ""
+
+# 8e6fdfc73fc640b1ab09591fe076d56c
+#: ../../source/interface_types/iksolver/wam7ikfast.rst:18
+msgid "wam7ikfast Commands"
+msgstr ""
+
+# bf7e5219bb794b65a2d2b2daf4b13a73
+#: ../../source/interface_types/module/basemanipulation.rst:4
+msgid "BaseManipulation - rmanipulation"
+msgstr ""
+
+# 9e72a99c34094f079eb189c421346e46
+# 9ce459d16ece4346b2a29e842e5f60e8
+# bc04ab99383342d0b0f66f2670712256
+# e553199ae9744f698dda11f4f4a6d610
+# bcbc1a7051a54ba0a4fe9e3bc4001a08
+# ea99a30af53f4a489675e823dae792b8
+# 3e5445dd58ef4602a5d6e9976d906c3c
+# a0be70dfd77349f9bfc66114fee81908
+# a2a058afc07f416bb0a01dc29fd1fb8e
+# 41122f43aaef4184bc6d3930f5a752c8
+# b7a4b747d9a14916ac613aad7f01c0c7
+# fd300a2662394dd2a5a3b9f52bc62f1a
+# 76b4f597884044f2a711e84a973add07
+# 46464843f76c450b933e4f8ddccbaac2
+# 359d761e42d94a319fc7c28aa42f2345
+#: ../../source/interface_types/module/basemanipulation.rst:6
+#: ../../source/interface_types/module/dualmanipulation.rst:6
+#: ../../source/interface_types/module/grasper.rst:6
+#: ../../source/interface_types/module/ikfast.rst:6
+#: ../../source/interface_types/module/ivmodelloader.rst:6
+#: ../../source/interface_types/module/logging.rst:6
+#: ../../source/interface_types/module/taskcaging.rst:6
+#: ../../source/interface_types/module/taskmanipulation.rst:6
+#: ../../source/interface_types/module/textserver.rst:6
+#: ../../source/interface_types/module/viewerrecorder.rst:6
+#: ../../source/interface_types/module/visualfeedback.rst:6
+msgid ":ref:`interface-module`"
+msgstr ""
+
+# 9fa3eeb0cfdc4041811f13b13b30db0c
+# dc71671764104009bcdcb98e0f8d8a67
+# f9aba1f3efca4c5f864a682ae7e34113
+# 25c28027cd73474d8387833eafc0e778
+#: ../../source/interface_types/module/basemanipulation.rst:8
+#: ../../source/interface_types/module/taskcaging.rst:8
+#: ../../source/interface_types/module/taskmanipulation.rst:8
+#: ../../source/interface_types/module/visualfeedback.rst:8
+msgid ":ref:`plugin-rmanipulation`"
+msgstr ""
+
+# 460280101f6747658e7759c0f689a363
+#: ../../source/interface_types/module/basemanipulation.rst:12
+msgid ""
+"Very useful routines for manipulation planning and planning in general. The "
+"planners use analytical inverse kinematics and search based techniques. Most "
+"of the MoveX commands by default execute the plan on the current robot by "
+"calling :meth:`.RobotBase.SetActiveMotion`. This can be disabled by adding "
+"'execute 0' to the command line"
+msgstr ""
+
+# c4944051c7cc4e8eadd4191034034504
+#: ../../source/interface_types/module/basemanipulation.rst:16
+msgid "BaseManipulation Commands"
+msgstr ""
+
+# 32ef097faa234c7d939a2f1de2c6d19a
+# 1241a5a7cd544507aa1056244f06a86a
+#: ../../source/interface_types/module/basemanipulation.rst:23
+#: ../../source/interface_types/module/dualmanipulation.rst:23
+msgid "GrabBody"
+msgstr ""
+
+# 26bb6d5b38714b1b94498105694d455f
+# 2fcf765ab79f43a6928e7d851c280a9a
+#: ../../source/interface_types/module/basemanipulation.rst:25
+#: ../../source/interface_types/module/dualmanipulation.rst:25
+msgid "Robot calls ::Grab on a body with its current manipulator"
+msgstr ""
+
+# 5e04b145b38f436abe71b8585976f4f8
+#: ../../source/interface_types/module/basemanipulation.rst:45
+msgid "JitterActive"
+msgstr ""
+
+# 807d03fc1faf45ba9084228021d17be6
+#: ../../source/interface_types/module/basemanipulation.rst:47
+msgid "Jitters the active DOF for a collision-free position."
+msgstr ""
+
+# 01fcede609c748fabbce85d059464ce3
+#: ../../source/interface_types/module/basemanipulation.rst:56
+msgid "MoveActiveJoints"
+msgstr ""
+
+# 3b0eddf6f9a6488dacfbf4836c49ba17
+#: ../../source/interface_types/module/basemanipulation.rst:58
+msgid "Moves the current active joints to a specified goal destination:"
+msgstr ""
+
+# 1a38531ecd1e4b42bba71bff24a68e3c
+#: ../../source/interface_types/module/basemanipulation.rst:60
+msgid "maxiter - The maximum number of iterations on the internal planner."
+msgstr ""
+
+# e16b88c482b24e1abf5d83b50706e3c2
+#: ../../source/interface_types/module/basemanipulation.rst:61
+msgid "maxtries - The maximum number of times to restart the planner."
+msgstr ""
+
+# 5c5cd4dc3de742d48fa9391043f86f18
+#: ../../source/interface_types/module/basemanipulation.rst:62
+msgid "steplength - See PlannerParameters::_fStepLength"
+msgstr ""
+
+# ccd8c3a310d74ebb86553138e382ee46
+#: ../../source/interface_types/module/basemanipulation.rst:73
+msgid "MoveHandStraight"
+msgstr ""
+
+# 930de052f68e434980f9589abd26ea84
+#: ../../source/interface_types/module/basemanipulation.rst:75
+msgid ""
+"Move the active end-effector in a straight line until collision or IK fails. "
+"Parameters:"
+msgstr ""
+
+# e5486e69766840b6b1b3cd21d1ecd0d7
+#: ../../source/interface_types/module/basemanipulation.rst:77
+msgid ""
+"steplength - the increments in workspace in which the robot tests for the "
+"next configuration."
+msgstr ""
+
+# 87e0087bde0341a0aadc8cee0a745017
+#: ../../source/interface_types/module/basemanipulation.rst:79
+msgid ""
+"minsteps - The minimum number of steps that need to be taken in order for "
+"success to declared. If robot doesn't reach this number of steps, it fails."
+msgstr ""
+
+# afffa864c50848d3af88a4f14600735c
+#: ../../source/interface_types/module/basemanipulation.rst:81
+msgid "maxsteps - The maximum number of steps the robot should take."
+msgstr ""
+
+# 1fd50bfa6f194620a17894ef698a06fe
+#: ../../source/interface_types/module/basemanipulation.rst:83
+msgid "direction - The workspace direction to move end effector in."
+msgstr ""
+
+# acc20bb810934013b64c9b54a5f698b2
+#: ../../source/interface_types/module/basemanipulation.rst:85
+msgid ""
+"Method wraps the WorkspaceTrajectoryTracker planner. For more details on "
+"parameters, check out its documentation."
+msgstr ""
+
+# 21104b6a97374a2abf3955d08b27d1ab
+#: ../../source/interface_types/module/basemanipulation.rst:94
+msgid "MoveManipulator"
+msgstr ""
+
+# b37eba5996734a0a80e6ad7b2807d964
+#: ../../source/interface_types/module/basemanipulation.rst:96
+msgid "Moves arm joints of active manipulator to a given set of joint values"
+msgstr ""
+
+# b06009fd92ff4db1b3bc5de9cb7c48d7
+#: ../../source/interface_types/module/basemanipulation.rst:105
+msgid "MoveToHandPosition"
+msgstr ""
+
+# ee21411f2c07494bb04e622269af27aa
+#: ../../source/interface_types/module/basemanipulation.rst:107
+msgid ""
+"Move the manipulator's end effector to reach a set of 6D poses. Parameters:"
+msgstr ""
+
+# 113a99229a574d09a13da392e907ca64
+#: ../../source/interface_types/module/basemanipulation.rst:118
+msgid "MoveUnsyncJoints"
+msgstr ""
+
+# 1cee9aca651a41d3abf1dfa22223e827
+#: ../../source/interface_types/module/basemanipulation.rst:120
+msgid ""
+"Moves the active joints to a position where the inactive (hand) joints can "
+"fully move to their goal. This is necessary because synchronization with arm "
+"and hand isn't guaranteed. Options: handjoints savetraj planner"
+msgstr ""
+
+# 8b911e271c4c4e2d81be14939752f589
+# a547a71742784764bcb1b8466ccef76b
+#: ../../source/interface_types/module/basemanipulation.rst:132
+#: ../../source/interface_types/module/dualmanipulation.rst:68
+msgid "ReleaseAll"
+msgstr ""
+
+# 50e67250c9ed4a81bf9c1fba19759cd7
+# 9f19031638954140ba2323c04d795aba
+#: ../../source/interface_types/module/basemanipulation.rst:134
+#: ../../source/interface_types/module/dualmanipulation.rst:70
+msgid "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed)."
+msgstr ""
+
+# 21e5b284826d4e9abab13d440a97ece4
+# cb103e42f1934abc94fdbae600c28a1c
+#: ../../source/interface_types/module/basemanipulation.rst:143
+#: ../../source/interface_types/module/dualmanipulation.rst:79
+msgid "SetActiveManip"
+msgstr ""
+
+# 6eedf18d8e6f42839959c8f7eb633186
+# ef3092a8cb7a4531aa31bf5b194ffd07
+#: ../../source/interface_types/module/basemanipulation.rst:145
+#: ../../source/interface_types/module/dualmanipulation.rst:81
+msgid "Set the active manipulator"
+msgstr ""
+
+# 3c9fd0975be645aeb5541c9cd69c7576
+# 2041335309f04eac9dfb46840c8dbc17
+#: ../../source/interface_types/module/basemanipulation.rst:154
+#: ../../source/interface_types/module/taskmanipulation.rst:131
+msgid "SetMinimumGoalPaths"
+msgstr ""
+
+# bff4f67f2ff24302a976c7d36fa1a077
+# 49f06121f198424087ea63d3cb16e866
+#: ../../source/interface_types/module/basemanipulation.rst:156
+#: ../../source/interface_types/module/taskmanipulation.rst:133
+msgid "Sets _minimumgoalpaths for all planner parameters."
+msgstr ""
+
+# 529faebff73d447c87316ba17064face
+# 806cd162807347efb1393117d356ea5a
+#: ../../source/interface_types/module/basemanipulation.rst:165
+msgid "SetPostProcessing"
+msgstr ""
+
+# 182b079116544cb4b8a49c6159959544
+#: ../../source/interface_types/module/basemanipulation.rst:167
+msgid "Sets post processing parameters."
+msgstr ""
+
+# 50442e64ad614897b2c41fed8b13aede
+#: ../../source/interface_types/module/basemanipulation.rst:176
+msgid "Traj"
+msgstr ""
+
+# 68336e1c2c95412b99c07920c8bd3aaf
+#: ../../source/interface_types/module/basemanipulation.rst:178
+msgid "Execute a trajectory from a file on the local filesystem"
+msgstr ""
+
+# 7a0b762615554d33b3e2f76c93073992
+#: ../../source/interface_types/module/dualmanipulation.rst:4
+msgid "DualManipulation - dualmanipulation"
+msgstr ""
+
+# 58cbfd66cf61415b84302d7be9682edf
+#: ../../source/interface_types/module/dualmanipulation.rst:8
+msgid ":ref:`plugin-dualmanipulation`"
+msgstr ""
+
+# 7151ba88e73249fba79468a55ef5766a
+#: ../../source/interface_types/module/dualmanipulation.rst:10
+msgid "Achint Aggarwal"
+msgstr ""
+
+# abd8748105534f6ba7a960fc130e6cd2
+#: ../../source/interface_types/module/dualmanipulation.rst:12
+msgid "Interface for planners using more than one manipulator simultaneously."
+msgstr ""
+
+# 2b8516fbb6564310926469db54a21976
+#: ../../source/interface_types/module/dualmanipulation.rst:16
+msgid "DualManipulation Commands"
+msgstr ""
+
+# 457380447a4549ff92bc0392c28de94e
+#: ../../source/interface_types/module/dualmanipulation.rst:45
+msgid "MoveAllJoints"
+msgstr ""
+
+# a91dc74d31ba49c2933534b5ce26f6b2
+#: ../../source/interface_types/module/dualmanipulation.rst:47
+msgid "Moves the current active joints to a specified goal destination"
+msgstr ""
+
+# 740aacdd5f454dd2890770b01e2ceea3
+#: ../../source/interface_types/module/dualmanipulation.rst:57
+msgid "MoveBothHandsStraight"
+msgstr ""
+
+# fcec32629e6844c6b1b8054b9c227269
+#: ../../source/interface_types/module/dualmanipulation.rst:59
+msgid ""
+"Move both the end-effectors in straight lines until collision or IK fails."
+msgstr ""
+
+# e06ffab7eb1d4d0f8eea17e6d74b572e
+# f267920f9d9645028477bd717aff184a
+#: ../../source/interface_types/module/grasper.rst:4
+#: ../../source/interface_types/planner/grasper.rst:4
+msgid "Grasper - grasper"
+msgstr ""
+
+# dbef7999463a4ad99d72ea6ffee59563
+# 927215f45c12426986b4a90dc54eaff8
+#: ../../source/interface_types/module/grasper.rst:8
+#: ../../source/interface_types/planner/grasper.rst:8
+msgid ":ref:`plugin-grasper`"
+msgstr ""
+
+# b8e15266ed1c452fba8fcc8e09f3c0a5
+#: ../../source/interface_types/module/grasper.rst:12
+msgid ""
+"Used to simulate a hand grasping an object by closing its fingers until "
+"collision with all links."
+msgstr ""
+
+# d7a46e2102764a7c81914b7d44db11f8
+# fda633ea887841fbaea590561cb6e7e8
+#: ../../source/interface_types/module/grasper.rst:16
+#: ../../source/interface_types/planner/grasper.rst:16
+msgid "Grasper Commands"
+msgstr ""
+
+# 2da57d1e39cd45d6b6ff38abf42c1061
+#: ../../source/interface_types/module/grasper.rst:23
+msgid "ComputeDistanceMap"
+msgstr ""
+
+# 9939450b03fb47d693f8cdbb4db3bde2
+#: ../../source/interface_types/module/grasper.rst:25
+msgid "Computes a distance map around a particular point in space"
+msgstr ""
+
+# e2f41d47a3fd41e4a69a1ce16472583a
+#: ../../source/interface_types/module/grasper.rst:34
+msgid "ConvexHull"
+msgstr ""
+
+# 5563c60390b34d43bcb3743b0e8d9d07
+#: ../../source/interface_types/module/grasper.rst:36
+msgid ""
+"Given a point cloud, returns information about its convex hull like normal "
+"planes, vertex indices, and triangle indices. Computed planes point outside "
+"the mesh, face indices are not ordered, triangles point outside the mesh "
+"(counter-clockwise)"
+msgstr ""
+
+# 748157300f1348b98e51ab2c7543d8a3
+#: ../../source/interface_types/module/grasper.rst:45
+msgid "GetStableContacts"
+msgstr ""
+
+# 9cc10fa2795645608da7dc5d146516e5
+#: ../../source/interface_types/module/grasper.rst:47
+msgid "Returns the stable contacts as defined by the closing direction"
+msgstr ""
+
+# dcac556b14d94d58820daf142f75a7e8
+#: ../../source/interface_types/module/grasper.rst:56
+msgid "Grasp"
+msgstr ""
+
+# 70b0b6a8320749a88c8a1b30e50a5fd8
+#: ../../source/interface_types/module/grasper.rst:58
+msgid "Performs a grasp and returns contact points"
+msgstr ""
+
+# cbad1739ab574481a3309c2be16b1c35
+#: ../../source/interface_types/module/grasper.rst:67
+msgid "GraspThreaded"
+msgstr ""
+
+# f13e51dcaefa466bb4223ad8edc153c3
+#: ../../source/interface_types/module/grasper.rst:69
+msgid ""
+"Parllelizes the computation of the grasp planning and force closure. Number "
+"of threads can be specified with 'numthreads'."
+msgstr ""
+
+# c3baa85cd69d483d921ed2c5681b153a
+#: ../../source/interface_types/module/ikfast.rst:4
+msgid "ikfast - ikfastsolvers"
+msgstr ""
+
+# e6717ca39edf4825ae17e41264971d50
+#: ../../source/interface_types/module/ikfast.rst:12
+msgid ""
+"Allows dynamic loading and registering of ikfast shared objects to openrave "
+"plugins. Also contains several test routines for inverse kinematics."
+msgstr ""
+
+# 778332abe82b4be3a71cc831f15f1943
+#: ../../source/interface_types/module/ikfast.rst:17
+msgid "ikfast Commands"
+msgstr ""
+
+# cc118b0f79fc45d2860bc0506a4c52d2
+#: ../../source/interface_types/module/ikfast.rst:24
+msgid "AddIkLibrary"
+msgstr ""
+
+# 73113da8a12c4671ab6f8c10bf817842
+#: ../../source/interface_types/module/ikfast.rst:26
+msgid ""
+"Dynamically adds an ik solver to openrave by loading a shared object (based "
+"on ikfast code generation). Usage::"
+msgstr ""
+
+# a8d82ceb7e3c45fd98a51364abdf791c
+#: ../../source/interface_types/module/ikfast.rst:31
+msgid "return the type of inverse kinematics solver (IkParamterization::Type)"
+msgstr ""
+
+# b49d0ac0ee3146559a241ef8d929a4fc
+#: ../../source/interface_types/module/ikfast.rst:40
+msgid "DebugIK"
+msgstr ""
+
+# f7c436d8269e42b3b93be4aadbc684b9
+#: ../../source/interface_types/module/ikfast.rst:42
+msgid ""
+"Function used for debugging and testing an IK solver. Input parameters are:"
+msgstr ""
+
+# 164f6685a55c4b4cba87948dae3bfbff
+#: ../../source/interface_types/module/ikfast.rst:44
+msgid ""
+"string readfile - file containing joint values to read, starts with number "
+"of entries."
+msgstr ""
+
+# dc81b5e8ae204aed92d47d636381f4fd
+#: ../../source/interface_types/module/ikfast.rst:46
+msgid ""
+"int numtests - if file not specified, number of random tests to perform "
+"(defualt is 1000)."
+msgstr ""
+
+# fa66c8202d3a4519822e443ed2d818d6
+#: ../../source/interface_types/module/ikfast.rst:48
+msgid ""
+"float sampledegeneratecases - probability in [0,1] specifies the probability "
+"of sampling joint values on [-pi/2,0,pi/2] (default is 0.2)."
+msgstr ""
+
+# 5205247fd2da47ee8946ca42b51f807e
+#: ../../source/interface_types/module/ikfast.rst:50
+msgid ""
+"int selfcollision - if true, will check IK only for non-self colliding "
+"positions of the robot (default is 0)."
+msgstr ""
+
+# ec1091b3b5a04f99ab774e0f0d851a69
+#: ../../source/interface_types/module/ikfast.rst:52
+msgid ""
+"string robot - name of the robot to test. the active manipulator of the "
+"roobt is used."
+msgstr ""
+
+# 641d6c53c293465e8bd0d386cdb4b9fa
+#: ../../source/interface_types/module/ikfast.rst:74
+msgid "IKTest"
+msgstr ""
+
+# de52a685ee174d1f84e99c50e7bf011f
+#: ../../source/interface_types/module/ikfast.rst:76
+msgid ""
+"Tests for an IK solution if active manipulation has an IK solver attached"
+msgstr ""
+
+# dcde5d474a7347bea790350756fca31f
+#: ../../source/interface_types/module/ikfast.rst:85
+msgid "LoadIKFastSolver"
+msgstr ""
+
+# 75a7beb10ab247c793446a07caa76bc0
+#: ../../source/interface_types/module/ikfast.rst:87
+msgid ""
+"Dynamically calls the inversekinematics.py script to generate an ik solver "
+"for a robot, or to load an existing one Usage::"
+msgstr ""
+
+# 43c391b131d6446eae69b142717b1e4c
+#: ../../source/interface_types/module/ikfast.rst:92
+msgid "return nothing, but does call the SetIKSolver for the robot"
+msgstr ""
+
+# 19f99d9f2aba4d90a2178df30d119fcb
+#: ../../source/interface_types/module/ikfast.rst:101
+msgid "PerfTiming"
+msgstr ""
+
+# d32ad5b1f5954488ba87fe75a94e2479
+#: ../../source/interface_types/module/ikfast.rst:103
+msgid "Times the ik call of a given library. Usage::"
+msgstr ""
+
+# 0b2a18b3a43e4b82b06b38655db91879
+#: ../../source/interface_types/module/ikfast.rst:108
+msgid "return the set of time measurements made in nano-seconds"
+msgstr ""
+
+# be320b1501af4ca8b2355141bd226580
+#: ../../source/interface_types/module/ivmodelloader.rst:4
+msgid "IvModelLoader - qtcoinrave"
+msgstr ""
+
+# b597388fd12f46b2abfa50ac829ed02b
+# 443d1662fd6944b8bfc24a0c8fffc10c
+# 27df8da742084dc1b9ac1a6b7065b103
+#: ../../source/interface_types/module/ivmodelloader.rst:8
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:8
+#: ../../source/interface_types/viewer/qtcoin.rst:8
+msgid ":ref:`plugin-qtcoinrave`"
+msgstr ""
+
+# 5f635caa89fe4b62876563c5ddcae6f3
+#: ../../source/interface_types/module/ivmodelloader.rst:12
+msgid ""
+"Provides a simple model loader functionality returning a triangle mesh using "
+"the Coin3D library. Depending on the version, Coin3D might be licensed under "
+"GPL."
+msgstr ""
+
+# c1ceedf621064417952eb5a68adbf9f7
+#: ../../source/interface_types/module/ivmodelloader.rst:16
+msgid "IvModelLoader Commands"
+msgstr ""
+
+# 5ee5f3fea2854779bd419299294776a9
+#: ../../source/interface_types/module/ivmodelloader.rst:34
+msgid "LoadModel"
+msgstr ""
+
+# 2df121a950674ca49004fd993b8f6738
+#: ../../source/interface_types/module/ivmodelloader.rst:36
+msgid "Returns the triangle mesh given a model filename"
+msgstr ""
+
+# ba081fadb3e4442e87f85fd64f3f0461
+#: ../../source/interface_types/module/logging.rst:4
+msgid "Logging - logging"
+msgstr ""
+
+# c39378bcbd124b3e89b4c9f008bd99bc
+# f32574686ff24c89836343722bf60223
+#: ../../source/interface_types/module/logging.rst:8
+#: ../../source/interface_types/module/viewerrecorder.rst:8
+msgid ":ref:`plugin-logging`"
+msgstr ""
+
+# c98ca1721a2e4fbd9130b7e4eea3a94f
+#: ../../source/interface_types/module/logging.rst:12
+msgid "Can save the entire scene to an OpenRAVE XML file"
+msgstr ""
+
+# ee44dc8c4c1c41f88a2fc8fcb81cd5c5
+#: ../../source/interface_types/module/logging.rst:16
+msgid "Logging Commands"
+msgstr ""
+
+# 350dd138540343e18c4380635d4f123f
+#: ../../source/interface_types/module/logging.rst:34
+msgid "savescene"
+msgstr ""
+
+# e248bca4b5584a5484ec97b6cba78b99
+#: ../../source/interface_types/module/logging.rst:36
+msgid ""
+"Saves the entire scene in an xml file. If paths are relative, should only be "
+"opened from the dirctory openrave was launched in Usage: [filename %s] "
+"[absolute (default is relative)]"
+msgstr ""
+
+# 9fd3632ef54e470abe8f9cf2c12b7ca1
+#: ../../source/interface_types/module/taskcaging.rst:4
+msgid "TaskCaging - rmanipulation"
+msgstr ""
+
+# 9bcb6ff7f2f640b68c1f46ea1a2934f4
+#: ../../source/interface_types/module/taskcaging.rst:15
+msgid ""
+"Implements various algorithms to open and close doors by having the hand "
+"cage the handles instead of tightly grip. This greatly relaxes the "
+"constraints on the robot (see the door manipluation example). The relevant "
+"paper is:"
+msgstr ""
+
+# 0af8be410f9343bb86e8fcbfa36792d8
+#: ../../source/interface_types/module/taskcaging.rst:17
+msgid ""
+"Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. "
+"Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid "
+"Robots, December 2008."
+msgstr ""
+
+# 4fc3b8c37b7f4abe98f785870c098f29
+#: ../../source/interface_types/module/taskcaging.rst:21
+msgid "TaskCaging Commands"
+msgstr ""
+
+# a6832989c84640f6b3db1bdddcae7b90
+#: ../../source/interface_types/module/taskcaging.rst:28
+msgid "bodytraj"
+msgstr ""
+
+# 23695287a44c461fb44ebc375971cbd1
+#: ../../source/interface_types/module/taskcaging.rst:30
+msgid ""
+"Starts a body to follow a trajectory. The trajrectory must contain "
+"timestamps Options: target targettraj"
+msgstr ""
+
+# 1f1c23f75a2f431a97680cb208009779
+#: ../../source/interface_types/module/taskcaging.rst:40
+msgid "graspset"
+msgstr ""
+
+# d13d4d827fc54e91842890cb69c927e5
+#: ../../source/interface_types/module/taskcaging.rst:42
+msgid ""
+"Creates a grasp set given a robot end-effector floating in space. Options: "
+"step exploreprob size target targetjoint contactconfigdelta cagedconfig"
+msgstr ""
+
+# 71058b3e12d94f0ab11a650a367086f3
+#: ../../source/interface_types/module/taskcaging.rst:63
+msgid "simpleconstraintplan"
+msgstr ""
+
+# 2a9b84699c184221be6964eaa373a6f4
+#: ../../source/interface_types/module/taskcaging.rst:65
+msgid "Invokes a simple one grasp planner"
+msgstr ""
+
+# 35745100a7a34a238df1fef59bd897b2
+#: ../../source/interface_types/module/taskcaging.rst:74
+msgid "taskconstraintplan"
+msgstr ""
+
+# 9781cc62bcdd4055b38538754c9fd03f
+#: ../../source/interface_types/module/taskcaging.rst:76
+msgid "Invokes the relaxed task constrained planner"
+msgstr ""
+
+# 4307d6b1c13b4a8cb678e66aa96c078c
+#: ../../source/interface_types/module/taskmanipulation.rst:4
+msgid "TaskManipulation - rmanipulation"
+msgstr ""
+
+# d402f24862d8423ab4ea4ccb9c4069af
+#: ../../source/interface_types/module/taskmanipulation.rst:12
+msgid ""
+"Task-based manipulation planning involving target objects. A lot of the "
+"algorithms and theory are covered in:"
+msgstr ""
+
+# 9fce5e9cf9934ed9a9456b77509a2fdb
+#: ../../source/interface_types/module/taskmanipulation.rst:14
+msgid ""
+"Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". "
+"PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, "
+"August 2010."
+msgstr ""
+
+# 8e865bdb6eab4df2a3578f4cb55be86f
+#: ../../source/interface_types/module/taskmanipulation.rst:19
+msgid "TaskManipulation Commands"
+msgstr ""
+
+# 2248db6c59bc4ac19b3cc61b603cff61
+#: ../../source/interface_types/module/taskmanipulation.rst:26
+msgid "CloseFingers"
+msgstr ""
+
+# f1c97a8c064d498c998b288b7ba78a2e
+#: ../../source/interface_types/module/taskmanipulation.rst:28
+msgid "Closes the active manipulator fingers using the grasp planner."
+msgstr ""
+
+# 7b94b5f64e0e4b38a034f717bae3db60
+#: ../../source/interface_types/module/taskmanipulation.rst:37
+msgid "CreateSystem"
+msgstr ""
+
+# b70de8aa389a4afaa80c966736137e7e
+#: ../../source/interface_types/module/taskmanipulation.rst:39
+msgid "creates a sensor system and initializes it with the current bodies"
+msgstr ""
+
+# 9d49685bd70e40b1b13e4835c2847175
+#: ../../source/interface_types/module/taskmanipulation.rst:48
+msgid "EvaluateConstraints"
+msgstr ""
+
+# c16c94c0f9154f78860e5ca8d25c415d
+#: ../../source/interface_types/module/taskmanipulation.rst:50
+msgid ""
+"Instantiates a jacobian constraint function and runs it on several examples. "
+"The constraints work on the active degress of freedom of the manipulator "
+"starting from the current configuration"
+msgstr ""
+
+# 32d5b4dc4e09434ca27d761b30b4e999
+#: ../../source/interface_types/module/taskmanipulation.rst:60
+msgid "GraspPlanning"
+msgstr ""
+
+# 2b92bd16ede84cd49558ac15545a8065
+#: ../../source/interface_types/module/taskmanipulation.rst:62
+msgid ""
+"Grasp planning is the ultimate function that puts together many planners "
+"achieving a robust and general pick and place motiotions with grasp sets. It "
+"first chooses grasps from a grasp set and use it for manipulation. In order "
+"for the arm to reach the grasps, it must have a Transform6D or "
+"TranslationDirection5D IK solver, anything with less DOF will not work. "
+"Parameters:"
+msgstr ""
+
+# 1688409e338b41dc92d3719e2411260e
+#: ../../source/interface_types/module/taskmanipulation.rst:65
+msgid "grasps"
+msgstr ""
+
+# 537e131975be4e52b8b1688c4d4385d0
+#: ../../source/interface_types/module/taskmanipulation.rst:66
+msgid "outputtraj"
+msgstr ""
+
+# cc87f56a827b4471b42c8c4705f48179
+#: ../../source/interface_types/module/taskmanipulation.rst:67
+msgid "execute"
+msgstr ""
+
+# 05b0c2aec9f84b0e9ed02260f164c27d
+#: ../../source/interface_types/module/taskmanipulation.rst:68
+msgid "randomdests"
+msgstr ""
+
+# c417db9aca12405f89b441e34846dc85
+#: ../../source/interface_types/module/taskmanipulation.rst:69
+msgid "writetraj"
+msgstr ""
+
+# 86bd5c7fc4ff4994aa86b1102bf32da8
+#: ../../source/interface_types/module/taskmanipulation.rst:70
+msgid "maxiter"
+msgstr ""
+
+# b3f7f833867d42a98779b2f40e63b95f
+#: ../../source/interface_types/module/taskmanipulation.rst:71
+msgid "igraspdir"
+msgstr ""
+
+# b235f798faeb40d593eef8ce3eec960a
+#: ../../source/interface_types/module/taskmanipulation.rst:72
+msgid "igrasppos"
+msgstr ""
+
+# 8242a40d007f42dd801d35501fb5b0c8
+#: ../../source/interface_types/module/taskmanipulation.rst:73
+msgid "igrasproll"
+msgstr ""
+
+# c346c059a69b4d6789162b17e79898a5
+#: ../../source/interface_types/module/taskmanipulation.rst:74
+msgid "igraspstandoff"
+msgstr ""
+
+# ab5336530b8f44d593bf0108ded0cc84
+#: ../../source/interface_types/module/taskmanipulation.rst:75
+msgid "igrasppreshape"
+msgstr ""
+
+# 90461a112fdb4b86bc0b490d9159a777
+#: ../../source/interface_types/module/taskmanipulation.rst:76
+msgid "igrasptrans"
+msgstr ""
+
+# f7b70604f5524d92b088e6faca5a5018
+#: ../../source/interface_types/module/taskmanipulation.rst:77
+msgid "target"
+msgstr ""
+
+# 599ce9ae65b743168c6c1b47c0bf223e
+#: ../../source/interface_types/module/taskmanipulation.rst:78
+msgid "approachoffset"
+msgstr ""
+
+# e2b80823a08045faa66eb624a919b9f4
+#: ../../source/interface_types/module/taskmanipulation.rst:79
+msgid "quitafterfirstrun"
+msgstr ""
+
+# 960e0dc3e2fd4f95bef55128062a9fd9
+#: ../../source/interface_types/module/taskmanipulation.rst:80
+msgid "matdests"
+msgstr ""
+
+# 0c2b8afef895445bb429a640930cddcc
+#: ../../source/interface_types/module/taskmanipulation.rst:81
+msgid "posedests"
+msgstr ""
+
+# eb7111f71534475c9d7117f09b3019db
+#: ../../source/interface_types/module/taskmanipulation.rst:82
+msgid "seedgrasps"
+msgstr ""
+
+# e42b04b252db495589d7f0e7ba7c5746
+#: ../../source/interface_types/module/taskmanipulation.rst:83
+msgid "seeddests"
+msgstr ""
+
+# f5c0cced78db4a4fbe94e079213931b2
+#: ../../source/interface_types/module/taskmanipulation.rst:84
+msgid "seedik"
+msgstr ""
+
+# 8b5bcae28d6b4866965d90bd863cad0b
+#: ../../source/interface_types/module/taskmanipulation.rst:85
+msgid "savepreshapetraj"
+msgstr ""
+
+# fe9b321542cb4d848b46eeabb5392274
+#: ../../source/interface_types/module/taskmanipulation.rst:86
+msgid "grasptranslationstepmult"
+msgstr ""
+
+# 9714f80a1a8f45b2b081df1a375aee3c
+#: ../../source/interface_types/module/taskmanipulation.rst:87
+msgid "graspfinestep"
+msgstr ""
+
+# bc40b521cba4490cbf5e07e6aba75968
+#: ../../source/interface_types/module/taskmanipulation.rst:108
+msgid "ReleaseActive"
+msgstr ""
+
+# 2f5178ee0ca34394b70fea59769b083b
+#: ../../source/interface_types/module/taskmanipulation.rst:110
+msgid "Moves the active DOF using the grasp planner."
+msgstr ""
+
+# 460e550f74fd4b8a81fea210042c949c
+#: ../../source/interface_types/module/taskmanipulation.rst:119
+msgid "ReleaseFingers"
+msgstr ""
+
+# 6602ae713db14bd69b241e3d2411af33
+#: ../../source/interface_types/module/taskmanipulation.rst:121
+msgid ""
+"Releases the active manipulator fingers using the grasp planner. Also "
+"releases the given object."
+msgstr ""
+
+# 40ce89e6ad194261aa2ed77fca67e619
+#: ../../source/interface_types/module/taskmanipulation.rst:142
+msgid "SwitchModels"
+msgstr ""
+
+# 8dfdd62755dd42c599527da51e06a8fc
+#: ../../source/interface_types/module/taskmanipulation.rst:144
+msgid "Switches between thin and fat models for planning."
+msgstr ""
+
+# b66bdbf17de44a19a615e235187b6da5
+#: ../../source/interface_types/module/textserver.rst:4
+msgid "textserver - textserver"
+msgstr ""
+
+# 4d36e77e434745118f85f3d9a0c324d4
+#: ../../source/interface_types/module/textserver.rst:8
+msgid ":ref:`plugin-textserver`"
+msgstr ""
+
+# 3ad970419f884fa9aa562df19f2ea41b
+#: ../../source/interface_types/module/textserver.rst:12
+msgid "Simple text-based server using sockets."
+msgstr ""
+
+# 96215491409d44d49699e64f17353b56
+#: ../../source/interface_types/module/textserver.rst:16
+msgid "textserver Commands"
+msgstr ""
+
+# 8433c75dea3046a6b092c3d23c8ec9e2
+#: ../../source/interface_types/module/viewerrecorder.rst:4
+msgid "ViewerRecorder - logging"
+msgstr ""
+
+# 8b398e0df51d4af6a39e5aea73ceda5e
+#: ../../source/interface_types/module/viewerrecorder.rst:12
+msgid ""
+"Records the images produced from a viewer into video file. The recordings "
+"can be synchronized to real-time or simulation time, by default simulation "
+"time is used. Each instance can record only one file at a time. To record "
+"multiple files simultaneously, create multiple VideoRecorder instances"
+msgstr ""
+
+# 529810da80904fe1a667159c626722fd
+#: ../../source/interface_types/module/viewerrecorder.rst:16
+msgid "ViewerRecorder Commands"
+msgstr ""
+
+# b9794dc81e794d0ba4e32072374ac82f
+#: ../../source/interface_types/module/viewerrecorder.rst:23
+msgid "GetCodecs"
+msgstr ""
+
+# abb378f7547c48aa901c8c526c60cd42
+#: ../../source/interface_types/module/viewerrecorder.rst:25
+msgid ""
+"Return all the possible codecs, one codec per line:[video_codec id] [name]"
+msgstr ""
+
+# c921bce1075b4e44a92da3cff134ccd4
+#: ../../source/interface_types/module/viewerrecorder.rst:45
+msgid "SetWatermark"
+msgstr ""
+
+# be6dd0ff7b32463db958c7a8a05ec3b6
+#: ../../source/interface_types/module/viewerrecorder.rst:47
+msgid ""
+"Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered "
+"as A|B|G|R. The origin should be the top left corner"
+msgstr ""
+
+# c8b05799ee704b4b8aea0b2d7ce5569b
+#: ../../source/interface_types/module/viewerrecorder.rst:56
+msgid "Start"
+msgstr ""
+
+# 2e868e5ef03f40228bedfc16d245c64b
+#: ../../source/interface_types/module/viewerrecorder.rst:58
+msgid ""
+"Starts recording a file, this will stop all previous recordings and "
+"overwrite any previous files stored in this location. Format::"
+msgstr ""
+
+# a4a275238de549948fa553677da2a741
+#: ../../source/interface_types/module/viewerrecorder.rst:62
+msgid ""
+"Because the viewer and filenames can have spaces, the names are ready until "
+"a newline is encountered"
+msgstr ""
+
+# dddfd5d7fcc24d7690b5216f35e73a84
+#: ../../source/interface_types/module/viewerrecorder.rst:71
+msgid "Stop"
+msgstr ""
+
+# 1c61c371ae5847968c01026f696c78a0
+#: ../../source/interface_types/module/viewerrecorder.rst:73
+msgid "Stops recording and saves the file. Format::"
+msgstr ""
+
+# 11daba9851e8450c92412a0a8ba416b3
+#: ../../source/interface_types/module/visualfeedback.rst:4
+msgid "VisualFeedback - rmanipulation"
+msgstr ""
+
+# 4b98bb67e9e54358a74124c550c6bc21
+#: ../../source/interface_types/module/visualfeedback.rst:15
+msgid ""
+"Adds grasp planning taking into account camera visibility constraints. The "
+"relevant paper is:"
+msgstr ""
+
+# 43c3867f7c40456d96d531984e723e6e
+#: ../../source/interface_types/module/visualfeedback.rst:17
+msgid ""
+"Rosen Diankov, Takeo Kanade, James Kuffner. Integrating Grasp Planning and "
+"Visual Feedback for Reliable Manipulation, IEEE-RAS Intl. Conf. on Humanoid "
+"Robots, December 2009."
+msgstr ""
+
+# 7f68a61c3b5d4a80807e520afcea433b
+#: ../../source/interface_types/module/visualfeedback.rst:19
+msgid ""
+"Visibility computation checks occlusion with other objects using ray "
+"sampling in the image space:"
+msgstr ""
+
+# 8f86341611e34a0eb8b31bdb5fa49613
+#: ../../source/interface_types/module/visualfeedback.rst:27
+msgid "VisualFeedback Commands"
+msgstr ""
+
+# ebe75e01b973498d9d384c7e40d9a19c
+#: ../../source/interface_types/module/visualfeedback.rst:34
+msgid "ComputeVisibility"
+msgstr ""
+
+# 0336c2097852406d99fd9296122f85c5
+#: ../../source/interface_types/module/visualfeedback.rst:36
+msgid "Computes the visibility of the current robot configuration"
+msgstr ""
+
+# c65777fd55e0435bb874dddc17fdb250
+#: ../../source/interface_types/module/visualfeedback.rst:45
+msgid "ComputeVisibleConfiguration"
+msgstr ""
+
+# 5ea1e11a65214481a71e91a5716d1d16
+#: ../../source/interface_types/module/visualfeedback.rst:47
+msgid ""
+"Gives a camera transformation, computes the visibility of the object and "
+"returns the robot configuration that takes the camera to its specified "
+"position, otherwise returns false"
+msgstr ""
+
+# 823435963e024b959561b659227115ef
+#: ../../source/interface_types/module/visualfeedback.rst:67
+msgid "MoveToObserveTarget"
+msgstr ""
+
+# 85a182d040ed45a4ad308ad5985e95cd
+#: ../../source/interface_types/module/visualfeedback.rst:69
+msgid ""
+"Approaches a target object while choosing a goal such that the robot's "
+"camera sensor sees the object"
+msgstr ""
+
+# 8a7d3a7daf7c41c1b37b84b8fbbd2e2e
+#: ../../source/interface_types/module/visualfeedback.rst:78
+msgid "ProcessVisibilityExtents"
+msgstr ""
+
+# adb507a9470348608e7ff759dda617dd
+#: ../../source/interface_types/module/visualfeedback.rst:80
+msgid ""
+"Processes the visibility extents of the target and initializes the camera "
+"transforms."
+msgstr ""
+
+# 2ce1e2edaa1545dfad8c4f419fe71ffa
+#: ../../source/interface_types/module/visualfeedback.rst:82
+msgid "Sets the transforms along a sphere density and the distances"
+msgstr ""
+
+# 86b7c97436d54bd7941bac7e24818446
+#: ../../source/interface_types/module/visualfeedback.rst:83
+msgid ""
+"Prunes the currently set transforms along a cone centered at the local "
+"target center and directed towards conedirangle with a half-angle of ``|"
+"conedirangle|``. Can specify multiple cones for an OR effect."
+msgstr ""
+
+# 2607f82b3b6445b28b851277ebc6dd7e
+#: ../../source/interface_types/module/visualfeedback.rst:92
+msgid "SampleVisibilityGoal"
+msgstr ""
+
+# bcdd0c3f27074a448d7d1330cebde255
+#: ../../source/interface_types/module/visualfeedback.rst:94
+msgid ""
+"Samples a goal with the current manipulator maintaining camera visibility "
+"constraints"
+msgstr ""
+
+# f649f7f16fba4f76984d75c1b5bb4594
+#: ../../source/interface_types/module/visualfeedback.rst:103
+msgid "SetCameraAndTarget"
+msgstr ""
+
+# a7ee38fb8c014bb2b19e0d8649e126a4
+#: ../../source/interface_types/module/visualfeedback.rst:105
+msgid "Sets the camera index from the robot and its convex hull"
+msgstr ""
+
+# 2b7764052c414e1aba429909610f6898
+#: ../../source/interface_types/module/visualfeedback.rst:114
+msgid "SetCameraTransforms"
+msgstr ""
+
+# bb27d27dea8e463da84b915eeec5ae83
+#: ../../source/interface_types/module/visualfeedback.rst:116
+msgid ""
+"Sets new camera transformations. Can optionally choose a minimum distance "
+"from all planes of the camera convex hull (includes gripper mask)"
+msgstr ""
+
+# 650afb92f75742dfb37a17cf75501b40
+#: ../../source/interface_types/module/visualfeedback.rst:125
+msgid "SetParameter"
+msgstr ""
+
+# 6568039f73e846a991a73400c125c82c
+#: ../../source/interface_types/module/visualfeedback.rst:127
+msgid "Sets internal parameters of visibility computation"
+msgstr ""
+
+# 91e90faa0cc84a98ad2d74dda314b69a
+#: ../../source/interface_types/module/visualfeedback.rst:136
+msgid "VisualFeedbackGrasping"
+msgstr ""
+
+# 5578d363a1a24d3597ec818a4203b463
+#: ../../source/interface_types/module/visualfeedback.rst:138
+msgid "Stochastic greedy grasp planner considering visibility"
+msgstr ""
+
+# eb806f2628d642ddb27e25bea012f81b
+# a44c07253c304beb9ed0562854074f28
+# 078980981d1f465d856461811fa334fc
+#: ../../source/interface_types/physicsengine/bullet.rst:6
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:6
+#: ../../source/interface_types/physicsengine/ode.rst:6
+msgid ":ref:`interface-physicsengine`"
+msgstr ""
+
+# 355b9f343f71450293e91b1a5af7a63a
+#: ../../source/interface_types/physicsengine/bullet.rst:10
+msgid "Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov"
+msgstr ""
+
+# 5cedb362a9bd4b3c8567b6a3b465a543
+#: ../../source/interface_types/physicsengine/bullet.rst:12
+msgid "Interface to `Bullet Physics Engine <http://bulletphysics.org/>`_"
+msgstr ""
+
+# ed3e2a136c454feaa07f58755913cf60
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:4
+msgid "GenericPhysicsEngine - __internal__"
+msgstr ""
+
+# b754adfdcb584516a179158529c20a53
+#: ../../source/interface_types/physicsengine/genericphysicsengine.rst:14
+msgid "GenericPhysicsEngine Commands"
+msgstr ""
+
+# 3a945a14b96b4535b0566aafc1576363
+#: ../../source/interface_types/physicsengine/ode.rst:12
+msgid "ODE physics engine"
+msgstr ""
+
+# 49c554955d2a41f8ac9acbbfa3c574bb
+#: ../../source/interface_types/physicsengine/ode.rst:14
+msgid ""
+"It is possible to set ODE physics engine and its properties inside the "
+"<environment> XML tags by typing:"
+msgstr ""
+
+# 41c9fe4252c04e729a784be34a4ab98d
+#: ../../source/interface_types/physicsengine/ode.rst:26
+msgid ""
+"The possible properties that can be set are: **friction**, "
+"**selfcollision**, **gravity**, **contact**, **erp**, **cfm**, "
+"**elastic_reduction_parameter**, **constraint_force_mixing**,"
+msgstr ""
+
+# b91d401a353b4dbdb875be4fe26a13f9
+#: ../../source/interface_types/planner/basicrrt.rst:4
+msgid "BasicRRT - rplanners"
+msgstr ""
+
+# fab2ba82071a45ef9dd53ab8b5f89caa
+# 32afbc3dcd3041c5b7bcb49310d5e827
+# 5a996c5ae5a74a92bfa28106b881e6a6
+# d9ad1563464c442f966b0d5b5fe91b70
+# bcd64252c2734063bd63c70f0c19707a
+# 9d91cebf35e14cdba2953a315b605650
+# cd3e64fb24ca47f8933eb97898c41b36
+# bfba3739466041099c8d6024c6127d2f
+# f2fd8e6b215f4b958af692853dd583ac
+# f62a660334fe40c6b1d3e007f2317baa
+# f5d40bef75a047259182e31b217a1e2e
+# 80b38bee2c0b4f7085b3d42c1cd8f741
+# b45a8190d10847dea6900cde55ba4e53
+#: ../../source/interface_types/planner/basicrrt.rst:6
+#: ../../source/interface_types/planner/birrt.rst:6
+#: ../../source/interface_types/planner/explorationrrt.rst:6
+#: ../../source/interface_types/planner/grasper.rst:6
+#: ../../source/interface_types/planner/graspgradient.rst:6
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:6
+#: ../../source/interface_types/planner/parabolicsmoother.rst:6
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:6
+#: ../../source/interface_types/planner/rastar.rst:6
+#: ../../source/interface_types/planner/shortcut_linear.rst:6
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:6
+msgid ":ref:`interface-planner`"
+msgstr ""
+
+# 5aa24a4c145e4de8aa92ba9ab3f9c32f
+# 3992d7e7e7844e80b6cec0f8fd0d2a51
+# f0451a48dfc44eb9a967c4560e30913f
+# 9470ab8c43284cb4934ae25cf013dce4
+# ce0ab4a3cdf947e792ac858ce200f64c
+# 311ab84e3bca4a37862742df8ab48db5
+# a9648ea66b66479188f85a609b56315a
+# 83442d3c504b4fb1bdc245b900dfe528
+# a082c1acc27c481286876f4fbf765486
+# 2b88adc506364cdb8b23259c4d82e1db
+#: ../../source/interface_types/planner/basicrrt.rst:8
+#: ../../source/interface_types/planner/birrt.rst:8
+#: ../../source/interface_types/planner/explorationrrt.rst:8
+#: ../../source/interface_types/planner/graspgradient.rst:8
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:8
+#: ../../source/interface_types/planner/parabolicsmoother.rst:8
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:8
+#: ../../source/interface_types/planner/rastar.rst:8
+#: ../../source/interface_types/planner/shortcut_linear.rst:8
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:8
+msgid ":ref:`plugin-rplanners`"
+msgstr ""
+
+# 7f950978aaff4fb1b2b892cb18283b4b
+#: ../../source/interface_types/planner/basicrrt.rst:10
+msgid "Rosen's Basic RRT planner"
+msgstr ""
+
+# 63face21a74243b6b8ff84687e3007be
+#: ../../source/interface_types/planner/basicrrt.rst:14
+msgid "BasicRRT Commands"
+msgstr ""
+
+# 6020b40b681f4fa897cddd3248113658
+# 4af7e12a4c7847d6a8150d7e0c09a305
+# e714fefcfa60495bae5b501236fec3db
+#: ../../source/interface_types/planner/basicrrt.rst:21
+#: ../../source/interface_types/planner/birrt.rst:26
+#: ../../source/interface_types/planner/explorationrrt.rst:23
+msgid "GetGoalIndex"
+msgstr ""
+
+# 4323f76153dc456383215f47cde0a5ca
+# 6782d52b40cd4ce2be283222e2095da3
+# 34471654dc4249b39f2a9b2c299c926b
+#: ../../source/interface_types/planner/basicrrt.rst:23
+#: ../../source/interface_types/planner/birrt.rst:28
+#: ../../source/interface_types/planner/explorationrrt.rst:25
+msgid "returns the goal index of the plan"
+msgstr ""
+
+# 4e82f86ba01a4dada3ca4c6a70d83e39
+# 1f29f5de3aac4c8ba3b9872e6d79c440
+# 3785731ae71d4ff09aa75a0b0adec664
+#: ../../source/interface_types/planner/basicrrt.rst:32
+#: ../../source/interface_types/planner/birrt.rst:37
+#: ../../source/interface_types/planner/explorationrrt.rst:34
+msgid "GetInitGoalIndices"
+msgstr ""
+
+# c634208deca34eddae67cf89613cc693
+# 81e69dbb9ba34b5e995eda1176f45d1e
+# 7843338557b640809b53fe5f611d2c17
+#: ../../source/interface_types/planner/basicrrt.rst:34
+#: ../../source/interface_types/planner/birrt.rst:39
+#: ../../source/interface_types/planner/explorationrrt.rst:36
+msgid "returns the start and goal indices"
+msgstr ""
+
+# ceaadf6ea0974ca0b83af21a58ff351e
+#: ../../source/interface_types/planner/birrt.rst:4
+msgid "BiRRT - rplanners"
+msgstr ""
+
+# d154d1f4328e450b93eecdea268ce0b0
+#: ../../source/interface_types/planner/birrt.rst:12
+msgid ""
+"Uses the Rapidly-Exploring Random Trees Algorithm. Bi-directional RRTs. See"
+msgstr ""
+
+# 202ec5a254114db6985e6deecb050b8f
+#: ../../source/interface_types/planner/birrt.rst:15
+msgid ""
+"J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-"
+"query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation "
+"(ICRA'2000), pages 995-1001, San Francisco, CA, April 2000."
+msgstr ""
+
+# 3611152a50364fd2850770e0f41c3ea1
+#: ../../source/interface_types/planner/birrt.rst:19
+msgid "BiRRT Commands"
+msgstr ""
+
+# 34f39a09a7a44fa0b3ba53a23a835810
+#: ../../source/interface_types/planner/explorationrrt.rst:4
+msgid "ExplorationRRT - rplanners"
+msgstr ""
+
+# b01e8bbf72c244ffbec831f8e3f0a1de
+#: ../../source/interface_types/planner/explorationrrt.rst:12
+msgid "RRT-based exploration planner"
+msgstr ""
+
+# 9e0d5a247296416ab3ade3a5bdbfd6f9
+#: ../../source/interface_types/planner/explorationrrt.rst:16
+msgid "ExplorationRRT Commands"
+msgstr ""
+
+# f686a734105c4bd2a90819a126180030
+#: ../../source/interface_types/planner/grasper.rst:10
+msgid "Rosen Diankov, Dmitry Berenson"
+msgstr ""
+
+# 429ef440a7144012aa49f8e01e468211
+#: ../../source/interface_types/planner/grasper.rst:12
+msgid ""
+"Simple planner that performs a follow and squeeze operation of a robotic "
+"hand."
+msgstr ""
+
+# 6a3b153a37f24323b13fed177690997c
+#: ../../source/interface_types/planner/graspgradient.rst:4
+msgid "GraspGradient - rplanners"
+msgstr ""
+
+# 6d7defa5be7e4ead8b7995f2a0f012b7
+#: ../../source/interface_types/planner/graspgradient.rst:12
+msgid "Grasp Planning with Stochastic Gradient Descent"
+msgstr ""
+
+# 54b29bd3d39e4c16ba4f3ec174c8286c
+#: ../../source/interface_types/planner/graspgradient.rst:16
+msgid "GraspGradient Commands"
+msgstr ""
+
+# fea9db6dd6b84cd19e6ccdaa54f0878d
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:4
+msgid "LinearTrajectoryRetimer - rplanners"
+msgstr ""
+
+# 564d30243faa44d1b430ed1b46386c7d
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:12
+msgid ""
+"Linear trajectory re-timing without modifying any of the points. Overwrites "
+"the velocities and timestamps."
+msgstr ""
+
+# 49580ccded4d4365886469ca1f3f35a6
+#: ../../source/interface_types/planner/lineartrajectoryretimer.rst:16
+msgid "LinearTrajectoryRetimer Commands"
+msgstr ""
+
+# 0f9aa64c5e634e5cbd37b63210becc45
+#: ../../source/interface_types/planner/parabolicsmoother.rst:4
+msgid "ParabolicSmoother - rplanners"
+msgstr ""
+
+# f3272a89d56748eeb5a2193deb938a99
+#: ../../source/interface_types/planner/parabolicsmoother.rst:12
+msgid ""
+"Interfae to `Indiana University Intelligent Motion Laboratory <http://www.iu."
+"edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser)."
+msgstr ""
+
+# 7fd840c0b43e4be6ac494468f81f5b24
+#: ../../source/interface_types/planner/parabolicsmoother.rst:14
+msgid ""
+"**Note:** The original trajectory will not be preserved at all, don't use "
+"this if the robot has to hit all points of the trajectory."
+msgstr ""
+
+# 4fdbbdf74be44c00a4d2c6371286da22
+#: ../../source/interface_types/planner/parabolicsmoother.rst:19
+msgid "ParabolicSmoother Commands"
+msgstr ""
+
+# 8217b2051a8e4c05945711d24d227133
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:4
+msgid "ParabolicTrajectoryRetimer - rplanners"
+msgstr ""
+
+# 2f0da2fc475c466d850cb1a1fb3cb01c
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:12
+msgid ""
+"Simple parabolic trajectory re-timing while passing through all the "
+"waypoints, waypoints will not be modified. This assumes all waypoints have "
+"velocity 0 (unless the start and final points are forced). Overwrites the "
+"velocities and timestamps of input trajectory."
+msgstr ""
+
+# 104f23aca6dd4df187e4cbbbd9cb27c5
+#: ../../source/interface_types/planner/parabolictrajectoryretimer.rst:16
+msgid "ParabolicTrajectoryRetimer Commands"
+msgstr ""
+
+# 7ff06e51a79144ae9ff39ad8436b8c4f
+#: ../../source/interface_types/planner/rastar.rst:4
+msgid "RAStar - rplanners"
+msgstr ""
+
+# 3ff7f0b2e95a4563a71b56339f091557
+#: ../../source/interface_types/planner/rastar.rst:12
+msgid ""
+"Randomized A*. A continuous version of A*. See: Rosen Diankov, James "
+"Kuffner. \"Randomized Statistical Path Planning. Intl. Conf. on Intelligent "
+"Robots and Systems, October 2007.\""
+msgstr ""
+
+# 3106639a0b78463a86045c13adaf8f1a
+#: ../../source/interface_types/planner/rastar.rst:18
+msgid "RAStar Commands"
+msgstr ""
+
+# 0a7c98031818435ab8ce52a41a710111
+#: ../../source/interface_types/planner/shortcut_linear.rst:4
+msgid "shortcut_linear - rplanners"
+msgstr ""
+
+# df8fe7a0a18e4b97af6288425acf4c83
+#: ../../source/interface_types/planner/shortcut_linear.rst:12
+msgid "path optimizer using linear shortcuts."
+msgstr ""
+
+# 95bae7ea779b46f1b3ee1f8372da19f1
+#: ../../source/interface_types/planner/shortcut_linear.rst:16
+msgid "shortcut_linear Commands"
+msgstr ""
+
+# 81e1d09f26954ab68bcc4c7c0fc3b3a9
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:4
+msgid "WorkspaceTrajectoryTracker - rplanners"
+msgstr ""
+
+# 66b18743b19249fca2da2471570a5e18
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:12
+msgid ""
+"Given a workspace trajectory of the end effector of a manipulator (active "
+"manipulator of the robot), finds a configuration space trajectory that "
+"tracks it using analytical inverse kinematics. Options can be specified to "
+"prioritize trajectory time, trajectory smoothness, and planning time In the "
+"simplest case, the workspace trajectory can be a straight line from one "
+"point to another."
+msgstr ""
+
+# 25bed5b56ada492f9fa28d546afb1278
+# 9c8bf52df1b94a5da8fbade7c5846e2f
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:17
+msgid "Planner Parameters"
+msgstr ""
+
+# 03f8fb19ec0349a2aac1f7f1e581de07
+# 89b78418904b46b9937cfa6668db7bd6
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:19
+msgid ""
+"**dReal maxdeviationangle** - the maximum angle the next iksolution can "
+"deviate from the expected direction computed by the jacobian."
+msgstr ""
+
+# 9ebea536620b46ab970a7935b30c2a48
+# 90cfa6942db54e1ab8baf33f5a309c08
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:21
+msgid "**bool maintaintiming** - maintain timing with input trajectory"
+msgstr ""
+
+# c3bf5fdabee6441591fe0cea3b82449e
+# d040c890e5b64c1695370fe77c53535a
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:23
+msgid ""
+"**dReal ignorefirstcollision** - if > 0, will allow the robot to be in "
+"environment collision for the initial 'ignorefirstcollision' seconds of the "
+"trajectory. Once the robot gets out of collision, it will execute its normal "
+"following phase until it gets into collision again. This option is used when "
+"lifting objects from a surface, where the object is already in collision "
+"with the surface."
+msgstr ""
+
+# b81a84c20ca3459d86ad4ba5d50b7785
+# 9cb78ae649d649abb427c22752ce08c6
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:25
+msgid ""
+"**dReal minimumcompletetime** - specifies the minimum trajectory that must "
+"be followed for planner to declare success. If 0, then the entire trajectory "
+"has to be followed."
+msgstr ""
+
+# 9c3e2dae5d514d1b9833ff88ebe95fd6
+# 4768d6dc1c08414ca168caff839543f0
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:27
+msgid ""
+"**TrajectoryBasePtr workspacetraj** - workspace trajectory of the end "
+"effector, needs to hold 'ikparam_values' groups"
+msgstr ""
+
+# 2ac250576e064d46b00f32044b6fca6e
+#: ../../source/interface_types/planner/workspacetrajectorytracker.rst:33
+msgid "WorkspaceTrajectoryTracker Commands"
+msgstr ""
+
+# a27244ca9414475d812517822d34ee55
+#: ../../source/interface_types/robot/collisionmaprobot.rst:4
+msgid "CollisionMapRobot - baserobots"
+msgstr ""
+
+# cbeb77ba4ef3493ea5ea751f16397ab6
+# aae43bf210bb457cbf81d7bd78be5b16
+#: ../../source/interface_types/robot/collisionmaprobot.rst:6
+#: ../../source/interface_types/robot/genericrobot.rst:6
+msgid ":ref:`interface-robot`"
+msgstr ""
+
+# 618787365bc64f93abdf1f3a3b2a0137
+#: ../../source/interface_types/robot/collisionmaprobot.rst:8
+msgid ":ref:`plugin-baserobots`"
+msgstr ""
+
+# ec2f78454de84f8a8cf7abd030282dc2
+#: ../../source/interface_types/robot/collisionmaprobot.rst:12
+msgid ""
+"Allows user to specify regions of the robot configuration space that are in "
+"self-collision via lookup tables. This is most commonly used when two or "
+"more joints are coupled and their joint limits cannot be specified by simple "
+"min/max limits. A CollisionMap robot allows the user to specify self-"
+"collision regions indexed by the values of two joints. The map will be 1 if "
+"the values are allowed or 0. If the robot gets into a 0 region, it will get "
+"into self-collision."
+msgstr ""
+
+# 57fd31dc23b6445887bd06a6fbf1f776
+#: ../../source/interface_types/robot/collisionmaprobot.rst:14
+msgid ""
+"This is done by first creating a robot of type 'CollisionMapRobot' and using "
+"the **<collisionmap>** XML tag. Inside the **<collisionmap>** tag, multiple "
+"**<pair>** tags can be specified for coupled joints. For example, to specify "
+"a 181x181 2D map for joints J0, J1, J2, J3 where J0,J1 are paired and J2,J3 "
+"are paired, do:"
+msgstr ""
+
+# c13dbaa33d5d4da8bf9fbdca5d1d9b0c
+#: ../../source/interface_types/robot/collisionmaprobot.rst:30
+msgid ""
+"The first pair specifies a map where both joints J0 and J1 have range [-"
+"1.5708,1,5708]. This is usually the joint limits specified in the "
+"**<joint>** definition."
+msgstr ""
+
+# ef75877d41074f9d81d2f655015f7677
+#: ../../source/interface_types/robot/collisionmaprobot.rst:32
+msgid ""
+"In order to index into the two maps defined above, the following operation "
+"is performed::"
+msgstr ""
+
+# d8d7a43f67b14a07ba5b64761ad51f3e
+#: ../../source/interface_types/robot/collisionmaprobot.rst:36
+msgid "For joints J2xJ3, the index operation is::"
+msgstr ""
+
+# 54b4e9059ace4cc29a63f338ca7aadb3
+#: ../../source/interface_types/robot/collisionmaprobot.rst:44
+msgid "CollisionMapRobot Commands"
+msgstr ""
+
+# 56632ab5732c4b4e9c3f96b7a4bdd8ad
+#: ../../source/interface_types/robot/genericrobot.rst:4
+msgid "GenericRobot - __internal__"
+msgstr ""
+
+# f27c8789a25e40a394b0c8e864482fa6
+#: ../../source/interface_types/robot/genericrobot.rst:12
+msgid ""
+"Simplest robot possible that just passes the trajectories to the controller"
+msgstr ""
+
+# 9d1315f4382645ab91f9bcec821f482d
+#: ../../source/interface_types/robot/genericrobot.rst:16
+msgid "GenericRobot Commands"
+msgstr ""
+
+# d558dc47eaca43fbb297fe005dbcbe74
+#: ../../source/interface_types/sensor/base_laser2d.rst:4
+msgid "base_laser2d - basesensors"
+msgstr ""
+
+# ead726f93d1a42a9b2238bfbe43ccc99
+# 313e59d7767240ada5b41f8a5eecd8a8
+# 34fa136b5e0c4576991e2cf91e7a7285
+# 737bdcdf7d6e4c729d7acc0cdba6db96
+# 8e4095d8ccc84fe995fae57eceeeef41
+# b4607f2bbc344ea9ae56d7a10e8db2c3
+# 4ef7d259b39046dfafa0da5e10916ec6
+#: ../../source/interface_types/sensor/base_laser2d.rst:6
+#: ../../source/interface_types/sensor/base_laser3d.rst:6
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:6
+#: ../../source/interface_types/sensor/basecamera.rst:6
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:6
+#: ../../source/interface_types/sensor/baselaser2d.rst:6
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:6
+msgid ":ref:`interface-sensor`"
+msgstr ""
+
+# bca973a175a44267b31b4029365d2ea2
+# 84587bd65190485b9068b385a63947e9
+# 0fe2d89028614107bfe48e999aea3ee6
+# 75457dd217224944bce22873bb827324
+# c2a93792449244819a9f3c5dd11a8a62
+# 0d339a06117d46afac1ec279fee0259f
+# 456c30df31194be1b9a5e6f07feb0ac6
+#: ../../source/interface_types/sensor/base_laser2d.rst:8
+#: ../../source/interface_types/sensor/base_laser3d.rst:8
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:8
+#: ../../source/interface_types/sensor/basecamera.rst:8
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:8
+#: ../../source/interface_types/sensor/baselaser2d.rst:8
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:8
+msgid ":ref:`plugin-basesensors`"
+msgstr ""
+
+# 2aa80d867662482f9d775749375c2ce7
+# 41196c2face6428e80663342af7b9c8b
+#: ../../source/interface_types/sensor/base_laser2d.rst:12
+#: ../../source/interface_types/sensor/baselaser2d.rst:12
+msgid "Provides a simulated 2D laser range finder."
+msgstr ""
+
+# d3fbd4c623c74098babd0b9e3ec92b7b
+#: ../../source/interface_types/sensor/base_laser2d.rst:20
+msgid "base_laser2d Commands"
+msgstr ""
+
+# 226b0abac3fc41dab3a2e9e80d7a7d86
+# b7875df866824d8d98b35668b32dd2d8
+# 13e973b758da4a9ebf142b4b23bd38dc
+# 52f3e1bb16524a8ead2bb5bdd18e46d6
+# 4bdbd95a2d4944bc9c95a9eda4f4ce2e
+#: ../../source/interface_types/sensor/base_laser2d.rst:27
+#: ../../source/interface_types/sensor/base_laser3d.rst:30
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:30
+#: ../../source/interface_types/sensor/baselaser2d.rst:27
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:30
+msgid "collidingbodies"
+msgstr ""
+
+# 9f67e4d4e85d4b24b156dbad00e276e2
+# ad0c0d1b889f4645a885505f0c4f4ce9
+# e581a46c4a744d6a8073ea5af40c3406
+#: ../../source/interface_types/sensor/base_laser2d.rst:29
+#: ../../source/interface_types/sensor/baselaser2d.rst:29
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:32
+msgid ""
+"Returns the ids of the bodies that the laser beams have hit. The order is "
+"the same as the returned laser points."
+msgstr ""
+
+# 099794ed41bd473db8f3e3ea9206cb5d
+# c2b1964091e24a8a9bd9eb8a78e3d984
+# a6a8cd07797648268c54fe97074dcc86
+# 90ca81716e5c45039e864b34d79cb80f
+# 967e60ccb52d4e27997c656b281aaafd
+# 9fbec226dc29455f948a91d957671fde
+# 13afd9b72b2c4244aad57a5b7c711588
+#: ../../source/interface_types/sensor/base_laser2d.rst:49
+#: ../../source/interface_types/sensor/base_laser3d.rst:52
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:45
+#: ../../source/interface_types/sensor/basecamera.rst:45
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:52
+#: ../../source/interface_types/sensor/baselaser2d.rst:49
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:52
+msgid "render"
+msgstr ""
+
+# 0c0ea518b57d4078abed6db258e6e500
+# ed52a836400f44d89931c178e16448c2
+# 155a4363a36a4d36bb744a0f00b65f99
+# 8f0e371569944fccba44b326947b21a5
+# 1afe59b055964c33a7849b2b337640af
+#: ../../source/interface_types/sensor/base_laser2d.rst:51
+#: ../../source/interface_types/sensor/base_laser3d.rst:54
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:54
+#: ../../source/interface_types/sensor/baselaser2d.rst:51
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:54
+msgid "Set rendering of the plots (1 or 0)."
+msgstr ""
+
+# 475b3fe0f09543aaae639a4547d48dcf
+#: ../../source/interface_types/sensor/base_laser3d.rst:4
+msgid "base_laser3d - basesensors"
+msgstr ""
+
+# 0835361c20eb441995198688fbe83e91
+# 1c07dae3086f438d8918ea630f07d1b2
+#: ../../source/interface_types/sensor/base_laser3d.rst:12
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:12
+msgid ""
+"Provides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously "
+"returns the depth measurements in the form of an image. It has the same "
+"projection parameters as a camera except each pixel is an active element "
+"that measures distance. The XML parameters are the same as :ref:`sensor-"
+"baselaser2d` along with: * KK - 4 element vector that constructs the "
+"intrinsic matrix of the flash lidar (KK[0] 0 KK[2]; 0 KK[1] KK[3]; 0 0 1]. * "
+"width - the number of active elements along the x-axis. * height - the "
+"number of active elements along the y-axis."
+msgstr ""
+
+# 9cb17b1e534d448ca65688df05659d90
+#: ../../source/interface_types/sensor/base_laser3d.rst:23
+msgid "base_laser3d Commands"
+msgstr ""
+
+# 79643e6315ef4ebf86091cffc6f84a11
+# 2a7bcc58b51b404088c7b6597d8fd10a
+#: ../../source/interface_types/sensor/base_laser3d.rst:32
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:32
+msgid "Returns the ids of the bodies that the laser beams have hit."
+msgstr ""
+
+# fbe32acc5eaf40689f92b1e71c665d87
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:4
+msgid "base_pinhole_camera - basesensors"
+msgstr ""
+
+# 6451a1a5043a4957bdcbfcbd4463a427
+# d1b9bc1c269345c3abf5bbd406706a92
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:12
+#: ../../source/interface_types/sensor/basecamera.rst:12
+msgid "Provides a simulated camera using the standard pinhole projection."
+msgstr ""
+
+# fd30136ebe4346de97581a55a7fa6903
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:16
+msgid "base_pinhole_camera Commands"
+msgstr ""
+
+# 61241ce058514aa0a64f23f9c59e7108
+# b69879e38fcd44f8973069a09eb19834
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:34
+#: ../../source/interface_types/sensor/basecamera.rst:34
+msgid "power"
+msgstr ""
+
+# 0ada86793d444a6d97a360f84e33415d
+# d4b0eee30d1e496ead148b4eafc18413
+# 6391d46f712e44348ea58dee8b5cb9d0
+# c4b156ec39484f70a517aa8df1458a60
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:36
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:47
+#: ../../source/interface_types/sensor/basecamera.rst:36
+#: ../../source/interface_types/sensor/basecamera.rst:47
+msgid "deprecated"
+msgstr ""
+
+# 29cdadd82a1b4b9891089629ae31a635
+# 00adef0f55784c8e99579ac6f7b44175
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:56
+#: ../../source/interface_types/sensor/basecamera.rst:56
+msgid "SaveImage"
+msgstr ""
+
+# eaa9a7c12c3d409681198bfaa094eb08
+# f984ab3d6f774001bdaffc6147d4434e
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:58
+#: ../../source/interface_types/sensor/basecamera.rst:58
+msgid "Saves the next camera image to the given filename"
+msgstr ""
+
+# 096b30d923a5418bbcd31f1efe172089
+# 5e5880f479b548b6bb607a8112313379
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:67
+#: ../../source/interface_types/sensor/basecamera.rst:67
+msgid "setdims"
+msgstr ""
+
+# 82e36d621e114c728742f1f78b6736f5
+# cfe5ec6813a44f06912d48d2c85dc72b
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:69
+#: ../../source/interface_types/sensor/basecamera.rst:69
+msgid "Set the dimensions of the image (width,height)"
+msgstr ""
+
+# 2d3fb4d9a0b7421db0622d626b8294ed
+# 8b353155097f4c9eb7dea7dcfde52051
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:78
+#: ../../source/interface_types/sensor/basecamera.rst:78
+msgid "setintrinsic"
+msgstr ""
+
+# 68bd4dabdbe1497480119c1571e0cbf2
+# db7d25b599994d72be236c95e56291b5
+#: ../../source/interface_types/sensor/base_pinhole_camera.rst:80
+#: ../../source/interface_types/sensor/basecamera.rst:80
+msgid "Set the intrinsic parameters of the camera (fx,fy,cx,cy)."
+msgstr ""
+
+# fa6e76432eba4bb38799af78fdee4523
+#: ../../source/interface_types/sensor/basecamera.rst:4
+msgid "BaseCamera - basesensors"
+msgstr ""
+
+# ff35c6de3f5444fe92463f8c47960d5d
+#: ../../source/interface_types/sensor/basecamera.rst:16
+msgid "BaseCamera Commands"
+msgstr ""
+
+# 4c9d1c31aa644ba39bc87e7fb6e7b67c
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:4
+msgid "BaseFlashLidar3D - basesensors"
+msgstr ""
+
+# 5d0a5e3cdf9b4a4c9db041b2654315c4
+#: ../../source/interface_types/sensor/baseflashlidar3d.rst:23
+msgid "BaseFlashLidar3D Commands"
+msgstr ""
+
+# d47c878fb34e4ee49d5df04f59a325c6
+#: ../../source/interface_types/sensor/baselaser2d.rst:4
+msgid "BaseLaser2D - basesensors"
+msgstr ""
+
+# d3d621fd654d4865a9b2d689a999e92e
+#: ../../source/interface_types/sensor/baselaser2d.rst:20
+msgid "BaseLaser2D Commands"
+msgstr ""
+
+# 103417fd81a8489fa5bbabca2e510062
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:4
+msgid "BaseSpinningLaser2D - basesensors"
+msgstr ""
+
+# 469b4c59c2764146808b94e7e9d2faf9
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:12
+msgid ""
+"Provides a simulated spinning 2D laser range finder. Includes all the XML "
+"parameters from :ref:`sensor-baselaser2d` along with: * spinaxis - the "
+"second axis to spin on * spinpos - center of rotation of second spin axis * "
+"spinspeed - how fast to spin in rad/s"
+msgstr ""
+
+# a9f93d19c735440dbdf6802dabfefcf7
+#: ../../source/interface_types/sensor/basespinninglaser2d.rst:23
+msgid "BaseSpinningLaser2D Commands"
+msgstr ""
+
+# a88fc647db83444c98708c3db94e491b
+#: ../../source/interface_types/spacesampler/halton.rst:4
+msgid "Halton - basesamplers"
+msgstr ""
+
+# 447bd3faf5df406bb7ac86deec43b0f3
+# f7c7ac3812684734b5cd36837d585204
+# ec8afb7e33324fe49f974b0937ee9ee7
+#: ../../source/interface_types/spacesampler/halton.rst:6
+#: ../../source/interface_types/spacesampler/mt19937.rst:6
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:6
+msgid ":ref:`interface-spacesampler`"
+msgstr ""
+
+# 8b0271d726e541828d88f8099040ee3b
+# 41300f8b297d454780174d682938abae
+# 56b9d7eb17304418807a677714506fad
+#: ../../source/interface_types/spacesampler/halton.rst:8
+#: ../../source/interface_types/spacesampler/mt19937.rst:8
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:8
+msgid ":ref:`plugin-basesamplers`"
+msgstr ""
+
+# 48a4b07919dd471cb08a1f50d48dbfd9
+#: ../../source/interface_types/spacesampler/halton.rst:10
+msgid "John Burkardt"
+msgstr ""
+
+# e85f1e54990043b6a6c8ae27ed59d89c
+#: ../../source/interface_types/spacesampler/halton.rst:12
+msgid "References:"
+msgstr ""
+
+# 4f061e2beffa4f8097958472d1d3471b
+#: ../../source/interface_types/spacesampler/halton.rst:14
+msgid ""
+"John Halton, On the efficiency of certain quasi-random sequences of points "
+"in evaluating multi-dimensional integrals, Numerische Mathematik, Volume 2, "
+"1960, pages 84-90."
+msgstr ""
+
+# 764042871bc441e799fb7977feee7d46
+#: ../../source/interface_types/spacesampler/halton.rst:16
+msgid ""
+"John Halton, GB Smith, Algorithm 247: Radical-Inverse Quasi-Random Point "
+"Sequence, Communications of the ACM, Volume 7, 1964, pages 701-702."
+msgstr ""
+
+# bf2c2428081b47348976a97db8c6a38b
+#: ../../source/interface_types/spacesampler/halton.rst:18
+msgid ""
+"Ladislav Kocis, William Whiten, Computational Investigations of Low-"
+"Discrepancy Sequences, ACM Transactions on Mathematical Software, Volume 23, "
+"Number 2, 1997, pages 266-294."
+msgstr ""
+
+# 084a1e219a03498785ccfec33f3fc1a5
+#: ../../source/interface_types/spacesampler/halton.rst:24
+msgid "Halton Commands"
+msgstr ""
+
+# 8e5b457d2d1942ba86209e3efa214847
+#: ../../source/interface_types/spacesampler/mt19937.rst:4
+msgid "MT19937 - basesamplers"
+msgstr ""
+
+# 3439947d65c64ea092a0e6fd7c2ae82e
+#: ../../source/interface_types/spacesampler/mt19937.rst:10
+msgid "Takuji Nishimura and Makoto Matsumoto"
+msgstr ""
+
+# 987cee80fbcd4c76b03445b1e10f2d2c
+#: ../../source/interface_types/spacesampler/mt19937.rst:12
+msgid ""
+"Mersenne twister sampling algorithm that is based on matrix linear "
+"recurrence over finite binary field F2. It has a period of 2^19937-1 and "
+"passes many tests for statistical uniform randomness."
+msgstr ""
+
+# 64b4ea5e81124a3182aec7bd28bf6c2e
+#: ../../source/interface_types/spacesampler/mt19937.rst:16
+msgid "MT19937 Commands"
+msgstr ""
+
+# c6b3284da8244a64be0ffd7f54f75107
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:4
+msgid "RobotConfiguration - basesamplers"
+msgstr ""
+
+# fa9266ea86f64e30ba9ade0244d2b33a
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:12
+msgid ""
+"Samples the robot active configuration space, treats revolute and circular "
+"joints appropriately. When creating pass the following parameters::"
+msgstr ""
+
+# 9bd857bb082544129fe6368631421ab4
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:16
+msgid ""
+"The sampler needs to return values in the range [0,1]. Default sampler is "
+"'mt19937'."
+msgstr ""
+
+# ecfecf30601c400db256f071bfd0a34a
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:21
+msgid "RobotConfiguration Commands"
+msgstr ""
+
+# 1dc373460f0643c5aed8008805be53f2
+#: ../../source/interface_types/trajectory/generictrajectory.rst:4
+msgid "GenericTrajectory - __internal__"
+msgstr ""
+
+# 67fe037caee248f2b7d35e9b3dfb262b
+#: ../../source/interface_types/trajectory/generictrajectory.rst:6
+msgid ":ref:`interface-trajectory`"
+msgstr ""
+
+# 2c64b2bccb1b439896f4d74afcd19860
+#: ../../source/interface_types/trajectory/generictrajectory.rst:14
+msgid "GenericTrajectory Commands"
+msgstr ""
+
+# 3c8fd22c1d804bdc97f26d6364d4a108
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:4
+msgid "QtCameraViewer - qtcoinrave"
+msgstr ""
+
+# e1f5f02324f140fd8ce0245a9dfac31d
+# 097a493c44a141ad8ee104415dea7a91
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:6
+#: ../../source/interface_types/viewer/qtcoin.rst:6
+msgid ":ref:`interface-viewer`"
+msgstr ""
+
+# cf2ab0dde04145049d232d2c976a7459
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:12
+msgid ""
+"Provides a camera image viewer (Qt4). Can attach to any camera by specifying "
+"the camera name in the type string when creating the interface. The qtcoin "
+"viewer needs to be set"
+msgstr ""
+
+# c826066b13ab4a02b1b1a217ca7273f1
+#: ../../source/interface_types/viewer/qtcameraviewer.rst:16
+msgid "QtCameraViewer Commands"
+msgstr ""
+
+# cc4f7bac18bd4680bf2b52bd3bb18470
+#: ../../source/interface_types/viewer/qtcoin.rst:4
+msgid "QtCoin - qtcoinrave"
+msgstr ""
+
+# 63f480af0f574cf6ab24b91b1f571f73
+#: ../../source/interface_types/viewer/qtcoin.rst:12
+msgid ""
+"Provides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the "
+"version, Coin3D and SoQt might be licensed under GPL."
+msgstr ""
+
+# 32a0ea1e603542099262728704712e10
+#: ../../source/interface_types/viewer/qtcoin.rst:14
+msgid ""
+"If the current directory contains a filename **environment.iv** when the "
+"qtcoin viewer is loaded, then this file will define the scene file all other "
+"elements are loaded under. This allows users to define their own lighting "
+"model. For example, the following **environment.iv** file will force every "
+"object to be draw as wirefire:"
+msgstr ""
+
+# 1c8a66be6b7148129d4502dc492fe257
+#: ../../source/interface_types/viewer/qtcoin.rst:28
+msgid "QtCoin Commands"
+msgstr ""
+
+# 2960112b7562426fbf5780e3d789c824
+#: ../../source/interface_types/viewer/qtcoin.rst:46
+msgid "SetFeedbackVisibility"
+msgstr ""
+
+# 8192c812f90942dbad65baf523ab2ec1
+#: ../../source/interface_types/viewer/qtcoin.rst:48
+msgid "Accepts 0/1 value that decides whether to render the cross hairs"
+msgstr ""
+
+# 560d110a14ba472a90d2329cbcdb559c
+#: ../../source/interface_types/viewer/qtcoin.rst:57
+msgid "SetFiguresInCamera"
+msgstr ""
+
+# ae3ef39858f44edcae18e0db56c80e90
+#: ../../source/interface_types/viewer/qtcoin.rst:59
+msgid ""
+"Accepts 0/1 value that decides whether to render the figure plots in the "
+"camera image through GetCameraImage"
+msgstr ""

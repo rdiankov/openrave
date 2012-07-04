@@ -1,0 +1,75 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-28 18:10\n"
+"PO-Revision-Date: 2012-06-19 18:04+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 9891df48f7bf45d08000490f44bd4b00
+#: ../../source/install.rst:4
+msgid "Installing OpenRAVE"
+msgstr ""
+
+# a153999fbf8948b0a857e8513189f6fe
+#: ../../source/install.rst:6
+msgid ":ref:`changelog`"
+msgstr ""
+
+# 8fc1182686ed43a68de079806c1758a3
+#: ../../source/install.rst:8
+msgid ""
+"`Roadmap <https://sourceforge.net/apps/trac/openrave/roadmap>`_ - timeline "
+"on new features and major changes."
+msgstr ""
+
+# c5045b9308444bad8f0e50718918f38d
+#: ../../source/install.rst:10
+msgid ""
+":ref:`release_organization` - infrastructure on releases, versioning, and "
+"updates."
+msgstr ""
+
+# c22b82efbaa84949aa5e86f611eed03a
+#: ../../source/install.rst:13
+msgid "Platforms"
+msgstr ""
+
+# 36b99e9bd148449f87c578501979cc55
+#: ../../source/install.rst:20
+msgid ""
+"`Official Release PPA <https://launchpad.net/~openrave/+archive/release>`_. "
+"Execute the following to add the OpenRAVE repository:"
+msgstr ""
+
+# fc14d3ea3f9642ec9954999b88e686c3
+#: ../../source/install.rst:33
+msgid ""
+"`Windows Installers <http://sourceforge.net/projects/openrave/files/"
+"latest_stable>`_ are compiled for every Visual Studio version."
+msgstr ""
+
+# 7c3fa1b4070b420e88183cda8c2d17a5
+#: ../../source/install.rst:38
+msgid "Compile From Sources"
+msgstr ""
+
+# 03e5b457da4d4342805f349b0044cda2
+#: ../../source/install.rst:40
+msgid "Get latest stable source code (constantly updated):"
+msgstr ""
+
+# 32e893bff2bc4cbeb0cdd87829665a39
+#: ../../source/install.rst:46
+msgid "`Compile/Install From Sources <../coreapihtml/installation.html>`_"
+msgstr ""

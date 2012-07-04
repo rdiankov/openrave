@@ -94,14 +94,14 @@ class BaseManipulation:
             assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
         return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter)
     
-    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None):
+    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         if goal is not None:
             assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter)
+        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter,releasegil=releasegil)
 
-    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None):
+    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         cmd += ' '
@@ -124,7 +124,7 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         if jitter is not None:
             cmd += 'jitter %f '%jitter
-        res = self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise planning_error('MoveActiveJoints')
         if outputtrajobj is not None and outputtrajobj:

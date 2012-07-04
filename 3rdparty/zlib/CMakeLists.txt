@@ -161,3 +161,8 @@ endif()
 #    target_link_libraries(minigzip64 zlib)
 #    set_target_properties(minigzip64 PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64")
 #endif()
+
+# set external flags
+set(ZLIB_FOUND 1 PARENT_SCOPE)
+set(ZLIB_LIBRARIES zlib PARENT_SCOPE)
+set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)

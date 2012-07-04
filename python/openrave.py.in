@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env @PYTHON_EXECUTABLE_NAME@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -185,9 +185,6 @@ if __name__ == "__main__":
             # load files after viewer is loaded since they may contain information about where to place the camera
             for arg in args:
                 env.Load(arg)
-            with env:
-                robots=env.GetRobots()
-                robot=None if len(robots) == 0 else robots[0]
             if options.pythoncmd is not None:
                 eval(compile(options.pythoncmd,'<string>','exec'))
             viewer = None
@@ -204,9 +201,14 @@ if __name__ == "__main__":
 
                 # start ipython in a separate thread
                 from IPython.Shell import IPShellEmbed
-                def ipythonthreadfn(env,robot):
+                def ipythonthreadfn(env):
                     try:
-                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
+                        with env:
+                            robots=env.GetRobots()
+                            robot=None if len(robots) == 0 else robots[0]
+                            bodies=env.GetBodies()
+                            body=None if len(bodies) == 0 else bodies[0]
+                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot, body',exit_msg = 'Leaving Interpreter and closing program.')
                         ipshell(local_ns=locals())
                     finally:
                         # ipython exited. if viewer is valid, then exit the viewer also
@@ -214,11 +216,11 @@ if __name__ == "__main__":
                             viewer.quitmainloop()
                     
                 if viewer is None:
-                    ipythonthreadfn(env,robot)
+                    ipythonthreadfn(env)
                 else:
                     import threading
                     from threading import Thread
-                    ipythonthread = Thread(target=ipythonthreadfn,args=(env,robot))
+                    ipythonthread = Thread(target=ipythonthreadfn,args=(env,))
                     ipythonthread.start()
 
                     # find the thread id

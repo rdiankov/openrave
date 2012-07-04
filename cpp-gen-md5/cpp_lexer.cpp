@@ -205,13 +205,13 @@ struct STRING_LITERAL :
                     (
                         !(as_lower_d[chlit<>('L')] [var(is_wchar) = true])
                         >> '\"'
-                        >> *(str_p("\\\\") | "\\\"" | anychar_p - '\"' )
+                        >> *(str_p("\\\\") | "\\\"" | (anychar_p - '\"') )
                     )
                     [self.result_ = construct_<std::string>(arg1, arg2)]
                     >> chlit<>('\"')
                 ] >> *lexeme_d[
                     !as_lower_d[chlit<>('L')] >> '\"'
-                    >> ( *( str_p("\\\\") | "\\\"" | anychar_p - '\"' ) )
+                    >> ( *( str_p("\\\\") | "\\\"" | (anychar_p - '\"' )) )
                     [self.result_ += construct_<std::string>(arg1, arg2)]
                     >> chlit<>('\"')
                 ]
@@ -240,7 +240,7 @@ struct CHARACTER_LITERAL :
                     (
                         !(as_lower_d[chlit<>('L')] [var(is_wchar) = true])
                         >> '\''
-                        >> +(str_p("\\\\") | "\\\'" | anychar_p - '\'' )
+                        >> +(str_p("\\\\") | "\\\'" | (anychar_p - '\'') )
                     )
                     [self.result_ = construct_<std::string>(arg1, arg2)]
                     >> chlit<>('\'')

@@ -121,7 +121,7 @@ if __name__ == "__main__":
     parser.add_option("-e", "--delta", dest="delta", default='0.01', help='the step of free indies angle')
     (options, args) = parser.parse_args()
 
-    numthreads=options.numthreads
+    numthreads=int(options.numthreads)
     time_limit=int(options.time_limit) #seconds
     robot_manip_type_fouts = None
     if (not options.robot is None and options.manip is None) or (options.robot is None and not options.manip is None):

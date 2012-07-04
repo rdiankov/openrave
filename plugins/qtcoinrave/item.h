@@ -34,6 +34,10 @@ public:
     Item(QtCoinViewerPtr viewer);
     virtual ~Item();
 
+    /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
+    virtual void PrepForDeletion() {
+    }
+
     // general methods
     virtual const string& GetName() const {
         return _name;
@@ -139,6 +143,11 @@ public:
         _pchain->SetName(pNewName);
     }
 
+    virtual void PrepForDeletion() {
+        _geometrycallback.reset();
+        _drawcallback.reset();
+    }
+
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
@@ -188,7 +197,7 @@ protected:
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     mutable boost::mutex _mutexjoints;
-    boost::shared_ptr<void> _geometrycallback, _drawcallback;
+    UserDataPtr _geometrycallback, _drawcallback;
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;

@@ -1,7 +1,7 @@
 """Generates the preamble and the postscript for examples"""
 import docutils.nodes
 from docutils.parsers.rst import Directive, Parser
-
+    
 class ExamplePreBlockDirective(Directive):
     required_arguments = 1
     optional_arguments = 0
@@ -10,7 +10,7 @@ class ExamplePreBlockDirective(Directive):
     has_content = False
     def run(self):
         rawtext = """
-.. image:: ../../images/examples/%s.jpg
+.. image:: /../images/examples/%s.jpg
   :width: %d
 
 **Running the Example**::
@@ -40,7 +40,7 @@ Command-line
 Main Python Code
 ----------------
 
-.. literalinclude:: ../../../python/examples/%s.py
+.. literalinclude:: /../openravepy/examples/%s.py
   :pyobject: main
 
 Class Definitions

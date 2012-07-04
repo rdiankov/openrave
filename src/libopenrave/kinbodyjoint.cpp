@@ -419,22 +419,32 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
         pVelocities.push_back(GetVelocity(0));
         return;
     }
+    _GetVelocities(pVelocities,bAppend,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+};
 
-    boost::array<Transform,2> transforms;
-    boost::array<Vector,2> linearvel, angularvel;
-    _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
-    _attachedbodies[1]->GetVelocity(linearvel[1],angularvel[1]);
-    transforms[0] = _attachedbodies[0]->GetTransform();
-    transforms[1] = _attachedbodies[1]->GetTransform();
+dReal KinBody::Joint::GetVelocity(int axis) const
+{
+    OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
+    return _GetVelocity(axis,_attachedbodies[0]->GetVelocity(), _attachedbodies[1]->GetVelocity());
+}
+
+void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppend, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
+{
     if( !bAppend ) {
         pVelocities.resize(0);
     }
-    Vector quatdelta = quatMultiply(transforms[0].rot,_tLeft.rot);
+    if( GetDOF() == 1 ) {
+        pVelocities.push_back(GetVelocity(0));
+        return;
+    }
+    const Transform& linkparenttransform = _attachedbodies[0]->_t;
+    const Transform& linkchildtransform = _attachedbodies[1]->_t;
+    Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
     if( _type & JointSpecialBit ) {
         switch(_type) {
         case JointSpherical: {
-            Vector v = quatRotate(quatdeltainv,angularvel[1]-angularvel[0]);
+            Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             pVelocities.push_back(v.x);
             pVelocities.push_back(v.y);
             pVelocities.push_back(v.z);
@@ -449,31 +459,27 @@ void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend
         Vector angvelocitycovered, linvelocitycovered;
         for(int i = 0; i < GetDOF(); ++i) {
             if( IsRevolute(i) ) {
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]-angvelocitycovered)));
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered)));
                 angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
             }
             else { // prismatic
-                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-(angularvel[0]-angvelocitycovered).cross(transforms[1].trans-transforms[0].trans)-linvelocitycovered)));
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered)));
                 linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
             }
         }
     }
 }
 
-dReal KinBody::Joint::GetVelocity(int axis) const
+dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const
 {
-    boost::array<Transform,2> transforms;
-    boost::array<Vector,2> linearvel, angularvel;
-    _attachedbodies[0]->GetVelocity(linearvel[0],angularvel[0]);
-    _attachedbodies[1]->GetVelocity(linearvel[1],angularvel[1]);
-    transforms[0] = _attachedbodies[0]->GetTransform();
-    transforms[1] = _attachedbodies[1]->GetTransform();
-    Vector quatdelta = quatMultiply(transforms[0].rot,_tLeft.rot);
+    const Transform& linkparenttransform = _attachedbodies[0]->_t;
+    const Transform& linkchildtransform = _attachedbodies[1]->_t;
+    Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
     if( _type & JointSpecialBit ) {
         switch(_type) {
         case JointSpherical: {
-            Vector v = quatRotate(quatdeltainv,angularvel[1]-angularvel[0]);
+            Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             return v[axis];
         }
         default:
@@ -482,24 +488,24 @@ dReal KinBody::Joint::GetVelocity(int axis) const
     }
     else {
         if( _type == JointPrismatic ) {
-            return _vaxes[0].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-angularvel[0].cross(transforms[1].trans-transforms[0].trans)));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-linkparentvelocity.second.cross(linkchildtransform.trans-linkparenttransform.trans)));
         }
         else if( _type == JointRevolute ) {
-            return _vaxes[0].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second));
         }
         else {
             // chain of revolute and prismatic joints
             Vector angvelocitycovered, linvelocitycovered;
             for(int i = 0; i < GetDOF(); ++i) {
                 if( IsRevolute(i) ) {
-                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,angularvel[1]-angularvel[0]-angvelocitycovered));
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered));
                     if( i == axis ) {
                         return fvelocity;
                     }
                     angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*fvelocity);
                 }
                 else { // prismatic
-                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linearvel[1]-linearvel[0]-(angularvel[0]-angvelocitycovered).cross(transforms[1].trans-transforms[0].trans)-linvelocitycovered));
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkparenttransform.trans-linkchildtransform.trans)-linvelocitycovered));
                     if( i == axis ) {
                         return fvelocity;
                     }
@@ -584,6 +590,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("unrecognized joint type 0x%x", _type, ORE_InvalidArguments);
         }
+        _tLeftNoOffset = _tLeft;
+        _tRightNoOffset = _tRight;
     }
     else {
         _tLeftNoOffset.trans = vanchor;

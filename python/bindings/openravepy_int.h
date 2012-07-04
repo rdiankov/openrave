@@ -129,9 +129,26 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
+
 struct null_deleter { void operator()(void const *) const {
                       }
 };
+
+namespace openravepy {
+class PythonThreadSaver
+{
+public:
+    PythonThreadSaver() {
+        _save = PyEval_SaveThread();
+    }
+    virtual ~PythonThreadSaver() {
+        PyEval_RestoreThread(_save);
+    }
+protected:
+    PyThreadState *_save;
+};
+typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
+}
 
 inline boost::python::object ConvertStringToUnicode(const std::string& s)
 {
@@ -493,25 +510,12 @@ public:
     }
     object GetUserData() const;
 
-    class PythonThreadSaver
-    {
-public:
-        PythonThreadSaver() {
-            _save = PyEval_SaveThread();
-        }
-        virtual ~PythonThreadSaver() {
-            PyEval_RestoreThread(_save);
-        }
-protected:
-        PyThreadState *_save;
-    };
-
     object SendCommand(const string& in, bool releasegil=false) {
         stringstream sin(in), sout;
         {
-            boost::shared_ptr<PythonThreadSaver> statesaver;
+            openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new PythonThreadSaver());
+                statesaver.reset(new openravepy::PythonThreadSaver());
             }
             sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
             if( !_pbase->SendCommand(sout,sin) ) {

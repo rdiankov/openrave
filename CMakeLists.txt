@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6.0) # using import/export targets
+cmake_minimum_required (VERSION 2.6.3) # using import/export targets, 2.6.3 for open scene graph cmake files
 project(OpenRAVE)
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
@@ -22,6 +22,8 @@ set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 # When building, don't use the install RPATH already
 # (but later on when installing)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+set(LIB_SUFFIX CACHE STRING "suffix for the library directory need for x86-64 systems that use lib64 ")
 
 # The RPATH to be used when installing
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
@@ -92,6 +94,7 @@ if( OPT_PYTHON )
   endif()
 
   if( PYTHON_EXECUTABLE )
+    get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
     # architecture independent
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
@@ -166,7 +169,7 @@ set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYT
 #define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
 
 
-message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
+message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECUTABLE}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
@@ -185,7 +188,7 @@ set(OPENRAVE_EXPORT_CXXFLAGS)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
   set(CMAKE_CXX_FLAGS_DEBUG "-g -D_DEBUG")
 
@@ -452,7 +455,15 @@ else()
   set(CRLIBM_FOUND 0)
 endif()
 
-pkg_check_modules(ASSIMP assimp)
+#if( MSVC )
+#  # MSVC has prepackaged assimp libraries
+#  set(ASSIMP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_assimp)
+#endif()
+find_package(ASSIMP)
+if( NOT ASSIMP_FOUND )
+  pkg_check_modules(ASSIMP assimp)
+endif()
+
 if( ASSIMP_FOUND )
   # For older versions of libassimp2, 
   # like the one in Ubuntu 12.04 
@@ -467,6 +478,9 @@ if( ASSIMP_FOUND )
   IS_ASSIMP_PRE_R896 
   )
   set(CMAKE_REQUIRED_LIBRARIES)
+  if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
+    set(IS_ASSIMP3 1)
+  endif()
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -538,12 +552,8 @@ if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
     set(COLLADA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_collada)
-  else()
-    # this is temporary since collada libraries changed (11/10/20)
-    set(COLLADA_DOM_LIBRARIES "" CACHE INTERNAL "collada libraries directories" FORCE)
-    set(COLLADA_DOM_DIR "" CACHE PATH "The directory containing a CMake configuration file for COLLADA_DOM." FORCE)
-    set(COLLADA_PATH "" CACHE PATH "collada root path" FORCE)
   endif()
+  #find_package(COLLADA_DOM 2.4 COMPONENTS 1.5 1.4 PATHS ${COLLADA_PATH})
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
   
   find_package(ZLIB)
@@ -551,9 +561,6 @@ if( OPT_COLLADA )
     message(STATUS "compiling zlib from souces")
     # compile from sources
     add_subdirectory(3rdparty/zlib)
-    set(ZLIB_FOUND 1)
-    set(ZLIB_LIBRARIES zlib)
-    set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/zlib)
   endif()
 
   pkg_check_modules(minizip minizip)
@@ -586,20 +593,9 @@ if( OPT_COLLADA )
         message(STATUS "System pcre not found, using local from sources")
         # include the local pcre
         add_subdirectory(3rdparty/pcre-8.02)
-        set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/pcre-8.02)
-        set(libpcrecpp_LIBRARY_DIRS)
-        set(libpcrecpp_LIBRARIES pcrecpp_local)
-        set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC")
-        set(libpcrecpp_LDFLAGS_OTHERS)
       endif()
 
-      add_subdirectory(3rdparty/collada)
-      set(COLLADA_DOM_FOUND 1)
-      set(COLLADA_DOM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/collada/include/1.5)
-      set(COLLADA_DOM_LIBRARY_DIRS)
-      set(COLLADA_DOM_LIBRARIES collada15reader)
-      set(COLLADA_DOM_CFLAGS_OTHER)
-      set(COLLADA_DOM_LDFLAGS_OTHER)
+      add_subdirectory(3rdparty/collada-2.4.0)
     else()
       set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
     endif()
@@ -711,34 +707,35 @@ add_subdirectory(octave_matlab)
 if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
   if( PYTHON_EXECUTABLE )
-    set(SYMPY_MINIMUM_VERSION "0.6.3")
-    set(SYMPY_MAXIMUM_VERSION "0.6.7")
-    # check if sympy substitution is ok
+    # get the sympy version
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
-      OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _sympy_check_failed)
-    if( ${_sympy_check_failed} EQUAL 0 )
-      set(OPENRAVE_USE_LOCAL_SYMPY 0)
-    else()
-      # get the sympy version
-      execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
-        OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE _sympy_version_failed)
-      if( ${_sympy_version_failed} EQUAL 0 )
-        string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-        if( "${_sympy_version}" VERSION_GREATER "${SYMPY_MINIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MINIMUM_VERSION}" )
-          if( "${_sympy_version}" VERSION_LESS "${SYMPY_MAXIMUM_VERSION}" OR "${_sympy_version}" VERSION_EQUAL "${SYMPY_MAXIMUM_VERSION}" )
-            message(STATUS "Found sympy version ${_sympy_version} >= ${SYMPY_MINIMUM_VERSION}, will patch this instead of installing local version (could have been previously installed by openrave?)")
-            set(OPENRAVE_USE_LOCAL_SYMPY 0)
-          endif()
+      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
+      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+      RESULT_VARIABLE _sympy_version_failed)
+    if( ${_sympy_version_failed} EQUAL 0 )
+      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+      message(STATUS "Found sympy version '${_sympy_version}'")
+      if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
+        set(OPENRAVE_USE_LOCAL_SYMPY 0)
+        if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
+          message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
+        else()
+          message(STATUS "Assuming sympy version 0.7.x or greater")
         endif()
-      else()
-        message(STATUS "failed to find python sympy system installation")
       endif()
+    else()
+      message(STATUS "failed to find python sympy system installation")
     endif()
   endif()
+
+      # check if sympy substitution is ok
+#      execute_process(
+#        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
+#        OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
+#        RESULT_VARIABLE _sympy_check_failed)
+#      if( ${_sympy_check_failed} EQUAL 0 )
+#        set(OPENRAVE_USE_LOCAL_SYMPY 0)
+#      else()
 
   if( OPENRAVE_USE_LOCAL_SYMPY )
     message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
@@ -746,7 +743,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
       message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
       execute_process(
-        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.6.7.tgz"
+        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.7.1.tgz"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     endif()
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
@@ -829,7 +826,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_PACKAGE_VERSION_MINOR ${OPENRAVE_VERSION_MINOR})
   set(CPACK_PACKAGE_VERSION_PATCH ${OPENRAVE_VERSION_PATCH})
   set(CPACK_PACKAGE_INSTALL_DIRECTORY "openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "CPack install directory")
-  set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/en/description.rst)
+  set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_CURRENT_SOURCE_DIR}/docs/source/description.rst)
   set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/COPYING)
 
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}BASE_REQUIRED 1)
@@ -845,7 +842,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "libcollada15dom-dev (>=2.3.1)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
@@ -855,25 +852,22 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
   set(CPACK_DEBIAN_PACKAGE_SECTION devel)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS openrave-minimal)
-  set(CPACK_DEBIAN_CMAKE_OPTIONS "-DBASH_COMPLETION_DIR=../etc/bash_completion.d -DOPT_DOUBLE_PRECISION=${OPT_DOUBLE_PRECISION} -DOPT_BUILD_PACKAGE_DEFAULT=${OPT_BUILD_PACKAGE_DEFAULT}")
   set(CPACK_DEBIAN_PACKAGE_SUGGESTS)
-  set(CPACK_DEBIAN_PACKAGE_RECOMMENDS)
-  foreach(COMP ${CPACK_COMPONENTS_ALL})
-    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "${CPACK_DEBIAN_PACKAGE_RECOMMENDS}, ${COMP}")
-  endforeach()
-  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.6.7.tgz sympy_0.6.7_patches.diff 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
+  set(CPACK_DEBIAN_PACKAGE_RECOMMENDS ${CPACK_COMPONENTS_ALL})
+  set(CPACK_DEBIAN_CMAKE_OPTIONS "-DBASH_COMPLETION_DIR=../etc/bash_completion.d -DOPT_DOUBLE_PRECISION=${OPT_DOUBLE_PRECISION} -DOPT_BUILD_PACKAGE_DEFAULT=${OPT_BUILD_PACKAGE_DEFAULT}")
+  set(CPACK_DEBIAN_PACKAGE_REMOVE_SOURCE_FILES docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.7.1.tgz 3rdparty/pcre-8.02 3rdparty/qhull 3rdparty/zlib 3rdparty/flann-1.6.6 3rdparty/collada)
   set(CPACK_DEBIAN_PACKAGE_SOURCE_COPY svn export --force)
-  set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/en/changelog.rst\n\n")
+  set(CPACK_DEBIAN_CHANGELOG "  * ChangeLog can be found at https://openrave.svn.sourceforge.net/svnroot/openrave/tags/${OPENRAVE_VERSION}/docs/source/changelog.rst\n\n")
   execute_process(COMMAND lsb_release -is
     OUTPUT_VARIABLE _lsb_distribution OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _lsb_release_failed)
   set(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
   string(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
-    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric CACHE STRING "Release code-names of the distrubiton release")
+    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid maverick natty oneiric precise CACHE STRING "Release code-names of the distrubiton release")
   endif()
   if( OPT_BUILD_PACKAGE_DEFAULT )
-    set(CPACK_COMPONENT_OPENRAVE_RECOMMENDS ${CPACK_DEBIAN_PACKAGE_NAME})
+    set(CPACK_COMPONENT_OPENRAVE_DEPENDS ${CPACK_DEBIAN_PACKAGE_NAME})
     set(CPACK_COMPONENT_OPENRAVE_DISPLAY_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
     set(CPACK_COMPONENT_OPENRAVE-MINIMAL_DISPLAY_NAME "minimal shared files for all versions")
     set(CPACK_COMPONENT_OPENRAVE-MINIMAL_DESCRIPTION "Uninstall this package to remove all OpenRAVE installations")

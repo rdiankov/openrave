@@ -139,9 +139,6 @@ class TestKinematics(EnvironmentSetup):
                                         raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, computed=%r, newquat=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, dot(Jquat,deltavalues)+worldquat, newquat))
 
                                     if axisangledist(dot(Jangvel,deltavalues),axisAngleFromRotationMatrix(dot(Tlinknew[0:3,0:3], linalg.inv(Tlink[0:3,0:3])))) > 0.1*angthresh:
-                                        from IPython.Shell import IPShellEmbed
-                                        ipshell = IPShellEmbed(argv='',banner = 'OpenRAVE Dropping into IPython, variables: env, robot',exit_msg = 'Leaving Interpreter and closing program.')
-                                        ipshell(local_ns=locals())
                                         raise ValueError('jacobian failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, angledist=%f, thresh=%f'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, axisangledist(dot(Jangvel,deltavalues)+worldaxisangle,newaxisangle), 2*thresh))
 
     def test_bodyvelocities(self):
@@ -406,7 +403,7 @@ class TestKinematics(EnvironmentSetup):
                 for idofvalues in range(10):
                     lower,upper = body.GetDOFLimits()
                     vellimits = body.GetDOFVelocityLimits()
-                    dofvaluesnew = randlimits(lower+2*deltastep, upper-2*deltastep)
+                    dofvaluesnew = randlimits(numpy.minimum(lower+5*deltastep,upper), numpy.maximum(upper-5*deltastep,lower))
                     Mreal = None
                     for idofvel in range(10):
                         dofvelnew = randlimits(-vellimits+10*deltastep,vellimits-10*deltastep)
@@ -425,7 +422,9 @@ class TestKinematics(EnvironmentSetup):
                         torques = body.ComputeInverseDynamics(dofaccel)
                         # how to verify these torques?
                         # compute M(q) and check if output torques form a symmetric matrix
-                        torquebase = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                        torquebase = body.ComputeInverseDynamics(None)
+                        
+                        testtorque_m, testtorque_c, testtorque_e = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
                         
                         M = []
                         for i in range(body.GetDOF()):
@@ -441,22 +440,29 @@ class TestKinematics(EnvironmentSetup):
                             # should be constant with changes to velocity
                             assert(transdist(M,Mreal) <= 1e-14*M.shape[0]**2)
                         assert(transdist(dot(dofaccel,M)+torquebase,torques) <= 1e-13*len(torquebase))
+                        assert(transdist(dot(dofaccel,M),testtorque_m) <= 1e-13*len(torquebase))
                         
                         env.GetPhysicsEngine().SetGravity([0,0,0])
-                        torquenogravity = body.ComputeInverseDynamics(zeros(body.GetDOF()))
+                        torquenogravity = body.ComputeInverseDynamics(None)
+                        testtorque_m2, testtorque_c2, testtorque_e2 = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
                         body.SetDOFVelocities(dofvelnew,[0,0,0],[0,0,0],checklimits=True)
-                        torquenoexternal = body.ComputeInverseDynamics(zeros(body.GetDOF())) # base link angular velocity exerts external torque
-                        body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)
+                        torquenoexternal = body.ComputeInverseDynamics(None) # base link angular velocity exerts external torque
+                        testtorque_m3, testtorque_c3, testtorque_e3 = body.ComputeInverseDynamics(dofaccel,None,returncomponents=True)
+                        assert( all(abs(testtorque_e3)<=1e-10) )
+                        assert( transdist(testtorque_m, testtorque_m2) <= 1e-10 )
+                        assert( transdist(testtorque_m, testtorque_m3) <= 1e-10 )
+                        assert( transdist(testtorque_c, torquenoexternal) <= 1e-10 )
+                        assert( transdist(testtorque_c2, torquenoexternal) <= 1e-10 )
+                        assert( transdist(testtorque_c3, torquenoexternal) <= 1e-10 )
                         
                         # compute the coriolis term: C_ij = 0.5*sum(dM_ij/dtheta_k + dM_ik/dtheta_j + dM_kj/dtheta_i)
                         def ComputeDynamicsM(body,dofvalues):
                             body.SetDOFValues(dofvalues,range(body.GetDOF()),checklimits=True)
-                            tb = body.ComputeInverseDynamics(zeros(body.GetDOF()))
                             M = zeros((body.GetDOF(),body.GetDOF()))
                             for index in range(body.GetDOF()):
                                 testaccel = zeros(body.GetDOF())
                                 testaccel[index] = 1.0
-                                M[:,index] = body.ComputeInverseDynamics(testaccel)-tb
+                                M[:,index] = body.ComputeInverseDynamics(testaccel)
                             return M
 
                         body.SetDOFVelocities(zeros(body.GetDOF()),[0,0,0],[0,0,0],checklimits=True)
@@ -467,7 +473,7 @@ class TestKinematics(EnvironmentSetup):
                             Mdiff = (ComputeDynamicsM(body,dofvaluesnew+testdelta) - ComputeDynamicsM(body,dofvaluesnew-testdelta))/(2*deltastep)
                             Mpartials.append(Mdiff)
 
-                        randdelta = 10*deltastep*(random.rand(body.GetDOF())-1)
+                        randdelta = 8*deltastep*(random.rand(body.GetDOF())-1)
                         Mtestdiff = ComputeDynamicsM(body,dofvaluesnew+randdelta)-ComputeDynamicsM(body,dofvaluesnew)
                         Mexpecteddiff = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
@@ -486,7 +492,7 @@ class TestKinematics(EnvironmentSetup):
                         body.SetDOFValues(dofvaluesnew,range(body.GetDOF()),checklimits=True)
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=True)    
                         env.GetPhysicsEngine().SetGravity(2*gravity)
-                        torquegravity2 = body.ComputeInverseDynamics(zeros(body.GetDOF()))-torquenogravity
+                        torquegravity2 = body.ComputeInverseDynamics(None)-torquenogravity
                         assert(transdist(2*torquegravity,torquegravity2) <= g_epsilon)
 
                         # check that diff(M) - 2*C is skew symmetric
@@ -495,9 +501,9 @@ class TestKinematics(EnvironmentSetup):
                             Mdot += Mpartials[i]*dofvelnew[i]                            
                         SkewSymmetric = Mdot-2*C
                         assert(transdist(SkewSymmetric,-transpose(SkewSymmetric)) <= g_epsilon)
-
-                        # compute potential energy with respect to gravity
+                        
                         env.GetPhysicsEngine().SetGravity(gravity)
+                        # compute potential energy with respect to gravity
                         def ComputePotentialEnergy(body,dofvalues):
                             gravity = body.GetEnv().GetPhysicsEngine().GetGravity()
                             body.SetDOFValues(dofvalues,range(body.GetDOF()),checklimits=True)
@@ -514,6 +520,69 @@ class TestKinematics(EnvironmentSetup):
                             PEdiff = (ComputePotentialEnergy(body,dofvaluesnew+testdelta)-ComputePotentialEnergy(body,dofvaluesnew-testdelta))/(2*deltastep)
                             gravitypartials.append(PEdiff)
                         assert( transdist(-torquegravity, gravitypartials) < 0.1*deltastep*len(gravitypartials))
+                        assert( transdist(torquegravity, testtorque_e-testtorque_e2) <= 1e-10 )
+
+    def test_hessian(self):
+        self.log.info('check the jacobian and hessian computation')
+        env=self.env
+        for envfile in ['robots/barrettwam.robot.xml']:#g_robotfiles:
+            env.Reset()
+            self.LoadEnv(envfile,{'skipgeometry':'1'})
+            body = env.GetBodies()[0]
+            lowerlimit,upperlimit = body.GetDOFLimits()
+            deltastep = 0.01
+            for i in range(100):
+                dofvalues = randlimits(numpy.minimum(lowerlimit+5*deltastep,upperlimit), numpy.maximum(upperlimit-5*deltastep,lowerlimit))
+                xyzoffset = ones(3)#random.rand(3)-0.5
+                for ilink,link in enumerate(body.GetLinks()):
+                    body.SetDOFValues(dofvalues)
+                    Jt = body.ComputeJacobianTranslation(ilink,xyzoffset)
+                    Ja = body.ComputeJacobianAxisAngle(ilink)
+                    Ht = body.ComputeHessianTranslation(ilink,xyzoffset)
+                    Ha = body.ComputeHessianAxisAngle(ilink)
+                    deltavalues = (random.rand(body.GetDOF())-0.5)*deltastep
+                    Tlink = link.GetTransform()
+                    axisangle0 = axisAngleFromRotationMatrix(Tlink[0:3,0:3])
+                    errfirst = []
+                    errsecond = []
+                    mults = arange(1.0,6.0,1.0)
+                    for mult in mults:
+                        newdeltavalues = mult*deltavalues
+                        body.SetDOFValues(dofvalues+newdeltavalues)
+                        newdeltavalues = body.GetDOFValues()-dofvalues
+                        Tlink2 = link.GetTransform()
+                        xyzoffset2 = transformPoints(dot(Tlink2,linalg.inv(Tlink)),[xyzoffset])[0]
+                        realoffset = xyzoffset2 - xyzoffset
+                        errfirst.append(linalg.norm(dot(Jt,newdeltavalues) - realoffset))
+                        errsecond.append(linalg.norm(dot(Jt,newdeltavalues) + 0.5*dot(newdeltavalues,dot(Ht,newdeltavalues)) - realoffset))
+                        errmult = 1.0
+                        if errfirst[-1] > deltastep*1e-5:
+                            errmult = 3.0
+                        #print 'trans',errsecond[-1],errfirst[-1],linalg.norm(realoffset)
+                        assert(errsecond[-1]*errmult<=errfirst[-1]) # should be way better
+                        if len(errfirst) > 2:
+                            assert(errfirst[-2]<=errfirst[-1]+1e-15)
+                            assert(errsecond[-2]<=errsecond[-1]+1e-15)
+
+                        axisangle1 = axisAngleFromRotationMatrix(Tlink2[0:3,0:3])
+                        axisdelta = axisangle1-axisangle0
+                        firstdelta = dot(Ja,newdeltavalues)
+                        seconddelta = firstdelta + 0.5*dot(newdeltavalues,dot(Ha,newdeltavalues))
+                        angleerrorfirst = linalg.norm(firstdelta-axisdelta)
+                        angleerrorsecond = linalg.norm(seconddelta-axisdelta)
+                        #print angleerrorfirst,angleerrorsecond,linalg.norm(axisdelta)
+                        assert(angleerrorfirst <= 1.3*linalg.norm(axisdelta))
+                        assert(angleerrorsecond <= 1.3*linalg.norm(axisdelta))
+                        #assert(angleerrorsecond <= angleerrorfirst+1e-14) # for some reason not valid all the time
+                        
+                    # errfirst should be increasing linearly
+                    # errsecond should be increasing quadratically
+                    if errfirst[-1] > 1e-15:
+                        coeffs0,residuals, rank, singular_values, rcond=polyfit(mults,errfirst/errfirst[-1],2,full=True)
+                        assert(residuals<0.01)
+                    if errsecond[-1] > 1e-15:
+                        coeffs1,residuals, rank, singular_values, rcond=polyfit(mults,errsecond/errsecond[-1],3,full=True)
+                        assert(residuals<0.01)
                         
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')

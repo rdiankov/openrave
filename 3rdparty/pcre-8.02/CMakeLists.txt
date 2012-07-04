@@ -500,3 +500,10 @@ IF(PCRE_SHOW_REPORT)
 ENDIF(PCRE_SHOW_REPORT)
 
 # end CMakeLists.txt
+
+# set external flags
+set(libpcrecpp_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+set(libpcrecpp_LIBRARY_DIRS PARENT_SCOPE)
+set(libpcrecpp_LIBRARIES pcrecpp_local PARENT_SCOPE)
+set(libpcrecpp_CFLAGS_OTHERS "-DPCRE_STATIC" PARENT_SCOPE)
+set(libpcrecpp_LDFLAGS_OTHERS PARENT_SCOPE)

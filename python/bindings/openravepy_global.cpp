@@ -831,6 +831,47 @@ void raveLogVerbose(const string &s)
     raveLog(s,Level_Verbose);
 }
 
+void pyRaveSetDebugLevel(uint32_t level)
+{
+    OpenRAVE::RaveSetDebugLevel(level);
+}
+
+int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
+{
+    int level = Level_Info;
+    if( olevel != object() ) {
+        // some version of boost python return true for extract::check, even through the actual conversion will throw an OverflowError
+        // therefore check for conversion compatibility starting at the longest signed integer
+        extract<int64_t> levelint64(olevel);
+        if( levelint64.check() ) {
+            level = static_cast<int>((int64_t)levelint64);
+        }
+        else {
+            extract<uint64_t> leveluint64(olevel);
+            if( leveluint64.check() ) {
+                RAVELOG_INFO("4\n");
+                level = static_cast<int>((uint64_t)leveluint64);
+            }
+            else {
+                extract<uint32_t> leveluint32(olevel);
+                if( leveluint32.check() ) {
+                    level = static_cast<int>((uint32_t)leveluint32);
+                }
+                else {
+                    extract<int> levelint32(olevel);
+                    if( levelint32.check() ) {
+                        level = (int)levelint32;
+                    }
+                    else {
+                        RAVELOG_WARN("failed to extract level from RaveInitialize call\n");
+                    }
+                }
+            }
+        }
+    }
+    return OpenRAVE::RaveInitialize(bLoadAllPlugins,level);
+}
+
 object RaveGetPluginInfo()
 {
     boost::python::list plugins;
@@ -1215,7 +1256,7 @@ public:
     virtual ~PyManipulatorIKGoalSampler() {
     }
 
-    object Sample(bool ikreturn = false)
+    object Sample(bool ikreturn = false, bool releasegil = false)
     {
         if( ikreturn ) {
             IkReturnPtr pikreturn = _sampler->Sample();
@@ -1232,6 +1273,23 @@ public:
         return object();
     }
 
+    object SampleAll(bool releasegil = false)
+    {
+        boost::python::list oreturns;
+        std::list<IkReturnPtr> listreturns;
+        {
+            openravepy::PythonThreadSaverPtr statesaver;
+            if( releasegil ) {
+                statesaver.reset(new openravepy::PythonThreadSaver());
+            }
+            _sampler->SampleAll(listreturns);
+        }
+        FOREACH(it,listreturns) {
+            oreturns.append(openravepy::toPyIkReturn(**it));
+        }
+        return oreturns;
+    }
+
     OpenRAVE::planningutils::ManipulatorIKGoalSamplerPtr _sampler;
 };
 
@@ -1239,14 +1297,15 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 
 }
 
-BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, RaveInitialize, 0, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 1)
 
 void init_openravepy_global()
 {
@@ -1571,11 +1630,12 @@ void init_openravepy_global()
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
-        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
+        .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
+        .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
         ;
     }
 
-    def("RaveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
+    def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
     def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
@@ -1586,7 +1646,7 @@ void init_openravepy_global()
     def("RaveLogDebug",openravepy::raveLogDebug,args("log"),"Send a debug log to the openrave system");
     def("RaveLogVerbose",openravepy::raveLogVerbose,args("log"),"Send a verbose log to the openrave system");
     def("RaveLog",openravepy::raveLog,args("log","level"),"Send a log to the openrave system with excplicit level");
-    def("RaveInitialize",RaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
+    def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(args("load_all_plugins","level"),DOXY_FN1(RaveInitialize)));
     def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
     def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
     def("RaveGetLoadedInterfaces",openravepy::RaveGetLoadedInterfaces,DOXY_FN1(RaveGetLoadedInterfaces));
@@ -1597,7 +1657,7 @@ void init_openravepy_global()
     def("RaveClone",openravepy::RaveClone,args("ref","cloningoptions"), DOXY_FN1(RaveClone));
     def("RaveGetIkTypeFromUniqueId",OpenRAVE::RaveGetIkTypeFromUniqueId,args("uniqueid"), DOXY_FN1(RaveGetIkTypeFromUniqueId));
 
-    def("raveSetDebugLevel",OpenRAVE::RaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
+    def("raveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("raveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");
     def("raveLogError",openravepy::raveLogError,args("log"),"Send an error log to the openrave system");

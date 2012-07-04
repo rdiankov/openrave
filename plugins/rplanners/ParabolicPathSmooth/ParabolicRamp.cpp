@@ -1766,7 +1766,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
             }
         }
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax && FuzzyEquals(pp.ttotal,endTime,EpsilonT) ) {
+    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && FuzzyEquals(pp.ttotal,endTime,EpsilonT) ) {
         a1 = pp.a;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;

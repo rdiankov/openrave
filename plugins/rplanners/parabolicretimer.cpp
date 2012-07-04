@@ -535,7 +535,10 @@ protected:
             }
 
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
-            BOOST_ASSERT(success);
+            if( !success ) {
+                success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+                BOOST_ASSERT(success);
+            }
 
             vector<dReal> vswitchtimes;
             if( info->ptraj->GetNumWaypoints() == 0 ) {

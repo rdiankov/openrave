@@ -1,0 +1,30 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-23 13:22\n"
+"PO-Revision-Date: 2012-06-19 18:03+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# 46999c76848d457dbf15c51378fac59f
+#: ../../source/description.rst:1
+msgid ""
+"OpenRAVE provides an environment for testing, developing, and deploying "
+"motion planning algorithms in real-world robotics applications. The main "
+"focus is on simulation and analysis of kinematic and geometric information "
+"related to motion planning. OpenRAVE's stand-alone nature allows is to be "
+"easily integrated into existing robotics systems. It provides many command "
+"line tools to work with robots and planners, and the run-time core is small "
+"enough to be used inside controllers and bigger frameworks. An important "
+"target application is industrial robotics automation."
+msgstr ""

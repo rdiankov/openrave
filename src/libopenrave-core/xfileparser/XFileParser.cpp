@@ -57,6 +57,10 @@
 #include <boost/static_assert.hpp>
 #include <boost/lexical_cast.hpp>
 
+#if defined(OPENRAVE_IS_ASSIMP3)
+#include <assimp/LogStream.hpp>
+#include <assimp/DefaultLogger.hpp>
+#else
 #include "DefaultLogger.h"
 //#include "IOStream.h"
 //#include "IOSystem.h"
@@ -64,6 +68,7 @@
 #include "aiPostProcess.h"
 #include "assimp.hpp"
 //#include "../include/export.hpp"
+#endif
 
 #define DeadlyImportError openrave_exception
 
@@ -77,15 +82,8 @@
 using namespace Assimp;
 using namespace Assimp::XFile;
 
-#ifndef ASSIMP_BUILD_NO_COMPRESSED_X
-
-//#   ifdef ASSIMP_BUILD_NO_OWN_ZLIB
-//#       include <zlib.h>
-//#   else
-//#       include "../contrib/zlib/zlib.h"
-//#   endif
-
-#include <zip.h> // compressed files
+#ifdef OPENRAVE_HAS_ZLIB
+#include <zlib.h> // compressed files
 
 // Magic identifier for MSZIP compressed data
 #define MSZIP_MAGIC 0x4B43
@@ -169,7 +167,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::string& pBuffer)
     // If this is a compressed X file, apply the inflate algorithm to it
     if (compressed)
     {
-#ifdef ASSIMP_BUILD_NO_COMPRESSED_X
+#ifndef OPENRAVE_HAS_ZLIB
         throw DeadlyImportError("Assimp was built without compressed X support");
 #else
         /* ///////////////////////////////////////////////////////////////////////
@@ -419,10 +417,10 @@ void XFileParserOpenRAVE::ParseDataObjectFrame( Node* pParent)
             ThrowException( "Unexpected end of file reached while parsing frame");
 
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                  // frame finished
+            break;                                                                                                                                                                                                                                                                                                                                                      // frame finished
         else
         if( objectName == "Frame")
-            ParseDataObjectFrame( node);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          // child frame
+            ParseDataObjectFrame( node);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // child frame
         else
         if( objectName == "FrameTransformMatrix")
             ParseDataObjectTransformationMatrix( node->mTrafoMatrix);
@@ -526,7 +524,7 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
             ThrowException( "Unexpected end of file while parsing mesh structure");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                              // mesh finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // mesh finished
         else
         if( objectName == "MeshNormals")
             ParseDataObjectMeshNormals( pMesh);
@@ -541,7 +539,7 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
             ParseDataObjectMeshMaterialList( pMesh);
         else
         if( objectName == "VertexDuplicationIndices")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           // we'll ignore vertex duplication indices
+            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // we'll ignore vertex duplication indices
         else
         if( objectName == "XSkinMeshHeader")
             ParseDataObjectSkinMeshHeader( pMesh);
@@ -735,7 +733,7 @@ void XFileParserOpenRAVE::ParseDataObjectMeshMaterialList( Mesh* pMesh)
             ThrowException( "Unexpected end of file while parsing mesh material list.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                              // material list finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material list finished
         else
         if( objectName == "{")
         {
@@ -789,7 +787,7 @@ void XFileParserOpenRAVE::ParseDataObjectMaterial( Material* pMaterial)
             ThrowException( "Unexpected end of file while parsing mesh material");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                              // material finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material finished
         else
         if( objectName == "TextureFilename" || objectName == "TextureFileName")
         {
@@ -838,7 +836,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationSet()
             ThrowException( "Unexpected end of file while parsing animation set.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                              // animation set finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation set finished
         else
         if( objectName == "Animation")
             ParseDataObjectAnimation( anim);
@@ -866,13 +864,13 @@ void XFileParserOpenRAVE::ParseDataObjectAnimation( Animation* pAnim)
             ThrowException( "Unexpected end of file while parsing animation.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                              // animation finished
+            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation finished
         else
         if( objectName == "AnimationKey")
             ParseDataObjectAnimationKey( banim);
         else
         if( objectName == "AnimationOptions")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // not interested
+            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // not interested
         else
         if( objectName == "{")
         {

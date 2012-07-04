@@ -16,6 +16,9 @@ class html_only(only_base):
 class latex_only(only_base):
     pass
 
+class json_only(only_base):
+    pass
+
 def run(content, node_class, state, content_offset):
     text = '\n'.join(content)
     node = node_class(text)
@@ -30,18 +33,21 @@ def latex_only_directive(name, arguments, options, content, lineno,
                          content_offset, block_text, state, state_machine):
     return run(content, latex_only, state, content_offset)
 
-def builder_inited(app):
-    if app.builder.name == 'html':
-        latex_only.traverse = only_base.dont_traverse
-    else:
-        html_only.traverse = only_base.dont_traverse
+def json_only_directive(name, arguments, options, content, lineno,
+                         content_offset, block_text, state, state_machine):
+    return run(content, json_only, state, content_offset)
+
+# def builder_inited(app):
+#     if app.builder.name == 'html':
+#         latex_only.traverse = only_base.dont_traverse
+#     else:
+#         html_only.traverse = only_base.dont_traverse
 
 def setup(app):
     app.add_directive('htmlonly', html_only_directive, True, (0, 0, 0))
     app.add_directive('latexonly', latex_only_directive, True, (0, 0, 0))
-    app.add_node(html_only)
-    app.add_node(latex_only)
-
+    app.add_directive('jsononly', json_only_directive, True, (0, 0, 0)
+)
     # This will *really* never see the light of day As it turns out,
     # this results in "broken" image nodes since they never get
     # processed, so best not to do this.
@@ -59,5 +65,11 @@ def setup(app):
 
     app.add_node(html_only, html=(visit_perform, depart_perform))
     app.add_node(html_only, latex=(visit_ignore, depart_ignore))
-    app.add_node(latex_only, latex=(visit_perform, depart_perform))
+    app.add_node(html_only, json=(visit_ignore, depart_ignore))
     app.add_node(latex_only, html=(visit_ignore, depart_ignore))
+    app.add_node(latex_only, latex=(visit_perform, depart_perform))
+    app.add_node(latex_only, json=(visit_ignore, depart_ignore))
+    app.add_node(json_only, html=(visit_ignore, depart_ignore))
+    app.add_node(json_only, latex=(visit_ignore, depart_ignore))
+    app.add_node(json_only, json=(visit_perform, depart_perform))
+    

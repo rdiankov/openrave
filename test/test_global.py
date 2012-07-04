@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+import imp
+
+log=logging.getLogger('openravepytest')
 
 @with_destroy
 def test_pluginloading():
@@ -21,3 +24,28 @@ def test_pluginloading():
     env=Environment()
     assert(RaveCreateProblem(env,'ikfast') is not None)
 
+class RunTutorialExample(object):
+    __name__= 'test_global.tutorialexample'
+    def __call__(self,modulepath):
+        # import the module, and at the end call RaveDestroy?
+        modulename = os.path.split(modulepath)[1]
+        description = 'test_programs.tutorialexample.%s'%(modulename)
+        log.info('execute tutorial %s',modulepath)
+        RaveDestroy()
+        try:
+            fp, pathname, description = imp.find_module(modulepath)
+            module=imp.load_module(modulename, fp, pathname, description)
+        finally:
+            log.info('tutorial %s finished',modulepath)
+            if fp:
+                fp.close()
+            RaveDestroy()
+
+# test all scripts in source/tutorials/openravepy_examples/*.py
+def test_tutorialexamples():
+    ignore_examples = ['saving_viewer_image', 'recording_videos']
+    examplesdir=os.path.join('..','docs','source','tutorials','openravepy_examples')
+    for name in os.listdir(examplesdir):
+        basename,ext = os.path.splitext(name)
+        if not basename in ignore_examples and ext.lower() == '.py':
+                yield RunTutorialExample(), os.path.join(examplesdir,basename)
