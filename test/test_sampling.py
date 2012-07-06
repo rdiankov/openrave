@@ -16,6 +16,9 @@ from common_test_openrave import *
 class TestSampling(EnvironmentSetup):
     def _runsampler(self,samplername):
         sp=RaveCreateSpaceSampler(self.env,samplername)
+        if sp is None:
+            return
+        
         for type in SampleDataType.values.values():
             if sp.Supports(type):
                 for dim in [1,5]:
