@@ -40,8 +40,8 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
 /** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
 
     checks internal data structures and verifies that all trajectory via points do not violate joint position, velocity, and acceleration limits.
+    \param parameters the planner parameters passed to the planner that returned the trajectory. If not initialized, will attempt to create a new PlannerParameters structure from trajectory->GetConfigurationSpecification()
     \param trajectory trajectory of points to be checked
-    \param parameters the planner parameters passed to the planner that returned the trajectory
     \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
     \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
  */
@@ -124,12 +124,6 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 /// trajectories's data can be set at a time.
 /// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
 OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
-
-/** \brief sets the planner parameters structure from a configuration specification
-
-    Attempt to set default values for all parameters
- */
-OPENRAVE_API void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec);
 
 /** \brief represents the DH parameters for one joint
 
