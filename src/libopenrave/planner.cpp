@@ -379,7 +379,7 @@ void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParamete
         std::vector<dReal> vtemp0, vtemp1; vtemp0.reserve(nMaxDOFForGroup); vtemp1.reserve(nMaxDOFForGroup);
         std::vector<dReal>::iterator itsource0 = v0.begin();
         std::vector<dReal>::const_iterator itsource1 = v1.begin();
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             vtemp0.resize(itfn->second);
             std::copy(itsource0,itsource0+itfn->second,vtemp0.begin());
             vtemp1.resize(itfn->second);
@@ -417,7 +417,7 @@ dReal _CallDistMetricFns(const std::vector< std::pair<PlannerBase::PlannerParame
         std::vector<dReal> vtemp0, vtemp1; vtemp0.reserve(nMaxDOFForGroup); vtemp1.reserve(nMaxDOFForGroup);
         std::vector<dReal>::const_iterator itsource0 = v0.begin(), itsource1 = v1.begin();
         dReal f = 0;
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             vtemp0.resize(itfn->second);
             std::copy(itsource0,itsource0+itfn->second,vtemp0.begin());
             vtemp1.resize(itfn->second);
@@ -439,7 +439,7 @@ bool _CallSampleFns(const std::vector< std::pair<PlannerBase::PlannerParameters:
         std::vector<dReal> vtemp; vtemp.reserve(nMaxDOFForGroup);
         v.resize(nDOF);
         std::vector<dReal>::iterator itdest = v.begin();
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             if( !itfn->first(vtemp) ) {
                 return false;
             }
@@ -462,7 +462,7 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
         v.resize(nDOF);
         std::vector<dReal>::iterator itdest = v.begin();
         int ifn = 0;
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             vtemp1.resize(itfn->second);
             if( fRadius <= 0 ) {
                 std::copy(itsample,itsample+itfn->second,itdest);
@@ -492,7 +492,7 @@ void _CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameter
         std::vector<dReal> vtemp; vtemp.reserve(nMaxDOFForGroup);
         OPENRAVE_ASSERT_OP((int)v.size(),==,nDOF);
         std::vector<dReal>::const_iterator itsrc = v.begin();
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             vtemp.resize(itfn->second);
             std::copy(itsrc,itsrc+itfn->second,vtemp.begin());
             itfn->first(vtemp);
@@ -510,7 +510,7 @@ void _CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameter
         std::vector<dReal> vtemp; vtemp.reserve(nMaxDOFForGroup);
         v.resize(nDOF);
         std::vector<dReal>::iterator itdest = v.begin();
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             itfn->first(vtemp);
             std::copy(vtemp.begin(),vtemp.end(),itdest);
             itdest += itfn->second;
@@ -529,7 +529,7 @@ bool _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamet
         std::vector<dReal> vtemp0, vtemp1; vtemp0.reserve(nMaxDOFForGroup); vtemp1.reserve(nMaxDOFForGroup);
         std::vector<dReal>::const_iterator itdelta = vdelta.begin();
         std::vector<dReal>::iterator itdest = v.begin();
-        FOREACH(itfn, vfunctions) {
+        FOREACHC(itfn, vfunctions) {
             vtemp0.resize(itfn->second);
             std::copy(itdest,itdest+itfn->second,vtemp0.begin());
             vtemp1.resize(itfn->second);
