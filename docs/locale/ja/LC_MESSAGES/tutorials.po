@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 19:58\n"
+"POT-Creation-Date: 2012-07-07 02:28\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -343,6 +343,11 @@ msgstr ""
 # 7dc0b94eddec4094b59926cd8080f15f
 #: ../../source/tutorials/openravepy_examples.rst:88
 msgid "Scene Logging"
+msgstr ""
+
+# b933d6f9bbb74b35a550bbefbf297ea4
+#: ../../source/tutorials/openravepy_examples.rst:93
+msgid "Plan Multiple Robots"
 msgstr ""
 
 # dc615d33563f4efc8defbeacf321d11d
