@@ -340,32 +340,31 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
 
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
 {
-    // get all child links of the manipualtor
     RobotBasePtr probot(_probot);
     vjoints.resize(0);
-    vector<dReal> lower,upper;
-    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     int iattlink = _pEndEffector->GetIndex();
+    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink )
+        if( ilink == iattlink ) {
             continue;
-        if((__varmdofindices.size() > 0)&& !probot->DoesAffect(__varmdofindices[0],ilink) )
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmjoint,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmjoint)->GetJointIndex(),ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink ) {
             continue;
-        for(int idof = 0; idof < probot->GetDOF(); ++idof) {
-            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
-            if( probot->DoesAffect(pjoint->GetJointIndex(),ilink) && !probot->DoesAffect(pjoint->GetJointIndex(),iattlink) ) {
-                // only insert if its limits are different (ie, not a dummy joint)
-                pjoint->GetLimits(lower,upper);
-                for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                    if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[pjoint->GetJointIndex()] ) {
-                            vjoints.push_back(pjoint);
-                            vhasjoint[pjoint->GetJointIndex()] = true;
-                        }
-                        break;
-                    }
-                }
+        }
+
+        FOREACHC(itjoint, probot->GetJoints()) {
+            if( !(*itjoint)->IsStatic() && !vhasjoint[(*itjoint)->GetJointIndex()] && probot->DoesAffect((*itjoint)->GetJointIndex(),ilink) && !probot->DoesAffect((*itjoint)->GetJointIndex(),iattlink) ) {
+                vjoints.push_back(*itjoint);
+                vhasjoint[(*itjoint)->GetJointIndex()] = true;
             }
         }
     }
@@ -373,33 +372,33 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
 
 void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) const
 {
-    // get all child links of the manipualtor
-    RobotBasePtr probot(_probot);
     vdofindices.resize(0);
-    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
-    vector<dReal> lower,upper;
+    RobotBasePtr probot(_probot);
     int iattlink = _pEndEffector->GetIndex();
+    vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( ilink == iattlink )
+        if( ilink == iattlink ) {
             continue;
-        if((__varmdofindices.size() > 0)&& !probot->DoesAffect(__varmdofindices[0],ilink) )
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmjoint,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmjoint)->GetJointIndex(),ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink ) {
             continue;
-        for(int idof = 0; idof < probot->GetDOF(); ++idof) {
-            KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(idof);
-            if( probot->DoesAffect(pjoint->GetJointIndex(),ilink) && !probot->DoesAffect(pjoint->GetJointIndex(),iattlink) ) {
-                // only insert if its limits are different (ie, not a dummy joint)
-                pjoint->GetLimits(lower,upper);
-                for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                    if( lower[i] != upper[i] ) {
-                        if( !vhasjoint[pjoint->GetJointIndex()] ) {
-                            vhasjoint[pjoint->GetJointIndex()] = true;
-                            int idofbase = pjoint->GetDOFIndex();
-                            for(int idof = 0; idof < pjoint->GetDOF(); ++idof)
-                                vdofindices.push_back(idofbase+idof);
-                        }
-                        break;
-                    }
+        }
+
+        FOREACHC(itjoint, probot->GetJoints()) {
+            if( !(*itjoint)->IsStatic() && !vhasjoint[(*itjoint)->GetJointIndex()] && probot->DoesAffect((*itjoint)->GetJointIndex(),ilink) && !probot->DoesAffect((*itjoint)->GetJointIndex(),iattlink) ) {
+                vhasjoint[(*itjoint)->GetJointIndex()] = true;
+                int idofbase = (*itjoint)->GetDOFIndex();
+                for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                    vdofindices.push_back(idofbase+idof);
                 }
             }
         }
@@ -420,8 +419,8 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,__varmdofindices) {
-            if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
                 bGripperLink = false;
                 break;
             }
@@ -429,7 +428,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
         if( !bGripperLink ) {
             continue;
         }
-        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 vlinks.push_back(*itlink);
                 break;
@@ -454,8 +453,8 @@ bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,__varmdofindices) {
-            if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
                 bGripperLink = false;
                 break;
             }
@@ -463,7 +462,7 @@ bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
         if( !bGripperLink ) {
             continue;
         }
-        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 return true;
             }
@@ -478,13 +477,13 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
         FOREACHC(itindex,__varmdofindices) {
-            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
         FOREACHC(itindex,__vgripperdofindices) {
-            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
@@ -516,8 +515,8 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
-        FOREACHC(itarmjoint,__varmdofindices) {
-            if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
                 bGripperLink = false;
                 break;
             }
@@ -525,7 +524,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         if( !bGripperLink ) {
             continue;
         }
-        for(int ijoint = 0; ijoint < probot->GetDOF(); ++ijoint) {
+        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
                     return true;
@@ -578,14 +577,14 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
         }
         bool bAffected = false;
         FOREACHC(itindex,__varmdofindices) {
-            if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
                 bAffected = true;
                 break;
             }
         }
         if( !bAffected ) {
             FOREACHC(itindex,__vgripperdofindices) {
-                if( probot->DoesAffect(*itindex,(*itlink)->GetIndex()) ) {
+                if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
                     bAffected = true;
                     break;
                 }
@@ -645,8 +644,8 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
                 continue;
             // gripper needs to be affected by all joints
             bool bGripperLink = true;
-            FOREACHC(itarmjoint,__varmdofindices) {
-                if( !probot->DoesAffect(*itarmjoint,ilink) ) {
+            FOREACHC(itarmdof,__varmdofindices) {
+                if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
                     bGripperLink = false;
                     break;
                 }

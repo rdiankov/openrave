@@ -37,7 +37,7 @@ images_base_installed:
 images_all_installed: images_base_installed images/openrave_architecture.pdf images/examples/visibilityplanning_framework.png images/openrave_architecture_jp.pdf images/openrave_documentation.png
 	touch images_all_installed
 
-build/%/coreapihtml/index.html: images_all_installed Doxyfile.html Doxyfile.%
+build/%/coreapihtml/index.html build/%/coreapixml/index.xml: images_all_installed Doxyfile.html Doxyfile.%
 	rm -f doxygenhtml_installed_$*
 	mkdir -p build
 	echo "$(doxycommands)" | cat Doxyfile.html Doxyfile.$* - > build/Doxyfile.html.$*
@@ -58,7 +58,7 @@ openravepy_changed:
 openrave_plugins_changed:
 	touch openrave_plugins_changed
 
-openravepy_internal_doc: openravepy_changed
+openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/ja/coreapixml/index.xml
 	rm -f openravepy_internal_doc
 	python build_openravepy_internal.py --languagecode en --languagecode ja
 	touch openravepy_internal_doc
