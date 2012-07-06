@@ -781,6 +781,18 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
     }
 }
 
+ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const
+{
+    if( interpolation.size() == 0 ) {
+        return __armspec;
+    }
+    ConfigurationSpecification spec = __armspec;
+    FOREACH(itgroup,spec._vgroups) {
+        itgroup->interpolation=interpolation;
+    }
+    return spec;
+}
+
 const std::string& RobotBase::Manipulator::GetStructureHash() const
 {
     if( __hashstructure.size() == 0 ) {

@@ -664,13 +664,8 @@ public:
         if( vindices.size() == 0 ) {
             return numeric::array(boost::python::list());
         }
-        vector<dReal> values, v;
-        values.reserve(vindices.size());
-        FOREACHC(it, vindices) {
-            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
-            pjoint->GetValues(v,false);
-            values.push_back(v.at(*it-pjoint->GetDOFIndex()));
-        }
+        vector<dReal> values;
+        _pbody->GetDOFValues(values,vindices);
         return toPyArray(values);
     }
 
@@ -678,6 +673,20 @@ public:
     {
         vector<dReal> values;
         _pbody->GetDOFVelocities(values);
+        return toPyArray(values);
+    }
+
+    object GetDOFVelocities(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _pbody->GetDOFVelocities(values,vindices);
         return toPyArray(values);
     }
 
@@ -2728,6 +2737,8 @@ void init_openravepy_kinbody()
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getdofvelocities1)() const = &PyKinBody::GetDOFVelocities;
+        object (PyKinBody::*getdofvelocities2)(object) const = &PyKinBody::GetDOFVelocities;
         object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdoflimits2)(object) const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdofweights1)() const = &PyKinBody::GetDOFWeights;
@@ -2764,7 +2775,8 @@ void init_openravepy_kinbody()
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
                         .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
                         .def("GetDOFValues",getdofvalues2,args("indices"),DOXY_FN(KinBody,GetDOFValues))
-                        .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(KinBody,GetDOFVelocities))
+                        .def("GetDOFVelocities",getdofvelocities1, DOXY_FN(KinBody,GetDOFVelocities))
+                        .def("GetDOFVelocities",getdofvelocities2, args("indices"), DOXY_FN(KinBody,GetDOFVelocities))
                         .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
                         .def("GetDOFLimits",getdoflimits2, args("indices"),DOXY_FN(KinBody,GetDOFLimits))
                         .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))

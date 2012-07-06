@@ -961,7 +961,14 @@ protected:
     /// \brief check if the groups form a continguous space
     ///
     /// If there are two or more groups with the same semantic names, will fail. Theese groups should be merged into one.
+    /// \return true if valid, otherwise false
     virtual bool IsValid() const;
+
+    /// \brief check if the groups form a continguous space
+    ///
+    /// If there are two or more groups with the same semantic names, will fail. Theese groups should be merged into one.
+    /// \throw openrave_exception if not valid
+    virtual void Validate() const;
 
     virtual bool operator==(const ConfigurationSpecification& r) const;
     virtual bool operator!=(const ConfigurationSpecification& r) const;

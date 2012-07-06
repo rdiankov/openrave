@@ -72,6 +72,10 @@ public:
             _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
         }
 
+        void SetConfigurationSpecification(PyConfigurationSpecificationPtr pyspec, PyEnvironmentBasePtr pyenv) {
+            _paramswrite->SetConfigurationSpecification(openravepy::GetConfigurationSpecification(pyspec),openravepy::GetEnvironment(pyenv));
+        }
+
         void SetExtraParameters(const std::string& s) {
             _paramswrite->_sExtraParameters = s;
         }
@@ -234,6 +238,7 @@ void init_openravepy_planner()
         .def(init<>())
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
         .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
+        .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, args("spec","env"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)

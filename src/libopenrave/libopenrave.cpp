@@ -1328,6 +1328,29 @@ bool ConfigurationSpecification::IsValid() const
     return true;
 }
 
+void ConfigurationSpecification::Validate() const
+{
+    vector<uint8_t> occupied(GetDOF(),0);
+    FOREACHC(it,_vgroups) {
+        OPENRAVE_ASSERT_OP(it->offset,>=, 0);
+        OPENRAVE_ASSERT_OP(it->dof,>,0);
+        OPENRAVE_ASSERT_OP(it->offset+it->dof,<=,(int)occupied.size());
+        for(int i = it->offset; i < it->offset+it->dof; ++i) {
+            OPENRAVE_ASSERT_FORMAT0(!occupied[i],"ocupied when it shoultn't be",ORE_Assert);
+            occupied[i] = 1;
+        }
+    }
+    FOREACH(it,occupied) {
+        OPENRAVE_ASSERT_OP_FORMAT0(*it,!=,0,"found unocupied index",ORE_Assert);
+    }
+    // check for repeating names
+    FOREACHC(it,_vgroups) {
+        for(std::vector<Group>::const_iterator it2 = it+1; it2 != _vgroups.end(); ++it2) {
+            OPENRAVE_ASSERT_OP_FORMAT0(it->name,!=,it2->name,"repeating names",ORE_Assert);
+        }
+    }
+}
+
 bool ConfigurationSpecification::operator==(const ConfigurationSpecification& r) const
 {
     if( _vgroups.size() != r._vgroups.size() ) {

@@ -536,10 +536,10 @@ public:
         /// \brief The discretization of the joint used when line-collision checking.
         ///
         /// The resolutions are set as large as possible such that the joint will not go through obstacles of determined size.
-        inline dReal GetResolution() const {
+        inline dReal GetResolution(int iaxis=0) const {
             return fResolution;
         }
-        virtual void SetResolution(dReal resolution);
+        virtual void SetResolution(dReal resolution, int iaxis=0);
 
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
@@ -596,13 +596,16 @@ public:
         /// \param[in] axis the axis to get
         virtual Vector GetAxis(int axis = 0) const;
 
-        /** \brief Returns the limits of the joint
+        /** \brief Get the limits of the joint
 
             \param[out] vLowerLimit the lower limits
             \param[out] vUpperLimit the upper limits
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
         virtual void GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& vUpperLimit, bool bAppend=false) const;
+
+        /// \brief returns the lower and upper limit of one axis of the joint
+        virtual std::pair<dReal, dReal> GetLimit(int iaxis=0) const;
 
         /// \brief \see GetLimits
         virtual void SetLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
@@ -616,6 +619,9 @@ public:
 
         virtual void GetVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal>& vupper, bool bAppend=false) const;
 
+        /// \brief returns the lower and upper velocity limit of one axis of the joint
+        virtual std::pair<dReal, dReal> GetVelocityLimit(int iaxis=0) const;
+
         /// \brief \see GetVelocityLimits
         virtual void SetVelocityLimits(const std::vector<dReal>& vmax);
 
@@ -625,6 +631,8 @@ public:
             \param[in] bAppend if true will append to the end of the vector instead of erasing it
          */
         virtual void GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        virtual dReal GetAccelerationLimit(int iaxis=0) const;
 
         /// \brief \see GetAccelerationLimits
         virtual void SetAccelerationLimits(const std::vector<dReal>& vmax);
@@ -1021,17 +1029,35 @@ private:
     virtual int GetDOF() const;
 
     /// \brief Returns all the joint values as organized by the DOF indices.
-    virtual void GetDOFValues(std::vector<dReal>& v) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns all the joint velocities as organized by the DOF indices.
-    virtual void GetDOFVelocities(std::vector<dReal>& v) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns all the joint limits as organized by the DOF indices.
-    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns all the joint velocity limits as organized by the DOF indices.
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& lowerlimit, std::vector<dReal>& upperlimit, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max velocity for each DOF
-    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFVelocityLimits(std::vector<dReal>& maxvelocities, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max acceleration for each DOF
-    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations) const;
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFAccelerationLimits(std::vector<dReal>& maxaccelerations, const std::vector<int>& dofindices = std::vector<int>()) const;
+
     /// \brief Returns the max torque for each DOF
     virtual void GetDOFTorqueLimits(std::vector<dReal>& maxaccelerations) const;
 
@@ -1043,8 +1069,16 @@ private:
         GetDOFAccelerationLimits(v);
     }
     virtual void GetDOFMaxTorque(std::vector<dReal>& v) const;
-    virtual void GetDOFResolutions(std::vector<dReal>& v) const;
-    virtual void GetDOFWeights(std::vector<dReal>& v) const;
+
+    /// \brief get the dof resolutions
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
+
+    /// \brief get dof weights
+    ///
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofindices = std::vector<int>()) const;
 
     /// \brief \see GetDOFVelocityLimits
     virtual void SetDOFVelocityLimits(const std::vector<dReal>& maxlimits);
@@ -1055,8 +1089,10 @@ private:
     /// \brief \see GetDOFTorqueLimits
     virtual void SetDOFTorqueLimits(const std::vector<dReal>& maxlimits);
 
-    /// \brief \see GetDOFWeights
-    virtual void SetDOFWeights(const std::vector<dReal>& weights);
+    /// \brief sets dof weights
+    ///
+    /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
+    virtual void SetDOFWeights(const std::vector<dReal>& weights, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief \see GetDOFLimits
     virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
@@ -1135,7 +1171,10 @@ private:
     /// \brief Computes the configuration difference values1-values2 and stores it in values1.
     ///
     /// Takes into account joint limits and wrapping of circular joints.
-    virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2) const;
+    /// \param[inout] values1 the result is stored back in this
+    /// \param[in] values2
+    /// \param dofindices the dof indices to compute the subtraction for. If empty, will compute for all the dofs
+    virtual void SubtractDOFValues(std::vector<dReal>& values1, const std::vector<dReal>& values2, const std::vector<int>& dofindices=std::vector<int>()) const;
 
     /// \brief Adds a torque to every joint.
     ///
@@ -1245,7 +1284,8 @@ private:
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = true);
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = true, const std::vector<int>& dofindices = std::vector<int>());
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
         SetDOFValues(values,checklimits);
@@ -1286,7 +1326,7 @@ private:
     /// \param linkindex of the link that defines the frame the position is attached to
     /// \param position position in world space where to compute derivatives from.
     /// \param jacobian 3xDOF matrix
-    /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+    /// \param dofindices the dof indices to compute the jacobian for. If empty, will compute for all the dofs
     virtual void ComputeJacobianTranslation(int linkindex, const Vector& position, std::vector<dReal>& jacobian, const std::vector<int>& dofindices=std::vector<int>()) const;
 
     /// \brief calls std::vector version of ComputeJacobian internally
@@ -1341,7 +1381,7 @@ private:
         /// \param linkindex of the link that defines the frame the position is attached to
         /// \param position position in world space where to compute derivatives from.
         /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta translation
-        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
      */
     virtual void ComputeHessianTranslation(int linkindex, const Vector& position, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
 
@@ -1364,7 +1404,7 @@ private:
 
         /// \param linkindex of the link that defines the frame the position is attached to
         /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta angle-axis
-        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the robot dofs
+        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
      */
     virtual void ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
 

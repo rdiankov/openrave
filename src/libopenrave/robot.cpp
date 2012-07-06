@@ -226,9 +226,9 @@ bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<in
     return false;
 }
 
-void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits)
+void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits, const std::vector<int>& dofindices)
 {
-    KinBody::SetDOFValues(vJointValues, bCheckLimits);
+    KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
@@ -870,6 +870,9 @@ const std::vector<int>& RobotBase::GetActiveDOFIndices() const
 
 ConfigurationSpecification RobotBase::GetActiveConfigurationSpecification(const std::string& interpolation) const
 {
+    if( interpolation.size() == 0 ) {
+        return _activespec;
+    }
     ConfigurationSpecification spec = _activespec;
     FOREACH(itgroup,spec._vgroups) {
         itgroup->interpolation=interpolation;
@@ -1617,6 +1620,8 @@ void RobotBase::_ComputeInternalInformation()
                         }
                     }
                 }
+                // initialize the arm configuration spec
+                (*itmanip)->__armspec = GetConfigurationSpecificationIndices((*itmanip)->__varmdofindices);
             }
             else {
                 RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%(*itmanip)->GetName()%(*itmanip)->GetBase()->GetName()%(*itmanip)->GetEndEffector()->GetName()));
