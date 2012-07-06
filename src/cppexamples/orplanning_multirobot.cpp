@@ -39,7 +39,7 @@ public:
         // create the configuration space using the manipulator indices
         ConfigurationSpecification spec = probot1->GetActiveManipulator()->GetArmConfigurationSpecification() + probot2->GetActiveManipulator()->GetArmConfigurationSpecification();
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
-        params->SetConfigurationSpecification(spec,penv); // set the joint configuration
+        params->SetConfigurationSpecification(penv,spec); // set the joint configuration
         params->_nMaxIterations = 4000; // max iterations before failure
         params->Validate();
 

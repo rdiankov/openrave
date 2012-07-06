@@ -50,7 +50,12 @@ Inverse Kinematics
 
 * Many ikfast bug fixes, upgraded version to 59
 
+Planning
+--------
+
 * Added :meth:`.Planner.PlannerParameters.SetConfigurationSpecification` to set planner parameters space directly from configuration specification.
+
+* Added :class:`.Planner.PlannerParameters.StateSaver` for saving states
 
 Database
 --------

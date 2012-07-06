@@ -46,10 +46,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         _robot = pbase;
 
-        RobotBase::RobotStateSaverPtr savestate;
-        if( !!_robot ) {
-            savestate.reset(new RobotBase::RobotStateSaver(_robot));
-        }
+        PlannerParameters::StateSaver savestate(params);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
@@ -132,10 +129,6 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         }
     }
 
-    virtual RobotBasePtr GetRobot() const {
-        return _robot;
-    }
-
     bool GetGoalIndexCommand(std::ostream& os, std::istream& is)
     {
         os << _goalindex;
@@ -187,10 +180,7 @@ public:
         }
 
         _fGoalBiasProb = dReal(0.01);
-        RobotBase::RobotStateSaverPtr savestate;
-        if( !!_robot ) {
-            savestate.reset(new RobotBase::RobotStateSaver(_robot));
-        }
+        PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         _treeBackward.Reset(shared_planner(), _parameters->GetDOF());
@@ -254,10 +244,7 @@ public:
         uint32_t basetime = utils::GetMilliTime();
 
         // the main planning loop
-        RobotBase::RobotStateSaverPtr savestate;
-        if( !!_robot ) {
-            savestate.reset(new RobotBase::RobotStateSaver(_robot));
-        }
+        PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         SpatialTreeBase* TreeA = &_treeForward;
@@ -583,10 +570,7 @@ public:
         bool bSuccess = false;
 
         // the main planning loop
-        RobotBase::RobotStateSaverPtr savestate;
-        if( !!_robot ) {
-            savestate.reset(new RobotBase::RobotStateSaver(_robot));
-        }
+        PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         PlannerAction callbackaction = PA_None;
@@ -797,10 +781,7 @@ protected:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
 
-        RobotBase::RobotStateSaverPtr savestate;
-        if( !!_robot ) {
-            savestate.reset(new RobotBase::RobotStateSaver(_robot));
-        }
+        PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         int iter = 0;

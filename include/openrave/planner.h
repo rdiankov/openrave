@@ -67,6 +67,25 @@ public:
         virtual ~PlannerParameters() {
         }
 
+        /// \brief saves and restores the state using PlannerParameters::_setstatefn and PlannerParameters::_getstatefn
+        class OPENRAVE_API StateSaver
+        {
+public:
+            StateSaver(boost::shared_ptr<PlannerParameters> params);
+            virtual ~StateSaver();
+            inline boost::shared_ptr<PlannerParameters> GetParameters() const {
+                return _params;
+            }
+            virtual void Restore();
+protected:
+            boost::shared_ptr<PlannerParameters> _params;
+            std::vector<dReal> _values;
+private:
+            virtual void _Restore();
+        };
+
+        typedef boost::shared_ptr<StateSaver> StateSaverPtr;
+
         /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
 
             First serializes the data of the right hand into a string, then initializes the current parameters via >>
@@ -104,7 +123,7 @@ public:
             - _configurationspecification
             \throw openrave_exception If the configuration specification is invalid or points to targets that are not present in the environment.
          */
-        virtual void SetConfigurationSpecification(const ConfigurationSpecification& spec, EnvironmentBasePtr env);
+        virtual void SetConfigurationSpecification(EnvironmentBasePtr env, const ConfigurationSpecification& spec);
 
         /// \brief veriries that the configuration space and all parameters are consistent
         ///

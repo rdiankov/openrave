@@ -62,6 +62,28 @@ bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int from
     return true;
 }
 
+PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
+{
+    BOOST_ASSERT(!!_params->_setstatefn);
+    _params->_getstatefn(_values);
+    OPENRAVE_ASSERT_OP(_values.size(),==,_params->GetDOF());
+}
+
+PlannerBase::PlannerParameters::StateSaver::~StateSaver()
+{
+    _Restore();
+}
+
+void PlannerBase::PlannerParameters::StateSaver::Restore()
+{
+    _Restore();
+}
+
+void PlannerBase::PlannerParameters::StateSaver::_Restore()
+{
+    _params->_setstatefn(_values);
+}
+
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner("shortcut_linear")
 {
     _diffstatefn = subtractstates;
@@ -523,7 +545,7 @@ bool _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamet
     }
 }
 
-void PlannerBase::PlannerParameters::SetConfigurationSpecification(const ConfigurationSpecification& spec, EnvironmentBasePtr penv)
+void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
 {
     using namespace planningutils;
     spec.Validate();
@@ -650,7 +672,7 @@ void PlannerBase::PlannerParameters::Validate() const
     }
     OPENRAVE_ASSERT_OP(_vConfigResolution.size(),==,(size_t)GetDOF());
     OPENRAVE_ASSERT_OP(_fStepLength,>,0);
-    OPENRAVE_ASSERT_OP(_nMaxIterations,>,0);
+    OPENRAVE_ASSERT_OP(_nMaxIterations,>=,0);
 
     // check all stateless functions, which means ie anything but configuration samplers
     vector<dReal> vstate;
