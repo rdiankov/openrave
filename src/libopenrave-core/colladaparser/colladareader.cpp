@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-// functions that allow plugins to program for the RAVE simulator
 #include "../ravep.h"
 
 #define COLLADA_DOM_NAMESPACE // collada-dom 2.4
