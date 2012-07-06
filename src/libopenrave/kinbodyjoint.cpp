@@ -703,6 +703,11 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
     }
 }
 
+std::pair<dReal, dReal> KinBody::Joint::GetLimit(int iaxis) const
+{
+    return make_pair(_vlowerlimit.at(iaxis),_vupperlimit.at(iaxis));
+}
+
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
 {
     bool bChanged = false;
@@ -749,6 +754,11 @@ void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend) c
     }
 }
 
+std::pair<dReal, dReal> KinBody::Joint::GetVelocityLimit(int iaxis) const
+{
+    return make_pair(-_vmaxvel.at(iaxis), _vmaxvel.at(iaxis));
+}
+
 void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
 {
     for(int i = 0; i < GetDOF(); ++i) {
@@ -765,6 +775,11 @@ void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppen
     for(int i = 0; i < GetDOF(); ++i) {
         vmax.push_back(_vmaxaccel[i]);
     }
+}
+
+dReal KinBody::Joint::GetAccelerationLimit(int iaxis) const
+{
+    return _vmaxaccel.at(iaxis);
 }
 
 void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
@@ -828,7 +843,7 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
     }
 }
 
-void KinBody::Joint::SetResolution(dReal resolution)
+void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
     fResolution = resolution;
     GetParent()->_ParametersChanged(Prop_JointProperties);

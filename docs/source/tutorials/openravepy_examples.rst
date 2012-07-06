@@ -88,3 +88,8 @@ Scene Logging
 -------------
 
 .. literalinclude:: openravepy_examples/scene_logging.py
+
+Plan Multiple Robots
+--------------------
+
+.. literalinclude:: openravepy_examples/plan_multiple_robots.py

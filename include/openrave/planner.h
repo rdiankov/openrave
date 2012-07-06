@@ -67,6 +67,25 @@ public:
         virtual ~PlannerParameters() {
         }
 
+        /// \brief saves and restores the state using PlannerParameters::_setstatefn and PlannerParameters::_getstatefn
+        class OPENRAVE_API StateSaver
+        {
+public:
+            StateSaver(boost::shared_ptr<PlannerParameters> params);
+            virtual ~StateSaver();
+            inline boost::shared_ptr<PlannerParameters> GetParameters() const {
+                return _params;
+            }
+            virtual void Restore();
+protected:
+            boost::shared_ptr<PlannerParameters> _params;
+            std::vector<dReal> _values;
+private:
+            virtual void _Restore();
+        };
+
+        typedef boost::shared_ptr<StateSaver> StateSaverPtr;
+
         /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
 
             First serializes the data of the right hand into a string, then initializes the current parameters via >>
@@ -75,8 +94,43 @@ public:
         virtual PlannerParameters& operator=(const PlannerParameters& r);
         virtual void copy(boost::shared_ptr<PlannerParameters const> r);
 
-        /// sets up the planner parameters to use the active joints of the robot
+        /// \brief sets up the planner parameters to use the active joints of the robot
         virtual void SetRobotActiveJoints(RobotBasePtr robot);
+
+        /** \brief sets up the planner parameters to use the configuration specification space
+
+            The configuraiton groups should point to controllable target objects. By default, this includes:
+            - joint_values
+            - joint_velocities
+            - affine_transform
+            - affine_velocities
+            - grab
+            The following internal parameters will be set:
+            - _diffstatefn
+            - _distmetricfn - weights used for distance metric are retrieved at this time and stored
+            - _samplefn
+            - _sampleneighfn
+            - _setstatefn
+            - _getstatefn
+            - _neighstatefn
+            - _checkpathconstraintsfn
+            - _vConfigLowerLimit
+            - _vConfigUpperLimit
+            - _vConfigVelocityLimit
+            - _vConfigAccelerationLimit
+            - _vConfigResolution
+            - vinitialconfig
+            - _configurationspecification
+            \throw openrave_exception If the configuration specification is invalid or points to targets that are not present in the environment.
+         */
+        virtual void SetConfigurationSpecification(EnvironmentBasePtr env, const ConfigurationSpecification& spec);
+
+        /// \brief veriries that the configuration space and all parameters are consistent
+        ///
+        /// Assumes at minimum that  _setstatefn and _getstatefn are set. Correct environment should be
+        /// locked when this function is called since _getstatefn will be called.
+        /// \throw openrave_exception If not consistent, will throw an exception
+        virtual void Validate() const;
 
         /// \brief the configuration specification in which the planner works in. This specification is passed to the trajecotry creation modules.
         ConfigurationSpecification _configurationspecification;
@@ -196,7 +250,8 @@ public:
         NeighStateFn _neighstatefn;
 
         /// to specify multiple initial or goal configurations, put them into the vector in series
-        /// (note: not all planners support multiple goals)
+        /// size always has to be a multiple of GetDOF()
+        /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
 
         /// \brief the absolute limits of the configuration space.
@@ -237,7 +292,7 @@ public:
 
         /// \brief Return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const {
-            return (int)_vConfigLowerLimit.size();
+            return _configurationspecification.GetDOF();
         }
 
 protected:

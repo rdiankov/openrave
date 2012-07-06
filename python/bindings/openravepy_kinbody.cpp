@@ -664,13 +664,8 @@ public:
         if( vindices.size() == 0 ) {
             return numeric::array(boost::python::list());
         }
-        vector<dReal> values, v;
-        values.reserve(vindices.size());
-        FOREACHC(it, vindices) {
-            KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
-            pjoint->GetValues(v,false);
-            values.push_back(v.at(*it-pjoint->GetDOFIndex()));
-        }
+        vector<dReal> values;
+        _pbody->GetDOFValues(values,vindices);
         return toPyArray(values);
     }
 
@@ -678,6 +673,20 @@ public:
     {
         vector<dReal> values;
         _pbody->GetDOFVelocities(values);
+        return toPyArray(values);
+    }
+
+    object GetDOFVelocities(object oindices) const
+    {
+        if( oindices == object() ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        if( vindices.size() == 0 ) {
+            return numeric::array(boost::python::list());
+        }
+        vector<dReal> values;
+        _pbody->GetDOFVelocities(values,vindices);
         return toPyArray(values);
     }
 
@@ -1922,6 +1931,10 @@ public:
             return links;
         }
 
+        object GetArmConfigurationSpecification(const std::string& interpolation="") const {
+            return object(openravepy::toPyConfigurationSpecification(_pmanip->GetArmConfigurationSpecification(interpolation)));
+        }
+
         bool CheckEndEffectorCollision(object otrans) const
         {
             IkParameterization ikparam;
@@ -2576,6 +2589,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution,
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolutions, 3, 5)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetArmConfigurationSpecification_overloads, GetArmConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianTranslation_overloads, ComputeJacobianTranslation, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianAxisAngle_overloads, ComputeJacobianAxisAngle, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, ComputeHessianTranslation, 2, 3)
@@ -2728,6 +2742,8 @@ void init_openravepy_kinbody()
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
+        object (PyKinBody::*getdofvelocities1)() const = &PyKinBody::GetDOFVelocities;
+        object (PyKinBody::*getdofvelocities2)(object) const = &PyKinBody::GetDOFVelocities;
         object (PyKinBody::*getdoflimits1)() const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdoflimits2)(object) const = &PyKinBody::GetDOFLimits;
         object (PyKinBody::*getdofweights1)() const = &PyKinBody::GetDOFWeights;
@@ -2764,7 +2780,8 @@ void init_openravepy_kinbody()
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
                         .def("GetDOFValues",getdofvalues1,DOXY_FN(KinBody,GetDOFValues))
                         .def("GetDOFValues",getdofvalues2,args("indices"),DOXY_FN(KinBody,GetDOFValues))
-                        .def("GetDOFVelocities",&PyKinBody::GetDOFVelocities, DOXY_FN(KinBody,GetDOFVelocities))
+                        .def("GetDOFVelocities",getdofvelocities1, DOXY_FN(KinBody,GetDOFVelocities))
+                        .def("GetDOFVelocities",getdofvelocities2, args("indices"), DOXY_FN(KinBody,GetDOFVelocities))
                         .def("GetDOFLimits",getdoflimits1, DOXY_FN(KinBody,GetDOFLimits))
                         .def("GetDOFLimits",getdoflimits2, args("indices"),DOXY_FN(KinBody,GetDOFLimits))
                         .def("GetDOFVelocityLimits",getdofvelocitylimits1, DOXY_FN(KinBody,GetDOFVelocityLimits))
@@ -3204,6 +3221,7 @@ void init_openravepy_kinbody()
         .def("GetChildLinks",&PyRobotBase::PyManipulator::GetChildLinks, DOXY_FN(RobotBase::Manipulator,GetChildLinks))
         .def("IsChildLink",&PyRobotBase::PyManipulator::IsChildLink, DOXY_FN(RobotBase::Manipulator,IsChildLink))
         .def("GetIndependentLinks",&PyRobotBase::PyManipulator::GetIndependentLinks, DOXY_FN(RobotBase::Manipulator,GetIndependentLinks))
+        .def("GetArmConfigurationSpecification",&PyRobotBase::PyManipulator::GetArmConfigurationSpecification, GetArmConfigurationSpecification_overloads(args("interpolation"),DOXY_FN(RobotBase::Manipulator,GetArmConfigurationSpecification)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,args("transform"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))

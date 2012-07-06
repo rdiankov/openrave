@@ -256,6 +256,11 @@ public:
         /// \brief calls std::vector version of CalculateAngularVelocityJacobian internally, a little inefficient since it copies memory
         virtual void CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& jacobian) const;
 
+        /// \brief return a copy of the configuration specification of the arm indices
+        ///
+        /// Note that the return type is by-value, so should not be used in iteration
+        virtual ConfigurationSpecification GetArmConfigurationSpecification(const std::string& interpolation="") const;
+
         virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief Return hash of just the manipulator definition.
@@ -278,6 +283,7 @@ protected:
 private:
         RobotBaseWeakPtr _probot;
         std::vector<int> __vgripperdofindices, __varmdofindices;
+        ConfigurationSpecification __armspec; ///< reflects __varmdofindices
         mutable std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE
@@ -399,7 +405,7 @@ private:
         return _vecSensors;
     }
 
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool checklimits = true);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool checklimits = true, const std::vector<int>& dofindices = std::vector<int>());
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool checklimits = true);
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);

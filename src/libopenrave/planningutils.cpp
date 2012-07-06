@@ -286,6 +286,11 @@ protected:
 void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
 {
     EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
+    if( !parameters ) {
+        PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
+        newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification());
+        parameters = newparams;
+    }
     TrajectoryVerifier v(parameters);
     v.VerifyTrajectory(trajectory,samplingstep);
 }
@@ -809,11 +814,6 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     presulttraj->Insert(0,vnewdata);
     presulttraj->SetDescription(sdesc.str());
     return presulttraj;
-}
-
-void SetPlannerParametersFromSpecification(PlannerBase::PlannerParametersPtr parameters, const ConfigurationSpecification& spec)
-{
-    throw OPENRAVE_EXCEPTION_FORMAT0("SetPlannerParametersFromSpecification not implemented",ORE_NotImplemented);
 }
 
 void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody)

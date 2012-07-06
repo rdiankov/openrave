@@ -18,6 +18,7 @@
 #include "mt19937ar.h"
 #include "halton.h"
 #include "robotconfiguration.h"
+#include "bodyconfiguration.h"
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -32,6 +33,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "robotconfiguration" ) {
             return InterfaceBasePtr(new RobotConfigurationSampler(penv,sinput));
         }
+        else if( interfacename == "bodyconfiguration" ) {
+            return InterfaceBasePtr(new BodyConfigurationSampler(penv,sinput));
+        }
         break;
     default:
         break;
@@ -44,6 +48,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_SpaceSampler].push_back("MT19937");
     info.interfacenames[PT_SpaceSampler].push_back("Halton");
     info.interfacenames[PT_SpaceSampler].push_back("RobotConfiguration");
+    info.interfacenames[PT_SpaceSampler].push_back("BodyConfiguration");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

@@ -1,5 +1,5 @@
 Managing openrave.org
-=====================
+---------------------
 
 openrave.org uses Django for managing documentation, news, and blogs. The code is maintained at::
 
@@ -13,19 +13,19 @@ Install
 1. Create a virtualenv
 2. Install dependencies:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-  apt-get install postgresql postgresql-client libpq-dev memcached python-dev gettext
-  pip install -r deploy-requirements.txt
+    apt-get install postgresql postgresql-client libpq-dev memcached python-dev gettext
+    pip install -r deploy-requirements.txt
 
-If you only need to deploy, and don't need to test any changes, you can use local-requirements.txt
+  If you only need to deploy, and don't need to test any changes, you can use local-requirements.txt
 
-Dependencies for Apache Webserver Deployment:
+  Dependencies for Apache Webserver Deployment:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-  apt-get install libapache2-mod-wsgi
-  a2enmod wsgi
+    apt-get install libapache2-mod-wsgi
+    a2enmod wsgi
 
 3. Set up databases, as per django_website/settings/www.py
 
@@ -40,34 +40,37 @@ Dependencies for Apache Webserver Deployment:
     ./manage.py syncdb
     ./manage.py convert_to_south docs
 
-Future DB Update::
+  Future DB Update::
 
     ./manage.py syncdb
     ./manage.py migrate
 
 6. For Docs::
 
-  ./manage.py loaddata doc_releases.json
-  ./manage.py update_docs 
+    ./manage.py loaddata doc_releases.json
+    ./manage.py update_docs 
 
 7. For adding new document::
 
-  DJANGO_SETTINGS_MODULE=openrave_website.settings python -c "from openrave_website.docs import models; models.DocumentRelease.objects.create(lang='en',version='0.7.0', scm=models.DocumentRelease.SVN, scm_url='https://openrave.svn.sourceforge.net/svnroot/openrave/tags/0.7.0', is_default=False);"
+    DJANGO_SETTINGS_MODULE=openrave_website.settings python -c "from openrave_website.docs import models; models.DocumentRelease.objects.create(lang='en',version='0.7.0', scm=models.DocumentRelease.SVN, scm_url='https://openrave.svn.sourceforge.net/svnroot/openrave/tags/0.7.0', is_default=False);"
 
-Re-index the documents::
+  Re-index the documents::
 
-  ./manage.py update_docs
-
-
-8. Internationalization. For Japanese, edit **locale/ja_JP/LC_MESSAGES/django.po** file
-
-  django-admin.py makemessages --locale=ja_JP
-  django-admin.py compilemessages --locale=ja_JP
+    ./manage.py update_docs
 
 
-9. Finally::
+8. Internationalization. For Japanese, edit **locale/ja_JP/LC_MESSAGES/django.po** file::
+
+    django-admin.py makemessages --locale=ja_JP
+    django-admin.py compilemessages --locale=ja_JP
+
+9. Running Locally::
 
     python manage.py runserver
+
+10. For deployment checkout fabfile.py::
+
+    https://openrave.svn.sourceforge.net/svnroot/openrave/openrave.org/fabfile.py
 
 Creating PostgreSQL Database
 ============================
@@ -103,3 +106,7 @@ Open **locale/ja_JP/LC_MESSAGES/django.po** and edit the translations. When done
 
 Restart the mujinwww server and the new translation should be visible!
 
+Maintain
+========
+
+`GetSentry Account <https://app.getsentry.com/openrave/group/182445/>`_

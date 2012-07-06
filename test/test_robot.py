@@ -357,129 +357,21 @@ class RunRobot(EnvironmentSetup):
             # customfilter shouldn't be executed anymore
             sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(numrepeats[0]==4)
-        
-# def test_ikgeneration():
-#     import inversekinematics
-#     env = Environment()
-#     env.SetDebugLevel(DebugLevel.Debug)
-#     #robot = self.LoadRobot('robots/barrettsegway.robot.xml')
-#     robot = self.LoadRobot('robots/barrettwam4.robot.xml')
-#     robot.SetActiveManipulator('arm')
-#     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Translation3D)
-# 
-#     freejoints=None
-#     usedummyjoints=False
-#     accuracy = None
-#     precision = None
-#     iktype=inversekinematics.InverseKinematicsModel.Type_Direction3D
-#     self.generate(freejoints=freejoints,usedummyjoints=usedummyjoints,iktype=iktype)
-# 
-#     baselink=self.manip.GetBase().GetIndex()
-#     eelink = self.manip.GetEndEffector().GetIndex()
-#     solvejoints=solvejoints
-#     freeparams=freejoints
-#     usedummyjoints=usedummyjoints
-#     solvefn=solvefn
-# 
-# def test_handstraight_jacobian():
-#     env = Environment()
-#     robot = self.LoadRobot('robots/barrettwam.robot.xml')
-#     # use jacobians for validation
-#     with env:
-#         deltastep = 0.01
-#         thresh=1e-5
-#         lower,upper = robot.GetDOFLimits()
-#         manip = robot.GetActiveManipulator()
-#         ilink = manip.GetEndEffector().GetIndex()
-#         localtrans = [0.1,0.2,0.3]
-#         localquat = [1.0,0.0,0.0,0.0]
-#         stats = []
-#         robot.SetActiveDOFs(manip.GetArmIndices())
-#         while True:
-#             robot.SetDOFValues(random.rand()*(upper-lower)+lower)
-#             if not robot.CheckSelfCollision() and not env.CheckCollision(robot):
-#                 break
-#         deltatrans = deltastep*(random.rand(3)-0.5)
-#         while True:
-#             values = robot.GetDOFValues(manip.GetArmIndices())
-#             T = manip.GetEndEffectorTransform()
-#             Tnew = array(T)
-#             Tnew[0:3,3] += deltatrans
-#             sols = manip.FindIKSolutions(Tnew,IkFilterOptions.CheckEnvCollisions)
-#             if len(sols) == 0:
-#                 break
-#             dists = sum( (array(sols)-tile(values,(len(sols),1)))**2, 1)
-#             sol = sols[argmin(dists)]            
-#             J = robot.CalculateActiveJacobian(ilink,manip.GetEndEffectorTransform()[0:3,3])
-#             Jrot = robot.CalculateActiveAngularVelocityJacobian(ilink)
-#             Jtrans = r_[J,Jrot]
-#             JJt = dot(Jtrans,transpose(Jtrans))
-#             deltavalues = dot(transpose(Jtrans),dot(linalg.inv(JJt),r_[deltatrans,0,0,0]))
-#             #dtt = dot(r_[deltatrans,0,0,0],JJt)
-#             #alpha = dot(r_[deltatrans,0,0,0], dtt)/dot(dtt,dtt)
-#             #deltavalues = alpha*dot(transpose(Jtrans),r_[deltatrans,0,0,0])
-#             realvalues = sol-values
-#             realtransdelta = dot(J,realvalues)
-#             #err = sum(abs(sign(deltatrans)-sign(realtransdelta)))
-#             err = dot(deltatrans,realtransdelta)/(linalg.norm(deltatrans)*linalg.norm(realtransdelta))
-#             d = sqrt(sum(realvalues**2)/sum(deltavalues**2))
-#             if err < 0.95 or d > 10:
-#                 print realvalues
-#                 print deltavalues
-#             stats.append((err,d))
-#             print stats[-1]
-#             robot.SetDOFValues(sol,manip.GetArmIndices())
-# 
-#     import matplotlib.pyplot as plt
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     ax.hist(stats,100)
-#     fig.show()
-# 
-# def test_ik():
-#     import inversekinematics
-#     env = Environment()
-#     env.SetDebugLevel(DebugLevel.Debug)
-#     robot = self.LoadRobot('/home/rdiankov/ros/honda/binpicking/robots/tx90.robot.xml')
-#     manip=robot.GetActiveManipulator()
-#     #manip=robot.SetActiveManipulator('leftarm_torso')
-#     self = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
-#     self.load()
-#     self.perftiming(10)
-#     robot.SetDOFValues([-2.62361, 1.5708, -0.17691, -3.2652, 0, -3.33643],manip.GetArmJoints())
-#     T=manip.GetEndEffectorTransform()
-#     print robot.CheckSelfCollision()
-#     #[j.SetJointLimits([-pi],[pi]) for j in robot.GetJoints()]
-#     robot.SetDOFValues(zeros(robot.GetDOF()))
-#     values=manip.FindIKSolution(T,False)
-#     Tlocal = dot(dot(linalg.inv(manip.GetBase().GetTransform()),T),linalg.inv(manip.GetGraspTransform()))
-#     print ' '.join(str(f) for f in Tlocal[0:3,0:4].flatten())
-#     robot.SetDOFValues (values,manip.GetArmJoints())
-#     print manip.GetEndEffectorTransform()
-#     
-#     sols=manip.FindIKSolutions(T,False)
-#     for i,sol in enumerate(sols):
-#         robot.SetDOFValues(sol)
-#         Tnew = manip.GetEndEffectorTransform()
-#         if sum((Tnew-T)**2) > 0.0001:
-#             print i
-#             break
-#         
-# def debug_ik():
-#     env = Environment()
-#     self.LoadEnv('data/katanatable.env.xml')
-#     env.StopSimulation()
-#     robot = env.GetRobots()[0]
-# 
-#     print robot.GetTransform()[0:3,3]
-#     target=array([-0.34087322,  0.64355438,  1.01439696])
-#     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=IkParameterization.Type.Translation3D)
-#     if not ikmodel.load():
-#         ikmodel.autogenerate()
-#     sol = ikmodel.manip.FindIKSolution(IkParameterization(target,IkParameterization.Type.Translation3D),IkFilterOptions.CheckEnvCollisions)
-#     print sol
-#     robot.SetDOFValues(sol,ikmodel.manip.GetArmIndices())
-#     print linalg.norm(target - ikmodel.manip.GetEndEffectorTransform()[0:3,3])
+    def test_manipulators(self):
+        env=self.env
+        robot=self.LoadRobot('robots/pr2-beta-static.zae')
+        manip=robot.GetManipulator('leftarm_torso')
+        links = manip.GetChildLinks()
+        assert(all([l.GetName().startswith('l_gripper') or l.GetName() == 'l_wrist_roll_link' for l in links]))
+        ilinks = manip.GetIndependentLinks()
+        expectednames = set([u'base_footprint', u'base_link', u'base_bellow_link', u'base_laser_link', u'bl_caster_rotation_link', u'bl_caster_l_wheel_link', u'bl_caster_r_wheel_link', u'br_caster_rotation_link', u'br_caster_l_wheel_link', u'br_caster_r_wheel_link', u'fl_caster_rotation_link', u'fl_caster_l_wheel_link', u'fl_caster_r_wheel_link', u'fr_caster_rotation_link', u'fr_caster_l_wheel_link', u'fr_caster_r_wheel_link', u'torso_lift_motor_screw_link'])
+        curnames = set([l.GetName() for l in ilinks])
+        assert(expectednames==curnames)
+        cjoints = manip.GetChildJoints()
+        assert(len(cjoints)==4)
+        assert(all([j.GetName().startswith('l_') for j in cjoints]))
+        cdofs = manip.GetChildDOFIndices()
+        assert(cdofs == [22,23,24,25])        
 
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 

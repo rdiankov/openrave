@@ -29,6 +29,8 @@ Core
 
 * Added invese dynamics computation (torques from robot state) via :meth:`.KinBody.ComputeInverseDynamics`. Can also return component-wise torques with **KinBody.ComputeInverseDynamics(accel,None,returncomponents=True)**  (thanks to Quang-Cuong Pham)
 
+* Added second derivative hessian computation of joints :meth:`.KinBody.ComputeHessianTranslation`, :meth:`.KinBody.ComputeHessianAxisAngle`
+
 * Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties.GetCollisionMesh`.
 
 Inverse Kinematics
@@ -47,6 +49,13 @@ Inverse Kinematics
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
 * Many ikfast bug fixes, upgraded version to 59
+
+Planning
+--------
+
+* Added :meth:`.Planner.PlannerParameters.SetConfigurationSpecification` to set planner parameters space directly from configuration specification.
+
+* Added :class:`.Planner.PlannerParameters.StateSaver` for saving states
 
 Database
 --------
@@ -72,6 +81,8 @@ Misc
 * Clang compiler compilation
 
 * Support doc internationalization using sphinx 1.1
+
+* Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
 Version 0.6.6
 =============
@@ -167,7 +178,7 @@ Physics
 Examples
 --------
 
-* Added orplanning_door C++ example to show how to plan with robot+door at same time.
+* Added **orplanning_door** C++ example to show how to plan with robot+door at same time.
 
 * Added :mod:`.examples.inversekinematicspick` python example to show IK picking.
 
