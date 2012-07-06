@@ -99,13 +99,13 @@ build_locale_installed: build/locale/index.pot ;
 #
 # have to remove all doctrees in order for translations to be regenerated
 # filter out en
-$(filter-out locale/%/LC_MESSAGES/openravesphinx.po, locale/en/LC_MESSAGES/openravesphinx.po): build_locale_installed
+$(filter-out locale/en/LC_MESSAGES/openravesphinx.po, locale/%/LC_MESSAGES/openravesphinx.po): build_locale_installed
 	echo "language='$*'\n\
 locale_dirs = ['locale']" > tempconf_$*.py
 	sphinx-gettext-helper -c tempconf_$*.py -p build/locale --update --statistics
 	rm -f tempconf_$*.py
 
-$(filter-out locale/%/LC_MESSAGES/openravesphinx.mo, locale/en/LC_MESSAGES/openravesphinx.mo): locale/%/LC_MESSAGES/*.po
+$(filter-out locale/en/LC_MESSAGES/openravesphinx.mo, locale/%/LC_MESSAGES/openravesphinx.mo): locale/%/LC_MESSAGES/*.po
 	echo "language='$*'\n\
 locale_dirs = ['locale']" > tempconf_$*.py
 	sphinx-gettext-helper -c tempconf_$*.py -p build/locale --build --statistics
