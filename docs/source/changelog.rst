@@ -69,6 +69,8 @@ Viewer
 
 * Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
 
+* Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project.
+
 Misc
 ----
 
