@@ -61,7 +61,7 @@ openrave_plugins_changed:
 openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/ja/coreapixml/index.xml
 	rm -f openravepy_internal_doc
 	python build_openravepy_internal.py --languagecode en --languagecode ja
-	touch openravepy_internal_doc
+	#touch openravepy_internal_doc
 
 source/interface_types.rst source/interface_types: openrave_plugins_changed build_interfaces.py
 	python build_interfaces.py --outdir=source
