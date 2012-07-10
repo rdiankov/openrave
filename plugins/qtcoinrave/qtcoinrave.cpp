@@ -22,11 +22,12 @@
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
 boost::mutex g_mutexsoqt;
+static int s_InitRefCount = 0;
+static int s_SoQtArgc = 0; // has to be static!!
 void EnsureSoQtInit()
 {
-    static int s_SoQtArgc = 0; // has to be static!!
-    if( QtCoinViewer::s_InitRefCount == 0 ) {
-        ++QtCoinViewer::s_InitRefCount;
+    if( s_InitRefCount == 0 ) {
+        ++s_InitRefCount;
         SoQt::init(s_SoQtArgc, NULL, NULL);
     }
 }

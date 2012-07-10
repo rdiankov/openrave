@@ -51,9 +51,6 @@ public:
 
         boost::mutex::scoped_lock lock(g_mutexsoqt);
         SoDBWriteLock dblock;
-        if(!SoDB::isInitialized()) {
-            SoDB::init();
-        }
         // have to lock coin3d, or otherwise state gets corrupted
         SoInput mySceneInput;
         if (!mySceneInput.openFile(filename.c_str())) {

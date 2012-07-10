@@ -215,7 +215,9 @@ class SoDBReadLock
 {
 public:
     SoDBReadLock() {
-        EnsureSoQtInit();
+        if(!SoDB::isInitialized()) {
+            SoDB::init();
+        }
         SoDB::readlock();
     }
     virtual ~SoDBReadLock() {
@@ -227,7 +229,9 @@ class SoDBWriteLock
 {
 public:
     SoDBWriteLock() {
-        EnsureSoQtInit();
+        if(!SoDB::isInitialized()) {
+            SoDB::init();
+        }
         SoDB::writelock();
     }
     virtual ~SoDBWriteLock() {
