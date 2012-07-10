@@ -195,6 +195,11 @@ typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
 
+extern boost::mutex g_mutexsoqt;
+
+// assumes g_mutexsoqt is locked
+void EnsureSoQtInit();
+
 class MyCallbackEvent : public QEvent
 {
 public:
@@ -210,6 +215,7 @@ class SoDBReadLock
 {
 public:
     SoDBReadLock() {
+        EnsureSoQtInit();
         SoDB::readlock();
     }
     virtual ~SoDBReadLock() {
@@ -221,14 +227,13 @@ class SoDBWriteLock
 {
 public:
     SoDBWriteLock() {
+        EnsureSoQtInit();
         SoDB::writelock();
     }
     virtual ~SoDBWriteLock() {
         SoDB::writeunlock();
     }
 };
-
-extern boost::mutex g_mutexsoqt;
 
 #include "item.h"
 #include "ivselector.h"

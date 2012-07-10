@@ -22,10 +22,17 @@
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
 boost::mutex g_mutexsoqt;
+void EnsureSoQtInit()
+{
+    static int s_SoQtArgc = 0; // has to be static!!
+    if( QtCoinViewer::s_InitRefCount == 0 ) {
+        ++QtCoinViewer::s_InitRefCount;
+        SoQt::init(s_SoQtArgc, NULL, NULL);
+    }
+}
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
-    static int s_SoQtArgc = 0; // has to be static!!
     switch(type) {
     case PT_Viewer:
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
@@ -36,12 +43,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         }
 #endif
         if( interfacename == "qtcoin" ) {
-            boost::mutex::scoped_lock lock(g_mutexsoqt);
-            if( QtCoinViewer::s_InitRefCount == 0 ) {
-                ++QtCoinViewer::s_InitRefCount;
-                SoQt::init(s_SoQtArgc, NULL, NULL);
-            }
             // have to lock after initialized since call relies on SoDBP::globalmutex
+            boost::mutex::scoped_lock lock(g_mutexsoqt);
+            EnsureSoQtInit();
             SoDBWriteLock dblock;
             return InterfaceBasePtr(new QtCoinViewer(penv));
         }
