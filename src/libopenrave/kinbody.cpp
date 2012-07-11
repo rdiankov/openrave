@@ -1098,7 +1098,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
             else {
                 for(int i = 0; i < (*it)->GetDOF(); ++i) {
                     if( (*it)->IsCircular(i) ) {
-                        *ptempjoints++ = utils::NormalizeCircularAngle(p[i],(*it)->_vcircularlowerlimit[i],(*it)->_vcircularupperlimit[i]);
+                        // don't normalize since user is expecting the values he sets are exactly returned via GetDOFValues
+                        *ptempjoints++ = p[i]; //utils::NormalizeCircularAngle(p[i],(*it)->_vcircularlowerlimit[i],(*it)->_vcircularupperlimit[i]);
                     }
                     else {
                         if( p[i] < lowerlim[i] ) {
