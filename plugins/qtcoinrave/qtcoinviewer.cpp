@@ -46,8 +46,6 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 #define VIDEO_HEIGHT 480
 #define VIDEO_FRAMERATE (30000.0/1001.0) // 29.97 //60
 
-int QtCoinViewer::s_InitRefCount = 0;
-
 #define ITEM_DELETER boost::bind(&QtCoinViewer::_DeleteItemCallback,shared_viewer(),_1)
 
 class ItemSelectionCallbackData : public UserData
@@ -198,7 +196,6 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     _ivBodies = NULL;
     if( !!ifstream("environment.iv") ) {
-        SoDBWriteLock dblock;
         SoInput mySceneInput;
         if( mySceneInput.openFile("environment.iv") ) {
             _ivBodies = SoDB::readAll(&mySceneInput);

@@ -40,6 +40,15 @@ class ColladaReader : public daeErrorHandler
         return t->getSid();
     }
 
+    class InterfaceType
+    {
+public:
+        InterfaceType(const std::string& type, const std::string& name) : type(type), name(name) {
+        }
+        std::string type, name;
+    };
+    typedef boost::shared_ptr<InterfaceType> InterfaceTypePtr;
+
     /// \brief bindings for instance models
     class ModelBinding
     {
@@ -233,11 +242,11 @@ public:
                 }
             }
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                RobotBasePtr probot;
-                if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], bindings) && !!probot ) {
-                    RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%probot->GetName()));
-                    _penv->Add(probot,true);
-                    _SetDOFValues(probot,bindings);
+                KinBodyPtr pbody;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings) && !!pbody ) {
+                    RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%pbody->GetName()));
+                    _penv->Add(pbody,true);
+                    _SetDOFValues(pbody,bindings);
                 }
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
@@ -329,7 +338,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( ExtractArticulatedSystem(probot, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!probot ) {
+                KinBodyPtr pbody=probot;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!pbody ) {
+                    probot = RaveInterfaceCast<RobotBase>(pbody);
                     bSuccess = true;
                     break;
                 }
@@ -472,7 +483,7 @@ public:
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
     /// \param probot the robot to be created from the system
-    bool ExtractArticulatedSystem(RobotBasePtr& probot, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings)
+    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings)
     {
         if( !ias ) {
             return false;
@@ -482,40 +493,49 @@ public:
         if( !articulated_system ) {
             return false;
         }
-        if( !probot ) {
-            boost::shared_ptr<std::string> pinterface_type = _ExtractInterfaceType(ias->getExtra_array());
+        if( !pbody ) {
+            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(ias->getExtra_array());
             if( !pinterface_type ) {
                 pinterface_type = _ExtractInterfaceType(articulated_system->getExtra_array());
             }
             if( !!pinterface_type ) {
-                probot = RaveCreateRobot(_penv,*pinterface_type);
+                if( pinterface_type->type == "kinbody" ) {
+                    pbody = RaveCreateKinBody(_penv,pinterface_type->name);
+                }
+                else if( pinterface_type->type.size() == 0 || pinterface_type->type == "robot" ) {
+                    pbody = RaveCreateRobot(_penv,pinterface_type->name);
+                }
+                else {
+                    RAVELOG_WARN("invalid interface_type\n");
+                    return false;
+                }
             }
-            if( !probot ) {
-                probot = RaveCreateRobot(_penv,"genericrobot");
-                if( !probot ) {
-                    probot = RaveCreateRobot(_penv,"");
+            if( !pbody ) {
+                pbody = RaveCreateRobot(_penv,"genericrobot");
+                if( !pbody ) {
+                    pbody = RaveCreateRobot(_penv,"");
                     RAVELOG_WARN("creating default robot with no controller support\n");
                 }
             }
             _mapJointUnits.clear();
             _mapJointIds.clear();
         }
-        if( probot->__struri.size() == 0 ) {
-            probot->__struri = _filename;
+        if( pbody->__struri.size() == 0 ) {
+            pbody->__struri = _filename;
         }
 
         // set the name
-        if(( probot->GetName().size() == 0) && !!ias->getName() ) {
-            probot->SetName(ias->getName());
+        if(( pbody->GetName().size() == 0) && !!ias->getName() ) {
+            pbody->SetName(ias->getName());
         }
-        if(( probot->GetName().size() == 0) && !!ias->getSid()) {
-            probot->SetName(ias->getSid());
+        if(( pbody->GetName().size() == 0) && !!ias->getSid()) {
+            pbody->SetName(ias->getSid());
         }
-        if(( probot->GetName().size() == 0) && !!articulated_system->getName() ) {
-            probot->SetName(articulated_system->getName());
+        if(( pbody->GetName().size() == 0) && !!articulated_system->getName() ) {
+            pbody->SetName(articulated_system->getName());
         }
-        if(( probot->GetName().size() == 0) && !!articulated_system->getId()) {
-            probot->SetName(articulated_system->getId());
+        if(( pbody->GetName().size() == 0) && !!articulated_system->getId()) {
+            pbody->SetName(articulated_system->getId());
         }
 
         if( !!articulated_system->getMotion() ) {
@@ -539,7 +559,7 @@ public:
                     }
                 }
             }
-            if( !ExtractArticulatedSystem(probot,ias_new,bindings) ) {
+            if( !ExtractArticulatedSystem(pbody,ias_new,bindings) ) {
                 return false;
             }
         }
@@ -556,25 +576,25 @@ public:
             }
 
             // parse the kinematics information
-            if (!probot) {
-                probot = RaveCreateRobot(_penv, "GenericRobot");
-                if( !probot ) {
-                    probot = RaveCreateRobot(_penv, "");
+            if (!pbody) {
+                pbody = RaveCreateRobot(_penv, "GenericRobot");
+                if( !pbody ) {
+                    pbody = RaveCreateRobot(_penv, "");
                 }
                 _mapJointUnits.clear();
                 _mapJointIds.clear();
             }
-            BOOST_ASSERT(probot->IsRobot());
-
-            KinBodyPtr pbody = probot;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 ExtractKinematicsModel(pbody,articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik],bindings);
             }
         }
 
-        ExtractRobotManipulators(probot, articulated_system);
-        ExtractRobotAttachedSensors(probot, articulated_system);
-        ExtractRobotAttachedActuators(probot, articulated_system);
+        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+        if( !!probot ) {
+            ExtractRobotManipulators(probot, articulated_system);
+            ExtractRobotAttachedSensors(probot, articulated_system);
+            ExtractRobotAttachedActuators(probot, articulated_system);
+        }
         return true;
     }
 
@@ -591,12 +611,21 @@ public:
         }
 
         if( !pkinbody ) {
-            boost::shared_ptr<std::string> pinterface_type = _ExtractInterfaceType(ikm->getExtra_array());
+            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(ikm->getExtra_array());
             if( !pinterface_type ) {
                 pinterface_type = _ExtractInterfaceType(kmodel->getExtra_array());
             }
             if( !!pinterface_type ) {
-                pkinbody = RaveCreateKinBody(_penv,*pinterface_type);
+                if( pinterface_type->type.size() == 0 || pinterface_type->type == "kinbody" ) {
+                    pkinbody = RaveCreateKinBody(_penv,pinterface_type->name);
+                }
+                else if( pinterface_type->type == "robot" ) {
+                    pkinbody = RaveCreateRobot(_penv,pinterface_type->name);
+                }
+                else {
+                    RAVELOG_WARN("invalid interface_type\n");
+                    return false;
+                }
             }
             if( !pkinbody ) {
                 pkinbody = RaveCreateKinBody(_penv,"");
@@ -1149,8 +1178,8 @@ public:
                     }
 
                     bool joint_locked = false;     // if locked, joint angle is static
-                    bool has_soft_limits = false;
-                    bool has_hard_limits = false;
+                    bool has_soft_limits = false, has_hard_limits = false;
+                    boost::shared_ptr<uint8_t> is_circular;
 
                     if (!!kinematics_axis_info) {
                         // contains the soft controller limits
@@ -1175,6 +1204,50 @@ public:
                                 }
                             }
                         }
+
+                        for (size_t iparam = 0; iparam < kinematics_axis_info->getNewparam_array().getCount(); iparam++) {
+                            domKinematics_newparamRef axisparam = kinematics_axis_info->getNewparam_array()[iparam];
+                            if( !!axisparam->getSid() ) {
+                                string paramsid = axisparam->getSid();
+                                if( paramsid == "circular" ) {
+                                    if( !!axisparam->getBool() ) {
+                                        is_circular.reset(new uint8_t(axisparam->getBool()->getValue()));
+                                    }
+                                    else if( !!axisparam->getInt() ) {
+                                        is_circular.reset(new uint8_t(axisparam->getInt()->getValue()!=0));
+                                    }
+                                    else {
+                                        RAVELOG_WARN("failed to resolve axis_info/circular newparam\n");
+                                    }
+                                }
+                                else if( paramsid == "planning_weight" ) {
+                                    if( !!axisparam->getFloat() ) {
+                                        if( axisparam->getFloat()->getValue() > 0 ) {
+                                            pjoint->_vweights[ic] = axisparam->getFloat()->getValue();
+                                        }
+                                        else {
+                                            RAVELOG_WARN(str(boost::format("bad joint weight %f")%axisparam->getFloat()->getValue()));
+                                        }
+                                    }
+                                    else {
+                                        RAVELOG_WARN("failed to resolve axis_info/planning_weight newparam\n");
+                                    }
+                                }
+                                else if( paramsid == "discretization_resolution" ) {
+                                    if( !!axisparam->getFloat() ) {
+                                        if( axisparam->getFloat()->getValue() > 0 ) {
+                                            pjoint->fResolution = axisparam->getFloat()->getValue();
+                                        }
+                                        else {
+                                            RAVELOG_WARN(str(boost::format("bad joint resolution %f")%axisparam->getFloat()->getValue()));
+                                        }
+                                    }
+                                    else {
+                                        RAVELOG_WARN("failed to resolve axis_info/discretization_resolution newparam\n");
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if (!joint_locked && !!pdomaxis->getLimits() ) {
@@ -1192,10 +1265,16 @@ public:
                         }
                     }
 
+                    if( !!is_circular ) {
+                        pjoint->_bIsCircular.at(ic) = *is_circular;
+                    }
+
                     if( !has_soft_limits && !has_hard_limits && !joint_locked ) {
                         RAVELOG_VERBOSE(str(boost::format("There are NO LIMITS in joint %s ...\n")%pjoint->GetName()));
                         if( pjoint->IsRevolute(ic) ) {
-                            pjoint->_bIsCircular.at(ic) = true;
+                            if( !is_circular ) {
+                                pjoint->_bIsCircular.at(ic) = true;
+                            }
                             pjoint->_vlowerlimit.at(ic) = -PI;
                             pjoint->_vupperlimit.at(ic) = PI;
                         }
@@ -1245,7 +1324,7 @@ public:
             bool contains=false;
             FOREACHC(it,bindings.listAxisBindings) {
                 // don't check ID's check if the reference is the same!
-                if ( (pdomnode->getNode_array()[i])  == (it->visualnode)) {
+                if ( pdomnode->getNode_array()[i] == it->visualnode) {
                     contains=true;
                     break;
                 }
@@ -1925,7 +2004,7 @@ public:
                                 for (size_t i = 0; i < children.getCount(); i++) {
                                     if( children[i]->getElementName() == string("closing_direction") ) {
                                         domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(children[i]->getAttribute("axis"), pdomjoint).resolve().elt);
-                                        float closing_direction = 0;
+                                        domFloat closing_direction = 0;
                                         if( !paxis ) {
                                             RAVELOG_WARN(str(boost::format("cannot resolve joint %s axis %s")%pmanipchild->getAttribute("joint")%children[i]->getAttribute("axis")));
                                         }
@@ -1942,10 +2021,15 @@ public:
                             RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%pmanip->GetName()%pmanipchild->getAttribute("joint")));
                         }
                         else if( pmanipchild->getElementName() == string("iksolver") ) {
-                            boost::shared_ptr<std::string> interfacename = _ExtractInterfaceType(tec->getContents()[ic]);
-                            if( !!interfacename ) {
-                                pmanip->_strIkSolver = *interfacename;
-                                pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
+                            InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(tec->getContents()[ic]);
+                            if( !!pinterfacetype ) {
+                                if( pinterfacetype->type.size() == 0 || pinterfacetype->type == "iksolver" ) {
+                                    pmanip->_strIkSolver = pinterfacetype->name;
+                                    pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
+                                }
+                                else {
+                                    RAVELOG_WARN("invalid interface_type\n");
+                                }
                             }
                         }
                         else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))) {
@@ -2292,8 +2376,11 @@ public:
         return 0;
     }
 
-    static bool resolveCommon_float_or_param(daeElementRef pcommon, daeElementRef parent, float& f)
+    static bool resolveCommon_float_or_param(daeElementRef pcommon, daeElementRef parent, domFloat& f)
     {
+        if( !pcommon ) {
+            return false;
+        }
         daeElement* pfloat = pcommon->getChild("float");
         if( !!pfloat ) {
             stringstream sfloat(pfloat->getCharData());
@@ -2490,7 +2577,7 @@ private:
                 continue;
             }
 
-            float jointvalue=0;
+            domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
                     pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene);
@@ -2568,7 +2655,7 @@ private:
     }
 
     /// \brief returns an openrave interface type from the extra array
-    boost::shared_ptr<std::string> _ExtractInterfaceType(const daeElementRef pelt) {
+    InterfaceTypePtr _ExtractInterfaceType(const daeElementRef pelt) {
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
@@ -2577,28 +2664,28 @@ private:
                 if( !!ptec ) {
                     daeElement* ptype = ptec->getChild("interface");
                     if( !!ptype ) {
-                        return boost::shared_ptr<std::string>(new std::string(ptype->getCharData()));
+                        return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
                     }
                 }
             }
         }
-        return boost::shared_ptr<std::string>();
+        return InterfaceTypePtr();
     }
 
     /// \brief returns an openrave interface type from the extra array
-    boost::shared_ptr<std::string> _ExtractInterfaceType(const domExtra_Array& arr) {
+    InterfaceTypePtr _ExtractInterfaceType(const domExtra_Array& arr) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"interface_type") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
                 if( !!tec ) {
                     daeElement* ptype = tec->getChild("interface");
                     if( !!ptype ) {
-                        return boost::shared_ptr<std::string>(new std::string(ptype->getCharData()));
+                        return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
                     }
                 }
             }
         }
-        return boost::shared_ptr<std::string>();
+        return InterfaceTypePtr();
     }
 
     std::string _ExtractLinkName(domLinkRef pdomlink) {

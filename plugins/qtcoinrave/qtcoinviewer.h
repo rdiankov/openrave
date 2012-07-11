@@ -221,8 +221,6 @@ protected:
     typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
-    static int s_InitRefCount;
-
 protected:
     class PrivateGraphHandle : public GraphHandle
     {

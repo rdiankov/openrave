@@ -124,9 +124,13 @@ class TestEnvironment(EnvironmentSetup):
                     assert( transdist(j0.GetInternalHierarchyRightTransform(),j1.GetInternalHierarchyRightTransform()) <= epsilon )
                     assert( j0.IsStatic() == j1.IsStatic() )
                     assert( transdist(j0.GetLimits(),j1.GetLimits()) <= epsilon )
+                    assert( transdist(j0.GetWeights(),j1.GetWeights()) <= epsilon )
+                    assert( transdist(j0.GetResolutions(),j1.GetResolutions()) <= epsilon )
                     for idof in range(j0.GetDOF()):
                         assert( abs(j0.GetMaxVel(idof)-j1.GetMaxVel(idof)) <= epsilon )
                         assert( abs(j0.GetMaxAccel(idof)-j1.GetMaxAccel(idof)) <= epsilon )
+                        assert( abs(j0.GetWeight(idof)-j1.GetWeight(idof)) <= epsilon )
+                        assert( abs(j0.GetResolution(idof)-j1.GetResolution(idof)) <= epsilon )
                         assert( j0.IsCircular(idof) == j1.IsCircular(idof) )
                         assert( j0.IsRevolute(idof) == j1.IsRevolute(idof) )
                         assert( j0.IsPrismatic(idof) == j1.IsPrismatic(idof) )
@@ -138,8 +142,6 @@ class TestEnvironment(EnvironmentSetup):
                             assert( mimicjoints0 == mimicjoints1 )
                             # is it possible to compare equations? perhaps just set random values and see if both robots behave the same
                             # assert( j0.GetMimicEquation(idof) == j1.GetMimicEquation(idof) )
-                        #todo: GetResolution, GetWeight
-                        #todo: ignore links
                 assert(len(robot0.GetLinks())==len(robot1.GetLinks()))
                 indexmap = []
                 for link0 in robot0.GetLinks():
@@ -232,6 +234,40 @@ class TestEnvironment(EnvironmentSetup):
             ab2 = g2.ComputeAABB(eye(4))
             assert(transdist(ab.pos(), ab2.pos()) <= g_epsilon)
             assert(transdist(ab.extents(), ab2.extents()) <= g_epsilon)
+
+    def test_collada_dummyjoints(self):
+        env=self.env
+        xmldata="""<kinbody name="a">
+  <body name="b1">
+  </body>
+  <body name="b2">
+  </body>
+  <body name="b3">
+  </body>
+  <joint name="j1" type="hinge">
+    <body>b1</body>
+    <body>b2</body>
+  </joint>
+  <joint name="j2" type="hinge" enable="false">
+    <body>b2</body>
+    <body>b3</body>
+  </joint>
+</kinbody>
+        """
+        body = env.ReadKinBodyData(xmldata)
+        env.Add(body)
+        env.Save('test_dummyjoints.dae')
+        assert(len(body.GetJoints())==1)
+        assert(len(body.GetPassiveJoints())==1)
+        
+        env2 = Environment()
+        env2.Load('test_dummyjoints.dae')
+        assert(len(env2.GetBodies())==len(env.GetBodies()))
+        body2=env2.GetBodies()[0]
+        assert(not body2.IsRobot())
+        assert(body.GetName() == body2.GetName())
+        assert(len(body2.GetJoints())==len(body.GetJoints()))
+        assert(len(body2.GetPassiveJoints())==len(body.GetPassiveJoints()))
 
     def test_unicode(self):
         env=self.env

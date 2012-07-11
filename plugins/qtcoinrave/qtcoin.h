@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2008 Carnegie Mellon University (rdiankov@cs.cmu.edu)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -194,6 +195,11 @@ typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
 
+extern boost::mutex g_mutexsoqt;
+
+// assumes g_mutexsoqt is locked
+void EnsureSoQtInit();
+
 class MyCallbackEvent : public QEvent
 {
 public:
@@ -203,31 +209,6 @@ public:
     }
     boost::function<void()> _fn;
 };
-
-
-class SoDBReadLock
-{
-public:
-    SoDBReadLock() {
-        SoDB::readlock();
-    }
-    virtual ~SoDBReadLock() {
-        SoDB::readunlock();
-    }
-};
-
-class SoDBWriteLock
-{
-public:
-    SoDBWriteLock() {
-        SoDB::writelock();
-    }
-    virtual ~SoDBWriteLock() {
-        SoDB::writeunlock();
-    }
-};
-
-extern boost::mutex g_mutexsoqt;
 
 #include "item.h"
 #include "ivselector.h"

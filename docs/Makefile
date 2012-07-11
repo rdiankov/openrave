@@ -61,7 +61,7 @@ openrave_plugins_changed:
 openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/ja/coreapixml/index.xml
 	rm -f openravepy_internal_doc
 	python build_openravepy_internal.py --languagecode en --languagecode ja
-	touch openravepy_internal_doc
+	#touch openravepy_internal_doc
 
 source/interface_types.rst source/interface_types: openrave_plugins_changed build_interfaces.py
 	python build_interfaces.py --outdir=source
@@ -113,7 +113,7 @@ locale_dirs = ['locale']" > tempconf_$*.py
 	msgfmt locale/$*/LC_MESSAGES/openravesphinx.po -o locale/$*/LC_MESSAGES/openravesphinx.mo
 	rm -rf build/$*/sphinxhtml/.doctrees build/$*/sphinxjson/.doctrees
 
-build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py _templates/*.html ikfast_installed sphinxext/*.py source/openravepy/openravepy.rst locale/%/LC_MESSAGES/openravesphinx.mo locale/%/LC_MESSAGES/*.po 
+build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py _templates/*.html ikfast_installed sphinxext/*.py source/openravepy/openravepy.rst locale/%/LC_MESSAGES/openravesphinx.mo locale/%/LC_MESSAGES/*.po
 	rm -f sphinxjson_installed_$* build/$*/sphinxjson/index.fjson
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	PYTHONPATH=`pwd`:$(PYTHONPATH) sphinx-build -D language=$* -t jsontag -b json -c . source build/$*/sphinxjson
@@ -126,7 +126,7 @@ build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjs
 
 sphinxjson_installed_%: build/openravejson-$(openrave_version)/%/sphinxjson build/%/sphinxjson/index.fjson ;
 
-build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst locale/%/LC_MESSAGES/openravesphinx.mo conf.py _templates/*.html ikfast_installed sphinxext/*.py source/openravepy/openravepy.rst locale/%/LC_MESSAGES/openravesphinx.mo locale/%/LC_MESSAGES/*.po
+build/openravehtml-$(openrave_version)/%/sphinxhtml build/%/sphinxhtml/index.html: source/*.rst source/devel/*.rst source/tutorials/*.rst source/architecture/*.rst conf.py _templates/*.html ikfast_installed sphinxext/*.py source/openravepy/openravepy.rst locale/%/LC_MESSAGES/openravesphinx.mo locale/%/LC_MESSAGES/*.po
 	rm -f sphinxhtml_installed_$* build/$*/sphinxhtml/index.html
 	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
 	PYTHONPATH=`pwd`:$(PYTHONPATH) sphinx-build -D language=$* -t htmltag -b html -c . source build/$*/sphinxhtml

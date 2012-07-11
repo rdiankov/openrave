@@ -1,0 +1,2019 @@
+# Japanese translations for PACKAGE package.
+# Copyright (C) 2006-2012, Rosen Diankov and contributors
+# This file is distributed under the same license as the OpenRAVE package.
+# Rosen Diankov <rosen.diankov@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenRAVE 0.7.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-07-11 22:33\n"
+"PO-Revision-Date: 2012-07-11 22:31+0900\n"
+"Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
+"Language-Team: Japanese\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+# a64d00d9c40147658ec7d4fcf0a2f070
+#: ../../source/collada_robot_extensions.rst:4
+msgid "COLLADA Robot Extensions (Version 0.2.1)"
+msgstr ""
+
+# a7cfb0a3ca0d45ef899759beb77b7447
+#: ../../source/collada_robot_extensions.rst:6
+msgid ""
+"OpenRAVE fully supports the COLLADA file format for specifying robots and "
+"adds its own set of robot-specific extensions. The `COLLADA <https://collada."
+"org/mediawiki/index.php/COLLADA_-_Digital_Asset_and_FX_Exchange_Schema>`_ "
+"format is used to specify all robot and scene related information. Robots "
+"are standardized with the COLLADA 1.5 file format. By default, COLLADA 1.5 "
+"handles geometry, visual effects, physical properties, and kinematics."
+msgstr ""
+
+# a4c0ec766e3644bcb2118ba5bf71b9bf
+#: ../../source/collada_robot_extensions.rst:8
+msgid "The robot extensions include:"
+msgstr ""
+
+# 8416d92f4b6f417da8600983301db4b9
+#: ../../source/collada_robot_extensions.rst:10
+msgid "manipulators"
+msgstr ""
+
+# e86d5698f706429dad48e44af78820fa
+#: ../../source/collada_robot_extensions.rst:11
+msgid "sensors"
+msgstr ""
+
+# 1d33b56f9bb143ae9cc629d00e8130dc
+#: ../../source/collada_robot_extensions.rst:12
+msgid "planning-specific parameters"
+msgstr ""
+
+# bb325c645caf43e8907c8eb134199083
+#: ../../source/collada_robot_extensions.rst:13
+msgid "collision data"
+msgstr ""
+
+# 4911a578ea79466e92d75861df6b9a46
+#: ../../source/collada_robot_extensions.rst:16
+msgid ""
+"COLLADA files saved as **dae** store the raw XML, files stored as **zae** "
+"stored the compressed XML. In order to preserve space, most robots in "
+"OpenRAVE are stored as **zae**. This document describes how to extend the "
+"format to handle robot-specific information."
+msgstr ""
+
+# 1cbe33a601aa43b7be705177bb0c40fa
+#: ../../source/collada_robot_extensions.rst:18
+msgid ""
+"COLLADA allows extensions of any of its tags using the **<extra>** tag. Each "
+"**<extra>** defines what type of information to provide and a format for "
+"that information, also called **technique**. All custom data defined here "
+"uses the **OpenRAVE** technique."
+msgstr ""
+
+# 2ea18a4dd69740d789e93d20c5bdb463
+#: ../../source/collada_robot_extensions.rst:20
+msgid ""
+"There are one-to-one correspondences between the OpenRAVE interface types "
+"and COLLADA tags:"
+msgstr ""
+
+# 3e34b39024db493da5fabe584706291f
+#: ../../source/collada_robot_extensions.rst:22
+msgid "Robot <-> articulated_system"
+msgstr ""
+
+# c42515fee1b749c6ba559478f705753c
+#: ../../source/collada_robot_extensions.rst:23
+msgid "KinBody <-> kinematics_model"
+msgstr ""
+
+# 4fcfaabb0673456b96c7a2d0b9438caa
+#: ../../source/collada_robot_extensions.rst:24
+msgid "Sensor <-> sensor (new)"
+msgstr ""
+
+# 750768a5e2a14d8a814dc72f1c7e8876
+#: ../../source/collada_robot_extensions.rst:27
+msgid "interface_type"
+msgstr ""
+
+# 62630cdd6195460eb17a4768bdb8180f
+# 0f404f56da1c4d56a8e02449adb27253
+# 667f5aba497f4a71999c625c878d5619
+# 68e6c34f690b4904a9670d6e213c37f9
+# 3d6d3266b521421e8f6cbc8b85d32017
+# 479cf34f69c04e379240cb2c1a217987
+# 68e0ae0f5b324ec8a8efd823a804a88c
+# dde35d1ecd2f4397b8a671d257f010e9
+# 251545ce58fa487abcf77c108ffad196
+# 6d2c3c4391cb4f598ca3dd5cc249d98d
+#: ../../source/collada_robot_extensions.rst:30
+#: ../../source/collada_robot_extensions.rst:79
+#: ../../source/collada_robot_extensions.rst:266
+#: ../../source/collada_robot_extensions.rst:369
+#: ../../source/collada_robot_extensions.rst:391
+#: ../../source/collada_robot_extensions.rst:587
+#: ../../source/collada_robot_extensions.rst:658
+#: ../../source/collada_robot_extensions.rst:731
+#: ../../source/collada_robot_extensions.rst:753
+#: ../../source/collada_robot_extensions.rst:861
+msgid "Introduction"
+msgstr ""
+
+# dd893a6c45354533ba48be55e2c28dac
+#: ../../source/collada_robot_extensions.rst:32
+msgid ""
+"Specifies the type of kinematics body/robot type to instantiate inside the "
+"code."
+msgstr ""
+
+# d0c2e24dc142486b9d05a36795332814
+# 2329623f4a594570a71db3efc0f48825
+# 1df7ff6e48814ad09cc9f540e5f1999e
+# 3b1ac8563a1741fb97e19f4f68fbead7
+# 8031f4b0df284e4096d1dd6bfbf95e96
+# 99fc1cbed7df4e459265000c93d67ae1
+# 67e4b5f22a3a4331be25ae853f1c499d
+# baf159a94c404f72af5c2d234b34ee09
+# e9509a3e576b4a228fda29e1faf23386
+# 350683cdb657432aa2d5b891b28aa010
+#: ../../source/collada_robot_extensions.rst:35
+#: ../../source/collada_robot_extensions.rst:84
+#: ../../source/collada_robot_extensions.rst:271
+#: ../../source/collada_robot_extensions.rst:374
+#: ../../source/collada_robot_extensions.rst:396
+#: ../../source/collada_robot_extensions.rst:592
+#: ../../source/collada_robot_extensions.rst:663
+#: ../../source/collada_robot_extensions.rst:736
+#: ../../source/collada_robot_extensions.rst:758
+#: ../../source/collada_robot_extensions.rst:866
+msgid "Concepts"
+msgstr ""
+
+# cf561a972c304a319a2e0ae6dd966218
+#: ../../source/collada_robot_extensions.rst:37
+msgid ""
+"All of the kinematics body methods can be overridden with new "
+"implementations. Because this requires loading user code, a user-provided "
+"instantiation has to be used. The interface type specifies what this type is "
+"and where to load it from."
+msgstr ""
+
+# ef2abfe497104efeb5b1b482c4d87b63
+# d1709ed054d4453da90f06de94817ca9
+# ecda689568704f67af307bc0d3a59fd7
+# 6d33873215664b52acd8f03122a2dff5
+# 81ccb8753bea45898eb9e7dea9717e2c
+# 1062f98b9f274ae1aa31fa22582d6bd2
+# d2ab38c8f437421c8d0b954e73625e4f
+# 5ac5d240375f4fdf946968480f324bc7
+# 3d1241a1618d47b4b096f034f3c21a6b
+# 165a0971741a46128512f0200f0191c4
+#: ../../source/collada_robot_extensions.rst:40
+#: ../../source/collada_robot_extensions.rst:89
+#: ../../source/collada_robot_extensions.rst:283
+#: ../../source/collada_robot_extensions.rst:379
+#: ../../source/collada_robot_extensions.rst:401
+#: ../../source/collada_robot_extensions.rst:597
+#: ../../source/collada_robot_extensions.rst:671
+#: ../../source/collada_robot_extensions.rst:741
+#: ../../source/collada_robot_extensions.rst:763
+#: ../../source/collada_robot_extensions.rst:871
+msgid "Related Elements"
+msgstr ""
+
+# 7f8f7db71973482d93ac1a5f624065f1
+# 1617023cf5d04898b3d80365bb941711
+# 17a6153e9b47404b984aa371456d942b
+# 4444b62720a048f6aea26b9e82b29a4f
+# 0fb38a0ac9e349a6ab9d6a0973d62881
+# 112ea4bf68f047398add8492c67bef14
+# f30f9084372a41e2854553f29adb46fb
+# cd2fa80820da43009ec10ee1bc9abc37
+# 2820ff4cabc5460f917d8dfc4b7f0692
+# 339cdd9182f444fd9c5b40674ed1ba78
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Parent elements"
+msgstr ""
+
+# c148306d546f49f6a3cbebb4a6225c59
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<articulated_system>, <kinematics_model>"
+msgstr ""
+
+# 4da28de4b03b4e7daccd3a3c3654a958
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Child elements"
+msgstr ""
+
+# 467eab14aaa643329654dcee6b8fd3e8
+#: ../../source/collada_robot_extensions.rst:1
+msgid "See the following subsection."
+msgstr ""
+
+# 6a7760119e8442ea9b255f5405f41d8a
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Other"
+msgstr ""
+
+# bcdd852ca53b4c3986ed7ff2729b8b73
+# 1617023cf5d04898b3d80365bb941711
+# 6267f5a7f5f84690b31b90bf9840afc1
+# 414de44a71b9455a89ad9740f6396822
+# 6ff88c5c39a549a7985ce005a7859bb6
+# dd3e0e4bce0f451ca92d904fe99d17ff
+# c82280cad35747f691f97a43c0f6d7da
+# 5639c7c8d45d44a598e4edb1bd6eb7f6
+#: ../../source/collada_robot_extensions.rst:52
+#: ../../source/collada_robot_extensions.rst:99
+#: ../../source/collada_robot_extensions.rst:292
+#: ../../source/collada_robot_extensions.rst:421
+#: ../../source/collada_robot_extensions.rst:606
+#: ../../source/collada_robot_extensions.rst:680
+#: ../../source/collada_robot_extensions.rst:783
+#: ../../source/collada_robot_extensions.rst:880
+msgid "Child Elements"
+msgstr ""
+
+# 1617023cf5d04898b3d80365bb941711
+# 1617023cf5d04898b3d80365bb941711
+# 1617023cf5d04898b3d80365bb941711
+# 1617023cf5d04898b3d80365bb941711
+# 1617023cf5d04898b3d80365bb941711
+# dc203495c5a4465a9c28632bdcbc7054
+# fdf3ad823066488ea8887670f685fd65
+# a7e5d0e568684e9fa9508df7a13f79e4
+# ab6721581dba427d89ac93fca01b0cc0
+# 4e73e063b98e4fc78496b5d095ed0a5f
+# 75a580aa449c4f85a68672876ccf4363
+# 6a1def6525f0484fb351348a1a38e944
+# 918c2e36754e42968516e8cf728cc308
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Element"
+msgstr ""
+
+# e29b01b22d3548ddbbb8e6711e81bd8b
+# e29b01b22d3548ddbbb8e6711e81bd8b
+# e29b01b22d3548ddbbb8e6711e81bd8b
+# 76e9db1f6582480d8d9635b60ef18b18
+# e29b01b22d3548ddbbb8e6711e81bd8b
+# 811cb18337834c75aaed4a1daf0e09e6
+# 69f8617c2c8248e39887a1af2f0cf12b
+# 7ad17c84656540c6b5e32a2bca82b27b
+# 7333dcd16b4946fe9a7c2a09a469e8b2
+# 8041c45ea15546708e5334a69297ab64
+# ce6377cc0fb94169ac5e29662ee99f23
+# 9e4455c2b95840d8a914d43d35f09fd7
+# 3e3f73ba58534d92835db4384c7f0d74
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Description"
+msgstr ""
+
+# 8233edfcd46940c5997602748a9b6742
+# f9f5b6808f254f5387c09c1734a1e0d1
+# d7e17707fb764dac892ec25b97cd6783
+# 9f857693793e49f0b78cfbb250fd28ad
+# 60ae1a59e3d34c11950b9de5742d9916
+# 03610928f55c4c9c91a5a71cd640ae84
+# b19daccc1410452185363137f6ddd614
+# f6659146e49c4797bd7aa36ad63efa80
+# 5a5ef421ab55477c8fc9e0cc8f429546
+# 1abe8e84d0224742918f457ad4d2df77
+# 8368ec1bc80b4e0bbd9870ba89c1cba7
+# fdc39296aeba45e4a7b4bd6035ba106c
+# 29fddeaec1864419b8c3e162adc8bd20
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Occurances"
+msgstr ""
+
+# e9cce5f928ee4c7db26dee8db8c65fad
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<interface>"
+msgstr ""
+
+# 341ac434ca5146328f4716a59b3ee911
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Contains the string id of the interface"
+msgstr ""
+
+# e4bff5a783c94aa1a3b755fb2a528afd
+# e4bff5a783c94aa1a3b755fb2a528afd
+# e4bff5a783c94aa1a3b755fb2a528afd
+# 441ca95993374df19dbd39b985cb14f4
+# c5272a9682914aae8a0ddc7d66f49d92
+# e0bb13284e98455192ca65496bcc5104
+# 06b29b1da175451f860ade1f56e8c382
+# 5f79a904bd8c4a5396440dc2162bacd8
+# 6a87fe8eee984334a967b1a7a580669d
+# 99e941b8fd51458b9bd0756d65b165eb
+# 25bbf12e9633485f8d64b896ada14737
+# 59df315d4b13488e8b7027e0cf05fa98
+# 7693a37d703b4172bfac4b313b65a71f
+# 880a6ac95dde477fb235e88141183866
+# 69ed2c61c4ac4e85a311d7dce1146f68
+# c88077f4f2624b0383e61d322730de05
+# 03bcd2a77005496490f0de87540b39ce
+# 73e2a0bc97b847cc97554575e88401c1
+# b6fcf95cad3a42a392845b02eb474094
+# 2a6225e919814367af10553235f6dbda
+# 3d604be83590401e9dc684add541643a
+# a6d3cbd54f15448cb6c2544d915c3366
+# 55980adeefaf44f5937b8a1ebb43123d
+# d8ebc7f52cab4e74984cbb78e2c7cd87
+# 91972ad61c5b409d89bff59fe5c87c84
+# db7f8f39ab0142ffb12634f04d917f65
+# 96490b31380d41f3a5ee7db587acd35d
+# 777191cc75bb4aeba0e616831d941a10
+# 62e5cb2eb03644599140e3a8946da7f4
+# 3f3243acc7c24a7b9842aaecad2468a1
+# 86edb86afec1461686f528d3a5e43862
+#: ../../source/collada_robot_extensions.rst:1
+msgid "1"
+msgstr ""
+
+# 21fa7530189b4d669a094f20affc9915
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<plugin>"
+msgstr ""
+
+# a2791f0d03794312b770808d35a39a64
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Optional. Contains the string of the location of the shared object object to "
+"load. Because plugin prefixes and suffixes depends on the OS, a prefix and "
+"suffix independent name can be specified."
+msgstr ""
+
+# 0a9cef520688449cb28e41d2c91e072f
+# 0a9cef520688449cb28e41d2c91e072f
+# 0a9cef520688449cb28e41d2c91e072f
+# 6d30174694de474393687f36f1dc1d3c
+# 186b55d48246458d9914d77e6a97157d
+# ee971df3040046ba92e91681836a6547
+# fcfe75901df84b65baa12fbda389a161
+# ae09359fb9044aaca20bf2e84623c8b9
+# 56858abdaf934394be2e6685bf79e4a9
+# 3c7569220e6c408da625349870481848
+# ecc32928b1d8412c89e3afda9df5eac8
+# 3a1cffe93570448bb96abd3c1bfd883d
+# 3d2d07b5ce774a78b1312b0716b0dd53
+# 827ea675bb1a488a8dda3c2c86e2c025
+# de35d5a551814a3faa194eddc2e59b5d
+# 592c9eec75a54e1ea8bc6a4ea7e9c80e
+#: ../../source/collada_robot_extensions.rst:1
+msgid "0 or 1"
+msgstr ""
+
+# 97648c64e96f4c71bfa59ef1869ad0ad
+# 049576ac85cf48d09dd6772ce45227ee
+# 84ed70b74340432a9a00188463bfe459
+# f9320301dbc44d948fafce59a18af9cd
+# 6eb044db15724aba98c01ac511dc25e8
+# e916f51de10a4013b77d925b897cd9ea
+# 5426f20e3e3f40cdb11b23b8ee3a25a5
+# 7d4b7a8f665d4c40ba947b0b0ea80118
+#: ../../source/collada_robot_extensions.rst:64
+#: ../../source/collada_robot_extensions.rst:223
+#: ../../source/collada_robot_extensions.rst:334
+#: ../../source/collada_robot_extensions.rst:539
+#: ../../source/collada_robot_extensions.rst:640
+#: ../../source/collada_robot_extensions.rst:702
+#: ../../source/collada_robot_extensions.rst:835
+#: ../../source/collada_robot_extensions.rst:902
+msgid "Example"
+msgstr ""
+
+# 02a71ed5572c4ed3a63bff1e90d5381f
+#: ../../source/collada_robot_extensions.rst:76
+msgid "manipulator"
+msgstr ""
+
+# 5dd5953e9c104b44838827bece1c8146
+#: ../../source/collada_robot_extensions.rst:81
+msgid ""
+"Defines a subset of the robot that acts as an **arm** and a **gripper**."
+msgstr ""
+
+# 033b6fb572824235808ef59cd44b776a
+#: ../../source/collada_robot_extensions.rst:86
+msgid ""
+"The arm is a chain of joints whose **end effector** is treated as a gripper. "
+"The arm is extracted from the **origin** and **tip** links. The **tip** "
+"contains the manipulator frame of reference. The gripper axes have to be "
+"specified manually. The direction is used as a hint for grasping and inverse "
+"kinematics."
+msgstr ""
+
+# b89f5a2ab8cf4036bb6439909c324722
+# 232d4f19c91542e6bda6d1d640e145aa
+# ed54703b2c3847f78553121aef1d3292
+# 66ca6998f9bc4f1c94192760b418ebfc
+# d3d45d802235485fbf511f5cd8110aeb
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<articulated_system>"
+msgstr ""
+
+# e470a34f23f74c60bde1b814cc932846
+# 07c63c365eb24d37b3b1dddd70ad92c0
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<frame_origin>"
+msgstr ""
+
+# dfafb165d13c4406abeaf01b7bfe1482
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The base frame that the arm starts at"
+msgstr ""
+
+# f1016a429df44f5dbdb7b9174027a2b9
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<frame_tip>"
+msgstr ""
+
+# 54903b9881554aa884cfc91768ffabb9
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The end effector frame the arm ends at"
+msgstr ""
+
+# e29b01b22d3548ddbbb8e6711e81bd8b
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<gripper_joint>"
+msgstr ""
+
+# e785b6eef81a4cd7a0c97d7e8dc2c8d2
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Defines one joint of the gripper"
+msgstr ""
+
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 40dc322cfee24e6b8169ee0b56029b1c
+# 86b714138cc845f7a1f9d375a9d272ca
+# 30b8cb4a3f33412693188622d8155e1e
+# 789a69715d594e29957b14a169774ad9
+# 9cf43bc3cf0a4d978569cc15cc4e4bb9
+# 98fa296190c140e9943d6931db240b29
+#: ../../source/collada_robot_extensions.rst:1
+msgid "0 or more"
+msgstr ""
+
+# f9bab46465cf482bac281fde418a1101
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<iksolver>"
+msgstr ""
+
+# 40e6e6dd46d940caa0edc2d029712c35
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Defines properties of inverse kinematics functions when used with the arm"
+msgstr ""
+
+# fad37613101e40fe8bdb7c631f1d68e6
+#: ../../source/collada_robot_extensions.rst:113
+msgid "Attributes for <frame_origin>/<frame_tip>"
+msgstr ""
+
+# 3e2421a01dcc4b22978e5d390fbefad3
+# 58ea99df811e4a10b1f02e0a261d3c5b
+# 7bf46bcb8dba49ac8eff9356f29d235f
+#: ../../source/collada_robot_extensions.rst:1
+msgid "link"
+msgstr ""
+
+# 89631a97dc1e46028219a5befb0f3803
+# 89631a97dc1e46028219a5befb0f3803
+# 89631a97dc1e46028219a5befb0f3803
+# 89631a97dc1e46028219a5befb0f3803
+# 89631a97dc1e46028219a5befb0f3803
+# 4e7372f5f97e450b84c1984a99f80c49
+# 8b7afde2a53c4cfc95c08fe55cb85444
+# a7eb139488a64e23ba9f5af6bba0b8a3
+# 5a60799a01e241c688785f51ae583ea9
+# 994c35dd04204062ac3aa97dd6d57a19
+# 7e6b6ab71f1d40e5806a8ade1788c3eb
+# 9d5795f873284682a247f8822d2f0fb8
+# b97bc8b8e1994f98beb5236b02978714
+# ae69e6059e984de2a5a15e4cd6a56e49
+# c6bcf7e7ae9d4786a58e998d385a1b9e
+#: ../../source/collada_robot_extensions.rst:1
+msgid "**xs:token**"
+msgstr ""
+
+# a98611617dc64324a14832507f4e9064
+# 214156c71897448bb7ad20de0bbb5089
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Required. References the SID of a <link> defined in <kinematics_model>."
+msgstr ""
+
+# de48340ca6b74ed192bf074b70b09a47
+#: ../../source/collada_robot_extensions.rst:123
+msgid "Child Elements for <frame_tip>"
+msgstr ""
+
+# f1016a429df44f5dbdb7b9174027a2b9
+# 9b6511aa91dd441c8d094cd926c8cf16
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<translate>"
+msgstr ""
+
+# f2879033defa459e92bd751a0f967343
+# a00c37bd2155415084f00c7009039909
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Translation. See main entry in Core."
+msgstr ""
+
+# f1016a429df44f5dbdb7b9174027a2b9
+# 84a494a8c01c47e6a3a2a2e54d3515d9
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<rotate>"
+msgstr ""
+
+# ba36b4235cca42b4baf2600f71942402
+# 771d8652def14d0bb10d14cfd93ebca5
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Rotation axis. See main entry in Core."
+msgstr ""
+
+# e29b01b22d3548ddbbb8e6711e81bd8b
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<direction>"
+msgstr ""
+
+# 0ad613666e3240cfa152a8ec40cd2c35
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Direction meta information. Sometimes IK and other modules require the "
+"manipulator to have a direction to measure angles from. This is defined "
+"inside the frame tip coordinate system."
+msgstr ""
+
+# 48ed7a8d85b344e6ab79acb091edaa3b
+#: ../../source/collada_robot_extensions.rst:135
+msgid "Attributes for <gripper_joint>"
+msgstr ""
+
+# 9a9bcbee54cf4402a0d09bf8d095446f
+# 9a9bcbee54cf4402a0d09bf8d095446f
+# c6f0d7dbd197476aae73aa9fe1e8d6c5
+#: ../../source/collada_robot_extensions.rst:1
+msgid "joint"
+msgstr ""
+
+# cd8334001abb4c5da7f0150d564a739c
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The reference of the joint in the instantiated kinematics model "
+"that is part of the gripper."
+msgstr ""
+
+# aca22d75109e497bbebcd37ffbd4b915
+#: ../../source/collada_robot_extensions.rst:145
+msgid "Child Elements for <gripper_joint>"
+msgstr ""
+
+# d9a709fb63a7425cb76a7d1f77b5969d
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<closing_direction>"
+msgstr ""
+
+# 91f401f93c7a41ceae97206a93c0d047
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"**common_float_or_param_type** that contains the default closing direction "
+"of an axis on the joint. If a closing direction is not specified for an axis "
+"in the joint, it defaults to 0."
+msgstr ""
+
+# d9a709fb63a7425cb76a7d1f77b5969d
+#: ../../source/collada_robot_extensions.rst:156
+msgid "Attributes for <gripper_joint>/<closing_direction>"
+msgstr ""
+
+# 63e3c2fa264640f29ff87e2241127f32
+#: ../../source/collada_robot_extensions.rst:1
+msgid "axis"
+msgstr ""
+
+# 75c657490eea4ef8bc9c92653fc84473
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Required. The SID of the axis inside the referenced joint."
+msgstr ""
+
+# fc5074b357f943228ecf74fa08774051
+#: ../../source/collada_robot_extensions.rst:166
+msgid "Attributes for <iksolver>"
+msgstr ""
+
+# 6977a8b9d810466dbe995e183524ef8f
+# 87a06ac7fc254e9382e62b883c278859
+# 7cf2721743e645f89e06bee3697fa584
+# 778000d0fd3d42939beb6f09d6e6961f
+# 956d4f5d23964f5595d3c8ebf5f68d5f
+#: ../../source/collada_robot_extensions.rst:1
+msgid "type"
+msgstr ""
+
+# b760d1016141434d9345ba07545d71aa
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The type of the inverse kinematics to set a property for. Possible "
+"types are: **Transform6D, Rotation3D, Translation3D, Direction3D, Ray4D, "
+"Lookat3D, TranslationDirection5D**."
+msgstr ""
+
+# b84971bdab2b4878849d4cfd68cb3fe1
+#: ../../source/collada_robot_extensions.rst:176
+msgid "Child Elements for <iksolver>"
+msgstr ""
+
+# e29b01b22d3548ddbbb8e6711e81bd8b
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<free_joint>"
+msgstr ""
+
+# 1b1f9b2555b546d1963f975ecadd8bbb
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Specifies one free joint to use for ik."
+msgstr ""
+
+# e9cce5f928ee4c7db26dee8db8c65fad
+# 76699b0e3b5541f7beae3a0436582a42
+# 20dc950cee004574a9b70eb9c0426814
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<interface_type>"
+msgstr ""
+
+# ae13cd17b53f4a34888166042fcb4c62
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Optional. Specifies the interface of the inverse kinematics solver."
+msgstr ""
+
+# 5c080a839fa4466fbaca29fb8a68a946
+#: ../../source/collada_robot_extensions.rst:188
+msgid "Attributes for <iksolver>/<free_joint>"
+msgstr ""
+
+# 7af25f21b094445c9533f974d384eb9e
+# d17140fbe6b94a49964e48e98deb1e7a
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The reference of the joint in the instantiated kinematics model "
+"that is part of the manipulator chain."
+msgstr ""
+
+# e260e9a52803457d9a3301fb58f0fef3
+#: ../../source/collada_robot_extensions.rst:1
+msgid "stepsize"
+msgstr ""
+
+# 083b5c68a27b4ceb90ae99e03aca998e
+#: ../../source/collada_robot_extensions.rst:1
+msgid "**xs:float**"
+msgstr ""
+
+# 0f58d2fb5bc849c7a44533a0efb996ba
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The discretization value of this joint when searching for solutions"
+msgstr ""
+
+# e8c03bed8b0f4e388a02e3aabd360b88
+# eeb54d25a91a40eca464c71317218c9d
+#: ../../source/collada_robot_extensions.rst:199
+#: ../../source/collada_robot_extensions.rst:327
+msgid "Details"
+msgstr ""
+
+# ca409a79618b411da7ea76654f07210c
+#: ../../source/collada_robot_extensions.rst:201
+msgid "The current IK types are:"
+msgstr ""
+
+# 9b04e0978ccb4001a0085f429fd8a43a
+#: ../../source/collada_robot_extensions.rst:203
+msgid "Transform6D - end effector reaches desired 6D transformation"
+msgstr ""
+
+# de99a949a10545b3b3e6d3293750e44d
+#: ../../source/collada_robot_extensions.rst:204
+msgid "Rotation3D - end effector reaches desired 3D rotation"
+msgstr ""
+
+# 5016e9d1146f464c8522e08b7a822895
+#: ../../source/collada_robot_extensions.rst:205
+msgid "Translation3D - end effector origin reaches desired 3D translation"
+msgstr ""
+
+# 1e125ecc5d7d4ab38aacbefa6a69431b
+#: ../../source/collada_robot_extensions.rst:206
+msgid ""
+"Direction3D - direction on end effector coordinate system reaches desired "
+"direction"
+msgstr ""
+
+# 2e8049bcb84e48a481e54071d934da51
+#: ../../source/collada_robot_extensions.rst:207
+msgid ""
+"Ray4D - ray on end effector coordinate system reaches desired global ray"
+msgstr ""
+
+# abe1079adce54b649e44e5d73df656cb
+#: ../../source/collada_robot_extensions.rst:208
+msgid ""
+"Lookat3D - direction on end effector coordinate system points to desired 3D "
+"position"
+msgstr ""
+
+# bc88031a43bc4c8697d07f4a2d6c47d2
+#: ../../source/collada_robot_extensions.rst:209
+msgid ""
+"TranslationDirection5D - end effector origin and direction reaches desired "
+"3D translation and direction. Can be thought of as Ray IK where the origin "
+"of the ray must coincide."
+msgstr ""
+
+# 9a7e80e1777643a0a6ece634b682666d
+#: ../../source/collada_robot_extensions.rst:211
+msgid ""
+"The IK types are meant to be hints as to how a manipulator can be used. "
+"Multiple IK types can be set for one manipulator and differing free joint "
+"values. It is possible for a post-processing stage to determine what IK "
+"types are best suited for a particular manipulator structure, and then add "
+"those into the COLLADA file."
+msgstr ""
+
+# b24233d97ddb4f1581a4403de29f7db9
+#: ../../source/collada_robot_extensions.rst:213
+msgid "Why is a manipulator frame necessary?"
+msgstr ""
+
+# e05bf1e8c1d14f49aeddc1fdb5eee8d1
+#: ../../source/collada_robot_extensions.rst:214
+msgid ""
+"** Answer: Manipulator frames allow the user to define a coordinate system "
+"where it makes target tasks easier to complete. In this regard, the "
+"manipulator frame can be freely chosen by the user without worrying about "
+"destroying the link coordinate systems. For example, link frames are usually "
+"aligned with joint axes and center of masses and robot state is defined by "
+"their 6D transform in space. Having them also represent task-specific "
+"information could destroy consistency when the task changes. Also, the z-"
+"axis of the manipulator frame can define the \"direction\" of the "
+"manipulator. Direction can be used in many places like sensor line of sight "
+"and grasping approach, which makes it possible to quickly use the robot for "
+"planning."
+msgstr ""
+
+# 0fde895e0cd44affb74bb2f65c1d0b4d
+#: ../../source/collada_robot_extensions.rst:216
+msgid ""
+"Question: For dual arm manipulation, would a leftright manipulator ever be "
+"used including all joints? In this case, will it might be necessary to "
+"define two frame tips (one for left arm and one for right arm)?"
+msgstr ""
+
+# 28da165236a74f84850f5629c6053411
+#: ../../source/collada_robot_extensions.rst:217
+msgid ""
+"** Answer: Having a leftright manipulator destroys the one-to-one "
+"correspondence between gripper joints and ik solver, and not much is gained. "
+"So better to have only have one frame tip and origin and treat two arms as "
+"separate. The constraint between the end effectors of the two arms is not "
+"always rigid, it very task dependent. Therefore, the user should take care "
+"of the dual relation."
+msgstr ""
+
+# a0fa753fb27c4ce88d5031e997765ad9
+#: ../../source/collada_robot_extensions.rst:219
+msgid ""
+"Question: What about closing gripper direction for complex hands? Fingers "
+"with many DOF might need special grasping strategies."
+msgstr ""
+
+# 32b97d4b97d946f7b1c858c501ecba0b
+#: ../../source/collada_robot_extensions.rst:220
+msgid ""
+"** Answer: The closing direction just provide a hint as to the usage. The "
+"real gripper movement depends on the grasp strategy, which is beyond the "
+"definition of this scope."
+msgstr ""
+
+# 3583da31b1c4415cae8a6ea6e6ea7ac9
+#: ../../source/collada_robot_extensions.rst:225
+msgid ""
+"The example defines an arm with an end effector at link wam7 with a local "
+"coordinate system. It also defines two gripper axes. For the 'transform6d' "
+"inverse kinematics type, it specifies that the free joint should be 'joint4'."
+msgstr ""
+
+# dce223bfa8a041c682597b032a61a04e
+#: ../../source/collada_robot_extensions.rst:263
+msgid "collision"
+msgstr ""
+
+# da066f07fa214ef0885913c583bd64d3
+#: ../../source/collada_robot_extensions.rst:268
+msgid ""
+"Links all possible collision meshes and properties for one kinematics body. "
+"The meshes depends on the usage."
+msgstr ""
+
+# 4350eb0c257342eaa06c8dd3dd8c0990
+#: ../../source/collada_robot_extensions.rst:273
+msgid ""
+"A link can have three different collision meshes: * for visual rendering * "
+"for self-collisions * for environment collisions"
+msgstr ""
+
+# 311704bcd3c54b38986cf9dab24d50e8
+#: ../../source/collada_robot_extensions.rst:278
+msgid ""
+"For each link, COLLADA will store three geometries in the "
+"**<library_geometries>**. The geometries will have an <extra> tag that "
+"specifies which usage they are meant to. The **self** and **env** will be "
+"referenced inside the visual geometry."
+msgstr ""
+
+# f3e32a3bde9d4cc7b4d23040fa4a81f3
+#: ../../source/collada_robot_extensions.rst:280
+msgid ""
+"The tag also stores information about what pairs of links can be completely "
+"ignored from self-collision detection. These links are either adjacent to "
+"each other, or so far from each other that no configuration of the robot can "
+"get them into possible collision."
+msgstr ""
+
+# 2c775dc9766449f8a2f1aa81ee0d697c
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<kinematics_model>"
+msgstr ""
+
+# a14c223edb4e40689180db0c2bd3884f
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<bind_instance_geometry>"
+msgstr ""
+
+# ab22ccf15eb1433782a055dcf59c81ac
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The geometry used for a particular link"
+msgstr ""
+
+# 38b232411af94178bb29eab59a5f7681
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<ignore_link_pair>"
+msgstr ""
+
+# 827973670b8b463cbe87a8ed2415f327
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Specifies two links pairs whose self-collision should not be checked"
+msgstr ""
+
+# 400e563763a647038b9cf1629a5e2303
+#: ../../source/collada_robot_extensions.rst:304
+msgid "Attributes for <bind_instance_geometry>"
+msgstr ""
+
+# 3934e6cf6318421690d00ad5527f4573
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Required. The usage type: **environment** or **self**"
+msgstr ""
+
+# 4727850f297b4186aa74aebfc4836455
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. References the SID of a <link> defined in <kinematics_model>. This "
+"link is where the geometries will be added."
+msgstr ""
+
+# 7eaf8fe2d85f478db6eedd1142aa177d
+# 22c6da1412924039ba61bf9e550d3049
+#: ../../source/collada_robot_extensions.rst:1
+msgid "url"
+msgstr ""
+
+# b5330528fe754baf8bf2cc06deb4ec63
+# 3ad622b85c914cc19d3fa7e7984a2d6f
+#: ../../source/collada_robot_extensions.rst:1
+msgid "**xs:anyURI**"
+msgstr ""
+
+# 002c451af1e94811b0ada82b87119e3c
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The URL of the location of the <geometry> element to instantiate. "
+"Can refer to a local instance or external reference."
+msgstr ""
+
+# 4acfec27abee4562947c993d3423b9ee
+#: ../../source/collada_robot_extensions.rst:316
+msgid "Attributes for <ignore_link_pair>"
+msgstr ""
+
+# 5501c2a99ea945fc9f301de810d06a45
+#: ../../source/collada_robot_extensions.rst:1
+msgid "link0"
+msgstr ""
+
+# 5ddc7ce4762a48f38a91d2bc00e06787
+# 0ef643646b1e411ea835e002ffc493fc
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. References the SID of a <link> defined in <kinematics_model>. One "
+"of the links defining the pair to be ignored."
+msgstr ""
+
+# 66b6dd2df60e47c399b7a7f3b8eb59d3
+#: ../../source/collada_robot_extensions.rst:1
+msgid "link1"
+msgstr ""
+
+# 0c40dda4e8b846518d32ac34d249a4a2
+#: ../../source/collada_robot_extensions.rst:329
+msgid ""
+"Convex decompositions can be defined by using one geometry per convex hull "
+"and attaching multiple geometries to the same link."
+msgstr ""
+
+# 92b114a1d1114b9cb1bf0f89ec63b009
+#: ../../source/collada_robot_extensions.rst:331
+msgid ""
+"<ignore_link_pair> tags help self-collision detection to help prune "
+"possibilities. The adjacency information is not just the neighboring links. "
+"It is also meant to prune any collisions between two links that *cannot* "
+"possibly happen if the robot maintains its joint limits. This information "
+"depends not only on the kinematics of the robot, but also on the geometry of "
+"every link. Also for triplets of joints j1, j2, j3 that intersect at a "
+"common axis, you would want to add (j1,j2),(j2,j3),(j1,j3)."
+msgstr ""
+
+# cc92e65e8f474eb39e0e054de9d62a30
+#: ../../source/collada_robot_extensions.rst:366
+msgid "library_sensors"
+msgstr ""
+
+# c9037a8941da40158cc2cb12081836bd
+#: ../../source/collada_robot_extensions.rst:371
+msgid "Provides a library in which to place <sensor> elements."
+msgstr ""
+
+# a7c1497e7c5442f8b1e591991bec0677
+#: ../../source/collada_robot_extensions.rst:376
+msgid ""
+"Allows sensors to be stored as modular resources in libraries. Can be easily "
+"referenced through files."
+msgstr ""
+
+# 30e7ee8e45904d78b8efade62add319f
+# 4cc5399e788e47bb9ea3a3ba17d4a50d
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<COLLADA>"
+msgstr ""
+
+# 080cefc798d5442086f82acca97135be
+#: ../../source/collada_robot_extensions.rst:388
+msgid "sensor"
+msgstr ""
+
+# 2fc6f39b2980490cb8379fd8bdbce351
+#: ../../source/collada_robot_extensions.rst:393
+msgid "Defines a sensor's type and the geometric and intrinsic parameters."
+msgstr ""
+
+# 21028a0d815d4cada991197ceb0b04c5
+#: ../../source/collada_robot_extensions.rst:398
+msgid ""
+"Each sensor will be associated with a particular sensor type; depending on "
+"the sensor type, the parameters that need to be set will change. The "
+"parameters should contain everything necessary to simulate the sensor "
+"accurately. They *should not* contain parameters that define the format and "
+"transfer of the data."
+msgstr ""
+
+# 45da733b6f72436fa3ef9b0298275234
+# 31b11fdf0fb3488c9d9e01059911d5a9
+#: ../../source/collada_robot_extensions.rst:410
+#: ../../source/collada_robot_extensions.rst:772
+msgid "Attributes"
+msgstr ""
+
+# f3de274de2aa4e9e967186f184a69b60
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The type of the sensor. Possible types are: **base_pinhole_camera, "
+"base_stereo_camera, base_laser2d, base_laser3d, base_flash_laser, "
+"base_encoder, base_force6d, base_imu, base_odometry**"
+msgstr ""
+
+# 64c281c02c7748b998a21bee05afdd2e
+# 7be605d41ad54c6ab22e01e49485029d
+#: ../../source/collada_robot_extensions.rst:1
+msgid "id"
+msgstr ""
+
+# 29bb96bba72341b69aeba2a672d79bc4
+# ac2d39fec5f040e28723d707d2826b0a
+#: ../../source/collada_robot_extensions.rst:1
+msgid "**xs:ID**"
+msgstr ""
+
+# d14c1ad37b7748338b6c10f110f5a4cf
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. A text string containing the unique identifier of the <sensor> "
+"element. This value must be unique within the instance document."
+msgstr ""
+
+# c6910c5b1d974c789606777460a39dfa
+# a11680df176a4ec0b2a00a530ebbfe2b
+#: ../../source/collada_robot_extensions.rst:423
+#: ../../source/collada_robot_extensions.rst:785
+msgid "**common**:"
+msgstr ""
+
+# ffd5cbff604c4c6093a816d0d9456c8f
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Optional. Contains the interface type to load the sensor with."
+msgstr ""
+
+# 34cadd7d1dad41809ee4521bce3aecc3
+#: ../../source/collada_robot_extensions.rst:433
+msgid "**type base_pinhole_camera**:"
+msgstr ""
+
+# 4727627227ec45a1abe86f587546424d
+#: ../../source/collada_robot_extensions.rst:435
+msgid ""
+"Simple pin hole camera defined by an intrinsic matrix. The camera can "
+"support multiple image dimensions with multiple channel formats. It is not "
+"clear whether all supported formats for one camera should be enumerated in "
+"one <sensor> tag, or there should be multiple sensor tags for each different "
+"type where the sensors are exclusively mutual."
+msgstr ""
+
+# 1793de59c22e42e3ac6b34370f68dd3a
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<image_dimensions>"
+msgstr ""
+
+# 5b9df7861a424e2aa7fd7d1ff897c7c8
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **int3_type** that specifies the image width, height, and "
+"channels."
+msgstr ""
+
+# 9f16877c6bc640f3839ece812e86f8ff
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<format>"
+msgstr ""
+
+# f5ade98d9026494fbfde153d3e59296e
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a string that specifies the format of every value in the image. "
+"Possible types are **uint8, uint16, uint32, int8, int16, int32, float32, "
+"float64**."
+msgstr ""
+
+# 09ab56168cfb4455bc1d575426be49c4
+# ad6e624ad6ec4d2f89c9def056afc623
+# bcac6ae567b84bf989969d1e9c190f59
+# 27b218f1b4274439a5f1fb94cbabdcd4
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<measurement_time>"
+msgstr ""
+
+# 2b937d4744224884bb86b621ade587e7
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies time between images (ie exposure "
+"time)."
+msgstr ""
+
+# 9c7df3c3c8ce47539999a38d6573cace
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<intrinsic>"
+msgstr ""
+
+# 9d224af315cf4067b009a0372c5a0b70
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float2x3_type** that specifies the intrinsic parameters "
+"defining the principal point, field of view, and skew."
+msgstr ""
+
+# 4a8f3adbd25f4adb8b762f5e1fc5c5ce
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<focal_length>"
+msgstr ""
+
+# 3a6bfe87ec5249a2958d274956b425c9
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the physical focal length of the "
+"camera."
+msgstr ""
+
+# 3885fd7722114e31bcbe39fe882f1454
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<distortion_model>"
+msgstr ""
+
+# a4cf4132d16f4559a856bfbd0866e0d8
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"The distortion model to use. It has a **type** attribute specifying the "
+"actual model type, and contains a **list_of_floats_type** that specifies the "
+"distortion coefficients of the model."
+msgstr ""
+
+# 21998c87d9824291abf841d49ad3158c
+#: ../../source/collada_robot_extensions.rst:449
+msgid "**type base_stereo_camera:**"
+msgstr ""
+
+# a0c51b6e9b5b4afb97fec6430bba7792
+#: ../../source/collada_robot_extensions.rst:451
+msgid ""
+"Uses two cameras together to extract a depth map. The stereo camera's "
+"coordinate system is in the first instanced camera."
+msgstr ""
+
+# 9d6c66dfdd67458a82d6f5c10e9b0700
+# 02f22deae7de456b9193979c62f41010
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<instance_sensor>"
+msgstr ""
+
+# 39480e0de9de49688a9d65c3e7eb2c32
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The camera sensors, the scan time should be equal"
+msgstr ""
+
+# 5c4d5eb446934662a0d98f38ebe5e0e1
+#: ../../source/collada_robot_extensions.rst:1
+msgid "2"
+msgstr ""
+
+# 27092247c98247a5a24dfa2b72a4a07d
+#: ../../source/collada_robot_extensions.rst:461
+msgid "Attributes for <instance_sensor>"
+msgstr ""
+
+# 4c33e828f11e4459be2df7381bf60f1c
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. The URL of the location of the <sensor> element to instantiate."
+msgstr ""
+
+# b1339c1d98174cc9be5f20a4dc7e0e69
+#: ../../source/collada_robot_extensions.rst:471
+msgid "Child Elements for <instance_sensor>"
+msgstr ""
+
+# 345e08ad1f564511a8ac97d83b34ffd6
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<rectification>"
+msgstr ""
+
+# 12b2521cc2084449a164dc930784e7c1
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3x3_type** that specifies a homography which takes an "
+"image to the ideal stereo image plane so that epipolar lines in both stereo "
+"images are parallel. The homography transforms from the second image to the "
+"first image."
+msgstr ""
+
+# 17822f009dcc4444b1885bfce729bd8f
+#: ../../source/collada_robot_extensions.rst:481
+msgid "**type base_laser2d**:"
+msgstr ""
+
+# 83344ead16e74f20b197e04f9e06973d
+#: ../../source/collada_robot_extensions.rst:483
+msgid "Single scan from a planar laser range-finder along the xy plane."
+msgstr ""
+
+# daf5d167346b4c34b1fbbecc3e335e9e
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<angle_range>"
+msgstr ""
+
+# 6b96572999fc4795b770caddfcf81f00
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float2_type** that specifies the minimum and maximum angles "
+"(degrees) of the laser range."
+msgstr ""
+
+# 6aa85fd9f99447dfad2f3a390162acc9
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<distance_range>"
+msgstr ""
+
+# e577412baad94563a80a4874cb6931ee
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float2_type** that specifies the minimum and maximum distance "
+"of the laser."
+msgstr ""
+
+# 17e44687b9d1402283f774a9f2a0b5a8
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<angle_increment>"
+msgstr ""
+
+# 8ba7ca108d454a0b9781a32e355050c8
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the angular distance between "
+"measurements (degrees)."
+msgstr ""
+
+# fb2e6f11dfee401eb61227e34ea780e0
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<time_increment>"
+msgstr ""
+
+# ac5c0d10f9f94681a37da54aa5f62d61
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the time between measurements "
+"(seconds). If your scanner is moving, this will be used in interpolating "
+"position of 3d points."
+msgstr ""
+
+# 7c73ab94a102499ab3936ddd9c230f9a
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the time between scans (seconds)"
+msgstr ""
+
+# a14813c16e04418a965c7f8a6f592cab
+#: ../../source/collada_robot_extensions.rst:496
+msgid "**type base_laser3d:**"
+msgstr ""
+
+# f29c850e52eb4cb0bd4a32704adb5d39
+#: ../../source/collada_robot_extensions.rst:498
+msgid "**type base_flash_laser:**"
+msgstr ""
+
+# 035a7eaa194f4b12b0d2dae6324b5ec0
+#: ../../source/collada_robot_extensions.rst:500
+msgid "**type base_encoder:**"
+msgstr ""
+
+# 5f1f8e9f0a7849cdaf75a15a74612dbd
+#: ../../source/collada_robot_extensions.rst:502
+msgid "**type base_force6d:**"
+msgstr ""
+
+# 7b03cb1464f94c768980ded0aed8ee84
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_range_force>"
+msgstr ""
+
+# 0dc02c4f0b46476596f5bf4152bd074b
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the maximum force around the XYZ "
+"axes the sensor can accurately measure before saturating. Units are **Mass * "
+"Distance² * Time-²**."
+msgstr ""
+
+# 80daa5d1841044e49434365c3277bce2
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_range_torque>"
+msgstr ""
+
+# daedccfa067f427cbe2eebe8744b67e1
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the maximum torque around the XYZ "
+"axes the sensor can accurately measure before saturating. Units are **Mass * "
+"Distance * Time-²**."
+msgstr ""
+
+# f1277c814c1147038d8b02b1db3d6dc7
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_resolution_force>"
+msgstr ""
+
+# ec0404de10ae475abd8c031cfd20043e
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the sensing resolution of the "
+"forces being measured around the XYZ axes. Units are **Mass * Distance² * "
+"Time-²**."
+msgstr ""
+
+# 72c068a6a3344b7a888cc15d2393b9b9
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_resolution_torque>"
+msgstr ""
+
+# cdc7095f98e9473e9e3e9a91462b24a6
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the sensing resolution of the "
+"torques being measured around the XYZ axes. Units are **Mass * Distance² * "
+"Time-²**."
+msgstr ""
+
+# 6d885d6e15e645909344f0784d569342
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_capacity_range_force>"
+msgstr ""
+
+# 8011a5daee4041a385c905e4c1f54c3d
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the maximum force around the XYZ "
+"axes the sensor can withstand before breaking. Units are **Mass * Distance² "
+"* Time-²**."
+msgstr ""
+
+# 1e34acd47e434731ac5a23fca08100e1
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<load_capacity_range_torque>"
+msgstr ""
+
+# 91df5c72453b4666a6251fcbb8700228
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float3_type** that specifies the maximum torque around the XYZ "
+"axes the sensor can withstand before breaking. Units are **Mass * Distance² "
+"* Time-²**."
+msgstr ""
+
+# 2a1ab5a69cdb4352a91cbdab3d2db3a4
+#: ../../source/collada_robot_extensions.rst:516
+msgid "**type base_imu:**"
+msgstr ""
+
+# 80b6e48a11954798924aee0c29f2b046
+# db1c0616b8ba4bc4806ca3c160458e2c
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the time between scans (seconds)."
+msgstr ""
+
+# 325bf13027eb4519a71d44cb39d1a406
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<rotation_covariance>"
+msgstr ""
+
+# 576f08a27993407cbf86c3269f3ff77d
+# 72ea3517cbec4aa39393ead96837b2d8
+# d641b4bc6419498b87509859ef96cf6f
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"The uncertainty covariance matrix (3x3 row-major matrix) in x, y, and z axes."
+msgstr ""
+
+# 7a71db51dacb459d886ff33c0dc57906
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<angular_velocity_covariance>"
+msgstr ""
+
+# 71c3322731974f2aa02bbd0269965d80
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<linear_acceleration_covariance>"
+msgstr ""
+
+# b6e9a000037b4a0193c66174d83593f8
+#: ../../source/collada_robot_extensions.rst:528
+msgid "**type base_odometry:**"
+msgstr ""
+
+# 58a63292cb5d453eafe3df6add05c746
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<target>"
+msgstr ""
+
+# dd1f08cb473a45baa531893544038630
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The name of the target whose odometry is being measured"
+msgstr ""
+
+# 77a62012d26548ff828ee4adde282712
+#: ../../source/collada_robot_extensions.rst:541
+msgid "Example using a default sensor with a custom interface"
+msgstr ""
+
+# a3b6e0e82e94412fbcb2d5acb61b1380
+#: ../../source/collada_robot_extensions.rst:564
+msgid "Using a non-default, custom sensor"
+msgstr ""
+
+# 1fc6ebd0c2894d0e8e036545d775ea1d
+#: ../../source/collada_robot_extensions.rst:581
+msgid "Develop a formal sensor XML file format for different sensor types."
+msgstr ""
+
+# c5eed5d39d0f42e7961988b9d4d0f8bb
+#: ../../source/collada_robot_extensions.rst:584
+msgid "attach_sensor"
+msgstr ""
+
+# 11019307964647e8856a71df4a8c6184
+#: ../../source/collada_robot_extensions.rst:589
+msgid "Attaches a sensor to a link of the robot."
+msgstr ""
+
+# 99b67d9cedec4299957502f6e841e08b
+#: ../../source/collada_robot_extensions.rst:594
+msgid ""
+"The sensor comes from the sensor library. It can be attached anywhere onto a "
+"link defined from the kinematics section. The sensor will maintain a "
+"constant transformation between the link."
+msgstr ""
+
+# 896e6991bb0745228d44acfa68d63914
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Instantiate a sensor."
+msgstr ""
+
+# 60d8f568df7b41b6a3b0a8829cea90dc
+#: ../../source/collada_robot_extensions.rst:1
+msgid "The base link that the sensor is attached to."
+msgstr ""
+
+# f6bfbc08e18f472cb72d4ce843a876f5
+#: ../../source/collada_robot_extensions.rst:618
+msgid "Attributes for <frame_origin>"
+msgstr ""
+
+# ca590bb47da742feb55c7646013578d2
+#: ../../source/collada_robot_extensions.rst:628
+msgid "Child Elements for <frame_origin>"
+msgstr ""
+
+# 5be65efaec1342558fd00c253f4e93bd
+#: ../../source/collada_robot_extensions.rst:655
+msgid "formula/technique"
+msgstr ""
+
+# f6d509d964434cdf9a35b76cc66c0c6b
+#: ../../source/collada_robot_extensions.rst:660
+msgid ""
+"Full specifies a formula for a joint and annotates it with extra information "
+"necessary for robotics."
+msgstr ""
+
+# 416bec2d1156448b99db85898e027dd4
+#: ../../source/collada_robot_extensions.rst:665
+msgid ""
+"The original <formula>/<technique_common> supports only one equation for the "
+"value of the joint. More complex kinematics systems have more than one "
+"degree of freedom per joint and use the partial derivatives of the equation "
+"to compute Jacobians and simulate physics."
+msgstr ""
+
+# cb74f524796c4a938b62f168bf796cc4
+#: ../../source/collada_robot_extensions.rst:667
+msgid ""
+"This \"OpenRAVE\" technique for <formula> can specify partial derivatives of "
+"the position equation for computing velocity and accelerations."
+msgstr ""
+
+# e7664653913849b3ad4e88b9e69a7eb6
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<formula>"
+msgstr ""
+
+# 80da8ecab15c4f48a43e138f67d05c2d
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<equation>"
+msgstr ""
+
+# c8e7eb6b768f4e0e9ecebe505ac6a7c3
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Equation in MathML format. Used to specify the position and partial "
+"derivatives."
+msgstr ""
+
+# 7e1a1b75872c41c3ab35170e5aea9d35
+#: ../../source/collada_robot_extensions.rst:691
+msgid "Attributes for <equation>"
+msgstr ""
+
+# 84de97a6689647d2be43683f86759cb5
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. can be one of \"position\", \"first_partial\", or \"second_partial"
+"\"."
+msgstr ""
+
+# 440bb86fa7d24861bb82abc5ca6bbaa5
+#: ../../source/collada_robot_extensions.rst:1
+msgid "target"
+msgstr ""
+
+# 3999709e683f4733a4e19853d619a9db
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"If 'type' is \"first_partial\" or \"second_partial\", then fill this with "
+"the variable taking the partial derivative with respect to."
+msgstr ""
+
+# 48a77bea24af4e85ad27e34e3cbe7a30
+#: ../../source/collada_robot_extensions.rst:728
+msgid "library_actuators"
+msgstr ""
+
+# ffb0ba41a2ce46628a7b0c0b0c8c0642
+#: ../../source/collada_robot_extensions.rst:733
+msgid "Provides a library in which to place <actuator> elements."
+msgstr ""
+
+# 1b4a2bf49a834bd5b5e98ea4bbbdca33
+#: ../../source/collada_robot_extensions.rst:738
+msgid ""
+"Allows actuators to be stored as modular resources in libraries. Can be "
+"easily referenced through files."
+msgstr ""
+
+# 0ff443d6bad44b74be59f6a9520d4c7a
+#: ../../source/collada_robot_extensions.rst:750
+msgid "actuator"
+msgstr ""
+
+# 14511927ca634df0a25d978c56c5605a
+#: ../../source/collada_robot_extensions.rst:755
+msgid "An actuator provides force/momentum/action to kinematics joints."
+msgstr ""
+
+# 600037bf977a4a6aa5498b0f1e7146c3
+#: ../../source/collada_robot_extensions.rst:760
+msgid ""
+"Defines a actuator's physical properties necessary to simulate dynamics and "
+"control algorithms of a robot. They **should not** contain parameters that "
+"define the format and transfer of the data to and from actuators."
+msgstr ""
+
+# 9b68dd3b341f47398386e0c1571f5511
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Required. The type of the actuator. Possible types are: **motor**"
+msgstr ""
+
+# 50b6c4b97d3c4990aebb370b70d395ef
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Required. A text string containing the unique identifier of the <actuator> "
+"element. This value must be unique within the instance document."
+msgstr ""
+
+# 6e78e71c7116418abc11a283112da4d2
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Optional. Contains the interface type to load the actuator with."
+msgstr ""
+
+# 76d52a3a4c6547aaa2927f959fed8bb7
+#: ../../source/collada_robot_extensions.rst:795
+msgid "**type electric_motor**:"
+msgstr ""
+
+# b2b7dfce953944588576af5496de4208
+#: ../../source/collada_robot_extensions.rst:797
+msgid ""
+"Converts electrical energy into mechanical energy usually using magnetic "
+"fields and conductors. The **speed** of a motor is measured in revolutions/"
+"Time (Time is defined by the <asset> tag and usually measured in seconds). "
+"DC Motor Theory References:"
+msgstr ""
+
+# 2f21cf8473204eed87b24d8fa035f8fc
+#: ../../source/collada_robot_extensions.rst:799
+msgid "http://hades.mech.northwestern.edu/index.php/Brushed_DC_Motor_Theory"
+msgstr ""
+
+# 78125a1e890547caa452b29a5bfba1b4
+#: ../../source/collada_robot_extensions.rst:801
+msgid "http://en.wikipedia.org/wiki/Brushed_DC_electric_motor"
+msgstr ""
+
+# 5f91434ff99042bc84a408c1b0cbaf6d
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<assigned_power_rating>"
+msgstr ""
+
+# de971cb4ece845cab202ea250b787d30
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the nominal power the electric "
+"motor can safely produce. Units are **Mass * Distance² * Time-³**."
+msgstr ""
+
+# 841c6351b4ce41afbe781994b02d8cbc
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<max_speed>"
+msgstr ""
+
+# 8df5a015581b419b8046c546cbfc7d29
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the maximum speed of the motor. "
+"Units are **Time-¹**."
+msgstr ""
+
+# 51f7f8924b6d44eeb883611d841747f8
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<no_load_speed>"
+msgstr ""
+
+# 252c452c9adb4609bf9ecbd7bb86ffec
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the speed of the motor powered by "
+"the nominal voltage when the motor provides zero torque. Units are **Time-"
+"¹**."
+msgstr ""
+
+# 0916e00c34b343fabd903808591aca9a
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<nominal_torque>"
+msgstr ""
+
+# 93d5286dfd4f4fbe986a82f17afb0463
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the maximum torque the motor can "
+"provide continuously without overheating. Units are **Mass * Distance * Time-"
+"²**."
+msgstr ""
+
+# 08c06f8a318e433f9e90422b4e34bb29
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<nominal_voltage>"
+msgstr ""
+
+# 177c3e2fdf3a4aae8d2c6002e6e9af93
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the nominal voltage the electric "
+"motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**."
+msgstr ""
+
+# dcc833c7399e4c2d8dba217f9f19a587
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<rotor_inertia>"
+msgstr ""
+
+# 3095490b451f4e1c89d36164109547d9
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the inertia of the rotating element "
+"about the axis of rotation. Units are **Mass * Distance²**."
+msgstr ""
+
+# c1fd7cd6a1aa4867842c6173b69b945a
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<speed_constant>"
+msgstr ""
+
+# 59312bd585ca4c539ff378bbe7826393
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the constant of proportionality "
+"relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-"
+"¹**."
+msgstr ""
+
+# adeb4bc49a734e3faaa4ecff655c5e91
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<speed_torque_gradient>"
+msgstr ""
+
+# ff82fc5f53fb4e1cb3f47c804b3a483f
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the slope of the speed-torque "
+"curve, approximately equal to the no load speed divided by the stall torque. "
+"Units are ** Mass-¹ * Distance-¹ * Time-¹**."
+msgstr ""
+
+# 307a27abfa91460aac7e16342f5dbe9c
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<starting_current>"
+msgstr ""
+
+# 511f96144ab3450c8ca707eadf8886b0
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the current through the motor at "
+"zero velocity, equal to the nominal voltage divided by the terminal "
+"resistance. Also called the stall current.  Units are **Time-¹ * Charge**."
+msgstr ""
+
+# fc847c03da46462794b34431a5c4e258
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<terminal_resistance>"
+msgstr ""
+
+# 82a4ee0661a14e0bb1eac4b1bdff3812
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the resistance of the motor "
+"windings. Units are **Mass * Distance² * Time-¹ * Charge-²**."
+msgstr ""
+
+# 68a09745e06d4297aa5e41c1c61beab1
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<torque_constant>"
+msgstr ""
+
+# 6d6b3ace9a0247ff9f3c03c60fcf91d7
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float_type** that specifies the proportion relating current to "
+"torque. Units are **Mass * Distance * Time-¹ * Charge-¹**."
+msgstr ""
+
+# 27916de51fd340f3ac1b7e76f7f1eb14
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<gear_ratio>"
+msgstr ""
+
+# 8c7856713b7f46c18b62cad4b0bf418f
+#: ../../source/collada_robot_extensions.rst:1
+msgid ""
+"Contains a **float type** that specifies the ratio between the input speed "
+"of the transmission (the speed of the motor shaft) and the output speed of "
+"the transmission."
+msgstr ""
+
+# 288aba9f1add49459f7614cd29714172
+#: ../../source/collada_robot_extensions.rst:822
+msgid ""
+"Related variables, but not inserted in the electric_motor specification:"
+msgstr ""
+
+# f635a6f98b384515bd04be0376db03bd
+#: ../../source/collada_robot_extensions.rst:824
+msgid ""
+"Stall torque - The time it takes the unloaded motor to reach 63% of its no "
+"load speed under a constant voltage, starting from rest. Proportional to the "
+"inertia of the rotor and inversely proportional to the square of the the "
+"torque constant."
+msgstr ""
+
+# 2686bb07223a45eb83981e1c82f448e5
+#: ../../source/collada_robot_extensions.rst:825
+msgid ""
+"Max. efficiency - The maximum efficiency of the motor in converting "
+"electrical power to mechanical power. This maximum efficiency typically "
+"occurs at high speed and low torque; the efficiency is zero at zero speed "
+"and zero torque, since the mechanical power is τω."
+msgstr ""
+
+# 2b378d57d0ef428f8da6f0a89cf3cad7
+#: ../../source/collada_robot_extensions.rst:826
+msgid ""
+"No load current - The current required to spin the motor at the no load "
+"condition (i.e., the current needed to provide the torque necessary to "
+"overcome friction)."
+msgstr ""
+
+# d758c61052274386aaec0a1786b6ed73
+#: ../../source/collada_robot_extensions.rst:827
+msgid ""
+"Nominal current (max. continuous current) - The current that yields the "
+"maximum continuous torque. This maximum is determined by thermal "
+"characteristics of the motor. The power dissipated by the motor as heat is "
+"i2R. Larger currents are acceptable intermittently, but large continuous "
+"currents may cause the motor to overheat."
+msgstr ""
+
+# 685b4e00f3874c97afce244cd8886010
+#: ../../source/collada_robot_extensions.rst:828
+msgid ""
+"Mechanical time constant - The time it takes the unloaded motor to reach 63% "
+"of its no load speed under a constant voltage, starting from rest. "
+"Proportional to the inertia of the rotor and inversely proportional to the "
+"square of the the torque constant."
+msgstr ""
+
+# a10e67c0029e4bffbd5646450ca63ca9
+#: ../../source/collada_robot_extensions.rst:829
+msgid "Terminal inductance - The inductance of the motor windings."
+msgstr ""
+
+# 9c0ef670fae1440091643a310e2f761b
+#: ../../source/collada_robot_extensions.rst:830
+msgid "Thermal resistance housing-ambient"
+msgstr ""
+
+# 0e0c2f93547b4e15abc0be3afcacd7df
+#: ../../source/collada_robot_extensions.rst:831
+msgid "Thermal resistance winding-housing"
+msgstr ""
+
+# 671ef9d8d00f4718bbc8ea8f09209326
+#: ../../source/collada_robot_extensions.rst:832
+msgid "Thermal time constant winding."
+msgstr ""
+
+# 2a884e89d0724335a25046645d491b1d
+#: ../../source/collada_robot_extensions.rst:858
+msgid "attach_actuator"
+msgstr ""
+
+# 6e03fc04e2e84b808b580da8f7cd4947
+#: ../../source/collada_robot_extensions.rst:863
+msgid "Attaches an actuator to a joint."
+msgstr ""
+
+# 56ded160ee7445a6a4f530499a97128c
+#: ../../source/collada_robot_extensions.rst:868
+msgid "The actuator comes from the actuator library."
+msgstr ""
+
+# d45dfd2d02ca4872865c86bf1f860823
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<instance_actuator>"
+msgstr ""
+
+# 23477d51567a4dbdbbef082b7a59c1c8
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Instantiate an actuator."
+msgstr ""
+
+# fe2ca684b5774769b16605892e63adc1
+#: ../../source/collada_robot_extensions.rst:1
+msgid "<bind_actuator>"
+msgstr ""
+
+# f89f16d025ff4e1c8a3521307c3251e0
+#: ../../source/collada_robot_extensions.rst:1
+msgid "Binds the actuator to a joint."
+msgstr ""
+
+# 664421f16faa48b9b63b4b4c0926d2ca
+#: ../../source/collada_robot_extensions.rst:892
+msgid "Attributes for <bind_actuator>"
+msgstr ""
+
+# bffa653421044514a7c09b6d6c683b78
+#: ../../source/collada_robot_extensions.rst:914
+msgid "COLLADA Usage"
+msgstr ""
+
+# d873b6e764964e52b5ead79ba842354d
+#: ../../source/collada_robot_extensions.rst:917
+msgid "COLLADA Format Notes"
+msgstr ""
+
+# 4585b03f9d1445278a9435eddd76ebc8
+#: ../../source/collada_robot_extensions.rst:919
+msgid "**articulated_system** tag is equivalent to OpenRAVE robot"
+msgstr ""
+
+# b742b622419145e1bff970fafc787ab8
+#: ../../source/collada_robot_extensions.rst:920
+msgid ""
+"** if child is a **motion** tag, get accelerations and velocity limits from "
+"it * **kinematics_model** tag is equivalent to KinBody * If visual_scene tag "
+"present, but no kinematics, then add each node tree as a rigid link. * In "
+"order to set a static link in physics, use the <instance_rigid_body>/"
+"<dynamic> tag."
+msgstr ""
+
+# 244a93ef5b1446d38441f4ad39d4c747
+#: ../../source/collada_robot_extensions.rst:926
+msgid "Hard and Soft Joint Limits"
+msgstr ""
+
+# c361e8eea85049fabcdf5f55cb45cf96
+#: ../../source/collada_robot_extensions.rst:928
+msgid ""
+"In many scenarios, the controllers on the robots use joints limits which are "
+"smaller than the maximum limits. The controller limits are called **soft "
+"limits**, while the hardware limits are called **hard limits**. In COLLADA, "
+"the specification is:"
+msgstr ""
+
+# b1bd4a476eaa4eee98528e1d9f3fbc35
+#: ../../source/collada_robot_extensions.rst:930
+msgid ""
+"**hard limits** - specified inside the <joint> tag using the <limits> tag."
+msgstr ""
+
+# 215b0f4ba49a47108a10405c2c040df6
+#: ../../source/collada_robot_extensions.rst:932
+msgid ""
+"**soft limits** - specified inside the <articulated_system>/<kinematics>/"
+"<technique_common>/<axis_info> tag using the <limits> tag."
+msgstr ""
+
+# 508b8c9e75c24ac4aa3d0c1f50aeb583
+#: ../../source/collada_robot_extensions.rst:936
+msgid "Planning Weights"
+msgstr ""
+
+# c5cfddbfd2624c9aaf380355d9bdd463
+#: ../../source/collada_robot_extensions.rst:938
+msgid ""
+"For each joint, a measure of how much a joint's movement impacts the robot "
+"(base joints have more impact than end effector joints). this information "
+"should be used by all planners to evaluate importance of joints. Calculating "
+"this accurately might require an offline process."
+msgstr ""
+
+# 7cecd63f0ff74cc69f62d2dba8b86cdf
+#: ../../source/collada_robot_extensions.rst:941
+msgid "Composition"
+msgstr ""
+
+# d1689e8d839f40039a4ff7831d5a0682
+#: ../../source/collada_robot_extensions.rst:943
+msgid ""
+"Robots usually have grippers, robot arms, and robot bases in separate files, "
+"then we have one file that references all of them and specifies the links to "
+"merge together (ie, we do not complicate things by creating dummy joints). "
+"This can be done with articulated systems (<kinematics> tag supports "
+"multiple <instance_kinematics_model> tags)."
+msgstr ""
+
+# 198b7a35bc2a4cfbb38cbcb218b92401
+#: ../../source/collada_robot_extensions.rst:946
+msgid "Geometric Primitives"
+msgstr ""
+
+# 2c6f08128a174847941245b5feb2225d
+#: ../../source/collada_robot_extensions.rst:948
+msgid "Use COLLADA <brep> for spheres, cylinders, boxes, etc."
+msgstr ""
+
+# 599bffaf74214d17b58d44571f23ccef
+#: ../../source/collada_robot_extensions.rst:951
+msgid "Storing Convex Decompositions"
+msgstr ""
+
+# fb6ca76371e44ce88a88c3456d339127
+#: ../../source/collada_robot_extensions.rst:953
+msgid ""
+"Each link is composed of a set of convex hulls. Need to create one geometry "
+"per convex hull (<convex_mesh>?) and specify multiple geometries per <node>."
+msgstr ""
+
+# f675514595c2496492b29c4fe3ccdb13
+#: ../../source/collada_robot_extensions.rst:956
+msgid "Calibration vs Static Data"
+msgstr ""
+
+# 32596c26bed64d43bc6e504e0435c285
+#: ../../source/collada_robot_extensions.rst:958
+msgid ""
+"One thing that separates a base description of the robot from the real robot "
+"that will be used in labs is calibration: * where each sensor is with "
+"respect to the robot (6D pose) * intrinsic parameters for each sensor * "
+"joint offsets for encoder calibration * controller parameters like PID gains "
+"for dynamic properties of motors * possibly even link lengths depending on "
+"how much you trust the manufacturer"
+msgstr ""
+
+# 36c9c353604b4ae0bff40a300fcc0f29
+#: ../../source/collada_robot_extensions.rst:966
+msgid ""
+"All these parameters will change per robot, and it won't be a good idea "
+"asking every person to go and modify their one robot file. Instead we should "
+"have a different calibration file that the main collada file always "
+"references. It should be setup in such a way that the calibration file "
+"becomes optional."
+msgstr ""
+
+# b63721113c2e45bf953598c8d1fb0828
+#: ../../source/collada_robot_extensions.rst:972
+msgid "Controllers"
+msgstr ""
+
+# fe176af27ad54abc8fbb99e5bb74bc34
+#: ../../source/collada_robot_extensions.rst:974
+msgid ""
+"Specifying controller parameters in the collada file falls somewhere in "
+"between calibration parameters and parameters that will never change and "
+"should be in the main robot file. In my opinion it is very hard to find "
+"static parameters especially when considering controllers in simulation "
+"along with real world controllers. Also, there's as many control algorithms "
+"out there as planners, and I wouldn't feel comfortable specifying planning "
+"algorithms and parameters inside a robot file."
+msgstr ""
+
+# 00f6177d6fbf4be6a6e0e6ee7ae52a67
+#: ../../source/collada_robot_extensions.rst:984
+msgid "Contributors"
+msgstr ""
+
+# d5b42ff5e35a413a96c9f4e95d9eda9b
+#: ../../source/collada_robot_extensions.rst:986
+msgid "University of Tokyo - Rosen Diankov and Ryohei Ueda"
+msgstr ""

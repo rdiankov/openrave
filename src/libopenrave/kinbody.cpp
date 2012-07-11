@@ -639,7 +639,7 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
             int dof = (*itjoint)->GetDOFIndex();
             for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                 if( (*itjoint)->IsCircular(i) ) {
-                    q1.at(dof+i) = utils::SubtractCircularAngle(q1.at(dof+i), q2.at(dof+i));
+                    q1.at(dof+i) = utils::NormalizeCircularAngle(q1.at(dof+i)-q2.at(dof+i),(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
                 }
                 else {
                     q1.at(dof+i) -= q2.at(dof+i);
@@ -651,7 +651,8 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
             if( pjoint->IsCircular(dofindices[i]-pjoint->GetDOFIndex()) ) {
-                q1.at(i) = utils::SubtractCircularAngle(q1.at(i), q2.at(i));
+                int iaxis = dofindices[i]-pjoint->GetDOFIndex();
+                q1.at(i) = utils::NormalizeCircularAngle(q1.at(i)-q2.at(i), pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
             }
             else {
                 q1.at(i) -= q2.at(i);
@@ -1097,7 +1098,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
             else {
                 for(int i = 0; i < (*it)->GetDOF(); ++i) {
                     if( (*it)->IsCircular(i) ) {
-                        *ptempjoints++ = utils::NormalizeCircularAngle(p[i],lowerlim[i],upperlim[i]);
+                        // don't normalize since user is expecting the values he sets are exactly returned via GetDOFValues
+                        *ptempjoints++ = p[i]; //utils::NormalizeCircularAngle(p[i],(*it)->_vcircularlowerlimit[i],(*it)->_vcircularupperlimit[i]);
                     }
                     else {
                         if( p[i] < lowerlim[i] ) {
@@ -1183,7 +1185,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                         vector<dReal>::iterator iteval = veval.begin();
                         while(iteval != veval.end()) {
                             bool removevalue = false;
-                            if((pjoint->GetType() == Joint::JointSpherical)|| pjoint->IsCircular(i) ) {
+                            if( pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
                             }
                             else if( *iteval < pjoint->_vlowerlimit[i] ) {
                                 if(*iteval >= pjoint->_vlowerlimit[i]-g_fEpsilonJointLimit ) {

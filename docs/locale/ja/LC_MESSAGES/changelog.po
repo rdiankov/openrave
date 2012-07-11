@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-29 16:22\n"
+"POT-Creation-Date: 2012-07-11 21:29\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -55,16 +55,16 @@ msgstr ""
 # 8667013cce224dea80567eb12b495488
 # e42089c3b28642269a050186c78b6de7
 # 70c931f4b08d4da9b2901605dbc511b7
-#: ../../source/changelog.rst:14 ../../source/changelog.rst:102
-#: ../../source/changelog.rst:259 ../../source/changelog.rst:321
-#: ../../source/changelog.rst:453 ../../source/changelog.rst:537
-#: ../../source/changelog.rst:558 ../../source/changelog.rst:685
-#: ../../source/changelog.rst:740 ../../source/changelog.rst:768
-#: ../../source/changelog.rst:818 ../../source/changelog.rst:891
-#: ../../source/changelog.rst:935 ../../source/changelog.rst:994
-#: ../../source/changelog.rst:1080 ../../source/changelog.rst:1139
-#: ../../source/changelog.rst:1167 ../../source/changelog.rst:1197
-#: ../../source/changelog.rst:1214
+#: ../../source/changelog.rst:14 ../../source/changelog.rst:115
+#: ../../source/changelog.rst:272 ../../source/changelog.rst:334
+#: ../../source/changelog.rst:466 ../../source/changelog.rst:550
+#: ../../source/changelog.rst:571 ../../source/changelog.rst:698
+#: ../../source/changelog.rst:753 ../../source/changelog.rst:781
+#: ../../source/changelog.rst:831 ../../source/changelog.rst:904
+#: ../../source/changelog.rst:948 ../../source/changelog.rst:1007
+#: ../../source/changelog.rst:1093 ../../source/changelog.rst:1152
+#: ../../source/changelog.rst:1180 ../../source/changelog.rst:1210
+#: ../../source/changelog.rst:1227
 msgid "Core"
 msgstr ""
 
@@ -118,8 +118,15 @@ msgid ""
 "(thanks to Quang-Cuong Pham)"
 msgstr ""
 
-# 0066e311e88c4eabb055a7924407e004
+# bf58bb831cab4e6087c71800694e503f
 #: ../../source/changelog.rst:32
+msgid ""
+"Added second derivative hessian computation of joints :meth:`.KinBody."
+"ComputeHessianTranslation`, :meth:`.KinBody.ComputeHessianAxisAngle`"
+msgstr ""
+
+# 0066e311e88c4eabb055a7924407e004
+#: ../../source/changelog.rst:34
 msgid ""
 "Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties."
 "GetCollisionMesh`."
@@ -132,36 +139,36 @@ msgstr ""
 # 57e16973b63e4c0b8b3a219868dd711a
 # c805774f88c1497aad32391d30243beb
 # 5451e36a08af4a568f89dc75b2b3a534
-#: ../../source/changelog.rst:35 ../../source/changelog.rst:125
-#: ../../source/changelog.rst:235 ../../source/changelog.rst:294
-#: ../../source/changelog.rst:348 ../../source/changelog.rst:492
-#: ../../source/changelog.rst:626
+#: ../../source/changelog.rst:37 ../../source/changelog.rst:138
+#: ../../source/changelog.rst:248 ../../source/changelog.rst:307
+#: ../../source/changelog.rst:361 ../../source/changelog.rst:505
+#: ../../source/changelog.rst:639
 msgid "Inverse Kinematics"
 msgstr ""
 
 # 1971ece02c4f4abaabb53499a158b6a1
-#: ../../source/changelog.rst:37
+#: ../../source/changelog.rst:39
 msgid ""
 "ikfast switch to sympy 0.7.x (old sympy 0.6.x files are still present, but "
 "will not be updated anymore)"
 msgstr ""
 
 # f40c69289d224db5b4af9842f1e707d6
-#: ../../source/changelog.rst:39
+#: ../../source/changelog.rst:41
 msgid ""
 "Can add custom data to IkParameterization that is also passed to the ik "
 "filters. :meth:`.IkParameterization.SetCustomData`"
 msgstr ""
 
 # 77586458ab474a57836fbfabe3a3e31e
-#: ../../source/changelog.rst:41
+#: ../../source/changelog.rst:43
 msgid ""
 "Can use IkParameterization to :meth:`.Robot.Manipulator."
 "CheckEndEffectorCollision` even if it isn't a Transform6D type."
 msgstr ""
 
 # 656219eb5b7140eb8ac69c6c967c345d
-#: ../../source/changelog.rst:43
+#: ../../source/changelog.rst:45
 msgid ""
 "Added velocities enumerations to IkParameterizationType (like "
 "IkParameterizationType.Transform6DVelocity), coordinate transforms can "
@@ -169,12 +176,12 @@ msgid ""
 msgstr ""
 
 # 02792dde674541bb8a94e898dadeef07
-#: ../../source/changelog.rst:45
+#: ../../source/changelog.rst:47
 msgid "Added IK solver error codes for notifying user where IK failed."
 msgstr ""
 
 # e73eecb13ce2477985fcf424e07d9db7
-#: ../../source/changelog.rst:47
+#: ../../source/changelog.rst:49
 msgid ""
 ":meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now "
 "returns results through the :class:`.IkReturn` object. It can output reason "
@@ -183,17 +190,45 @@ msgid ""
 msgstr ""
 
 # f9903faefcb74452b8ecf7c3c0718c45
-#: ../../source/changelog.rst:49
+#: ../../source/changelog.rst:51
 msgid "Many ikfast bug fixes, upgraded version to 59"
 msgstr ""
 
+# fedd85e3e2cb49ea86bef4953c72c2d0
+# 2b08041d95944c459769298f52ad0097
+# f406d861001e48a2b93bf56c3ceedf01
+# c89f41836abf47e2b2b9fd2f642744ab
+# 14b2ec6e045d4dca8efd88d657eb5657
+# 63b5b6db1b634508b5aafb8883fd6d20
+# 11bbaf03c3e1466c885bbf9d60280f0c
+# 8e576b3b06ca4860ab2e16f2f8906d27
+#: ../../source/changelog.rst:54 ../../source/changelog.rst:147
+#: ../../source/changelog.rst:224 ../../source/changelog.rst:285
+#: ../../source/changelog.rst:389 ../../source/changelog.rst:477
+#: ../../source/changelog.rst:604 ../../source/changelog.rst:1056
+#: ../../source/changelog.rst:1238
+msgid "Planning"
+msgstr ""
+
+# 58f78eaccb4c436abc4081e4940c8280
+#: ../../source/changelog.rst:56
+msgid ""
+"Added :meth:`.Planner.PlannerParameters.SetConfigurationSpecification` to "
+"set planner parameters space directly from configuration specification."
+msgstr ""
+
+# f6e74454294a46229cc2f64148faabc6
+#: ../../source/changelog.rst:58
+msgid "Added :class:`.Planner.PlannerParameters.StateSaver` for saving states"
+msgstr ""
+
 # 6cc4a8b0926c4dfead2093c3eb8650b4
-#: ../../source/changelog.rst:52
+#: ../../source/changelog.rst:61
 msgid "Database"
 msgstr ""
 
 # 70edf34c1eea4af1bb9ceb8cde559ed2
-#: ../../source/changelog.rst:54
+#: ../../source/changelog.rst:63
 msgid ""
 "Introduced HDF5 loading/saving of the :mod:`.databases."
 "kinematicreachability` and :mod:`.databases.linkstatistics databases` making "
@@ -201,22 +236,28 @@ msgid ""
 msgstr ""
 
 # 8a96a53ed953404b9f0729e280cf0334
-#: ../../source/changelog.rst:57
+#: ../../source/changelog.rst:66
 msgid "Viewer"
 msgstr ""
 
 # 5f2a6d47b974443abd58fbe59ec6c99e
-#: ../../source/changelog.rst:59
+#: ../../source/changelog.rst:68
 msgid ""
 "Check if DISPLAY variable is set for linux systems before creating the "
 "viewer (thanks to Chen Haseru)."
 msgstr ""
 
 # b89f47f683544a9cb853ad9890fd0de0
-#: ../../source/changelog.rst:61
+#: ../../source/changelog.rst:70
 msgid ""
 "Fixed dead lock condition when destroying items, by introducing Item::"
 "PrepForDeletion"
+msgstr ""
+
+# 75855dfa58f14512b23778892542890a
+#: ../../source/changelog.rst:72
+msgid ""
+"Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project."
 msgstr ""
 
 # f74306f9fac142ebb74f2200a99ea2e0
@@ -229,24 +270,24 @@ msgstr ""
 # f40d071338ca4874bd1feef1ca886495
 # bf70e143d94a4639aa42512c4744d4cf
 # d1ca9a56add741bc8643d33ddf39e1e7
-#: ../../source/changelog.rst:64 ../../source/changelog.rst:84
-#: ../../source/changelog.rst:177 ../../source/changelog.rst:245
-#: ../../source/changelog.rst:303 ../../source/changelog.rst:421
-#: ../../source/changelog.rst:511 ../../source/changelog.rst:657
-#: ../../source/changelog.rst:804 ../../source/changelog.rst:923
-#: ../../source/changelog.rst:1066
+#: ../../source/changelog.rst:75 ../../source/changelog.rst:97
+#: ../../source/changelog.rst:190 ../../source/changelog.rst:258
+#: ../../source/changelog.rst:316 ../../source/changelog.rst:434
+#: ../../source/changelog.rst:524 ../../source/changelog.rst:670
+#: ../../source/changelog.rst:817 ../../source/changelog.rst:936
+#: ../../source/changelog.rst:1079
 msgid "Misc"
 msgstr ""
 
 # d7de4bb171194ccebbf87f68bff74669
-#: ../../source/changelog.rst:66
+#: ../../source/changelog.rst:77
 msgid ""
 "Mac OSX compatibility: openrave.py now runs the viewer in the main thread "
 "for Mac OSX."
 msgstr ""
 
 # b7a5092a66394aee92ddbb2d27b6dd15
-#: ../../source/changelog.rst:68
+#: ../../source/changelog.rst:79
 msgid ""
 "Added :meth:`.misc.OpenRAVEGlobalArguments.parseAndCreateThreadedUser` and :"
 "meth:`.misc.SetViewerUserThread` to allow viewer to be run in main thread "
@@ -255,180 +296,172 @@ msgid ""
 msgstr ""
 
 # cac5f034f2634123af39bc3c3cfaea7e
-#: ../../source/changelog.rst:70
+#: ../../source/changelog.rst:81
 msgid "Added :mod:`.examples.pr2turnlever` example"
 msgstr ""
 
 # 70a380836529468fa629fc61666c01bb
-#: ../../source/changelog.rst:72
+#: ../../source/changelog.rst:83
 msgid "Clang compiler compilation"
 msgstr ""
 
 # 7d609d21b6ae4f40908d9108cb08497a
-#: ../../source/changelog.rst:74
+#: ../../source/changelog.rst:85
 msgid "Support doc internationalization using sphinx 1.1"
 msgstr ""
 
+# 71ea8eae4e8b4e32903109ac80deaf99
+#: ../../source/changelog.rst:87
+msgid ""
+"Added **orplanning_multirobot** C++ example to show how to plan with "
+"multiple robots in same configuration space"
+msgstr ""
+
 # 213a00c5f5b7401d8943d45d297f1f9b
-#: ../../source/changelog.rst:77
+#: ../../source/changelog.rst:90
 msgid "Version 0.6.6"
 msgstr ""
 
 # b07d216b1c8c42c1823385ad39dca685
-#: ../../source/changelog.rst:79
+#: ../../source/changelog.rst:92
 msgid "Subversion Revision: r3401"
 msgstr ""
 
 # 3fc0234a12704cca84be583b3f7f1cc7
-#: ../../source/changelog.rst:81
+#: ../../source/changelog.rst:94
 msgid "Initial Release: 2012/06/29"
 msgstr ""
 
 # 2d6695702f06415a8f753fb40f0a8806
-#: ../../source/changelog.rst:86
+#: ../../source/changelog.rst:99
 msgid "Assimp 3 compatibility"
 msgstr ""
 
 # 5833e4ddbed949a6ae8d8fc26898ea6a
-#: ../../source/changelog.rst:88
+#: ../../source/changelog.rst:101
 msgid "Collada 2.4 compatibility"
 msgstr ""
 
 # c5eb3d2ecfd944a2a30ceb5ad814580a
-#: ../../source/changelog.rst:90
+#: ../../source/changelog.rst:103
 msgid "fparser 4.5 compatibility"
 msgstr ""
 
 # bc160bc949de4c60b145a6c5cecf5bc9
-#: ../../source/changelog.rst:92
+#: ../../source/changelog.rst:105
 msgid "sympy 0.7.x compatibility (ikfast)"
 msgstr ""
 
 # 8377f712916846698913dc49218c3c3d
-#: ../../source/changelog.rst:95
+#: ../../source/changelog.rst:108
 msgid "Version 0.6.4"
 msgstr ""
 
 # 5acebe444dc3453d81f16e185dd637af
-#: ../../source/changelog.rst:97
+#: ../../source/changelog.rst:110
 msgid "Subversion Revision: r3191"
 msgstr ""
 
 # a4533a8155da4ebfbec0a3ebf4267c90
-#: ../../source/changelog.rst:99
+#: ../../source/changelog.rst:112
 msgid "Initial Release: 2012/04/13"
 msgstr ""
 
 # 6f6140f9825c4f7a80fc2fb4f7fde68a
-#: ../../source/changelog.rst:104
+#: ../../source/changelog.rst:117
 msgid ""
 "Added more :ref:`.ErrorCode` error codes and many new types of "
 "OPENRAVE_ASSERT_X macros."
 msgstr ""
 
 # 2919038f93294787b8d991085ffb2f9e
-#: ../../source/changelog.rst:106
+#: ../../source/changelog.rst:119
 msgid ""
 "Added **openrave/utils.h** file for common programming constructs not "
 "related to the OpenRAVE API."
 msgstr ""
 
 # d52a34a0c4f8482d98b529936272b1d2
-#: ../../source/changelog.rst:108
+#: ../../source/changelog.rst:121
 msgid "Fixed bug in closed-chain kinematics when static links are present."
 msgstr ""
 
 # 4f36199999024468b215c23819fd5098
-#: ../../source/changelog.rst:110
+#: ../../source/changelog.rst:123
 msgid "Added :meth:`.RaveClone`"
 msgstr ""
 
 # 68d657b0fe28410eb04c2ba9049b9ffc
-#: ../../source/changelog.rst:112
+#: ../../source/changelog.rst:125
 msgid ""
 "Added :class:`.SerializableData` that derives from :class:`.UserData` "
 "allowing C++ user data to be saved and transferred."
 msgstr ""
 
 # 8cea3d993eaf408e9b12383c7a2b0329
-#: ../../source/changelog.rst:114
+#: ../../source/changelog.rst:127
 msgid "Set better epsilon limits throughout the code"
 msgstr ""
 
 # 9cde8d47111247ce8fa1942f99d16547
-#: ../../source/changelog.rst:116
+#: ../../source/changelog.rst:129
 msgid ""
 "dofbranches are now used to set/get joint values greater than 2*pi range. "
 "Added support in openravepy KinBody.XLinkTransformations"
 msgstr ""
 
 # 5da8f72f33234155878ce803d40b6b4d
-#: ../../source/changelog.rst:118
+#: ../../source/changelog.rst:131
 msgid ""
 "The rigidly attached links of grabbed links of a robot are now always "
 "ignored, collision is never checked between them."
 msgstr ""
 
 # 77a13e71851c40049e305055cc7540ef
-#: ../../source/changelog.rst:120
+#: ../../source/changelog.rst:133
 msgid "Fixed trajectory sampling/interpolation for IkParameterization"
 msgstr ""
 
 # 0a3e660a989842fcb7542346d648576a
-#: ../../source/changelog.rst:122
+#: ../../source/changelog.rst:135
 msgid ""
 "Removed operator T*() from geometry::RaveVector, **could break existing "
 "code**."
 msgstr ""
 
 # a7d561a15e8341898395437d44293a38
-#: ../../source/changelog.rst:127
+#: ../../source/changelog.rst:140
 msgid ""
 "All IK solutions returned for revolute joints with ranges greater than 2*pi "
 "radians by adding +- 2*pi until limits reached."
 msgstr ""
 
 # afb4f874e5d642648eb0adbe07c3175d
-#: ../../source/changelog.rst:129
+#: ../../source/changelog.rst:142
 msgid "Fixed ManipulatorIKGoalSampler for returning original ik indices."
 msgstr ""
 
 # b329d3da1f904faca42a47c7d65f2396
-#: ../../source/changelog.rst:131
+#: ../../source/changelog.rst:144
 msgid "Fixed ikfast bug in solve5DIntersectingAxes"
 msgstr ""
 
-# fedd85e3e2cb49ea86bef4953c72c2d0
-# 2b08041d95944c459769298f52ad0097
-# f406d861001e48a2b93bf56c3ceedf01
-# c89f41836abf47e2b2b9fd2f642744ab
-# 14b2ec6e045d4dca8efd88d657eb5657
-# 63b5b6db1b634508b5aafb8883fd6d20
-# 11bbaf03c3e1466c885bbf9d60280f0c
-# 8e576b3b06ca4860ab2e16f2f8906d27
-#: ../../source/changelog.rst:134 ../../source/changelog.rst:211
-#: ../../source/changelog.rst:272 ../../source/changelog.rst:376
-#: ../../source/changelog.rst:464 ../../source/changelog.rst:591
-#: ../../source/changelog.rst:1043 ../../source/changelog.rst:1225
-msgid "Planning"
-msgstr ""
-
 # d9f90c4a6821467383082f9e30162de8
-#: ../../source/changelog.rst:136
+#: ../../source/changelog.rst:149
 msgid ""
 "Fixed bug in retiming/smoothing planners taking in inconsistent trajectory "
 "configurations."
 msgstr ""
 
 # f6174e89a34b4a8eba1222fe851fb621
-#: ../../source/changelog.rst:138
+#: ../../source/changelog.rst:151
 msgid ""
 "Fixed :meth:`.planningutils.ReverseTrajectory` for linearly interpolated "
 "trajectories."
 msgstr ""
 
 # 4506b9691df242bb956595dafb8412ff
-#: ../../source/changelog.rst:140
+#: ../../source/changelog.rst:153
 msgid ""
 "Fixed grasp offsets and trajectory combining in :ref:`module-"
 "taskmanipulation-graspplanning` and :meth:`.planningutils."
@@ -436,7 +469,7 @@ msgid ""
 msgstr ""
 
 # ee32e5ae3add4dbc8295e81110495bfc
-#: ../../source/changelog.rst:142
+#: ../../source/changelog.rst:155
 msgid ""
 "The rplanners RRTs now respect the PA_Interrupt actions from the "
 "PlanCallbacks. The callbacks are also transferred to the post-process "
@@ -444,12 +477,12 @@ msgid ""
 msgstr ""
 
 # ba7d79a5176147bb97223388157ec349
-#: ../../source/changelog.rst:144
+#: ../../source/changelog.rst:157
 msgid "Added parabolic retiming of IkParameterization"
 msgstr ""
 
 # 047b1528eeb54695b04f53f8e00932dd
-#: ../../source/changelog.rst:146
+#: ../../source/changelog.rst:159
 msgid "Added planner parameters option to force max acceleration"
 msgstr ""
 
@@ -457,13 +490,13 @@ msgstr ""
 # 2842814a519d4b3f9b548150ae363a4a
 # 0253eb513ce2406eb98c22042cb8ea5d
 # 20f81fd7076c427d83a4f66440cf2841
-#: ../../source/changelog.rst:149 ../../source/changelog.rst:363
-#: ../../source/changelog.rst:504 ../../source/changelog.rst:542
+#: ../../source/changelog.rst:162 ../../source/changelog.rst:376
+#: ../../source/changelog.rst:517 ../../source/changelog.rst:555
 msgid "Grasping"
 msgstr ""
 
 # 8f771cd591b4484abf9c87a42add71f8
-#: ../../source/changelog.rst:151
+#: ../../source/changelog.rst:164
 msgid ""
 "Fixed several grasperplanner bugs: one in returning no solution when last "
 "point is in collision."
@@ -475,69 +508,69 @@ msgstr ""
 # 6ba45bcc13974c80b3a636234122bb67
 # 4dffcf8101b4450f9f0e86c263a8d2e3
 # edd8bfe84a744364b726c2b3afffeafc
-#: ../../source/changelog.rst:154 ../../source/changelog.rst:289
-#: ../../source/changelog.rst:410 ../../source/changelog.rst:476
-#: ../../source/changelog.rst:747 ../../source/changelog.rst:839
+#: ../../source/changelog.rst:167 ../../source/changelog.rst:302
+#: ../../source/changelog.rst:423 ../../source/changelog.rst:489
+#: ../../source/changelog.rst:760 ../../source/changelog.rst:852
 msgid "Python"
 msgstr ""
 
 # fcfda8eee9af4da38f37a31e0e102157
-#: ../../source/changelog.rst:156
+#: ../../source/changelog.rst:169
 msgid ""
 "Setup openravepy logging hierarchy, colorized logging output with logutils "
 "library."
 msgstr ""
 
 # 79b208c7aec94bde8df0b75e96f675c5
-#: ../../source/changelog.rst:158
+#: ../../source/changelog.rst:171
 msgid "Added GetCode to python openrave_exception class"
 msgstr ""
 
 # b450cccf1aec4b5097e303013f655ca7
-#: ../../source/changelog.rst:160
+#: ../../source/changelog.rst:173
 msgid ""
 "Added :meth:`.misc.InitOpenRAVELogging` to setup global python logging "
 "handlers."
 msgstr ""
 
 # db2ec2f4d7d44290bc73205bdca2c4c5
-#: ../../source/changelog.rst:163
+#: ../../source/changelog.rst:176
 msgid "Physics"
 msgstr ""
 
 # 485d818fca9940df85d9df4a15f3a4e3
-#: ../../source/changelog.rst:165
+#: ../../source/changelog.rst:178
 msgid "fixed many bugs with bullet physics, static links are supported"
 msgstr ""
 
 # 595b3344de4d4194b970e9a14ea693fe
-#: ../../source/changelog.rst:168
+#: ../../source/changelog.rst:181
 msgid "Examples"
 msgstr ""
 
-# 18e4105ff4864be8adb2bd0715f2f0c6
-#: ../../source/changelog.rst:170
+# 94c05cf3f1fa40cdaf6b70a97ee4a77d
+#: ../../source/changelog.rst:183
 msgid ""
-"Added orplanning_door C++ example to show how to plan with robot+door at "
+"Added **orplanning_door** C++ example to show how to plan with robot+door at "
 "same time."
 msgstr ""
 
 # b7786cde57d24e15a9cdb66d326a2c1c
-#: ../../source/changelog.rst:172
+#: ../../source/changelog.rst:185
 msgid ""
 "Added :mod:`.examples.inversekinematicspick` python example to show IK "
 "picking."
 msgstr ""
 
 # 9c68cb675b1d41d6ab26fce5903cb8b3
-#: ../../source/changelog.rst:174
+#: ../../source/changelog.rst:187
 msgid ""
 "Introduced a simple framework for the C++ examples in cppexamples/orexample."
 "h (class OpenRAVEExample). Most C++ examples now use it."
 msgstr ""
 
 # cabea5d47169487284c66344e09542d4
-#: ../../source/changelog.rst:179
+#: ../../source/changelog.rst:192
 msgid ""
 "Removed isosurface computation from linkstatistics since it was buggy. Now "
 "forcing linkstatistics generation of all planning models. Also fixed bug "
@@ -545,97 +578,97 @@ msgid ""
 msgstr ""
 
 # 20e9f76006504e96995d99fe4cb15e9d
-#: ../../source/changelog.rst:181
+#: ../../source/changelog.rst:194
 msgid ""
 "Installing **openrave.bash** to share folder to allow users to easy set "
 "paths for openrave runtimes."
 msgstr ""
 
 # 495ece806ae64858bdf4294b78dd3487
-#: ../../source/changelog.rst:183
+#: ../../source/changelog.rst:196
 msgid ""
 "Fixed :meth:`.planningutils.RetimeActiveDOFTrajectory` and :meth:`."
 "planningutils.RetimeAffineTrajectory` when trajectories have timestamps."
 msgstr ""
 
 # 723ad4ae80384b95982e04280daaba87
-#: ../../source/changelog.rst:185
+#: ../../source/changelog.rst:198
 msgid ""
 "Starting with FParser 4.4.3, can use the library without local "
 "modifications. Also check for installations with cmake's find_package."
 msgstr ""
 
 # 2693b46331114d0682cff803260a95e5
-#: ../../source/changelog.rst:187
+#: ../../source/changelog.rst:200
 msgid ""
 "Fixed several race condition with video recording (VideoRecorder interface), "
 "viewer exiting, and other threads."
 msgstr ""
 
 # c7bdda289e07427db57097b076ff4e8d
-#: ../../source/changelog.rst:189
+#: ../../source/changelog.rst:202
 msgid ""
 "Mac OSX compatibility: openrave executable now creates the viewer in the "
 "main thread."
 msgstr ""
 
 # 8ebe800c0c424cc78fb5bc0609d3a14d
-#: ../../source/changelog.rst:191
+#: ../../source/changelog.rst:204
 msgid "Fixed render scale when non-xml file is loaded as a kinbody."
 msgstr ""
 
 # 38af24147f2e41c9b91f32dfc25472f0
-#: ../../source/changelog.rst:193
+#: ../../source/changelog.rst:206
 msgid ""
 "Returned ik solutions from :meth:`.Robot.Manipulator.FindIKSolutions` are "
 "prioritized by minimum distance from joint limits."
 msgstr ""
 
 # f92cfb2691f1420081ca461c4d6b824c
-#: ../../source/changelog.rst:195
+#: ../../source/changelog.rst:208
 msgid "Fixed environment cloning of iksolvers set by LoadIKFastSolver."
 msgstr ""
 
 # 9a76febc9dca48678ba1b73f0fdf3006
-#: ../../source/changelog.rst:197
+#: ../../source/changelog.rst:210
 msgid "Added multi-threading C++ example **ormultithreadedplanning**."
 msgstr ""
 
 # 7f198953978543378b92b9186a430b29
-#: ../../source/changelog.rst:199
+#: ../../source/changelog.rst:212
 msgid "Fixed bug in IkParameterization::ComputeDistanceSqr"
 msgstr ""
 
 # 824165deb2384e4180f7c0466d54f807
-#: ../../source/changelog.rst:201
+#: ../../source/changelog.rst:214
 msgid ""
 "Added conversion to DH parameters with :meth:`.planningutils.GetDHParameters`"
 msgstr ""
 
 # cd3d31271e4c43c4983af67d1585b0f6
-#: ../../source/changelog.rst:204
+#: ../../source/changelog.rst:217
 msgid "Version 0.6.2"
 msgstr ""
 
 # f7b640ec9c1e4a03b236ad69df64c064
-#: ../../source/changelog.rst:206
+#: ../../source/changelog.rst:219
 msgid "Subversion Revision: r3061"
 msgstr ""
 
 # 87e4e05667c44a0ca43bb96f1580fe5b
-#: ../../source/changelog.rst:208
+#: ../../source/changelog.rst:221
 msgid "Initial Release: 2012/02/04"
 msgstr ""
 
 # e63f68b43b9347aeab2d9349aa4629f4
-#: ../../source/changelog.rst:213
+#: ../../source/changelog.rst:226
 msgid ""
 "CloseFingers/ReleaseFingers now only check collisions between fingers, so "
 "robot can be in collision when performing this"
 msgstr ""
 
 # 7d3a719a64334f78967aa81bcb74f8a4
-#: ../../source/changelog.rst:215
+#: ../../source/changelog.rst:228
 msgid ""
 ":ref:`module-basemanipulation-movehandstraight` replaced :meth:`."
 "planningutils.SmoothAffineTrajectory` call with :meth:`.planningutils."
@@ -643,74 +676,74 @@ msgid ""
 msgstr ""
 
 # 4b0516cc4e4442518ee2e4b0438cb307
-#: ../../source/changelog.rst:217
+#: ../../source/changelog.rst:230
 msgid ""
 "Fixed :ref:`planner-workspacetrajectorytracker` filter issues related to "
 "MoveHandStraight"
 msgstr ""
 
 # 7e806edb91c64cbebc10eb10bfb25b91
-#: ../../source/changelog.rst:219
+#: ../../source/changelog.rst:232
 msgid "Fixed :ref:`planner-lineartrajectoryretimer` interpolation issue"
 msgstr ""
 
 # a1d6779e4cd84f11ab5bbd970e928f28
-#: ../../source/changelog.rst:221
+#: ../../source/changelog.rst:234
 msgid "Better error handling for smoothing/retiming failures."
 msgstr ""
 
 # 91482fc2998548beb8563884bc4df980
-#: ../../source/changelog.rst:223
+#: ../../source/changelog.rst:236
 msgid "Task GraspPlanning now respects approach offset distance"
 msgstr ""
 
 # d7f3021480c1453198e6d246da6c89da
-#: ../../source/changelog.rst:225
+#: ../../source/changelog.rst:238
 msgid "Parabolic Smoother updates (thanks to Kris Hauser)"
 msgstr ""
 
 # 5fd59386407d4b0f95ad720acefe4f34
-#: ../../source/changelog.rst:227
+#: ../../source/changelog.rst:240
 msgid "rplanners RRTs now track initial configuration indices"
 msgstr ""
 
 # 7684c337b1cd48f8898b4ea3df58ac90
-#: ../../source/changelog.rst:230
+#: ../../source/changelog.rst:243
 msgid "Sampling"
 msgstr ""
 
 # e12f6f4fa7054ae18f1bf6add8179af3
-#: ../../source/changelog.rst:232
+#: ../../source/changelog.rst:245
 msgid ""
 "Robot Configuration Sampler now respects circular DOFs (including affine "
 "rotation)."
 msgstr ""
 
 # 719754b808304334ab40cebe12540b84
-#: ../../source/changelog.rst:237
+#: ../../source/changelog.rst:250
 msgid "ikfast computation of katana ik goes from 77% to 93% success rate."
 msgstr ""
 
 # 55074210564f44b6a4d7138b342e3e12
-#: ../../source/changelog.rst:240
+#: ../../source/changelog.rst:253
 msgid "Trajectory"
 msgstr ""
 
 # aaa11cec0a1c47e487ba9e45960a6b7f
-#: ../../source/changelog.rst:242
+#: ../../source/changelog.rst:255
 msgid ""
 ":meth:`.Trajectory.Insert` overwrite option now does not touch unspecified "
 "data"
 msgstr ""
 
 # d19fa371bd33478186fa0b4ecbf6953c
-#: ../../source/changelog.rst:247
+#: ../../source/changelog.rst:260
 msgid ""
 "If trajectory timing is not initialized, use retimer rather than smoother"
 msgstr ""
 
 # 679d8198976b46019e040f23d2081f62
-#: ../../source/changelog.rst:249
+#: ../../source/changelog.rst:262
 msgid ""
 "Using ode in multi-threaded environments now works when cmake flag "
 "ODE_USE_MULTITHREAD is not specified. Ubuntu installations shouldn't crash "
@@ -718,43 +751,43 @@ msgid ""
 msgstr ""
 
 # 9806fe6bb3124a90a5433fb56d9c19c8
-#: ../../source/changelog.rst:252
+#: ../../source/changelog.rst:265
 msgid "Version 0.6.0"
 msgstr ""
 
 # 6697bc94c786460fb1dd22f0e363d402
-#: ../../source/changelog.rst:254
+#: ../../source/changelog.rst:267
 msgid "Subversion Revision: r3033"
 msgstr ""
 
 # eb6bfc6dbedc43e78d86c771e5a692fe
-#: ../../source/changelog.rst:256
+#: ../../source/changelog.rst:269
 msgid "Initial Release: 2012/02/01"
 msgstr ""
 
 # 72e228bc767c4c35b00143063996b28c
-#: ../../source/changelog.rst:261
+#: ../../source/changelog.rst:274
 msgid "Correctly cloning physics/collision/viewers."
 msgstr ""
 
 # 96ffe444d6f6444fa234e5917d0da3ad
-#: ../../source/changelog.rst:263
+#: ../../source/changelog.rst:276
 msgid ""
 "By default all SetDOFValues/SetActiveDOFValues methods check joint limits"
 msgstr ""
 
 # 48d4fd5b93974401b2f48b7d1a25b5ba
-#: ../../source/changelog.rst:265
+#: ../../source/changelog.rst:278
 msgid "Joint limits on circular joint now returned as -BIGNUMBER,BIGNUMBER."
 msgstr ""
 
 # e8696cffbe65434e87f254268f3ff922
-#: ../../source/changelog.rst:267
+#: ../../source/changelog.rst:280
 msgid "Added :meth:`.KinBody.Joint.SubtractValues`"
 msgstr ""
 
 # 9eac64e9f12149939da2ad86cc6eef0a
-#: ../../source/changelog.rst:269
+#: ../../source/changelog.rst:282
 msgid ""
 "**interpolation** is set to empty in configurations returned by :meth:`."
 "KinBody.GetConfigurationSpecification` and :meth:`.Robot."
@@ -762,125 +795,125 @@ msgid ""
 msgstr ""
 
 # fae26e03e56c461693c6e5a70f7b6011
-#: ../../source/changelog.rst:274
+#: ../../source/changelog.rst:287
 msgid ""
 "Fixed segment feasibility checking on parabolic smoother by using "
 "perterbations, now most small collisions are avoided."
 msgstr ""
 
 # 6f384730c79a495aa4c53e2543a3c594
-#: ../../source/changelog.rst:276
+#: ../../source/changelog.rst:289
 msgid ""
 "**Many** fixes for :mod:`.examples.constraintplanning` demo and "
 "GripperJacobianConstrains class used for linear constraint planning."
 msgstr ""
 
 # a17af3d21f054ec990fe12e86b62e295
-#: ../../source/changelog.rst:278
+#: ../../source/changelog.rst:291
 msgid "Fixed :ref:`.planningutils.JitterActiveDOF` when constraints are used."
 msgstr ""
 
 # 037421531df34449993e0eb73e4a2ce1
-#: ../../source/changelog.rst:280
+#: ../../source/changelog.rst:293
 msgid "Fixed linear smoothing fallback when parabolic smoother fails."
 msgstr ""
 
 # 396a3a3f4747416aa5239e87478adb71
-#: ../../source/changelog.rst:282
+#: ../../source/changelog.rst:295
 msgid ""
 "Added many more constraints checking to :ref:`.planningutils."
 "VerifyTrajectory`"
 msgstr ""
 
 # d58592fa58744203a0a56ffaea5fd1dd
-#: ../../source/changelog.rst:284
+#: ../../source/changelog.rst:297
 msgid "Added very simple parabolic retimer :ref:`planner-parabolicretimer`"
 msgstr ""
 
 # 6dfc06faae9149769c5383a7efadc9b9
-#: ../../source/changelog.rst:286
+#: ../../source/changelog.rst:299
 msgid ""
 "If robot originally colliding, MoveToHandPosition/MoveManipulator correctly "
 "add the colliding configuration to the trajectory."
 msgstr ""
 
 # dbc018675a574d5a845483e465710d18
-#: ../../source/changelog.rst:291
+#: ../../source/changelog.rst:304
 msgid ""
 "All name strings are now returned/set as unicode objects. All openravepy "
 "objects support __unicode__"
 msgstr ""
 
 # 5b6f77a1ec0e4e43be8c5848c7c76834
-#: ../../source/changelog.rst:296
+#: ../../source/changelog.rst:309
 msgid "Fixed crash when smoothing close configurations."
 msgstr ""
 
 # 94dd927e2514449d8240ad07ba39003e
-#: ../../source/changelog.rst:298
+#: ../../source/changelog.rst:311
 msgid "Fixed C++ IK generation command :ref:`module-ikfast-addiklibrary`"
 msgstr ""
 
 # 66543532c925405ca228e2bb5049efbd
-#: ../../source/changelog.rst:300
+#: ../../source/changelog.rst:313
 msgid "ikfast compute Universal Robots UR6-85-5-A arm IK"
 msgstr ""
 
 # 197e412c008e4de68115f284d782d34a
-#: ../../source/changelog.rst:305
+#: ../../source/changelog.rst:318
 msgid "Fixed ``openrave.py --database inversekinematics --show``"
 msgstr ""
 
 # 3e7c85e4908e40748a25c872e96e0a91
-#: ../../source/changelog.rst:307
+#: ../../source/changelog.rst:320
 msgid "Fixed ``--graspingnoise`` when multi-threading is used"
 msgstr ""
 
 # 19e5ce5b55344b798f02301a1bd94f17
-#: ../../source/changelog.rst:309
+#: ../../source/changelog.rst:322
 msgid ""
 "Fixed default value for :ref:`.Robot.GetActiveConfigurationSpecification`"
 msgstr ""
 
 # 8d1598dd1f704af4bdc826fe21c9c8eb
-#: ../../source/changelog.rst:311
+#: ../../source/changelog.rst:324
 msgid "Fixed GenericTrajectory sampling with circular joints"
 msgstr ""
 
 # 27e9c3d6747b4e6190555477405c21bd
-#: ../../source/changelog.rst:314
+#: ../../source/changelog.rst:327
 msgid "Version 0.5.0"
 msgstr ""
 
 # c5449bcbb70848bd989cfeed5615c49e
-#: ../../source/changelog.rst:316
+#: ../../source/changelog.rst:329
 msgid "Subversion Revision: r2988"
 msgstr ""
 
 # afe3c2eff3c8410bbdac05e0b75758cb
-#: ../../source/changelog.rst:318
+#: ../../source/changelog.rst:331
 msgid "Initial Release: 2012/01/20"
 msgstr ""
 
 # 1c46c4bb039948f0b2def76c9c97ec83
-#: ../../source/changelog.rst:323
+#: ../../source/changelog.rst:336
 msgid "fixed physics simulation loop freezing, added tests"
 msgstr ""
 
 # 37c6b4c61c8c4cd3842fdab8d34ec99a
-#: ../../source/changelog.rst:325
+#: ../../source/changelog.rst:338
 msgid "fixed \"prefix\" attribute when colldata models are used."
 msgstr ""
 
 # 680e322d5c084dfa8f7445bb51c8cbe2
-#: ../../source/changelog.rst:327
+#: ../../source/changelog.rst:340
 msgid ""
 "added \"scalegeometry\" attribute to kinbody loading. can have different "
 "scales along XYZ."
 msgstr ""
 
 # 16c80f77e4fd454292e8d4650e717a50
-#: ../../source/changelog.rst:329
+#: ../../source/changelog.rst:342
 msgid ""
 "Geometry files imported with assimp now load multiple geometries per "
 "material in order to preserve colors. Added :meth:`.KinBody."
@@ -888,7 +921,7 @@ msgid ""
 msgstr ""
 
 # c76cc0a0dfd94f669e20df65a0714935
-#: ../../source/changelog.rst:331
+#: ../../source/changelog.rst:344
 msgid ""
 "KinBody::KinBodyStateSaver and RobotBase::RobotStateSaver now have "
 "**Restore** functions that allows users to get back to the original robot "
@@ -896,7 +929,7 @@ msgid ""
 msgstr ""
 
 # 5a379b30f3694c3185d0364d0f64d601
-#: ../../source/changelog.rst:333
+#: ../../source/changelog.rst:346
 msgid ""
 "Now properly handling inter-grabbed-body collisions: if two grabbed bodies "
 "are initially colliding when grabbed, then their self-colision should be "
@@ -905,7 +938,7 @@ msgid ""
 msgstr ""
 
 # 4233a722aa7b4aa58108a08b2967f88e
-#: ../../source/changelog.rst:335
+#: ../../source/changelog.rst:348
 msgid ""
 "**Major**: Added a new class :class:`.ConfigurationSpecification` to manage "
 "configuration spaces, it is shared by both planners and trajectories. The "
@@ -913,7 +946,7 @@ msgid ""
 msgstr ""
 
 # 38619ca0d73f4ed5a02b60eed338e75d
-#: ../../source/changelog.rst:337
+#: ../../source/changelog.rst:350
 msgid ""
 "Separated the affine DOF spece configuration from robot class into the "
 "global openrave space. See :class:`.DOFAffine`, :meth:`."
@@ -922,33 +955,33 @@ msgid ""
 msgstr ""
 
 # 1f5ab5a078e54c5d9a97eb3a87ab32ce
-#: ../../source/changelog.rst:339
+#: ../../source/changelog.rst:352
 msgid ""
 "Can now reset the local manipulator coordinate system with :meth:`.Robot."
 "Manipulator.SetLocalToolTransform`"
 msgstr ""
 
 # 9a2ad99870c64db19bcfb37df8aa3b95
-#: ../../source/changelog.rst:341
+#: ../../source/changelog.rst:354
 msgid "Added parsing of kinematics for DirextX files (\\*.x)."
 msgstr ""
 
 # 029da563800041fa86d12c2acb576171
-#: ../../source/changelog.rst:343
+#: ../../source/changelog.rst:356
 msgid ""
 "COLLADA: reading/writing now preserve the body DOF indices order by storing "
 "actuator information, now supports manipulator <direction> tag."
 msgstr ""
 
 # ae89fa1456634890876a0a2d5e95f4c5
-#: ../../source/changelog.rst:345
+#: ../../source/changelog.rst:358
 msgid ""
 "Fixed computation of mass frames in XML/COLLADA parsing. :class:`.KinBody."
 "Link` now holds a mass frame with inertia along the principal axes."
 msgstr ""
 
 # 5e69f520a6934aefab00c54433e6c7aa
-#: ../../source/changelog.rst:350
+#: ../../source/changelog.rst:363
 msgid ""
 "added :meth:`.IkSolver.RegisterCustomFilter` that allows any number of "
 "filters to be registered with priority. :meth:`.IkSolver.SetCustomFilter` is "
@@ -956,19 +989,19 @@ msgid ""
 msgstr ""
 
 # 94921d7f62d2480da0bec8bb4618e59b
-#: ../../source/changelog.rst:352
+#: ../../source/changelog.rst:365
 msgid "Fixed TranslationDirection5D IK bug, upgrade ikfast version"
 msgstr ""
 
 # 96ad229a86a745d0a8eb1d9557279824
-#: ../../source/changelog.rst:354
+#: ../../source/changelog.rst:367
 msgid ""
 "ikfast IkSolvers only check collisions of links that can possible move due "
 "to new joint values."
 msgstr ""
 
 # 05623993f3714503994d2157f9082f8f
-#: ../../source/changelog.rst:356
+#: ../../source/changelog.rst:369
 msgid ""
 "Added new :class:`.IkFilterOptions.IgnoreEndEffectorCollision` option, this "
 "disables the end effector links and their attached bodies from environment "
@@ -976,14 +1009,14 @@ msgid ""
 msgstr ""
 
 # 098071391a3b4e1eb047801af833350c
-#: ../../source/changelog.rst:358
+#: ../../source/changelog.rst:371
 msgid ""
 "fixed ikfast bugs: prismatic joints, precision issues. ikfast version is now "
 "**52**."
 msgstr ""
 
 # 4c787b7f2a2c4e9fa7852d22aac207d3
-#: ../../source/changelog.rst:360
+#: ../../source/changelog.rst:373
 msgid ""
 "Added new IK types: :meth:`.TranslationXAxisAngle4D`, :meth:`."
 "TranslationYAxisAngle4D`, :meth:`.TranslationZAxisAngle4D`, :meth:`."
@@ -992,40 +1025,40 @@ msgid ""
 msgstr ""
 
 # 75f5b4cf3dd34497bc3ead77ae4d5186
-#: ../../source/changelog.rst:365
+#: ../../source/changelog.rst:378
 msgid "fixes in grasping with standoff"
 msgstr ""
 
 # fc795a69600b411b901d59750b8db0bf
-#: ../../source/changelog.rst:367
+#: ../../source/changelog.rst:380
 msgid ""
 "added IK checking option to :ref:`module-grasper-graspthreaded`, showing "
 "usage in :mod:`.examples.fastgraspingthreaded` example."
 msgstr ""
 
 # 127f32e1ea434450a22db424d01dc41d
-#: ../../source/changelog.rst:369
+#: ../../source/changelog.rst:382
 msgid ""
 "added new :mod:`.examples.fastgraspingthreaded` example to show how to use "
 "multithreaded functions to compute good grasps in real-time."
 msgstr ""
 
 # 5989aa59679b4ec7b96bf5c5dc0791b4
-#: ../../source/changelog.rst:371
+#: ../../source/changelog.rst:384
 msgid ""
 "added ``--numthreads`` option to ``openrave.py --database grasping`` to "
 "allow users to set number of threads."
 msgstr ""
 
 # a2c19c90a36045c4b825488050cb4cbc
-#: ../../source/changelog.rst:373
+#: ../../source/changelog.rst:386
 msgid ""
 "now storing translationstepmult and finestep parameters in the database "
 "since they affect success rates"
 msgstr ""
 
 # 4f090d4ec36a4693b7157f0bbeace7a6
-#: ../../source/changelog.rst:378
+#: ../../source/changelog.rst:391
 msgid ""
 "Can register callback functions during planners to stop the planner via :"
 "meth:`.Planner.RegisterPlanCallback`. Planner developers should use :meth:`."
@@ -1033,34 +1066,34 @@ msgid ""
 msgstr ""
 
 # 9a1d41cee1454881acb342e74939a46c
-#: ../../source/changelog.rst:380
+#: ../../source/changelog.rst:393
 msgid ""
 ":meth:`.Planner.PlanPath` now returns a :class:`.PlannerStatus` enum showing "
 "how planner exited. It does not support pOutStream anymore."
 msgstr ""
 
 # 10fe58ceb4d049f99efc6bbcc6a7c75e
-#: ../../source/changelog.rst:382
+#: ../../source/changelog.rst:395
 msgid ""
 "Added velocity and acceleration limits to :class:`.Planner.PlannerParameters`"
 msgstr ""
 
 # 95ea48734cb64177a5499838373023c7
-#: ../../source/changelog.rst:384
+#: ../../source/changelog.rst:397
 msgid ""
 "Each planner needs to initialize the trajectory with :meth:`.Trajectory."
 "Init` (GetParameters()->_configurationspecification);"
 msgstr ""
 
 # e731c345fd854572b3e738f8744c9852
-#: ../../source/changelog.rst:386
+#: ../../source/changelog.rst:399
 msgid ""
 "Added **minimumgoalpaths** to RRT planner to continue searching for "
 "different goals after initial path is found."
 msgstr ""
 
 # 678e0c5a1b3345dc83c1b5567efdf2f6
-#: ../../source/changelog.rst:388
+#: ../../source/changelog.rst:401
 msgid ""
 "**Major**: Added :ref:`parabolic smoothing <planner-parabolicsmoother>` as "
 "defualt smoother. The parabolic smoothing library is from `Kris Hauser's "
@@ -1068,55 +1101,55 @@ msgid ""
 msgstr ""
 
 # f0f6781d906643e08aa9e792f8011314
-#: ../../source/changelog.rst:390
+#: ../../source/changelog.rst:403
 msgid ""
 "added jittering of goals and openravepy bindings to :class:`.planningutils."
 "ManipulatorIKGoalSampler`"
 msgstr ""
 
 # 49002ff73b8a4347a508f97cd4f8e4b7
-#: ../../source/changelog.rst:392
+#: ../../source/changelog.rst:405
 msgid ""
 "fixed :meth:`.planningutils.JitterActiveDOF` accidentally returning "
 "perturbed values"
 msgstr ""
 
 # 174115de849240c59611c4fd2e79c677
-#: ../../source/changelog.rst:395
+#: ../../source/changelog.rst:408
 msgid "Trajectories"
 msgstr ""
 
 # 538e1bae03164967aa3313ce07eef607
-#: ../../source/changelog.rst:397
+#: ../../source/changelog.rst:410
 msgid ""
 "**Major**: Completely redesigned the :class:`.Trajectory` class, see :ref:"
 "`arch_trajectory` for usage."
 msgstr ""
 
 # 736dcbfb4f964c6bab192a4a738de802
-#: ../../source/changelog.rst:399
+#: ../../source/changelog.rst:412
 msgid "Added :meth:`.Trajectory.Clone`"
 msgstr ""
 
 # 67b34392489146bc89112fec5577979c
-#: ../../source/changelog.rst:401
+#: ../../source/changelog.rst:414
 msgid ""
 "Changed trajectory serialization format to XML, see :ref:"
 "`arch_trajectory_format`"
 msgstr ""
 
 # df84d01a9dc54e04a23d769fc64cff68
-#: ../../source/changelog.rst:403
+#: ../../source/changelog.rst:416
 msgid "Added trajectory API to openravepy."
 msgstr ""
 
 # 4940239447984f18b2644f44e9f6f64f
-#: ../../source/changelog.rst:405
+#: ../../source/changelog.rst:418
 msgid "Trajectory retiming/smoothing performed now in planners."
 msgstr ""
 
 # f8e0bc18255d43058a2c05062399753f
-#: ../../source/changelog.rst:407
+#: ../../source/changelog.rst:420
 msgid ""
 "Added many useful trajectory routines in the :class:`.planningutils` "
 "namespace. For example: :meth:`.planningutils.VerifyTrajectory`, :meth:`."
@@ -1130,135 +1163,135 @@ msgid ""
 msgstr ""
 
 # 0b608c5833b54e48ab4fec12445a87c2
-#: ../../source/changelog.rst:412
+#: ../../source/changelog.rst:425
 msgid ""
 "Added **releasegil** parameter to :meth:`.Interface.SendCommand` that can "
 "temporarily release the Python GIL."
 msgstr ""
 
 # 865458dda01e4df89a7e6bc0b1de9cd6
-#: ../../source/changelog.rst:414
+#: ../../source/changelog.rst:427
 msgid ""
 "added two python examples showing how to use PyQt + OpenRAVE together. :mod:"
 "`.examples.qtexampleselector` :mod:`.examples.qtserverprocess`"
 msgstr ""
 
 # bf7b4c6067f2428cb9dd9ec25e054d61
-#: ../../source/changelog.rst:416
+#: ../../source/changelog.rst:429
 msgid "split openravepy into smaller files for faster compilation"
 msgstr ""
 
 # 27087531e9134296bdd1f24f5f34814d
-#: ../../source/changelog.rst:418
+#: ../../source/changelog.rst:431
 msgid "Support passing in unicode strings"
 msgstr ""
 
 # 5c1fda3167e949abbdc2dcd39272f182
-#: ../../source/changelog.rst:423
+#: ../../source/changelog.rst:436
 msgid ""
 "\"skipgeometry\" now being acknowledged in :meth:`.Environment.Load`, fixes "
 "the ``openrave.py inversekinematics database --getfilename`` option."
 msgstr ""
 
 # 01c96e740f814775a1fab0d104af19cc
-#: ../../source/changelog.rst:425
+#: ../../source/changelog.rst:438
 msgid "<render> tag for non-trimesh objects works now"
 msgstr ""
 
 # 9a819b4f452040f3a54469a2d275615c
-#: ../../source/changelog.rst:427
+#: ../../source/changelog.rst:440
 msgid "more reasonable default acceleration and velocity limits"
 msgstr ""
 
 # 4c297e37dc094a4ea0bb6c959908def9
-#: ../../source/changelog.rst:429
+#: ../../source/changelog.rst:442
 msgid "fixed octave graspplanning demo"
 msgstr ""
 
 # b3c83e2674cc439eb2bb57661b0ff51b
-#: ../../source/changelog.rst:431
+#: ../../source/changelog.rst:444
 msgid "odephysics now uses dJointFeedback to compute forces/torques on links"
 msgstr ""
 
 # b7afee6916184ef3b73829da3deda14b
-#: ../../source/changelog.rst:433
+#: ../../source/changelog.rst:446
 msgid ""
 "removed **KinBody.SetGuiData** and **KinBody.GetGuiData** and replaced with :"
 "meth:`.KinBody.GetViewerData` similar to how collision/physics are handled."
 msgstr ""
 
 # c61c5216c95f4d388a28edc4db6b2ad9
-#: ../../source/changelog.rst:435
+#: ../../source/changelog.rst:448
 msgid ""
 "added  :mod:`.examples.cubeassembly` to show a robot assembling a cube from "
 "randomly scattered blocks."
 msgstr ""
 
 # f03310f179064e568f38b47691cd21fc
-#: ../../source/changelog.rst:437
+#: ../../source/changelog.rst:450
 msgid ""
 "updated :ref:`collisionchecker-bullet` collision checker to be up to par "
 "with ODE. Now the two engines should be interchangeable,"
 msgstr ""
 
 # b151210f52e6499db71b82f740399e11
-#: ../../source/changelog.rst:439
+#: ../../source/changelog.rst:452
 msgid "fixed qtcoin interface memory leak with QAction menus."
 msgstr ""
 
 # 34e7bdcfb83f44dab9a127cee60942e9
-#: ../../source/changelog.rst:441
+#: ../../source/changelog.rst:454
 msgid ""
 "fixed qtcoin :meth:`.Viewer.GetCameraTransform` function. now compatible "
 "with :meth:`.Viewer.GetCameraImage`"
 msgstr ""
 
 # f4704ca289d74f5cbb14d50ec88aa575
-#: ../../source/changelog.rst:443
+#: ../../source/changelog.rst:456
 msgid "everything compiles with Ubuntu 8.04/Python 2.5."
 msgstr ""
 
 # 2ac93f1d74c548759372f366fc928f0f
-#: ../../source/changelog.rst:446
+#: ../../source/changelog.rst:459
 msgid "Version 0.4.2"
 msgstr ""
 
 # 597c2e3cce2740fd8cd92b23aa560eac
-#: ../../source/changelog.rst:448
+#: ../../source/changelog.rst:461
 msgid "Subversion Revision: 2678"
 msgstr ""
 
 # 5b71c5d404c04043abe45c82d340c9b7
-#: ../../source/changelog.rst:450
+#: ../../source/changelog.rst:463
 msgid "Initial Release: 2011/08/11"
 msgstr ""
 
 # 9928b19b6cff495d897cfedefca323f9
-#: ../../source/changelog.rst:455
+#: ../../source/changelog.rst:468
 msgid ""
 "CMake OpenRAVE_CORE_LIBRARIES variable now returns both openrave and "
 "openrave-core."
 msgstr ""
 
 # ad2c3eef9fe94602b46583e464398728
-#: ../../source/changelog.rst:457
+#: ../../source/changelog.rst:470
 msgid ""
 "Now reading physics data from COLLADA files, also fixed bugs in collada "
 "readers/writers."
 msgstr ""
 
 # 625ea9d6db69435881b6b8bca8a509f6
-#: ../../source/changelog.rst:459
+#: ../../source/changelog.rst:472
 msgid "Can compile without qt4 being present."
 msgstr ""
 
 # cea0214c078e42bebbf41967ddf690da
-#: ../../source/changelog.rst:461
+#: ../../source/changelog.rst:474
 msgid "Fixed collision caching bug with ODE/Bullet CheckSelfCollision."
 msgstr ""
 
 # 7002579484744d3a96bfb0b84d6e4a6b
-#: ../../source/changelog.rst:466
+#: ../../source/changelog.rst:479
 msgid ""
 "MoveToHandPosition, MoveManipulator, MoveActiveJoints, and Manipulator::"
 "CheckIndependentCollision now only check the **active** links if the "
@@ -1266,7 +1299,7 @@ msgid ""
 msgstr ""
 
 # 925298df7ebf4d3ca4eaa7e7867c7db7
-#: ../../source/changelog.rst:468
+#: ../../source/changelog.rst:481
 msgid "added multiple goals to MoveManipulator and MoveActiveJoints commands"
 msgstr ""
 
@@ -1274,13 +1307,13 @@ msgstr ""
 # 47531a091a7245709c6e4cd7deb9b029
 # 130b9db415844585afb69d199470e58b
 # 5ed93fa345b64ef6a186c7cf54e14e03
-#: ../../source/changelog.rst:471 ../../source/changelog.rst:726
-#: ../../source/changelog.rst:754 ../../source/changelog.rst:790
+#: ../../source/changelog.rst:484 ../../source/changelog.rst:739
+#: ../../source/changelog.rst:767 ../../source/changelog.rst:803
 msgid "Release"
 msgstr ""
 
 # ef189f8f417744348919f460679054d9
-#: ../../source/changelog.rst:473
+#: ../../source/changelog.rst:486
 msgid ""
 "Debian packages of different openrave versions will now install without "
 "conflicting with each other since they will share no common files. symlinks "
@@ -1289,14 +1322,14 @@ msgid ""
 msgstr ""
 
 # 9b4c016817ba47179e4455689af2a2b0
-#: ../../source/changelog.rst:478
+#: ../../source/changelog.rst:491
 msgid ""
 "Redesigned the openravepy structure so that loading is faster and multiple "
 "openravepy versions can be selected at load time."
 msgstr ""
 
 # 35c3d2ef11fd4848b4ce257531869586
-#: ../../source/changelog.rst:480
+#: ../../source/changelog.rst:493
 msgid ""
 "Started a new :mod:`openravepy.misc` library that is not loaded by default. "
 "The OpenRAVEGlobalArguments and MultiManipIKSolver helper classes are now "
@@ -1304,144 +1337,144 @@ msgid ""
 msgstr ""
 
 # b057eb932e884cce96937804aa8f56aa
-#: ../../source/changelog.rst:483
+#: ../../source/changelog.rst:496
 msgid "Octave/Matlab"
 msgstr ""
 
 # f0b47fab22be4ea1949bf88cb2acabc7
-#: ../../source/changelog.rst:485
+#: ../../source/changelog.rst:498
 msgid "fixed the grasping demo"
 msgstr ""
 
 # 82c0d69548a54d0ea6de7952c1f22351
-#: ../../source/changelog.rst:487
+#: ../../source/changelog.rst:500
 msgid ""
 "added orRobotSensorConfigure.m to power and sensors and display their data"
 msgstr ""
 
 # 5c43bf4458334a129d34ac6ac752bf18
-#: ../../source/changelog.rst:489
+#: ../../source/changelog.rst:502
 msgid "Octave stripping symbols"
 msgstr ""
 
 # 3ce8b0ae45f74c59a89496c9f81e1067
-#: ../../source/changelog.rst:494
+#: ../../source/changelog.rst:507
 msgid ""
 "Fixed major IK fast bug when intersecting axes of robot are not at the ends."
 msgstr ""
 
 # 90a5161c237e4443869da613f3c6520a
-#: ../../source/changelog.rst:497
+#: ../../source/changelog.rst:510
 msgid "Tests"
 msgstr ""
 
 # 34bec64964564c98ac9858b38bc5b968
-#: ../../source/changelog.rst:499
+#: ../../source/changelog.rst:512
 msgid "test_programs is now runnable by windows"
 msgstr ""
 
 # 10f1a37906854aceb9e5a59a1ad401ed
-#: ../../source/changelog.rst:501
+#: ../../source/changelog.rst:514
 msgid ""
 "test_ikfast is now also included in the regular tests to determine release. "
 "The full IK tests are run separately to gather statistics on ikfast."
 msgstr ""
 
 # e782e581305d4106ad1a80071846d687
-#: ../../source/changelog.rst:506
+#: ../../source/changelog.rst:519
 msgid ""
 "grasping database now uses the producer, consumer, gatherer model, removed "
 "updateenv and disableallbodies from the generate method"
 msgstr ""
 
 # a988af23c9b249c89d8c71a88e640bdb
-#: ../../source/changelog.rst:508
+#: ../../source/changelog.rst:521
 msgid ""
 "implemented the unfinished :meth:`.databases.grasping.GraspingModel."
 "computeSphereApproachRays`"
 msgstr ""
 
 # af5c3751bf9044b0b92242d7ec4053c8
-#: ../../source/changelog.rst:513
+#: ../../source/changelog.rst:526
 msgid ""
 "fixed bug in ODE physics when contacts overflow and added check for 0 "
 "quaternions."
 msgstr ""
 
 # 987e428caa294e7ab90e734e9875fc7b
-#: ../../source/changelog.rst:515
+#: ../../source/changelog.rst:528
 msgid ""
 "ode physics is more stable, can now modify erp and cfm parameters through xml"
 msgstr ""
 
 # 82e80af512b8464fbacdd96ff0aa5471
-#: ../../source/changelog.rst:517
+#: ../../source/changelog.rst:530
 msgid ""
 "fixed bug grasperplanner that exits at coarse step without going to fine "
 "step phase"
 msgstr ""
 
 # 3b1acaabe5f9414ea2dc6b6afc1ce5f5
-#: ../../source/changelog.rst:519
+#: ../../source/changelog.rst:532
 msgid "fixed bug with non-adjacent link computation"
 msgstr ""
 
 # 5d30b05223914cc0aa78864282568dc8
-#: ../../source/changelog.rst:521
+#: ../../source/changelog.rst:534
 msgid ""
 "fixed bug with not checking joint limits when resetting robot pose in "
 "KinBody::_ComputeInternalInformation"
 msgstr ""
 
 # 4f0c6a67bcf94beabefbab3ff5133472
-#: ../../source/changelog.rst:523
+#: ../../source/changelog.rst:536
 msgid "fixed bug in BaseLaser <resolution> tag"
 msgstr ""
 
 # 3d038607a06f4e25bc8f1ab25e9d3f52
-#: ../../source/changelog.rst:525
+#: ../../source/changelog.rst:538
 msgid ""
 "Logging module: added exporting geometric primitives of :ref:`savescene "
 "<module-logging-savescene>`"
 msgstr ""
 
 # 8f7db7618a6d440bb68923b566a7528c
-#: ../../source/changelog.rst:527
+#: ../../source/changelog.rst:540
 msgid "fixed ode bug with ray collisions now returning closest point"
 msgstr ""
 
 # 6ba4426f44be44e796ccb4e6e9b64b5f
-#: ../../source/changelog.rst:530
+#: ../../source/changelog.rst:543
 msgid "Version 0.4.1"
 msgstr ""
 
 # 953af6e2307f4655b536aadddf73017d
-#: ../../source/changelog.rst:532
+#: ../../source/changelog.rst:545
 msgid "Subversion Revision: 2574"
 msgstr ""
 
 # 33089df9f4bf46eca33648d3a4cfc818
-#: ../../source/changelog.rst:534
+#: ../../source/changelog.rst:547
 msgid "Initial Release: 2011/07/08"
 msgstr ""
 
 # e82230d257de427c98bfb6ee1d25aee1
-#: ../../source/changelog.rst:539
+#: ../../source/changelog.rst:552
 msgid "Fixed self-collision problem when grasping two objects (#31)."
 msgstr ""
 
 # b919f32e62a146868aaf79a6f0158a7f
-#: ../../source/changelog.rst:544
+#: ../../source/changelog.rst:557
 msgid "Fixed major bug in force closure computation."
 msgstr ""
 
 # c3b400a653f94f6e927daa91585ca518
-#: ../../source/changelog.rst:546
+#: ../../source/changelog.rst:559
 msgid "The direction on the gripper is now a parameter of the grasp set."
 msgstr ""
 
 # a05d4a8579404be880d1015a11126d5a
-#: ../../source/changelog.rst:548
+#: ../../source/changelog.rst:561
 msgid ""
 "Added 5D IK support for grasp planning. Check out the :mod:`.examples."
 "graspplanning` example. This required handling and passing goals as :class:`."
@@ -1449,58 +1482,58 @@ msgid ""
 msgstr ""
 
 # c7b86d6cb9ff4ecaaedd7cf7c768bc70
-#: ../../source/changelog.rst:551
+#: ../../source/changelog.rst:564
 msgid "Version 0.4.0"
 msgstr ""
 
 # edb7a31be05949038b71083c77a714ea
-#: ../../source/changelog.rst:553
+#: ../../source/changelog.rst:566
 msgid "Subversion Revision: 2557"
 msgstr ""
 
 # efb2d4788c934860ba51577a0ae02da8
-#: ../../source/changelog.rst:555
+#: ../../source/changelog.rst:568
 msgid "Initial Release: 2011/07/02"
 msgstr ""
 
 # d3733c06bce64b5dbcbfbd70618bb11d
-#: ../../source/changelog.rst:560
+#: ../../source/changelog.rst:573
 msgid "fixed collada loading of formulas"
 msgstr ""
 
 # cfd0c7be867f48a9aa3504a0061e7f78
-#: ../../source/changelog.rst:562
+#: ../../source/changelog.rst:575
 msgid "fixed caching issue with ik files in ikfastsolvers"
 msgstr ""
 
 # 0a789f5d4e154637971d5f6bd60e422a
-#: ../../source/changelog.rst:564
+#: ../../source/changelog.rst:577
 msgid ""
 "added a new :class:`.SpaceSampler` interface for sophisticated discrete/"
 "deterministic/randomized samplers."
 msgstr ""
 
 # 2044fc2b20284dfc905baca3c5961aa8
-#: ../../source/changelog.rst:566
+#: ../../source/changelog.rst:579
 msgid "deprecated the RaveRandomX functions in favor of the new samplers"
 msgstr ""
 
 # 271008de552f4f66bea1a9f5aa7fba25
-#: ../../source/changelog.rst:568
+#: ../../source/changelog.rst:581
 msgid ""
 "Added a Prop_RobotActiveDOFs change callback in order to catch SetActiveDOFs "
 "messages"
 msgstr ""
 
 # ba6ac4eb9fbd4cc3b2f00b2972207f5f
-#: ../../source/changelog.rst:570
+#: ../../source/changelog.rst:583
 msgid ""
 "renamed ProblemInstance interface into Module. Users should use the "
 "ModuleBase class."
 msgstr ""
 
 # 44a773dddee34b4897c7f5885bf7539c
-#: ../../source/changelog.rst:572
+#: ../../source/changelog.rst:585
 msgid ""
 "Environment can now support multiple viewers attached to it and can query "
 "them with their name. Plotting methods through the environment send commands "
@@ -1508,77 +1541,77 @@ msgid ""
 msgstr ""
 
 # 9d9fd4c619864c858b19ba5aa4426e59
-#: ../../source/changelog.rst:574
+#: ../../source/changelog.rst:587
 msgid ""
 "**Compatibility Break:** EnvironmentBase AddKinBody/AddRobot/AddSensor "
 "return void instead of bool."
 msgstr ""
 
 # 250024c718cf4125b448a079da89c3b3
-#: ../../source/changelog.rst:576
+#: ../../source/changelog.rst:589
 msgid ""
 "added a Level_VerifyPlans debug level that globally notifies planners/"
 "modules to double check their outputs. Used for testing."
 msgstr ""
 
 # 1c931eda168047e09f6944c958852c88
-#: ../../source/changelog.rst:578
+#: ../../source/changelog.rst:591
 msgid ""
 "added :meth:`.KinBody.Joint.SetWrapOffset`, :meth:`.KinBody.Link."
 "SetStatic`, :meth:`.KinBody.Link.GeomProperties.SetRenderFilename` functions"
 msgstr ""
 
 # 13ed9da6120546798d9bf0992ba56d4b
-#: ../../source/changelog.rst:580
+#: ../../source/changelog.rst:593
 msgid "added :meth:`.KinBody.SetZeroConfiguration` for calibration"
 msgstr ""
 
 # 08c4b995c03b4478bb5235ebcc2f38ba
-#: ../../source/changelog.rst:582
+#: ../../source/changelog.rst:595
 msgid "caching computation of hashes for faster kinbody/robot loading"
 msgstr ""
 
 # 3d4e53d4568640f198726dadb4d66ad4
-#: ../../source/changelog.rst:584
+#: ../../source/changelog.rst:597
 msgid ""
 "the Environment Load methods takes an attributes list, and Save method "
 "allows for selection of what gets saved."
 msgstr ""
 
 # 7b19afc0513c41e8ae11a393e5eb8b7c
-#: ../../source/changelog.rst:586
+#: ../../source/changelog.rst:599
 msgid ""
 "renamed EnvironmentBase::TriangulateOptions to EnvironmentBase::"
 "SelectionOptions"
 msgstr ""
 
 # f70897065f2b4f05a2acb463b5f28d22
-#: ../../source/changelog.rst:588
+#: ../../source/changelog.rst:601
 msgid ""
 "renamed EnvironmentBase \\*XMLFile and \\*XMLData methods to \\*URI and "
 "\\*Data."
 msgstr ""
 
 # ca005081d27b4e069eb2ec36eeff6f40
-#: ../../source/changelog.rst:593
+#: ../../source/changelog.rst:606
 msgid ""
 "added a new planner parameter _neighstatefn that adds two states together."
 msgstr ""
 
 # 2b4448f30df0410a80233dffaa31a44b
-#: ../../source/changelog.rst:595
+#: ../../source/changelog.rst:608
 msgid ""
 "added a RobotConfiguration sampler for sampling robot active DOFs used for "
 "planning"
 msgstr ""
 
 # d771b97511ed432b93087b130b194311
-#: ../../source/changelog.rst:597
+#: ../../source/changelog.rst:610
 msgid "added a Halton Sequence sampler"
 msgstr ""
 
 # 80978447f01e46b79aff63acb31a38ac
-#: ../../source/changelog.rst:599
+#: ../../source/changelog.rst:612
 msgid ""
 "removed the PlannerParameters::_constraintfn and replaced it with "
 "PlannerParameters::_checkpathconstraints. Combined with _neighstatefn, the "
@@ -1587,105 +1620,105 @@ msgid ""
 msgstr ""
 
 # 8c334cbc6f064349a6b7569045a01a85
-#: ../../source/changelog.rst:601
+#: ../../source/changelog.rst:614
 msgid ""
 "removed the PlannerParameters::_tWorkspaceGoal parameter since it is non-"
 "generic and not used in openrave."
 msgstr ""
 
 # e7a08f59fad64bd39b7eaa00329bd1c4
-#: ../../source/changelog.rst:603
+#: ../../source/changelog.rst:616
 msgid ""
 "added PlannerParameters::_sampleinitialfn to sample initial goals for the "
 "planner"
 msgstr ""
 
 # bc39c5619d7845adbef0ca4b592dfbec
-#: ../../source/changelog.rst:605
+#: ../../source/changelog.rst:618
 msgid ""
 "added a _fromgoal parameter to PlannerParameters::_neighstatefn so users can "
 "know which direction the tree is growing in."
 msgstr ""
 
 # 4b5d04bdb925417190cf33c6485f0a0d
-#: ../../source/changelog.rst:607
+#: ../../source/changelog.rst:620
 msgid ""
 "added a new **openrave/planningutils.h** file that contains many functions/"
 "heuristics to help users build planning algorithms."
 msgstr ""
 
 # 392342e9ee2a4446abe3ee852b269973
-#: ../../source/changelog.rst:609
+#: ../../source/changelog.rst:622
 msgid "LineCollisionConstraint"
 msgstr ""
 
 # e4774c725a2a45b7bee0539b1dca46ea
-#: ../../source/changelog.rst:610
+#: ../../source/changelog.rst:623
 msgid "SimpleDistanceMetric"
 msgstr ""
 
 # 4df7ec873ee84d06be9b1054030057bc
-#: ../../source/changelog.rst:611
+#: ../../source/changelog.rst:624
 msgid "SimpleNeighborhoodSampler"
 msgstr ""
 
 # f6837a2f1c314b6294d22edee956e83e
-#: ../../source/changelog.rst:612
+#: ../../source/changelog.rst:625
 msgid "ManipulatorIKGoalSampler"
 msgstr ""
 
 # 3359813f26c943928cc191b56ba719d4
-#: ../../source/changelog.rst:613
+#: ../../source/changelog.rst:626
 msgid "VerifyTrajectory"
 msgstr ""
 
 # ef180be455a94ac995369088193e04bc
-#: ../../source/changelog.rst:614
+#: ../../source/changelog.rst:627
 msgid "JitterActiveDOF"
 msgstr ""
 
 # 4e4b8547fe6c481e8276fd07bf2574f5
-#: ../../source/changelog.rst:615
+#: ../../source/changelog.rst:628
 msgid "JitterTransform"
 msgstr ""
 
 # 032205dd48164da5856357c263394b7f
-#: ../../source/changelog.rst:617
+#: ../../source/changelog.rst:630
 msgid "added VerifyTrajectory command in BaseManipulation."
 msgstr ""
 
 # e585a047cd7a4276954e7a13a4f48d16
-#: ../../source/changelog.rst:619
+#: ../../source/changelog.rst:632
 msgid ""
 "fixed major bug in :ref:`WorkspaceTrajectoryTracker <planner-"
 "workspacetrajectorytracker>` (ie MoveHandStraight) due to obstacle checking"
 msgstr ""
 
 # bf0c90e516694cacbf0e5d05eed40969
-#: ../../source/changelog.rst:621
+#: ../../source/changelog.rst:634
 msgid "many changes to the RRT extend function to prevent infinite loops"
 msgstr ""
 
 # 0ddc90aa5fd2489ab79ea329d002215e
-#: ../../source/changelog.rst:623
+#: ../../source/changelog.rst:636
 msgid ""
 "Jittering uses perterbutation in order to reject border collisions easily"
 msgstr ""
 
 # 2dd5af7575ec4e0b8dad6d4b8dfb7b2e
-#: ../../source/changelog.rst:628
+#: ../../source/changelog.rst:641
 msgid "implemented '--show' command for inversekinematics"
 msgstr ""
 
 # a45c0ca0491843b9871b8b80bd6bead6
-#: ../../source/changelog.rst:630
+#: ../../source/changelog.rst:643
 msgid ""
 "ikfast fix in solvePairVariablesHalfAngle, lookat3d works for simple "
 "mechanisms."
 msgstr ""
 
 # 60e5cb510922499d92b386e578cb0aff
-#: ../../source/changelog.rst:632
+#: ../../source/changelog.rst:645
 msgid ""
 "added a validation step to the ikfast openrave iksolver so wrong solutions "
 "are **never** returned."
@@ -1695,37 +1728,37 @@ msgstr ""
 # da652acdbb4d4fcb9f7d03bc44b0354a
 # 6144aefdac7b4e84b7efa54c3cd45666
 # 1c7050d7470b4b64be7629d80f91cec6
-#: ../../source/changelog.rst:635 ../../source/changelog.rst:873
-#: ../../source/changelog.rst:1118 ../../source/changelog.rst:1174
+#: ../../source/changelog.rst:648 ../../source/changelog.rst:886
+#: ../../source/changelog.rst:1131 ../../source/changelog.rst:1187
 msgid "Sensors"
 msgstr ""
 
 # f70f9605e5bc42bc97c67761d5115e0b
-#: ../../source/changelog.rst:637
+#: ../../source/changelog.rst:650
 msgid ""
 "camera intrinsics now include distortion model and focal length, viewer "
 "rendering respects the focal length"
 msgstr ""
 
 # e76f5e4bebc744b885a776ff686cb9a1
-#: ../../source/changelog.rst:639
+#: ../../source/changelog.rst:652
 msgid ""
 "removed transform from laser data, all sensors have a transform data type "
 "that is not part of the data state"
 msgstr ""
 
 # d5f621395e204702b856e371b270e401
-#: ../../source/changelog.rst:642
+#: ../../source/changelog.rst:655
 msgid "Viewers"
 msgstr ""
 
 # 26eb2c4a27f54592b966597b72a47f7a
-#: ../../source/changelog.rst:644
+#: ../../source/changelog.rst:657
 msgid "viewer showing scene normals"
 msgstr ""
 
 # 8f52ac9e67d84674a05e48e22cef27e9
-#: ../../source/changelog.rst:646
+#: ../../source/changelog.rst:659
 msgid ""
 "added a new :ref:`module-viewerrecorder` interface that can attach to "
 "viewers and record their images. The recorder works on a separate thread, so "
@@ -1733,19 +1766,19 @@ msgid ""
 msgstr ""
 
 # 23f7a132578b42e8a73c050ebec639be
-#: ../../source/changelog.rst:648
+#: ../../source/changelog.rst:661
 msgid "Removed ffmpeg/video recording from qtcoin viewer."
 msgstr ""
 
 # e1b1188b068b4011b123620887546c94
-#: ../../source/changelog.rst:650
+#: ../../source/changelog.rst:663
 msgid ""
 "added watermarking support through :ref:`SetWatermark command <module-"
 "viewerrecorder-setwatermark>`"
 msgstr ""
 
 # 284c4e29b069452089d3d4aada7a42d0
-#: ../../source/changelog.rst:652
+#: ../../source/changelog.rst:665
 msgid ""
 "deprecated the ViewerBase::RegisterCallback function and added individdual "
 "functions for item selection and new viewer image: "
@@ -1753,51 +1786,51 @@ msgid ""
 msgstr ""
 
 # f4d6fdc40d0c48f183dc1193c240c0df
-#: ../../source/changelog.rst:654
+#: ../../source/changelog.rst:667
 msgid "Added ViewerBase::GetCameraIntrinsics for the current camera location"
 msgstr ""
 
 # 0baa62ae8f4646c59579143d7b8cf324
-#: ../../source/changelog.rst:659
+#: ../../source/changelog.rst:672
 msgid "added more tests: openrave global runtime, API Sanity Autotest XML"
 msgstr ""
 
 # e93eabb7cfe54983be4b2e6dd7fbdecb
-#: ../../source/changelog.rst:661
+#: ../../source/changelog.rst:674
 msgid "added :meth:`.IkSolver.SetCustomFilter` in openravepy"
 msgstr ""
 
 # f66a4d08ca1747f6ae51310760d5e28b
-#: ../../source/changelog.rst:663
+#: ../../source/changelog.rst:676
 msgid "fixed bug in velocity controller mimic joints"
 msgstr ""
 
 # 4088e273caf246a1b8342163ccef7834
-#: ../../source/changelog.rst:665
+#: ../../source/changelog.rst:678
 msgid "added Kawada Hiro NX (robots/kawada-hironx.zae) industrial robot model"
 msgstr ""
 
 # a7396f3fadf843f3bf983f0ee3ee5626
-#: ../../source/changelog.rst:667
+#: ../../source/changelog.rst:680
 msgid "fixed IV/VRML model loading scaling"
 msgstr ""
 
 # 3a92f492637442918d5997912ae4001f
-#: ../../source/changelog.rst:669
+#: ../../source/changelog.rst:682
 msgid ""
 "removed links without any geometry attached to them from the non-adjacent "
 "lists"
 msgstr ""
 
 # 1d15bd321b3348d18496cf73ff64e8f5
-#: ../../source/changelog.rst:671
+#: ../../source/changelog.rst:684
 msgid ""
 "added examples :mod:`.examples.simplemanipulation` (thanks to Alan Tan), "
 "added :mod:`.examples.simplegrasping`"
 msgstr ""
 
 # cb5e02681c6c48609803b344dedbd72a
-#: ../../source/changelog.rst:673
+#: ../../source/changelog.rst:686
 msgid ""
 "added GraspThreaded command to grasper plugin to allow for multithreaded "
 "computation of grasps. Added the corresponding bindings to the openravepy "
@@ -1805,39 +1838,39 @@ msgid ""
 msgstr ""
 
 # 1e35910fd9a346898365e28d2cb2cfb5
-#: ../../source/changelog.rst:675
+#: ../../source/changelog.rst:688
 msgid "fixed assert in ODE when collision checking with contact points."
 msgstr ""
 
 # 3d069c0e414b48da819db40bc3be2176
-#: ../../source/changelog.rst:678
+#: ../../source/changelog.rst:691
 msgid "Version 0.3.2"
 msgstr ""
 
 # ad8dddfb96a9402b98ba172cd148ca7d
-#: ../../source/changelog.rst:680
+#: ../../source/changelog.rst:693
 msgid "Subversion Revision: 2452"
 msgstr ""
 
 # c1625763d05043368d236cb944e72171
-#: ../../source/changelog.rst:682
+#: ../../source/changelog.rst:695
 msgid "Initial Release: 2011/05/11"
 msgstr ""
 
 # b7b4c3e0c0f440d49208e89c23d8f257
-#: ../../source/changelog.rst:687
+#: ../../source/changelog.rst:700
 msgid "fixed major bug in synchronizing collision and openrave world"
 msgstr ""
 
 # 6b4a879dab46408fb5da772cfa6c4132
-#: ../../source/changelog.rst:689
+#: ../../source/changelog.rst:702
 msgid ""
 "added openrave-robot.py which allows introspection into robot files. This "
 "deprecates openrave-hash.py. added bash completion for it."
 msgstr ""
 
 # 9fda0f0f89bf49369a7d282ac4eee80c
-#: ../../source/changelog.rst:691
+#: ../../source/changelog.rst:704
 msgid ""
 "added openrave-createplugin.py which allows new users to easily setup the "
 "plugin directories and get something running. also works on creating "
@@ -1845,18 +1878,18 @@ msgid ""
 msgstr ""
 
 # a3de17c6712940dfb4949b63e949a16c
-#: ../../source/changelog.rst:693
+#: ../../source/changelog.rst:706
 msgid ""
 "changed way of searching for collada-dom to prepare for its 2.3.1 release."
 msgstr ""
 
 # 6c69087bfacd4e76a704ef24e4458d10
-#: ../../source/changelog.rst:695
+#: ../../source/changelog.rst:708
 msgid "removed a dependency on mathextra.h from geometry.h"
 msgstr ""
 
 # 9df49e97a8704dffaca88b304facd05d
-#: ../../source/changelog.rst:697
+#: ../../source/changelog.rst:710
 msgid ""
 "ReadKinBody*, ReadRobot*, and Load can now process rigid body models like "
 "IV, VRML, STL, etc and convert them automatically to KinBody objects. For "
@@ -1864,7 +1897,7 @@ msgid ""
 msgstr ""
 
 # f0b4f6f94d7f4d9dba0a269bd1c7deeb
-#: ../../source/changelog.rst:705
+#: ../../source/changelog.rst:718
 msgid ""
 "fixed collada bug in parsing robot sensors, added a barrett-wam-sensors.zae "
 "file to show a working example."
@@ -1872,26 +1905,26 @@ msgstr ""
 
 # 96a7a487a133458884cc0208a893dbb6
 # 8b209c64bf9a4406bdd723a35c425f06
-#: ../../source/changelog.rst:708 ../../source/changelog.rst:797
+#: ../../source/changelog.rst:721 ../../source/changelog.rst:810
 msgid "Windows"
 msgstr ""
 
 # aacbf3b172f343b0937f6560ae364240
-#: ../../source/changelog.rst:710
+#: ../../source/changelog.rst:723
 msgid ""
 "small changes to the way symlinks are handled on install/uninstall since "
 "windows does not handle symlinks."
 msgstr ""
 
 # 9c3a89090adc4445a3134dc9b05f78cf
-#: ../../source/changelog.rst:712
+#: ../../source/changelog.rst:725
 msgid ""
 "rearranged the windows pre-compiled DLLs and added official libcollada pre-"
 "compiled DLLs."
 msgstr ""
 
 # 4229dc84451d44a7b4d9fb3024557533
-#: ../../source/changelog.rst:714
+#: ../../source/changelog.rst:727
 msgid ""
 "All openrave DLLs are now suffixed with the msvc version and openrave "
 "soversion."
@@ -1899,29 +1932,29 @@ msgstr ""
 
 # 5083194203954ec58e6791b84a14a459
 # 85d65879faf547ddba5fc1983b01b87d
-#: ../../source/changelog.rst:717 ../../source/changelog.rst:859
+#: ../../source/changelog.rst:730 ../../source/changelog.rst:872
 msgid "Testing"
 msgstr ""
 
 # 01c0fee1693448709dded151a668403e
-#: ../../source/changelog.rst:719
+#: ../../source/changelog.rst:732
 msgid "fixed bugs in multiprocess plugin"
 msgstr ""
 
 # 9f354ba123b942dc9ac383d80739b1ab
-#: ../../source/changelog.rst:721
+#: ../../source/changelog.rst:734
 msgid "added extensive basic math and kinematics tests"
 msgstr ""
 
 # 7f18b1876e08468ab18e3fcd1c0c7479
-#: ../../source/changelog.rst:723
+#: ../../source/changelog.rst:736
 msgid ""
 "added a 'testmode' in all python examples so unit testing can run the "
 "examples safely"
 msgstr ""
 
 # 25d2b880bd2c4bcb98db47b84e6793c3
-#: ../../source/changelog.rst:728
+#: ../../source/changelog.rst:741
 msgid ""
 "adding the soversion suffix to all libopenrave libraries: libopenrave -> "
 "libopenraveX.Y. There is no libopenrave or libopenrave-core anymore, so "
@@ -1929,37 +1962,37 @@ msgid ""
 msgstr ""
 
 # 5d6441ce989741ac9b6ae423c3ecd1f4
-#: ../../source/changelog.rst:730
+#: ../../source/changelog.rst:743
 msgid "releases are now suffxed with floating-point precision mode"
 msgstr ""
 
 # 44fccf4135a8472e869f2450fa9abe40
-#: ../../source/changelog.rst:733
+#: ../../source/changelog.rst:746
 msgid "Version 0.3.1"
 msgstr ""
 
 # 9a217eaf53db421ba4454476e2cc2b4d
-#: ../../source/changelog.rst:735
+#: ../../source/changelog.rst:748
 msgid "Subversion Revision: 2402"
 msgstr ""
 
 # 4a83b33b9cb74c97b1655a1fe60c6afd
-#: ../../source/changelog.rst:737
+#: ../../source/changelog.rst:750
 msgid "Initial Release: 2011/04/24"
 msgstr ""
 
 # c24bacb54f7c4db8b5783ce097d0d25b
-#: ../../source/changelog.rst:742
+#: ../../source/changelog.rst:755
 msgid "Fixed OpenRAVE freeze when closed with Ctrl-C"
 msgstr ""
 
 # 6a013eb442ca45c4a765e63859539f1b
-#: ../../source/changelog.rst:744
+#: ../../source/changelog.rst:757
 msgid "Fixed problem with detecting system crlibm installs"
 msgstr ""
 
 # e3ffc2f098f44e07ad945141c53315da
-#: ../../source/changelog.rst:749
+#: ../../source/changelog.rst:762
 msgid ""
 "openravepy now gets copied onto the python site-packages or dist-packages "
 "folder. For Linux users, this means it is not necessary to set the "
@@ -1967,19 +2000,19 @@ msgid ""
 msgstr ""
 
 # 8e1f99426c314244bc2e5640a78fdfe9
-#: ../../source/changelog.rst:751
+#: ../../source/changelog.rst:764
 msgid "ikfast fixes inclusion of math libraries and python-mpmath"
 msgstr ""
 
 # 0531b5da566a411fb2d3ea69a3e5d3cc
-#: ../../source/changelog.rst:756
+#: ../../source/changelog.rst:769
 msgid ""
 "The openravepy python bindings now get installed into the python site-"
 "packages/dist-packages folder."
 msgstr ""
 
 # dfb71e058419491f9c8d87a8f40306db
-#: ../../source/changelog.rst:758
+#: ../../source/changelog.rst:771
 msgid ""
 "Using cpack to componentize all the installs and create debian source "
 "packages. The debian source packages are created with DebSourcePPA.cmake and "
@@ -1987,41 +2020,41 @@ msgid ""
 msgstr ""
 
 # 06f1acc0b6d24f779d4f6cf531743ae6
-#: ../../source/changelog.rst:761
+#: ../../source/changelog.rst:774
 msgid "Version 0.3.0"
 msgstr ""
 
 # 159ce16d96dc460f8e4e9a96fd734d05
-#: ../../source/changelog.rst:763
+#: ../../source/changelog.rst:776
 msgid "Subversion Revision: r2371"
 msgstr ""
 
 # 2b98db00ba7a4e5f844925236b8759eb
-#: ../../source/changelog.rst:765
+#: ../../source/changelog.rst:778
 msgid "Initial Release: 2011/04/18"
 msgstr ""
 
 # cd208c659fa54ab089503e0d492a5c40
-#: ../../source/changelog.rst:770
+#: ../../source/changelog.rst:783
 msgid ""
 "Moved all the header files to the 'include/openrave-$MAJOR.$MINOR/openrave' "
 "folder. 'rave' folder is now deprecated."
 msgstr ""
 
 # 5f06e73d068343698c4ecfc86362a192
-#: ../../source/changelog.rst:772
+#: ../../source/changelog.rst:785
 msgid "Include files will now be installed in openrave-$MAJOR.$MINOR folders"
 msgstr ""
 
 # 47a3222f36e74164ac0744c95ae0b14e
-#: ../../source/changelog.rst:774
+#: ../../source/changelog.rst:787
 msgid ""
 "Binaries will now be suffixed with $MAJOR.$MINOR. Ie openrave0.3-config, "
 "openrave0.3.py. Symlinks will be provied to openrave"
 msgstr ""
 
 # 1b1a9de9c1694733b6eff532fa4b4abf
-#: ../../source/changelog.rst:776
+#: ../../source/changelog.rst:789
 msgid ""
 "OpenRAVE installs version-specific cmake configuration files stored in lib/"
 "cmake/openrave-$MAJOR.$MINOR/. The FindOpenRAVE.cmake file just looks for "
@@ -2029,7 +2062,7 @@ msgid ""
 msgstr ""
 
 # 1f70da3a8f2a47aa911a7a3ff2e8ff56
-#: ../../source/changelog.rst:778
+#: ../../source/changelog.rst:791
 msgid ""
 "Removed linking with Coin3d due to GPL license issue. Now will attemp to "
 "load only if a ProblemInstance supports model loading."
@@ -2038,196 +2071,196 @@ msgstr ""
 # d08cf3db848347bbb07ca202045c9e85
 # 5692e7b7e0394d1c8baa8b37607457db
 # e1a12af9c5f747d0a231ec3a961c8bb9
-#: ../../source/changelog.rst:781 ../../source/changelog.rst:844
-#: ../../source/changelog.rst:906
+#: ../../source/changelog.rst:794 ../../source/changelog.rst:857
+#: ../../source/changelog.rst:919
 msgid "IKFast"
 msgstr ""
 
 # 6572158f940141a599db85a1d6888dfd
-#: ../../source/changelog.rst:783
+#: ../../source/changelog.rst:796
 msgid "Added TranslationLocalGlobal6D new IK type"
 msgstr ""
 
 # c015a5a3262b4015b4e832262af29fbf
-#: ../../source/changelog.rst:785
+#: ../../source/changelog.rst:798
 msgid ""
 "Fixed inversekinematics database generator loading/caching problems. Fixed a "
 "cloning problem."
 msgstr ""
 
 # 0ec1973c7ed54349933b21d0809b26b2
-#: ../../source/changelog.rst:787
+#: ../../source/changelog.rst:800
 msgid "Made sure all python examples rely on pre-generated ik files."
 msgstr ""
 
 # 7d9ad64385ca46f296018d9cbf3a8f87
-#: ../../source/changelog.rst:792
+#: ../../source/changelog.rst:805
 msgid ""
 "Windows Installer using Nullsoft Scriptable Install System. It automatically "
 "downloads necessary libraries and registers openrave to the windows registry."
 msgstr ""
 
 # e364ae43c8e84631a85694af443e34be
-#: ../../source/changelog.rst:794
+#: ../../source/changelog.rst:807
 msgid "Added many scripts to automate upload to sourceforge"
 msgstr ""
 
 # e2bb0deb87eb4a81b83d5353ff92ac90
-#: ../../source/changelog.rst:799
+#: ../../source/changelog.rst:812
 msgid ""
 "Updated all DLLs and libraries, cleaned a lot of old stuff, now relying on "
 "official installations of boost and qt4."
 msgstr ""
 
 # 35aecd09feec40f5aa27f7f6fd0ad112
-#: ../../source/changelog.rst:801
+#: ../../source/changelog.rst:814
 msgid "Reduced the number of MSVC special cases in the build system"
 msgstr ""
 
 # fa3bde7af72c4f6ba1648cd268e93e12
-#: ../../source/changelog.rst:806
+#: ../../source/changelog.rst:819
 msgid "Fixed ivcon loading bug"
 msgstr ""
 
 # 467d7b9ae0d6472397b026e711a66ee9
-#: ../../source/changelog.rst:808
+#: ../../source/changelog.rst:821
 msgid ""
 "Added a ivmodelloader interface to use coin3d functionality across plugin "
 "boundaries"
 msgstr ""
 
 # 749df074a989496bb69b146377f7faff
-#: ../../source/changelog.rst:811
+#: ../../source/changelog.rst:824
 msgid "Version 0.2.20"
 msgstr ""
 
 # 74a3cdaa32ef4563a34a0992a34f7494
-#: ../../source/changelog.rst:813
+#: ../../source/changelog.rst:826
 msgid "Subversion Revision: r2241"
 msgstr ""
 
 # 23ee94d5ef2d4de785e8d4d46ce8c782
-#: ../../source/changelog.rst:815
+#: ../../source/changelog.rst:828
 msgid "Initial Release: 2011/03/28"
 msgstr ""
 
 # ef213ee86f9e4731a12e8554e55032e4
-#: ../../source/changelog.rst:820
+#: ../../source/changelog.rst:833
 msgid ""
 "Addding linking with assimp. If present, libopenrave-core will not use the "
 "buggy ivcon."
 msgstr ""
 
 # 015f060c6d80445ab26ac6d4899f699e
-#: ../../source/changelog.rst:822
+#: ../../source/changelog.rst:835
 msgid ""
 "Added EnvironmentBase::ReadTrimeshFile allowing ability to load kinbody "
 "files from the openrave command line."
 msgstr ""
 
 # 509dccae54be492e86611416157ee7ff
-#: ../../source/changelog.rst:824
+#: ../../source/changelog.rst:837
 msgid ""
 "Refactored openrave-core and several plugins in order to make compilation "
 "more parallelizable."
 msgstr ""
 
 # b6b8366d88644d469afffabb91f0cc9d
-#: ../../source/changelog.rst:826
+#: ../../source/changelog.rst:839
 msgid ""
 "Clone now returns a void instead of bool since it relies on exceptions for "
 "error handling instead of return values."
 msgstr ""
 
 # cf4d9a42ec374ce3b27a68737b2cd5c3
-#: ../../source/changelog.rst:828
+#: ../../source/changelog.rst:841
 msgid ""
 "Fixed many bugs with prefixing names for robots/kinbodies in the XML/COLLADA "
 "readers."
 msgstr ""
 
 # 650afe79e4924181817a93d141eecbf4
-#: ../../source/changelog.rst:830
+#: ../../source/changelog.rst:843
 msgid ""
 "Better detection of sympy installation. Can now use sympy system installs if "
 "they pass a \"compatibility test\". If 0.6.7, can patch sympy dynamically."
 msgstr ""
 
 # 89411123e39e4484a4fea1272e1ab95d
-#: ../../source/changelog.rst:832
+#: ../../source/changelog.rst:845
 msgid "removed recursive lock from plugindatabase.h"
 msgstr ""
 
 # fafbdea166b24e8d8e452ba470ec20bb
-#: ../../source/changelog.rst:834
+#: ../../source/changelog.rst:847
 msgid "FindIKSolution forces environment lock since it is so common to use"
 msgstr ""
 
 # 29f8a10f21a0499ab740c78dbf2e27f6
-#: ../../source/changelog.rst:836
+#: ../../source/changelog.rst:849
 msgid "Support compilation with Visual Studio 2010"
 msgstr ""
 
 # 0025f95ae36947fd9d9d54e5a5aa96f9
-#: ../../source/changelog.rst:841
+#: ../../source/changelog.rst:854
 msgid ""
 "Can now lock environments in multiple python threads without deadlocking."
 msgstr ""
 
 # 4e6c7fe0fe1a459d9bffee6e3bb1a8ad
-#: ../../source/changelog.rst:846
+#: ../../source/changelog.rst:859
 msgid ""
 "ikfastsolvers: ikfast c++ files are individually compiled instead of "
 "included as headers. speeds up compilation"
 msgstr ""
 
 # 86fc3a21b0ad4177998202f449e10867
-#: ../../source/changelog.rst:848
+#: ../../source/changelog.rst:861
 msgid "perf timing is more accurate using CLOCK_MONOTONIC"
 msgstr ""
 
 # c884214cc5d7413f96b45c6ffb2497af
-#: ../../source/changelog.rst:850
+#: ../../source/changelog.rst:863
 msgid ""
 "Added automatic updating of the cached files in sandbox/updateikfiles.py"
 msgstr ""
 
 # 7104cb006abc480fa19ff1c336657d00
-#: ../../source/changelog.rst:852
+#: ../../source/changelog.rst:865
 msgid "Added a lot of documentation on ikfast."
 msgstr ""
 
 # 479b9c57e1af4fa1b1e532415381dde0
-#: ../../source/changelog.rst:854
+#: ../../source/changelog.rst:867
 msgid "Added 5DOF inverse kinematics: position+direction."
 msgstr ""
 
 # be0286b020dc404684cefa85498fac8f
-#: ../../source/changelog.rst:856
+#: ../../source/changelog.rst:869
 msgid ""
 "Added a TranslationXY2D primitive for 2D translation (see "
 "tutorial_iktranslation2d example)"
 msgstr ""
 
 # f18a407ed07f431db7ab1d16595fd2f8
-#: ../../source/changelog.rst:861
+#: ../../source/changelog.rst:874
 msgid ""
 "Unit testing of ikfast using python nose, developed several custom plugins "
 "in test/nosetests"
 msgstr ""
 
 # b0f50555024746b7a4a5ad8ec9b01dd7
-#: ../../source/changelog.rst:863
+#: ../../source/changelog.rst:876
 msgid "Linked with jenkins test server now at http://www.openrave.org/testing"
 msgstr ""
 
 # 4917be97129842a498c78212411ac138
-#: ../../source/changelog.rst:866
+#: ../../source/changelog.rst:879
 msgid "Documentation"
 msgstr ""
 
 # 28f1ac919a824c538c486e9b17b3b391
-#: ../../source/changelog.rst:868
+#: ../../source/changelog.rst:881
 msgid ""
 "Documentation infrastructure rewritten. It now uses mostly reStructuredText "
 "and compiled with sphinx. the official openrave homepage is also outputted "
@@ -2236,14 +2269,14 @@ msgid ""
 msgstr ""
 
 # 740defcc5f984abab4055628f2b2dbcf
-#: ../../source/changelog.rst:870
+#: ../../source/changelog.rst:883
 msgid ""
 "The robot database is now compiled from the ikfast results with robot images "
 "and links to the testing server."
 msgstr ""
 
 # 4855159de18c47a5a9561903229b74f1
-#: ../../source/changelog.rst:875
+#: ../../source/changelog.rst:888
 msgid ""
 "Removed sensor Init/Reset methods and added a Configure method for "
 "controlling power and rendering properties since all sensors will share "
@@ -2251,39 +2284,39 @@ msgid ""
 msgstr ""
 
 # 534b8bc17dec4a17b5f823942bc232a0
-#: ../../source/changelog.rst:877
+#: ../../source/changelog.rst:890
 msgid "Added an actuator sensor for modeling motors, etc."
 msgstr ""
 
 # 8a41278241644df28327b34ef6b519fd
-#: ../../source/changelog.rst:879
+#: ../../source/changelog.rst:892
 msgid ""
 "Added a camera viewer GUI that pops up whenever the SensorBase::Configure"
 "(CC_RenderDataOn) function is called."
 msgstr ""
 
 # 89d85f59879040aea1ee672ed2597087
-#: ../../source/changelog.rst:881
+#: ../../source/changelog.rst:894
 msgid "Added a showsensors tutorial"
 msgstr ""
 
 # a0f1677d791149f2b8325cd522a0205c
-#: ../../source/changelog.rst:884
+#: ../../source/changelog.rst:897
 msgid "Version 0.2.19"
 msgstr ""
 
 # 65859b5e93bf42048b0deca7e67e3198
-#: ../../source/changelog.rst:886
+#: ../../source/changelog.rst:899
 msgid "Subversion Revision: r2031"
 msgstr ""
 
 # a4f51a807f42430da7d4f88d26882d35
-#: ../../source/changelog.rst:888
+#: ../../source/changelog.rst:901
 msgid "Initial Release: 2011/02/17"
 msgstr ""
 
 # c7a2bea095104ff9a03edcfd673f4c69
-#: ../../source/changelog.rst:893
+#: ../../source/changelog.rst:906
 msgid ""
 "Now OpenRAVE explicitly controls what symbols are exported and imported into "
 "the dynamic table. This means much faster loading times of openrave and its "
@@ -2291,24 +2324,24 @@ msgid ""
 msgstr ""
 
 # 31e1f82b84a4478fb0be4d6d76e8404f
-#: ../../source/changelog.rst:895
+#: ../../source/changelog.rst:908
 msgid "http://gcc.gnu.org/wiki/Visibility"
 msgstr ""
 
 # bad57a710495423f98f0310c7578b753
-#: ../../source/changelog.rst:897
+#: ../../source/changelog.rst:910
 msgid "OpenRAVE exceptions are now caught across shared object boundaries."
 msgstr ""
 
 # 78c8cdb317d54ca89f724e3b8dfd7ef9
-#: ../../source/changelog.rst:899
+#: ../../source/changelog.rst:912
 msgid ""
 "Added OPENRAVE_DLL and OPENRAVE_DLL_EXPORTS to control import vs export of "
 "symbols. This changed the FindOpenRAVE.cmake file changed."
 msgstr ""
 
 # a05da311de644f34a58bbe6c8127c204
-#: ../../source/changelog.rst:901
+#: ../../source/changelog.rst:914
 msgid ""
 "Added a \"Release\" cmake build type that disables all stl/boost asserts and "
 "security checks. This will produce the most optimized code possible, but "
@@ -2317,14 +2350,14 @@ msgid ""
 msgstr ""
 
 # f599018c95f24e939ea50bbdfe9f6e9d
-#: ../../source/changelog.rst:903
+#: ../../source/changelog.rst:916
 msgid ""
 "Removed \"vanchor\" parameter from KinBody::Joint since it could be "
 "autogenerated."
 msgstr ""
 
 # d2229bf476094009a4a6f6e47d8aff90
-#: ../../source/changelog.rst:908
+#: ../../source/changelog.rst:921
 msgid ""
 "ikfast now supports solving IK for robots that do not have intersecting "
 "axes. This includes work from Raghavan, Roth, Osvatic, Kohli, Manocha, and "
@@ -2332,7 +2365,7 @@ msgid ""
 msgstr ""
 
 # 83d71e9d873c4d53a3373a60b2119369
-#: ../../source/changelog.rst:910
+#: ../../source/changelog.rst:923
 msgid ""
 "Generation process itself became about 3-5x faster. For example, the puma ik "
 "can be generated in 9 seconds and wam ik in 27 seconds. Fixes freezes users "
@@ -2340,67 +2373,67 @@ msgid ""
 msgstr ""
 
 # bc1459747b784e0aa1395550ca776b6d
-#: ../../source/changelog.rst:912
+#: ../../source/changelog.rst:925
 msgid ""
 "Now uses infinite precision fractions for all its computations, therefore "
 "there is no more rounding and hunting for zeros."
 msgstr ""
 
 # 8c318dc0971d4daf881dc1091745b267
-#: ../../source/changelog.rst:914
+#: ../../source/changelog.rst:927
 msgid ""
 "PR2 IK improved a lot after replacing conic section intersection with 4th "
 "degree polynomial root finding."
 msgstr ""
 
 # f9b3046eeff04be2b07293b588cbcfe5
-#: ../../source/changelog.rst:916
+#: ../../source/changelog.rst:929
 msgid "solving pairwise variables is now handles much more cases."
 msgstr ""
 
 # ce8f63a40b1145b797c9c53c2e9d9336
-#: ../../source/changelog.rst:918
+#: ../../source/changelog.rst:931
 msgid ""
 "5DOF IK works and can detect special geometry like intersecting axes (katana "
 "arm)"
 msgstr ""
 
 # 125fc1480f38492f90c40da91e8ebfd5
-#: ../../source/changelog.rst:920
+#: ../../source/changelog.rst:933
 msgid ""
 "added sanity checks to high degree polynomials to remove solutions due to "
 "precision error"
 msgstr ""
 
 # 2dca20723ea140bd8adfb96d38c1f3f1
-#: ../../source/changelog.rst:925
+#: ../../source/changelog.rst:938
 msgid ""
 "Added a orpythonbinding example showing how users can register their python "
 "classes/functions with the OpenRAVE C++ framework."
 msgstr ""
 
 # 6da993acdb37459a8e04d2ac4674516a
-#: ../../source/changelog.rst:928
+#: ../../source/changelog.rst:941
 msgid "Version 0.2.18"
 msgstr ""
 
 # 72ce2901dc7a4dbdbbef50ff4c30cea0
-#: ../../source/changelog.rst:930
+#: ../../source/changelog.rst:943
 msgid "Subversion Revision: r1975"
 msgstr ""
 
 # 58fe8dc9694b4bb09c86df2db926f19c
-#: ../../source/changelog.rst:932
+#: ../../source/changelog.rst:945
 msgid "Initial Release: 2011/01/18"
 msgstr ""
 
 # d1a86193d5b9420b8b9cb753bbf9ef06
-#: ../../source/changelog.rst:937
+#: ../../source/changelog.rst:950
 msgid "moved the check_libm_accuracy script in libopenrave folder"
 msgstr ""
 
 # 27d340ca6a52432599b0595f91e75df1
-#: ../../source/changelog.rst:939
+#: ../../source/changelog.rst:952
 msgid ""
 "Moved all configuration files to the build (BINARY) folder rather than have "
 "it in source. The build process for configuration files changed a little to "
@@ -2411,12 +2444,12 @@ msgid ""
 msgstr ""
 
 # f223f1211fd947d792c4f0f04411d2ee
-#: ../../source/changelog.rst:948
+#: ../../source/changelog.rst:961
 msgid "updated zlib 1.2.5 and minizip"
 msgstr ""
 
 # 355eb770b4c840caa2c82d1c56c23ae0
-#: ../../source/changelog.rst:950
+#: ../../source/changelog.rst:963
 msgid ""
 "Added more joint types involving all permutations of revolution and "
 "prismatic joints! For example Revolute, Revolute, Revolute or Revolute,"
@@ -2426,7 +2459,7 @@ msgid ""
 msgstr ""
 
 # c6c2037ced444e9c8a7ac568a472d846
-#: ../../source/changelog.rst:952
+#: ../../source/changelog.rst:965
 msgid ""
 "Organized the joint hierarchy and added a Joint::_ComputeInternalInformation "
 "to do some of the preprocessing that was previously done in the individual "
@@ -2434,7 +2467,7 @@ msgid ""
 msgstr ""
 
 # ffff472288f84fc19c8f8687670914b5
-#: ../../source/changelog.rst:954
+#: ../../source/changelog.rst:967
 msgid ""
 "Added normalizeAxisRotation - Find the rotation theta around axis such that "
 "rot(axis,theta) * q is closest to the identity rotation. This is used in "
@@ -2442,22 +2475,22 @@ msgid ""
 msgstr ""
 
 # d71e8669f54e49f6bfede88bf296281c
-#: ../../source/changelog.rst:957
+#: ../../source/changelog.rst:970
 msgid "COLLADA"
 msgstr ""
 
 # 1f708783861b4fb7bfd2089c5e2f433e
-#: ../../source/changelog.rst:959
+#: ../../source/changelog.rst:972
 msgid "can now read and write compressed collada files (zae)"
 msgstr ""
 
 # 448e5db4a63c4a77b6e1a517cd666e44
-#: ../../source/changelog.rst:961
+#: ../../source/changelog.rst:974
 msgid "fixed many bugs in colladareader units"
 msgstr ""
 
 # 5103e3044ff2482c8c84c26c3ad3906e
-#: ../../source/changelog.rst:963
+#: ../../source/changelog.rst:976
 msgid ""
 "all collada robots are offered as zae. Many previous .robot.xml robots were "
 "removed to prefer the COLLADA counterparts. The models.tgz file size reduced "
@@ -2465,19 +2498,19 @@ msgid ""
 msgstr ""
 
 # 493999f78a6c4069942f870eadd169ae
-#: ../../source/changelog.rst:965
+#: ../../source/changelog.rst:978
 msgid ""
 "There is now a folder dedicated to all possible COLLADA robots that is "
 "seaprate from the openrave trunk:"
 msgstr ""
 
 # 3b7927a4356141c889d49b2938076662
-#: ../../source/changelog.rst:967
+#: ../../source/changelog.rst:980
 msgid "https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots"
 msgstr ""
 
 # df846caf06af43f9bf12f773fdc16533
-#: ../../source/changelog.rst:969
+#: ../../source/changelog.rst:982
 msgid ""
 "For ROS users: There is now a collada_robots ROS package that will check out "
 "all these robots. You would need to add the following bashrc line to get "
@@ -2485,97 +2518,97 @@ msgid ""
 msgstr ""
 
 # fa58d42d43134f75bcbf7d2a4862c5f0
-#: ../../source/changelog.rst:975
+#: ../../source/changelog.rst:988
 msgid ""
 "can open collada visual scenes without any kinematics scene definitions "
 "(collada 1.4)."
 msgstr ""
 
 # 42152630928f4677922faf27523b76f0
-#: ../../source/changelog.rst:977
+#: ../../source/changelog.rst:990
 msgid "can write physics data (masses + inertias) and collision adjacency data"
 msgstr ""
 
 # ec833906f2b24f7f868b2833b07f8bd8
-#: ../../source/changelog.rst:980
+#: ../../source/changelog.rst:993
 msgid "Version 0.2.17"
 msgstr ""
 
 # aada1cd18425454984624e1b1352776c
-#: ../../source/changelog.rst:982
+#: ../../source/changelog.rst:995
 msgid "Subversion Revision: r1955"
 msgstr ""
 
 # fdb3a59b91e74fbaa3ce09fa2eb94dd2
-#: ../../source/changelog.rst:984
+#: ../../source/changelog.rst:997
 msgid "Initial Release: 2011/01/09"
 msgstr ""
 
 # bf9bd4688dfe451fabdf460003d7e506
-#: ../../source/changelog.rst:987
+#: ../../source/changelog.rst:1000
 msgid "COLLADA Robot Specification"
 msgstr ""
 
 # 5895b7d02bc84985822e9e06c62365f0
-#: ../../source/changelog.rst:989
+#: ../../source/changelog.rst:1002
 msgid "Released initial specification for robotics info in COLLADA."
 msgstr ""
 
 # 4b2ba7012c0c433185a61f492e83c1a3
-#: ../../source/changelog.rst:991
+#: ../../source/changelog.rst:1004
 msgid "http://openrave.programmingvision.com/index.php/Started:COLLADA"
 msgstr ""
 
 # 7767e0ee81ba48d09722d90faa16e2c1
-#: ../../source/changelog.rst:997
+#: ../../source/changelog.rst:1010
 msgid "Mimic Joints Support Arbitrary Functions"
 msgstr ""
 
 # 3ab135af305b49f694dc516c6916e3e5
-#: ../../source/changelog.rst:999
+#: ../../source/changelog.rst:1012
 msgid ""
 "It is now possible to define the value of a joint as a complex formula "
 "involving any number of joints from the robot. For example:"
 msgstr ""
 
 # 45bd3f42e45448fab1e8aa55b45e056e
-#: ../../source/changelog.rst:1001
+#: ../../source/changelog.rst:1014
 msgid "j2 = arctan(0.5*cos(j0)) - j1"
 msgstr ""
 
 # 20c41af5ef5f463f8adf2e5800c6fc7f
-#: ../../source/changelog.rst:1003
+#: ../../source/changelog.rst:1016
 msgid "Here's the C++ API modifications:"
 msgstr ""
 
 # 440f3b5140ff4edc9b39e963fb0ab386
-#: ../../source/changelog.rst:1005
+#: ../../source/changelog.rst:1018
 msgid ""
 "http://openrave.programmingvision.com/ordocs/en/html/"
 "classOpenRAVE_1_1KinBody_1_1Joint.html#a0e31c5be31c4145afa786e0c0d6a46ae"
 msgstr ""
 
 # 9e1e23c591434766964450fba1875ec8
-#: ../../source/changelog.rst:1007
+#: ../../source/changelog.rst:1020
 msgid ""
 "OpenRAVE XML tutorial: http://openrave.programmingvision.com/index.php/"
 "Started:Formats#Closed-chains_and_Mimic_Joints"
 msgstr ""
 
 # 1797cb3ee6b64d87ba7f15e6b41d6c13
-#: ../../source/changelog.rst:1010
+#: ../../source/changelog.rst:1023
 msgid ""
 "And of course COLLADA spec modifications necessary: http://openrave."
 "programmingvision.com/index.php/Started:COLLADA#formula.2Ftechnique"
 msgstr ""
 
 # 2c89e6b7a6fc4f0cb9bbb396313a2d15
-#: ../../source/changelog.rst:1014
+#: ../../source/changelog.rst:1027
 msgid "Complex kinematics support"
 msgstr ""
 
 # 324470f69ad5441ca428f633223cd720
-#: ../../source/changelog.rst:1016
+#: ../../source/changelog.rst:1029
 msgid ""
 "Kinematics hierarchy now supports closed-chains correctly. It uses graph "
 "theory to find places to find the loops and how to compute link "
@@ -2585,7 +2618,7 @@ msgid ""
 msgstr ""
 
 # a410d54a7f984611a989d4bfd8ff290b
-#: ../../source/changelog.rst:1018
+#: ../../source/changelog.rst:1031
 msgid ""
 "KinBody::GetClosedLoops - returns all the unique closed loops of the robot. "
 "KinBody::GetChain - returns a chain of joints or a chain of links KinBody::"
@@ -2597,7 +2630,7 @@ msgid ""
 msgstr ""
 
 # 5b70f23aa67c4bb5a482ae5cc8031dcc
-#: ../../source/changelog.rst:1026
+#: ../../source/changelog.rst:1039
 msgid ""
 "Thanks to Nick Hillier for giving us the Bobcat S185 skid-steer loader model "
 "to test closed-chains with! This robot has 11 joints with 3 closed-loops and "
@@ -2605,12 +2638,12 @@ msgid ""
 msgstr ""
 
 # 0fc466bb5ea64809a13988d126c00c93
-#: ../../source/changelog.rst:1028
+#: ../../source/changelog.rst:1041
 msgid "http://www.bobcat.com/publicadmin/viewArticle.html?id=3910"
 msgstr ""
 
 # de053972fab74f369590f1d4429b1054
-#: ../../source/changelog.rst:1030
+#: ../../source/changelog.rst:1043
 msgid ""
 "Started development on a new tool called 'fkfast'. It solves the analytic "
 "equations for closed loops. It turns out that the Bobcat fk requires a "
@@ -2621,31 +2654,31 @@ msgid ""
 msgstr ""
 
 # 06cf25ad91184884bfe32b6df943f6a2
-#: ../../source/changelog.rst:1032
+#: ../../source/changelog.rst:1045
 msgid ""
 "fkfast is still experimental, so is not as usable as ikfast. For anyone "
 "curious, the file can be found in"
 msgstr ""
 
 # 258d08919bab4e1fb1993c9252300ebd
-#: ../../source/changelog.rst:1034
+#: ../../source/changelog.rst:1047
 msgid "test/fkfast.py"
 msgstr ""
 
 # c5c4f63609484c9ebb4181d781ed6677
-#: ../../source/changelog.rst:1037
+#: ../../source/changelog.rst:1050
 msgid "Accurate/Robust Math"
 msgstr ""
 
 # e5596d13e926485e98db39fa978e19a7
-#: ../../source/changelog.rst:1039
+#: ../../source/changelog.rst:1052
 msgid ""
 "Added high precision math functions using crlibm. On compilation time, "
 "OpenRAVE checks with functions from libm are inaccurate and replaces them."
 msgstr ""
 
 # 35fbc6ea47fc4e73ac839b5080c9d456
-#: ../../source/changelog.rst:1045
+#: ../../source/changelog.rst:1058
 msgid ""
 "Introduced a new planner called \"WorkspaceTrajectoryTracker\" that can take "
 "arbitrary trajectories of the end effector and quickly produce smooth "
@@ -2656,56 +2689,56 @@ msgid ""
 msgstr ""
 
 # c652122b6edd461d9c6db59f5b59cb09
-#: ../../source/changelog.rst:1050
+#: ../../source/changelog.rst:1063
 msgid "Models"
 msgstr ""
 
 # 760aeef00fb745e4b8302610bc4eaa85
-#: ../../source/changelog.rst:1052
+#: ../../source/changelog.rst:1065
 msgid "Added the DARPA RE2 model and updated Care-O-Bot3 and arm models."
 msgstr ""
 
 # 5c2a5b271f8e487ca437643901bb2f1d
-#: ../../source/changelog.rst:1055
+#: ../../source/changelog.rst:1068
 msgid "ROS"
 msgstr ""
 
 # a84a7dcf9b554784a22b566313c0ef4e
-#: ../../source/changelog.rst:1057
+#: ../../source/changelog.rst:1070
 msgid ""
 "Added 3 useful scripts connecting openrave planning to the ROS world. They "
 "are all in orrosplanning package:"
 msgstr ""
 
 # a439a091b91244178c371a9d1b30f161
-#: ../../source/changelog.rst:1059
+#: ../../source/changelog.rst:1072
 msgid ""
 "ik_openrave.py - uses the openrave ik offering the orrosplanning/IK service"
 msgstr ""
 
 # 29c782d5b735419c8bc49b4a41143879
-#: ../../source/changelog.rst:1061
+#: ../../source/changelog.rst:1074
 msgid ""
 "armplanning_openrave.py - offers arm planning using the orrosplanning/"
 "MoveToHandPosition service"
 msgstr ""
 
 # 5631537d21864598ba7d11a15af178d6
-#: ../../source/changelog.rst:1063
+#: ../../source/changelog.rst:1076
 msgid ""
 "graspplanning_openrave.py - offers finding grasp sets for new objects using "
 "with object_manipulation_msgs/GraspPlanning service"
 msgstr ""
 
 # f7edd02806e6454b88695c9e5f861df3
-#: ../../source/changelog.rst:1068
+#: ../../source/changelog.rst:1081
 msgid ""
 "Added convex hull computation command inside grasper plugin so that openrave "
 "can convert point clouds into meshes for grasping."
 msgstr ""
 
 # 89acc6c1f1d244fc91ca2cbd66c5ec61
-#: ../../source/changelog.rst:1070
+#: ../../source/changelog.rst:1083
 msgid ""
 "Added several new python examples: :mod:`.examples."
 "checkconvexdecomposition`, :mod:`.examples.checkvisibility`, :mod:`.examples."
@@ -2713,55 +2746,55 @@ msgid ""
 msgstr ""
 
 # 75d7127a5b09430ca1922b51e5e5a722
-#: ../../source/changelog.rst:1073
+#: ../../source/changelog.rst:1086
 msgid "Version 0.2.15"
 msgstr ""
 
 # 7fa8d064c0a74c5a98bf12782822f0fe
-#: ../../source/changelog.rst:1075
+#: ../../source/changelog.rst:1088
 msgid "Subversion Revision: r1846"
 msgstr ""
 
 # 684c8c274ab942018e2eeb4a7353692a
-#: ../../source/changelog.rst:1077
+#: ../../source/changelog.rst:1090
 msgid "Initial Release: 2010/11/20"
 msgstr ""
 
 # f01c350e02cc4f57b8171110304c2380
-#: ../../source/changelog.rst:1082
+#: ../../source/changelog.rst:1095
 msgid ""
 "All user data is now derived from UserData class, this allows RTTI to be "
 "used making type casts safe."
 msgstr ""
 
 # 8d76477ee58a41cf853c6f20c010747e
-#: ../../source/changelog.rst:1084
+#: ../../source/changelog.rst:1097
 msgid ""
 "Added a global openrave state that manages environments, environments now "
 "have unique ids."
 msgstr ""
 
 # ff4f0d839b914950ad9e07f41195e5d7
-#: ../../source/changelog.rst:1086
+#: ../../source/changelog.rst:1099
 msgid ""
 "Added OPENRAVE_DATABASE environment variable to allow users to specify "
 "multiple database directories different from ~/.openrave."
 msgstr ""
 
 # 8858caedc9e5464a87e9bb3f024c67bd
-#: ../../source/changelog.rst:1088
+#: ../../source/changelog.rst:1101
 msgid ""
 "Safer destruction of all openrave resources using RaveDestroy, no more "
 "segfauls on exit."
 msgstr ""
 
 # cee8009dabeb4b18995ee16ec52975ef
-#: ../../source/changelog.rst:1091
+#: ../../source/changelog.rst:1104
 msgid "Velocities and Physics API"
 msgstr ""
 
 # 78d0655a411e4dc092a21068ace39f38
-#: ../../source/changelog.rst:1093
+#: ../../source/changelog.rst:1106
 msgid ""
 "Cleaned up velocity functions in the physics engine (interface is simpler). "
 "KinBody class now converts joint velocities to link velocities (and vice "
@@ -2772,26 +2805,26 @@ msgid ""
 msgstr ""
 
 # 09dc80d606ed460f90db7a93c2cf4205
-#: ../../source/changelog.rst:1095
+#: ../../source/changelog.rst:1108
 msgid ""
 "Setting velocity behaves similar to setting dof values. the default physics "
 "engine now stores velocities (it did not before)."
 msgstr ""
 
 # a19c7dddf2ef49ccbfe6fe2c8298cf2a
-#: ../../source/changelog.rst:1097
+#: ../../source/changelog.rst:1110
 msgid ""
 "Some discussion for these changes can be found in `this ticket <http://"
 "sourceforge.net/apps/trac/openrave/ticket/69>`_."
 msgstr ""
 
 # ba071144c3bf4a469616f156a2e0ed1b
-#: ../../source/changelog.rst:1100
+#: ../../source/changelog.rst:1113
 msgid "Controller API"
 msgstr ""
 
 # 04274617e9c64eaaadc9aa536e81759f
-#: ../../source/changelog.rst:1102
+#: ../../source/changelog.rst:1115
 msgid ""
 "Controller interface cleaning up, setting a controller on a robot now "
 "requires the degrees of freedom that the controller uses to be specified. "
@@ -2800,14 +2833,14 @@ msgid ""
 msgstr ""
 
 # dc48a6872db74f2ebd7d45d34eff6d6a
-#: ../../source/changelog.rst:1104
+#: ../../source/changelog.rst:1117
 msgid ""
 "Added a MultiController class to simplify setting multiple controllers per "
 "robot. A C++ example is shown in the ormulticontrol C++ demo:"
 msgstr ""
 
 # cce8556304f649009b462483fbbe9823
-#: ../../source/changelog.rst:1106
+#: ../../source/changelog.rst:1119
 msgid ""
 "http://openrave.programmingvision.com/ordocs/en/html/ormulticontrol_8cpp-"
 "example.html"
@@ -2815,12 +2848,12 @@ msgstr ""
 
 # 33f073ec880846f7af85f449e9ca809b
 # c7ebf78a2bf6470e8137800524d35d7f
-#: ../../source/changelog.rst:1109 ../../source/changelog.rst:1235
+#: ../../source/changelog.rst:1122 ../../source/changelog.rst:1248
 msgid "ikfast"
 msgstr ""
 
 # 523be02adbbd41aab6cc4d03af82407d
-#: ../../source/changelog.rst:1111
+#: ../../source/changelog.rst:1124
 msgid ""
 "ikfast can solve more complex kinematics requiring conic section "
 "intersections or 6th degree polynomial solutions. solving equations is now "
@@ -2828,61 +2861,61 @@ msgid ""
 msgstr ""
 
 # a63da5ab528e4747913eba73de85931b
-#: ../../source/changelog.rst:1113
+#: ../../source/changelog.rst:1126
 msgid "ikfast supports a new lookat type."
 msgstr ""
 
 # 374a95ef8f2341e7ad57435177fb7629
-#: ../../source/changelog.rst:1115
+#: ../../source/changelog.rst:1128
 msgid "PR2 IK is pre-generated."
 msgstr ""
 
 # c86a009efbd8493c820dc331c9c200a9
-#: ../../source/changelog.rst:1120
+#: ../../source/changelog.rst:1133
 msgid ""
 "Added many new sensor types (Odometry/Tactle) and exporting them through the "
 "python interface."
 msgstr ""
 
 # bf0895125b644b388a738333dc86368f
-#: ../../source/changelog.rst:1122
+#: ../../source/changelog.rst:1135
 msgid "One sensor can support multiple sensor data (ie Odometry+Tactile+IMU)."
 msgstr ""
 
 # 39d19bdfd9db43d3a55ad6c1042ddb96
-#: ../../source/changelog.rst:1125
+#: ../../source/changelog.rst:1138
 msgid "Other"
 msgstr ""
 
 # efa59e55d7a049f1b96eacd97ee4d9c1
-#: ../../source/changelog.rst:1127
+#: ../../source/changelog.rst:1140
 msgid "Viewer graph handles allow changing transformation and showing/hiding."
 msgstr ""
 
 # 463a81701b5e471eb0c81e6e6d57cd5c
-#: ../../source/changelog.rst:1129
+#: ../../source/changelog.rst:1142
 msgid ""
 "Major upgrades on collada reader extending robot-specific information (more "
 "on this in a future email once writer is done)."
 msgstr ""
 
 # be8f335982bd4762b80a71091820bc18
-#: ../../source/changelog.rst:1132
+#: ../../source/changelog.rst:1145
 msgid "Version 0.2.13"
 msgstr ""
 
 # dbc2c04033cc4cffafd980cc19a97fbc
-#: ../../source/changelog.rst:1134
+#: ../../source/changelog.rst:1147
 msgid "Subversion Revision: r1756"
 msgstr ""
 
 # 298c678fd01640ffaaee0fdeaf6b4208
-#: ../../source/changelog.rst:1136
+#: ../../source/changelog.rst:1149
 msgid "Initial Release: 2010/10/04"
 msgstr ""
 
 # 3b145bda15d2419cb260e18e41c7443c
-#: ../../source/changelog.rst:1141
+#: ../../source/changelog.rst:1154
 msgid ""
 "Separates the global OpenRAVE state from the environment state. The main "
 "reason for this move was for better management of multiple environments and "
@@ -2891,34 +2924,34 @@ msgid ""
 msgstr ""
 
 # afa7d8b6eb9a4a8e9f857756451ace5a
-#: ../../source/changelog.rst:1143
+#: ../../source/changelog.rst:1156
 msgid "More specifically, the new global state"
 msgstr ""
 
 # 91715d74428f4aabbb9538d8a1fbbc28
-#: ../../source/changelog.rst:1145
+#: ../../source/changelog.rst:1158
 msgid "manages plugins/interfaces"
 msgstr ""
 
 # c2320b32d6af4fa6a51dee4965b6242e
-#: ../../source/changelog.rst:1147
+#: ../../source/changelog.rst:1160
 msgid "allows users to better manage multiple environments"
 msgstr ""
 
 # 2d16dc244c9b4963bfa9cce81ede48b6
-#: ../../source/changelog.rst:1149
+#: ../../source/changelog.rst:1162
 msgid "manages debug levels"
 msgstr ""
 
 # a9ece35cac7d47419ec6e5c8dd8a9b41
-#: ../../source/changelog.rst:1151
+#: ../../source/changelog.rst:1164
 msgid ""
 "fixes many race conditions by organizing destruction order of all global "
 "resources."
 msgstr ""
 
 # 9f31547cfdcf47d2b797622538d67c5d
-#: ../../source/changelog.rst:1153
+#: ../../source/changelog.rst:1166
 msgid ""
 "allows destruction of entire OpenRAVE state and all resources using a single "
 "call: RaveDestroy. These changes fix all thrown exceptions when a program "
@@ -2926,55 +2959,55 @@ msgid ""
 msgstr ""
 
 # cc439a765839439eace4af5ed2780b8c
-#: ../../source/changelog.rst:1155
+#: ../../source/changelog.rst:1168
 msgid ""
 "OpenRAVE is initialized by first calling RaveInitialize, independent of the "
 "environment."
 msgstr ""
 
 # 9380844823e241bbafc5dd798ac99f42
-#: ../../source/changelog.rst:1157
+#: ../../source/changelog.rst:1170
 msgid "All the global functions are prefixed with Rave*."
 msgstr ""
 
 # 6dd0e7f242b041b189e932c95c3e9640
-#: ../../source/changelog.rst:1160
+#: ../../source/changelog.rst:1173
 msgid "Version 0.2.12"
 msgstr ""
 
 # 2327f0178eda4ce6835f269c45e7f24b
-#: ../../source/changelog.rst:1162
+#: ../../source/changelog.rst:1175
 msgid "Subversion Revision: r1736"
 msgstr ""
 
 # 5992922d227244dfae7a0ebd91ded450
-#: ../../source/changelog.rst:1164
+#: ../../source/changelog.rst:1177
 msgid "Initial Release: 2010/09/16"
 msgstr ""
 
 # 5fb0abc4e52f46f8b536b21a02a76b41
-#: ../../source/changelog.rst:1169
+#: ../../source/changelog.rst:1182
 msgid ""
 "Destruction order has been cleaned up. Before, openrave would freeze up when "
 "locking the environment in a Destroy method, now it doesn't."
 msgstr ""
 
 # b32e2c3c73b14d329c186c0939f608bf
-#: ../../source/changelog.rst:1171
+#: ../../source/changelog.rst:1184
 msgid ""
 "RemoveKinBody/RemoveProblem/RemoveSensor are all handled now by one :meth:`."
 "Environment.Remove`"
 msgstr ""
 
 # c37b1c7169ec402ca7dc93520d95b7d6
-#: ../../source/changelog.rst:1176
+#: ../../source/changelog.rst:1189
 msgid ""
 "A sensor can be added into the environment without a robot using :meth:`."
 "Enviornment.AddSensor`"
 msgstr ""
 
 # 43f77b2eef8e4fbdaf54bf3553eefbfd
-#: ../../source/changelog.rst:1178
+#: ../../source/changelog.rst:1191
 msgid ""
 "All the sensors in the environment can be queried using Environment."
 "GetSensors, this returns all sensors attached to all the robots and all the "
@@ -2983,7 +3016,7 @@ msgid ""
 msgstr ""
 
 # b2f0a33103b841e1b266ab359cc005e0
-#: ../../source/changelog.rst:1182
+#: ../../source/changelog.rst:1195
 msgid ""
 "Can now store sensor parameters in side \\*.sensor.xml files and include "
 "them from a parent xml file using the file=\"...\" attribute. This applies "
@@ -2992,12 +3025,12 @@ msgid ""
 msgstr ""
 
 # b3f3cbcde2c84367898f3730e397132a
-#: ../../source/changelog.rst:1185
+#: ../../source/changelog.rst:1198
 msgid "Added IMU sensor definitions"
 msgstr ""
 
 # 80acfbe791624b2d945e09ad83ffc616
-#: ../../source/changelog.rst:1187
+#: ../../source/changelog.rst:1200
 msgid ""
 "Cloning treats sensors separately now. In order to clone sensors (robot"
 "+environment), the Clone_Sensors option has to be specified. The definitions "
@@ -3006,32 +3039,32 @@ msgid ""
 msgstr ""
 
 # d63a7f204c5043ffb34d21b9e86ef92c
-#: ../../source/changelog.rst:1190
+#: ../../source/changelog.rst:1203
 msgid "Version 0.2.11"
 msgstr ""
 
 # c52dd4ecb35640ec97b1de6d3ce95958
-#: ../../source/changelog.rst:1192
+#: ../../source/changelog.rst:1205
 msgid "Subversion Revision: r1689"
 msgstr ""
 
 # 879a8e060c3b4ed9a2e8a32d4287871c
-#: ../../source/changelog.rst:1194
+#: ../../source/changelog.rst:1207
 msgid "Initial Release: 2010/07/30"
 msgstr ""
 
 # 78b7dfa6fed3467cae3cf2a57f4fe8b2
-#: ../../source/changelog.rst:1199
+#: ../../source/changelog.rst:1212
 msgid "Every interface now has a :meth:`.InterfaceBase.SendCommand` function"
 msgstr ""
 
 # fc18deb44dae4ad8bd3e71e91232782a
-#: ../../source/changelog.rst:1202
+#: ../../source/changelog.rst:1215
 msgid "Robot"
 msgstr ""
 
 # 5e9e32343c21422e995c7292f7adf4d6
-#: ../../source/changelog.rst:1204
+#: ../../source/changelog.rst:1217
 msgid ""
 "iksolver methods in manipulator class were cleaned up. It is now possible to "
 "get the pointer using ManipulatorBase::GetIkSolver. and then do "
@@ -3039,59 +3072,59 @@ msgid ""
 msgstr ""
 
 # df565f0e017841a4865632d4f2a7eaac
-#: ../../source/changelog.rst:1207
+#: ../../source/changelog.rst:1220
 msgid "Version 0.2.9"
 msgstr ""
 
 # 4a0b8704581146bb9fed6bc9f8d9f623
-#: ../../source/changelog.rst:1209
+#: ../../source/changelog.rst:1222
 msgid "Subversion Revision: r1648"
 msgstr ""
 
 # c2785e39384e40f3a0ef4ef6e2a0eb05
-#: ../../source/changelog.rst:1211
+#: ../../source/changelog.rst:1224
 msgid "Initial Release: 2010/07/23"
 msgstr ""
 
 # eca2a87929bd4a588381841bb8b37e15
-#: ../../source/changelog.rst:1216
+#: ../../source/changelog.rst:1229
 msgid ""
 "Cleans up a lot of the interfaces and puts in a consistent documentation "
 "system for plugin authors."
 msgstr ""
 
 # b23817fafbbf441491f4c0631a90aa24
-#: ../../source/changelog.rst:1218
+#: ../../source/changelog.rst:1231
 msgid ""
 "There is now a rave/plugin.h file that helps plugin authors export "
 "interfaces much simpler."
 msgstr ""
 
 # b417aceffa664f089ecdd173f599a86a
-#: ../../source/changelog.rst:1220
+#: ../../source/changelog.rst:1233
 msgid ""
 "Plugin loading at start-up is now 2x+ faster. Users do not have to worry "
 "about having too many plugins in openrave."
 msgstr ""
 
 # 0d1cd8a86e9d4b6d8ffdc13ae10b2544
-#: ../../source/changelog.rst:1222
+#: ../../source/changelog.rst:1235
 msgid "All interfaces (not just problems) now have a RegisterCommand function."
 msgstr ""
 
 # ebde421b200645a7b41c374492a87cd1
-#: ../../source/changelog.rst:1227
+#: ../../source/changelog.rst:1240
 msgid ""
 "A lot of bug fixes on camera visibility planning (VisualFeedback problem)"
 msgstr ""
 
 # 2d0bae6f679443f89f3497be2f37f3d4
-#: ../../source/changelog.rst:1230
+#: ../../source/changelog.rst:1243
 msgid "Kinematics"
 msgstr ""
 
 # ebb2a4a513fd4b40ad547585cae9995a
-#: ../../source/changelog.rst:1232
+#: ../../source/changelog.rst:1245
 msgid ""
 "Moved methods like GetJointXXX to GetDOFXXX. With some joints having "
 "multiple degrees of freedom, the joint indices are not necessarily equal to "
@@ -3099,14 +3132,14 @@ msgid ""
 msgstr ""
 
 # 1c63ac280cd547fb946ba630d732c067
-#: ../../source/changelog.rst:1237
+#: ../../source/changelog.rst:1250
 msgid ""
 "IKFast has been greatly improved, the ray inverse kinematics is also working "
 "nicely"
 msgstr ""
 
 # eccbe43c00f948b483a1aad5d99fb894
-#: ../../source/changelog.rst:1239
+#: ../../source/changelog.rst:1252
 msgid ""
 "It is now possible to use the inversekinematics.py database generator "
 "through the ikfast problem instance using :ref:`module-ikfast-"

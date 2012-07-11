@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-28 18:10\n"
+"POT-Creation-Date: 2012-07-11 21:29\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -51,64 +51,25 @@ msgstr ""
 msgid "File Formats"
 msgstr ""
 
-# 9da47dd667504449b8941c10d244864f
-#: ../../source/robots_overview.rst:21
-msgid "COLLADA"
-msgstr ""
-
-# f407c2d7d6bc489099174494a7444578
-#: ../../source/robots_overview.rst:23
-msgid ""
-"OpenRAVE fully supports the COLLADA file format for specifying robots and "
-"adds its own set of robot-specific extensions. The robot extensions include:"
-msgstr ""
-
-# 37b67f0b776b4d18a32b66537a817668
-#: ../../source/robots_overview.rst:25
-msgid "manipulators"
-msgstr ""
-
-# aa27f160b1bd4a939123b500fedaee32
-#: ../../source/robots_overview.rst:26
-msgid "sensors"
-msgstr ""
-
-# 9d2fda579b8247ecb6e274390d878d9c
-#: ../../source/robots_overview.rst:27
-msgid "planning-specific parameters"
-msgstr ""
-
-# a112e82025304919852e448e200365c2
-#: ../../source/robots_overview.rst:29
-msgid ""
-"`COLLADA Robot Extensions <http://openrave.programmingvision.com/wiki/index."
-"php/Format:COLLADA>`_ (\\*.dae, \\*.zae)"
-msgstr ""
-
-# 91fd96e1ea324bc0b161be72962b8732
-#: ../../source/robots_overview.rst:31
-msgid ""
-"Robots are standardized with the COLLADA 1.5 file format. OpenRAVE defines "
-"these for storing information like manipulators, sensors, and collision "
-"data. COLLADA files saved as **dae** store the raw XML, files stored as "
-"**zae** stored the compressed XML. In order to preserve space, all robots in "
-"OpenRAVE are stored as **zae**."
+# 8b17b2de763440cb8308213fc484a5c1
+#: ../../source/robots_overview.rst:20
+msgid ":ref:`collada_robot_extensions` - (\\*.dae, \\*.zae)"
 msgstr ""
 
 # 4c49dc330b384dd9af4e684f15ab0f08
-#: ../../source/robots_overview.rst:34
+#: ../../source/robots_overview.rst:23
 msgid "OpenRAVE XML"
 msgstr ""
 
 # c87bf8c5f0a246f285f58a1fc48a0587
-#: ../../source/robots_overview.rst:36
+#: ../../source/robots_overview.rst:25
 msgid ""
 "`OpenRAVE XML <http://openrave.programmingvision.com/wiki/index.php/Format:"
 "XML>`_ (\\*.xml)"
 msgstr ""
 
 # 5f64387f24fc4cf6979450efcb9fe9cb
-#: ../../source/robots_overview.rst:38
+#: ../../source/robots_overview.rst:27
 msgid ""
 "Because COLLADA can be a little difficult to edit by hand, OpenRAVE also "
 "defines its own format to help users quickly get robots into the "

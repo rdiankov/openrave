@@ -69,6 +69,8 @@ Viewer
 
 * Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
 
+* Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project.
+
 Misc
 ----
 
@@ -83,6 +85,8 @@ Misc
 * Support doc internationalization using sphinx 1.1
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
+
+* collada stores joint **circular** property
 
 Version 0.6.6
 =============

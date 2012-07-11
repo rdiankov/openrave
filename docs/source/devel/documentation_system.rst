@@ -15,7 +15,7 @@ Installation
 
   apt-get remove python-sphinx
   apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng dia-common python-svn
-  sudo pip install --upgrade docutils sphinx sphinx-gettext-helper
+  pip install --upgrade docutils sphinx sphinx-gettext-helper
 
 `doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ version 1.7.1 or later is required.
 

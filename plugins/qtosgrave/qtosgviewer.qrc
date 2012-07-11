@@ -1,0 +1,23 @@
+<RCC>
+    <qresource prefix="/" >
+        <file>images/Import.png</file>
+        <file>images/save.png</file>
+        <file>images/smooth.png</file>
+        <file>images/flat.png</file>
+        <file>images/hand.png</file>
+        <file>images/house.png</file>
+        <file>images/lighton.png</file>
+        <file>images/lightoff.png</file>
+        <file>images/open.png</file>
+        <file>images/pause.png</file>
+        <file>images/play.png</file>
+        <file>images/pointer.png</file>
+        <file>images/wire.png</file>
+        <file>images/stop.png</file>
+        <file>images/faces.png</file>
+        <file>images/bbox.png</file>
+        <file>images/axes.png</file>
+        <file>images/shadow.png</file>
+        <file>images/no_edit.png</file>
+    </qresource>
+</RCC>

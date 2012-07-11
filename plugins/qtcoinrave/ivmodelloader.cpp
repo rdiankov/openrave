@@ -50,7 +50,6 @@ public:
         boost::trim(filename);
 
         boost::mutex::scoped_lock lock(g_mutexsoqt);
-        SoDBWriteLock dblock;
         if(!SoDB::isInitialized()) {
             SoDB::init();
         }
