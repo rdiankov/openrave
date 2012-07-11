@@ -267,6 +267,7 @@ inline T NormalizeCircularAngle(T theta, T min, T max)
 {
     if (theta < min) {
         T range = max-min;
+        OPENRAVE_ASSERT_OP(range,>,0);
         theta += range;
         while (theta < min) {
             theta += range;
@@ -274,6 +275,7 @@ inline T NormalizeCircularAngle(T theta, T min, T max)
     }
     else if (theta > max) {
         T range = max-min;
+        OPENRAVE_ASSERT_OP(range,>,0);
         theta -= range;
         while (theta > max) {
             theta -= range;
