@@ -47,7 +47,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             // have to lock after initialized since call relies on SoDBP::globalmutex
             boost::mutex::scoped_lock lock(g_mutexsoqt);
             EnsureSoQtInit();
-            SoDBWriteLock dblock;
+            //SoDBWriteLock dblock;
             return InterfaceBasePtr(new QtCoinViewer(penv));
         }
         else if( interfacename == "qtcameraviewer" ) {

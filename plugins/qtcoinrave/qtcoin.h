@@ -210,35 +210,6 @@ public:
     boost::function<void()> _fn;
 };
 
-
-class SoDBReadLock
-{
-public:
-    SoDBReadLock() {
-        if(!SoDB::isInitialized()) {
-            SoDB::init();
-        }
-        SoDB::readlock();
-    }
-    virtual ~SoDBReadLock() {
-        SoDB::readunlock();
-    }
-};
-
-class SoDBWriteLock
-{
-public:
-    SoDBWriteLock() {
-        if(!SoDB::isInitialized()) {
-            SoDB::init();
-        }
-        SoDB::writelock();
-    }
-    virtual ~SoDBWriteLock() {
-        SoDB::writeunlock();
-    }
-};
-
 #include "item.h"
 #include "ivselector.h"
 #include "qtcoinviewer.h"
