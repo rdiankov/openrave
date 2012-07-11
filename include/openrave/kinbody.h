@@ -773,6 +773,7 @@ protected:
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
         boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
         boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
+        boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
         /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
         ///
         /// In every array, [0] is position, [1] is velocity, [2] is acceleration.

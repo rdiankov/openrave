@@ -77,13 +77,10 @@ Planner Parameters\n\
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
-                    dReal diff = RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j));
                     // this is necessary in case robot's have limits like [-100,100] for revolute joints (pa10 arm)
                     int dofindex = _manip->GetArmIndices().at(j);
                     KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(dofindex);
-                    if( pjoint->IsCircular(dofindex-pjoint->GetDOFIndex()) ) {
-                        diff = utils::NormalizeCircularAngle(diff,-PI,PI);
-                    }
+                    dReal diff = RaveFabs(pjoint->SubtractValue(dummyvalues.at(j), testvalues[i]->at(j), dofindex-pjoint->GetDOFIndex()));
                     if( diff > g_fEpsilonLinear ) {
                         RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
                         return false;
