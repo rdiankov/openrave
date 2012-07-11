@@ -76,5 +76,5 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCE
   set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PLUGIN-QTOSGRAVE_DISPLAY_NAME "Plugin for a Qt/OpenSceneGraph viewer" PARENT_SCOPE)
   set(PLUGIN_COMPONENT ${COMPONENT_PREFIX}plugin-qtosgrave PARENT_SCOPE)
 else()
-    message(SEND_ERROR "ERROR: Could not find OpenSceneGraph v3+. Please install OSG (http://www.openscenegraph.org/projects/osg)")
+    message(STATUS "Could not find OpenSceneGraph v3+. Please install OSG (http://www.openscenegraph.org/projects/osg)")
 endif()
