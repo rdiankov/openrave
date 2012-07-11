@@ -533,6 +533,11 @@ public:
             return _type;
         }
 
+        /// \brief gets all resolutions for the joint axes
+        ///
+        /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
+        virtual void GetResolutions(std::vector<dReal>& resolutions, bool bAppend=false) const;
+
         /// \brief The discretization of the joint used when line-collision checking.
         ///
         /// The resolutions are set as large as possible such that the joint will not go through obstacles of determined size.
@@ -647,8 +652,14 @@ public:
         /// \brief \see GetTorqueLimits
         virtual void SetTorqueLimits(const std::vector<dReal>& vmax);
 
+        /// \brief gets all weights for the joint axes
+        ///
+        /// \param[in] bAppend if true will append to the end of the vector instead of erasing it
+        virtual void GetWeights(std::vector<dReal>& weights, bool bAppend=false) const;
+
         /// \brief The weight associated with a joint's axis for computing a distance in the robot configuration space.
         virtual dReal GetWeight(int axis=0) const;
+
         /// \brief \see GetWeight
         virtual void SetWeights(const std::vector<dReal>& weights);
 
@@ -831,7 +842,7 @@ protected:
         virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
         std::string _name;         ///< \see GetName
-        boost::array<bool,3> _bIsCircular;            ///< \see IsCircular
+        boost::array<uint8_t,3> _bIsCircular;            ///< \see IsCircular
         boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
 
 private:

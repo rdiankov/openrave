@@ -14,6 +14,7 @@ Contents
    install
    getting_started
    plugin_interfaces
+   robots_overview
    ikfast/robots
    databases
    examples

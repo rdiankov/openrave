@@ -429,12 +429,6 @@ public:
             _pjoint->GetTorqueLimits(v);
             return toPyArray(v);
         }
-        object GetWeights() const {
-            vector<dReal> weights(_pjoint->GetDOF());
-            for(size_t i = 0; i < weights.size(); ++i)
-                weights[i] = _pjoint->GetWeight(i);
-            return toPyArray(weights);
-        }
 
         dReal GetWrapOffset(int iaxis=0) {
             return _pjoint->GetWrapOffset(iaxis);
@@ -471,8 +465,26 @@ public:
             }
             _pjoint->SetTorqueLimits(vmaxlimits);
         }
+
+        object GetResolutions() const {
+            vector<dReal> resolutions;
+            _pjoint->GetResolutions(resolutions);
+            return toPyArray(resolutions);
+        }
+        dReal GetResolution(int iaxis) {
+            return _pjoint->GetResolution(iaxis);
+        }
         void SetResolution(dReal resolution) {
             _pjoint->SetResolution(resolution);
+        }
+
+        object GetWeights() const {
+            vector<dReal> weights;
+            _pjoint->GetWeights(weights);
+            return toPyArray(weights);
+        }
+        dReal GetWeight(int iaxis) {
+            return _pjoint->GetWeight(iaxis);
         }
         void SetWeights(object o) {
             _pjoint->SetWeights(ExtractArray<dReal>(o));
@@ -3008,14 +3020,17 @@ void init_openravepy_kinbody()
                           .def("GetVelocityLimits", &PyKinBody::PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                           .def("GetAccelerationLimits", &PyKinBody::PyJoint::GetAccelerationLimits, DOXY_FN(KinBody::Joint,GetAccelerationLimits))
                           .def("GetTorqueLimits", &PyKinBody::PyJoint::GetTorqueLimits, DOXY_FN(KinBody::Joint,GetTorqueLimits))
-                          .def("GetWeights", &PyKinBody::PyJoint::GetWeights, DOXY_FN(KinBody::Joint,GetWeight))
                           .def("SetWrapOffset",&PyKinBody::PyJoint::SetWrapOffset,SetWrapOffset_overloads(args("offset","axis"), DOXY_FN(KinBody::Joint,SetWrapOffset)))
                           .def("GetWrapOffset",&PyKinBody::PyJoint::GetWrapOffset,GetWrapOffset_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetWrapOffset)))
                           .def("SetLimits",&PyKinBody::PyJoint::SetLimits,args("lower","upper"), DOXY_FN(KinBody::Joint,SetLimits))
                           .def("SetVelocityLimits",&PyKinBody::PyJoint::SetVelocityLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetVelocityLimits))
                           .def("SetAccelerationLimits",&PyKinBody::PyJoint::SetAccelerationLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetAccelerationLimits))
                           .def("SetTorqueLimits",&PyKinBody::PyJoint::SetTorqueLimits,args("maxlimits"), DOXY_FN(KinBody::Joint,SetTorqueLimits))
+                          .def("GetResolution",&PyKinBody::PyJoint::GetResolution,args("axis"), DOXY_FN(KinBody::Joint,GetResolution))
+                          .def("GetResolutions",&PyKinBody::PyJoint::GetResolutions,DOXY_FN(KinBody::Joint,GetResolutions))
                           .def("SetResolution",&PyKinBody::PyJoint::SetResolution,args("resolution"), DOXY_FN(KinBody::Joint,SetResolution))
+                          .def("GetWeight",&PyKinBody::PyJoint::GetWeight,args("axis"), DOXY_FN(KinBody::Joint,GetWeight))
+                          .def("GetWeights",&PyKinBody::PyJoint::GetWeights,DOXY_FN(KinBody::Joint,GetWeights))
                           .def("SetWeights",&PyKinBody::PyJoint::SetWeights,args("weights"), DOXY_FN(KinBody::Joint,SetWeights))
                           .def("SubtractValues",&PyKinBody::PyJoint::SubtractValues,args("values0","values1"), DOXY_FN(KinBody::Joint,SubtractValues))
                           .def("SubtractValue",&PyKinBody::PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))

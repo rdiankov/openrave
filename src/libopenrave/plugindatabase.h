@@ -464,7 +464,7 @@ protected:
             switch(type) {
             case PT_KinBody: {
                 pointer.reset(new KinBody(PT_KinBody,penv));
-                pointer->__strxmlid = "KinBody";
+                pointer->__strxmlid = ""; // don't set to KinBody since there's no officially registered interface
                 break;
             }
             case PT_PhysicsEngine: name = "GenericPhysicsEngine"; break;

@@ -86,6 +86,8 @@ Misc
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
+* collada stores joint **circular** property
+
 Version 0.6.6
 =============
 

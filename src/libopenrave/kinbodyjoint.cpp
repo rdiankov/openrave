@@ -808,11 +808,6 @@ void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
     GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
-dReal KinBody::Joint::GetWeight(int iaxis) const
-{
-    return _vweights.at(iaxis);
-}
-
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
 {
     if( _voffsets.at(iaxis) != newoffset ) {
@@ -843,10 +838,35 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
     }
 }
 
+void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppend) const
+{
+    if( !bAppend ) {
+        resolutions.resize(GetDOF());
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        resolutions.push_back(fResolution);
+    }
+}
+
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
     fResolution = resolution;
     GetParent()->_ParametersChanged(Prop_JointProperties);
+}
+
+void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
+{
+    if( !bAppend ) {
+        weights.resize(GetDOF());
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        weights.push_back(_vweights[i]);
+    }
+}
+
+dReal KinBody::Joint::GetWeight(int iaxis) const
+{
+    return _vweights.at(iaxis);
 }
 
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
@@ -862,7 +882,7 @@ void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dR
 {
     for(int i = 0; i < GetDOF(); ++i) {
         if( IsCircular(i) ) {
-            q1.at(i) = utils::SubtractCircularAngle(q1.at(i), q2.at(i));
+            q1.at(i) = utils::NormalizeCircularAngle(q1.at(i)-q2.at(i),_vlowerlimit.at(i),_vupperlimit.at(i));
         }
         else {
             q1.at(i) -= q2.at(i);
@@ -873,7 +893,7 @@ void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dR
 dReal KinBody::Joint::SubtractValue(dReal value1, dReal value2, int iaxis) const
 {
     if( IsCircular(iaxis) ) {
-        return utils::SubtractCircularAngle(value1, value2);
+        return utils::NormalizeCircularAngle(value1-value2,_vlowerlimit.at(iaxis),_vupperlimit.at(iaxis));
     }
     else {
         return value1-value2;
