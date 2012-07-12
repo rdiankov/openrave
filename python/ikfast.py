@@ -274,6 +274,7 @@ except ImportError:
     def isinf(x): return _isinf(float(x))
     def isnan(x): return _isnan(float(x))
 
+from operator import itemgetter
 from itertools import izip
 try:
     from itertools import combinations, permutations
@@ -3442,7 +3443,7 @@ class IKFastSolver(AutoReloader):
         if len(allmonoms) < len(neweqs_full):
             # order with respect to complexity of [0], this is to make the inverse of A faster
             complexity = [(self.codeComplexity(peq[0].as_expr()),peq) for peq in neweqs_full]
-            complexity.sort()
+            complexity.sort(key=itemgetter(0))
             neweqs_full = [peq for c,peq in complexity]
             A = zeros((len(neweqs_full),len(allmonoms)))
             B = zeros((len(neweqs_full),1))
@@ -4055,7 +4056,10 @@ class IKFastSolver(AutoReloader):
                     subs = subsvals+getsubs(subsvals)
                 A = Mall[maxdegree].subs(subs).subs(self.globalsymbols).evalf()
                 eps = 10**-(self.precision-3)
-                eigenvals = numpy.linalg.eigvals(numpy.array(numpy.array(A),numpy.float64))
+                Anumpy = numpy.array(numpy.array(A), numpy.float64)
+                if numpy.isnan(numpy.sum(Anumpy)):
+                    break
+                eigenvals = numpy.linalg.eigvals(Anumpy)
                 if all([Abs(f) > eps for f in eigenvals]):
                     Ainv = A.inv(method='LU')
                     B = Ainv*Mall[1].subs(subs).evalf()
@@ -4702,7 +4706,7 @@ class IKFastSolver(AutoReloader):
             pass
 
         complexity = [(self.codeComplexity(peq.as_expr()),peq) for peq in polyeqs]
-        complexity.sort()
+        complexity.sort(key=itemgetter(0))
         polyeqs = [peq[1] for peq in complexity]
 
         solutions = [None,None]
@@ -4771,7 +4775,7 @@ class IKFastSolver(AutoReloader):
                             
                         # sort with respect to degree
                         equationdegrees = [(max(peq.degree_list())*100000+self.codeComplexity(peq.as_expr()),peq) for peq in possibilities]
-                        equationdegrees.sort()
+                        equationdegrees.sort(key=itemgetter(0))
                         solutions[ileftvar] = [peq[1] for peq in equationdegrees]
                         break
 
@@ -4892,7 +4896,7 @@ class IKFastSolver(AutoReloader):
         mindegree = __builtin__.min(nummonoms)
         maxdegree = min(__builtin__.max(nummonoms),len(polyeqs))
         complexity = [(self.codeComplexity(peq.as_expr()),peq) for peq in polyeqs]
-        complexity.sort()
+        complexity.sort(key=itemgetter(0))
         polyeqs = [peq[1] for peq in complexity]
         trigsubs = []
         trigsubsinv = []
