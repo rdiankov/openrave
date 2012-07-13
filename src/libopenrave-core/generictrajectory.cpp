@@ -341,8 +341,7 @@ public:
             O << *it << " ";
         }
         O << "</data>" << endl;
-        //O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
-        O << "<description>" << GetDescription() << "</description>" << endl;
+        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
         O << "</trajectory>" << endl;
     }
 

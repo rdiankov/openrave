@@ -19,6 +19,8 @@
 
 #include <openrave/planningutils.h>
 
+namespace openravepy {
+
 PyRay::PyRay(object newpos, object newdir)
 {
     r.pos = ExtractVector3(newpos);
@@ -292,13 +294,35 @@ public:
         return _spec.AddGroup(g);
     }
 
-//    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+    PyConfigurationSpecificationPtr ConvertToVelocitySpecification() const
+    {
+        return openravepy::toPyConfigurationSpecification(_spec.ConvertToVelocitySpecification());
+    }
+
+    PyConfigurationSpecificationPtr GetTimeDerivativeSpecification(int timederivative) const
+    {
+        return openravepy::toPyConfigurationSpecification(_spec.GetTimeDerivativeSpecification(timederivative));
+    }
+
+    object ExtractTransform(object otransform, object odata, PyKinBodyPtr pybody, int timederivative=0) const
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        Transform t;
+        if( otransform != object() ) {
+            t = openravepy::ExtractTransform(otransform);
+        }
+        if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
+            return openravepy::ReturnTransform(t);
+        }
+        return object();
+    }
+
 //
 //    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
 //
 //    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
 //
-    object ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative) const
+    object ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative=0) const
     {
         std::vector<int> vindices = ExtractArray<int>(oindices);
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
@@ -753,8 +777,6 @@ public:
     }
 };
 
-namespace openravepy {
-
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification &spec)
 {
     return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(spec));
@@ -785,6 +807,22 @@ struct spec_from_group
         data->convertible = storage;
     }
 };
+
+PyConfigurationSpecificationPtr pyRaveGetAffineConfigurationSpecification(int affinedofs,PyKinBodyPtr pybody=PyKinBodyPtr(), const std::string& interpolation="")
+{
+    return openravepy::toPyConfigurationSpecification(RaveGetAffineConfigurationSpecification(affinedofs,openravepy::GetKinBody(pybody), interpolation));
+}
+
+object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, object oActvAffineRotationAxis=object())
+{
+    Vector vActvAffineRotationAxis(0,0,1);
+    if( oActvAffineRotationAxis != object() ) {
+        vActvAffineRotationAxis = ExtractVector3(oActvAffineRotationAxis);
+    }
+    std::vector<dReal> values(RaveGetAffineDOF(affinedofs));
+    RaveGetAffineDOFValuesFromTransform(values.begin(),ExtractTransform(otransform), affinedofs, vActvAffineRotationAxis);
+    return toPyArray(values);
+}
 
 std::string openravepyCompilerVersion()
 {
@@ -1303,9 +1341,13 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils:
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineConfigurationSpecification_overloads, openravepy::pyRaveGetAffineConfigurationSpecification, 1, 3)
+BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineDOFValuesFromTransform_overloads, openravepy::pyRaveGetAffineDOFValuesFromTransform, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 
 void init_openravepy_global()
 {
@@ -1488,7 +1530,11 @@ void init_openravepy_global()
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
                                            .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))
-                                           .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues))
+                                           .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
+                                           .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
+
+                                           .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(args("transform","data","body","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractTransform)))
+                                           .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
@@ -1656,6 +1702,11 @@ void init_openravepy_global()
     def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
     def("RaveClone",openravepy::RaveClone,args("ref","cloningoptions"), DOXY_FN1(RaveClone));
     def("RaveGetIkTypeFromUniqueId",OpenRAVE::RaveGetIkTypeFromUniqueId,args("uniqueid"), DOXY_FN1(RaveGetIkTypeFromUniqueId));
+    def("RaveGetIndexFromAffineDOF",OpenRAVE::RaveGetIndexFromAffineDOF, args("affinedofs","dof"), DOXY_FN1(RaveGetIndexFromAffineDOF));
+    def("RaveGetAffineDOFFromIndex",OpenRAVE::RaveGetAffineDOFFromIndex, args("affinedofs","index"), DOXY_FN1(RaveGetAffineDOFFromIndex));
+    def("RaveGetAffineDOF",OpenRAVE::RaveGetAffineDOF, args("affinedofs"), DOXY_FN1(RaveGetAffineDOF));
+    def("RaveGetAffineDOFValuesFromTransform",openravepy::pyRaveGetAffineDOFValuesFromTransform, pyRaveGetAffineDOFValuesFromTransform_overloads(args("transform","affinedofs","rotationaxis"), DOXY_FN1(RaveGetAffineDOFValuesFromTransform)));
+    def("RaveGetAffineConfigurationSpecification",openravepy::pyRaveGetAffineConfigurationSpecification, pyRaveGetAffineConfigurationSpecification_overloads(args("affinedofs","body","interpolation"), DOXY_FN1(RaveGetAffineConfigurationSpecification)));
 
     def("raveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("raveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));

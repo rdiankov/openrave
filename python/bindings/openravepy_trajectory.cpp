@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
@@ -145,8 +147,6 @@ public:
         return _ptrajectory;
     }
 };
-
-namespace openravepy {
 
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr pytrajectory)
 {

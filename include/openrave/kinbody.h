@@ -486,6 +486,37 @@ public:
             JointUniversal = 0x80000001,
             JointHinge2 = 0x80000002,
             JointSpherical = 0x80000003,
+            JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
+        };
+
+        /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
+        ///
+        /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
+        struct OPENRAVE_API MIMIC
+        {
+            struct DOFFormat
+            {
+                int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
+                int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
+                uint8_t axis : 2;         ///< the axis of the joint index
+                bool operator <(const DOFFormat& r) const;
+                bool operator ==(const DOFFormat& r) const;
+                boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
+                boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
+            };
+            std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
+            struct DOFHierarchy
+            {
+                int16_t dofindex;         ///< >=0 dof index
+                uint16_t dofformatindex;         ///< index into _vdofformat to follow the computation
+                bool operator ==(const DOFHierarchy& r) const {
+                    return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
+                }
+            };
+            std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
+            OpenRAVEFunctionParserRealPtr _posfn;
+            std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
+            boost::array< std::string, 3>  _equations;         ///< the original equations
         };
 
         Joint(KinBodyPtr parent);
@@ -774,35 +805,8 @@ protected:
         boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
         boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
         boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
-        /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
-        ///
-        /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-        struct OPENRAVE_API MIMIC
-        {
-            struct DOFFormat
-            {
-                int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
-                int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
-                uint8_t axis : 2;         ///< the axis of the joint index
-                bool operator <(const DOFFormat& r) const;
-                bool operator ==(const DOFFormat& r) const;
-                boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
-                boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
-            };
-            std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
-            struct DOFHierarchy
-            {
-                int16_t dofindex;         ///< >=0 dof index
-                uint16_t dofformatindex;         ///< index into _vdofformat to follow the computation
-                bool operator ==(const DOFHierarchy& r) const {
-                    return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
-                }
-            };
-            std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
-            OpenRAVEFunctionParserRealPtr _posfn;
-            std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
-            boost::array< std::string, 3>  _equations;         ///< the original equations
-        };
+        TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
+
         boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
         /** \brief computes the partial velocities with respect to all dependent DOFs specified by MIMIC::_vmimicdofs.

@@ -36,6 +36,8 @@ DECLARE_DTYPE_FOR( uint64_t, "uint64" )
 
 }
 
+namespace openravepy {
+
 // namespace impl
 template< typename MultiArrayType >
 struct numpy_multi_array_converter
@@ -225,4 +227,6 @@ void init_python_bindings()
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;
+}
+
 }

@@ -1475,19 +1475,19 @@ public:
                 _pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%strmimicjoint%a);
                 _pjoint->_vmimic[0]->_equations[2] = str(boost::format("|%s %f")%strmimicjoint%a);
             }
-            else if((itatt->first.size() >= 9)&&(itatt->first.substr(0,9) == "mimic_pos")) {
+            else if( itatt->first.size() >= 9&&itatt->first.substr(0,9) == "mimic_pos") {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }
                 _pjoint->_vmimic[0]->_equations[0] = itatt->second;
             }
-            else if((itatt->first.size() >= 9)&&(itatt->first.substr(0,9) == "mimic_vel")) {
+            else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_vel") {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }
                 _pjoint->_vmimic[0]->_equations[1] = itatt->second;
             }
-            else if((itatt->first.size() >= 11)&&(itatt->first.substr(0,11) == "mimic_accel")) {
+            else if( itatt->first.size() >= 11 && itatt->first.substr(0,11) == "mimic_accel") {
                 if( !_pjoint->_vmimic[0] ) {
                     _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
                 }

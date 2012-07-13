@@ -1072,15 +1072,17 @@ protected:
         Looks for 'affine_transform' groups. If pbody is not initialized, will choose the first affine_transform found.
         \param[inout] t the transform holding the default values, which will be overwritten with the new values.
         \param[in] itdata data in the format of this configuration specification.
+        \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative=0) const;
 
     /** \brief extracts an ikparameterization given the start of a configuration space point
 
         Looks for 'ikparam' groups.
         \param[inout] ikparam filled with ikparameterization (if found)
         \param[in] itdata data in the format of this configuration specification
+        \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
     virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
@@ -2092,7 +2094,7 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
  */
 OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
 
-OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr());
+OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
 }
 

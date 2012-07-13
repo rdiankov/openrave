@@ -556,6 +556,7 @@ class TestTrajectory(EnvironmentSetup):
             assert( transdist(originalvalues, robot.GetConfigurationValues()) <= g_epsilon)
 
     def test_worktraj(self):
+        self.log.debug('test workspace trajerctory with ikparameterization')
         env=self.env
         maxvelocities = array([ 0.62831853,  0.62831853,  0.62831853,  0.62831853,  0.3259    , 0.3259    ,  0.3259    ])
         maxaccelerations = array([ 4.24811395,  4.24811395,  4.24811395,  4.24811395,  2.2036    ,    2.2036    ,  2.2036    ])
@@ -570,3 +571,43 @@ class TestTrajectory(EnvironmentSetup):
         traj.Insert(1,ikparam1.GetValues())
         planningutils.RetimeAffineTrajectory(traj,maxvelocities,maxaccelerations,hastimestamps=False,plannername='ParabolicTrajectoryRetimer',plannerparameters='<multidofinterp>2</multidofinterp>')
         assert(abs(traj.GetDuration()-0.45473694444377921) <= g_epsilon)
+
+    def test_affinetraj(self):
+        self.log.debug('test workspace trajerctory with affine transform')
+        T=eye(4)
+        extents=array([2.0,0,0.1])
+        spec=RaveGetAffineConfigurationSpecification(DOFAffine.Transform)
+        assert(spec==spec.GetTimeDerivativeSpecification(0))
+        traj = RaveCreateTrajectory(env,'')
+        traj.Init(spec)
+        originaldir = array([extents[0],0,0])
+        poseglobal = poseFromMatrix(T)
+        for t in linspace(0,pi,100):
+            pos = array([0,0,extents[2]])
+            q=quatFromAxisAngle([0,t,0])
+            newpos = quatRotate(q,pos)
+            newpos[0] += extents[0]
+            localpose = r_[q,newpos]
+            pose = poseMult(poseglobal,localpose)
+            traj.Insert(traj.GetNumWaypoints(),RaveGetAffineDOFValuesFromTransform(pose,DOFAffine.Transform))
+        for t in linspace(pi,0,100):
+            pos = array([0,0,extents[2]])
+            q=quatFromAxisAngle([0,-t,0])
+            newpos = quatRotate(q,pos)
+            newpos[0] -= extents[0]
+            localpose = r_[q,newpos]
+            pose = poseMult(poseglobal,localpose)
+            traj.Insert(traj.GetNumWaypoints(),RaveGetAffineDOFValuesFromTransform(pose,DOFAffine.Transform))
+        # add the first point as the last point in oder to complete the loop
+        traj.Insert(traj.GetNumWaypoints(),traj.GetWaypoint(0))
+        velocities = ones(spec.GetDOF())
+        quatindex = RaveGetIndexFromAffineDOF(DOFAffine.Transform,DOFAffine.RotationQuat)
+        velocities[quatindex:(quatindex+4)] = 100
+        planningutils.RetimeAffineTrajectory(traj,velocities,1e6*ones(spec.GetDOF()), False, 'LinearTrajectoryRetimer')
+        assert(abs(traj.GetDuration()-8.6282921678584152) <= g_epsilon)
+        sampledata=traj.Sample(1.5,spec)
+        assert(transdist(sampledata,array([  8.14146084e-01,   0.00000000e+00,  -1.00000000e-01, 6.12323400e-17,   0.00000000e+00,   4.07073042e-01, 0.00000000e+00])) <= g_epsilon)
+        velspec = spec.ConvertToVelocitySpecification()
+        sampledata=traj.Sample(1.5,velspec)
+        assert(transdist(sampledata, array([-1. ,  0. ,  0. ,  0. ,  0. , -0.5,  0. ])) <= g_epsilon)
+        

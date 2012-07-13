@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyModuleBase : public PyInterfaceBase
 {
 protected:
@@ -34,8 +36,6 @@ public:
         return _pmodule->SimulationStep(fElapsedTime);
     }
 };
-
-namespace openravepy {
 
 ModuleBasePtr GetModule(PyModuleBasePtr pymodule)
 {

@@ -1289,6 +1289,15 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                 }
                 break;
             }
+            case Joint::JointTrajectory: {
+                vector<dReal> vdata;
+                tjoint = Transform();
+                pjoint->_trajfollow->Sample(vdata,pvalues[0]);
+                if( !pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
+                    RAVELOG_WARN(str(boost::format("trajectory sampling for joint %s failed")%pjoint->GetName()));
+                }
+                pjoint->_dofbranches[0] = 0;
+            }
             default:
                 RAVELOG_WARN(str(boost::format("forward kinematic type 0x%x not supported")%pjoint->GetType()));
                 break;

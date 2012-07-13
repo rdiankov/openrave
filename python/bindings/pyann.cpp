@@ -33,6 +33,7 @@
 
 using namespace boost::python;
 using namespace std;
+using namespace openravepy;
 
 struct pyann_exception : std::exception
 {

@@ -106,7 +106,7 @@ def main(env,options):
         planner = RaveCreatePlanner(env,'workspacetrajectorytracker')
         params = Planner.PlannerParameters()
         params.SetRobotActiveJoints(robot)
-        params.SetExtraParameters('<workspacetraj><![CDATA[%s]]></workspacetraj>'%traj.serialize(0))
+        params.SetExtraParameters('<workspacetrajectory>%s</workspacetrajectory>'%traj.serialize(0))
         planner.InitPlan(robot,params)
         
         outputtraj = RaveCreateTrajectory(env,'')

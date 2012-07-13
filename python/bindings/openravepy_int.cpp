@@ -16,6 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openravepy_int.h"
 
+namespace openravepy
+{
+
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() {
@@ -1143,9 +1146,6 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 #endif
 }
 
-namespace openravepy
-{
-
 object GetUserData(UserDataPtr pdata)
 {
     boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(pdata);
@@ -1211,8 +1211,6 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
     return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
 }
 
-}
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
@@ -1237,8 +1235,11 @@ std::string get_openrave_exception_repr(openrave_exception* p)
     return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
 }
 
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
+    using namespace openravepy;
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
     doc_options.disable_cpp_signatures();

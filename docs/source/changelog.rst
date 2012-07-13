@@ -33,6 +33,10 @@ Core
 
 * Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties.GetCollisionMesh`.
 
+* Added **openrave/plannerparameters.h** to official OpenRAVE headers
+
+* Added new **JointTrajectory** joint type allowing a joint to transform a link in anyway imaginable.
+
 Inverse Kinematics
 ------------------
 
@@ -86,7 +90,7 @@ Misc
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
-* collada stores joint **circular** property
+* collada stores joint **circular**, **weight**, and **resolution** properties
 
 Version 0.6.6
 =============

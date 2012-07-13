@@ -17,7 +17,6 @@
 #define OPENRAVE_TRAJECTORY_RETIMER
 
 #include "plugindefs.h"
-#include "plannerparameters.h"
 
 class TrajectoryRetimer : public PlannerBase
 {

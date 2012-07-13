@@ -43,8 +43,9 @@ public:
 public:
         CollisionMapXMLReader(boost::shared_ptr<XMLData> cmdata, const AttributesList& atts) {
             _cmdata = cmdata;
-            if( !_cmdata )
+            if( !_cmdata ) {
                 _cmdata.reset(new XMLData());
+            }
         }
 
         virtual XMLReadablePtr GetReadable() {
@@ -76,7 +77,7 @@ public:
                         ss >> pair.jointnames[0] >> pair.jointnames[1];
                     }
                 }
-                RAVELOG_VERBOSE(str(boost::format("creating self-collision pair: %s %s\n")%pair.jointnames[0]%pair.jointnames[1]));
+                RAVELOG_VERBOSE(str(boost::format("creating self-collision pair: %s %s")%pair.jointnames[0]%pair.jointnames[1]));
                 return PE_Support;
             }
 
@@ -96,13 +97,16 @@ public:
                         pair.vfreespace[i][j] = freespace;
                     }
                 }
-                if( !_ss )
+                if( !_ss ) {
                     RAVELOG_WARN("failed to read collision pair values\n");
+                }
             }
-            else if( name == "collisionmap" )
+            else if( name == "collisionmap" ) {
                 return true;
-            else
-                RAVELOG_ERROR("unknown field %s\n", name.c_str());
+            }
+            else {
+                RAVELOG_ERROR(str(boost::format("unknown field %s")%name));
+            }
             return false;
         }
 
@@ -152,7 +156,7 @@ For joints J2xJ3, the index operation is::\n\n\
         _pController = controller;
         if( !!_pController ) {
             if( !_pController->Init(shared_robot(),jointindices,nControlTransformation) ) {
-                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s\n")%GetName()%controller->GetXMLId()));
+                RAVELOG_WARN(str(boost::format("GenericRobot %s: Failed to init controller %s")%GetName()%controller->GetXMLId()));
                 _pController.reset();
                 return false;
             }
@@ -183,10 +187,11 @@ For joints J2xJ3, the index operation is::\n\n\
                     itmap->fidelta.at(i) = (dReal)itmap->vfreespace.shape()[i]/(itmap->fmax.at(i)-itmap->fmin.at(i));
                     if( !pjoint ) {
                         itmap->jointindices.at(i) = -1;
-                        RAVELOG_WARN(str(boost::format("failed to find joint %s specified in collisionmap\n")%itmap->jointnames[i]));
+                        RAVELOG_WARN(str(boost::format("failed to find joint %s specified in collisionmap")%itmap->jointnames[i]));
                     }
-                    else
+                    else {
                         itmap->jointindices.at(i) = pjoint->GetJointIndex();
+                    }
                 }
             }
         }
@@ -194,9 +199,9 @@ For joints J2xJ3, the index operation is::\n\n\
 
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const
     {
-        if( RobotBase::CheckSelfCollision(report) )
+        if( RobotBase::CheckSelfCollision(report) ) {
             return true;
-
+        }
         // check if the current joint angles fall within the allowable range
         boost::shared_ptr<XMLData> cmdata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
         if( !!cmdata ) {
@@ -206,45 +211,54 @@ For joints J2xJ3, the index operation is::\n\n\
                 size_t i=0;
                 const XMLData::COLLISIONPAIR& curmap = *itmap;     // for debugging
                 FOREACHC(itjindex,curmap.jointindices) {
-                    if( *itjindex < 0 )
+                    if( *itjindex < 0 ) {
                         break;
+                    }
                     GetJoints().at(*itjindex)->GetValues(values);
                     if( curmap.fmin[i] < curmap.fmax[i] ) {
                         int index = (int)((values.at(0)-curmap.fmin[i])*curmap.fidelta[i]);
-                        if(( index < 0) ||( index >= (int)curmap.vfreespace.shape()[i]) )
+                        if( index < 0 || index >= (int)curmap.vfreespace.shape()[i] ) {
                             break;
+                        }
                         indices.at(i) = index;
                     }
                     ++i;
                 }
-                if( i != curmap.jointindices.size() )
+                if( i != curmap.jointindices.size() ) {
                     continue;
+                }
                 if( !curmap.vfreespace(indices) ) {
                     // get all colliding links and check to make sure that at least two are enabled
                     vector<LinkConstPtr> vLinkColliding;
                     FOREACHC(itjindex,curmap.jointindices) {
                         JointPtr pjoint = GetJoints().at(*itjindex);
-                        if( !!pjoint->GetFirstAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end()) )
+                        if( !!pjoint->GetFirstAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end()) ) {
                             vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetFirstAttached()));
-                        if( !!pjoint->GetSecondAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end()) )
+                        }
+                        if( !!pjoint->GetSecondAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end()) ) {
                             vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetSecondAttached()));
+                        }
                     }
                     int numenabled = 0;
                     FOREACHC(itlink,vLinkColliding) {
-                        if( (*itlink)->IsEnabled() )
+                        if( (*itlink)->IsEnabled() ) {
                             numenabled++;
+                        }
                     }
-                    if( numenabled < 2 )
+                    if( numenabled < 2 ) {
                         continue;
+                    }
                     if( !!report ) {
                         report->numCols = 1;
                         report->vLinkColliding = vLinkColliding;
-                        if( vLinkColliding.size() > 0 )
+                        if( vLinkColliding.size() > 0 ) {
                             report->plink1 = vLinkColliding.at(0);
-                        if( vLinkColliding.size() > 1 )
+                        }
+                        if( vLinkColliding.size() > 1 ) {
                             report->plink2 = vLinkColliding.at(1);
+                        }
                     }
-                    RAVELOG_VERBOSE(str(boost::format("Self collision: joints %s(%d):%s(%d)\n")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
+                    RAVELOG_VERBOSE(str(boost::format("Self collision: joints %s(%d):%s(%d)")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
                     return true;
                 }
             }

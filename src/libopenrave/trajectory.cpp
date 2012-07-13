@@ -15,80 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-#include <openrave/planningutils.h>
 #include <boost/lexical_cast.hpp>
+#include <openrave/planningutils.h>
 
 namespace OpenRAVE {
-
-TrajectoryReader::TrajectoryReader(TrajectoryBasePtr ptraj) : _ptraj(ptraj)
-{
-    _datacount = 0;
-}
-
-BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& name, const AttributesList& atts)
-{
-    _ss.str("");
-    if( !!_pcurreader ) {
-        if( _pcurreader->startElement(name, atts) == PE_Support ) {
-            return PE_Support;
-        }
-        return PE_Ignore;
-    }
-
-    if( name == "trajectory" ) {
-        return PE_Support;
-    }
-    if( name == "configuration" ) {
-        _pcurreader.reset(new ConfigurationSpecification::Reader(_spec));
-        return PE_Support;
-    }
-    else if( name == "data" ) {
-        _vdata.resize(0);
-        _datacount = 0;
-        FOREACHC(itatt,atts) {
-            if( itatt->first == "count" ) {
-                _datacount = boost::lexical_cast<int>(itatt->second);
-            }
-        }
-        return PE_Support;
-    }
-    else if( name == "description" ) {
-        return PE_Support;
-    }
-    return PE_Pass;
-}
-
-bool TrajectoryReader::endElement(const std::string& name)
-{
-    if( !!_pcurreader ) {
-        if( _pcurreader->endElement(name) ) {
-            _pcurreader.reset();
-            BOOST_ASSERT(_spec.IsValid());
-            _ptraj->Init(_spec);
-        }
-    }
-    else if( name == "data" ) {
-        _vdata.resize(_spec.GetDOF()*_datacount);
-        for(size_t i = 0; i < _vdata.size(); ++i) {
-            _ss >> _vdata[i];
-        }
-        BOOST_ASSERT(!!_ss);
-        _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
-    }
-    else if( name == "description" ) {
-        _ptraj->SetDescription(_ss.str());
-    }
-    else if( name == "trajectory" ) {
-        return true;
-    }
-    return false;
-}
-
-void TrajectoryReader::characters(const std::string& ch)
-{
-    _ss.clear();
-    _ss << ch;
-}
 
 TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Trajectory,penv)
 {
@@ -127,7 +57,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </trajectory> in %s",buf.str(),ORE_InvalidArguments);
     }
-    TrajectoryReader reader(shared_trajectory());
+    planningutils::TrajectoryReader reader(GetEnv(),shared_trajectory());
     LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
     return shared_from_this();
 }

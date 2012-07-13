@@ -134,6 +134,7 @@ int KinBody::Joint::GetDOF() const
         case JointHinge2:
         case JointUniversal: return 2;
         case JointSpherical: return 3;
+        case JointTrajectory: return 1;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
         }
@@ -345,6 +346,37 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 if((iaxis >= 0)&&(iaxis < 3)) {
                     return 0;
                 }
+            }
+            break;
+        }
+        case JointTrajectory: {
+            vector<dReal> vsampledata;
+            dReal splitpercentage = 0.01;
+            dReal precision(1e-6);
+            dReal timemin = 0, timemax = _trajfollow->GetDuration();
+            Transform tbest, ttest;
+            while(timemin+precision < timemax) {
+                dReal timestep = (timemax-timemin)*splitpercentage;
+                dReal timeclosest = timemin;
+                dReal bestdist = 1e30, besttime=0;
+                for(; timeclosest < timemax; timeclosest += timestep ) {
+                    if( timeclosest > timemax ) {
+                        timeclosest = timemax;
+                    }
+                    _trajfollow->Sample(vsampledata,timeclosest);
+                    if( _trajfollow->GetConfigurationSpecification().ExtractTransform(ttest,vsampledata.begin(),KinBodyConstPtr()) ) {
+                        dReal fdist = TransformDistanceFast(ttest,tjoint,0.3);
+                        if( bestdist > fdist ) {
+                            besttime = timeclosest;
+                            bestdist = fdist;
+                            tbest = ttest;
+                        }
+                    }
+                }
+                OPENRAVE_ASSERT_OP_FORMAT(bestdist, <, 1e30, "failed to compute trajectory value for joint %s\n",GetName(),ORE_Assert);
+                timemin = max(timemin,besttime-timestep);
+                timemax = min(timemax, besttime+timestep);
+                splitpercentage = 0.1f;
             }
             break;
         }
@@ -586,6 +618,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
+            break;
+        case JointTrajectory:
             break;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("unrecognized joint type 0x%x", _type, ORE_InvalidArguments);

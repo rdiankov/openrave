@@ -261,6 +261,33 @@ protected:
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
 
+/// \brief create a xml parser for trajectories
+class OPENRAVE_API TrajectoryReader : public BaseXMLReader
+{
+public:
+    /// \param env the environment used to create the trajectory
+    /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
+    /// \param atts attributes passed from <trajectory> tag
+    TrajectoryReader(EnvironmentBasePtr env, TrajectoryBasePtr traj = TrajectoryBasePtr(), const AttributesList& atts=AttributesList());
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+
+    inline TrajectoryBasePtr GetTrajectory() const {
+        return _ptraj;
+    }
+
+protected:
+    TrajectoryBasePtr _ptraj;
+    std::stringstream _ss;
+    ConfigurationSpecification _spec;
+    BaseXMLReaderPtr _pcurreader;
+    int _datacount;
+    std::vector<dReal> _vdata;
+};
+
+typedef boost::shared_ptr<TrajectoryReader> TrajectoryReaderPtr;
+
 } // planningutils
 } // OpenRAVE
 

@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyCollisionReport
 {
 public:
@@ -118,8 +120,6 @@ public:
         return _pCollisionChecker->GetCollisionOptions();
     }
 };
-
-namespace openravepy {
 
 CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr pyCollisionChecker)
 {

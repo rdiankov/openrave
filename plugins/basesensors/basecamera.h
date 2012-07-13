@@ -106,8 +106,9 @@ public:
 
         virtual void characters(const std::string& ch)
         {
-            if( !!_pcurreader )
+            if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
+            }
             else {
                 ss.clear();
                 ss << ch;
