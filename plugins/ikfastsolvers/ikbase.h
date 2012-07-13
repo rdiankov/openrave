@@ -293,7 +293,7 @@ protected:
         RobotBasePtr _probot;
         std::list<KinBody::KinBodyStateSaver> _listGrabbedSavedStates;
         vector<uint8_t> _vlinkenabled;
-        boost::shared_ptr<void> _callbackhandle;
+        UserDataPtr _callbackhandle;
         const std::vector<KinBody::LinkPtr>& _vchildlinks, &_vindependentlinks;
         bool _bCheckEndEffectorCollision, _bCheckSelfCollision, _bDisabled;
     };
@@ -1207,7 +1207,7 @@ private:
     std::vector<int> _vfreeparams;
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
     std::vector<dReal> _vfreeparamscales;
-    boost::shared_ptr<void> _cblimits;
+    UserDataPtr _cblimits;
     std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
     IkFn _pfnik;
     std::vector<dReal> _vFreeInc;

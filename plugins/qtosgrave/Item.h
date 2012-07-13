@@ -163,7 +163,7 @@ protected:
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     mutable boost::mutex _mutexjoints;
-    boost::shared_ptr<void> _geometrycallback, _drawcallback;
+    UserDataPtr _geometrycallback, _drawcallback;
 
 private:
     //  Print matrix

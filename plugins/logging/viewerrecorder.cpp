@@ -104,7 +104,7 @@ class ViewerRecorder : public ModuleBase
     float _framerate;
     uint64_t _starttime, _frametime;
     std::string _filename;
-    boost::shared_ptr<void> _callback;
+    UserDataPtr _callback;
     bool _bUseSimulationTime;
     list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
     boost::shared_ptr<VideoFrame> _frameLastAdded;

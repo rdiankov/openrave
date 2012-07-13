@@ -574,6 +574,7 @@ class TestTrajectory(EnvironmentSetup):
 
     def test_affinetraj(self):
         self.log.debug('test workspace trajerctory with affine transform')
+        env=self.env
         T=eye(4)
         extents=array([2.0,0,0.1])
         spec=RaveGetAffineConfigurationSpecification(DOFAffine.Transform)

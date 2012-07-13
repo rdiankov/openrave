@@ -166,7 +166,7 @@ protected:
 
     SpaceSamplerBasePtr _psampler;
     RobotBasePtr _probot;
-    boost::shared_ptr<void> _updatedofscallback;
+    UserDataPtr _updatedofscallback;
     std::vector<dReal> _lower, _upper, _range, _rangescaled;
     std::vector<dReal> _tempsamples;
     std::vector<uint8_t> _viscircular;

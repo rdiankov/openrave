@@ -18,7 +18,7 @@
 #include "collisionmaprobot.h"
 #include <openrave/plugin.h>
 
-static boost::shared_ptr<void> s_RegisteredReader;
+static UserDataPtr s_RegisteredReader;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

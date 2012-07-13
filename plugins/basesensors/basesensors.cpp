@@ -18,11 +18,11 @@
 #include "basecamera.h"
 #include <openrave/plugin.h>
 
-static list< boost::shared_ptr<void> >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object destruction from taking precedence
+static list< UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object destruction from taking precedence
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     if( !s_listRegisteredReaders ) {
-        s_listRegisteredReaders = new list< boost::shared_ptr<void> >();
+        s_listRegisteredReaders = new list< UserDataPtr >();
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser2d",BaseLaser2DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"basespinninglaser2d",BaseSpinningLaser2DSensor::CreateXMLReader));
