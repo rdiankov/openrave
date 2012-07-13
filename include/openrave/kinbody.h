@@ -233,6 +233,7 @@ protected:
             friend class ::XFileReader;
 #endif
 #endif
+            friend class RobotBase;
             friend class KinBody;
             friend class KinBody::Link;
         };
@@ -455,6 +456,7 @@ private:
 #endif
 #endif
         friend class KinBody;
+        friend class RobotBase;
     };
     typedef boost::shared_ptr<KinBody::Link> LinkPtr;
     typedef boost::shared_ptr<KinBody::Link const> LinkConstPtr;
@@ -519,7 +521,7 @@ public:
             boost::array< std::string, 3>  _equations;         ///< the original equations
         };
 
-        Joint(KinBodyPtr parent);
+        Joint(KinBodyPtr parent, JointType type = JointNone);
         virtual ~Joint();
 
         /// \brief The unique name of the joint

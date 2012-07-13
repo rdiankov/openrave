@@ -35,7 +35,7 @@ Core
 
 * Added **openrave/plannerparameters.h** to official OpenRAVE headers
 
-* Added new **JointTrajectory** joint type allowing a joint to transform a link in anyway imaginable.
+* Added new **JointTrajectory** joint type allowing a joint to transform a child link in any way.
 
 Inverse Kinematics
 ------------------
@@ -69,7 +69,7 @@ Database
 Viewer
 ------
 
-* Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
+* Check if **DISPLAY** environment variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
 
 * Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
 
@@ -84,13 +84,15 @@ Misc
 
 * Added :mod:`.examples.pr2turnlever` example
 
-* Clang compiler compilation
+* Clang compiler support
 
 * Support doc internationalization using sphinx 1.1
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
 * collada stores joint **circular**, **weight**, and **resolution** properties
+
+* exposed :class:`.planningutils.TrajectoryReader` for parsing trajectory files
 
 Version 0.6.6
 =============
