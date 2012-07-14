@@ -610,7 +610,7 @@ osg::Vec3Array* KinBodyItem::generateNormals(osg::Vec3Array *vertices)
         normal.z = e0.x * e1.y - e0.y * e1.x;
 
         f = normal.x*normal.x+normal.y*normal.y+normal.z*normal.z;
-        f = MATH_SQRT(f);
+        f = RaveSqrt(f);
 
         normal.x /= f;
         normal.y /= f;

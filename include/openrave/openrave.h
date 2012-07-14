@@ -767,19 +767,35 @@ private:
 } // end namespace OpenRAVE
 
 // define the math functions
-#define MATH_EXP RaveExp
-#define MATH_LOG RaveLog
-#define MATH_COS RaveCos
-#define MATH_SIN RaveSin
-#define MATH_TAN RaveTan
-#define MATH_LOG2 RaveLog2
-#define MATH_LOG10 RaveLog10
-#define MATH_ACOS RaveAcos
-#define MATH_ASIN RaveAsin
-#define MATH_ATAN2 RaveAtan2
-#define MATH_POW RavePow
-#define MATH_SQRT RaveSqrt
-#define MATH_FABS RaveFabs
+#if OPENRAVE_PRECISION // 1 if double precision
+#define OPENRAVE_MATH_EXP_DOUBLE RaveExp
+#define OPENRAVE_MATH_LOG_DOUBLE RaveLog
+#define OPENRAVE_MATH_COS_DOUBLE RaveCos
+#define OPENRAVE_MATH_SIN_DOUBLE RaveSin
+#define OPENRAVE_MATH_TAN_DOUBLE RaveTan
+#define OPENRAVE_MATH_LOG2_DOUBLE RaveLog2
+#define OPENRAVE_MATH_LOG10_DOUBLE RaveLog10
+#define OPENRAVE_MATH_ACOS_DOUBLE RaveAcos
+#define OPENRAVE_MATH_ASIN_DOUBLE RaveAsin
+#define OPENRAVE_MATH_ATAN2_DOUBLE RaveAtan2
+#define OPENRAVE_MATH_POW_DOUBLE RavePow
+#define OPENRAVE_MATH_SQRT_DOUBLE RaveSqrt
+#define OPENRAVE_MATH_FABS_DOUBLE RaveFabs
+#else // 32bit float
+#define OPENRAVE_MATH_EXP_FLOAT RaveExp
+#define OPENRAVE_MATH_LOG_FLOAT RaveLog
+#define OPENRAVE_MATH_COS_FLOAT RaveCos
+#define OPENRAVE_MATH_SIN_FLOAT RaveSin
+#define OPENRAVE_MATH_TAN_FLOAT RaveTan
+#define OPENRAVE_MATH_LOG2_FLOAT RaveLog2
+#define OPENRAVE_MATH_LOG10_FLOAT RaveLog10
+#define OPENRAVE_MATH_ACOS_FLOAT RaveAcos
+#define OPENRAVE_MATH_ASIN_FLOAT RaveAsin
+#define OPENRAVE_MATH_ATAN2_FLOAT RaveAtan2
+#define OPENRAVE_MATH_POW_FLOAT RavePow
+#define OPENRAVE_MATH_SQRT_FLOAT RaveSqrt
+#define OPENRAVE_MATH_FABS_FLOAT RaveFabs
+#endif
 
 #include <openrave/geometry.h>
 #include <openrave/mathextra.h>
