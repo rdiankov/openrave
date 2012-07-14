@@ -869,12 +869,7 @@ void raveLogVerbose(const string &s)
     raveLog(s,Level_Verbose);
 }
 
-void pyRaveSetDebugLevel(uint32_t level)
-{
-    OpenRAVE::RaveSetDebugLevel(level);
-}
-
-int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
+int pyGetDebugLevelFromPy(object olevel)
 {
     int level = Level_Info;
     if( olevel != object() ) {
@@ -907,7 +902,18 @@ int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
             }
         }
     }
-    return OpenRAVE::RaveInitialize(bLoadAllPlugins,level);
+    return level;
+}
+
+void pyRaveSetDebugLevel(object olevel)
+{
+    OpenRAVE::RaveSetDebugLevel(pyGetDebugLevelFromPy(olevel));
+}
+
+int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
+{
+
+    return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetDebugLevelFromPy(olevel));
 }
 
 object RaveGetPluginInfo()

@@ -35,7 +35,9 @@ Core
 
 * Added **openrave/plannerparameters.h** to official OpenRAVE headers
 
-* Added new **JointTrajectory** joint type allowing a joint to transform a child link in any way.
+* Added new :ref:`.KinBody.Joint.Type.Trajectory` joint type allowing a joint to transform a child link in any way.
+
+* Added :meth:`.Environment.SetDataAccess` to restrict filenames from only being opened from $OPENRAVE_DATA directories
 
 Inverse Kinematics
 ------------------

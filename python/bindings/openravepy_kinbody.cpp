@@ -3057,6 +3057,7 @@ void init_openravepy_kinbody()
             .value("Universal",KinBody::Joint::JointUniversal)
             .value("Hinge2",KinBody::Joint::JointHinge2)
             .value("Spherical",KinBody::Joint::JointSpherical)
+            .value("Trajectory",KinBody::Joint::JointTrajectory)
             ;
         }
 

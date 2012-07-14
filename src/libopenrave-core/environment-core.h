@@ -91,6 +91,7 @@ protected:
 public:
     Environment() : EnvironmentBase()
     {
+        _nDataAccessOptions = 0;
         _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUG(str(boost::format("setting openrave home directory to %s")%_homedirectory));
 
@@ -450,13 +451,13 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(), _nDataAccessOptions);
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 return true;
             }
         }
         if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
@@ -486,7 +487,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( _IsColladaData(data) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
@@ -1079,13 +1080,13 @@ public:
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
@@ -1200,13 +1201,13 @@ public:
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
@@ -1309,7 +1310,7 @@ public:
     {
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
@@ -1336,7 +1337,7 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1345,7 +1346,7 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1360,7 +1361,7 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1369,7 +1370,7 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1428,7 +1429,7 @@ public:
     virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
         if( !filedata ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
@@ -1456,7 +1457,7 @@ public:
     virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
         if( !filedata ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
@@ -1672,11 +1673,20 @@ public:
         return _nCurSimTime;
     }
 
-    virtual void SetDebugLevel(uint32_t level) {
-        RaveSetDebugLevel((int)level);
+    virtual void SetDebugLevel(int level) {
+        RaveSetDebugLevel(level);
     }
-    virtual uint32_t GetDebugLevel() const {
-        return (uint32_t)RaveGetDebugLevel();
+    virtual int GetDebugLevel() const {
+        return RaveGetDebugLevel();
+    }
+
+    virtual void SetDataAccess(int options) {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _nDataAccessOptions = options;
+    }
+    virtual int GetDataAccess() const {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        return _nDataAccessOptions;
     }
 
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
@@ -1726,14 +1736,14 @@ protected:
     virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
     }
 
     virtual bool _ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs());
+        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
@@ -2120,6 +2130,7 @@ protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     int _nEnvironmentIndex;                   ///< next network index
+    int _nDataAccessOptions;
     std::map<int, KinBodyWeakPtr> _mapBodies;     ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation

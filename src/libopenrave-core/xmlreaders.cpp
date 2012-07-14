@@ -121,10 +121,24 @@ std::string& GetFullFilename() {
     static string s; return s;
 }
 
-std::vector<string>& RaveGetDataDirs()
+std::vector<string>& GetDataDirs()
 {
     static vector<string> v;
     return v;
+}
+
+#ifdef HAVE_BOOST_FILESYSTEM
+/// \brief returns absolute filenames of the data
+std::vector<boost::filesystem::path>& GetDataDirsBoost()
+{
+    static vector<boost::filesystem::path> v;
+    return v;
+}
+#endif
+
+int& GetAccessOptions() {
+    static int accessoptions = 0;
+    return accessoptions;
 }
 
 int& GetXMLErrorCount()
@@ -133,9 +147,59 @@ int& GetXMLErrorCount()
     return errorcount;
 }
 
-void SetDataDirs(const vector<string>& vdatadirs) {
+#ifdef HAVE_BOOST_FILESYSTEM
+void CustomNormalizePath(boost::filesystem::path& p)
+{
+#ifndef BOOST_FILESYSTEM_NO_DEPRECATED
+    p.normalize();
+#else
+    boost::filesystem::path result;
+    for(boost::filesystem::path::iterator it=p.begin(); it!=p.end(); ++it)
+    {
+        if(*it == "..") {
+            // /a/b/.. is not necessarily /a if b is a symbolic link
+            if(boost::filesystem::is_symlink(result) ) {
+                result /= *it;
+            }
+            // /a/b/../.. is not /a/b/.. under most circumstances
+            // We can end up with ..s in our result because of symbolic links
+            else if(result.filename() == "..") {
+                result /= *it;
+            }
+            // Otherwise it should be safe to resolve the parent
+            else {
+                result = result.parent_path();
+            }
+        }
+        else if(*it == ".") {
+            // Ignore
+        }
+        else {
+            // Just cat other path entries
+            result /= *it;
+        }
+    }
+    p = result;
+#endif
+}
+#endif
+
+void SetDataDirs(const vector<string>& vdatadirs, int accessoptions) {
     EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-    RaveGetDataDirs() = vdatadirs;
+    GetDataDirs() = vdatadirs;
+#ifdef HAVE_BOOST_FILESYSTEM
+    GetDataDirsBoost().resize(0);
+    FOREACHC(itfilename,vdatadirs) {
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itfilename));
+#else
+        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itfilename, boost::filesystem::native));
+#endif
+        CustomNormalizePath(fullfilename);
+        GetDataDirsBoost().push_back(fullfilename);
+    }
+#endif
+    GetAccessOptions() = accessoptions;
 }
 
 #ifdef OPENRAVE_ASSIMP
@@ -469,6 +533,42 @@ static int raveXmlSAXUserParseMemory(xmlSAXHandlerPtr sax, BaseXMLReaderPtr prea
     return ret;
 }
 
+/// \brief returns true if filename is valid
+bool _ValidateFilename(const std::string& filename)
+{
+    if( !ifstream(filename.c_str()) ) {
+        return false;
+    }
+
+    if( GetAccessOptions() & 1 ) {
+        // check if filename is within GetDataDirs()
+#ifdef HAVE_BOOST_FILESYSTEM
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(filename));
+#else
+        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(filename, boost::filesystem::native));
+#endif
+        CustomNormalizePath(fullfilename);
+        bool bfound = false;
+        // check with GetDataDirsBoost()
+        FOREACHC(itpath,GetDataDirsBoost()) {
+            if( *itpath < fullfilename ) {
+                bfound = true;
+                break;
+            }
+        }
+        if( !bfound ) {
+            return false;
+        }
+#else
+        RAVELOG_WARN("cannot validate filename with data access\n");
+#endif
+    }
+
+    return true;
+}
+
+/// \brief searches for filename in the filesystem and GetDataDirs() directories and returns the full filename
 boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename)
 {
     if( filename.size() == 0 ) {
@@ -513,13 +613,13 @@ boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::strin
         }
 
         // try the set openrave directories
-        FOREACHC(itdir, RaveGetDataDirs()) {
+        FOREACHC(itdir, GetDataDirs()) {
             string newparse;
             newparse = *itdir; newparse.push_back(s_filesep);
             newparse += parsedirectory;
             fullfilename = newparse; fullfilename += filename;
 
-            if( !!ifstream(fullfilename.c_str()) ) {
+            if( _ValidateFilename(fullfilename) ) {
                 parsedirectory = newparse; parsedirectory += appended;
                 bFileFound = true;
                 break;
@@ -528,7 +628,7 @@ boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::strin
             newparse = *itdir; newparse.push_back(s_filesep);
             fullfilename = newparse; fullfilename += filename;
 
-            if( !!ifstream(fullfilename.c_str()) ) {
+            if( _ValidateFilename(fullfilename) ) {
                 parsedirectory = newparse; parsedirectory += appended;
                 bFileFound = true;
                 break;
@@ -2145,7 +2245,7 @@ public:
             if( !!ifstream(temp.c_str()) ) {
                 return temp;
             }
-            FOREACHC(itdir, RaveGetDataDirs()) {
+            FOREACHC(itdir, GetDataDirs()) {
                 temp = *itdir; temp.push_back(s_filesep);
                 temp += *itmodelsdir;
                 temp += filename;
