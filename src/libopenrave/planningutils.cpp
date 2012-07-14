@@ -899,6 +899,34 @@ LineCollisionConstraint::LineCollisionConstraint(const std::list<KinBodyPtr>& li
     _report.reset(new CollisionReport());
 }
 
+void LineCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
+{
+    _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
+}
+
+bool LineCollisionConstraint::_CheckState()
+{
+    if( !!_usercheckfns[0] ) {
+        if( !_usercheckfns[0]() ) {
+            return false;
+        }
+    }
+    FOREACHC(itbody, _listCheckSelfCollisions) {
+        if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+            return false;
+        }
+        if( (*itbody)->CheckSelfCollision(_report) ) {
+            return false;
+        }
+    }
+    if( !!_usercheckfns[1] ) {
+        if( !_usercheckfns[1]() ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
@@ -1045,13 +1073,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision(_report) ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
     }
 
@@ -1081,13 +1104,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 
     if (start == 0 ) {
         params->_setstatefn(pQ0);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision(_report) ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
         start = 1;
     }
@@ -1111,13 +1129,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody)) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision() ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits

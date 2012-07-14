@@ -168,6 +168,12 @@ public:
     virtual ~LineCollisionConstraint() {
     }
 
+    /// \brief set user check fucntions
+    ///
+    /// Two functions can be set, one to be called before check collision and one after.
+    /// \param bCallAfterCheckCollision if set, function will be called after check collision functions.
+    virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
+
     /// \deprecated (12/04/23)
     virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr body, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations) RAVE_DEPRECATED;
 
@@ -175,10 +181,13 @@ public:
     virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
 
 protected:
+    virtual bool _CheckState();
+
     std::vector<dReal> _vtempconfig, dQ;
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckSelfCollisions;
     bool _bCheckEnv;
+    boost::array< boost::function<bool() >, 2> _usercheckfns;
 };
 
 /// \brief simple distance metric based on joint weights
