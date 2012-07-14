@@ -196,6 +196,10 @@ void SetDataDirs(const vector<string>& vdatadirs, int accessoptions) {
         boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itfilename, boost::filesystem::native));
 #endif
         CustomNormalizePath(fullfilename);
+        if( fullfilename.filename() == "." ) {
+            // fullfilename ends in '/', so remove it
+            fullfilename = fullfilename.parent_path();
+        }
         GetDataDirsBoost().push_back(fullfilename);
     }
 #endif
@@ -552,8 +556,15 @@ bool _ValidateFilename(const std::string& filename)
         bool bfound = false;
         // check with GetDataDirsBoost()
         FOREACHC(itpath,GetDataDirsBoost()) {
-            if( *itpath < fullfilename ) {
-                bfound = true;
+            boost::filesystem::path testfilename = fullfilename.parent_path();
+            while( testfilename >= *itpath ) {
+                if( testfilename == *itpath ) {
+                    bfound = true;
+                    break;
+                }
+                testfilename = testfilename.parent_path();
+            }
+            if( bfound ) {
                 break;
             }
         }

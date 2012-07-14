@@ -302,26 +302,26 @@ public:
         RaveVector<T> v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v;
     }
     template <typename U> inline RaveVector<T> operator+(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v;
+        RaveVector<T> v; v.x = x+T(r.x); v.y = y+T(r.y); v.z = z+T(r.z); v.w = w+T(r.w); return v;
     }
     template <typename U> inline RaveVector<T> operator-(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v;
+        RaveVector<T> v; v.x = x-T(r.x); v.y = y-T(r.y); v.z = z-T(r.z); v.w = w-T(r.w); return v;
     }
     template <typename U> inline RaveVector<T> operator*(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v;
+        RaveVector<T> v; v.x = T(r.x)*x; v.y = T(r.y)*y; v.z = T(r.z)*z; v.w = T(r.w)*w; return v;
     }
     inline RaveVector<T> operator*(T k) const {
         RaveVector<T> v; v.x = k*x; v.y = k*y; v.z = k*z; v.w = k*w; return v;
     }
 
     template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>&r) {
-        x += r.x; y += r.y; z += r.z; w += r.w; return *this;
+        x += T(r.x); y += T(r.y); z += T(r.z); w += T(r.w); return *this;
     }
     template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>&r) {
-        x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this;
+        x -= T(r.x); y -= T(r.y); z -= T(r.z); w -= T(r.w); return *this;
     }
     template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>&r) {
-        x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this;
+        x *= T(r.x); y *= T(r.y); z *= T(r.z); w *= T(r.w); return *this;
     }
 
     inline RaveVector<T>& operator *= (const T k) {

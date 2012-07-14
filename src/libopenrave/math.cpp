@@ -153,20 +153,23 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
             int i1;
             for (i1 = i0; i1 <= 1; i1++)
             {
-                T fSum = RaveFabs(afDiag[i1]) +
-                         RaveFabs(afDiag[i1+1]);
-                if ( RaveFabs(afSubDiag[i1]) + fSum == fSum )
+                T fSum = geometry::MATH_FABS(afDiag[i1]) + geometry::MATH_FABS(afDiag[i1+1]);
+                if ( geometry::MATH_FABS(afSubDiag[i1]) + fSum == fSum ) {
                     break;
+                }
             }
-            if ( i1 == i0 )
+            if ( i1 == i0 ) {
                 break;
+            }
 
             T fTmp0 = (afDiag[i0+1]-afDiag[i0])/(2.0f*afSubDiag[i0]);
-            T fTmp1 = RaveSqrt(fTmp0*fTmp0+1.0f);
-            if ( fTmp0 < 0.0f )
+            T fTmp1 = geometry::MATH_SQRT(fTmp0*fTmp0+1.0f);
+            if ( fTmp0 < 0.0f ) {
                 fTmp0 = afDiag[i1]-afDiag[i0]+afSubDiag[i0]/(fTmp0-fTmp1);
-            else
+            }
+            else {
                 fTmp0 = afDiag[i1]-afDiag[i0]+afSubDiag[i0]/(fTmp0+fTmp1);
+            }
             T fSin = 1.0f;
             T fCos = 1.0f;
             T fTmp2 = 0.0f;
@@ -174,10 +177,10 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
             {
                 T fTmp3 = fSin*afSubDiag[i2];
                 T fTmp4 = fCos*afSubDiag[i2];
-                if ( RaveFabs(fTmp3) >= RaveFabs(fTmp0) )
+                if ( geometry::MATH_FABS(fTmp3) >= geometry::MATH_FABS(fTmp0) )
                 {
                     fCos = fTmp0/fTmp3;
-                    fTmp1 = RaveSqrt(fCos*fCos+1.0f);
+                    fTmp1 = geometry::MATH_SQRT(fCos*fCos+1.0f);
                     afSubDiag[i2+1] = fTmp3*fTmp1;
                     fSin = 1.0f/fTmp1;
                     fCos *= fSin;
@@ -185,7 +188,7 @@ bool _QLAlgorithm3 (T* m_aafEntry, T* afDiag, T* afSubDiag)
                 else
                 {
                     fSin = fTmp3/fTmp0;
-                    fTmp1 = RaveSqrt(fSin*fSin+1.0f);
+                    fTmp1 = geometry::MATH_SQRT(fSin*fSin+1.0f);
                     afSubDiag[i2+1] = fTmp0*fTmp1;
                     fCos = 1.0f/fTmp1;
                     fSin *= fCos;

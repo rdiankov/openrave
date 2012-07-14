@@ -142,6 +142,11 @@ int KinBody::Joint::GetDOF() const
     return int(_type & 0xf);
 }
 
+bool KinBody::Joint::IsCircular(int iaxis) const
+{
+    return static_cast<bool>(_bIsCircular.at(iaxis));
+}
+
 bool KinBody::Joint::IsRevolute(int iaxis) const
 {
     if( _type & JointSpecialBit ) {

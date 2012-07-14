@@ -588,9 +588,7 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        virtual bool IsCircular(int iaxis) const {
-            return _bIsCircular.at(iaxis);
-        }
+        virtual bool IsCircular(int iaxis) const;
 
         /// \brief returns true if the axis describes a rotation around an axis.
         ///

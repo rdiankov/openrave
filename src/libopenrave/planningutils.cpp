@@ -18,6 +18,9 @@
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
 
+// have to include in order to get symbols inside libopenrave
+#include <openrave/plannerparameters.h>
+
 namespace OpenRAVE {
 namespace planningutils {
 

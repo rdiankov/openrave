@@ -410,6 +410,9 @@ protected:
     }
 };
 
+typedef boost::shared_ptr<GraspParameters> GraspParametersPtr;
+typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
+
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
