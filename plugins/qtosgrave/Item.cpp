@@ -50,8 +50,7 @@ bool Item::ContainsOSGNode(osg::Node *pNode)
     FindNode *search = new FindNode(pNode);
     search->apply(_ivGeom);
 
-    if (search->getNode())
-    {
+    if (search->getNode()) {
         delete search;
         return true;
     }
@@ -63,12 +62,10 @@ bool Item::ContainsOSGNode(osg::Node *pNode)
 /// Set the visibility of the geometry (ON = true).
 void Item::SetGeomVisibility(bool bFlag)
 {
-    if (bFlag)
-    {
+    if (bFlag) {
         _ivGeom->setAllChildrenOn();
     }
-    else
-    {
+    else {
         _ivGeom->setAllChildrenOff();
     }
 }
@@ -94,8 +91,7 @@ void KinBodyItem::setNamedNode(const std::string&  name,
 
     // check to see if we have a valid (non-NULL) node.
     // if we do have a null node, return NULL.
-    if ( !!currNode)
-    {
+    if ( !!currNode) {
         // Sets the name of the node
         currNode->setName(name);
 
@@ -107,10 +103,8 @@ void KinBodyItem::setNamedNode(const std::string&  name,
         // If we check all of the children and have not found the node,
         // return NULL
         currGroup = currNode->asGroup(); // returns NULL if not a group.
-        if ( currGroup )
-        {
-            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++)
-            {
+        if ( currGroup ) {
+            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
                 setNamedNode(name, currGroup->getChild(i));
             }
         }
@@ -161,13 +155,10 @@ void KinBodyItem::Load()
         lnk.second->preMult(mR);
 
         lnk.first->addChild(lnk.second);
-
         _veclinks.push_back(lnk);
 
-        FOREACHC(itgeom, (*it)->GetGeometries())
-        {
-            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly )
-            {
+        FOREACHC(itgeom, (*it)->GetGeometries()) {
+            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
                 continue;
             }
 
@@ -189,30 +180,6 @@ void KinBodyItem::Load()
             bool bSucceeded = false;
             if( _viewmode == VG_RenderOnly || _viewmode == VG_RenderCollision ) {
 
-//        //  OpenRAVE 0.4v
-//        if( itgeom->GetRenderFilename().size() > 0){
-//          osg::Node* loadedModel;
-//          osg::Matrix mRotate;
-//
-//          mRotate.makeRotate(-osg::PI/2,osg::Vec3f(1.0f,0.0f,0.0f));
-//
-//          mS.makeScale(itgeom->GetRenderScale().x,
-//              itgeom->GetRenderScale().y,
-//              itgeom->GetRenderScale().z);
-//
-//          ptrans->preMult(mS);
-//          ptrans->preMult(mRotate);
-//
-//          loadedModel   = osgDB::readNodeFile(itgeom->GetRenderFilename());
-//
-//          psep          = loadedModel->asGroup();
-//          osg::StateSet* state = psep->getOrCreateStateSet();
-//          state->setMode(GL_RESCALE_NORMAL,osg::StateAttribute::ON);
-//
-//          bSucceeded    = true;
-//          RaveVector<float> color = itgeom->GetDiffuseColor();
-//        }
-
                 //  OpenRAVE 0.5 version
                 string extension;
                 if( itgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
@@ -226,15 +193,12 @@ void KinBodyItem::Load()
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
-
                     osg::Node* loadedModel;
                     osg::Matrix mRotate;
 
                     mRotate.makeRotate(-osg::PI/2,osg::Vec3f(1.0f,0.0f,0.0f));
 
-                    mS.makeScale(itgeom->GetRenderScale().x,
-                                 itgeom->GetRenderScale().y,
-                                 itgeom->GetRenderScale().z);
+                    mS.makeScale(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
 
                     ptrans->preMult(mS);
                     ptrans->preMult(mRotate);
@@ -254,8 +218,9 @@ void KinBodyItem::Load()
                 float x,y,z,w;
 
                 // create custom
-                if( psep == NULL )
+                if( psep == NULL ) {
                     psep = new osg::Group();
+                }
 
                 // set a diffuse color
                 osg::StateSet* state = psep->getOrCreateStateSet();
@@ -265,8 +230,7 @@ void KinBodyItem::Load()
                 z = itgeom->GetDiffuseColor().z;
                 w = 1.0f;
 
-                mat->setDiffuse( osg::Material::FRONT_AND_BACK,
-                                 osg::Vec4f(x,y,z,w) );
+                mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
                 //  Debug
                 RAVELOG_WARN("Diffuse color= %f %f %f\n",x,y,z);
@@ -276,8 +240,7 @@ void KinBodyItem::Load()
                 z = itgeom->GetAmbientColor().z;
                 w = 1.0f;
 
-                mat->setAmbient( osg::Material::FRONT_AND_BACK,
-                                 osg::Vec4f(x,y,z,w) );
+                mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
                 mat->setShininess( osg::Material::FRONT_AND_BACK, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
@@ -341,8 +304,6 @@ void KinBodyItem::Load()
                     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
                     const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();
-
-
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
                     geom->setVertexArray(vertices.get());
 
@@ -356,8 +317,7 @@ void KinBodyItem::Load()
 
                     RAVELOG_INFO("Vertices=%d\n",mesh.indices.size());
 
-                    osg::ref_ptr<osg::DrawElementsUInt> geom_prim =
-                        new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
+                    osg::ref_ptr<osg::DrawElementsUInt> geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
 
                     for(size_t i = 0; i < mesh.indices.size()/3; ++i)
                     {
@@ -389,8 +349,7 @@ void KinBodyItem::Load()
                 }
             }
 
-            if( psep != NULL )
-            {
+            if( psep != NULL ) {
                 ptrans->addChild(psep);
 
                 //  Apply external transform to local transform
@@ -398,13 +357,10 @@ void KinBodyItem::Load()
 
                 string name;
 
-                if ((*it)->GetName() == "")
-                {
-//          RAVELOG_DEBUG("No Link name\n");
+                if ((*it)->GetName() == "") {
                     name = (*it)->GetParent()->GetName();
                 }
-                else
-                {
+                else {
                     name = (*it)->GetName();
                 }
 
@@ -424,37 +380,46 @@ void KinBodyItem::Load()
     RAVELOG_INFO("Number of links added = %d\n",_veclinks.size());
 
     //  Is an object without joints
-    if (_pchain->GetJoints().size() < 1)
-    {
+    if (_pchain->GetJoints().size() < 1) {
         //  Debug
 //    RAVELOG_DEBUG("Object without joints\n");
 
         _ivGeom->addChild(_veclinks[0].first);
     }
     //  Object with joints
-    else
-    {
+    else {
         //  Assemble link hierarchy
-        FOREACH(itjoint, _pchain->GetJoints())
-        {
-            parent = findNodeName((*itjoint)->GetFirstAttached()->GetName());
-            child = findNodeName((*itjoint)->GetSecondAttached()->GetName());
-
-            parent->addChild(child);
+        FOREACH(itjoint, _pchain->GetJoints()) {
+            parent = findNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
+            child = findNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
+            if( !parent ) {
+                RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyParentLink()->GetName()));
+            }
+            else if( !child ) {
+                RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyChildLink()->GetName()));
+            }
+            else {
+                parent->addChild(child);
+            }
         }
 
         //  Assemble passive joints
-        FOREACH(itjoint, _pchain->GetPassiveJoints())
-        {
-            parent = findNodeName((*itjoint)->GetFirstAttached()->GetName());
-            child = findNodeName((*itjoint)->GetSecondAttached()->GetName());
-
-            parent->addChild(child);
+        FOREACH(itjoint, _pchain->GetPassiveJoints()) {
+            parent = findNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
+            child = findNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
+            if( !parent ) {
+                RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyParentLink()->GetName()));
+            }
+            else if( !child ) {
+                RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyChildLink()->GetName()));
+            }
+            else {
+                parent->addChild(child);
+            }
         }
 
         //  Gets the parent
-        while (parent->getParents().size() > 0)
-        {
+        while (parent->getParents().size() > 0) {
             parent = parent->getParent(0);
         }
 
@@ -464,7 +429,7 @@ void KinBodyItem::Load()
     RAVELOG_DEBUG("Model added successfully!!!!!!\n");
     //  Debug
     //  Print Scene Graph after creation
-//  printSceneGraph("",_ivGeom);
+    //  printSceneGraph("",_ivGeom);
 
     _bReload = false;
     _bDrawStateChanged = false;
@@ -474,12 +439,10 @@ void KinBodyItem::Load()
 osg::Group* KinBodyItem::findNodeName(const string& name)
 {
     osg::Group* node;
-    for (size_t i = 0; i < _veclinks.size(); i++)
-    {
+    for (size_t i = 0; i < _veclinks.size(); i++) {
         node = _veclinks[i].first->asGroup();
 
-        if (node->getName() == name)
-        {
+        if (node->getName() == name) {
 //      RAVELOG_DEBUG("Node '%s' found\n",name.c_str());
             return node;
         }
@@ -491,8 +454,7 @@ osg::Group* KinBodyItem::findNodeName(const string& name)
 //  Print matrix
 void KinBodyItem::printMatrix(osg::Matrix& m)
 {
-    for (size_t i = 0; i < 4; i++)
-    {
+    for (size_t i = 0; i < 4; i++) {
         RAVELOG_WARN("Line '%d'= %f %f %f %f\n",i,m(i,0),m(i,1),m(i,2),m(i,3));
     }
 
@@ -584,16 +546,15 @@ osg::Vec3Array* KinBodyItem::generateNormals(osg::Vec3Array *vertices)
 {
     osg::Vec3Array *normals = new osg::Vec3Array;
 
-    if (!vertices)
+    if (!vertices) {
         return NULL;
-
+    }
     dReal f;
     /*
      * Calculate per-face normals from face vertices.
      */
     unsigned int fi = 0;
-    while (fi < vertices->size())
-    {
+    while (fi < vertices->size()) {
         // Edge vectors
         Vector e0;
         e0.x = (*vertices)[fi+1].x() - (*vertices)[fi].x();
@@ -660,9 +621,7 @@ bool KinBodyItem::UpdateFromIv()
 
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
-
         *ittrans = GetRaveTransform(it->second);
-
         m = it->second->getMatrix();
 
 //    //  Debug
@@ -685,27 +644,28 @@ bool KinBodyItem::UpdateFromIv()
 ////////////////////////////////////////////////////////////////////////////////
 bool KinBodyItem::UpdateFromModel()
 {
-    if( !_pchain )
+    if( !_pchain ) {
         return false;
-
+    }
     vector<Transform> vtrans;
     vector<dReal> vjointvalues;
 
     {
         boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
-        if( !lockenv )
+        if( !lockenv ) {
             return false;
-
-        if( _bReload || _bDrawStateChanged )
+        }
+        if( _bReload || _bDrawStateChanged ) {
             Load();
-
+        }
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
             _pchain->GetBodyTransformations(_vtrans);
             _pchain->GetDOFValues(vjointvalues);
         }
-        else
+        else {
             _pchain.reset();
+        }
     }
 
     return UpdateFromModel(vjointvalues,vtrans);
@@ -751,8 +711,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         SetMatrixTransform(ptrans,tlocal);
 
         //  Error control
-        if (it->second->getNumChildren() == 0)
-        {
+        if (it->second->getNumChildren() == 0) {
             return false;
         }
 
@@ -819,8 +778,7 @@ RobotItem::RobotItem(QtOSGViewerPtr viewer, RobotBasePtr robot, ViewGeometry vie
     int index = 0;
     FOREACHC(itmanip, robot->GetManipulators()) {
 
-        if((*itmanip)->GetEndEffector())
-        {
+        if((*itmanip)->GetEndEffector()) {
             osg::Switch* peeswitch = new osg::Switch();
             osg::Group* peesep = new osg::Group();
             osg::MatrixTransform* ptrans = new osg::MatrixTransform();
@@ -946,26 +904,31 @@ RobotItem::RobotItem(QtOSGViewerPtr viewer, RobotBasePtr robot, ViewGeometry vie
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if( !_probot )
+    if( !_probot ) {
         return;
-
+    }
     if( bGrab ) {
         // turn off any controller commands if a robot
-        if( !!_probot->GetController() )
+        if( !!_probot->GetController() ) {
             _probot->GetController()->SetPath(TrajectoryBaseConstPtr());
+        }
     }
 
     FOREACH(itee, _vEndEffectors) {
-        if( !!itee->_pswitch )
+        if( !!itee->_pswitch ) {
             itee->_pswitch->setAllChildrenOn();
-        else
+        }
+        else {
             itee->_pswitch->setAllChildrenOff();
+        }
     }
     FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch )
+        if( !!itee->_pswitch ) {
             itee->_pswitch->setAllChildrenOn();
-        else
+        }
+        else {
             itee->_pswitch->setAllChildrenOff();
+        }
     }
 
     KinBodyItem::SetGrab(bGrab, bUpdate);
@@ -973,17 +936,17 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 
 bool RobotItem::UpdateFromIv()
 {
-    if( !KinBodyItem::UpdateFromIv() )
+    if( !KinBodyItem::UpdateFromIv() ) {
         return false;
-
+    }
     return true;
 }
 
 bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)
 {
-    if( !KinBodyItem::UpdateFromModel(vjointvalues,vtrans) )
+    if( !KinBodyItem::UpdateFromModel(vjointvalues,vtrans) ) {
         return false;
-
+    }
     if( bGrabbed ) {
         // only updated when grabbing!
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
