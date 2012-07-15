@@ -37,7 +37,7 @@ images_base_installed:
 images_all_installed: images_base_installed images/openrave_architecture.pdf images/examples/visibilityplanning_framework.png images/openrave_architecture_jp.pdf images/openrave_documentation.png
 	touch images_all_installed
 
-build/%/coreapihtml/index.html build/%/coreapixml/index.xml: images_all_installed Doxyfile.html Doxyfile.%
+build/%/coreapihtml/index.html build/%/coreapixml/index.xml: images_all_installed Doxyfile.html Doxyfile.% ../include/openrave/*.h
 	rm -f doxygenhtml_installed_$*
 	mkdir -p build
 	echo "$(doxycommands)" | cat Doxyfile.html Doxyfile.$* - > build/Doxyfile.html.$*
