@@ -19,6 +19,8 @@
 #ifndef OPENRAVE_OSG_ITEM_H
 #define OPENRAVE_OSG_ITEM_H
 
+namespace qtosgrave {
+
 enum ViewGeometry {
     VG_RenderOnly = 0,
     VG_CollisionOnly = 1,
@@ -217,5 +219,7 @@ BOOST_TYPEOF_REGISTER_TYPE(KinBodyItem)
 BOOST_TYPEOF_REGISTER_TYPE(RobotItem)
 BOOST_TYPEOF_REGISTER_TYPE(RobotItem::EE)
 #endif
+
+}
 
 #endif   // RAVE_OSG_ITEM_H

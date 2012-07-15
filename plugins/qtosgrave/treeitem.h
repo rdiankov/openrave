@@ -16,7 +16,9 @@
 //
 #include <QList>
 #include <QVariant>
-//
+
+namespace qtosgrave {
+
 class TreeItem
 {
 
@@ -39,4 +41,7 @@ private:
     TreeItem *parentItem;
 
 };
+
+}
+
 #endif

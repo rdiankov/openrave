@@ -14,6 +14,8 @@
 #include "osgpick.h"
 #include "osgviewerQtContext.h"
 
+namespace qtosgrave {
+
 void PickHandler::pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea)
 {
     osgUtil::LineSegmentIntersector::Intersections intersections;
@@ -76,4 +78,6 @@ void PickHandler::doubleClick()
 void PickHandler::activeSelect(bool active)
 {
     _select = active;
+}
+
 }

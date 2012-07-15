@@ -89,6 +89,8 @@ using namespace std;
 #include <osg/BlendColor>
 #include <osg/Switch>
 
+namespace qtosgrave {
+
 /// returns the Transform from a Coin3D SoTransform object
 inline RaveTransform<float> GetRaveTransform(const osg::MatrixTransform* ptrans)
 {
@@ -134,13 +136,7 @@ inline void SetMatrixTransform(osg::MatrixTransform* ptrans, const RaveTransform
     ptrans->preMult(mR);
 }
 
-//@{ video recording
-bool START_AVI(const char* file_name, int _frameRate, int width, int height, int bits);
-bool ADD_FRAME_FROM_DIB_TO_AVI(void* pdata);
-bool STOP_AVI();
-//@}
-
-class QtOSGViewer;
+}
 
 #include <osg/NodeVisitor>
 #include <osg/Node>
@@ -164,6 +160,8 @@ class QtOSGViewer;
 #include <osgGA/TerrainManipulator>
 
 #include <osgText/Text>
+
+namespace qtosgrave {
 
 // Derive a class from NodeVisitor to find a node with a
 //   specific name.
@@ -196,6 +194,8 @@ protected:
 class QtOSGViewer;
 typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
 typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
+
+}
 
 #include "Item.h"
 #include "qtosgviewer.h"

@@ -14,9 +14,11 @@
 #ifndef OPENRAVE_QTOSG_TREEMODEL_H
 #define OPENRAVE_QTOSG_TREEMODEL_H
 
- #include <QAbstractItemModel>
- #include <QModelIndex>
- #include <QVariant>
+#include <QAbstractItemModel>
+#include <QModelIndex>
+#include <QVariant>
+
+namespace qtosgrave {
 
 class TreeItem;
 
@@ -44,5 +46,6 @@ private:
     TreeItem *rootItem;
 };
 
- #endif
+}
 
+#endif

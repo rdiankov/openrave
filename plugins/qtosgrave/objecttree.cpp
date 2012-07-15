@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "objecttree.h"
 
+namespace qtosgrave {
+
 ObjectTree::ObjectTree() {
     setFixedSize(100,200);
     model = OsgTreeModel::create();
@@ -33,3 +35,4 @@ ObjectTree::OsgTreeModel::OsgTreeModel(){
     //set_column_types(_columns);
 }
 
+}

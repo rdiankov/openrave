@@ -28,6 +28,7 @@
 #include <osg/ref_ptr>
 
 
+namespace qtosgrave {
 
 class ObjectTree : public QTreeView {
 public:
@@ -56,5 +57,7 @@ public:
     };
     OsgTreeModel *model;
 };
+
+}
 
 #endif /* OBJECTTREE_H_ */

@@ -34,6 +34,8 @@ class QComboBox;
 class QButtonGroup;
 class TreeModel;
 
+namespace qtosgrave {
+
 class QtOSGViewer : public QMainWindow, public ViewerBase
 {
     Q_OBJECT;
@@ -392,4 +394,7 @@ protected:
     QTimer _timer;
 
 };
+
+}
+
 #endif

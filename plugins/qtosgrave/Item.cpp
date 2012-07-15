@@ -17,6 +17,8 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 
+namespace qtosgrave {
+
 Item::Item(QtOSGViewerPtr viewer) : _viewer(viewer)
 {
     // set up the Inventor nodes
@@ -1008,4 +1010,6 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     }
 
     return true;
+}
+
 }
