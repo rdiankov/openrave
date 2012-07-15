@@ -14,6 +14,7 @@
 from common_test_openrave import *
 from subprocess import Popen, PIPE
 import shutil
+import threading
 
 class TestEnvironment(EnvironmentSetup):
     def test_load(self):
@@ -336,3 +337,39 @@ class TestEnvironment(EnvironmentSetup):
         clonedrobot = clonedenv.GetRobot(robot.GetName())
         assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
         
+    def test_multithread(self):
+        self.log.info('test multiple threads accessing same resource')
+        def mythread(env,threadid):
+            for counter in range(3):
+                with env:
+                    self.log.info('%s: %s',threadid,counter)
+                    env.Reset()
+                    env.Load('data/lab1.env.xml')
+                time.sleep(0.1)
+
+        threads = []
+        for ithread in range(4):
+            t = threading.Thread(target=mythread,args=(self.env,'t%d'%ithread))
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
+    def test_dataccess(self):
+        os.environ['OPENRAVE_DATA'] = os.path.join(os.getcwd(),'testdata')
+        env2=Environment() # should reread the OPENRAVE_DATA
+        try:
+            env2.SetDataAccess(0)
+            assert(env2.Load('bobcat.robot.xml'))
+            assert(env2.Load('../ikfastrobots/fail1.robot.xml'))
+            env2.Reset()
+            assert(env2.Load('../ikfastrobots/fail1.dae'))
+            env2.SetDataAccess(1)
+            env2.Reset()
+            assert(env2.Load('bobcat.robot.xml'))
+            assert(not env2.Load('../ikfastrobots/fail1.robot.xml'))
+            env2.Reset()
+            assert(not env2.Load('../ikfastrobots/fail1.dae'))
+        finally:
+            env2.Destroy()
+            

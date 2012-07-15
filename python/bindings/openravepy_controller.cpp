@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyControllerBase : public PyInterfaceBase
 {
 protected:
@@ -113,8 +115,6 @@ public:
         return toPyArray(torque);
     }
 };
-
-namespace openravepy {
 
 ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 {

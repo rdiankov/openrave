@@ -16,6 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openravepy_int.h"
 
+namespace openravepy
+{
+
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() {
@@ -1091,11 +1094,17 @@ public:
         return toPyTriMesh(mesh);
     }
 
-    void SetDebugLevel(int level) {
-        _penv->SetDebugLevel(level);
+    void SetDebugLevel(object olevel) {
+        _penv->SetDebugLevel(pyGetDebugLevelFromPy(olevel));
     }
     int GetDebugLevel() const {
         return _penv->GetDebugLevel();
+    }
+    void SetDataAccess(int options) {
+        return _penv->SetDataAccess(options);
+    }
+    int GetDataAccess() const {
+        return _penv->GetDataAccess();
     }
 
     string GetHomeDirectory() {
@@ -1142,9 +1151,6 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
     return PyEnvironmentBasePtr(new PyEnvironmentBase(_pyenv->GetEnv()));
 #endif
 }
-
-namespace openravepy
-{
 
 object GetUserData(UserDataPtr pdata)
 {
@@ -1211,8 +1217,6 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
     return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
 }
 
-}
-
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
@@ -1237,8 +1241,11 @@ std::string get_openrave_exception_repr(openrave_exception* p)
     return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
 }
 
+}
+
 BOOST_PYTHON_MODULE(openravepy_int)
 {
+    using namespace openravepy;
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
     doc_options.disable_cpp_signatures();
@@ -1457,6 +1464,8 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))
                     .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(EnvironmentBase,GetDebugLevel))
+                    .def("SetDataAccess",&PyEnvironmentBase::SetDataAccess,args("level"), DOXY_FN(EnvironmentBase,SetDataAccess))
+                    .def("GetDataAccess",&PyEnvironmentBase::GetDataAccess, DOXY_FN(EnvironmentBase,GetDataAccess))
                     .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(EnvironmentBase,GetHomeDirectory))
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))

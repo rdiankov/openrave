@@ -66,7 +66,7 @@ PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr para
 {
     BOOST_ASSERT(!!_params->_setstatefn);
     _params->_getstatefn(_values);
-    OPENRAVE_ASSERT_OP(_values.size(),==,_params->GetDOF());
+    OPENRAVE_ASSERT_OP((int)_values.size(),==,_params->GetDOF());
 }
 
 PlannerBase::PlannerParameters::StateSaver::~StateSaver()

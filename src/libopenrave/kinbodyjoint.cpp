@@ -87,7 +87,7 @@ OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
     return parser;
 }
 
-KinBody::Joint::Joint(KinBodyPtr parent)
+KinBody::Joint::Joint(KinBodyPtr parent, JointType type)
 {
     _parent = parent;
     // fill _vaxes with valid values
@@ -120,7 +120,7 @@ KinBody::Joint::Joint(KinBodyPtr parent)
     }
     _bActive = true;
     _bInitialized = false;
-    _type = JointNone;
+    _type = type;
 }
 
 KinBody::Joint::~Joint()
@@ -134,11 +134,17 @@ int KinBody::Joint::GetDOF() const
         case JointHinge2:
         case JointUniversal: return 2;
         case JointSpherical: return 3;
+        case JointTrajectory: return 1;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
         }
     }
     return int(_type & 0xf);
+}
+
+bool KinBody::Joint::IsCircular(int iaxis) const
+{
+    return static_cast<bool>(_bIsCircular.at(iaxis));
 }
 
 bool KinBody::Joint::IsRevolute(int iaxis) const
@@ -348,6 +354,37 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             }
             break;
         }
+        case JointTrajectory: {
+            vector<dReal> vsampledata;
+            dReal splitpercentage = 0.01;
+            dReal precision(1e-6);
+            dReal timemin = 0, timemax = _trajfollow->GetDuration();
+            Transform tbest, ttest;
+            while(timemin+precision < timemax) {
+                dReal timestep = (timemax-timemin)*splitpercentage;
+                dReal timeclosest = timemin;
+                dReal bestdist = 1e30, besttime=0;
+                for(; timeclosest < timemax; timeclosest += timestep ) {
+                    if( timeclosest > timemax ) {
+                        timeclosest = timemax;
+                    }
+                    _trajfollow->Sample(vsampledata,timeclosest);
+                    if( _trajfollow->GetConfigurationSpecification().ExtractTransform(ttest,vsampledata.begin(),KinBodyConstPtr()) ) {
+                        dReal fdist = TransformDistanceFast(ttest,tjoint,0.3);
+                        if( bestdist > fdist ) {
+                            besttime = timeclosest;
+                            bestdist = fdist;
+                            tbest = ttest;
+                        }
+                    }
+                }
+                OPENRAVE_ASSERT_OP_FORMAT(bestdist, <, 1e30, "failed to compute trajectory value for joint %s\n",GetName(),ORE_Assert);
+                timemin = max(timemin,besttime-timestep);
+                timemax = min(timemax, besttime+timestep);
+                splitpercentage = 0.1f;
+            }
+            return 0.5*(timemin+timemax);
+        }
         default:
             break;
         }
@@ -530,7 +567,6 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
 void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
 {
     OPENRAVE_ASSERT_OP_FORMAT(!!plink0,&&,!!plink1, "one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
-    OPENRAVE_ASSERT_OP((int)vaxes.size(),==,GetDOF());
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP_FORMAT(_vmaxvel[i], >=, 0, "joint %s[%d] max velocity is invalid",_name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_vmaxaccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_name%i, ORE_InvalidArguments);
@@ -543,7 +579,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     _attachedbodies[1] = plink1;
     Transform trel, tbody0, tbody1;
     Vector vanchor=vanchorraw;
-    for(int i = 0; i < GetDOF(); ++i) {
+    for(size_t i = 0; i < vaxes.size(); ++i) {
         _vaxes[i] = vaxes[i];
     }
     // make sure first body is always closer to the root, unless the second body is static
@@ -576,15 +612,23 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
+            OPENRAVE_ASSERT_OP((int)vaxes.size(),==,2);
             break;
         case JointHinge2:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
+            OPENRAVE_ASSERT_OP((int)vaxes.size(),==,2);
             break;
         case JointSpherical:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
+            _tRight = _tRight * trel;
+            break;
+        case JointTrajectory:
+            if( !_trajfollow ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("trajectory joint requires Joint::_trajfollow to be initialized",ORE_InvalidState);
+            }
             _tRight = _tRight * trel;
             break;
         default:
@@ -594,6 +638,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         _tRightNoOffset = _tRight;
     }
     else {
+        OPENRAVE_ASSERT_OP((int)vaxes.size(),==,GetDOF());
         _tLeftNoOffset.trans = vanchor;
         _tRightNoOffset.trans = -vanchor;
         _tRightNoOffset = _tRightNoOffset * trel;
@@ -629,26 +674,39 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
     if( vcurrentvalues.size() > 0 ) {
         // see if any joints have offsets
-        if( !(_type&JointSpecialBit) ||(_type != JointSpherical)) {
-            Transform toffset;
+        Transform toffset;
+        if( _type == JointTrajectory ) {
+            vector<dReal> vsampledata;
+            Transform t0, t1;
+            _trajfollow->Sample(vsampledata,0);
+            if( !_trajfollow->GetConfigurationSpecification().ExtractTransform(t0,vsampledata.begin(),KinBodyConstPtr()) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to sample trajectory for joint %s",GetName(),ORE_Assert);
+            }
+            _trajfollow->Sample(vsampledata,vcurrentvalues.at(0));
+            if( !_trajfollow->GetConfigurationSpecification().ExtractTransform(t1,vsampledata.begin(),KinBodyConstPtr()) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to sample trajectory for joint %s",GetName(),ORE_Assert);
+            }
+            toffset = t0*t1.inverse();
+        }
+        else if( !(_type&JointSpecialBit) || _type == JointUniversal || _type == JointHinge2 ) {
             if( IsRevolute(0) ) {
                 toffset.rot = quatFromAxisAngle(_vaxes[0], -vcurrentvalues[0]);
             }
             else {
                 toffset.trans = -_vaxes[0]*vcurrentvalues[0];
             }
-            _tLeftNoOffset *= toffset;
-            _tLeft *= toffset;
-            if( vcurrentvalues.size() > 1 ) {
-                if( IsRevolute(GetDOF()-1) ) {
-                    toffset.rot = quatFromAxisAngle(_vaxes[GetDOF()-1], -vcurrentvalues.at(GetDOF()-1));
-                }
-                else {
-                    toffset.trans = -_vaxes[GetDOF()-1]*vcurrentvalues.at(GetDOF()-1);
-                }
-                _tRightNoOffset = toffset * _tRightNoOffset;
-                _tRight = toffset * _tRight;
+        }
+        _tLeftNoOffset *= toffset;
+        _tLeft *= toffset;
+        if( vcurrentvalues.size() > 1 ) {
+            if( IsRevolute(GetDOF()-1) ) {
+                toffset.rot = quatFromAxisAngle(_vaxes[GetDOF()-1], -vcurrentvalues.at(GetDOF()-1));
             }
+            else {
+                toffset.trans = -_vaxes[GetDOF()-1]*vcurrentvalues.at(GetDOF()-1);
+            }
+            _tRightNoOffset = toffset * _tRightNoOffset;
+            _tRight = toffset * _tRight;
         }
     }
     _tinvRight = _tRight.inverse();

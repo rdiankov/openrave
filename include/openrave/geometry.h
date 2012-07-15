@@ -47,58 +47,140 @@ namespace geometry {
 template <typename T> class RaveTransform;
 template <typename T> class RaveTransformMatrix;
 
-#ifndef MATH_SQRT
+#ifdef OPENRAVE_MATH_SQRT_FLOAT
+inline float MATH_SQRT(float f) {
+    return OPENRAVE_MATH_SQRT_FLOAT(f);
+}
+#else
 inline float MATH_SQRT(float f) {
     return sqrtf(f);
 }
+#endif
+#ifdef OPENRAVE_MATH_SQRT_DOUBLE
+inline double MATH_SQRT(double f) {
+    return OPENRAVE_MATH_SQRT_DOUBLE(f);
+}
+#else
 inline double MATH_SQRT(double f) {
     return sqrt(f);
 }
 #endif
-#ifndef MATH_SIN
+
+#ifdef OPENRAVE_MATH_SIN_FLOAT
+inline float MATH_SIN(float f) {
+    return OPENRAVE_MATH_SIN_FLOAT(f);
+}
+#else
 inline float MATH_SIN(float f) {
     return sinf(f);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_SIN_DOUBLE
+inline double MATH_SIN(double f) {
+    return OPENRAVE_MATH_SIN_DOUBLE(f);
+}
+#else
 inline double MATH_SIN(double f) {
     return sin(f);
 }
 #endif
-#ifndef MATH_COS
+
+#ifdef OPENRAVE_MATH_COS_FLOAT
+inline float MATH_COS(float f) {
+    return OPENRAVE_MATH_COS_FLOAT(f);
+}
+#else
 inline float MATH_COS(float f) {
     return cosf(f);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_COS_DOUBLE
+inline double MATH_COS(double f) {
+    return OPENRAVE_MATH_COS_DOUBLE(f);
+}
+#else
 inline double MATH_COS(double f) {
     return cos(f);
 }
 #endif
-#ifndef MATH_FABS
+
+#ifdef OPENRAVE_MATH_FABS_FLOAT
+inline float MATH_FABS(float f) {
+    return OPENRAVE_MATH_FABS_FLOAT(f);
+}
+#else
 inline float MATH_FABS(float f) {
     return fabsf(f);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_FABS_DOUBLE
+inline double MATH_FABS(double f) {
+    return OPENRAVE_MATH_FABS_DOUBLE(f);
+}
+#else
 inline double MATH_FABS(double f) {
     return fabs(f);
 }
 #endif
-#ifndef MATH_ACOS
+
+#ifdef OPENRAVE_MATH_ACOS_FLOAT
+inline float MATH_ACOS(float f) {
+    return OPENRAVE_MATH_ACOS_FLOAT(f);
+}
+#else
 inline float MATH_ACOS(float f) {
     return acosf(f);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_ACOS_DOUBLE
+inline double MATH_ACOS(double f) {
+    return OPENRAVE_MATH_ACOS_DOUBLE(f);
+}
+#else
 inline double MATH_ACOS(double f) {
     return acos(f);
 }
 #endif
-#ifndef MATH_ASIN
+
+#ifdef OPENRAVE_MATH_ASIN_FLOAT
+inline float MATH_ASIN(float f) {
+    return OPENRAVE_MATH_ASIN_FLOAT(f);
+}
+#else
 inline float MATH_ASIN(float f) {
     return asinf(f);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_ASIN_DOUBLE
+inline double MATH_ASIN(double f) {
+    return OPENRAVE_MATH_ASIN_DOUBLE(f);
+}
+#else
 inline double MATH_ASIN(double f) {
     return asin(f);
 }
 #endif
-#ifndef MATH_ATAN2
+
+#ifdef OPENRAVE_MATH_ATAN2_FLOAT
+inline float MATH_ATAN2(float fy, float fx) {
+    return OPENRAVE_MATH_ATAN2_FLOAT(fy,fx);
+}
+#else
 inline float MATH_ATAN2(float fy, float fx) {
     return atan2f(fy,fx);
 }
+#endif
+
+#ifdef OPENRAVE_MATH_ATAN2_DOUBLE
+inline double MATH_ATAN2(double fy, double fx) {
+    return OPENRAVE_MATH_ATAN2_DOUBLE(fy,fx);
+}
+#else
 inline double MATH_ATAN2(double fy, double fx) {
     return atan2(fy,fx);
 }
@@ -220,26 +302,26 @@ public:
         RaveVector<T> v; v.x = -x; v.y = -y; v.z = -z; v.w = -w; return v;
     }
     template <typename U> inline RaveVector<T> operator+(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = x+r.x; v.y = y+r.y; v.z = z+r.z; v.w = w+r.w; return v;
+        RaveVector<T> v; v.x = x+T(r.x); v.y = y+T(r.y); v.z = z+T(r.z); v.w = w+T(r.w); return v;
     }
     template <typename U> inline RaveVector<T> operator-(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = x-r.x; v.y = y-r.y; v.z = z-r.z; v.w = w-r.w; return v;
+        RaveVector<T> v; v.x = x-T(r.x); v.y = y-T(r.y); v.z = z-T(r.z); v.w = w-T(r.w); return v;
     }
     template <typename U> inline RaveVector<T> operator*(const RaveVector<U> &r) const {
-        RaveVector<T> v; v.x = r.x*x; v.y = r.y*y; v.z = r.z*z; v.w = r.w*w; return v;
+        RaveVector<T> v; v.x = T(r.x)*x; v.y = T(r.y)*y; v.z = T(r.z)*z; v.w = T(r.w)*w; return v;
     }
     inline RaveVector<T> operator*(T k) const {
         RaveVector<T> v; v.x = k*x; v.y = k*y; v.z = k*z; v.w = k*w; return v;
     }
 
     template <typename U> inline RaveVector<T>& operator += (const RaveVector<U>&r) {
-        x += r.x; y += r.y; z += r.z; w += r.w; return *this;
+        x += T(r.x); y += T(r.y); z += T(r.z); w += T(r.w); return *this;
     }
     template <typename U> inline RaveVector<T>& operator -= (const RaveVector<U>&r) {
-        x -= r.x; y -= r.y; z -= r.z; w -= r.w; return *this;
+        x -= T(r.x); y -= T(r.y); z -= T(r.z); w -= T(r.w); return *this;
     }
     template <typename U> inline RaveVector<T>& operator *= (const RaveVector<U>&r) {
-        x *= r.x; y *= r.y; z *= r.z; w *= r.w; return *this;
+        x *= T(r.x); y *= T(r.y); z *= T(r.z); w *= T(r.w); return *this;
     }
 
     inline RaveVector<T>& operator *= (const T k) {

@@ -60,6 +60,8 @@ using namespace boost::python;
 using namespace std;
 using namespace OpenRAVE;
 
+namespace openravepy {
+
 struct DummyStruct {};
 
 class PyInterfaceBase;
@@ -134,7 +136,6 @@ struct null_deleter { void operator()(void const *) const {
                       }
 };
 
-namespace openravepy {
 class PythonThreadSaver
 {
 public:
@@ -148,7 +149,6 @@ protected:
     PyThreadState *_save;
 };
 typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
-}
 
 inline boost::python::object ConvertStringToUnicode(const std::string& s)
 {
@@ -548,9 +548,6 @@ public:
     }
 };
 
-namespace openravepy
-{
-
 bool ExtractIkReturn(object o, IkReturn& ikfr);
 object toPyIkReturn(const IkReturn& ret);
 
@@ -620,6 +617,8 @@ PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr);
 void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
+
+int pyGetDebugLevelFromPy(object olevel);
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);

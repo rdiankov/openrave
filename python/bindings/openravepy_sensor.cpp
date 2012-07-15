@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PySensorBase : public PyInterfaceBase
 {
 protected:
@@ -369,8 +371,6 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 };
-
-namespace openravepy {
 
 SensorBasePtr GetSensor(PySensorBasePtr pysensor)
 {

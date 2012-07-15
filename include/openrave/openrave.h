@@ -767,19 +767,35 @@ private:
 } // end namespace OpenRAVE
 
 // define the math functions
-#define MATH_EXP RaveExp
-#define MATH_LOG RaveLog
-#define MATH_COS RaveCos
-#define MATH_SIN RaveSin
-#define MATH_TAN RaveTan
-#define MATH_LOG2 RaveLog2
-#define MATH_LOG10 RaveLog10
-#define MATH_ACOS RaveAcos
-#define MATH_ASIN RaveAsin
-#define MATH_ATAN2 RaveAtan2
-#define MATH_POW RavePow
-#define MATH_SQRT RaveSqrt
-#define MATH_FABS RaveFabs
+#if OPENRAVE_PRECISION // 1 if double precision
+#define OPENRAVE_MATH_EXP_DOUBLE RaveExp
+#define OPENRAVE_MATH_LOG_DOUBLE RaveLog
+#define OPENRAVE_MATH_COS_DOUBLE RaveCos
+#define OPENRAVE_MATH_SIN_DOUBLE RaveSin
+#define OPENRAVE_MATH_TAN_DOUBLE RaveTan
+#define OPENRAVE_MATH_LOG2_DOUBLE RaveLog2
+#define OPENRAVE_MATH_LOG10_DOUBLE RaveLog10
+#define OPENRAVE_MATH_ACOS_DOUBLE RaveAcos
+#define OPENRAVE_MATH_ASIN_DOUBLE RaveAsin
+#define OPENRAVE_MATH_ATAN2_DOUBLE RaveAtan2
+#define OPENRAVE_MATH_POW_DOUBLE RavePow
+#define OPENRAVE_MATH_SQRT_DOUBLE RaveSqrt
+#define OPENRAVE_MATH_FABS_DOUBLE RaveFabs
+#else // 32bit float
+#define OPENRAVE_MATH_EXP_FLOAT RaveExp
+#define OPENRAVE_MATH_LOG_FLOAT RaveLog
+#define OPENRAVE_MATH_COS_FLOAT RaveCos
+#define OPENRAVE_MATH_SIN_FLOAT RaveSin
+#define OPENRAVE_MATH_TAN_FLOAT RaveTan
+#define OPENRAVE_MATH_LOG2_FLOAT RaveLog2
+#define OPENRAVE_MATH_LOG10_FLOAT RaveLog10
+#define OPENRAVE_MATH_ACOS_FLOAT RaveAcos
+#define OPENRAVE_MATH_ASIN_FLOAT RaveAsin
+#define OPENRAVE_MATH_ATAN2_FLOAT RaveAtan2
+#define OPENRAVE_MATH_POW_FLOAT RavePow
+#define OPENRAVE_MATH_SQRT_FLOAT RaveSqrt
+#define OPENRAVE_MATH_FABS_FLOAT RaveFabs
+#endif
 
 #include <openrave/geometry.h>
 #include <openrave/mathextra.h>
@@ -1072,15 +1088,17 @@ protected:
         Looks for 'affine_transform' groups. If pbody is not initialized, will choose the first affine_transform found.
         \param[inout] t the transform holding the default values, which will be overwritten with the new values.
         \param[in] itdata data in the format of this configuration specification.
+        \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const;
+    virtual bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative=0) const;
 
     /** \brief extracts an ikparameterization given the start of a configuration space point
 
         Looks for 'ikparam' groups.
         \param[inout] ikparam filled with ikparameterization (if found)
         \param[in] itdata data in the format of this configuration specification
+        \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
     virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
@@ -2092,7 +2110,7 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
  */
 OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
 
-OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr());
+OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
 }
 

@@ -1257,13 +1257,13 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
     }
 }
 
-ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody)
+ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody,const std::string& interpolation)
 {
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = RaveGetAffineDOF(affinedofs);
-    spec._vgroups[0].interpolation = "linear";
+    spec._vgroups[0].interpolation = interpolation;
     if( !!pbody ) {
         spec._vgroups[0].name = str(boost::format("affine_transform %s %d")%pbody->GetName()%affinedofs);
     }
@@ -1837,11 +1837,19 @@ ConfigurationSpecification ConfigurationSpecification::operator+ (const Configur
     return spec;
 }
 
-bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody) const
+bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative) const
 {
     bool bfound = false;
+    string searchname;
+    switch( timederivative ) {
+    case 0: searchname = "affine_transform"; break;
+    case 1: searchname = "affine_velocities"; break;
+    case 2: searchname = "affine_accelerations"; break;
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT("bad time derivative %d",timederivative,ORE_InvalidArguments);
+    }
     FOREACHC(itgroup,_vgroups) {
-        if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+        if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
             stringstream ss(itgroup->name.substr(16));
             string bodyname;
             int affinedofs=0;
@@ -1866,8 +1874,8 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
     case 0: searchname = "ikparam_values"; break;
     case 1: searchname = "ikparam_velocities"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
-    };
+        throw OPENRAVE_EXCEPTION_FORMAT("bad time derivative %d",timederivative,ORE_InvalidArguments);
+    }
     FOREACHC(itgroup,_vgroups) {
         if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
             stringstream ss(itgroup->name.substr(searchname.size()));
@@ -2763,7 +2771,8 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         pdata->_pdummy->startElement(s,listatts);
     }
     else {
-        if( ((XMLREADERDATA*)ctx)->_preader->startElement(s, listatts) != BaseXMLReader::PE_Support ) {
+        BaseXMLReader::ProcessElement pestatus = pdata->_preader->startElement(s, listatts);
+        if( pestatus != BaseXMLReader::PE_Support ) {
             // not handling, so create a temporary class to handle it
             pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
         }

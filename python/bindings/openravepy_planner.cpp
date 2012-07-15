@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyPlannerProgress
 {
 public:
@@ -185,8 +187,6 @@ public:
         return _pplanner;
     }
 };
-
-namespace openravepy {
 
 PlannerBasePtr GetPlanner(PyPlannerBasePtr pyplanner)
 {

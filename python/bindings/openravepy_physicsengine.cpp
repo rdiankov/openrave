@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PyPhysicsEngineBase : public PyInterfaceBase
 {
 protected:
@@ -144,8 +146,6 @@ public:
         _pPhysicsEngine->SimulateStep(fTimeElapsed);
     }
 };
-
-namespace openravepy {
 
 PhysicsEngineBasePtr GetPhysicsEngine(PyPhysicsEngineBasePtr pyPhysicsEngine)
 {

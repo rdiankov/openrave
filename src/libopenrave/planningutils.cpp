@@ -15,8 +15,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
-
+#include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
+
+// have to include in order to get symbols inside libopenrave
+#include <openrave/plannerparameters.h>
 
 namespace OpenRAVE {
 namespace planningutils {
@@ -442,15 +445,17 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
             ss >> tempname >> affinedofs;
             BOOST_ASSERT( !!ss );
             KinBodyPtr pbody = traj->GetEnv()->GetKinBody(tempname);
-            BOOST_ASSERT( !!pbody );
-            Vector vaxis(0,0,1);
-            if( affinedofs & DOF_RotationAxis ) {
-                vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
-                ss >> vaxis.x >> vaxis.y >> vaxis.z;
+            // body doesn't hav eto be set
+            if( !!pbody ) {
+                Vector vaxis(0,0,1);
+                if( affinedofs & DOF_RotationAxis ) {
+                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                    ss >> vaxis.x >> vaxis.y >> vaxis.z;
+                }
+                robot = pbody;
+                listsetfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+                listgetfunctions.push_back(boost::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
             }
-            robot = pbody;
-            listsetfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
-            listgetfunctions.push_back(boost::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
             int iktypeint = 0;
@@ -897,6 +902,34 @@ LineCollisionConstraint::LineCollisionConstraint(const std::list<KinBodyPtr>& li
     _report.reset(new CollisionReport());
 }
 
+void LineCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
+{
+    _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
+}
+
+bool LineCollisionConstraint::_CheckState()
+{
+    if( !!_usercheckfns[0] ) {
+        if( !_usercheckfns[0]() ) {
+            return false;
+        }
+    }
+    FOREACHC(itbody, _listCheckSelfCollisions) {
+        if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+            return false;
+        }
+        if( (*itbody)->CheckSelfCollision(_report) ) {
+            return false;
+        }
+    }
+    if( !!_usercheckfns[1] ) {
+        if( !_usercheckfns[1]() ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
@@ -1043,13 +1076,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     _vtempconfig.resize(params->GetDOF());
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision(_report) ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
     }
 
@@ -1079,13 +1107,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 
     if (start == 0 ) {
         params->_setstatefn(pQ0);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision(_report) ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
         start = 1;
     }
@@ -1109,13 +1132,8 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        FOREACHC(itbody, _listCheckSelfCollisions) {
-            if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody)) ) {
-                return false;
-            }
-            if( (*itbody)->CheckSelfCollision() ) {
-                return false;
-            }
+        if( !_CheckState() ) {
+            return false;
         }
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
@@ -1411,6 +1429,105 @@ void ManipulatorIKGoalSampler::SetSamplingProb(dReal fsampleprob)
 void ManipulatorIKGoalSampler::SetJitter(dReal maxdist)
 {
     _fjittermaxdist = maxdist;
+}
+
+TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
+{
+    _datacount = 0;
+    FOREACHC(itatt, atts) {
+        if( itatt->first == "type" ) {
+            if( !!_ptraj ) {
+                OPENRAVE_ASSERT_OP(_ptraj->GetXMLId(),==,itatt->second );
+            }
+            else {
+                _ptraj = RaveCreateTrajectory(penv, itatt->second);
+            }
+        }
+    }
+    if( !_ptraj ) {
+        _ptraj = RaveCreateTrajectory(penv, "");
+    }
+}
+
+BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& name, const AttributesList& atts)
+{
+    _ss.str("");
+    if( !!_pcurreader ) {
+        if( _pcurreader->startElement(name, atts) == PE_Support ) {
+            return PE_Support;
+        }
+        return PE_Ignore;
+    }
+
+    if( name == "trajectory" ) {
+        _pcurreader.reset(new TrajectoryReader(_ptraj->GetEnv(), _ptraj, atts));
+        return PE_Support;
+    }
+    else if( name == "configuration" ) {
+        _pcurreader.reset(new ConfigurationSpecification::Reader(_spec));
+        return PE_Support;
+    }
+    else if( name == "data" ) {
+        _vdata.resize(0);
+        _datacount = 0;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "count" ) {
+                _datacount = boost::lexical_cast<int>(itatt->second);
+            }
+        }
+        return PE_Support;
+    }
+    else if( name == "description" ) {
+        return PE_Support;
+    }
+    return PE_Pass;
+}
+
+bool TrajectoryReader::endElement(const std::string& name)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(name) ) {
+            if( !!boost::dynamic_pointer_cast<ConfigurationSpecification::Reader>(_pcurreader) ) {
+                BOOST_ASSERT(_spec.IsValid());
+                _ptraj->Init(_spec);
+            }
+            bool bret = !!boost::dynamic_pointer_cast<TrajectoryReader>(_pcurreader);
+            _pcurreader.reset();
+            if( bret ) {
+                return true;
+            }
+        }
+    }
+    else if( name == "data" ) {
+        _vdata.resize(_spec.GetDOF()*_datacount);
+        for(size_t i = 0; i < _vdata.size(); ++i) {
+            _ss >> _vdata[i];
+        }
+        if( !_ss ) {
+            RAVELOG_WARN("failed treading trajectory <data>\n");
+        }
+        else {
+            _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
+        }
+    }
+    else if( name == "description" ) {
+        _ptraj->SetDescription(_ss.str());
+    }
+    else if( name == "trajectory" ) {
+        return true;
+    }
+    return false;
+}
+
+void TrajectoryReader::characters(const std::string& ch)
+{
+    if( !!_pcurreader ) {
+        _pcurreader->characters(ch);
+    }
+    else {
+        _ss.clear();
+        _ss << ch;
+    }
 }
 
 } // planningutils

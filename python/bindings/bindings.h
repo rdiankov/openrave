@@ -61,6 +61,8 @@
 #include <complex>
 #include <algorithm>
 
+namespace openravepy {
+
 using namespace boost::python;
 
 class PyVoidHandle
@@ -445,5 +447,7 @@ inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
 }
 
 #endif
+
+}
 
 #endif

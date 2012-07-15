@@ -33,6 +33,12 @@ Core
 
 * Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties.GetCollisionMesh`.
 
+* Added **openrave/plannerparameters.h** to official OpenRAVE headers
+
+* Added new :ref:`.KinBody.Joint.Type.Trajectory` joint type allowing a joint to transform a child link in any way.
+
+* Added :meth:`.Environment.SetDataAccess` to restrict filenames from only being opened from $OPENRAVE_DATA directories
+
 Inverse Kinematics
 ------------------
 
@@ -65,7 +71,7 @@ Database
 Viewer
 ------
 
-* Check if DISPLAY variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
+* Check if **DISPLAY** environment variable is set for linux systems before creating the viewer (thanks to Chen Haseru).
 
 * Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
 
@@ -80,13 +86,15 @@ Misc
 
 * Added :mod:`.examples.pr2turnlever` example
 
-* Clang compiler compilation
+* Clang compiler support
 
 * Support doc internationalization using sphinx 1.1
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
-* collada stores joint **circular** property
+* collada stores joint **circular**, **weight**, and **resolution** properties
+
+* exposed :class:`.planningutils.TrajectoryReader` for parsing trajectory files
 
 Version 0.6.6
 =============

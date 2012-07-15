@@ -17,8 +17,7 @@
 #define COMMON_MANIPULATION_H
 
 #include "plugindefs.h"
-#include "plannerparameters.h"
-
+#include <openrave/plannerparameters.h>
 #include <openrave/planningutils.h>
 
 // used for inverse jacobian computation

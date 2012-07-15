@@ -18,6 +18,8 @@
 #include "openravepy_int.h"
 #include <openrave/utils.h>
 
+namespace openravepy {
+
 class PyIkReturn
 {
 public:
@@ -195,8 +197,6 @@ public:
         return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,boost::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,_1,_2,_3)));
     }
 };
-
-namespace openravepy {
 
 bool ExtractIkReturn(object o, IkReturn& ikfr)
 {

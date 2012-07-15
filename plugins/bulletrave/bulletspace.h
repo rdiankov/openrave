@@ -105,7 +105,7 @@ public:
         ///< the pointer to this Link is the userdata
         typedef std::map< KinBody::JointConstPtr, boost::shared_ptr<btTypedConstraint> > MAPJOINTS;
         MAPJOINTS _mapjoints;
-        boost::shared_ptr<void> _geometrycallback;
+        UserDataPtr _geometrycallback;
         boost::weak_ptr<BulletSpace> _bulletspace;
 
 private:

@@ -73,6 +73,8 @@ extern "C" void openravepy_viewer_sigint_handler(int sig) //, siginfo_t *siginfo
 #endif
 }
 
+namespace openravepy {
+
 class PyViewerBase : public PyInterfaceBase
 {
 protected:
@@ -281,8 +283,6 @@ public:
         return toPyArray(memory,dims);
     }
 };
-
-namespace openravepy {
 
 ViewerBasePtr GetViewer(PyViewerBasePtr pyviewer)
 {

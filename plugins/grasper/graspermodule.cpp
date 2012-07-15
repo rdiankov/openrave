@@ -135,7 +135,7 @@ public:
         bool bOutputFinal = false;
         dReal friction = 0;
 
-        boost::shared_ptr<GraspParameters> params(new GraspParameters(GetEnv()));
+        GraspParametersPtr params(new GraspParameters(GetEnv()));
         params->btransformrobot = true;
         params->bonlycontacttarget = true;
         params->btightgrasp = false;
@@ -857,8 +857,7 @@ public:
             probot->SetActiveManipulator(worker_params->manipname);
 
             // setup parameters
-            boost::shared_ptr<GraspParameters> params(new GraspParameters(pcloneenv));
-
+            GraspParametersPtr params(new GraspParameters(pcloneenv));
             params->targetbody = pcloneenv->GetKinBody(worker_params->targetname);
             params->vavoidlinkgeometry = worker_params->vavoidlinkgeometry;
             params->btransformrobot = true;

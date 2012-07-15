@@ -545,9 +545,15 @@ public:
     /// \param level 0 for no debug, 1 - to print all debug messeges. Default
     ///             value for release builds is 0, for debug builds it is 1
     /// declaring variables with stdcall can be a little complex
-    virtual void SetDebugLevel(uint32_t level) = 0;
-    virtual uint32_t GetDebugLevel() const = 0;
+    virtual void SetDebugLevel(int level) = 0;
+    virtual int GetDebugLevel() const = 0;
     //@}
+
+    /// \brief sets the data access options for cad resources/robot files
+    ///
+    /// \param options - if 1 will only allow resources inside directories specified from OPERNAVE_DATA environment variable. This allows reject of full paths from unsecure/unauthenticated resources.
+    virtual void SetDataAccess(int options) = 0;
+    virtual int GetDataAccess() const = 0;
 
 protected:
     virtual const char* GetHash() const {

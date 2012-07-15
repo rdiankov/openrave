@@ -268,7 +268,7 @@ public:
 };
 
 int& GetXMLErrorCount();
-void SetDataDirs(const std::vector<std::string>& vdatadirs);
+void SetDataDirs(const std::vector<std::string>& vdatadirs, int accessoptions);
 bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
 bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
 BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);

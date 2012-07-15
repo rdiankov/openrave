@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PySpaceSamplerBase : public PyInterfaceBase
 {
 protected:
@@ -142,8 +144,6 @@ protected:
         return static_cast<numeric::array>(handle<>(pyvalues));
     }
 };
-
-namespace openravepy {
 
 SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr pyspacesampler)
 {

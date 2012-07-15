@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+namespace openravepy {
+
 class PySensorSystemBase : public PyInterfaceBase
 {
     friend class PyEnvironmentBase;
@@ -32,8 +34,6 @@ public:
         return _psensorsystem;
     }
 };
-
-namespace openravepy {
 
 SensorSystemBasePtr GetSensorSystem(PySensorSystemBasePtr pySensorSystem)
 {

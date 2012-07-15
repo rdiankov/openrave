@@ -18,7 +18,6 @@
 #define RAVE_PLANNERS_H
 
 #include "plugindefs.h"
-#include "plannerparameters.h"
 
 enum ExtendType {
     ET_Failed=0,

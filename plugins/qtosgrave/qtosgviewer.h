@@ -117,17 +117,6 @@ public:
     virtual void SetEnvironmentSync(bool bUpdate);
     virtual void EnvironmentSync();
 
-//  virtual void UnregisterCallback(std::list<std::pair<int,ViewerCallbackFn > >::iterator it)
-//  {
-//      boost::mutex::scoped_lock lock(_mutexCallbacks);
-//      _listRegisteredCallbacks.erase(it);
-//
-//  }
-//  virtual boost::shared_ptr<void> RegisterCallback(int properties, const ViewerCallbackFn& fncallback) {
-//      boost::mutex::scoped_lock lock(_mutexCallbacks);
-//      return boost::shared_ptr<void>((void*)1,boost::bind(&QtOSGViewer::UnregisterCallback,this,_listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),make_pair(properties,fncallback))));
-//  }
-
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
