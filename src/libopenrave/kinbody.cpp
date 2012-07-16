@@ -837,15 +837,13 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0]*pjoint->GetInternalHierarchyAxis(0)), wparent);
         }
         else if( pjoint->GetType() == Joint::JointTrajectory ) {
-            Transform tlocalvelocity;
+            Transform tlocalvelocity, tlocal;
             pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
-            Transform tjoint = tdelta.inverse() * tchild * pjoint->GetInternalHierarchyRightTransform().inverse();
-            //tlocalvelocity
-            //tlocalvelocity
-            //Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-            //velocities.at(childindex) =
-            BOOST_ASSERT(0);
+            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = axisangle * qrot * 0.5 * vel
+            Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
+            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("joint %s not supported for querying velocities",pjoint->GetType(),ORE_Assert);
