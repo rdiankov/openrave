@@ -3063,12 +3063,11 @@ void init_openravepy_kinbody()
                                  .def("__eq__",&PyKinBody::PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
                 ;
+                // \deprecated (12/07/16)
+                geometry.attr("Type") = geomtype;
             }
-            {
-                // deprecated (12/07/16)
-                scope geomproperties = class_<object>("GeomProperties");
-                geomproperties.attr("Type") = geomtype;
-            }
+            // \deprecated (12/07/16)
+            link.attr("GeomProperties") = link.attr("Geometry");
         }
 
         {

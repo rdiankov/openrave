@@ -312,13 +312,13 @@ class LinkStatisticsModel(DatabaseGenerator):
                     cdhulls = [cdhull for ig2,cdhull in linkcd if ig2==ig]
                     if len(cdhulls) > 0:
                         hulls += [self.cdmodel.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
+                    elif geom.GetType() == KinBody.Link.GeomType.Box:
                         hull= self.cdmodel.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents()))
                         hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
+                    elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1))
                         hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
+                    elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
                         hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight()))
                         hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
                 self.linkstats[ilink] = self.ComputeGeometryStatistics(hulls)

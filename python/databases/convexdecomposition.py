@@ -143,7 +143,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 log.info('link %d/%d',il,len(links))
                 geoms = []
                 for ig,geom in enumerate(link.GetGeometries()):
-                    if geom.GetType() == KinBody.Link.GeomProperties.Type.Trimesh:
+                    if geom.GetType() == KinBody.Link.GeomType.Trimesh:
                         trimesh = geom.GetCollisionMesh()
                         orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
                         if len(orghulls) > 0:
@@ -241,11 +241,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             if len(leftinds) == 0:
                                 break
                         continue
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
+                    elif geom.GetType() == KinBody.Link.GeomType.Box:
                         insideinds = numpy.all(numpy.less_equal(abs(localpoints), geom.GetBoxExtents()) ,1)
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
+                    elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         insideinds = numpy.less_equal(sum(localpoints**2,1), geom.GetSphereRadius()**2)
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
+                    elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
                         insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoint[:,0]**2+localpoint[:2]**2, geom.GetCylinderRadius()**2)
                     else:
                         continue
@@ -298,11 +298,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     cdhulls = [cdhull for ig2,cdhull in self.linkgeometry[ilink] if ig2==ig]
                     if len(cdhulls) > 0:
                         hulls += [self.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Box:
+                    elif geom.GetType() == KinBody.Link.GeomType.Box:
                         hulls.append(self.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Sphere:
+                    elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         hulls.append(self.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
-                    elif geom.GetType() == KinBody.Link.GeomProperties.Type.Cylinder:
+                    elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
                         hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                 handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
                 colorindex+=len(hulls)
