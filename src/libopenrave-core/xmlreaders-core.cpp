@@ -1795,6 +1795,10 @@ public:
             }
             else {
                 _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                if( !!_pcustomreader ) {
+                    // should set a name for it to get stored
+                    _readername = _pinterface->GetXMLId();
+                }
                 SetFilename(_filename);
             }
         }
@@ -1828,6 +1832,10 @@ public:
             }
             else {
                 _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                if( !!_pcustomreader ) {
+                    // should set a name for it to get stored
+                    _readername = _pinterface->GetXMLId();
+                }
             }
 
             SetFilename(_filename);
@@ -2555,8 +2563,9 @@ public:
 
                     if( !pIKFastLoader ) {
                         pIKFastLoader = RaveCreateModule(_probot->GetEnv(), "ikfast");
-                        if( !!pIKFastLoader )
+                        if( !!pIKFastLoader ) {
                             _probot->GetEnv()->AddModule(pIKFastLoader,"");
+                        }
                     }
 
                     if( !!pIKFastLoader ) {
@@ -3107,21 +3116,17 @@ public:
         }
 
         _CheckInterface();
-        if( !!_pinterface ) {
-            ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
-            if( !!module ) {
-                int ret = _penv->AddModule(module,_args);
-                if( ret ) {
-                    RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
-                    module.reset();
-                    _pinterface.reset();
-                }
-            }
-        }
     }
 
+    const string& GetArgs() const {
+        return _args;
+    }
+
+protected:
     string _args;
 };
+
+typedef boost::shared_ptr<ModuleXMLReader> ModuleXMLReaderPtr;
 
 class SensorXMLReader : public InterfaceXMLReader
 {
@@ -3362,6 +3367,16 @@ public:
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_CollisionChecker);
                     _penv->SetCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(_pinterface));
                 }
+                else if( !!boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader) ) {
+                    ModuleXMLReaderPtr modulereader = boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader);
+                    ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                    if( !!module ) {
+                        int ret = _penv->AddModule(module,modulereader->GetArgs());
+                        if( ret ) {
+                            RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
+                        }
+                    }
+                }
                 else if( !!_pinterface ) {
                     RAVELOG_DEBUG("owning interface %s, type: %s\n",_pinterface->GetXMLId().c_str(),RaveGetInterfaceName(_pinterface->GetInterfaceType()).c_str());
                     _penv->OwnInterface(_pinterface);
@@ -3551,6 +3566,16 @@ public:
                                 }
                                 else {
                                     pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else if( !!boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader) ) {
+                            ModuleXMLReaderPtr modulereader = boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader);
+                            ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                            if( !!module ) {
+                                int ret = _penv->AddModule(module,modulereader->GetArgs());
+                                if( ret ) {
+                                    RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
                                 }
                             }
                         }

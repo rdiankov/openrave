@@ -43,6 +43,8 @@ Core
 
 * created new **openrave/xmlreaders.h** to hold XML readers classes like  :class:`.xmlreaders.TrajectoryReader` for parsing trajectory files, and :class:`.xmlreaders.GeometryInfoReader` for parsing geometries.
 
+* custom interface xml readers with top-level interface type xmlid get stored into :meth:`.Interface.GetReadableInterfaces`
+
 Inverse Kinematics
 ------------------
 
