@@ -39,6 +39,10 @@ Core
 
 * Added :meth:`.Environment.SetDataAccess` to restrict filenames from only being opened from $OPENRAVE_DATA directories
 
+* Created a new class to store geometry info :class:`.KinBody.Link.GeometryInfo` that can be used to initialize new geometry objects via :meth:`.KinBody.InitFromGeometries`. **could break existing code**.
+
+* created new **openrave/xmlreaders.h** to hold XML readers classes like  :class:`.xmlreaders.TrajectoryReader` for parsing trajectory files, and :class:`.xmlreaders.GeometryInfoReader` for parsing geometries.
+
 Inverse Kinematics
 ------------------
 
@@ -94,7 +98,6 @@ Misc
 
 * collada stores joint **circular**, **weight**, and **resolution** properties
 
-* exposed :class:`.planningutils.TrajectoryReader` for parsing trajectory files
 
 Version 0.6.6
 =============

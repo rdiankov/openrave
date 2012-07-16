@@ -1099,18 +1099,19 @@ public:
                 robot = RaveCreateRobot(shared_from_this(),"");
             }
             if( !!robot ) {
-                std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
+                std::list<KinBody::Link::GeometryInfo> listGeometries;
                 if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
-                    if( robot->InitFromGeometries(listGeometries,true) ) {
-                        string extension;
-                        if( filename.find_last_of('.') != string::npos ) {
-                            extension = filename.substr(filename.find_last_of('.')+1);
-                        }
-                        string norender = string("__norenderif__:")+extension;
-                        for(size_t igeom = 0; igeom < robot->GetLinks().at(0)->GetGeometries().size(); ++igeom) {
-                            robot->GetLinks().at(0)->GetGeometry(igeom).SetRenderFilename(norender);
-                        }
-                        robot->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    string extension;
+                    if( filename.find_last_of('.') != string::npos ) {
+                        extension = filename.substr(filename.find_last_of('.')+1);
+                    }
+                    string norender = string("__norenderif__:")+extension;
+                    FOREACH(itinfo,listGeometries) {
+                        itinfo->_bVisible = true;
+                        itinfo->_filenamerender = norender;
+                    }
+                    listGeometries.front()._filenamerender = filename;
+                    if( robot->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
@@ -1217,18 +1218,19 @@ public:
                 body = RaveCreateKinBody(shared_from_this(),"");
             }
             if( !!body ) {
-                std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
+                std::list<KinBody::Link::GeometryInfo> listGeometries;
                 if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
-                    if( body->InitFromGeometries(listGeometries,true) ) {
-                        string extension;
-                        if( filename.find_last_of('.') != string::npos ) {
-                            extension = filename.substr(filename.find_last_of('.')+1);
-                        }
-                        string norender = string("__norenderif__:")+extension;
-                        for(size_t igeom = 0; igeom < body->GetLinks().at(0)->GetGeometries().size(); ++igeom) {
-                            body->GetLinks().at(0)->GetGeometry(igeom).SetRenderFilename(norender);
-                        }
-                        body->GetLinks().at(0)->GetGeometry(0).SetRenderFilename(filename);
+                    string extension;
+                    if( filename.find_last_of('.') != string::npos ) {
+                        extension = filename.substr(filename.find_last_of('.')+1);
+                    }
+                    string norender = string("__norenderif__:")+extension;
+                    FOREACH(itinfo,listGeometries) {
+                        itinfo->_bVisible = true;
+                        itinfo->_filenamerender = norender;
+                    }
+                    listGeometries.front()._filenamerender = filename;
+                    if( body->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
@@ -1454,7 +1456,7 @@ public:
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, const std::string& filename, const AttributesList& atts)
+    virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);

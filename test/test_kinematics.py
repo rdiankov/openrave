@@ -586,20 +586,37 @@ class TestKinematics(EnvironmentSetup):
                         
     def test_initkinbody(self):
         self.log.info('tests initializing a kinematics body')
-        with self.env:
-            k = RaveCreateKinBody(self.env,'')
+        env=self.env
+        with env:
+            k = RaveCreateKinBody(env,'')
             boxes = array(((0,0.5,0,0.1,0.2,0.3),(0.5,0,0,0.2,0.2,0.2)))
             k.InitFromBoxes(boxes,True)
             k.SetName('temp')
-            self.env.Add(k)
+            env.Add(k)
             assert( len(k.GetLinks()) == 1 and len(k.GetLinks()[0].GetGeometries()) == 2 )
             assert( k.GetLinks()[0].GetGeometries()[0].GetType() == KinBody.Link.GeomProperties.Type.Box )
             assert( k.GetLinks()[0].GetGeometries()[1].GetType() == KinBody.Link.GeomProperties.Type.Box )
-            k2 = RaveCreateKinBody(self.env,'')
+            k2 = RaveCreateKinBody(env,'')
             k2.InitFromTrimesh(TriMesh(*misc.ComputeBoxMesh([0.1,0.2,0.3])),True)
             k2.SetName('temp')
-            self.env.Add(k2,True)
+            env.Add(k2,True)
             assert( transdist(k2.ComputeAABB().extents(),[0.1,0.2,0.3]) <= g_epsilon )
+
+            # create from raw geometry infos
+            infobox = KinBody.Link.GeometryInfo()
+            infobox._type = KinBody.Link.GeomType.Box
+            infobox._t[2,3] = 1.0
+            infobox._vGeomData = [0.1,0.2,0.3]
+            infobox._bVisible = True
+            infobox._fTransparency = 0.5
+            infobox._fDiffuseColor = [1,0,0]
+            k3 = RaveCreateKinBody(env,'')
+            k3.InitFromGeometries([infobox])
+            k3.SetName('temp')
+            env.Add(k3,True)
+            ab = k3.ComputeAABB()
+            assert(transdist(ab.extents(),infobox._vGeomData) <= g_epsilon)
+            assert(transdist(ab.pos(),[0,0,1.0]) <= g_epsilon)
 
     def test_misc(self):
         env=self.env

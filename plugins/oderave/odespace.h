@@ -287,56 +287,57 @@ private:
             }
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                dGeomID geom = NULL;
-                switch(itgeom->GetType()) {
+                KinBody::Link::GeometryPtr geom = *itgeom;
+                dGeomID odegeom = NULL;
+                switch(geom->GetType()) {
                 case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                    geom = dCreateBox(0,itgeom->GetBoxExtents().x*2.0f,itgeom->GetBoxExtents().y*2.0f,itgeom->GetBoxExtents().z*2.0f);
+                    odegeom = dCreateBox(0,geom->GetBoxExtents().x*2.0f,geom->GetBoxExtents().y*2.0f,geom->GetBoxExtents().z*2.0f);
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                    geom = dCreateSphere(0,itgeom->GetSphereRadius());
+                    odegeom = dCreateSphere(0,geom->GetSphereRadius());
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                    geom = dCreateCylinder(0,itgeom->GetCylinderRadius(),itgeom->GetCylinderHeight());
+                    odegeom = dCreateCylinder(0,geom->GetCylinderRadius(),geom->GetCylinderHeight());
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                    if( itgeom->GetCollisionMesh().indices.size() > 0 ) {
-                        dTriIndex* pindices = new dTriIndex[itgeom->GetCollisionMesh().indices.size()];
-                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); ++i) {
-                            pindices[i] = itgeom->GetCollisionMesh().indices[i];
+                    if( geom->GetCollisionMesh().indices.size() > 0 ) {
+                        dTriIndex* pindices = new dTriIndex[geom->GetCollisionMesh().indices.size()];
+                        for(size_t i = 0; i < geom->GetCollisionMesh().indices.size(); ++i) {
+                            pindices[i] = geom->GetCollisionMesh().indices[i];
                         }
-                        dReal* pvertices = new dReal[4*itgeom->GetCollisionMesh().vertices.size()];
-                        for(size_t i = 0; i < itgeom->GetCollisionMesh().vertices.size(); ++i) {
-                            Vector v = itgeom->GetCollisionMesh().vertices[i];
+                        dReal* pvertices = new dReal[4*geom->GetCollisionMesh().vertices.size()];
+                        for(size_t i = 0; i < geom->GetCollisionMesh().vertices.size(); ++i) {
+                            Vector v = geom->GetCollisionMesh().vertices[i];
                             pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
                         }
                         dTriMeshDataID id = dGeomTriMeshDataCreate();
-                        dGeomTriMeshDataBuildSimple(id, pvertices, itgeom->GetCollisionMesh().vertices.size(), pindices, itgeom->GetCollisionMesh().indices.size());
-                        geom = dCreateTriMesh(0, id, NULL, NULL, NULL);
+                        dGeomTriMeshDataBuildSimple(id, pvertices, geom->GetCollisionMesh().vertices.size(), pindices, geom->GetCollisionMesh().indices.size());
+                        odegeom = dCreateTriMesh(0, id, NULL, NULL, NULL);
                         link->listtrimeshinds.push_back(pindices);
                         link->listvertices.push_back(pvertices);
                     }
                     break;
                 default:
-                    RAVELOG_WARN("ode doesn't support geom type %d\n", itgeom->GetType());
+                    RAVELOG_WARN("ode doesn't support geom type %d\n", geom->GetType());
                     break;
                 }
 
-                if( geom == NULL ) {
+                if( !odegeom ) {
                     continue;
                 }
-                dGeomID geomtrans = dCreateGeomTransform(pinfo->space);
-                dGeomTransformSetCleanup(geomtrans, 1);
-                dGeomTransformSetGeom(geomtrans, geom);
-                dGeomSetData(geom, (void*)&(*itgeom));
+                dGeomID odegeomtrans = dCreateGeomTransform(pinfo->space);
+                dGeomTransformSetCleanup(odegeomtrans, 1);
+                dGeomTransformSetGeom(odegeomtrans, odegeom);
+                dGeomSetData(odegeom, (void*)geom.get());
 
                 // set the transformation
-                RaveTransform<dReal> t = itgeom->GetTransform();
-                dGeomSetQuaternion(geom,&t.rot[0]);
-                dGeomSetPosition(geom,t.trans.x, t.trans.y, t.trans.z);
+                RaveTransform<dReal> t = geom->GetTransform();
+                dGeomSetQuaternion(odegeom,&t.rot[0]);
+                dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
 
                 // finally set the geom to the ode body
-                dGeomSetBody(geomtrans, link->body);
-                link->geom = geomtrans;
+                dGeomSetBody(odegeomtrans, link->body);
+                link->geom = odegeomtrans;
             }
 
             if( !(*itlink)->IsStatic() && _bUsingPhysics ) {

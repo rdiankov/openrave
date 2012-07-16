@@ -141,12 +141,13 @@ void KinBodyItem::Load()
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
-            if( !itgeom->IsVisible() &&(_viewmode == VG_RenderOnly)) {
+            KinBody::Link::GeometryPtr geom = *itgeom;
+            if( !geom->IsVisible() &&(_viewmode == VG_RenderOnly)) {
                 continue;
             }
             SoSeparator* psep = NULL;
             SoTransform* ptrans = new SoTransform();
-            Transform tgeom = itgeom->GetTransform();
+            Transform tgeom = geom->GetTransform();
             ptrans->rotation.setValue(tgeom.rot.y, tgeom.rot.z, tgeom.rot.w, tgeom.rot.x);
             ptrans->translation.setValue(tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
 
@@ -155,25 +156,25 @@ void KinBodyItem::Load()
             if((_viewmode == VG_RenderOnly)||(_viewmode == VG_RenderCollision)) {
                 SoInput mySceneInput;
                 string extension;
-                if( itgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
-                    string ignoreextension = itgeom->GetRenderFilename().substr(15);
+                if( geom->GetRenderFilename().find("__norenderif__:") == 0 ) {
+                    string ignoreextension = geom->GetRenderFilename().substr(15);
                     if( ignoreextension == "wrl" || extension == "iv" || extension == "vrml" ) {
                         continue;
                     }
                 }
-                if( itgeom->GetRenderFilename().find_last_of('.') != string::npos ) {
-                    extension = itgeom->GetRenderFilename().substr(itgeom->GetRenderFilename().find_last_of('.')+1);
+                if( geom->GetRenderFilename().find_last_of('.') != string::npos ) {
+                    extension = geom->GetRenderFilename().substr(geom->GetRenderFilename().find_last_of('.')+1);
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
-                    if( mySceneInput.openFile(itgeom->GetRenderFilename().c_str()) ) {
+                    if( mySceneInput.openFile(geom->GetRenderFilename().c_str()) ) {
                         psep = SoDB::readAll(&mySceneInput);
                         if( !!psep ) {
                             SoScale* s = new SoScale();
-                            s->scaleFactor.setValue(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
+                            s->scaleFactor.setValue(geom->GetRenderScale().x, geom->GetRenderScale().y, geom->GetRenderScale().z);
                             psep->insertChild(s, 0);
 
-                            if( itgeom->GetTransparency() > 0 ) {
+                            if( geom->GetTransparency() > 0 ) {
                                 // set a diffuse color
                                 SoSearchAction search;
                                 search.setInterest(SoSearchAction::ALL);
@@ -183,7 +184,7 @@ void KinBodyItem::Load()
                                 for(int i = 0; i < search.getPaths().getLength(); ++i) {
                                     SoPath* path = search.getPaths()[i];
                                     SoMaterial* pmtrl = (SoMaterial*)path->getTail();
-                                    pmtrl->transparency = itgeom->GetTransparency();
+                                    pmtrl->transparency = geom->GetTransparency();
                                 }
                             }
 
@@ -207,11 +208,11 @@ void KinBodyItem::Load()
 
                 // set a diffuse color
                 SoMaterial* mtrl = new SoMaterial;
-                mtrl->diffuseColor = SbColor(&itgeom->GetDiffuseColor().x);
-                mtrl->ambientColor = SbColor(&itgeom->GetAmbientColor().x);
+                mtrl->diffuseColor = SbColor(&geom->GetDiffuseColor().x);
+                mtrl->ambientColor = SbColor(&geom->GetAmbientColor().x);
                 mtrl->setOverride(true);
-                mtrl->transparency = itgeom->GetTransparency();
-                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !itgeom->IsVisible()) ) {
+                mtrl->transparency = geom->GetTransparency();
+                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !geom->IsVisible()) ) {
                     mtrl->transparency = 0.5f;
                     mtrl->diffuseColor = SbColor(0.6f,0.6f,1.0f);
                     mtrl->ambientColor = SbColor(0.4f,0.4f,1.0f);
@@ -228,19 +229,19 @@ void KinBodyItem::Load()
                 phints->creaseAngle = 0;
                 psep->addChild(phints);
 
-                switch(itgeom->GetType()) {
+                switch(geom->GetType()) {
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere: {
                     SoSphere* s = new SoSphere();
-                    s->radius = itgeom->GetSphereRadius();
+                    s->radius = geom->GetSphereRadius();
                     psep->addChild(s);
                     break;
                 }
                 case KinBody::Link::GEOMPROPERTIES::GeomBox: {
                     Vector v;
                     SoCube* c = new SoCube();
-                    c->width = itgeom->GetBoxExtents().x*2.0f;
-                    c->height = itgeom->GetBoxExtents().y*2.0f;
-                    c->depth = itgeom->GetBoxExtents().z*2.0f;
+                    c->width = geom->GetBoxExtents().x*2.0f;
+                    c->height = geom->GetBoxExtents().y*2.0f;
+                    c->depth = geom->GetBoxExtents().z*2.0f;
                     psep->addChild(c);
                     break;
                 }
@@ -250,8 +251,8 @@ void KinBodyItem::Load()
                     SbRotation(SbVec3f(1,0,0),M_PI/2).getValue(m);
                     ptrans->multLeft(m);
                     SoCylinder* cy = new SoCylinder();
-                    cy->radius = itgeom->GetCylinderRadius();
-                    cy->height = itgeom->GetCylinderHeight();
+                    cy->radius = geom->GetCylinderRadius();
+                    cy->height = geom->GetCylinderHeight();
                     cy->parts = SoCylinder::ALL;
                     psep->addChild(cy);
                     break;
@@ -264,13 +265,13 @@ void KinBodyItem::Load()
                     pbinding->value = SoMaterialBinding::OVERALL;
                     psep->addChild(pbinding);
 
-                    if( itgeom->GetTransparency() > 0 ) {
+                    if( geom->GetTransparency() > 0 ) {
                         SoTransparencyType* ptype = new SoTransparencyType();
                         ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
                         psep->addChild(ptype);
                     }
 
-                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();
+                    const KinBody::Link::TRIMESH& mesh = geom->GetCollisionMesh();
                     SoCoordinate3* vprop = new SoCoordinate3();
                     // this makes it crash!
                     //vprop->point.set1Value(mesh.indices.size()-1,SbVec3f(0,0,0)); // resize
@@ -292,7 +293,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 default:
-                    RAVELOG_WARN("No render data for link %s:%s, geom type = %d\n", _pchain->GetName().c_str(), (*it)->GetName().c_str(), itgeom->GetType());
+                    RAVELOG_WARN("No render data for link %s:%s, geom type = %d\n", _pchain->GetName().c_str(), (*it)->GetName().c_str(), geom->GetType());
                     break;
                 }
             }

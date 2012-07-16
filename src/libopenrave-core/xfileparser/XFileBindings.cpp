@@ -311,20 +311,19 @@ protected:
 
         FOREACH(it,node->mMeshes) {
             Assimp::XFile::Mesh* pmesh = *it;
-            plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-            KinBody::Link::GEOMPROPERTIES& g = plink->_listGeomProperties.back();
+            KinBody::Link::GeometryInfo g;
             g._t = plink->_t.inverse() * tflipyz * tnode;
-            g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
-            g.collisionmesh.vertices.resize(pmesh->mPositions.size());
+            g._type = KinBody::Link::GeomTrimesh;
+            g._meshcollision.vertices.resize(pmesh->mPositions.size());
             for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
-                g.collisionmesh.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);
+                g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);
             }
             size_t numindices = 0;
             for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
                 numindices += 3*(pmesh->mPosFaces[iface].mIndices.size()-2);
             }
-            g.collisionmesh.indices.resize(numindices);
-            std::vector<int>::iterator itindex = g.collisionmesh.indices.begin();
+            g._meshcollision.indices.resize(numindices);
+            std::vector<int>::iterator itindex = g._meshcollision.indices.begin();
             for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
                 for(size_t i = 2; i < pmesh->mPosFaces[iface].mIndices.size(); ++i) {
                     *itindex++ = pmesh->mPosFaces[iface].mIndices.at(0);
@@ -339,9 +338,10 @@ protected:
             }
             if( matindex < pmesh->mMaterials.size() ) {
                 const Assimp::XFile::Material& mtrl = pmesh->mMaterials.at(matindex);
-                g.diffuseColor = Vector(mtrl.mDiffuse.r, mtrl.mDiffuse.g, mtrl.mDiffuse.b, mtrl.mDiffuse.a);
-                g.ambientColor = Vector(mtrl.mEmissive.r, mtrl.mEmissive.g, mtrl.mEmissive.b, 1);
+                g._vDiffuseColor = Vector(mtrl.mDiffuse.r, mtrl.mDiffuse.g, mtrl.mDiffuse.b, mtrl.mDiffuse.a);
+                g._vAmbientColor = Vector(mtrl.mEmissive.r, mtrl.mEmissive.g, mtrl.mEmissive.b, 1);
             }
+            plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(plink,g)));
         }
 
         FOREACH(it,node->mChildren) {

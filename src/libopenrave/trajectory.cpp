@@ -17,6 +17,7 @@
 #include "libopenrave.h"
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
+#include <openrave/xmlreaders.h>
 
 namespace OpenRAVE {
 
@@ -57,7 +58,7 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </trajectory> in %s",buf.str(),ORE_InvalidArguments);
     }
-    planningutils::TrajectoryReader reader(GetEnv(),shared_trajectory());
+    xmlreaders::TrajectoryReader reader(GetEnv(),shared_trajectory());
     LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
     return shared_from_this();
 }

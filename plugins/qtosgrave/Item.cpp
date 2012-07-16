@@ -158,13 +158,14 @@ void KinBodyItem::Load()
         _veclinks.push_back(lnk);
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
-            if( !itgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
+            KinBody::Link::GeometryPtr orgeom = *itgeom;
+            if( !orgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
                 continue;
             }
 
             osg::Group*           psep = NULL;
             osg::MatrixTransform* ptrans = new osg::MatrixTransform();
-            Transform tgeom = itgeom->GetTransform();
+            Transform tgeom = orgeom->GetTransform();
 
 //      //  Debug
 //      RAVELOG_VERBOSE("Trn Int: %f,%f,%f\n",tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
@@ -182,14 +183,14 @@ void KinBodyItem::Load()
 
                 //  OpenRAVE 0.5 version
                 string extension;
-                if( itgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
-                    string ignoreextension = itgeom->GetRenderFilename().substr(15);
+                if( orgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
+                    string ignoreextension = orgeom->GetRenderFilename().substr(15);
                     if( ignoreextension == "wrl" || extension == "iv" || extension == "vrml" ) {
                         continue;
                     }
                 }
-                if( itgeom->GetRenderFilename().find_last_of('.') != string::npos ) {
-                    extension = itgeom->GetRenderFilename().substr(itgeom->GetRenderFilename().find_last_of('.')+1);
+                if( orgeom->GetRenderFilename().find_last_of('.') != string::npos ) {
+                    extension = orgeom->GetRenderFilename().substr(orgeom->GetRenderFilename().find_last_of('.')+1);
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
@@ -198,19 +199,19 @@ void KinBodyItem::Load()
 
                     mRotate.makeRotate(-osg::PI/2,osg::Vec3f(1.0f,0.0f,0.0f));
 
-                    mS.makeScale(itgeom->GetRenderScale().x, itgeom->GetRenderScale().y, itgeom->GetRenderScale().z);
+                    mS.makeScale(orgeom->GetRenderScale().x, orgeom->GetRenderScale().y, orgeom->GetRenderScale().z);
 
                     ptrans->preMult(mS);
                     ptrans->preMult(mRotate);
 
-                    loadedModel   = osgDB::readNodeFile(itgeom->GetRenderFilename());
+                    loadedModel   = osgDB::readNodeFile(orgeom->GetRenderFilename());
 
                     psep          = loadedModel->asGroup();
                     osg::StateSet* state = psep->getOrCreateStateSet();
                     state->setMode(GL_RESCALE_NORMAL,osg::StateAttribute::ON);
 
                     bSucceeded    = true;
-                    RaveVector<float> color = itgeom->GetDiffuseColor();
+                    RaveVector<float> color = orgeom->GetDiffuseColor();
                 }
             }
 
@@ -225,9 +226,9 @@ void KinBodyItem::Load()
                 // set a diffuse color
                 osg::StateSet* state = psep->getOrCreateStateSet();
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
-                x = itgeom->GetDiffuseColor().x;
-                y = itgeom->GetDiffuseColor().y;
-                z = itgeom->GetDiffuseColor().z;
+                x = orgeom->GetDiffuseColor().x;
+                y = orgeom->GetDiffuseColor().y;
+                z = orgeom->GetDiffuseColor().z;
                 w = 1.0f;
 
                 mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
@@ -235,9 +236,9 @@ void KinBodyItem::Load()
                 //  Debug
                 RAVELOG_WARN("Diffuse color= %f %f %f\n",x,y,z);
 
-                x = itgeom->GetAmbientColor().x;
-                y = itgeom->GetAmbientColor().y;
-                z = itgeom->GetAmbientColor().z;
+                x = orgeom->GetAmbientColor().x;
+                y = orgeom->GetAmbientColor().y;
+                z = orgeom->GetAmbientColor().z;
                 w = 1.0f;
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
@@ -245,7 +246,7 @@ void KinBodyItem::Load()
                 mat->setShininess( osg::Material::FRONT_AND_BACK, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
-                mat->setTransparency(osg::Material::FRONT_AND_BACK,itgeom->GetTransparency());
+                mat->setTransparency(osg::Material::FRONT_AND_BACK,orgeom->GetTransparency());
 
                 if( _viewmode == VG_RenderCollision && bSucceeded ) {
                     mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
@@ -255,13 +256,13 @@ void KinBodyItem::Load()
 
                 state->setAttribute( mat.get() );
 
-                switch(itgeom->GetType()) {
+                switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere: {
 
                     osg::Sphere* s = new osg::Sphere();
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                    s->setRadius(itgeom->GetSphereRadius());
+                    s->setRadius(orgeom->GetSphereRadius());
                     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(s);
                     geode->addDrawable(sd.get());
 
@@ -275,7 +276,7 @@ void KinBodyItem::Load()
                     osg::Box* box = new osg::Box();
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
 
-                    box->setHalfLengths(osg::Vec3f(itgeom->GetBoxExtents().x,itgeom->GetBoxExtents().y,itgeom->GetBoxExtents().z));
+                    box->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
                     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box);
                     geode->addDrawable(sd.get());
 
@@ -288,8 +289,8 @@ void KinBodyItem::Load()
 
                     // make SoCylinder point towards z, not y
                     osg::Cylinder* cy = new osg::Cylinder();
-                    cy->setRadius(itgeom->GetCylinderRadius());
-                    cy->setHeight(itgeom->GetCylinderHeight());
+                    cy->setRadius(orgeom->GetCylinderRadius());
+                    cy->setHeight(orgeom->GetCylinderHeight());
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
                     geode->addDrawable(sd.get());
@@ -303,7 +304,7 @@ void KinBodyItem::Load()
 
                     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-                    const KinBody::Link::TRIMESH& mesh = itgeom->GetCollisionMesh();
+                    const KinBody::Link::TRIMESH& mesh = orgeom->GetCollisionMesh();
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
                     geom->setVertexArray(vertices.get());
 
