@@ -298,7 +298,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& l
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    FOREACH(itinfo,listGeometries) {
+    FOREACHC(itinfo,listGeometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,*itinfo));
         geom->InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
