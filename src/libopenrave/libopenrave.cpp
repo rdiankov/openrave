@@ -1212,7 +1212,7 @@ void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, 
     }
 }
 
-void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis)
+void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis, bool normalize)
 {
     if( affinedofs & DOF_X ) {
         t.trans.x = *itvalues++;
@@ -1232,19 +1232,30 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
         t.rot.w = vActvAffineRotationAxis.z * fsin;
     }
     else if( affinedofs & DOF_Rotation3D ) {
-        dReal x = *itvalues++;
-        dReal y = *itvalues++;
-        dReal z = *itvalues++;
-        dReal fang = RaveSqrt(x*x + y*y + z*z);
-        if( fang > 0 ) {
-            dReal fnormalizer = sin((dReal)0.5 * fang) / fang;
-            t.rot.x = cos((dReal)0.5 * fang);
-            t.rot.y = fnormalizer * x;
-            t.rot.z = fnormalizer * y;
-            t.rot.w = fnormalizer * z;
+        if( normalize ) {
+            dReal x = *itvalues++;
+            dReal y = *itvalues++;
+            dReal z = *itvalues++;
+            dReal fang = RaveSqrt(x*x + y*y + z*z);
+            if( fang > 0 ) {
+                dReal fnormalizer = sin((dReal)0.5 * fang) / fang;
+                t.rot.x = cos((dReal)0.5 * fang);
+                t.rot.y = fnormalizer * x;
+                t.rot.z = fnormalizer * y;
+                t.rot.w = fnormalizer * z;
+            }
+            else {
+                t.rot = Vector(1,0,0,0); // identity
+            }
         }
         else {
-            t.rot = Vector(1,0,0,0); // identity
+            // normalization turned off, but affine dofs have only DOF_Rotation3D. In order to convert this to quaternion velocity
+            // will need current quaternion value (qrot), which is unknown, so assume identity
+            // qvel = [0,axisangle] * qrot * 0.5
+            t.rot[0] = 0;
+            t.rot[1] = 0.5 * *itvalues++;
+            t.rot[2] = 0.5 * *itvalues++;
+            t.rot[3] = 0.5 * *itvalues++;
         }
     }
     else if( affinedofs & DOF_RotationQuat ) {
@@ -1253,7 +1264,9 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
         t.rot.y = *itvalues++;
         t.rot.z = *itvalues++;
         t.rot.w = *itvalues++;
-        t.rot.normalize4();
+        if( normalize ) {
+            t.rot.normalize4();
+        }
     }
 }
 
@@ -1850,7 +1863,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     }
     FOREACHC(itgroup,_vgroups) {
         if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
-            stringstream ss(itgroup->name.substr(16));
+            stringstream ss(itgroup->name.substr(searchname.size()));
             string bodyname;
             int affinedofs=0;
             ss >> bodyname >> affinedofs;
@@ -1858,7 +1871,11 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
                 if( !!pbody && bodyname != pbody->GetName() ) {
                     continue;
                 }
-                RaveGetTransformFromAffineDOFValues(t,itdata+itgroup->offset,affinedofs);
+                Vector vaxis(0,0,1);
+                if( affinedofs & DOF_RotationAxis ) {
+                    ss >> vaxis.x >> vaxis.y >> vaxis.z;
+                }
+                RaveGetTransformFromAffineDOFValues(t,itdata+itgroup->offset,affinedofs, vaxis, timederivative==0);
                 bfound = true;
             }
         }

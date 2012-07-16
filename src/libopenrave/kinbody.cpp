@@ -841,7 +841,11 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             if( pjoint->IsMimic(0) ) {
                 // vtempvalues should already be init from previous _Eval call
                 int err = pjoint->_Eval(0,0,vtempvalues,veval);
-                pjoint->_trajfollow->Sample(vtempvalues,veval.at(0));
+                dReal fvalue = veval[0];
+                if( pjoint->IsCircular(0) ) {
+                    fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
+                }
+                pjoint->_trajfollow->Sample(vtempvalues,fvalue);
             }
             else {
                 // calling GetValue() could be extremely slow
@@ -849,7 +853,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             }
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
-            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = axisangle * qrot * 0.5 * vel
+            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
+            gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
             velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
         }

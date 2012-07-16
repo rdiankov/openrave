@@ -68,7 +68,6 @@ public:
         return true;
     }
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj) {
-        Reset(0);
         return false;
     }
     virtual void SimulationStep(OpenRAVE::dReal fTimeElapsed) {
@@ -78,7 +77,6 @@ public:
             for(size_t i = 0; i < _dofindices.size(); ++i) {
                 vallvelocities.at(_dofindices[i]) = _vDesiredVelocities.at(i);
             }
-            _probot->SetDOFVelocities(vallvelocities);
 
             vector<dReal> vprevvalues;
             _probot->GetDOFValues(vprevvalues,_dofindices);
@@ -86,6 +84,7 @@ public:
                 vprevvalues[i] += fTimeElapsed*_vDesiredVelocities[i];
             }
             _probot->SetDOFValues(vprevvalues,true,_dofindices);
+            _probot->SetDOFVelocities(vallvelocities); // set after SetDOFValues in order to get correct link velocities
         }
     }
     virtual bool IsDone() {

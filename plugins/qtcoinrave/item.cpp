@@ -638,17 +638,20 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
     }
     if( bGrab ) {
         // turn off any controller commands if a robot
-        if( !!_probot->GetController() )
+        if( !!_probot->GetController() ) {
             _probot->GetController()->SetPath(TrajectoryBaseConstPtr());
+        }
     }
 
     FOREACH(itee, _vEndEffectors) {
-        if( !!itee->_pswitch )
+        if( !!itee->_pswitch ) {
             itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+        }
     }
     FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch )
+        if( !!itee->_pswitch ) {
             itee->_pswitch->whichChild = bGrab ? SO_SWITCH_ALL : SO_SWITCH_NONE;
+        }
     }
 
     KinBodyItem::SetGrab(bGrab, bUpdate);

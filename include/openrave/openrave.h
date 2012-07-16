@@ -2107,8 +2107,9 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
     \param[in] itvalues the start iterator of the affine dof values
     \param[in] affinedofs the affine dof mask
     \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+    \param[in] if true will normalize rotations, should set to false if extracting velocity data
  */
-OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
+OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1), bool normalize=true);
 
 OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
