@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "treeitem.h"
 
+namespace qtosgrave {
+
 TreeItem::TreeItem(const QList<QVariant> &data, TreeItem *parent)
 {
     parentItem = parent;
@@ -62,3 +64,4 @@ int TreeItem::row() const
     return 0;
 }
 
+}

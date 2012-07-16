@@ -47,7 +47,9 @@ If c++ header files documentation changed, then have to call with a rebuild to o
 
 .. code-block:: bash
 
-  LANG=en_US.UTF-8 make internal
+  LANG=en_US.UTF-8 make openravepy_changed build/en/coreapixml/index.xml
+  LANG=ja_JP.UTF-8 make openravepy_changed build/ja/coreapixml/index.xml
+  make openravepy_internal_doc
 
 Create the packages to be sent to the doc server:
 

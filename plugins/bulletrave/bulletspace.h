@@ -161,24 +161,25 @@ private:
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 boost::shared_ptr<btCollisionShape> child;
-                switch(itgeom->GetType()) {
+                KinBody::Link::GeometryPtr geom = *itgeom;
+                switch(geom->GetType()) {
                 case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                    child.reset(new btBoxShape(GetBtVector(itgeom->GetBoxExtents())));
+                    child.reset(new btBoxShape(GetBtVector(geom->GetBoxExtents())));
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                    child.reset(new btSphereShape(itgeom->GetSphereRadius()));
+                    child.reset(new btSphereShape(geom->GetSphereRadius()));
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
                     // cylinder axis aligned to Y
-                    child.reset(new btCylinderShapeZ(btVector3(itgeom->GetCylinderRadius(),itgeom->GetCylinderRadius(),itgeom->GetCylinderHeight()*0.5f)));
+                    child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
                     break;
                 case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
-                    if( itgeom->GetCollisionMesh().indices.size() >= 3 ) {
+                    if( geom->GetCollisionMesh().indices.size() >= 3 ) {
                         btTriangleMesh* ptrimesh = new btTriangleMesh();
 
                         // for some reason adding indices makes everything crash
-                        for(size_t i = 0; i < itgeom->GetCollisionMesh().indices.size(); i += 3) {
-                            ptrimesh->addTriangle(GetBtVector(itgeom->GetCollisionMesh().vertices[i]), GetBtVector(itgeom->GetCollisionMesh().vertices[i+1]), GetBtVector(itgeom->GetCollisionMesh().vertices[i+2]));
+                        for(size_t i = 0; i < geom->GetCollisionMesh().indices.size(); i += 3) {
+                            ptrimesh->addTriangle(GetBtVector(geom->GetCollisionMesh().vertices[i]), GetBtVector(geom->GetCollisionMesh().vertices[i+1]), GetBtVector(geom->GetCollisionMesh().vertices[i+2]));
                         }
                         //child.reset(new btBvhTriangleMeshShape(ptrimesh, true, true)); // doesn't do tri-tri collisions!
 
@@ -216,13 +217,13 @@ private:
                 }
 
                 if( !child ) {
-                    RAVELOG_WARN("did not create geom type 0x%x\n", itgeom->GetType());
+                    RAVELOG_WARN("did not create geom type 0x%x\n", geom->GetType());
                     continue;
                 }
 
                 link->listchildren.push_back(child);
                 child->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
-                pshapeparent->addChildShape(GetBtTransform(itgeom->GetTransform()), child.get());
+                pshapeparent->addChildShape(GetBtTransform(geom->GetTransform()), child.get());
             }
 
             link->plink = *itlink;
@@ -390,21 +391,21 @@ private:
         return it->second;
     }
 
-    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) {
+    void SetSynchornizationCallback(const SynchornizeCallbackFn &synccallback) {
         _synccallback = synccallback;
     }
 
-    static inline Transform GetTransform(const btTransform& t)
+    static inline Transform GetTransform(const btTransform &t)
     {
         return Transform(Vector(t.getRotation().getW(), t.getRotation().getX(), t.getRotation().getY(), t.getRotation().getZ()), Vector(t.getOrigin().getX(), t.getOrigin().getY(), t.getOrigin().getZ()));
     }
 
-    static inline btTransform GetBtTransform(const Transform& t)
+    static inline btTransform GetBtTransform(const Transform &t)
     {
         return btTransform(btQuaternion(t.rot.y,t.rot.z,t.rot.w,t.rot.x),GetBtVector(t.trans));
     }
 
-    static inline btVector3 GetBtVector(const Vector& v)
+    static inline btVector3 GetBtVector(const Vector &v)
     {
         return btVector3(v.x,v.y,v.z);
     }

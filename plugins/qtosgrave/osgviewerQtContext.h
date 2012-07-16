@@ -40,6 +40,8 @@
 #include "osgpick.h"
 #include "qtosg.h"
 
+namespace qtosgrave {
+
 using namespace OpenRAVE;
 using namespace osgQt;
 
@@ -1272,5 +1274,7 @@ protected:
     //  List of link children
     std::vector<osg::MatrixTransform*> _linkChildren;
 };
+
+}
 
 #endif

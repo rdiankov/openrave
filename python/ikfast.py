@@ -5116,7 +5116,8 @@ class IKFastSolver(AutoReloader):
                 found = True
                 break            
             realsolution = pfinal.gens[0].subs(subs).subs(self.globalsymbols).subs(testconsistentvalue).evalf()
-            roots = mpmath.polyroots(coeffs)
+            # need to convert to float64 first, X.evalf() is still a sympy object
+            roots = mpmath.polyroots(numpy.array(numpy.array(coeffs),numpy.float64))
             for root in roots:
                 if Abs(float(root.imag)) < 10.0**-self.precision and Abs(float(root.real)-realsolution) < 10.0**-(self.precision-2):
                     found = True

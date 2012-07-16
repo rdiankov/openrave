@@ -1036,7 +1036,7 @@ public:
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 domRigid_body::domTechnique_common::domShapeRef pdomshape = daeSafeCast<domRigid_body::domTechnique_common::domShape>(ptec->add(COLLADA_ELEMENT_SHAPE));
                 // there is a weird bug here where _WriteTranformation will fail to create rotate/translate elements in instance_geometry is created first... (is this part of the spec?)
-                _WriteTransformation(pdomshape,tbaseinv*tlink0*itgeom->GetTransform());
+                _WriteTransformation(pdomshape,tbaseinv*tlink0*(*itgeom)->GetTransform());
                 domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pdomshape->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
                 pinstgeom->setUrl(xsAnyURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
                 ++igeom;
@@ -1048,15 +1048,15 @@ public:
     /// \brief Write geometry properties
     /// \param geom Link geometry
     /// \param parentid Parent Identifier
-    virtual domGeometryRef WriteGeometry(const KinBody::Link::GEOMPROPERTIES& geom, const string& parentid)
+    virtual domGeometryRef WriteGeometry(KinBody::Link::GeometryConstPtr geom, const string& parentid)
     {
-        const KinBody::Link::TRIMESH& mesh = geom.GetCollisionMesh();
-        Transform t = geom.GetTransform();
+        const KinBody::Link::TRIMESH& mesh = geom->GetCollisionMesh();
+        Transform t = geom->GetTransform();
 
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
 
-        domEffectRef pdomeff = WriteEffect(geom.GetAmbientColor(), geom.GetDiffuseColor());
+        domEffectRef pdomeff = WriteEffect(geom->GetAmbientColor(), geom->GetDiffuseColor());
         pdomeff->setId(effid.c_str());
 
         domMaterialRef pdommat = daeSafeCast<domMaterial>(_materialsLib->add(COLLADA_ELEMENT_MATERIAL));

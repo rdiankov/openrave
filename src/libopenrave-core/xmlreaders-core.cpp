@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
 
+#include <openrave/xmlreaders.h>
+
 #include <libxml/xmlstring.h>
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -76,16 +78,13 @@ void __CreateXMLMutex()
 class myStream : public Assimp::LogStream
 {
 public:
-    myStream()
-    {
+    myStream() {
     }
 
-    ~myStream()
-    {
+    ~myStream() {
     }
 
-    void write(const char* message)
-    {
+    void write(const char* message) {
         RAVELOG_VERBOSE("%s",message);
     }
 };
@@ -763,7 +762,7 @@ class LinkXMLReader : public StreamXMLReader
 {
 public:
 #ifdef OPENRAVE_ASSIMP
-    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries)
+    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
     {
         if( !node ) {
             return false;
@@ -779,35 +778,35 @@ public:
         }
 
         for (size_t i = 0; i < node->mNumMeshes; i++) {
-            listGeometries.push_back(KinBody::Link::GEOMPROPERTIES(KinBody::LinkPtr()));
-            KinBody::Link::GEOMPROPERTIES& g = listGeometries.back();
-            g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
-            g.vRenderScale = scale;
+            listGeometries.push_back(KinBody::Link::GeometryInfo());
+            KinBody::Link::GeometryInfo& g = listGeometries.back();
+            g._type = KinBody::Link::GeomTrimesh;
+            g._vRenderScale = scale;
             aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
-            g.collisionmesh.vertices.resize(input_mesh->mNumVertices);
+            g._meshcollision.vertices.resize(input_mesh->mNumVertices);
             for (size_t j = 0; j < input_mesh->mNumVertices; j++) {
                 aiVector3D p = input_mesh->mVertices[j];
                 p *= transform;
-                g.collisionmesh.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
+                g._meshcollision.vertices[j] = Vector(p.x*scale.x,p.y*scale.y,p.z*scale.z);
             }
             size_t indexCount = 0;
             for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
                 aiFace& face = input_mesh->mFaces[j];
                 indexCount += 3*(face.mNumIndices-2);
             }
-            g.collisionmesh.indices.reserve(indexCount);
+            g._meshcollision.indices.reserve(indexCount);
             for (size_t j = 0; j < input_mesh->mNumFaces; j++) {
                 aiFace& face = input_mesh->mFaces[j];
                 if( face.mNumIndices == 3 ) {
-                    g.collisionmesh.indices.push_back(face.mIndices[0]);
-                    g.collisionmesh.indices.push_back(face.mIndices[1]);
-                    g.collisionmesh.indices.push_back(face.mIndices[2]);
+                    g._meshcollision.indices.push_back(face.mIndices[0]);
+                    g._meshcollision.indices.push_back(face.mIndices[1]);
+                    g._meshcollision.indices.push_back(face.mIndices[2]);
                 }
                 else {
                     for (size_t k = 2; k < face.mNumIndices; ++k) {
-                        g.collisionmesh.indices.push_back(face.mIndices[0]);
-                        g.collisionmesh.indices.push_back(face.mIndices[k-1]);
-                        g.collisionmesh.indices.push_back(face.mIndices[k]);
+                        g._meshcollision.indices.push_back(face.mIndices[0]);
+                        g._meshcollision.indices.push_back(face.mIndices[k-1]);
+                        g._meshcollision.indices.push_back(face.mIndices[k]);
                     }
                 }
             }
@@ -816,9 +815,9 @@ public:
                 aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
                 aiColor4D color;
                 aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
-                g.diffuseColor = Vector(color.r,color.g,color.b,color.a);
+                g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
                 aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
-                g.ambientColor = Vector(color.r,color.g,color.b,color.a);
+                g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
             }
         }
 
@@ -829,7 +828,7 @@ public:
     }
 #endif
 
-    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries)
+    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
     {
         string extension;
         if( filename.find_last_of('.') != string::npos ) {
@@ -857,13 +856,13 @@ public:
 #endif
 
         // for other importers, just convert into one big trimesh
-        listGeometries.push_back(KinBody::Link::GEOMPROPERTIES(KinBody::LinkPtr()));
-        KinBody::Link::GEOMPROPERTIES& g = listGeometries.back();
-        g._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
-        g.diffuseColor=Vector(1,0.5f,0.5f,1);
-        g.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        g.vRenderScale = vscale;
-        if( !CreateTriMeshData(penv,filename,vscale,g.collisionmesh,g.diffuseColor,g.ambientColor,g.ftransparency) ) {
+        listGeometries.push_back(KinBody::Link::GeometryInfo());
+        KinBody::Link::GeometryInfo& g = listGeometries.back();
+        g._type = KinBody::Link::GeomTrimesh;
+        g._vDiffuseColor=Vector(1,0.5f,0.5f,1);
+        g._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        g._vRenderScale = vscale;
+        if( !CreateTriMeshData(penv,filename,vscale,g._meshcollision,g._vDiffuseColor,g._vAmbientColor,g._fTransparency) ) {
             return false;
         }
         return true;
@@ -878,7 +877,6 @@ public:
         _massCustom = MASS::GetSphericalMass(1,Vector(0,0,0),1);
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
-        _bGeomOverwriteDiffuse = _bGeomOverwriteAmbient = _bGeomOverwriteTransparency = false;
         bool bStaticSet = false;
         bool bStatic = false;
         string linkname, linkfilename;
@@ -933,7 +931,6 @@ public:
         if( bStaticSet ) {
             _plink->_bStatic = bStatic;
         }
-        _itgeomprop = _plink->_listGeomProperties.end();
     }
     virtual ~LinkXMLReader() {
     }
@@ -947,54 +944,7 @@ public:
         }
 
         if( _processingtag.size() > 0 ) {
-            if( _processingtag == "geom" ) {
-                if( xmlname == "render" ) {
-                    // check the attributes first
-                    FOREACHC(itatt,atts) {
-                        if( itatt->first == "file" ) {
-                            _renderfilename.first = !_fnGetModelsDir ? itatt->second : _fnGetModelsDir(itatt->second);
-                        }
-                        else if( itatt->first == "scale" ) {
-                            Vector vscale(1,1,1);
-                            stringstream sslocal(itatt->second);
-                            sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
-                            sslocal >> vscale.y >> vscale.z;
-                            _renderfilename.second = vscale;
-                        }
-                    }
-                }
-                else if( xmlname == "collision" ) {
-                    // check the attributes first
-                    FOREACHC(itatt,atts) {
-                        if( itatt->first == "file" ) {
-                            _collisionfilename.first = !_fnGetModelsDir ? itatt->second : _fnGetModelsDir(itatt->second);
-                        }
-                        else if( itatt->first == "scale" ) {
-                            Vector vscale(1,1,1);
-                            stringstream sslocal(itatt->second);
-                            sslocal >> vscale.x; vscale.y = vscale.z = vscale.x;
-                            sslocal >> vscale.y >> vscale.z;
-                            _collisionfilename.second = vscale;
-                        }
-                    }
-                }
-
-                static boost::array<string,11> tags = { { "translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "radius", "height"}};
-                if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
-                    return PE_Support;
-                }
-                switch(_itgeomprop->GetType()) {
-                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                    if(( xmlname=="collision") ||( xmlname=="data") ||( xmlname=="vertices") ) {
-                        return PE_Support;
-                    }
-                    break;
-                default:
-                    break;
-                }
-                return PE_Ignore;
-            }
-            else if( _processingtag == "mass" ) {
+            if( _processingtag == "mass" ) {
                 return (xmlname == "density" || xmlname == "total" || xmlname == "radius" || !(_masstype == MT_Box && xmlname == "extents") || (_masstype == MT_Custom && xmlname == "com") || (_masstype == MT_Custom && xmlname == "inertia")) ? PE_Support : PE_Ignore;
             }
             return PE_Ignore;
@@ -1012,55 +962,7 @@ public:
         }
 
         _processingtag = xmlname;
-        if( xmlname == "geom" ) {
-            if( _bSkipGeometry ) {
-                _processingtag = "";
-                return PE_Ignore;
-            }
-
-            string type;
-            bool bVisible = true, bModifiable = true;
-            FOREACHC(itatt,atts) {
-                if( itatt->first == "type") {
-                    type = itatt->second;
-                }
-                else if( itatt->first == "render" ) {
-                    // set draw to false only if atts[i]==false
-                    bVisible = _stricmp(itatt->second.c_str(), "false")!=0 && itatt->second!="0";
-                }
-                else if( itatt->first == "modifiable" ) {
-                    bModifiable = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
-                }
-            }
-
-            if( type.size() == 0 ) {
-                RAVELOG_INFOA("no geometry type, defaulting to box\n");
-                type = "box";
-            }
-
-            _itgeomprop = _plink->_listGeomProperties.insert(_plink->_listGeomProperties.end(),KinBody::Link::GEOMPROPERTIES(_plink));
-            if( _stricmp(type.c_str(), "box") == 0 ) {
-                _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomBox;
-            }
-            else if( _stricmp(type.c_str(), "sphere") == 0 ) {
-                _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomSphere;
-            }
-            else if( _stricmp(type.c_str(), "cylinder") == 0 ) {
-                _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomCylinder;
-            }
-            else if( _stricmp(type.c_str(), "trimesh") == 0 ) {
-                _itgeomprop->_type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
-            }
-            _renderfilename.first.resize(0);
-            _collisionfilename.first.resize(0);
-            _itgeomprop->_bVisible = bVisible;
-            _itgeomprop->_bModifiable = bModifiable;
-            return PE_Support;
-        }
-        else if((xmlname == "translation")||(xmlname == "rotationmat")||(xmlname == "rotationaxis")||(xmlname == "quat")||(xmlname == "offsetfrom")) {
+        if( xmlname == "translation" || xmlname == "rotationmat" || xmlname == "rotationaxis" || xmlname == "quat" || xmlname == "offsetfrom" ) {
             return PE_Support;
         }
         else if( xmlname == "mass" ) {
@@ -1085,6 +987,14 @@ public:
             }
             return PE_Support;
         }
+        else if( _processingtag == "geometry" || _processingtag == "geom" ) {
+            _processingtag = "";
+            if( _bSkipGeometry ) {
+                return PE_Ignore;
+            }
+            _pcurreader.reset(new xmlreaders::GeometryInfoReader(KinBody::Link::GeometryInfoPtr(),atts));
+            return PE_Support;
+        }
 
         _processingtag = "";
         return PE_Pass;
@@ -1097,243 +1007,126 @@ public:
                 if( xmlname == "body" ) {
                     // directly apply transform to all geomteries
                     Transform tnew = _plink->GetTransform();
-                    FOREACH(itgeomprop, _plink->_listGeomProperties) {
-                        itgeomprop->_t = tnew * itgeomprop->_t;
+                    FOREACH(itgeom, _plink->_vGeometries) {
+                        (*itgeom)->_info._t = tnew * (*itgeom)->_info._t;
                     }
                     _plink->collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
                 }
-                _pcurreader.reset();
-            }
-            return false;
-        }
-        else if( _processingtag == "geom" ) {
-            if( xmlname == "translation" ) {
-                Vector v;
-                _ss >>v.x >> v.y >> v.z;
-                _itgeomprop->_t.trans += v;
-            }
-            else if( xmlname == "rotationmat" ) {
-                TransformMatrix tnew;
-                _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-                _itgeomprop->_t.rot = (Transform(tnew)*_itgeomprop->_t).rot;
-            }
-            else if( xmlname == "rotationaxis" ) {
-                Vector vaxis; dReal fangle=0;
-                _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
-                Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-                _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
-            }
-            else if( xmlname == "quat" ) {
-                Transform tnew;
-                _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
-                tnew.rot.normalize4();
-                _itgeomprop->_t.rot = (tnew*_itgeomprop->_t).rot;
-            }
-            else if( xmlname == "render" ) {
-                if( _renderfilename.first.size() == 0 ) {
-                    string orgfilename;
-                    Vector vscale(1,1,1);
-                    _ss >> orgfilename;
-                    _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
-                    _ss >> vscale.y >> vscale.z;
-                    _renderfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                    _renderfilename.second = vscale;
-                }
-            }
-            else if( xmlname == "diffusecolor" ) {
-                _bGeomOverwriteDiffuse = true;
-                _ss >> _geomdiffusecol.x >> _geomdiffusecol.y >> _geomdiffusecol.z;
-            }
-            else if( xmlname == "ambientcolor" ) {
-                _bGeomOverwriteAmbient = true;
-                _ss >> _geomambientcol.x >> _geomambientcol.y >> _geomambientcol.z;
-            }
-            else if( xmlname == "transparency" ) {
-                _bGeomOverwriteTransparency = true;
-                _ss >> _geomtransparency;
-            }
-            else if( xmlname == _processingtag ) {
-                TransformMatrix tm(_itgeomprop->_t); tm.trans = Vector();
-                TransformMatrix tminv = tm.inverse();
-                tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
-                tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
-                tm.m[8] *= _vScaleGeometry.z; tm.m[9] *= _vScaleGeometry.z; tm.m[10] *= _vScaleGeometry.z;
-                TransformMatrix tmres = tminv * tm;
-                // have to scale in link space, so get scale in geomspace
-                Vector geomspacescale(RaveSqrt(tmres.m[0]*tmres.m[0]+tmres.m[4]*tmres.m[4]+tmres.m[8]*tmres.m[8]),RaveSqrt(tmres.m[1]*tmres.m[1]+tmres.m[5]*tmres.m[5]+tmres.m[9]*tmres.m[9]),RaveSqrt(tmres.m[2]*tmres.m[2]+tmres.m[6]*tmres.m[6]+tmres.m[10]*tmres.m[10]));
 
-                std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
-                if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomTrimesh ) {
-                    bool bSuccess = false;
-                    if( _collisionfilename.first.size() > 0 ) {
-                        _itgeomprop->vRenderScale = _renderfilename.second*geomspacescale;
-                        _itgeomprop->_renderfilename = _renderfilename.first;
-                        if( !CreateGeometries(_pparent->GetEnv(),_collisionfilename.first, _collisionfilename.second, listGeometries) ) {
-                            RAVELOG_WARN(str(boost::format("failed to find %s\n")%_collisionfilename.first));
-                        }
-                        else {
-                            bSuccess = true;
-                        }
+                xmlreaders::GeometryInfoReaderPtr geomreader = boost::dynamic_pointer_cast<xmlreaders::GeometryInfoReader>(_pcurreader);
+                if( !!geomreader ) {
+                    KinBody::Link::GeometryInfoPtr info = geomreader->GetGeometryInfo();
+                    TransformMatrix tm(info->_t); tm.trans = Vector();
+                    TransformMatrix tminv = tm.inverse();
+                    tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
+                    tm.m[4] *= _vScaleGeometry.y; tm.m[5] *= _vScaleGeometry.y; tm.m[6] *= _vScaleGeometry.y;
+                    tm.m[8] *= _vScaleGeometry.z; tm.m[9] *= _vScaleGeometry.z; tm.m[10] *= _vScaleGeometry.z;
+                    TransformMatrix tmres = tminv * tm;
+                    // have to scale in link space, so get scale in geomspace
+                    Vector geomspacescale(RaveSqrt(tmres.m[0]*tmres.m[0]+tmres.m[4]*tmres.m[4]+tmres.m[8]*tmres.m[8]),RaveSqrt(tmres.m[1]*tmres.m[1]+tmres.m[5]*tmres.m[5]+tmres.m[9]*tmres.m[9]),RaveSqrt(tmres.m[2]*tmres.m[2]+tmres.m[6]*tmres.m[6]+tmres.m[10]*tmres.m[10]));
+
+                    if( !!_fnGetModelsDir ) {
+                        info->_filenamerender = _fnGetModelsDir(info->_filenamerender);
                     }
-                    if( _renderfilename.first.size() > 0 ) {
-                        if( !bSuccess ) {
-                            if( !CreateGeometries(_pparent->GetEnv(), _renderfilename.first, _renderfilename.second, listGeometries) ) {
-                                RAVELOG_WARN(str(boost::format("failed to find %s\n")%_renderfilename.first));
+                    if( !!_fnGetModelsDir ) {
+                        info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
+                    }
+                    std::list<KinBody::Link::GeometryInfo> listGeometries;
+                    if( info->_type == KinBody::Link::GeomTrimesh ) {
+                        bool bSuccess = false;
+                        if( info->_filenamecollision.size() > 0 ) {
+                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometries) ) {
+                                RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamecollision));
                             }
                             else {
                                 bSuccess = true;
                             }
                         }
-                    }
-                    if( listGeometries.size() > 0 ) {
-                        // append all the geometries to the link. make sure the render filename is specified in only one geometry.
-                        string extension;
-                        if( _renderfilename.first.find_last_of('.') != string::npos ) {
-                            extension = _renderfilename.first.substr(_renderfilename.first.find_last_of('.')+1);
-                        }
-                        FOREACH(itnewgeom,listGeometries) {
-                            itnewgeom->_parent = _plink;
-                            itnewgeom->_bVisible = _itgeomprop->_bVisible;
-                            itnewgeom->_bModifiable = _itgeomprop->_bModifiable;
-                            itnewgeom->_t = _itgeomprop->_t;
-                            itnewgeom->_parent = _itgeomprop->_parent;
-                            itnewgeom->ftransparency = _itgeomprop->ftransparency;
-                            itnewgeom->_renderfilename = string("__norenderif__:")+extension;
-                            FOREACH(it,itnewgeom->collisionmesh.vertices) {
-                                *it = tmres * *it;
+                        if( info->_filenamerender.size() > 0 ) {
+                            if( !bSuccess ) {
+                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometries) ) {
+                                    RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamerender));
+                                }
+                                else {
+                                    bSuccess = true;
+                                }
                             }
-                            if( _bGeomOverwriteDiffuse ) {
-                                itnewgeom->diffuseColor = _geomdiffusecol;
+                        }
+                        if( listGeometries.size() > 0 ) {
+                            // append all the geometries to the link. make sure the render filename is specified in only one geometry.
+                            string extension;
+                            if( info->_filenamerender.find_last_of('.') != string::npos ) {
+                                extension = info->_filenamerender.substr(info->_filenamerender.find_last_of('.')+1);
                             }
-                            if( _bGeomOverwriteAmbient ) {
-                                itnewgeom->ambientColor = _geomambientcol;
+                            FOREACH(itnewgeom,listGeometries) {
+                                itnewgeom->_bVisible = info->_bVisible;
+                                itnewgeom->_bModifiable = info->_bModifiable;
+                                itnewgeom->_t = info->_t;
+                                itnewgeom->_fTransparency = info->_fTransparency;
+                                itnewgeom->_filenamerender = string("__norenderif__:")+extension;
+                                FOREACH(it,itnewgeom->_meshcollision.vertices) {
+                                    *it = tmres * *it;
+                                }
+                                if( geomreader->IsOverwriteDiffuse() ) {
+                                    itnewgeom->_vDiffuseColor = info->_vDiffuseColor;
+                                }
+                                if( geomreader->IsOverwriteAmbient() ) {
+                                    itnewgeom->_vAmbientColor = info->_vAmbientColor;
+                                }
+                                if( geomreader->IsOverwriteTransparency() ) {
+                                    itnewgeom->_fTransparency = info->_fTransparency;
+                                }
+                                itnewgeom->_t.trans *= _vScaleGeometry;
+                                _plink->collision.Append(itnewgeom->_meshcollision, itnewgeom->_t);
                             }
-                            if( _bGeomOverwriteTransparency ) {
-                                itnewgeom->ftransparency = _geomtransparency;
+                            listGeometries.front()._vRenderScale = info->_vRenderScale*geomspacescale;
+                            listGeometries.front()._filenamerender = info->_filenamerender;
+                            listGeometries.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
+                            listGeometries.front()._filenamecollision = info->_filenamecollision;
+                            listGeometries.front()._bVisible = info->_bVisible;
+                            FOREACH(itinfo, listGeometries) {
+                                _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
                             }
-                            itnewgeom->_t.trans *= _vScaleGeometry;
-                            _plink->collision.Append(itnewgeom->GetCollisionMesh(), itnewgeom->_t);
-                        }
-                        listGeometries.front().vRenderScale = _renderfilename.second*geomspacescale;
-                        listGeometries.front()._renderfilename = _renderfilename.first;
-                        listGeometries.front()._bVisible = _itgeomprop->_bVisible;
-                        _plink->_listGeomProperties.erase(_itgeomprop);
-                        _plink->_listGeomProperties.splice(_plink->_listGeomProperties.end(),listGeometries);
-                    }
-                    else {
-                        if( _bGeomOverwriteDiffuse ) {
-                            _itgeomprop->diffuseColor = _geomdiffusecol;
-                        }
-                        if( _bGeomOverwriteAmbient ) {
-                            _itgeomprop->ambientColor = _geomambientcol;
-                        }
-                        if( _bGeomOverwriteTransparency ) {
-                            _itgeomprop->ftransparency = _geomtransparency;
-                        }
-                        _itgeomprop->vRenderScale = _renderfilename.second*geomspacescale;
-                        _itgeomprop->_renderfilename = _renderfilename.first;
-                        FOREACH(it,_itgeomprop->collisionmesh.vertices) {
-                            *it = tmres * *it;
-                        }
-                        _itgeomprop->_t.trans *= _vScaleGeometry;
-                        _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
-                    }
-                }
-                else {
-                    _itgeomprop->vRenderScale = _renderfilename.second*_vScaleGeometry;
-                    _itgeomprop->_renderfilename = _renderfilename.first;
-                    if( _bGeomOverwriteDiffuse ) {
-                        _itgeomprop->diffuseColor = _geomdiffusecol;
-                    }
-                    if( _bGeomOverwriteAmbient ) {
-                        _itgeomprop->ambientColor = _geomambientcol;
-                    }
-                    if( _bGeomOverwriteTransparency ) {
-                        _itgeomprop->ftransparency = _geomtransparency;
-                    }
-
-                    if( _itgeomprop->GetType() == KinBody::Link::GEOMPROPERTIES::GeomCylinder ) {         // axis has to point on y
-                        // rotate on x axis by pi/2
-                        Transform trot;
-                        trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
-                        _itgeomprop->_t.rot = (_itgeomprop->_t*trot).rot;
-                    }
-
-                    // call before attaching the geom
-                    _itgeomprop->InitCollisionMesh();
-                    FOREACH(it,_itgeomprop->collisionmesh.vertices) {
-                        *it = tmres * *it;
-                    }
-                    _itgeomprop->_t.trans *= _vScaleGeometry;
-                    _itgeomprop->vGeomData *= geomspacescale;
-                    _plink->collision.Append(_itgeomprop->GetCollisionMesh(), _itgeomprop->_t);
-                }
-
-                _itgeomprop = _plink->_listGeomProperties.end();
-                _processingtag = "";
-            }
-            else {
-                // could be type specific features
-                switch(_itgeomprop->GetType()) {
-                case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                    if( xmlname == "radius" ) {
-                        _ss >> _itgeomprop->vGeomData.x;
-                    }
-                    break;
-                case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                    if( xmlname == "extents" ) {
-                        _ss >> _itgeomprop->vGeomData.x >> _itgeomprop->vGeomData.y >> _itgeomprop->vGeomData.z;
-                    }
-                    break;
-                case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                    if( xmlname == "radius") {
-                        _ss >> _itgeomprop->vGeomData.x;
-                    }
-                    else if( xmlname == "height" ) {
-                        _ss >> _itgeomprop->vGeomData.y;
-                    }
-                    break;
-                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                    if(( xmlname == "data") ||( xmlname == "collision") ) {
-                        if( _collisionfilename.first.size() == 0 ) {
-                            // check the attributes first
-                            string orgfilename;
-                            Vector vscale(1,1,1);
-                            _ss >> orgfilename;
-                            _ss >> vscale.x; vscale.y = vscale.z = vscale.x;
-                            _ss >> vscale.y >> vscale.z;
-                            _collisionfilename.first = !_fnGetModelsDir ? orgfilename : _fnGetModelsDir(orgfilename);
-                            _collisionfilename.second = vscale;
-                        }
-                    }
-                    else if( xmlname == "vertices" ) {
-                        vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-                        if( (values.size()%9) ) {
-                            RAVELOG_WARN(str(boost::format("number of points specified in the vertices field of %s body needs to be a multiple of 3 (it is %d), ignoring...\n")%_plink->GetName()%values.size()));
                         }
                         else {
-                            _itgeomprop->collisionmesh.vertices.resize(values.size()/3);
-                            _itgeomprop->collisionmesh.indices.resize(values.size()/3);
-                            vector<dReal>::iterator itvalue = values.begin();
-                            size_t i = 0;
-                            FOREACH(itv,_itgeomprop->collisionmesh.vertices) {
-                                itv->x = *itvalue++;
-                                itv->y = *itvalue++;
-                                itv->z = *itvalue++;
-                                _itgeomprop->collisionmesh.indices[i] = i;
-                                ++i;
+                            info->_vRenderScale = info->_vRenderScale*geomspacescale;
+                            FOREACH(it,info->_meshcollision.vertices) {
+                                *it = tmres * *it;
                             }
+                            info->_t.trans *= _vScaleGeometry;
+                            _plink->collision.Append(info->_meshcollision, info->_t);
+                            _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*info)));
                         }
                     }
-                    break;
-                default:
-                    _pcurreader.reset(new DummyXMLReader(xmlname,"geom"));
+                    else {
+                        info->_vRenderScale = info->_vRenderScale*geomspacescale;
+                        info->_filenamerender = info->_filenamerender;
+                        if( info->_type == KinBody::Link::GeomCylinder ) {         // axis has to point on y
+                            // rotate on x axis by pi/2
+                            Transform trot;
+                            trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
+                            info->_t.rot = (info->_t*trot).rot;
+                        }
+
+                        // call before attaching the geom
+                        KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(_plink,*info));
+                        geom->InitCollisionMesh();
+                        FOREACH(it,info->_meshcollision.vertices) {
+                            *it = tmres * *it;
+                        }
+                        info->_t.trans *= _vScaleGeometry;
+                        info->_vGeomData *= geomspacescale;
+                        _plink->collision.Append(geom->GetCollisionMesh(), info->_t);
+                        _plink->_vGeometries.push_back(geom);
+                    }
                 }
+
+                _pcurreader.reset();
             }
             return false;
         }
-        if( _processingtag == "mass" ) {
+        else if( _processingtag == "mass" ) {
             if( xmlname == "density" ) {
                 if( _masstype == MT_BoxMass ) {
                     _masstype = MT_Box;
@@ -1385,21 +1178,21 @@ public:
             if( _masstype == MT_MimicGeom ) {
                 FOREACHC(itgeom, _plink->GetGeometries()) {
                     MASS mass;
-                    switch(itgeom->GetType()) {
-                    case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                        mass = MASS::GetSphericalMassD(itgeom->GetSphereRadius(), Vector(),_fMassDensity);
+                    switch((*itgeom)->GetType()) {
+                    case KinBody::Link::GeomSphere:
+                        mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),_fMassDensity);
                         break;
-                    case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                        mass = MASS::GetBoxMassD(itgeom->GetBoxExtents(), Vector(), _fMassDensity);
+                    case KinBody::Link::GeomBox:
+                        mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
                         break;
-                    case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                        mass = MASS::GetCylinderMassD(itgeom->GetCylinderRadius(), itgeom->GetCylinderHeight(), Vector(), _fMassDensity);
+                    case KinBody::Link::GeomCylinder:
+                        mass = MASS::GetCylinderMassD((*itgeom)->GetCylinderRadius(), (*itgeom)->GetCylinderHeight(), Vector(), _fMassDensity);
                         break;
                     default:
                         break;
                     }
 
-                    totalmass += mass.ChangeCoordinateSystem(itgeom->GetTransform());
+                    totalmass += mass.ChangeCoordinateSystem((*itgeom)->GetTransform());
                 }
             }
             else if( _masstype == MT_Box ) {
@@ -1474,8 +1267,9 @@ public:
             }
         }
 
-        if( xmlname !=_processingtag )
+        if( xmlname !=_processingtag ) {
             RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+        }
         _processingtag = "";
         return false;
     }
@@ -1491,7 +1285,7 @@ public:
         }
     }
 
-    void SetMassType(MassType type, float fValue, const Vector& vMassExtents)
+    void SetMassType(MassType type, float fValue, const Vector &vMassExtents)
     {
         _masstype = type;
         _fMassDensity = _fTotalMass = fValue;
@@ -1510,15 +1304,9 @@ private:
     KinBody::LinkPtr& _plink;
     KinBodyPtr _pparent;
     KinBody::LinkPtr _offsetfrom;                            ///< all transformations are relative to the this body
-    list<KinBody::Link::GEOMPROPERTIES>::iterator _itgeomprop;
-    std::pair< string, Vector > _renderfilename, _collisionfilename;
     bool _bSkipGeometry;
     Vector _vScaleGeometry;
     Transform tOrigTrans;
-
-    RaveVector<float> _geomdiffusecol, _geomambientcol;
-    float _geomtransparency;
-    bool _bGeomOverwriteDiffuse, _bGeomOverwriteAmbient, _bGeomOverwriteTransparency;
 
     // Mass
     MassType _masstype;                   ///< if true, mass is craeted so that it mimics the geometry
@@ -1528,7 +1316,7 @@ private:
     Vector _vMassExtents;                   ///< used only if mass is a box
 };
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries)
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
 {
     return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometries);
 }
@@ -1648,7 +1436,7 @@ public:
         }
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         switch( StreamXMLReader::startElement(xmlname,atts) ) {
         case PE_Pass: break;
@@ -2046,14 +1834,14 @@ public:
         }
     }
 
-    void SetFilename(const string& filename)
+    void SetFilename(const string &filename)
     {
         if( !!_pinterface &&( _pinterface->__struri.size() == 0) ) {
             _pinterface->__struri = filename;
         }
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         if( !!_pcustomreader ) {
             return _pcustomreader->startElement(xmlname, atts);
@@ -2269,7 +2057,7 @@ public:
         return "";         // bad filename
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         if( _processingtag.size() > 0 ) {
             switch( StreamXMLReader::startElement(xmlname,atts) ) {
@@ -2510,24 +2298,24 @@ public:
             if( _bOverwriteDiffuse ) {
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
-                    FOREACH(itprop, (*itlink)->_listGeomProperties) {
-                        itprop->diffuseColor = _diffusecol;
+                    FOREACH(itgeom, (*itlink)->_vGeometries) {
+                        (*itgeom)->_info._vDiffuseColor = _diffusecol;
                     }
                 }
             }
             if( _bOverwriteAmbient ) {
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
-                    FOREACH(itprop, (*itlink)->_listGeomProperties) {
-                        itprop->ambientColor = _ambientcol;
+                    FOREACH(itgeom, (*itlink)->_vGeometries) {
+                        (*itgeom)->_info._vAmbientColor = _ambientcol;
                     }
                 }
             }
             if( _bOverwriteTransparency ) {
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
-                    FOREACH(itprop, (*itlink)->_listGeomProperties) {
-                        itprop->ftransparency = _transparency;
+                    FOREACH(itgeom, (*itlink)->_vGeometries) {
+                        (*itgeom)->_info._fTransparency = _transparency;
                     }
                 }
             }
@@ -2675,7 +2463,7 @@ public:
         _probot = _pmanip->GetRobot();
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         switch( StreamXMLReader::startElement(xmlname,atts) ) {
         case PE_Pass: break;
@@ -2900,7 +2688,7 @@ public:
         _probot = _psensor->GetRobot();
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         switch( StreamXMLReader::startElement(xmlname,atts) ) {
         case PE_Pass: break;
@@ -3060,7 +2848,7 @@ public:
         }
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         if( _processingtag.size() > 0 ) {
             switch( StreamXMLReader::startElement(xmlname,atts) ) {
@@ -3360,7 +3148,7 @@ public:
         }
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         if( _processingtag.size() > 0 ) {
             switch( StreamXMLReader::startElement(xmlname,atts) ) {
@@ -3485,7 +3273,7 @@ public:
         bTransSpecified = false;
     }
 
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         switch( StreamXMLReader::startElement(xmlname,atts) ) {
         case PE_Pass: break;
@@ -3651,12 +3439,12 @@ protected:
     bool _bInEnvironment;
 };
 
-BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts)
+BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList &atts)
 {
     return BaseXMLReaderPtr(new EnvironmentXMLReader(penv,atts,false));
 }
 
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts)
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList &atts)
 {
     switch(type) {
     case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
@@ -3696,7 +3484,7 @@ class GlobalInterfaceXMLReader : public StreamXMLReader
 public:
     GlobalInterfaceXMLReader(EnvironmentBasePtr penv, const AttributesList &atts, bool bAddToEnvironment=false) : _penv(penv), _atts(atts), _bAddToEnvironment(bAddToEnvironment) {
     }
-    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList& atts)
+    virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
     {
         switch( StreamXMLReader::startElement(xmlname,atts) ) {
         case PE_Pass: break;
@@ -3790,7 +3578,7 @@ protected:
     bool _bAddToEnvironment; ///< if true, will add interface to environment
 };
 
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts,bool bAddToEnvironment)
+BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList &atts,bool bAddToEnvironment)
 {
     return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts,bAddToEnvironment));
 }

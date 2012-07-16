@@ -18,9 +18,6 @@
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
 
-// have to include in order to get symbols inside libopenrave
-#include <openrave/plannerparameters.h>
-
 namespace OpenRAVE {
 namespace planningutils {
 
@@ -1429,105 +1426,6 @@ void ManipulatorIKGoalSampler::SetSamplingProb(dReal fsampleprob)
 void ManipulatorIKGoalSampler::SetJitter(dReal maxdist)
 {
     _fjittermaxdist = maxdist;
-}
-
-TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
-{
-    _datacount = 0;
-    FOREACHC(itatt, atts) {
-        if( itatt->first == "type" ) {
-            if( !!_ptraj ) {
-                OPENRAVE_ASSERT_OP(_ptraj->GetXMLId(),==,itatt->second );
-            }
-            else {
-                _ptraj = RaveCreateTrajectory(penv, itatt->second);
-            }
-        }
-    }
-    if( !_ptraj ) {
-        _ptraj = RaveCreateTrajectory(penv, "");
-    }
-}
-
-BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& name, const AttributesList& atts)
-{
-    _ss.str("");
-    if( !!_pcurreader ) {
-        if( _pcurreader->startElement(name, atts) == PE_Support ) {
-            return PE_Support;
-        }
-        return PE_Ignore;
-    }
-
-    if( name == "trajectory" ) {
-        _pcurreader.reset(new TrajectoryReader(_ptraj->GetEnv(), _ptraj, atts));
-        return PE_Support;
-    }
-    else if( name == "configuration" ) {
-        _pcurreader.reset(new ConfigurationSpecification::Reader(_spec));
-        return PE_Support;
-    }
-    else if( name == "data" ) {
-        _vdata.resize(0);
-        _datacount = 0;
-        FOREACHC(itatt,atts) {
-            if( itatt->first == "count" ) {
-                _datacount = boost::lexical_cast<int>(itatt->second);
-            }
-        }
-        return PE_Support;
-    }
-    else if( name == "description" ) {
-        return PE_Support;
-    }
-    return PE_Pass;
-}
-
-bool TrajectoryReader::endElement(const std::string& name)
-{
-    if( !!_pcurreader ) {
-        if( _pcurreader->endElement(name) ) {
-            if( !!boost::dynamic_pointer_cast<ConfigurationSpecification::Reader>(_pcurreader) ) {
-                BOOST_ASSERT(_spec.IsValid());
-                _ptraj->Init(_spec);
-            }
-            bool bret = !!boost::dynamic_pointer_cast<TrajectoryReader>(_pcurreader);
-            _pcurreader.reset();
-            if( bret ) {
-                return true;
-            }
-        }
-    }
-    else if( name == "data" ) {
-        _vdata.resize(_spec.GetDOF()*_datacount);
-        for(size_t i = 0; i < _vdata.size(); ++i) {
-            _ss >> _vdata[i];
-        }
-        if( !_ss ) {
-            RAVELOG_WARN("failed treading trajectory <data>\n");
-        }
-        else {
-            _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
-        }
-    }
-    else if( name == "description" ) {
-        _ptraj->SetDescription(_ss.str());
-    }
-    else if( name == "trajectory" ) {
-        return true;
-    }
-    return false;
-}
-
-void TrajectoryReader::characters(const std::string& ch)
-{
-    if( !!_pcurreader ) {
-        _pcurreader->characters(ch);
-    }
-    else {
-        _ss.clear();
-        _ss << ch;
-    }
 }
 
 } // planningutils

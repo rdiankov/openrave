@@ -1340,7 +1340,7 @@ public:
             // put everything in a subroutine in order to process pdomnode too!
         }
 
-        size_t nGeomBefore =  plink->_listGeomProperties.size();     // #of Meshes already associated to this link
+        size_t nGeomBefore =  plink->_vGeometries.size();     // #of Meshes already associated to this link
 
         // get the geometry
         for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
@@ -1377,46 +1377,47 @@ public:
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
 
-        list<KinBody::Link::GEOMPROPERTIES>::iterator itgeom= plink->_listGeomProperties.begin();
+        std::vector<KinBody::Link::GeometryPtr>::iterator itgeom = plink->_vGeometries.begin();
         for (unsigned int i=0; i< nGeomBefore; i++) {
             itgeom++;     // change only the transformations of the newly found geometries.
         }
 
         //  Switch between different type of geometry PRIMITIVES
-        for (; itgeom != plink->_listGeomProperties.end(); ++itgeom) {
-            itgeom->_t = tnodegeom;
-            switch (itgeom->GetType()) {
-            case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                itgeom->vGeomData *= vscale;
+        for (; itgeom != plink->_vGeometries.end(); ++itgeom) {
+            KinBody::Link::GeometryPtr geom = *itgeom;
+            geom->_info._t = tnodegeom;
+            switch (geom->GetType()) {
+            case KinBody::Link::GeomBox:
+                geom->_info._vGeomData *= vscale;
                 break;
-            case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                itgeom->vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
+            case KinBody::Link::GeomSphere:
+                geom->_info._vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
                 break;
-            case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                itgeom->vGeomData.x *= max(vscale.x, vscale.y);
-                itgeom->vGeomData.y *= vscale.z;
+            case KinBody::Link::GeomCylinder:
+                geom->_info._vGeomData.x *= max(vscale.x, vscale.y);
+                geom->_info._vGeomData.y *= vscale.z;
                 break;
-            case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                itgeom->collisionmesh.ApplyTransform(tmnodegeom);
-                itgeom->_t = Transform();     // reset back to identity
+            case KinBody::Link::GeomTrimesh:
+                geom->_info._meshcollision.ApplyTransform(tmnodegeom);
+                geom->_info._t = Transform();     // reset back to identity
                 break;
             default:
-                RAVELOG_WARN("unknown geometry type: %d\n", itgeom->GetType());
+                RAVELOG_WARN("unknown geometry type: %d\n", geom->GetType());
             }
 
             //  Gets collision mesh
-            KinBody::Link::TRIMESH trimesh = itgeom->GetCollisionMesh();
-            trimesh.ApplyTransform(itgeom->_t);
+            KinBody::Link::TRIMESH trimesh = geom->GetCollisionMesh();
+            trimesh.ApplyTransform(geom->_info._t);
             plink->collision.Append(trimesh);
         }
 
-        return bhasgeometry || plink->_listGeomProperties.size() > nGeomBefore;
+        return bhasgeometry || plink->_vGeometries.size() > nGeomBefore;
     }
 
     /// Paint the Geometry with the color material
     /// \param  pmat    Material info of the COLLADA's model
     /// \param  geom    Geometry properties in OpenRAVE
-    void FillGeometryColor(const domMaterialRef pmat, KinBody::Link::GEOMPROPERTIES& geom)
+    void FillGeometryColor(const domMaterialRef pmat, KinBody::Link::GeometryInfo& geom)
     {
         if( !!pmat && !!pmat->getInstance_effect() ) {
             domEffectRef peffect = daeSafeCast<domEffect>(pmat->getInstance_effect()->getUrl().getElement().cast());
@@ -1424,10 +1425,10 @@ public:
                 domProfile_common::domTechnique::domPhongRef pphong = daeSafeCast<domProfile_common::domTechnique::domPhong>(peffect->getDescendant(daeElement::matchType(domProfile_common::domTechnique::domPhong::ID())));
                 if( !!pphong ) {
                     if( !!pphong->getAmbient() && !!pphong->getAmbient()->getColor() ) {
-                        geom.ambientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
+                        geom._vAmbientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
                     }
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() ) {
-                        geom.diffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
+                        geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                     }
                 }
             }
@@ -1444,10 +1445,9 @@ public:
         if( !triRef ) {
             return false;
         }
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-        KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        KinBody::Link::GeometryInfo geom;
+        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
+        geom._type = KinBody::Link::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1513,7 +1513,9 @@ public:
         if( trimesh.indices.size() != 3*triRef->getCount() ) {
             RAVELOG_WARN("triangles declares wrong count!\n");
         }
-        geom.InitCollisionMesh();
+        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
+        pgeom->InitCollisionMesh();
+        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1527,10 +1529,9 @@ public:
         if( !triRef ) {
             return false;
         }
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-        KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        KinBody::Link::GeometryInfo geom;
+        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
+        geom._type = KinBody::Link::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1606,7 +1607,9 @@ public:
             }
         }
 
-        geom.InitCollisionMesh();
+        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
+        pgeom->InitCollisionMesh();
+        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1620,10 +1623,9 @@ public:
         if( !triRef ) {
             return false;
         }
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-        KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        KinBody::Link::GeometryInfo geom;
+        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
+        geom._type = KinBody::Link::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1701,7 +1703,9 @@ public:
                 }
             }
         }
-        geom.InitCollisionMesh();
+        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
+        pgeom->InitCollisionMesh();
+        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1715,10 +1719,9 @@ public:
         if( !triRef ) {
             return false;
         }
-        plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-        KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-        geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
+        KinBody::Link::GeometryInfo geom;
+        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
+        geom._type = KinBody::Link::GeomTrimesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1783,7 +1786,9 @@ public:
                 break;
             }
         }
-        geom.InitCollisionMesh();
+        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
+        pgeom->InitCollisionMesh();
+        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1931,13 +1936,13 @@ public:
             }
 
             if( vconvexhull.size()> 0 ) {
-                plink->_listGeomProperties.push_back(KinBody::Link::GEOMPROPERTIES(plink));
-                KinBody::Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-                KinBody::Link::TRIMESH& trimesh = geom.collisionmesh;
-                geom._type = KinBody::Link::GEOMPROPERTIES::GeomTrimesh;
-
+                KinBody::Link::GeometryInfo geom;
+                KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
+                geom._type = KinBody::Link::GeomTrimesh;
                 _computeConvexHull(vconvexhull,trimesh);
-                geom.InitCollisionMesh();
+                KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
+                pgeom->InitCollisionMesh();
+                plink->_vGeometries.push_back(pgeom);
             }
             return true;
         }

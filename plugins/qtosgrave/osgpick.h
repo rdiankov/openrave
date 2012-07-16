@@ -14,8 +14,6 @@
 #ifndef OPENRAVE_QTOSG_PICK_H_
 #define OPENRAVE_QTOSG_PICK_H_
 
-class ViewerWidget;
-
 #include <osgUtil/Optimizer>
 #include <osgDB/ReadFile>
 #include <osgViewer/Viewer>
@@ -43,6 +41,10 @@ class ViewerWidget;
 #include <osg/ShapeDrawable>
 
 #include <sstream>
+
+namespace qtosgrave {
+
+class ViewerWidget;
 
 // class to handle events with a pick
 class PickHandler : public osgGA::GUIEventHandler {
@@ -100,7 +102,6 @@ protected:
     ViewerWidget  *_viewer;
 };
 
-
-
+}
 
 #endif /* OSGPICK_H_ */

@@ -209,6 +209,20 @@ inline RaveVector<T> ExtractVector34(const object& oraw,T fdefaultw)
 }
 
 template <typename T>
+inline RaveVector<T> ExtractVector(const object& oraw)
+{
+    int n = len(oraw);
+    if( n > 4 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("unexpected vector size %d",n,ORE_InvalidArguments);
+    }
+    Vector v;
+    for(int i = 0; i < n; ++i) {
+        v[i] = (T)extract<T>(oraw[i]);
+    }
+    return v;
+}
+
+template <typename T>
 inline RaveTransform<T> ExtractTransformType(const object& o)
 {
     if( len(o) == 7 ) {

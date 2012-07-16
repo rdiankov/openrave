@@ -33,19 +33,63 @@ public:
         KinBody::LinkPtr _plink;
         PyEnvironmentBasePtr _pyenv;
 public:
-        class PyGeomProperties
+        class PyGeometryInfo
         {
-            KinBody::LinkPtr _plink;
-            int _geomindex;
 public:
-            PyGeomProperties(KinBody::LinkPtr plink, int geomindex) : _plink(plink), _geomindex(geomindex) {
+            PyGeometryInfo() {
+                _t = ReturnTransform(Transform());
+                _vGeomData = toPyVector4(Vector());
+                _vDiffuseColor = toPyVector3(Vector(1,1,1));
+                _vAmbientColor = toPyVector3(Vector(0,0,0));
+                _type = KinBody::Link::GeomNone;
+                _fTransparency = 0;
+                _vRenderScale = toPyVector3(Vector(1,1,1));
+                _vCollisionScale = toPyVector3(Vector(1,1,1));
+                _bVisible = true;
+                _bModifiable = true;
+            }
+            KinBody::Link::GeometryInfo GetGeometryInfo()
+            {
+                KinBody::Link::GeometryInfo info;
+                info._t = ExtractTransform(_t);
+                info._vGeomData = ExtractVector<dReal>(_vGeomData);
+                info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
+                info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
+                if( _meshcollision != object() ) {
+                    ExtractTriMesh(_meshcollision,info._meshcollision);
+                }
+                info._type = _type;
+                info._filenamerender = _filenamerender;
+                info._filenamecollision = _filenamecollision;
+                info._vRenderScale = ExtractVector3(_vRenderScale);
+                info._vCollisionScale = ExtractVector3(_vCollisionScale);
+                info._fTransparency = _fTransparency;
+                info._bVisible = _bVisible;
+                info._bModifiable = _bModifiable;
+                return info;
+            }
+
+            object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
+            KinBody::Link::GeomType _type;
+            std::string _filenamerender, _filenamecollision;
+            object _vRenderScale, _vCollisionScale;
+            float _fTransparency;
+            bool _bVisible, _bModifiable;
+        };
+        typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
+
+        class PyGeometry
+        {
+            KinBody::Link::GeometryPtr _pgeometry;
+public:
+            PyGeometry(KinBody::Link::GeometryPtr pgeometry) : _pgeometry(pgeometry) {
             }
 
             virtual void SetCollisionMesh(object pytrimesh)
             {
                 KinBody::Link::TRIMESH mesh;
                 if( ExtractTriMesh(pytrimesh,mesh) ) {
-                    _plink->GetGeometry(_geomindex).SetCollisionMesh(mesh);
+                    _pgeometry->SetCollisionMesh(mesh);
                 }
                 else {
                     throw openrave_exception("bad trimesh");
@@ -53,71 +97,71 @@ public:
             }
 
             object GetCollisionMesh() {
-                return toPyTriMesh(_plink->GetGeometry(_geomindex).GetCollisionMesh());
+                return toPyTriMesh(_pgeometry->GetCollisionMesh());
             }
             object ComputeAABB(object otransform) const {
-                return toPyAABB(_plink->GetGeometry(_geomindex).ComputeAABB(ExtractTransform(otransform)));
+                return toPyAABB(_pgeometry->ComputeAABB(ExtractTransform(otransform)));
             }
             void SetDraw(bool bDraw) {
-                _plink->GetGeometry(_geomindex).SetVisible(bDraw);
+                _pgeometry->SetVisible(bDraw);
             }
             bool SetVisible(bool visible) {
-                return _plink->GetGeometry(_geomindex).SetVisible(visible);
+                return _pgeometry->SetVisible(visible);
             }
             void SetTransparency(float f) {
-                _plink->GetGeometry(_geomindex).SetTransparency(f);
+                _pgeometry->SetTransparency(f);
             }
             void SetAmbientColor(object ocolor) {
-                _plink->GetGeometry(_geomindex).SetAmbientColor(ExtractVector3(ocolor));
+                _pgeometry->SetAmbientColor(ExtractVector3(ocolor));
             }
             void SetDiffuseColor(object ocolor) {
-                _plink->GetGeometry(_geomindex).SetDiffuseColor(ExtractVector3(ocolor));
+                _pgeometry->SetDiffuseColor(ExtractVector3(ocolor));
             }
             void SetRenderFilename(const string& filename) {
-                _plink->GetGeometry(_geomindex).SetRenderFilename(filename);
+                _pgeometry->SetRenderFilename(filename);
             }
             bool IsDraw() {
-                return _plink->GetGeometry(_geomindex).IsVisible();
+                return _pgeometry->IsVisible();
             }
             bool IsVisible() {
-                return _plink->GetGeometry(_geomindex).IsVisible();
+                return _pgeometry->IsVisible();
             }
             bool IsModifiable() {
-                return _plink->GetGeometry(_geomindex).IsModifiable();
+                return _pgeometry->IsModifiable();
             }
-            KinBody::Link::GEOMPROPERTIES::GeomType GetType() {
-                return _plink->GetGeometry(_geomindex).GetType();
+            KinBody::Link::GeomType GetType() {
+                return _pgeometry->GetType();
             }
             object GetTransform() {
-                return ReturnTransform(_plink->GetGeometry(_geomindex).GetTransform());
+                return ReturnTransform(_pgeometry->GetTransform());
             }
             dReal GetSphereRadius() const {
-                return _plink->GetGeometry(_geomindex).GetSphereRadius();
+                return _pgeometry->GetSphereRadius();
             }
             dReal GetCylinderRadius() const {
-                return _plink->GetGeometry(_geomindex).GetCylinderRadius();
+                return _pgeometry->GetCylinderRadius();
             }
             dReal GetCylinderHeight() const {
-                return _plink->GetGeometry(_geomindex).GetCylinderHeight();
+                return _pgeometry->GetCylinderHeight();
             }
             object GetBoxExtents() const {
-                return toPyVector3(_plink->GetGeometry(_geomindex).GetBoxExtents());
+                return toPyVector3(_pgeometry->GetBoxExtents());
             }
             object GetRenderScale() const {
-                return toPyVector3(_plink->GetGeometry(_geomindex).GetRenderScale());
+                return toPyVector3(_pgeometry->GetRenderScale());
             }
             object GetRenderFilename() const {
-                return ConvertStringToUnicode(_plink->GetGeometry(_geomindex).GetRenderFilename());
+                return ConvertStringToUnicode(_pgeometry->GetRenderFilename());
             }
             float GetTransparency() const {
-                return _plink->GetGeometry(_geomindex).GetTransparency();
+                return _pgeometry->GetTransparency();
             }
 
-            bool __eq__(boost::shared_ptr<PyGeomProperties> p) {
-                return !!p && _plink == p->_plink && _geomindex == p->_geomindex;
+            bool __eq__(boost::shared_ptr<PyGeometry> p) {
+                return !!p && _pgeometry == p->_pgeometry;
             }
-            bool __ne__(boost::shared_ptr<PyGeomProperties> p) {
-                return !p || _plink != p->_plink || _geomindex != p->_geomindex;
+            bool __ne__(boost::shared_ptr<PyGeometry> p) {
+                return !p || _pgeometry != p->_pgeometry;
             }
         };
 
@@ -243,7 +287,7 @@ public:
             boost::python::list geoms;
             size_t N = _plink->GetGeometries().size();
             for(size_t i = 0; i < N; ++i)
-                geoms.append(boost::shared_ptr<PyGeomProperties>(new PyGeomProperties(_plink, i)));
+                geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
             return geoms;
         }
 
@@ -645,13 +689,18 @@ public:
         }
     }
 
-//    bool InitFromGeometries(const std::list<boost::shared_ptr<PyLink::PyGeomProperties> >& listpyGeometries, bool bDraw)
-//    {
-//        std::list<KinBody::Link::GEOMPROPERTIES> listGeometries;
-//        FOREACH(itgeom, listpyGeometries) {
-//
-//        }
-//    }
+    bool InitFromGeometries(object ogeometries)
+    {
+        std::list<KinBody::Link::GeometryInfo> geometries;
+        for(int i = 0; i < len(ogeometries); ++i) {
+            PyLink::PyGeometryInfoPtr pygeom = boost::python::extract<PyLink::PyGeometryInfoPtr>(ogeometries[i]);
+            if( !pygeom ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.Link.GeometryInfo",ORE_InvalidArguments);
+            }
+            geometries.push_back(pygeom->GetGeometryInfo());
+        }
+        return _pbody->InitFromGeometries(geometries);
+    }
 
     void SetName(const std::string& name) {
         _pbody->SetName(name);
@@ -2704,6 +2753,15 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
     return PyKinBodyPtr(new PyKinBody(p,pyenv));
 }
 
+class GeometryInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyKinBody::PyLink::PyGeometryInfo& r)
+    {
+        return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable);
+    }
+};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
@@ -2788,6 +2846,7 @@ void init_openravepy_kinbody()
                         .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), sInitFromBoxesDoc.c_str())
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,args("spherex","draw"), DOXY_FN(KinBody,InitFromSpheres))
                         .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
+                        .def("InitFromGeometries",&PyKinBody::InitFromGeometries,args("geometries"), DOXY_FN(KinBody,InitFromGeometries))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
@@ -2953,38 +3012,62 @@ void init_openravepy_kinbody()
                          .def("__eq__",&PyKinBody::PyLink::__eq__)
                          .def("__ne__",&PyKinBody::PyLink::__ne__)
             ;
+            object geomtype = enum_<KinBody::Link::GeomType>("GeomType" DOXY_ENUM(GeomType))
+                              .value("None",KinBody::Link::GeomNone)
+                              .value("Box",KinBody::Link::GeomBox)
+                              .value("Sphere",KinBody::Link::GeomSphere)
+                              .value("Cylinder",KinBody::Link::GeomCylinder)
+                              .value("Trimesh",KinBody::Link::GeomTrimesh)
+            ;
             {
-                scope geomproperties = class_<PyKinBody::PyLink::PyGeomProperties, boost::shared_ptr<PyKinBody::PyLink::PyGeomProperties> >("GeomProperties", DOXY_CLASS(KinBody::Link::GEOMPROPERTIES),no_init)
-                                       .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetCollisionMesh))
-                                       .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeomProperties::GetCollisionMesh, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetCollisionMesh))
-                                       .def("ComputeAABB",&PyKinBody::PyLink::PyGeomProperties::ComputeAABB, args("transform"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,ComputeAABB))
-                                       .def("SetDraw",&PyKinBody::PyLink::PyGeomProperties::SetDraw,args("draw"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDraw))
-                                       .def("SetTransparency",&PyKinBody::PyLink::PyGeomProperties::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetTransparency))
-                                       .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeomProperties::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetDiffuseColor))
-                                       .def("SetAmbientColor",&PyKinBody::PyLink::PyGeomProperties::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetAmbientColor))
-                                       .def("SetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::GEOMPROPERTIES,SetRenderFilename))
-                                       .def("IsDraw",&PyKinBody::PyLink::PyGeomProperties::IsDraw, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsDraw))
-                                       .def("IsModifiable",&PyKinBody::PyLink::PyGeomProperties::IsModifiable, DOXY_FN(KinBody::Link::GEOMPROPERTIES,IsModifiable))
-                                       .def("GetType",&PyKinBody::PyLink::PyGeomProperties::GetType, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetType))
-                                       .def("GetTransform",&PyKinBody::PyLink::PyGeomProperties::GetTransform, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetTransform))
-                                       .def("GetSphereRadius",&PyKinBody::PyLink::PyGeomProperties::GetSphereRadius, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetSphereRadius))
-                                       .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeomProperties::GetCylinderRadius, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetCylinderRadius))
-                                       .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeomProperties::GetCylinderHeight, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetCylinderHeight))
-                                       .def("GetBoxExtents",&PyKinBody::PyLink::PyGeomProperties::GetBoxExtents, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetBoxExtents))
-                                       .def("GetRenderScale",&PyKinBody::PyLink::PyGeomProperties::GetRenderScale, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetRenderScale))
-                                       .def("GetRenderFilename",&PyKinBody::PyLink::PyGeomProperties::GetRenderFilename, DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetRenderFilename))
-                                       .def("GetTransparency",&PyKinBody::PyLink::PyGeomProperties::GetTransparency,DOXY_FN(KinBody::Link::GEOMPROPERTIES,GetTransparency))
-                                       .def("__eq__",&PyKinBody::PyLink::PyGeomProperties::__eq__)
-                                       .def("__ne__",&PyKinBody::PyLink::PyGeomProperties::__ne__)
-                ;
-                enum_<KinBody::Link::GEOMPROPERTIES::GeomType>("Type" DOXY_ENUM(GeomType))
-                .value("None",KinBody::Link::GEOMPROPERTIES::GeomNone)
-                .value("Box",KinBody::Link::GEOMPROPERTIES::GeomBox)
-                .value("Sphere",KinBody::Link::GEOMPROPERTIES::GeomSphere)
-                .value("Cylinder",KinBody::Link::GEOMPROPERTIES::GeomCylinder)
-                .value("Trimesh",KinBody::Link::GEOMPROPERTIES::GeomTrimesh)
+                scope geometryinfo = class_<PyKinBody::PyLink::PyGeometryInfo, boost::shared_ptr<PyKinBody::PyLink::PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::Link::GeometryInfo))
+                                     .def_readwrite("_t",&PyKinBody::PyLink::PyGeometryInfo::_t)
+                                     .def_readwrite("_vGeomData",&PyKinBody::PyLink::PyGeometryInfo::_vGeomData)
+                                     .def_readwrite("_vDiffuseColor",&PyKinBody::PyLink::PyGeometryInfo::_vDiffuseColor)
+                                     .def_readwrite("_vAmbientColor",&PyKinBody::PyLink::PyGeometryInfo::_vAmbientColor)
+                                     .def_readwrite("_meshcollision",&PyKinBody::PyLink::PyGeometryInfo::_meshcollision)
+                                     .def_readwrite("_type",&PyKinBody::PyLink::PyGeometryInfo::_type)
+                                     .def_readwrite("_filenamerender",&PyKinBody::PyLink::PyGeometryInfo::_filenamerender)
+                                     .def_readwrite("_filenamecollision",&PyKinBody::PyLink::PyGeometryInfo::_filenamecollision)
+                                     .def_readwrite("_vRenderScale",&PyKinBody::PyLink::PyGeometryInfo::_vRenderScale)
+                                     .def_readwrite("_vCollisionScale",&PyKinBody::PyLink::PyGeometryInfo::_vCollisionScale)
+                                     .def_readwrite("_fTransparency",&PyKinBody::PyLink::PyGeometryInfo::_fTransparency)
+                                     .def_readwrite("_bVisible",&PyKinBody::PyLink::PyGeometryInfo::_bVisible)
+                                     .def_readwrite("_bModifiable",&PyKinBody::PyLink::PyGeometryInfo::_bModifiable)
+                                     //.def("__str__",&PyTriMesh::__str__)
+                                     //.def("__unicode__",&PyAABB::__unicode__)
+                                     .def_pickle(GeometryInfo_pickle_suite())
                 ;
             }
+            {
+                scope geometry = class_<PyKinBody::PyLink::PyGeometry, boost::shared_ptr<PyKinBody::PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
+                                 .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeometry::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::Geometry,SetCollisionMesh))
+                                 .def("GetCollisionMesh",&PyKinBody::PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
+                                 .def("ComputeAABB",&PyKinBody::PyLink::PyGeometry::ComputeAABB, args("transform"), DOXY_FN(KinBody::Link::Geometry,ComputeAABB))
+                                 .def("SetDraw",&PyKinBody::PyLink::PyGeometry::SetDraw,args("draw"), DOXY_FN(KinBody::Link::Geometry,SetDraw))
+                                 .def("SetTransparency",&PyKinBody::PyLink::PyGeometry::SetTransparency,args("transparency"), DOXY_FN(KinBody::Link::Geometry,SetTransparency))
+                                 .def("SetDiffuseColor",&PyKinBody::PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
+                                 .def("SetAmbientColor",&PyKinBody::PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
+                                 .def("SetRenderFilename",&PyKinBody::PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
+                                 .def("IsDraw",&PyKinBody::PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
+                                 .def("IsModifiable",&PyKinBody::PyLink::PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
+                                 .def("GetType",&PyKinBody::PyLink::PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
+                                 .def("GetTransform",&PyKinBody::PyLink::PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))
+                                 .def("GetSphereRadius",&PyKinBody::PyLink::PyGeometry::GetSphereRadius, DOXY_FN(KinBody::Link::Geometry,GetSphereRadius))
+                                 .def("GetCylinderRadius",&PyKinBody::PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
+                                 .def("GetCylinderHeight",&PyKinBody::PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))
+                                 .def("GetBoxExtents",&PyKinBody::PyLink::PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
+                                 .def("GetRenderScale",&PyKinBody::PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
+                                 .def("GetRenderFilename",&PyKinBody::PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
+                                 .def("GetTransparency",&PyKinBody::PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
+                                 .def("__eq__",&PyKinBody::PyLink::PyGeometry::__eq__)
+                                 .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
+                ;
+                // \deprecated (12/07/16)
+                geometry.attr("Type") = geomtype;
+            }
+            // \deprecated (12/07/16)
+            link.attr("GeomProperties") = link.attr("Geometry");
         }
 
         {

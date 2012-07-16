@@ -173,40 +173,41 @@ private:
                     }
                     fout << "</rotationmat>" << endl;
                     FOREACHC(itgeom,(*itlink)->GetGeometries()) {
-                        switch(itgeom->GetType()) {
+                        KinBody::Link::GeometryPtr geom = *itgeom;
+                        switch(geom->GetType()) {
                         case KinBody::Link::GEOMPROPERTIES::GeomBox:
-                            fout << "<geom type=\"box\">" << endl;
-                            fout << "<extents>" << itgeom->GetBoxExtents().x << " " << itgeom->GetBoxExtents().y << " "  << itgeom->GetBoxExtents().z << "</extents>";
+                            fout << "<geometry type=\"box\">" << endl;
+                            fout << "<extents>" << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " "  << geom->GetBoxExtents().z << "</extents>";
                             break;
                         case KinBody::Link::GEOMPROPERTIES::GeomSphere:
-                            fout << "<geom type=\"sphere\">" << endl;
-                            fout << "<radius>" << itgeom->GetSphereRadius() << "</radius>";
+                            fout << "<geometry type=\"sphere\">" << endl;
+                            fout << "<radius>" << geom->GetSphereRadius() << "</radius>";
                             break;
                         case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
-                            fout << "<geom type=\"cylinder\">" << endl;
-                            fout << "<radius>" << itgeom->GetCylinderRadius() << "</radius>" << endl;
-                            fout << "<height>" << itgeom->GetCylinderHeight() << "</height>" << endl;
+                            fout << "<geometry type=\"cylinder\">" << endl;
+                            fout << "<radius>" << geom->GetCylinderRadius() << "</radius>" << endl;
+                            fout << "<height>" << geom->GetCylinderHeight() << "</height>" << endl;
                             break;
                         case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
-                            fout << "<geom type=\"trimesh\">" << endl;
+                            fout << "<geometry type=\"trimesh\">" << endl;
                             break;
                         case KinBody::Link::GEOMPROPERTIES::GeomNone:
-                            fout << "<geom>" << endl;
+                            fout << "<geometry>" << endl;
                             break;
                         }
-                        if( itgeom->GetRenderFilename().size() > 0 ) {
-                            fout << "<render>" << itgeom->GetRenderFilename() << "</render>" << endl;
+                        if( geom->GetRenderFilename().size() > 0 ) {
+                            fout << "<render>" << geom->GetRenderFilename() << "</render>" << endl;
                         }
-                        t = itgeom->GetTransform();
+                        t = geom->GetTransform();
                         fout << setw(tabwidth*2) << " " << "<Translation>" << t.trans.x << " " << t.trans.y << " " << t.trans.z << "</Translation>" << endl;
                         fout << setw(tabwidth*2) << " " << "<rotationmat>";
                         for(int i = 0; i < 3; ++i) {
                             fout << t.m[4*i+0] << " " << t.m[4*i+1] << " " << t.m[4*i+2] << " ";
                         }
                         fout << "</rotationmat>" << endl;
-                        fout << "<diffusecolor>" << itgeom->GetDiffuseColor().x << " " << itgeom->GetDiffuseColor().y << " " << itgeom->GetDiffuseColor().z << " " << itgeom->GetDiffuseColor().w << "</diffusecolor>";
-                        fout << "<ambientcolor>" << itgeom->GetAmbientColor().x << " " << itgeom->GetAmbientColor().y << " " << itgeom->GetAmbientColor().z << " " << itgeom->GetAmbientColor().w << "</ambientcolor>";
-                        fout << "</geom>" << endl;
+                        fout << "<diffusecolor>" << geom->GetDiffuseColor().x << " " << geom->GetDiffuseColor().y << " " << geom->GetDiffuseColor().z << " " << geom->GetDiffuseColor().w << "</diffusecolor>";
+                        fout << "<ambientcolor>" << geom->GetAmbientColor().x << " " << geom->GetAmbientColor().y << " " << geom->GetAmbientColor().z << " " << geom->GetAmbientColor().w << "</ambientcolor>";
+                        fout << "</geometry>" << endl;
                     }
                     fout << "</body>" << endl;
                 }

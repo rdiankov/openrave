@@ -16,6 +16,8 @@
 #include "treeitem.h"
 #include "treemodel.h"
 
+namespace qtosgrave {
+
 TreeModel::TreeModel(const QString &data, QObject *parent)
     : QAbstractItemModel(parent)
 {
@@ -163,4 +165,6 @@ void TreeModel::setupModelData(const QStringList &lines, TreeItem *parent)
 
         number++;
     }
+}
+
 }

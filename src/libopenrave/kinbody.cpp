@@ -173,25 +173,26 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
     plink->_bStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
-        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
-        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        geom._type = Link::GEOMPROPERTIES::GeomBox;
-        geom._t.trans = itab->pos;
-        geom._bVisible = visible;
-        geom.vGeomData = itab->extents;
-        geom.InitCollisionMesh();
-        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
-        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        numvertices += geom.GetCollisionMesh().vertices.size();
-        numindices += geom.GetCollisionMesh().indices.size();
+        Link::GeometryInfo info;
+        info._type = Link::GeomBox;
+        info._t.trans = itab->pos;
+        info._bVisible = visible;
+        info._vGeomData = itab->extents;
+        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
+        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        Link::GeometryPtr geom(new Link::Geometry(plink,info));
+        geom->InitCollisionMesh();
+        numvertices += geom->GetCollisionMesh().vertices.size();
+        numindices += geom->GetCollisionMesh().indices.size();
+        plink->_vGeometries.push_back(geom);
     }
 
     plink->collision.vertices.reserve(numvertices);
     plink->collision.indices.reserve(numindices);
     Link::TRIMESH trimesh;
-    FOREACH(itgeom,plink->_listGeomProperties) {
-        trimesh = itgeom->GetCollisionMesh();
-        trimesh.ApplyTransform(itgeom->_t);
+    FOREACH(itgeom,plink->_vGeometries) {
+        trimesh = (*itgeom)->GetCollisionMesh();
+        trimesh.ApplyTransform((*itgeom)->GetTransform());
         plink->collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
@@ -208,33 +209,33 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
     plink->_bStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itobb, vobbs) {
-        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
-        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        geom._type = Link::GEOMPROPERTIES::GeomBox;
         TransformMatrix tm;
         tm.trans = itobb->pos;
         tm.m[0] = itobb->right.x; tm.m[1] = itobb->up.x; tm.m[2] = itobb->dir.x;
         tm.m[4] = itobb->right.y; tm.m[5] = itobb->up.y; tm.m[6] = itobb->dir.y;
         tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
-        geom._t = tm;
-        geom._bVisible = visible;
-        geom.vGeomData = itobb->extents;
-        geom.InitCollisionMesh();
-        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
-        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        numvertices += geom.GetCollisionMesh().vertices.size();
-        numindices += geom.GetCollisionMesh().indices.size();
+        Link::GeometryInfo info;
+        info._type = Link::GeomBox;
+        info._t = tm;
+        info._bVisible = visible;
+        info._vGeomData = itobb->extents;
+        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
+        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        Link::GeometryPtr geom(new Link::Geometry(plink,info));
+        geom->InitCollisionMesh();
+        numvertices += geom->GetCollisionMesh().vertices.size();
+        numindices += geom->GetCollisionMesh().indices.size();
+        plink->_vGeometries.push_back(geom);
     }
 
     plink->collision.vertices.reserve(numvertices);
     plink->collision.indices.reserve(numindices);
     Link::TRIMESH trimesh;
-    FOREACH(itgeom,plink->_listGeomProperties) {
-        trimesh = itgeom->GetCollisionMesh();
-        trimesh.ApplyTransform(itgeom->_t);
+    FOREACH(itgeom,plink->_vGeometries) {
+        trimesh = (*itgeom)->GetCollisionMesh();
+        trimesh.ApplyTransform((*itgeom)->GetTransform());
         plink->collision.Append(trimesh);
     }
-
     _veclinks.push_back(plink);
     return true;
 }
@@ -249,20 +250,20 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
     plink->_bStatic = true;
     Link::TRIMESH trimesh;
     FOREACHC(itv, vspheres) {
-        plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
-        Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-        geom._type = Link::GEOMPROPERTIES::GeomSphere;
-        geom._t.trans.x = itv->x; geom._t.trans.y = itv->y; geom._t.trans.z = itv->z;
-        geom._bVisible = visible;
-        geom.vGeomData.x = itv->w;
-        geom.InitCollisionMesh();
-        geom.diffuseColor=Vector(1,0.5f,0.5f,1);
-        geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
-        trimesh = geom.GetCollisionMesh();
-        trimesh.ApplyTransform(geom._t);
+        Link::GeometryInfo info;
+        info._type = Link::GeomSphere;
+        info._t.trans.x = itv->x; info._t.trans.y = itv->y; info._t.trans.z = itv->z;
+        info._bVisible = visible;
+        info._vGeomData.x = itv->w;
+        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
+        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        Link::GeometryPtr geom(new Link::Geometry(plink,info));
+        geom->InitCollisionMesh();
+        plink->_vGeometries.push_back(geom);
+        trimesh = geom->GetCollisionMesh();
+        trimesh.ApplyTransform(geom->GetTransform());
         plink->collision.Append(trimesh);
     }
-
     _veclinks.push_back(plink);
     return true;
 }
@@ -276,19 +277,19 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool visibl
     plink->_name = "base";
     plink->_bStatic = true;
     plink->collision = trimesh;
-
-    plink->_listGeomProperties.push_back(Link::GEOMPROPERTIES(plink));
-    Link::GEOMPROPERTIES& geom = plink->_listGeomProperties.back();
-    geom._type = Link::GEOMPROPERTIES::GeomTrimesh;
-    geom._bVisible = visible;
-    geom.collisionmesh = trimesh;
-    geom.diffuseColor=Vector(1,0.5f,0.5f,1);
-    geom.ambientColor=Vector(0.1,0.0f,0.0f,0);
+    Link::GeometryInfo info;
+    info._type = Link::GeomTrimesh;
+    info._bVisible = visible;
+    info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
+    info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+    info._meshcollision = trimesh;
+    Link::GeometryPtr geom(new Link::Geometry(plink,info));
+    plink->_vGeometries.push_back(geom);
     _veclinks.push_back(plink);
     return true;
 }
 
-bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listGeometries, bool visible)
+bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& listGeometries)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(listGeometries.size(),>,0);
@@ -297,11 +298,11 @@ bool KinBody::InitFromGeometries(std::list<KinBody::Link::GEOMPROPERTIES>& listG
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    plink->_listGeomProperties.splice(plink->_listGeomProperties.end(),listGeometries);
-    FOREACH(itgeom,plink->_listGeomProperties) {
-        itgeom->_bVisible = visible;
-        itgeom->_parent = plink;
-        plink->collision.Append(itgeom->GetCollisionMesh(),itgeom->_t);
+    FOREACHC(itinfo,listGeometries) {
+        Link::GeometryPtr geom(new Link::Geometry(plink,*itinfo));
+        geom->InitCollisionMesh();
+        plink->_vGeometries.push_back(geom);
+        plink->collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
     _veclinks.push_back(plink);
     return true;
@@ -834,6 +835,15 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
         else if( pjoint->GetType() == Joint::JointPrismatic ) {
             velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + tdelta.rotate(pvalues[0]*pjoint->GetInternalHierarchyAxis(0)), wparent);
+        }
+        else if( pjoint->GetType() == Joint::JointTrajectory ) {
+            Transform tlocalvelocity, tlocal;
+            pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
+            pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
+            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = axisangle * qrot * 0.5 * vel
+            Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
+            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("joint %s not supported for querying velocities",pjoint->GetType(),ORE_Assert);
@@ -3722,9 +3732,9 @@ bool KinBody::SetVisible(bool visible)
 {
     bool bchanged = false;
     FOREACH(it, _veclinks) {
-        FOREACH(itgeom,(*it)->_listGeomProperties) {
-            if( itgeom->_bVisible != visible ) {
-                itgeom->_bVisible = visible;
+        FOREACH(itgeom,(*it)->_vGeometries) {
+            if( (*itgeom)->IsVisible() != visible ) {
+                (*itgeom)->_info._bVisible = visible;
                 bchanged = true;
             }
         }

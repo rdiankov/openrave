@@ -92,7 +92,8 @@ class ReachabilityModel(DatabaseGenerator):
         def kSearch(self,poses,k,eps):
             """returns distance squared"""
             poses[:,4:] *= self.transmult
-            neighs,dists = self.nnposes.kSearch(poses,k,eps)
+#            neighs,dists = self.nnposes.kSearch(poses,k,eps)
+            neighs,dists = zip(*[self.nnposes.kSearch(pose,k,eps) for pose in poses])
             neighs[neighs>=self.numposes] -= self.numposes
             poses[:,4:] *= self.itransmult
             return neighs,dists
@@ -276,23 +277,24 @@ class ReachabilityModel(DatabaseGenerator):
             quatdelta=0.5
         self.kdtree3d = self.kdtree6d = None
         with self.robot:
-            self.robot.SetTransform(eye(4))
             Tbase = self.manip.GetBase().GetTransform()
             Tbaseinv = linalg.inv(Tbase)
+            Trobot=dot(Tbaseinv,self.robot.GetTransform())
+            self.robot.SetTransform(Trobot) # set base link to global origin
             maniplinks = self.getManipulatorLinks(self.manip)
             for link in self.robot.GetLinks():
                 link.Enable(link in maniplinks)
             # the axes' anchors are the best way to find the max radius
             # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
             armjoints = self.getOrderedArmJoints()
-            baseanchor = transformPoints(Tbaseinv,[armjoints[0].GetAnchor()])
+            baseanchor = armjoints[0].GetAnchor()
             eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
             armlength = 0
             for j in armjoints[::-1]:
                 armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
                 eetrans = j.GetAnchor()    
             if maxradius is None:
-                maxradius = armlength+xyzdelta*sqrt(3.0)
+                maxradius = armlength+xyzdelta*sqrt(3.0)*1.05
 
             allpoints,insideinds,shape,self.pointscale = self.UniformlySampleSpace(maxradius,delta=xyzdelta)
             qarray = SpaceSamplerExtra().sampleSO3(quatdelta=quatdelta)
@@ -319,7 +321,8 @@ class ReachabilityModel(DatabaseGenerator):
                     log.info('%s/%d', i,len(insideinds))
                 yield ind,T
         def consumer(ind,T):
-            with self.env:
+            with self.robot:
+                self.robot.SetTransform(Trobot)
                 reachabilitystats = []
                 numvalid = 0
                 numrotvalid = 0
@@ -327,13 +330,13 @@ class ReachabilityModel(DatabaseGenerator):
                 for rotation in rotations:
                     T[0:3,0:3] = rotation
                     if usefreespace:
-                        solutions = self.manip.FindIKSolutions(dot(Tbase,T),0)
+                        solutions = self.manip.FindIKSolutions(T,0)
                         if solutions is not None:
                             reachabilitystats.append(r_[poseFromMatrix(T),len(solutions)])
                             numvalid += len(solutions)
                             numrotvalid += 1
                     else:
-                        solution = self.manip.FindIKSolution(dot(Tbase,T),0)
+                        solution = self.manip.FindIKSolution(T,0)
                         if solution is not None:
                             reachabilitystats.append(r_[poseFromMatrix(T),1])
                             numvalid += 1

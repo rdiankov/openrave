@@ -13,6 +13,8 @@
 // limitations under the License.
 #include "qtosgviewer.h"
 
+namespace qtosgrave {
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Constructor
 ////////////////////////////////////////////////////////////////////////////////
@@ -1297,4 +1299,6 @@ void QtOSGViewer::EnvironmentSync()
     _condUpdateModels.wait(lock);
     if( !_bModelsUpdated )
         RAVELOG_WARNA("failed to update models from environment sync\n");
+}
+
 }

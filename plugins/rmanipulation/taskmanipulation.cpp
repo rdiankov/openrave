@@ -1423,10 +1423,7 @@ public:
                 RAVELOG_DEBUG(str(boost::format("switching %s to fat: %d\n")%_pbody->GetName()%(int)bSwitchToFat));
                 FOREACHC(itlink,_pbody->GetLinks()) {
                     KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
-                    list<KinBody::Link::GEOMPROPERTIES> listgeoms;
-                    (*itlink)->SwapGeometries(listgeoms);
-                    pswitchlink->SwapGeometries(listgeoms);
-                    (*itlink)->SwapGeometries(listgeoms);
+                    (*itlink)->SwapGeometries(pswitchlink);
                 }
                 _bFat = bSwitchToFat;
             }
