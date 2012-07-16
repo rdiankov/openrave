@@ -838,7 +838,15 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
         else if( pjoint->GetType() == Joint::JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
-            pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            if( pjoint->IsMimic(0) ) {
+                // vtempvalues should already be init from previous _Eval call
+                int err = pjoint->_Eval(0,0,vtempvalues,veval);
+                pjoint->_trajfollow->Sample(vtempvalues,veval.at(0));
+            }
+            else {
+                // calling GetValue() could be extremely slow
+                pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            }
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = axisangle * qrot * 0.5 * vel

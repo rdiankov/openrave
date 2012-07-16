@@ -62,7 +62,8 @@ public:
     }
 
     virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values, TransformConstPtr trans) {
-        Reset(0);
+        //Reset(0);
+        return _SetVelocities(values);
         return false;
     }
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj) {
@@ -100,58 +101,7 @@ public:
                     return false;
                 }
             }
-
-            EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-            ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
-            if( !pinfo ) {
-                RAVELOG_WARN("need to set ode physics engine\n");
-                return false;
-            }
-            RobotBase::RobotStateSaver robotsaver(_probot,KinBody::Save_LinkVelocities);
-            boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
-            int dofindex = 0;
-            std::vector<OpenRAVE::dReal> valldofvelocities;
-            _probot->GetDOFVelocities(valldofvelocities);
-            FOREACHC(it, _dofindices) {
-                KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-                dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
-                int iaxis = *it-pjoint->GetDOFIndex();
-                BOOST_ASSERT(iaxis >= 0);
-                valldofvelocities.at(*it) = velocities.at(dofindex);
-                odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, pjoint->GetMaxTorque(iaxis));
-                odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, velocities.at(dofindex++));
-            }
-            _probot->SetDOFVelocities(valldofvelocities);
-
-            // go through all passive joints and set their velocity if they are dependent on the current controlled indices
-            std::vector<int> vmimicdofs;
-            std::vector<OpenRAVE::dReal> values;
-            size_t ipassiveindex = _probot->GetJoints().size();
-            FOREACHC(itjoint, _probot->GetPassiveJoints()) {
-                values.resize(0);
-                for(int iaxis = 0; iaxis < (*itjoint)->GetDOF(); ++iaxis) {
-                    if( (*itjoint)->IsMimic(iaxis) ) {
-                        bool bset = false;
-                        (*itjoint)->GetMimicDOFIndices(vmimicdofs,iaxis);
-                        FOREACH(itdof, vmimicdofs) {
-                            if( find(_dofindices.begin(),_dofindices.end(),*itdof) != _dofindices.end() ) {
-                                bset = true;
-                            }
-                        }
-                        if( bset ) {
-                            if( values.size() == 0 ) {
-                                (*itjoint)->GetVelocities(values);
-                            }
-                            dJointID jointid = pinfo->vjoints.at(ipassiveindex);
-                            odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, (*itjoint)->GetMaxTorque(iaxis));
-                            odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, values.at(iaxis));
-                        }
-                    }
-                }
-                ipassiveindex++;
-            }
-            _bVelocityMode = true;
-            return true;
+            return _SetVelocities(velocities);
         }
 
         throw openrave_exception(str(boost::format("command %s supported")%cmd),OpenRAVE::ORE_CommandNotSupported);
@@ -159,6 +109,61 @@ public:
     }
 
 protected:
+    bool _SetVelocities(const std::vector<OpenRAVE::dReal>& velocities)
+    {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
+        if( !pinfo ) {
+            RAVELOG_WARN("need to set ode physics engine\n");
+            return false;
+        }
+        RobotBase::RobotStateSaver robotsaver(_probot,KinBody::Save_LinkVelocities);
+        boost::shared_ptr<ODESpace> odespace(pinfo->_odespace);
+        int dofindex = 0;
+        std::vector<OpenRAVE::dReal> valldofvelocities;
+        _probot->GetDOFVelocities(valldofvelocities);
+        FOREACHC(it, _dofindices) {
+            KinBody::JointConstPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+            dJointID jointid = pinfo->vjoints.at(pjoint->GetJointIndex());
+            int iaxis = *it-pjoint->GetDOFIndex();
+            BOOST_ASSERT(iaxis >= 0);
+            valldofvelocities.at(*it) = velocities.at(dofindex);
+            odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, pjoint->GetMaxTorque(iaxis));
+            odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, velocities.at(dofindex++));
+        }
+        _probot->SetDOFVelocities(valldofvelocities);
+
+        // go through all passive joints and set their velocity if they are dependent on the current controlled indices
+        std::vector<int> vmimicdofs;
+        std::vector<OpenRAVE::dReal> values;
+        size_t ipassiveindex = _probot->GetJoints().size();
+        FOREACHC(itjoint, _probot->GetPassiveJoints()) {
+            values.resize(0);
+            for(int iaxis = 0; iaxis < (*itjoint)->GetDOF(); ++iaxis) {
+                if( (*itjoint)->IsMimic(iaxis) ) {
+                    bool bset = false;
+                    (*itjoint)->GetMimicDOFIndices(vmimicdofs,iaxis);
+                    FOREACH(itdof, vmimicdofs) {
+                        if( find(_dofindices.begin(),_dofindices.end(),*itdof) != _dofindices.end() ) {
+                            bset = true;
+                        }
+                    }
+                    if( bset ) {
+                        if( values.size() == 0 ) {
+                            (*itjoint)->GetVelocities(values);
+                        }
+                        dJointID jointid = pinfo->vjoints.at(ipassiveindex);
+                        odespace->_jointset[dJointGetType(jointid)](jointid,dParamFMax+dParamGroup*iaxis, (*itjoint)->GetMaxTorque(iaxis));
+                        odespace->_jointset[dJointGetType(jointid)](jointid,dParamVel+dParamGroup*iaxis, values.at(iaxis));
+                    }
+                }
+            }
+            ipassiveindex++;
+        }
+        _bVelocityMode = true;
+        return true;
+    }
+
     void _TorqueChanged() {
         if( !!_probot ) {
             ODESpace::KinBodyInfoPtr pinfo = GetODESpace();
