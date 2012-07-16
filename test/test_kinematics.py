@@ -609,7 +609,7 @@ class TestKinematics(EnvironmentSetup):
             infobox._vGeomData = [0.1,0.2,0.3]
             infobox._bVisible = True
             infobox._fTransparency = 0.5
-            infobox._fDiffuseColor = [1,0,0]
+            infobox._vDiffuseColor = [1,0,0]
             k3 = RaveCreateKinBody(env,'')
             k3.InitFromGeometries([infobox])
             k3.SetName('temp')
