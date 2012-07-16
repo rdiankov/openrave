@@ -78,16 +78,13 @@ void __CreateXMLMutex()
 class myStream : public Assimp::LogStream
 {
 public:
-    myStream()
-    {
+    myStream() {
     }
 
-    ~myStream()
-    {
+    ~myStream() {
     }
 
-    void write(const char* message)
-    {
+    void write(const char* message) {
         RAVELOG_VERBOSE("%s",message);
     }
 };
@@ -1039,8 +1036,6 @@ public:
                     if( info->_type == KinBody::Link::GeomTrimesh ) {
                         bool bSuccess = false;
                         if( info->_filenamecollision.size() > 0 ) {
-                            info->_vRenderScale = info->_vRenderScale*geomspacescale;
-                            info->_filenamerender = info->_filenamerender;
                             if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometries) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamecollision));
                             }
@@ -1096,7 +1091,6 @@ public:
                         }
                         else {
                             info->_vRenderScale = info->_vRenderScale*geomspacescale;
-                            info->_filenamerender = info->_filenamerender;
                             FOREACH(it,info->_meshcollision.vertices) {
                                 *it = tmres * *it;
                             }
