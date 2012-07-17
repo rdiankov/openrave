@@ -77,6 +77,10 @@ public:
             }
             else {
                 spec = _robot->GetActiveConfigurationSpecification();
+                if( spec.GetDOF() == 0 ) {
+                    return PS_Failed;
+                }
+                ptraj->Init(spec);
             }
             FOREACH(itgroup,spec._vgroups) {
                 if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
@@ -335,7 +339,7 @@ public:
                 // check that anything that should be avoided is not hit
                 ct = 0;
                 for(int q = 0; q < (int)_vlinks.size(); q++) {
-		    ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
+                    ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
                     if( ct&CT_AvoidLinkHit ) {
                         break;
                     }
