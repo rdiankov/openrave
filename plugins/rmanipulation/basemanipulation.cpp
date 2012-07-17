@@ -556,6 +556,7 @@ protected:
         dReal jitter = 0.03;
         dReal jitterikparam = 0;
         dReal goalsampleprob = 0.1;
+        int nGoalMaxTries=10;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -688,6 +689,9 @@ protected:
             else if( cmd == "goalsampleprob" ) {
                 sinput >> goalsampleprob;
             }
+            else if( cmd == "goalmaxtries" ) {
+                sinput >> nGoalMaxTries;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -726,7 +730,7 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoal;
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples);
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries);
         goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {

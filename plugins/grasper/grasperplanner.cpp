@@ -40,6 +40,11 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = pbase;
+
+        if( _robot->GetActiveDOF() <= 0 ) {
+            return false;
+        }
+
         _parameters.reset(new GraspParameters(GetEnv()));
         _parameters->copy(pparams);
 

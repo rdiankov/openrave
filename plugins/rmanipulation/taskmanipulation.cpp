@@ -524,6 +524,7 @@ protected:
             mapPreshapeTrajectories[vCurHandValues] = pstarttraj;
         }
 
+        IkReturnPtr ikreturn(new IkReturn(IKRA_Success));
         TrajectoryBasePtr ptraj;
         GRASPGOAL goalFound;
         int iCountdown = 0;
@@ -724,9 +725,8 @@ protected:
                 if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
                     // get a valid transformation
                     tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
-                    vector<dReal> vsolution;
-                    if( !pmanip->FindIKSolution(tGoalEndEffector,vsolution,IKFO_CheckEnvCollisions) ) {
-                        RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed")%igrasp));
+                    if( !pmanip->FindIKSolution(tGoalEndEffector,IKFO_CheckEnvCollisions, ikreturn) ) {
+                        RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed reason 0x%x")%igrasp%ikreturn->_action));
                         continue; // failed
                     }
                     vFinalGripperValues = _vFinalGripperValues;
@@ -751,7 +751,7 @@ protected:
 
             // set the initial hand joints
             _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-            if( iGraspPreshape >= 0 ) {
+            if( pmanip->GetGripperIndices().size() > 0 && iGraspPreshape >= 0 ) {
                 _robot->SetActiveDOFValues(vector<dReal>(pgrasp+iGraspPreshape,pgrasp+iGraspPreshape+_robot->GetActiveDOF()),true);
             }
 
@@ -859,7 +859,7 @@ protected:
             // finally start planning
             _UpdateSwitchModels(true,false);
 
-            if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
+            if( pmanip->GetGripperIndices().size() > 0 && itpreshapetraj == mapPreshapeTrajectories.end() ) {
                 // not present in map, so look for correct one
                 // initial joint is far from desired preshape, have to plan to get to it
                 // note that this changes trajectory of robot!
@@ -942,18 +942,21 @@ protected:
             return false;     // couldn't not find any grasps
         }
 
-        PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
-        if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
-            std::stringstream ss;
-            ss << "no preshape trajectory where there should have been one!" << endl;
-            RAVELOG_ERROR("no preshape trajectory!\n");
-            FOREACH(itpreshape,mapPreshapeTrajectories) {
-                FOREACHC(itvalue,itpreshape->first) {
-                    ss << *itvalue << ", ";
+        PRESHAPETRAJMAP::iterator itpreshapetraj;
+        if( pmanip->GetGripperIndices().size() > 0 ) {
+            itpreshapetraj = mapPreshapeTrajectories.find(goalFound.vpreshape);
+            if( itpreshapetraj == mapPreshapeTrajectories.end() ) {
+                std::stringstream ss;
+                ss << "no preshape trajectory where there should have been one!" << endl;
+                RAVELOG_ERROR("no preshape trajectory!\n");
+                FOREACH(itpreshape,mapPreshapeTrajectories) {
+                    FOREACHC(itvalue,itpreshape->first) {
+                        ss << *itvalue << ", ";
+                    }
+                    ss << endl;
                 }
-                ss << endl;
+                throw openrave_exception(ss.str(),ORE_InconsistentConstraints);
             }
-            throw openrave_exception(ss.str(),ORE_InconsistentConstraints);
         }
 
         specfinal += ptraj->GetConfigurationSpecification();
@@ -975,7 +978,7 @@ protected:
 
         _robot->SetDOFValues(vCurRobotValues);
 
-        if( bCombinePreShapeTraj ) {     // add the preshape
+        if( bCombinePreShapeTraj && pmanip->GetGripperIndices().size() > 0 ) {     // add the preshape
             RAVELOG_DEBUG(str(boost::format("combine preshape trajectory, duration=%f")%itpreshapetraj->second->GetDuration()));
             itpreshapetraj->second->GetWaypoints(0,itpreshapetraj->second->GetNumWaypoints(),vtrajdata,specfinal);
             ptrajfinal->Insert(ptrajfinal->GetNumWaypoints(),vtrajdata);
@@ -1708,37 +1711,49 @@ protected:
         return ptraj;
     }
 
-    IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikaram, KinBodyPtr ptarget)
+    IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
             return IKRA_Success;
         }
-        if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
-            return IKRA_Reject;
-        }
-        RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-        if( !_phandtraj ) {
-            _phandtraj = RaveCreateTrajectory(GetEnv(),"");
-        }
-
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->targetbody = ptarget;
-        graspparams->btransformrobot = false;
-        graspparams->breturntrajectory = false;
-        graspparams->bonlycontacttarget = true;
-        graspparams->btightgrasp = false;
-        graspparams->bavoidcontact = true;
-        // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
-        if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
-            return IKRA_Reject;
+        if( ikparam.GetType() != IKP_Transform6D ) {
+            // only check end effector if not trasform 6d
+            if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
+                RAVELOG_DEBUG("grasper planner CheckEndEffectorCollision\n");
+                return IKRA_Reject;
+            }
         }
 
-        if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
-            return IKRA_Reject;
-        }
+        if( pmanip->GetGripperIndices().size() > 0 ) {
+            RobotBase::RobotStateSaver saver(_robot);
+            _robot->SetActiveDOFs(pmanip->GetGripperIndices());
+            if( !_phandtraj ) {
+                _phandtraj = RaveCreateTrajectory(GetEnv(),"");
+            }
 
-        _phandtraj->GetWaypoint(-1,_vFinalGripperValues, _robot->GetConfigurationSpecificationIndices(pmanip->GetGripperIndices()));
+            GraspParametersPtr graspparams(new GraspParameters(GetEnv()));
+            graspparams->targetbody = ptarget;
+            graspparams->btransformrobot = false;
+            graspparams->breturntrajectory = false;
+            graspparams->bonlycontacttarget = true;
+            graspparams->btightgrasp = false;
+            graspparams->bavoidcontact = true;
+            // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
+            if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+                RAVELOG_DEBUG("grasper planner InitPlan failed\n");
+                return IKRA_Reject;
+            }
+
+            if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+                RAVELOG_DEBUG("grasper planner PlanPath failed\n");
+                return IKRA_Reject;
+            }
+
+            _phandtraj->GetWaypoint(-1,_vFinalGripperValues, _robot->GetConfigurationSpecificationIndices(pmanip->GetGripperIndices()));
+        }
+        else {
+            _phandtraj.reset();
+        }
         return IKRA_Success;
     }
 
