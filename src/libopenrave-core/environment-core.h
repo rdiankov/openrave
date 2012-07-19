@@ -1931,7 +1931,10 @@ protected:
                     (*itbody)->GetLinkTransformations(transforms,dofbranches);
                     (*itbody)->GetDOFVelocities(velocities);
                     pnewbody->SetLinkTransformations(transforms,dofbranches);
-                    pnewbody->SetDOFVelocityLimits(velocities);
+                    pnewbody->SetDOFVelocities(velocities);
+                    for(size_t ilink = 0; pnewbody->GetLinks().size(); ++ilink) {
+                        pnewbody->GetLinks()[ilink]->Enable((*itbody)->GetLinks().at(ilink)->IsEnabled());
+                    }
                     if( pnewbody->IsRobot() ) {
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
