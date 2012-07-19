@@ -537,7 +537,7 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
 
     //params->_distmetricfn;
     params->_hastimestamps = hastimestamps;
-    //params->_multidofinterp = 1; // always force max acceleration?
+    params->_multidofinterp = 1; // always force max acceleration?
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);

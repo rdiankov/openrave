@@ -155,19 +155,32 @@ public:
 
     PyEnvironmentBasePtr CloneSelf(int options)
     {
-        //RAVELOG_WARN("cloning environment without permission!\n");
-        string strviewer;
+//        string strviewer;
+//        if( options & Clone_Viewer ) {
+//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            if( !!_penv->GetViewer() ) {
+//                strviewer = _penv->GetViewer()->GetXMLId();
+//            }
+//        }
+        PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
+//        if( strviewer.size() > 0 ) {
+//            pnewenv->SetViewer(strviewer);
+//        }
+        return pnewenv;
+    }
+
+    void Clone(PyEnvironmentBasePtr pyreference, int options)
+    {
         if( options & Clone_Viewer ) {
-            boost::mutex::scoped_lock lockcreate(_mutexViewer);
-            if( !!_penv->GetViewer() ) {
-                strviewer = _penv->GetViewer()->GetXMLId();
+            if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
+                if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
+                    RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
+                    boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                    SetViewer("");
+                }
             }
         }
-        PyEnvironmentBasePtr pnewenv(new PyEnvironmentBase(_penv->CloneSelf(options)));
-        if( strviewer.size() > 0 ) {
-            pnewenv->SetViewer(strviewer);
-        }
-        return pnewenv;
+        _penv->Clone(pyreference->GetEnv(),options);
     }
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
@@ -1361,6 +1374,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
                     .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
                     .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"), DOXY_FN(EnvironmentBase,CloneSelf))
+                    .def("Clone",&PyEnvironmentBase::Clone,args("reference","options"), DOXY_FN(EnvironmentBase,Clone))
                     .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker,args("collisionchecker"), DOXY_FN(EnvironmentBase,SetCollisionChecker))
                     .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
 
