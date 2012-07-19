@@ -76,6 +76,7 @@ public:
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
+    /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>

@@ -1827,7 +1827,7 @@ protected:
         _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+        //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
 
         bool bCollisionCheckerChanged = false;
         if( !!r->GetCollisionChecker() ) {
@@ -1872,6 +1872,7 @@ protected:
                     }
                     if( !pnewrobot ) {
                         pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
+                        pnewrobot->_name = (*itrobot)->_name; // at least copy the names
                         listToClone.push_back(*itrobot);
                     }
                     else {
@@ -1905,6 +1906,7 @@ protected:
                     }
                     if( !pnewbody ) {
                         pnewbody.reset(new KinBody(PT_KinBody,shared_from_this()));
+                        pnewbody->_name = (*itbody)->_name; // at least copy the names
                         listToClone.push_back(*itbody);
                     }
                     else {
@@ -1966,9 +1968,18 @@ protected:
                     }
                 }
             }
-            if( !!GetCollisionChecker() && bCollisionCheckerChanged ) {
-                FOREACH(itbody, _vecbodies) {
-                    GetCollisionChecker()->InitKinBody(*itbody);
+            if( !!GetCollisionChecker() ) {
+                if( bCollisionCheckerChanged ) {
+                    FOREACH(itbody, _vecbodies) {
+                        GetCollisionChecker()->InitKinBody(*itbody);
+                    }
+                }
+                else {
+                    // init only the newly cloned
+                    FOREACH(itbody,listToClone) {
+                        KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                        GetCollisionChecker()->InitKinBody(pnewbody);
+                    }
                 }
             }
         }
