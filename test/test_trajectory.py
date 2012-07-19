@@ -611,4 +611,32 @@ class TestTrajectory(EnvironmentSetup):
         velspec = spec.ConvertToVelocitySpecification()
         sampledata=traj.Sample(1.5,velspec)
         assert(transdist(sampledata, array([-1. ,  0. ,  0. ,  0. ,  0. , -0.5,  0. ])) <= g_epsilon)
-        
+
+    def test_insertionsmoothing(self):
+        env=self.env
+        env.Load('robots/kawada-hironx.zae')
+        robot=env.GetRobots()[0]
+
+        with env:
+            robot.SetActiveManipulator('leftarm')
+            ikmodel=databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterizationType.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            Tmanip = matrixFromAxisAngle([0,pi/2,0])
+            Tmanip[0:3,3] = [0.4,0.1,0.3]
+            basemanip = interfaces.BaseManipulation(robot)
+            traj=basemanip.MoveToHandPosition(matrices=[Tmanip],outputtrajobj=True,execute=False)
+            
+            Tmanip2 = array(Tmanip)
+            Tmanip2[2,3] -= 0.04
+            solution2 = ikmodel.manip.FindIKSolution(Tmanip2,IkFilterOptions.CheckEnvCollisions)
+
+            trajclone = RaveCreateTrajectory(env,traj.GetXMLId())
+            trajclone.Clone(traj,0)
+            starttime=time.time()
+            planningutils.InsertWaypointWithSmoothing(trajclone.GetNumWaypoints(),solution2,zeros(len(solution2)),trajclone)
+            endvalues=trajclone.GetConfigurationSpecification().ExtractJointValues(trajclone.GetWaypoint(-1),robot,ikmodel.manip.GetArmIndices(),0)
+            assert(transdist(solution2,endvalues) <= g_epsilon)
+            totaltime = time.time()-starttime
+            # path should be a little faster
+            assert(trajclone.GetDuration()<traj.GetDuration())

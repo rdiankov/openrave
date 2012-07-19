@@ -69,6 +69,10 @@ Planning
 
 * Added :class:`.Planner.PlannerParameters.StateSaver` for saving states
 
+* Added :meth:`.planningutils.SmoothTrajectory`, :meth:`.planningutils.RetimeTrajectory` that work directly on the trajectory configuration space.
+
+* Added :meth:`.planningutils.InsertWaypointWithSmoothing` for quickly inserting waypoints into trajectories while doing some smoothing.
+
 Database
 --------
 

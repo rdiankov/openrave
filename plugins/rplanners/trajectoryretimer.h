@@ -95,7 +95,7 @@ public:
             // check that all velocity groups are there
             FOREACH(itgroup,velspec._vgroups) {
                 if(ptraj->GetConfigurationSpecification().FindCompatibleGroup(*itgroup,true) == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-                    RAVELOG_WARN(str(boost::format("trajectory does not velocity group '%s', even though parameters say is needed")%itgroup->name));
+                    RAVELOG_WARN(str(boost::format("trajectory does not have velocity group '%s', even though parameters say is needed")%itgroup->name));
                     return PS_Failed;
                 }
             }

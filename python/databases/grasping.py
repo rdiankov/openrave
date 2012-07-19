@@ -716,11 +716,14 @@ class GraspingModel(DatabaseGenerator):
             
             return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True,translationstepmult=self.translationstepmult,finestep=self.finestep)
 
-    def getGlobalGraspTransform(self,grasp,collisionfree=False):
-        """returns the final grasp transform before fingers start closing. If collisionfree is set to True, then will return a grasp that is guaranteed to be not in collision with the target object when at its preshape. This is achieved by by moving the hand back along igraspdir."""
+    def GetLocalGraspTransform(self,grasp,collisionfree=False):
         Tlocalgrasp = eye(4)
         Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['grasptrans_nocol' if collisionfree else 'igrasptrans']],(4,3)))
-        return dot(self.target.GetTransform(),Tlocalgrasp)
+        return Tlocalgrasp
+
+    def getGlobalGraspTransform(self,grasp,collisionfree=False):
+        """returns the final grasp transform before fingers start closing. If collisionfree is set to True, then will return a grasp that is guaranteed to be not in collision with the target object when at its preshape. This is achieved by by moving the hand back along igraspdir."""
+        return dot(self.target.GetTransform(),self.GetLocalGraspTransform(grasp,collisionfree))
     def getGlobalApproachDir(self,grasp):
         """returns the global approach direction"""
         return dot(self.target.GetTransform()[0:3,0:3],grasp[self.graspindices.get('igraspdir')])
