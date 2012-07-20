@@ -1395,16 +1395,16 @@ void RobotBase::SetActiveManipulator(const std::string& manipname)
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
-        throw RobotBase::ManipulatorPtr();
+    if( _nActiveManip < 0 || _nActiveManip >= (int)_vecManipulators.size()) {
+        return RobotBase::ManipulatorPtr();
     }
     return _vecManipulators.at(_nActiveManip);
 }
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
-    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
-        return RobotBase::ManipulatorPtr();
+    if( _nActiveManip < 0 || _nActiveManip >= (int)_vecManipulators.size()) {
+        return RobotBase::ManipulatorConstPtr();
     }
     return _vecManipulators.at(_nActiveManip);
 }

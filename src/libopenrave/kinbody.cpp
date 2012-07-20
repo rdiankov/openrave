@@ -3958,6 +3958,11 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
+    // cannot copy the velocities since it requires the physics engine to be initialized with this kinbody, which might not happen before the clone..?
+//    std::vector<std::pair<Vector,Vector> > velocities;
+//    r->GetLinkVelocities(velocities);
+//    SetLinkVelocities(velocities);
+
     _listRegisteredCallbacks.clear(); // reset the callbacks
 
     // cache

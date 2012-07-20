@@ -1839,18 +1839,37 @@ protected:
                     bCollisionCheckerChanged = true;
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone collision checker %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
         }
         else {
-            _pCurrentChecker.reset();
+            SetCollisionChecker(CollisionCheckerBasePtr());
+        }
+
+        bool bPhysicsEngineChanged = false;
+        if( !!r->GetPhysicsEngine() ) {
+            if( !bCheckSharedResources || (!!_pPhysicsEngine && _pPhysicsEngine->GetXMLId() != r->GetPhysicsEngine()->GetXMLId()) ) {
+                try {
+                    PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
+                    p->Clone(r->GetPhysicsEngine(),options);
+                    SetPhysicsEngine(p);
+                    bPhysicsEngineChanged = true;
+                }
+                catch(const std::exception& ex) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                }
+            }
+        }
+        else {
+            SetPhysicsEngine(PhysicsEngineBasePtr());
         }
 
         if( options & Clone_Bodies ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
             std::vector<RobotBasePtr> vecrobots;
             std::vector<KinBodyPtr> vecbodies;
+            std::vector<std::pair<Vector,Vector> > linkvelocities;
             _mapBodies.clear();
             if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecrobots and r->_vecbodies
@@ -1928,18 +1947,31 @@ protected:
                 std::vector<dReal> velocities;
                 FOREACH(itbody,listToCopyState) {
                     KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                    if( bCollisionCheckerChanged ) {
+                        GetCollisionChecker()->InitKinBody(pnewbody);
+                    }
+                    if( bPhysicsEngineChanged ) {
+                        GetPhysicsEngine()->InitKinBody(pnewbody);
+                    }
                     (*itbody)->GetLinkTransformations(transforms,dofbranches);
                     (*itbody)->GetDOFVelocities(velocities);
                     pnewbody->SetLinkTransformations(transforms,dofbranches);
                     pnewbody->SetDOFVelocities(velocities);
-                    for(size_t ilink = 0; pnewbody->GetLinks().size(); ++ilink) {
+                    (*itbody)->GetLinkVelocities(linkvelocities);
+                    pnewbody->SetLinkVelocities(linkvelocities);
+                    for(size_t ilink = 0; ilink < pnewbody->GetLinks().size(); ++ilink) {
                         pnewbody->GetLinks()[ilink]->Enable((*itbody)->GetLinks().at(ilink)->IsEnabled());
                     }
                     if( pnewbody->IsRobot() ) {
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
                         pnewrobot->SetActiveDOFs(poldrobot->GetActiveDOFIndices(), poldrobot->GetAffineDOF(), poldrobot->GetAffineRotationAxis());
-                        pnewrobot->SetActiveManipulator(poldrobot->GetActiveManipulator()->GetName());
+                        if( !poldrobot->GetActiveManipulator() ) {
+                            pnewrobot->SetActiveManipulator("");
+                        }
+                        else {
+                            pnewrobot->SetActiveManipulator(poldrobot->GetActiveManipulator()->GetName());
+                        }
                     }
                 }
             }
@@ -1959,6 +1991,16 @@ protected:
             FOREACH(itbody,listToClone) {
                 KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
                 pnewbody->_ComputeInternalInformation();
+                GetCollisionChecker()->InitKinBody(pnewbody);
+                GetPhysicsEngine()->InitKinBody(pnewbody);
+                (*itbody)->GetLinkVelocities(linkvelocities);
+                pnewbody->SetLinkVelocities(linkvelocities);
+                pnewbody->__hashkinematics = (*itbody)->__hashkinematics; /// _ComputeInternalInformation resets the hashes
+                if( pnewbody->IsRobot() ) {
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
+                    pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
+                }
             }
             if( listToCopyState.size() > 0 ) {
                 // check for re-grabs after cloning is done
@@ -1971,20 +2013,20 @@ protected:
                     }
                 }
             }
-            if( !!GetCollisionChecker() ) {
-                if( bCollisionCheckerChanged ) {
-                    FOREACH(itbody, _vecbodies) {
-                        GetCollisionChecker()->InitKinBody(*itbody);
-                    }
-                }
-                else {
-                    // init only the newly cloned
-                    FOREACH(itbody,listToClone) {
-                        KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
-                        GetCollisionChecker()->InitKinBody(pnewbody);
-                    }
-                }
-            }
+//            if( !!GetCollisionChecker() ) {
+//                if( bCollisionCheckerChanged ) {
+//                    FOREACH(itbody, _vecbodies) {
+//                        GetCollisionChecker()->InitKinBody(*itbody);
+//                    }
+//                }
+//                else {
+//                    // init only the newly cloned
+//                    FOREACH(itbody,listToClone) {
+//                        KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+//                        GetCollisionChecker()->InitKinBody(pnewbody);
+//                    }
+//                }
+//            }
         }
         if( options & Clone_Sensors ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
@@ -2001,23 +2043,13 @@ protected:
         }
 
         if( options & Clone_Simulation ) {
-            if( !!r->GetPhysicsEngine() ) {
-                try {
-                    PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
-                    p->Clone(r->GetPhysicsEngine(),options);
-                    SetPhysicsEngine(p);
-                }
-                catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
-                }
-            }
             _bEnableSimulation = r->_bEnableSimulation;
             _nCurSimTime = r->_nCurSimTime;
             _nSimStartTime = r->_nSimStartTime;
         }
-        FOREACH(itbody, _vecbodies) {
-            GetPhysicsEngine()->InitKinBody(*itbody);
-        }
+//        FOREACH(itbody, _vecbodies) {
+//            GetPhysicsEngine()->InitKinBody(*itbody);
+//        }
 
         if( options & Clone_Viewer ) {
             list<ViewerBasePtr> listViewers2;
