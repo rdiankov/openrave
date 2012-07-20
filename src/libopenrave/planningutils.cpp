@@ -716,16 +716,16 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
         *it *= fmaxaccelmult;
     }
 
-    params->_hasvelocities = false;
+    params->_hasvelocities = true;
     params->_hastimestamps = false;
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolictrajectoryretimer"));
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
     }
 
-    dReal fSamplingTime = 0.01; // for collision checking
+    dReal fSamplingTime = 0.005; // for collision checking
     dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
 
     ConfigurationSpecification spectotal = specpos;
@@ -778,6 +778,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
                         bInCollision = true;
                         break;
                     }
+                    vprevpoint = vwaypoint;
                 }
                 if( !bInCollision ) {
                     iBestInsertionWaypoint = N-1-iwaypoint;
@@ -794,6 +795,12 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
                     }
                 }
             }
+            else {
+                // if it isn't better and we already have a best trajectory, then choose it. most likely things will get worse from now on...
+                if( !!pBestTrajectory ) {
+                    break;
+                }
+            }
         }
         fRemainingDuration -= deltatime;
     }
@@ -802,10 +809,17 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to find connecting trajectory",ORE_Assert);
     }
     if( fBestDuration > fOriginalTime+fTimeBuffer ) {
-        RAVELOG_WARN("new trajectory is greater than expected time\n");
+        RAVELOG_WARN(str(boost::format("new trajectory is greater than expected time %f > %f \n")%fBestDuration%fOriginalTime));
     }
     // splice in the new trajectory. pBestTrajectory's first waypoint matches traj's iBestInsertionWaypoint
     traj->Remove(iBestInsertionWaypoint+1,traj->GetNumWaypoints());
+//    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
+//    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
+//    for(size_t i = 0; i < vprevpoint.size(); ++i) {
+//        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
+//            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
+//        }
+//    }
     pBestTrajectory->GetWaypoints(1,pBestTrajectory->GetNumWaypoints(),vwaypoint,traj->GetConfigurationSpecification());
     traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
     dReal fNewDuration = traj->GetDuration();
