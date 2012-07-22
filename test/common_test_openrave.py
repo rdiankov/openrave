@@ -185,7 +185,7 @@ class EnvironmentSetup(object):
                     robot=env.GetRobot(body.GetName())
                     robot2=env2.GetRobot(body2.GetName())
                     grabbed = robot.GetGrabbed()
-                    grabbed2 = len(robot.GetGrabbed())
+                    grabbed2 = robot2.GetGrabbed()
                     assert( set(grabbed) == set(grabbed2) )
                     
 def generate_classes(BaseClass, namespace, data):

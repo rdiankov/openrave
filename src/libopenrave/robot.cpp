@@ -123,7 +123,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         rotationaxis = _probot->GetAffineRotationAxis();
     }
     if( _options & Save_ActiveManipulator ) {
-        nActiveManip = _probot->_nActiveManip;
+        _pManipActive = _probot->GetActiveManipulator();
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _probot->_vGrabbedBodies;
@@ -132,37 +132,37 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _RestoreRobot();
+    _RestoreRobot(_probot);
 }
 
-void RobotBase::RobotStateSaver::Restore()
+void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)
 {
-    _RestoreRobot();
-    KinBodyStateSaver::Restore();
+    _RestoreRobot(!robot ? _probot : robot);
+    KinBodyStateSaver::Restore(!robot ? KinBodyPtr(_probot) : KinBodyPtr(robot));
 }
 
-void RobotBase::RobotStateSaver::_RestoreRobot()
+void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
-    if( _probot->GetEnvironmentId() == 0 ) {
+    if( probot->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
         return;
     }
     if( _options & Save_ActiveDOF ) {
-        _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
+        probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }
     if( _options & Save_ActiveManipulator ) {
-        _probot->_nActiveManip = nActiveManip;
+        probot->SetActiveManipulator(_pManipActive);
     }
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
-        _probot->ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(_probot->_vGrabbedBodies.size(),==,0);
+        probot->ReleaseAllGrabbed();
+        OPENRAVE_ASSERT_OP(probot->_vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
             GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
             KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
             if( !!pbody ) {
-                _probot->_AttachBody(pbody);
-                _probot->_vGrabbedBodies.push_back(*itgrabbed);
+                probot->_AttachBody(pbody);
+                probot->_vGrabbedBodies.push_back(*itgrabbed);
             }
         }
     }
@@ -173,8 +173,6 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _nAffineDOFs = 0;
     _nActiveDOF = -1;
     vActvAffineRotationAxis = Vector(0,0,1);
-
-    _nActiveManip = 0;
     _vecManipulators.reserve(16); // make sure to reseve enough, otherwise pIkSolver pointer might get messed up when resizing
 
     //set limits for the affine DOFs
@@ -1413,38 +1411,84 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 
 void RobotBase::SetActiveManipulator(int index)
 {
-    _nActiveManip = index;
+    _pManipActive = _vecManipulators.at(index);
+}
+
+void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
+{
+    if( !pmanip ) {
+        _pManipActive.reset();
+    }
+    else {
+        FOREACH(itmanip,_vecManipulators) {
+            if( *itmanip == pmanip ) {
+                _pManipActive = *itmanip;
+                return;
+            }
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", pmanip->GetName(), ORE_InvalidArguments);
+    }
 }
 
 void RobotBase::SetActiveManipulator(const std::string& manipname)
 {
     if( manipname.size() > 0 ) {
-        for(size_t i = 0; i < _vecManipulators.size(); ++i ) {
-            if( manipname == _vecManipulators[i]->GetName() ) {
-                _nActiveManip = i;
+        FOREACH(itmanip,_vecManipulators) {
+            if( (*itmanip)->GetName() == manipname ) {
+                _pManipActive = *itmanip;
                 return;
             }
         }
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
     }
-
-    _nActiveManip = -1;
+    _pManipActive.reset();
 }
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if( _nActiveManip < 0 || _nActiveManip >= (int)_vecManipulators.size()) {
-        return RobotBase::ManipulatorPtr();
-    }
-    return _vecManipulators.at(_nActiveManip);
+    return _pManipActive;
 }
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
-    if( _nActiveManip < 0 || _nActiveManip >= (int)_vecManipulators.size()) {
-        return RobotBase::ManipulatorConstPtr();
+    return _pManipActive;
+}
+
+int RobotBase::GetActiveManipulatorIndex() const
+{
+    for(size_t i = 0; i < _vecManipulators.size(); ++i) {
+        if( _pManipActive == _vecManipulators[i] ) {
+            return (int)i;
+        }
     }
-    return _vecManipulators.at(_nActiveManip);
+    return -1;
+}
+
+RobotBase::ManipulatorPtr RobotBase::AddManipulator(RobotBase::ManipulatorConstPtr manip)
+{
+    FOREACH(itmanip,_vecManipulators) {
+        if( (*itmanip)->GetName() == manip->GetName() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manip->GetName(),ORE_InvalidArguments);
+        }
+    }
+    ManipulatorPtr newmanip(new Manipulator(shared_robot(),*manip));
+    _vecManipulators.push_back(newmanip);
+    __hashrobotstructure.resize(0);
+    return newmanip;
+}
+
+void RobotBase::RemoveManipulator(ManipulatorPtr manip)
+{
+    if( _pManipActive == manip ) {
+        _pManipActive.reset();
+    }
+    FOREACH(itmanip,_vecManipulators) {
+        if( *itmanip == manip ) {
+            _vecManipulators.erase(itmanip);
+            __hashrobotstructure.resize(0);
+            return;
+        }
+    }
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
@@ -1859,7 +1903,15 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
-    _nActiveManip = r->_nActiveManip;
+    _pManipActive.reset();
+    if( !!r->_pManipActive ) {
+        for(size_t i = 0; i < r->_vecManipulators.size(); ++i) {
+            if( r->_vecManipulators[i] == r->_pManipActive ) {
+                _pManipActive = _vecManipulators.at(i);
+                break;
+            }
+        }
+    }
     _nActiveDOF = r->_nActiveDOF;
     _nAffineDOFs = r->_nAffineDOFs;
 

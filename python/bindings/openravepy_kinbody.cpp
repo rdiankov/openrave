@@ -2139,6 +2139,7 @@ public:
     }
 
     PyManipulatorPtr SetActiveManipulator(int index) {
+        RAVELOG_WARN("SetActiveManipulator(int) is deprecated\n");
         _probot->SetActiveManipulator(index);
         return GetActiveManipulator();
     }
@@ -2147,14 +2148,21 @@ public:
         return GetActiveManipulator();
     }
     PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip) {
-        _probot->SetActiveManipulator(pmanip->GetManipulator()->GetName());
+        _probot->SetActiveManipulator(pmanip->GetManipulator());
         return GetActiveManipulator();
     }
     PyManipulatorPtr GetActiveManipulator() {
         return _GetManipulator(_probot->GetActiveManipulator());
     }
     int GetActiveManipulatorIndex() const {
+        RAVELOG_WARN("GetActiveManipulatorIndex is deprecated\n");
         return _probot->GetActiveManipulatorIndex();
+    }
+    PyManipulatorPtr AddManipulator(PyManipulatorPtr pmanip) {
+        return _GetManipulator(_probot->AddManipulator(pmanip->GetManipulator()));
+    }
+    void RemoveManipulator(PyManipulatorPtr pmanip) {
+        _probot->RemoveManipulator(pmanip->GetManipulator());
     }
 
     object GetSensors()
@@ -3155,6 +3163,8 @@ void init_openravepy_kinbody()
                       .def("SetActiveManipulator",setactivemanipulator2,args("manipname"), DOXY_FN(RobotBase,SetActiveManipulator "const std::string"))
                       .def("SetActiveManipulator",setactivemanipulator3,args("manip"), "Set the active manipulator given a pointer")
                       .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator))
+                      .def("AddManipulator",&PyRobotBase::AddManipulator, args("manip"), DOXY_FN(RobotBase,AddManipulator))
+                      .def("RemoveManipulator",&PyRobotBase::RemoveManipulator, args("manip"), DOXY_FN(RobotBase,RemoveManipulator))
                       .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex, DOXY_FN(RobotBase,GetActiveManipulatorIndex))
                       .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors))
                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,args("sensorname"), "Return the attached sensor whose name matches")

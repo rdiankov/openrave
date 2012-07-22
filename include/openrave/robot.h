@@ -376,16 +376,21 @@ private:
 public:
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
-        virtual void Restore();
+
+        /// \brief restore the state
+        ///
+        /// \param robot if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
+        /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
+        virtual void Restore(boost::shared_ptr<RobotBase> robot=boost::shared_ptr<RobotBase>());
 protected:
         RobotBasePtr _probot;
         std::vector<int> vactivedofs;
         int affinedofs;
         Vector rotationaxis;
-        int nActiveManip;
+        ManipulatorPtr _pManipActive;
         std::vector<UserDataPtr> _vGrabbedBodies;
 private:
-        virtual void _RestoreRobot();
+        virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
 
     typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
@@ -567,18 +572,34 @@ private:
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
-    /// sets the active manipulator of the robot
-    /// \param index manipulator index
-    virtual void SetActiveManipulator(int index);
-    /// sets the active manipulator of the robot
+    /// \deprecated (12/07/23)
+    virtual void SetActiveManipulator(int index) RAVE_DEPRECATED;
+
+    /// \brief sets the active manipulator of the robot
+    ///
     /// \param manipname manipulator name
+    /// \throw openrave_exception if manipulator not present, will throw an exception
     virtual void SetActiveManipulator(const std::string& manipname);
+    virtual void SetActiveManipulator(ManipulatorConstPtr pmanip);
     virtual ManipulatorPtr GetActiveManipulator();
     virtual ManipulatorConstPtr GetActiveManipulator() const;
-    /// \return index of the current active manipulator
-    virtual int GetActiveManipulatorIndex() const {
-        return _nActiveManip;
-    }
+
+    /// \brief adds a manipulator the list
+    ///
+    /// Will copy the information of this manipulator object into a new manipulator and initialize it with the robot.
+    /// Will change the robot structure hash..
+    /// \return the new manipulator attached to the robot
+    /// \throw openrave_exception If there exists a manipulator with the same name, will throw an exception
+    virtual ManipulatorPtr AddManipulator(ManipulatorConstPtr manip);
+
+    /// \brief removes a manipulator from the robot list.
+    ///
+    /// Will change the robot structure hash..
+    /// if the active manipulator is set to this manipulator, it will be set to None afterwards
+    virtual void RemoveManipulator(ManipulatorPtr manip);
+
+    /// \deprecated (12/07/23)
+    virtual int GetActiveManipulatorIndex() const RAVE_DEPRECATED;
 
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
@@ -758,7 +779,7 @@ protected:
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
-    int _nActiveManip; ///< \see GetActiveManipulatorIndex
+    ManipulatorPtr _pManipActive;
 
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
 

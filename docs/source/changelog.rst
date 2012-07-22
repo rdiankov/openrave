@@ -49,6 +49,10 @@ Core
 
 * Update velocity of grabbed objects.
 
+* Added :meth:`.Robot.AddManipulatotr` and :meth:`.Robot.RemoveManipulator` for dynamic manipulator addition/removal.
+
+* KinBody StateSaver classes can transfer restoring state to different kinbody/robot.
+
 Inverse Kinematics
 ------------------
 

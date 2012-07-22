@@ -68,43 +68,43 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    _RestoreKinBody();
+    _RestoreKinBody(_pbody);
 }
 
-void KinBody::KinBodyStateSaver::Restore()
+void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
 {
-    _RestoreKinBody();
+    _RestoreKinBody(!body ? _pbody : body);
 }
 
-void KinBody::KinBodyStateSaver::_RestoreKinBody()
+void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbody)
 {
-    if( _pbody->GetEnvironmentId() == 0 ) {
-        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%_pbody->GetName()));
+    if( pbody->GetEnvironmentId() == 0 ) {
+        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%pbody->GetName()));
         return;
     }
     if( _options & Save_LinkTransformation ) {
-        _pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
+        pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }
     if( _options & Save_LinkEnable ) {
         // should first enable before calling the parameter callbacks
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
-            if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                _pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
+            if( pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
+                pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
                 bchanged = true;
             }
         }
         if( bchanged ) {
-            _pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
-            _pbody->_ParametersChanged(Prop_LinkEnable);
+            pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
+            pbody->_ParametersChanged(Prop_LinkEnable);
         }
     }
     if( _options & Save_JointMaxVelocityAndAcceleration ) {
-        _pbody->SetDOFVelocityLimits(_vMaxVelocities);
-        _pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
+        pbody->SetDOFVelocityLimits(_vMaxVelocities);
+        pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
     }
     if( _options & Save_LinkVelocities ) {
-        _pbody->SetLinkVelocities(_vLinkVelocities);
+        pbody->SetLinkVelocities(_vLinkVelocities);
     }
 }
 
@@ -127,6 +127,7 @@ KinBody::~KinBody()
 void KinBody::Destroy()
 {
     if( _listAttachedBodies.size() > 0 ) {
+        // could be in the environment destructor?
         stringstream ss; ss << GetName() << " still has attached bodies: ";
         FOREACHC(it,_listAttachedBodies) {
             KinBodyPtr pattached = it->lock();
@@ -134,7 +135,7 @@ void KinBody::Destroy()
                 ss << pattached->GetName();
             }
         }
-        RAVELOG_WARN(ss.str());
+        RAVELOG_VERBOSE(ss.str());
     }
     _listAttachedBodies.clear();
 

@@ -1012,7 +1012,12 @@ public:
         inline KinBodyPtr GetBody() const {
             return _pbody;
         }
-        virtual void Restore();
+
+        /// \brief restore the state
+        ///
+        /// \param body if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
+        /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
+        virtual void Restore(boost::shared_ptr<KinBody> body=boost::shared_ptr<KinBody>());
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
@@ -1022,7 +1027,7 @@ protected:
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations;
         KinBodyPtr _pbody;
 private:
-        virtual void _RestoreKinBody();
+        virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
     };
 
     typedef boost::shared_ptr<KinBodyStateSaver> KinBodyStateSaverPtr;
