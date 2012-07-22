@@ -432,6 +432,7 @@ class GraspPlanning:
             except planning_error, e:
                 print 'failed to grasp object %s'%graspables[i][0].target.GetName()
                 failures += 1
+                graspables.append(graspables.pop(0)) # push front to back
                 print e
 
 def main(env,options):

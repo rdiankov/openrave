@@ -170,7 +170,7 @@ class RunPlanning(EnvironmentSetup):
             assert(transdist(soltraj,sol) <= g_epsilon)
             self.RunTrajectory(robot,traj)
             # check if cloning works after model is grabbed
-            robot.SetDOFVeloities(ones(len(robot.GetDOF())))
+            robot.SetDOFVelocities(ones(len(robot.GetDOF())))
             env2 = Environment()
             env2.Clone(env,CloningOptions.Bodies|CloningOptions.Simulation)
             self.CompareEnvironments(env,env2)

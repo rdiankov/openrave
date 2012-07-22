@@ -183,7 +183,7 @@ class EnvironmentSetup(object):
                     assert(transdist(body.GetDOFVelocities(),body2.GetDOFVelocities()) <= 10*g_epsilon)
                 if body.IsRobot():
                     robot=env.GetRobot(body.GetName())
-                    robot2=env2.GetRobot(body2.Getname())
+                    robot2=env2.GetRobot(body2.GetName())
                     grabbed = robot.GetGrabbed()
                     grabbed2 = len(robot.GetGrabbed())
                     assert( set(grabbed) == set(grabbed2) )

@@ -45,7 +45,9 @@ Core
 
 * custom interface xml readers with top-level interface type xmlid get stored into :meth:`.Interface.GetReadableInterfaces`
 
-* Added :meth:`.Environment.Clone` for quick synchornization cloning.
+* Added :meth:`.Environment.Clone` for quick synchornization cloning depending on how big the differences between the original environment is.
+
+* Update velocity of grabbed objects.
 
 Inverse Kinematics
 ------------------
