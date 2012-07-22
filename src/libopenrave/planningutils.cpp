@@ -725,7 +725,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
     }
 
-    dReal fSamplingTime = 0.005; // for collision checking
+    dReal fSamplingTime = 0.01; // for collision checking
     dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
 
     ConfigurationSpecification spectotal = specpos;

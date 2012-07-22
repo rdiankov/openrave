@@ -3963,7 +3963,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 //    r->GetLinkVelocities(velocities);
 //    SetLinkVelocities(velocities);
 
-    _listRegisteredCallbacks.clear(); // reset the callbacks
+    // do not force-reset the callbacks!! since the ChangeCallbackData destructors will crash
+    //_listRegisteredCallbacks.clear();
 
     // cache
     _ResetInternalCollisionCache();
