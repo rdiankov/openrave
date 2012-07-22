@@ -169,7 +169,12 @@ class RunPlanning(EnvironmentSetup):
             self.log.debug('make sure it starts at the initial configuration')
             assert(transdist(soltraj,sol) <= g_epsilon)
             self.RunTrajectory(robot,traj)
-                
+            # check if cloning works after model is grabbed
+            robot.SetDOFVeloities(ones(len(robot.GetDOF())))
+            env2 = Environment()
+            env2.Clone(env,CloningOptions.Bodies|CloningOptions.Simulation)
+            self.CompareEnvironments(env,env2)
+            
     def test_movehandstraight(self):
         env = self.env
         with env:

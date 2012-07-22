@@ -76,6 +76,14 @@ Transform RobotBase::Manipulator::GetTransform() const
     return _pEndEffector->GetTransform() * _tLocalTool;
 }
 
+std::pair<Vector,Vector> RobotBase::Manipulator::GetVelocity() const
+{
+    Vector vdifference = _pEndEffector->GetTransform().rotate(_tLocalTool.trans);
+    std::pair<Vector,Vector> velocity = _pEndEffector->GetVelocity();
+    velocity.first += velocity.second.cross(vdifference);
+    return velocity;
+}
+
 bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 {
     if( !iksolver ) {

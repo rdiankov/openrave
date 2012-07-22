@@ -46,6 +46,9 @@ public:
         /// All inverse kinematics and jacobian queries are specifying this frame.
         virtual Transform GetTransform() const;
 
+        /// \brief return the linear/angular velocity of the manipulator coordinate system
+        virtual std::pair<Vector,Vector> GetVelocity() const;
+
         virtual Transform GetEndEffectorTransform() const {
             return GetTransform();
         }
@@ -410,6 +413,10 @@ private:
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
+
+    virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);

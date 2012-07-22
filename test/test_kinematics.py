@@ -183,7 +183,7 @@ class TestKinematics(EnvironmentSetup):
                         newlinkvels = random.rand(len(body.GetLinks()),6)-0.5
                         for link,vel in izip(body.GetLinks(),newlinkvels):
                             link.SetVelocity(vel[0:3],vel[3:6])
-                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                            assert( transdist(link.GetVelocity(),vel) <= g_epsilon )
                         assert( transdist(body.GetLinkVelocities(),newlinkvels) <= g_epsilon )
                         body.SetDOFVelocities(dofvelnew,linear=[0,0,0],angular=[0,0,0],checklimits=True)
                         assert( transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
@@ -193,7 +193,7 @@ class TestKinematics(EnvironmentSetup):
                         for joint in body.GetJoints():
                             assert( transdist(joint.GetVelocities(), dofvelnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
                         for link,vel in izip(body.GetLinks(),linkvels):
-                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                            assert( transdist(link.GetVelocity(),vel) <= g_epsilon )
 
                         body.SetDOFValues(dofvaluesnew)
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=False)

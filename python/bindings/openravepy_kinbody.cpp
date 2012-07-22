@@ -48,8 +48,7 @@ public:
                 _bVisible = true;
                 _bModifiable = true;
             }
-            KinBody::Link::GeometryInfo GetGeometryInfo()
-            {
+            KinBody::Link::GeometryInfo GetGeometryInfo() {
                 KinBody::Link::GeometryInfo info;
                 info._t = ExtractTransform(_t);
                 info._vGeomData = ExtractVector<dReal>(_vGeomData);
@@ -85,8 +84,7 @@ public:
             PyGeometry(KinBody::Link::GeometryPtr pgeometry) : _pgeometry(pgeometry) {
             }
 
-            virtual void SetCollisionMesh(object pytrimesh)
-            {
+            virtual void SetCollisionMesh(object pytrimesh) {
                 KinBody::Link::TRIMESH mesh;
                 if( ExtractTriMesh(pytrimesh,mesh) ) {
                     _pgeometry->SetCollisionMesh(mesh);
@@ -198,8 +196,7 @@ public:
 
         object GetParent() const;
 
-        object GetParentLinks() const
-        {
+        object GetParentLinks() const {
             std::vector<KinBody::LinkPtr> vParentLinks;
             _plink->GetParentLinks(vParentLinks);
             boost::python::list links;
@@ -209,8 +206,7 @@ public:
             return links;
         }
 
-        bool IsParentLink(boost::shared_ptr<PyLink> pylink) const
-        {
+        bool IsParentLink(boost::shared_ptr<PyLink> pylink) const {
             return _plink->IsParentLink(pylink->GetLink());
         }
 
@@ -234,8 +230,7 @@ public:
             return toPyVector3(_plink->GetGlobalCOM());
         }
 
-        object GetLocalInertia() const
-        {
+        object GetLocalInertia() const {
             TransformMatrix t = _plink->GetLocalInertia();
             npy_intp dims[] = { 3, 3};
             PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -248,24 +243,19 @@ public:
         dReal GetMass() const {
             return _plink->GetMass();
         }
-        object GetPrincipalMomentsOfInertia() const
-        {
+        object GetPrincipalMomentsOfInertia() const {
             return toPyVector3(_plink->GetPrincipalMomentsOfInertia());
         }
-        object GetLocalMassFrame() const
-        {
+        object GetLocalMassFrame() const {
             return ReturnTransform(_plink->GetLocalMassFrame());
         }
-        void SetLocalMassFrame(object omassframe)
-        {
+        void SetLocalMassFrame(object omassframe) {
             _plink->SetLocalMassFrame(ExtractTransform(omassframe));
         }
-        void SetPrincipalMomentsOfInertia(object oinertiamoments)
-        {
+        void SetPrincipalMomentsOfInertia(object oinertiamoments) {
             _plink->SetPrincipalMomentsOfInertia(ExtractVector3(oinertiamoments));
         }
-        void SetMass(dReal mass)
-        {
+        void SetMass(dReal mass) {
             _plink->SetMass(mass);
         }
 
@@ -282,8 +272,7 @@ public:
             return _plink->SetTorque(ExtractVector3(otorque),bAdd);
         }
 
-        object GetGeometries()
-        {
+        object GetGeometries() {
             boost::python::list geoms;
             size_t N = _plink->GetGeometries().size();
             for(size_t i = 0; i < N; ++i)
@@ -291,8 +280,7 @@ public:
             return geoms;
         }
 
-        object GetRigidlyAttachedLinks() const
-        {
+        object GetRigidlyAttachedLinks() const {
             std::vector<KinBody::LinkPtr> vattachedlinks;
             _plink->GetRigidlyAttachedLinks(vattachedlinks);
             boost::python::list links;
@@ -302,22 +290,20 @@ public:
             return links;
         }
 
-        bool IsRigidlyAttached(boost::shared_ptr<PyLink>  plink)
-        {
+        bool IsRigidlyAttached(boost::shared_ptr<PyLink>  plink) {
             CHECK_POINTER(plink);
             return _plink->IsRigidlyAttached(plink->GetLink());
         }
 
-        void SetVelocity(object olinear, object oangular)
-        {
+        void SetVelocity(object olinear, object oangular) {
             _plink->SetVelocity(ExtractVector3(olinear),ExtractVector3(oangular));
         }
 
-        object GetVelocity() const
-        {
-            Vector linearvel, angularvel;
-            _plink->GetVelocity(linearvel,angularvel);
-            return boost::python::make_tuple(toPyVector3(linearvel),toPyVector3(angularvel));
+        object GetVelocity() const {
+            std::pair<Vector,Vector> velocity;
+            velocity = _plink->GetVelocity();
+            boost::array<dReal,6> v = {{ velocity.first.x, velocity.first.y, velocity.first.z, velocity.second.x, velocity.second.y, velocity.second.z}};
+            return toPyArray<dReal,6>(v);
         }
 
         string __repr__() {
@@ -368,8 +354,7 @@ public:
             _pjoint->GetMimicDOFIndices(vmimicdofs,iaxis);
             return toPyArray(vmimicdofs);
         }
-        void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq)
-        {
+        void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq) {
             _pjoint->SetMimicEquations(iaxis,poseq,veleq,acceleq);
         }
 
@@ -420,14 +405,12 @@ public:
         int GetDOF() const {
             return _pjoint->GetDOF();
         }
-        object GetValues() const
-        {
+        object GetValues() const {
             vector<dReal> values;
             _pjoint->GetValues(values);
             return toPyArray(values);
         }
-        object GetVelocities() const
-        {
+        object GetVelocities() const {
             vector<dReal> values;
             _pjoint->GetVelocities(values);
             return toPyArray(values);
@@ -545,8 +528,7 @@ public:
             return toPyArray(values0);
         }
 
-        dReal SubtractValue(dReal value0, dReal value1, int iaxis)
-        {
+        dReal SubtractValue(dReal value0, dReal value1, int iaxis) {
             return _pjoint->SubtractValue(value0,value1,iaxis);
         }
 
@@ -588,8 +570,7 @@ public:
             return _pdata;
         }
 
-        object GetSystem()
-        {
+        object GetSystem() {
             return object(openravepy::toPySensorSystem(_pdata->GetSystem(),_pyenv));
         }
 
@@ -654,8 +635,7 @@ public:
         RAVELOG_WARN("KinBody.InitFromData is deprecated, use EnvironmentBase::ReadKinBodyData\n");
         return _pbody->GetEnv()->ReadKinBodyData(_pbody,data);
     }
-    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
-    {
+    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw) {
         if( vboxes.shape()[1] != 6 ) {
             throw openrave_exception("boxes needs to be a Nx6 vector\n");
         }
@@ -666,8 +646,7 @@ public:
         }
         return _pbody->InitFromBoxes(vaabbs,bDraw);
     }
-    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw)
-    {
+    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw) {
         if( vspheres.shape()[1] != 4 ) {
             throw openrave_exception("spheres needs to be a Nx4 vector\n");
         }
@@ -678,8 +657,7 @@ public:
         return _pbody->InitFromSpheres(vvspheres,bDraw);
     }
 
-    bool InitFromTrimesh(object pytrimesh, bool bDraw)
-    {
+    bool InitFromTrimesh(object pytrimesh, bool bDraw) {
         KinBody::Link::TRIMESH mesh;
         if( ExtractTriMesh(pytrimesh,mesh) ) {
             return _pbody->InitFromTrimesh(mesh,bDraw);
@@ -689,8 +667,7 @@ public:
         }
     }
 
-    bool InitFromGeometries(object ogeometries)
-    {
+    bool InitFromGeometries(object ogeometries) {
         std::list<KinBody::Link::GeometryInfo> geometries;
         for(int i = 0; i < len(ogeometries); ++i) {
             PyLink::PyGeometryInfoPtr pygeom = boost::python::extract<PyLink::PyGeometryInfoPtr>(ogeometries[i]);
@@ -712,14 +689,12 @@ public:
         return _pbody->GetDOF();
     }
 
-    object GetDOFValues() const
-    {
+    object GetDOFValues() const {
         vector<dReal> values;
         _pbody->GetDOFValues(values);
         return toPyArray(values);
     }
-    object GetDOFValues(object oindices) const
-    {
+    object GetDOFValues(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -732,15 +707,13 @@ public:
         return toPyArray(values);
     }
 
-    object GetDOFVelocities() const
-    {
+    object GetDOFVelocities() const {
         vector<dReal> values;
         _pbody->GetDOFVelocities(values);
         return toPyArray(values);
     }
 
-    object GetDOFVelocities(object oindices) const
-    {
+    object GetDOFVelocities(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -753,36 +726,31 @@ public:
         return toPyArray(values);
     }
 
-    object GetDOFLimits() const
-    {
+    object GetDOFLimits() const {
         vector<dReal> vlower, vupper;
         _pbody->GetDOFLimits(vlower,vupper);
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
 
-    object GetDOFVelocityLimits() const
-    {
+    object GetDOFVelocityLimits() const {
         vector<dReal> vmax;
         _pbody->GetDOFVelocityLimits(vmax);
         return toPyArray(vmax);
     }
 
-    object GetDOFAccelerationLimits() const
-    {
+    object GetDOFAccelerationLimits() const {
         vector<dReal> vmax;
         _pbody->GetDOFAccelerationLimits(vmax);
         return toPyArray(vmax);
     }
 
-    object GetDOFTorqueLimits() const
-    {
+    object GetDOFTorqueLimits() const {
         vector<dReal> vmax;
         _pbody->GetDOFTorqueLimits(vmax);
         return toPyArray(vmax);
     }
 
-    object GetDOFLimits(object oindices) const
-    {
+    object GetDOFLimits(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -802,8 +770,7 @@ public:
         return boost::python::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
 
-    object GetDOFVelocityLimits(object oindices) const
-    {
+    object GetDOFVelocityLimits(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -821,8 +788,7 @@ public:
         return toPyArray(vmax);
     }
 
-    object GetDOFAccelerationLimits(object oindices) const
-    {
+    object GetDOFAccelerationLimits(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -840,8 +806,7 @@ public:
         return toPyArray(vmax);
     }
 
-    object GetDOFTorqueLimits(object oindices) const
-    {
+    object GetDOFTorqueLimits(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -859,36 +824,31 @@ public:
         return toPyArray(vmax);
     }
 
-    object GetDOFMaxVel() const
-    {
+    object GetDOFMaxVel() const {
         RAVELOG_WARN("KinBody.GetDOFMaxVel() is deprecated, use GetDOFVelocityLimits\n");
         vector<dReal> values;
         _pbody->GetDOFVelocityLimits(values);
         return toPyArray(values);
     }
-    object GetDOFMaxTorque() const
-    {
+    object GetDOFMaxTorque() const {
         vector<dReal> values;
         _pbody->GetDOFMaxTorque(values);
         return toPyArray(values);
     }
-    object GetDOFMaxAccel() const
-    {
+    object GetDOFMaxAccel() const {
         RAVELOG_WARN("KinBody.GetDOFMaxAccel() is deprecated, use GetDOFAccelerationLimits\n");
         vector<dReal> values;
         _pbody->GetDOFAccelerationLimits(values);
         return toPyArray(values);
     }
 
-    object GetDOFWeights() const
-    {
+    object GetDOFWeights() const {
         vector<dReal> values;
         _pbody->GetDOFWeights(values);
         return toPyArray(values);
     }
 
-    object GetDOFWeights(object oindices) const
-    {
+    object GetDOFWeights(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -905,15 +865,13 @@ public:
         return toPyArray(values);
     }
 
-    object GetDOFResolutions() const
-    {
+    object GetDOFResolutions() const {
         vector<dReal> values;
         _pbody->GetDOFResolutions(values);
         return toPyArray(values);
     }
 
-    object GetDOFResolutions(object oindices) const
-    {
+    object GetDOFResolutions(object oindices) const {
         if( oindices == object() ) {
             return numeric::array(boost::python::list());
         }
@@ -930,8 +888,7 @@ public:
         return toPyArray(values);
     }
 
-    object GetLinks() const
-    {
+    object GetLinks() const {
         boost::python::list links;
         FOREACHC(itlink, _pbody->GetLinks()) {
             links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
@@ -939,8 +896,7 @@ public:
         return links;
     }
 
-    object GetLinks(object oindices) const
-    {
+    object GetLinks(object oindices) const {
         if( oindices == object() ) {
             return GetLinks();
         }
@@ -1625,6 +1581,13 @@ public:
 
         object GetTransform() const {
             return ReturnTransform(_pmanip->GetTransform());
+        }
+
+        object GetVelocity() const {
+            std::pair<Vector, Vector> velocity;
+            velocity = _pmanip->GetVelocity();
+            boost::array<dReal,6> v = {{ velocity.first.x, velocity.first.y, velocity.first.z, velocity.second.x, velocity.second.y, velocity.second.z}};
+            return toPyArray<dReal,6>(v);
         }
 
         object GetName() const {
@@ -3289,6 +3252,7 @@ void init_openravepy_kinbody()
         class_<PyRobotBase::PyManipulator, boost::shared_ptr<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
         .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
+        .def("GetVelocity", &PyRobotBase::PyManipulator::GetVelocity, DOXY_FN(RobotBase::Manipulator,GetVelocity))
         .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(RobotBase::Manipulator,GetName))
         .def("SetName",&PyRobotBase::PyManipulator::SetName, args("name"), DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))

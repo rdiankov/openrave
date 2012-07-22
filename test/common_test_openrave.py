@@ -177,12 +177,17 @@ class EnvironmentSetup(object):
                 body2 = env2.GetKinBody(body.GetName())
                 assert(body.GetKinematicsGeometryHash()==body2.GetKinematicsGeometryHash())
                 assert(transdist(body.GetLinkTransformations(),body2.GetLinkTransformations()) <= 10*g_epsilon)
+                assert(transdist(body.GetLinkVelocities(),body2.GetLinkVelocities()) <= 10*g_epsilon)
                 if body.GetDOF() > 0:
                     assert(transdist(body.GetDOFValues(),body2.GetDOFValues()) <= 10*g_epsilon)
+                    assert(transdist(body.GetDOFVelocities(),body2.GetDOFVelocities()) <= 10*g_epsilon)
                 if body.IsRobot():
                     robot=env.GetRobot(body.GetName())
                     robot2=env2.GetRobot(body2.Getname())
-
+                    grabbed = robot.GetGrabbed()
+                    grabbed2 = len(robot.GetGrabbed())
+                    assert( set(grabbed) == set(grabbed2) )
+                    
 def generate_classes(BaseClass, namespace, data):
     """Used to generate test classes inside a namespace since nose generators do not support classes
 

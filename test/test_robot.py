@@ -373,6 +373,43 @@ class RunRobot(EnvironmentSetup):
         cdofs = manip.GetChildDOFIndices()
         assert(cdofs == [22,23,24,25])        
 
+    def test_grabdynamics(self):
+        self.log.info('test is grabbed bodies have correct')
+        env=self.env
+        with env:
+            robot=self.LoadRobot('robots/pr2-beta-static.zae')
+            body = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(body)
+            manip=robot.SetActiveManipulator('leftarm')
+            velocities = zeros(robot.GetDOF())
+            velocities[manip.GetArmIndices()] = ones(len(manip.GetArmIndices()))
+            robot.SetDOFVelocities(velocities)
+            Tmanip = manip.GetTransform()
+            Tbody = array(Tmanip)
+            Tbody[0,3] += 0.1
+            body.SetTransform(Tbody)
+            robot.Grab(body)
+            diff = Tbody[0:3,3] - Tmanip[0:3,3]
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
+            
+            # change velocity and try again
+            velocities[manip.GetArmIndices()] = -ones(len(manip.GetArmIndices()))
+            robot.SetDOFVelocities(velocities)
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
+            
+            # set robot base velocity
+            robot.SetVelocity([1,2,3],[4,5,6])
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
+
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

@@ -259,6 +259,27 @@ void RobotBase::SetTransform(const Transform& trans)
     _UpdateAttachedSensors();
 }
 
+bool RobotBase::SetVelocity(const Vector& linearvel, const Vector& angularvel)
+{
+    if( !KinBody::SetVelocity(linearvel,angularvel) ) {
+        return false;
+    }
+    _UpdateGrabbedBodies();
+    return true;
+}
+
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits)
+{
+    KinBody::SetDOFVelocities(dofvelocities,linearvel,angularvel,checklimits);
+    _UpdateGrabbedBodies();
+    // do sensors need to have their velocities updated?
+}
+
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits)
+{
+    KinBody::SetDOFVelocities(dofvelocities,checklimits); // RobotBase::SetDOFVelocities should be called internally
+}
+
 void RobotBase::_UpdateGrabbedBodies()
 {
     vector<UserDataPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
@@ -266,7 +287,12 @@ void RobotBase::_UpdateGrabbedBodies()
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pbody ) {
-            pbody->SetTransform(pgrabbed->_plinkrobot->GetTransform() * pgrabbed->_troot);
+            Transform t = pgrabbed->_plinkrobot->GetTransform();
+            pbody->SetTransform(t * pgrabbed->_troot);
+            // set the correct velocity
+            std::pair<Vector, Vector> velocity = pgrabbed->_plinkrobot->GetVelocity();
+            velocity.first += velocity.second.cross(t.rotate(pgrabbed->_troot.trans));
+            pbody->SetVelocity(velocity.first, velocity.second);
             ++itgrabbed;
         }
         else {
@@ -511,7 +537,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
 void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits)
 {
     if(_nActiveDOF < 0) {
-        SetDOFVelocities(velocities);
+        SetDOFVelocities(velocities,true);
         return;
     }
 
@@ -1272,8 +1298,14 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     }
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,plink));
-    pgrabbed->_troot = plink->GetTransform().inverse() * pbody->GetTransform();
+    Transform t = plink->GetTransform();
+    Transform tbody = pbody->GetTransform();
+    pgrabbed->_troot = t.inverse() * tbody;
     pgrabbed->_ProcessCollidingLinks();
+    // set velocity
+    std::pair<Vector, Vector> velocity = plink->GetVelocity();
+    velocity.first += velocity.second.cross(tbody.trans - t.trans);
+    pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
     return true;
@@ -1289,8 +1321,14 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     }
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
-    pgrabbed->_troot = pRobotLinkToGrabWith->GetTransform().inverse() * pbody->GetTransform();
+    Transform t = pRobotLinkToGrabWith->GetTransform();
+    Transform tbody = pbody->GetTransform();
+    pgrabbed->_troot = t.inverse() * tbody;
     pgrabbed->_ProcessCollidingLinks();
+    // set velocity
+    std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
+    velocity.first += velocity.second.cross(tbody.trans - t.trans);
+    pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
     return true;

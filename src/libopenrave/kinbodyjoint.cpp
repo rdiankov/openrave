@@ -355,7 +355,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             break;
         }
         case JointTrajectory: {
-            uint64_t starttime = utils::GetMicroTime();
+            //uint64_t starttime = utils::GetMicroTime();
             vector<dReal> vsampledata;
             dReal splitpercentage = 0.01;
             dReal precision(1e-6);
@@ -385,7 +385,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 timemin = max(timemin,besttime-timestep);
                 timemax = min(timemax, besttime+timestep);
                 splitpercentage = 0.1f;
-                RAVELOG_INFO(str(boost::format("calls: %d time: %f")%totalcalls%((utils::GetMicroTime()-starttime)*1e-6)));
+                //RAVELOG_INFO(str(boost::format("calls: %d time: %f")%totalcalls%((utils::GetMicroTime()-starttime)*1e-6)));
             }
             return 0.5*(timemin+timemax);
         }
