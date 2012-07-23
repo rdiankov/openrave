@@ -175,23 +175,23 @@ private:
                     FOREACHC(itgeom,(*itlink)->GetGeometries()) {
                         KinBody::Link::GeometryPtr geom = *itgeom;
                         switch(geom->GetType()) {
-                        case KinBody::Link::GEOMPROPERTIES::GeomBox:
+                        case KinBody::Link::GeomBox:
                             fout << "<geometry type=\"box\">" << endl;
                             fout << "<extents>" << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " "  << geom->GetBoxExtents().z << "</extents>";
                             break;
-                        case KinBody::Link::GEOMPROPERTIES::GeomSphere:
+                        case KinBody::Link::GeomSphere:
                             fout << "<geometry type=\"sphere\">" << endl;
                             fout << "<radius>" << geom->GetSphereRadius() << "</radius>";
                             break;
-                        case KinBody::Link::GEOMPROPERTIES::GeomCylinder:
+                        case KinBody::Link::GeomCylinder:
                             fout << "<geometry type=\"cylinder\">" << endl;
                             fout << "<radius>" << geom->GetCylinderRadius() << "</radius>" << endl;
                             fout << "<height>" << geom->GetCylinderHeight() << "</height>" << endl;
                             break;
-                        case KinBody::Link::GEOMPROPERTIES::GeomTrimesh:
+                        case KinBody::Link::GeomTrimesh:
                             fout << "<geometry type=\"trimesh\">" << endl;
                             break;
-                        case KinBody::Link::GEOMPROPERTIES::GeomNone:
+                        case KinBody::Link::GeomNone:
                             fout << "<geometry>" << endl;
                             break;
                         }

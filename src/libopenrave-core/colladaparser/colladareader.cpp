@@ -366,8 +366,8 @@ public:
                 _AddPrefixForKinBody(probot,_prefix);
                 FOREACH(itmanip,probot->_vecManipulators) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
-                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
-                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                        (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
+                        FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
                             *itgrippername = _prefix + *itgrippername;
                         }
                     }
@@ -1962,16 +1962,16 @@ public:
                 }
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
-                    RobotBase::ManipulatorPtr pmanip(new RobotBase::Manipulator(probot));
-                    pmanip->_name = _ConvertToOpenRAVEName(name);
+                    RobotBase::ManipulatorInfo manipinfo;
+                    manipinfo._name = _ConvertToOpenRAVEName(name);
                     daeElement* pframe_origin = tec->getChild("frame_origin");
                     daeElement* pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
-                            pmanip->_pBase = probot->GetLink(_ExtractLinkName(pdomlink));
+                            manipinfo._sBaseLinkName = _ExtractLinkName(pdomlink);
                         }
-                        if( !pmanip->_pBase ) {
+                        if( !probot->GetLink(manipinfo._sBaseLinkName) ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
                             continue;
                         }
@@ -1979,17 +1979,17 @@ public:
                     if( !!pframe_tip ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
-                            pmanip->_pEndEffector = probot->GetLink(_ExtractLinkName(pdomlink));
+                            manipinfo._sEffectorLinkName = _ExtractLinkName(pdomlink);
                         }
-                        if( !pmanip->_pEndEffector ) {
+                        if( !probot->GetLink(manipinfo._sEffectorLinkName) ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame tip %s\n")%name%pframe_tip->getAttribute("link")));
                             continue;
                         }
-                        pmanip->_tLocalTool = _ExtractFullTransformFromChildren(pframe_tip);
+                        manipinfo._tLocalTool = _ExtractFullTransformFromChildren(pframe_tip);
                         daeElement* pdirection = pframe_tip->getChild("direction");
                         if( !!pdirection ) {
                             stringstream ss(pdirection->getCharData());
-                            ss >> pmanip->_vdirection.x >> pmanip->_vdirection.y >> pmanip->_vdirection.z;
+                            ss >> manipinfo._vdirection.x >> manipinfo._vdirection.y >> manipinfo._vdirection.z;
                             if( !ss ) {
                                 RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
                             }
@@ -2003,7 +2003,7 @@ public:
                             KinBody::JointPtr pjoint = result.first;
                             domJointRef pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
-                                pmanip->_vgripperjointnames.push_back(pjoint->GetName());
+                                manipinfo._vGripperJointNames.push_back(pjoint->GetName());
                                 daeTArray<daeElementRef> children;
                                 pmanipchild->getChildren(children);
                                 for (size_t i = 0; i < children.getCount(); i++) {
@@ -2018,19 +2018,18 @@ public:
                                                 RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract closing_direction\n")%children[i]->getAttribute("axis")%pmanipchild->getAttribute("joint")));
                                             }
                                         }
-                                        pmanip->_vClosingDirection.push_back((dReal)closing_direction);
+                                        manipinfo._vClosingDirection.push_back((dReal)closing_direction);
                                     }
                                 }
                                 continue;
                             }
-                            RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%pmanip->GetName()%pmanipchild->getAttribute("joint")));
+                            RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%manipinfo._name%pmanipchild->getAttribute("joint")));
                         }
                         else if( pmanipchild->getElementName() == string("iksolver") ) {
                             InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(tec->getContents()[ic]);
                             if( !!pinterfacetype ) {
                                 if( pinterfacetype->type.size() == 0 || pinterfacetype->type == "iksolver" ) {
-                                    pmanip->_strIkSolver = pinterfacetype->name;
-                                    pmanip->_pIkSolver = RaveCreateIkSolver(_penv,pmanip->_strIkSolver);
+                                    manipinfo._sIkSolverXMLId = pinterfacetype->name;
                                 }
                                 else {
                                     RAVELOG_WARN("invalid interface_type\n");
@@ -2038,11 +2037,11 @@ public:
                             }
                         }
                         else if((pmanipchild->getElementName() != string("frame_origin"))&&(pmanipchild->getElementName() != string("frame_tip"))) {
-                            RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%pmanip->GetName()));
+                            RAVELOG_WARN(str(boost::format("unrecognized tag <%s> in manipulator '%s'")%pmanipchild->getElementName()%manipinfo._name));
                         }
                     }
 
-                    probot->GetManipulators().push_back(pmanip);
+                    probot->GetManipulators().push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(probot,manipinfo)));
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s manipulator %s\n")%probot->GetName()%name));

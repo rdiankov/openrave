@@ -1464,14 +1464,14 @@ int RobotBase::GetActiveManipulatorIndex() const
     return -1;
 }
 
-RobotBase::ManipulatorPtr RobotBase::AddManipulator(RobotBase::ManipulatorConstPtr manip)
+RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo)
 {
     FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->GetName() == manip->GetName() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manip->GetName(),ORE_InvalidArguments);
+        if( (*itmanip)->GetName() == manipinfo._name ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);
         }
     }
-    ManipulatorPtr newmanip(new Manipulator(shared_robot(),*manip));
+    ManipulatorPtr newmanip(new Manipulator(shared_robot(),manipinfo));
     _vecManipulators.push_back(newmanip);
     __hashrobotstructure.resize(0);
     return newmanip;
@@ -1660,93 +1660,13 @@ void RobotBase::_ComputeInternalInformation()
 
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->GetName().size() == 0 ) {
+        if( (*itmanip)->_info._name.size() == 0 ) {
             stringstream ss;
             ss << "manip" << manipindex;
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));
-            (*itmanip)->_name = ss.str();
+            (*itmanip)->_info._name = ss.str();
         }
-        else if( !utils::IsValidName((*itmanip)->GetName()) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", (*itmanip)->GetName(), ORE_Failed);
-        }
-        if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
-            vector<JointPtr> vjoints;
-            std::vector<int> vmimicdofs;
-            (*itmanip)->__varmdofindices.resize(0);
-            if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
-                FOREACH(it,vjoints) {
-                    if( (*it)->IsStatic() ) {
-                        // ignore
-                    }
-                    else if( (*it)->IsMimic() ) {
-                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                            if( (*it)->IsMimic(i) ) {
-                                (*it)->GetMimicDOFIndices(vmimicdofs,i);
-                                FOREACHC(itmimicdof,vmimicdofs) {
-                                    if( find((*itmanip)->__varmdofindices.begin(),(*itmanip)->__varmdofindices.end(),*itmimicdof) == (*itmanip)->__varmdofindices.end() ) {
-                                        (*itmanip)->__varmdofindices.push_back(*itmimicdof);
-                                    }
-                                }
-                            }
-                            else if( (*it)->GetDOFIndex() >= 0 ) {
-                                (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
-                            }
-                        }
-                    }
-                    else if( (*it)->GetDOFIndex() < 0) {
-                        RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));
-                    }
-                    else { // ignore static joints
-                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                            (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
-                        }
-                    }
-                }
-                // initialize the arm configuration spec
-                (*itmanip)->__armspec = GetConfigurationSpecificationIndices((*itmanip)->__varmdofindices);
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%(*itmanip)->GetName()%(*itmanip)->GetBase()->GetName()%(*itmanip)->GetEndEffector()->GetName()));
-            }
-        }
-        else {
-            RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
-        }
-        // init the gripper dof indices
-        (*itmanip)->__vgripperdofindices.resize(0);
-        std::vector<dReal> vClosingDirection;
-        size_t iclosingdirection = 0;
-        FOREACHC(itjointname,(*itmanip)->_vgripperjointnames) {
-            JointPtr pjoint = GetJoint(*itjointname);
-            if( !pjoint ) {
-                RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%(*itmanip)->GetName()));
-                iclosingdirection++;
-            }
-            else {
-                if( pjoint->GetDOFIndex() >= 0 ) {
-                    for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                        if( find((*itmanip)->__varmdofindices.begin(), (*itmanip)->__varmdofindices.end(), pjoint->GetDOFIndex()+i) != (*itmanip)->__varmdofindices.end() ) {
-                            RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%(*itmanip)->GetName()%(pjoint->GetDOFIndex()+i)));
-                        }
-                        else {
-                            (*itmanip)->__vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
-                            if( iclosingdirection < (*itmanip)->_vClosingDirection.size() ) {
-                                vClosingDirection.push_back((*itmanip)->_vClosingDirection[iclosingdirection++]);
-                            }
-                            else {
-                                vClosingDirection.push_back(0);
-                                RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%(*itmanip)->GetName()));
-                            }
-                        }
-                    }
-                }
-                else {
-                    ++iclosingdirection;
-                    RAVELOG_WARN(str(boost::format("manipulator %s gripper joint %s is not active, so has no dof index. ignoring.")%(*itmanip)->GetName()%*itjointname));
-                }
-            }
-        }
-        (*itmanip)->_vClosingDirection.swap(vClosingDirection);
+        (*itmanip)->_ComputeInternalInformation();
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(; itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {
@@ -1754,6 +1674,13 @@ void RobotBase::_ComputeInternalInformation()
             }
         }
         manipindex++;
+    }
+    // set active manipulator to first manipulator
+    if( _vecManipulators.size() > 0 ) {
+        _pManipActive = _vecManipulators.at(0);
+    }
+    else {
+        _pManipActive.reset();
     }
 
     int sensorindex=0;
@@ -1776,26 +1703,22 @@ void RobotBase::_ComputeInternalInformation()
 
     {
         __hashrobotstructure.resize(0);
-        FOREACH(itmanip,_vecManipulators) {
-            (*itmanip)->__hashstructure.resize(0);
-            (*itmanip)->__hashkinematicsstructure.resize(0);
-        }
         FOREACH(itsensor,_vecSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
     // finally initialize the ik solvers (might depend on the hashes)
-    FOREACH(itmanip, _vecManipulators) {
-        if( !!(*itmanip)->_pIkSolver ) {
-            try {
-                (*itmanip)->_pIkSolver->Init(*itmanip);
-            }
-            catch(const std::exception& e) {
-                RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
-                (*itmanip)->SetIkSolver(IkSolverBasePtr());
-            }
-        }
-    }
+//    FOREACH(itmanip, _vecManipulators) {
+//        if( !!(*itmanip)->__pIkSolver ) {
+//            try {
+//                (*itmanip)->__pIkSolver->Init(*itmanip);
+//            }
+//            catch(const std::exception& e) {
+//                RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
+//                (*itmanip)->SetIkSolver(IkSolverBasePtr());
+//            }
+//        }
+//    }
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
     }
@@ -1888,7 +1811,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
     FOREACHC(itmanip, r->_vecManipulators) {
-        _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
+        _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),*itmanip)));
         if( !!_vecManipulators.back()->GetIkSolver() ) {
             _vecManipulators.back()->SetIkSolver(_vecManipulators.back()->GetIkSolver());
         }

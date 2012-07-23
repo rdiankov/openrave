@@ -49,7 +49,7 @@ Core
 
 * Update velocity of grabbed objects.
 
-* Added :meth:`.Robot.AddManipulatotr` and :meth:`.Robot.RemoveManipulator` for dynamic manipulator addition/removal.
+* Added :class:`.Robot.ManipulatorInfo` to hold initialization info for manipulators. Can now dynamically add/remove manipulators with :meth:`.Robot.AddManipulatotr` and :meth:`.Robot.RemoveManipulator`.
 
 * KinBody StateSaver classes can transfer restoring state to different kinbody/robot.
 

@@ -357,6 +357,7 @@ class RunRobot(EnvironmentSetup):
             # customfilter shouldn't be executed anymore
             sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(numrepeats[0]==4)
+
     def test_manipulators(self):
         env=self.env
         robot=self.LoadRobot('robots/pr2-beta-static.zae')

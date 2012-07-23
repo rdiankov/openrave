@@ -120,16 +120,13 @@ public:
         }
         // add manipulators
         FOREACH(itmanip,_listendeffectors) {
-            RobotBase::ManipulatorPtr pmanip(new RobotBase::Manipulator(probot));
-            pmanip->_name = itmanip->first->_name;
-            pmanip->_pEndEffector = itmanip->first;
-            pmanip->_pBase = probot->GetLinks().at(0);
-            pmanip->_tLocalTool = itmanip->second;
-            //if( probot->GetDOF() == 4 ) {
-            //RAVELOG_INFO("specify x-axis for planar IK\n");
-            pmanip->_vdirection=Vector(1,0,0);
-            //}
-            probot->_vecManipulators.push_back(pmanip);
+            RobotBase::ManipulatorInfo manipinfo;
+            manipinfo._name = itmanip->first->_name;
+            manipinfo._sEffectorLinkName = itmanip->first->GetName();
+            manipinfo._sBaseLinkName = probot->GetLinks().at(0)->GetName();
+            manipinfo._tLocalTool = itmanip->second;
+            manipinfo._vdirection=Vector(1,0,0);
+            probot->_vecManipulators.push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(probot,manipinfo)));
         }
     }
 

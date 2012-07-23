@@ -1565,6 +1565,37 @@ public:
         return _probot;
     }
 
+    class PyManipulatorInfo
+    {
+public:
+        PyManipulatorInfo() {
+            _tLocalTool = ReturnTransform(Transform());
+            _vClosingDirection = numeric::array(boost::python::list());
+            _vdirection = toPyVector3(Vector(1,1,1));
+            _vGripperJointNames = boost::python::list();
+        }
+        RobotBase::ManipulatorInfo GetManipulatorInfo() {
+            RobotBase::ManipulatorInfo info;
+            info._name = _name;
+            info._sBaseLinkName = _sBaseLinkName;
+            info._sEffectorLinkName = _sEffectorLinkName;
+            info._tLocalTool = ExtractTransform(_tLocalTool);
+            info._vClosingDirection = ExtractArray<dReal>(_vClosingDirection);
+            info._vdirection = ExtractVector3(_vdirection);
+            info._sIkSolverXMLId = _sIkSolverXMLId;
+            info._vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+            return info;
+        }
+
+        std::string _name, _sBaseLinkName, _sEffectorLinkName;
+        object _tLocalTool;
+        object _vClosingDirection;
+        object _vdirection;
+        std::string _sIkSolverXMLId;
+        object _vGripperJointNames;
+    };
+    typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
+
     class PyManipulator
     {
         RobotBase::ManipulatorPtr _pmanip;
@@ -2158,8 +2189,8 @@ public:
         RAVELOG_WARN("GetActiveManipulatorIndex is deprecated\n");
         return _probot->GetActiveManipulatorIndex();
     }
-    PyManipulatorPtr AddManipulator(PyManipulatorPtr pmanip) {
-        return _GetManipulator(_probot->AddManipulator(pmanip->GetManipulator()));
+    PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo) {
+        return _GetManipulator(_probot->AddManipulator(pmanipinfo->GetManipulatorInfo()));
     }
     void RemoveManipulator(PyManipulatorPtr pmanip) {
         _probot->RemoveManipulator(pmanip->GetManipulator());
@@ -2733,6 +2764,15 @@ public:
     }
 };
 
+class ManipulatorInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getinitargs(const PyRobotBase::PyManipulatorInfo& r)
+    {
+        return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vClosingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
+    }
+};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
@@ -3247,6 +3287,20 @@ void init_openravepy_kinbody()
                       .def("__unicode__", &PyRobotBase::__unicode__)
         ;
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
+
+        {
+            scope manipulatorinfo = class_<PyRobotBase::PyManipulatorInfo, boost::shared_ptr<PyRobotBase::PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+                                    .def_readwrite("_name",&PyRobotBase::PyManipulatorInfo::_name)
+                                    .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
+                                    .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
+                                    .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
+                                    .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vClosingDirection)
+                                    .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
+                                    .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
+                                    .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
+                                    .def_pickle(ManipulatorInfo_pickle_suite())
+            ;
+        }
 
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
