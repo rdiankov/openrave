@@ -1807,7 +1807,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itmanip, r->_vecManipulators) {
         ManipulatorPtr pmanip(new Manipulator(shared_robot(),*itmanip));
         _vecManipulators.push_back(pmanip);
-        if( !!r->GetActiveManipulator() && r->GetActiveManipulator()->GetName() == pmanip->GetName() ) {
+        if( !!r->GetActiveManipulator() && r->GetActiveManipulator()->GetName() == (*itmanip)->GetName() ) {
             _pManipActive = pmanip;
         }
     }
@@ -1821,15 +1821,6 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
-    _pManipActive.reset();
-    if( !!r->_pManipActive ) {
-        for(size_t i = 0; i < r->_vecManipulators.size(); ++i) {
-            if( r->_vecManipulators[i] == r->_pManipActive ) {
-                _pManipActive = _vecManipulators.at(i);
-                break;
-            }
-        }
-    }
     _nActiveDOF = r->_nActiveDOF;
     _nAffineDOFs = r->_nAffineDOFs;
 

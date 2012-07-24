@@ -1996,7 +1996,8 @@ protected:
                 if( (*itbody)->IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
-                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities);
+                    // need to also update active dof/active manip since it is erased by _ComputeInternalInformation
+                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
                     saver.Restore(pnewrobot);
                 }
                 else {
