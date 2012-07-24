@@ -84,6 +84,30 @@ std::pair<Vector,Vector> RobotBase::Manipulator::GetVelocity() const
     return velocity;
 }
 
+IkSolverBasePtr RobotBase::Manipulator::GetIkSolver() const
+{
+    if( !!__pIkSolver || _info._sIkSolverXMLId.size() == 0 ) {
+        return __pIkSolver;
+    }
+
+    // initialize ik solver
+    try {
+        if( _info._sIkSolverXMLId.size() > 0 ) {
+            RobotBasePtr probot(__probot);
+            __pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
+            if( !!__pIkSolver ) {
+                // note that ik solvers might look at the manipulator hashes for verification
+                __pIkSolver->Init(shared_from_this());
+            }
+        }
+    }
+    catch(const std::exception& e) {
+        RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
+        __pIkSolver.reset();
+    }
+    return __pIkSolver;
+}
+
 bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 {
     if( !iksolver ) {
@@ -744,42 +768,47 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
     }
     if( options & SO_Kinematics ) {
         RobotBasePtr probot(__probot);
-        KinBody::KinBodyStateSaver saver(probot,Save_LinkTransformation);
-        vector<dReal> vzeros(probot->GetDOF(),0);
-        probot->SetDOFValues(vzeros,Transform(),true);
-        Transform tbaseinv;
-        if( !!__pBase ) {
-            tbaseinv = __pBase->GetTransform().inverse();
-        }
-        if( !__pEffector ) {
-            SerializeRound(o,tbaseinv * _info._tLocalTool);
-        }
-        else {
-            SerializeRound(o,tbaseinv * GetTransform());
-        }
-        o << __varmdofindices.size() << " ";
-        FOREACHC(it,__varmdofindices) {
-            JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
-            o << pjoint->GetType() << " ";
-            SerializeRound3(o,tbaseinv*pjoint->GetAnchor());
-            SerializeRound3(o,tbaseinv.rotate(pjoint->GetAxis(*it-pjoint->GetDOFIndex())));
-        }
-        // the arm might be dependent on mimic joints, so recompute the chain and output the equations
+        Transform tcur;
         std::vector<JointPtr> vjoints;
-        if( probot->GetChain(GetBase()->GetIndex(),GetEndEffector()->GetIndex(), vjoints) ) {
+        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+            // due to back compat issues, have to compute the end effector transform first
+            FOREACH(itjoint, vjoints) {
+                tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+            }
+            tcur = tcur*_info._tLocalTool;
+            SerializeRound(o,tcur);
+            o << __varmdofindices.size() << " ";
+
+            tcur = Transform();
             int index = 0;
-            FOREACH(it,vjoints) {
-                if( !(*it)->IsStatic() && (*it)->IsMimic() ) {
-                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        if( (*it)->IsMimic(i) ) {
-                            o << "mimic " << index << " ";
-                            for(int ieq = 0; ieq < 3; ++ieq) {
-                                o << (*it)->GetMimicEquation(i,ieq) << " ";
+            FOREACH(itjoint, vjoints) {
+                if( !(*itjoint)->IsStatic() ) {
+                    o << (*itjoint)->GetType() << " ";
+                }
+
+                if( (*itjoint)->GetDOFIndex() >= 0 && find(__varmdofindices.begin(),__varmdofindices.end(),(*itjoint)->GetDOFIndex()) != __varmdofindices.end() ) {
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform();
+                    for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                        SerializeRound3(o,tcur.trans);
+                        SerializeRound3(o,tcur.rotate((*itjoint)->GetInternalHierarchyAxis(idof)));
+                    }
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyRightTransform();
+                }
+                else {
+                    // not sure if this is correct for a mimic joint...
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+                    if( (*itjoint)->IsMimic() ) {
+                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                            if( (*itjoint)->IsMimic(idof) ) {
+                                o << "mimic " << index << " ";
+                                for(int ieq = 0; ieq < 3; ++ieq) {
+                                    o << (*itjoint)->GetMimicEquation(idof,ieq) << " ";
+                                }
                             }
                         }
                     }
                 }
-                ++index;
+                index += 1;
             }
         }
     }
@@ -913,18 +942,6 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
     _info._vClosingDirection.swap(vClosingDirection);
-
-    // ik solvers might look at the manipulator hashes for verification
-    try {
-        __pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
-        if( !!__pIkSolver ) {
-            __pIkSolver->Init(shared_from_this());
-        }
-    }
-    catch(const std::exception& e) {
-        RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
-        SetIkSolver(IkSolverBasePtr());
-    }
 }
 
 }

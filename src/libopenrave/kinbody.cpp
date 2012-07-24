@@ -3600,8 +3600,9 @@ void KinBody::_ComputeInternalInformation()
         vector<int> vprevdofbranches, vnewdofbranches;
         GetLinkTransformations(vprevtrans, vprevdofbranches);
         vector<dReal> vcurrentvalues;
+        // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        SetDOFValues(vcurrentvalues,true);
+        KinBody::SetDOFValues(vcurrentvalues,true, std::vector<int>());
         GetLinkTransformations(vnewtrans, vnewdofbranches);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {

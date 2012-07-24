@@ -120,7 +120,7 @@ public:
     ///
     /// For example, some ik solvers might have different ways of computing optimal solutions.
     /// \param pmanip The manipulator the IK solver is attached to
-    virtual bool Init(RobotBase::ManipulatorPtr pmanip) = 0;
+    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip) = 0;
 
     virtual RobotBase::ManipulatorPtr GetManipulator() const = 0;
 

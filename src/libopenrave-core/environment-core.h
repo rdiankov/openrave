@@ -1983,13 +1983,25 @@ protected:
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
                 GetPhysicsEngine()->InitKinBody(pnewbody);
-                (*itbody)->GetLinkVelocities(linkvelocities);
-                pnewbody->SetLinkVelocities(linkvelocities);
                 pnewbody->__hashkinematics = (*itbody)->__hashkinematics; /// _ComputeInternalInformation resets the hashes
                 if( pnewbody->IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
                     pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
+                }
+            }
+            // update the state after every body is initialized!
+            FOREACH(itbody,listToClone) {
+                KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                if( (*itbody)->IsRobot() ) {
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
+                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities);
+                    saver.Restore(pnewrobot);
+                }
+                else {
+                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_LinkVelocities); // all the others should have been saved?
+                    saver.Restore(pnewbody);
                 }
             }
             if( listToCopyState.size() > 0 ) {
@@ -2016,6 +2028,10 @@ protected:
                     RAVELOG_ERROR(str(boost::format("failed to clone sensor %s: %s")%(*itsensor)->GetName()%ex.what()));
                 }
             }
+        }
+        // sensors might be attached on a robot?, so have to re-update
+        FOREACH(itrobot, _vecrobots) {
+            (*itrobot)->_UpdateAttachedSensors();
         }
 
         if( options & Clone_Simulation ) {

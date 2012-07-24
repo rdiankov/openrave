@@ -481,7 +481,7 @@ protected:
                 nInterfaceNameLength = name.size();
             }
             if( nInterfaceNameLength == 0 ) {
-                RAVELOG_WARN(str(boost::format("interface name \"%s\" needs to start with a valid character\n")%name));
+                RAVELOG_WARN(str(boost::format("interface %s name \"%s\" needs to start with a valid character\n")%RaveGetInterfaceName(type)%name));
                 return InterfaceBasePtr();
             }
 

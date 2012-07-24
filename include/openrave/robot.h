@@ -94,9 +94,7 @@ public:
         virtual bool SetIkSolver(IkSolverBasePtr iksolver);
 
         /// \brief Returns the currently set ik solver
-        virtual IkSolverBasePtr GetIkSolver() const {
-            return __pIkSolver;
-        }
+        virtual IkSolverBasePtr GetIkSolver() const;
 
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
@@ -309,7 +307,7 @@ private:
         LinkPtr __pBase, __pEffector; ///< contains weak links to robot
         std::vector<int> __vgripperdofindices, __varmdofindices;
         ConfigurationSpecification __armspec; ///< reflects __varmdofindices
-        IkSolverBasePtr __pIkSolver;
+        mutable IkSolverBasePtr __pIkSolver;
         mutable std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE

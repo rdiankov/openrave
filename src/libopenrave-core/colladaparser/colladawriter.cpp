@@ -817,10 +817,7 @@ public:
         {
             domAssetRef kmodelinfo = daeSafeCast<domAsset>(kmodel->add(COLLADA_ELEMENT_ASSET));
             domAsset::domSubjectRef subject = daeSafeCast<domAsset::domSubject>(kmodelinfo->add(COLLADA_ELEMENT_SUBJECT));
-            string sdesc = "<![CDATA[";
-            sdesc += pbody->GetDescription();
-            sdesc += "]]>";
-            subject->setValue(sdesc.c_str());
+            subject->setValue(pbody->GetDescription().c_str());
         }
 
         //kmodel->getAsset();
