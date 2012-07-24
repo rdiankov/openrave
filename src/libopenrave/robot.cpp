@@ -173,7 +173,6 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _nAffineDOFs = 0;
     _nActiveDOF = -1;
     vActvAffineRotationAxis = Vector(0,0,1);
-    _vecManipulators.reserve(16); // make sure to reseve enough, otherwise pIkSolver pointer might get messed up when resizing
 
     //set limits for the affine DOFs
     _vTranslationLowerLimits = Vector(-100,-100,-100);
@@ -1707,18 +1706,7 @@ void RobotBase::_ComputeInternalInformation()
             (*itsensor)->__hashstructure.resize(0);
         }
     }
-    // finally initialize the ik solvers (might depend on the hashes)
-//    FOREACH(itmanip, _vecManipulators) {
-//        if( !!(*itmanip)->__pIkSolver ) {
-//            try {
-//                (*itmanip)->__pIkSolver->Init(*itmanip);
-//            }
-//            catch(const std::exception& e) {
-//                RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
-//                (*itmanip)->SetIkSolver(IkSolverBasePtr());
-//            }
-//        }
-//    }
+
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
     }

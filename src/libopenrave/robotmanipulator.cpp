@@ -42,11 +42,11 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
     if( !!r->GetEndEffector() ) {
         __pEffector = probot->GetLinks().at(r->GetEndEffector()->GetIndex());
     }
-    __pIkSolver.reset();
-    if( _info._sIkSolverXMLId.size() > 0 ) {
-        __pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
-        // cannot call __pIkSolver->Init since this is the constructor...
-    }
+    __pIkSolver.reset(); // will be initialized when needed
+//    if( _info._sIkSolverXMLId.size() > 0 ) {
+//        //__pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
+//        // cannot call __pIkSolver->Init since this is the constructor...
+//    }
 }
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
@@ -135,9 +135,10 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vect
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!__pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
     RobotBasePtr probot = GetRobot();
-    BOOST_ASSERT(__pIkSolver->GetManipulator() == shared_from_this() );
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     solution.resize(__varmdofindices.size());
     for(size_t i = 0; i < __varmdofindices.size(); ++i) {
         JointConstPtr pjoint = probot->GetJointFromDOFIndex(__varmdofindices[i]);
@@ -151,7 +152,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
         localgoal=goal;
     }
     boost::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
-    return vFreeParameters.size() == 0 ? __pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : __pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
@@ -161,8 +162,9 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!__pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
-    BOOST_ASSERT(__pIkSolver->GetManipulator() == shared_from_this() );
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!__pBase ) {
         localgoal = __pBase->GetTransform().inverse()*goal;
@@ -170,7 +172,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? __pIkSolver->SolveAll(localgoal,filteroptions,solutions) : __pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,solutions) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
 
@@ -181,9 +183,10 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int 
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!__pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
     RobotBasePtr probot = GetRobot();
-    BOOST_ASSERT(__pIkSolver->GetManipulator() == shared_from_this() );
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> solution(__varmdofindices.size());
     for(size_t i = 0; i < __varmdofindices.size(); ++i) {
         JointConstPtr pjoint = probot->GetJointFromDOFIndex(__varmdofindices[i]);
@@ -196,7 +199,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? __pIkSolver->Solve(localgoal, solution, filteroptions, ikreturn) : __pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, ikreturn);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, ikreturn) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, ikreturn);
 }
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
@@ -206,8 +209,9 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!__pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
-    BOOST_ASSERT(__pIkSolver->GetManipulator() == shared_from_this() );
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!__pBase ) {
         localgoal = __pBase->GetTransform().inverse()*goal;
@@ -215,7 +219,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? __pIkSolver->SolveAll(localgoal,filteroptions,vikreturns) : __pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,vikreturns);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,vikreturns) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,vikreturns);
 }
 
 IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizationType iktype, bool inworld) const
@@ -574,10 +578,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         return CheckEndEffectorCollision(ikparam.GetTransform6D());
     }
     RobotBasePtr probot = GetRobot();
+    IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_OP_FORMAT((int)GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
-    OPENRAVE_ASSERT_FORMAT(!!__pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
-    OPENRAVE_ASSERT_FORMAT(__pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%__pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
-    BOOST_ASSERT(__pIkSolver->GetManipulator() == shared_from_this() );
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
     if( !!__pBase ) {
         localgoal = __pBase->GetTransform().inverse()*ikparam;
@@ -588,7 +593,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     vector<dReal> vsolution;
     boost::shared_ptr< vector<dReal> > psolution(&vsolution, utils::null_deleter());
     // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-    if( !__pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
+    if( !pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
     }
     RobotStateSaver saver(probot);
