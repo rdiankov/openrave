@@ -187,6 +187,8 @@ class EnvironmentSetup(object):
                     grabbed = robot.GetGrabbed()
                     grabbed2 = robot2.GetGrabbed()
                     assert( set(grabbed) == set(grabbed2) )
+                    assert( transdist(robot.GetActiveDOFIndices(),robot2.GetActiveDOFIndices()) == 0)
+                    assert( robot.GetActiveManipulator().GetName() == robot2.GetActiveManipulator().GetName())
                     
 def generate_classes(BaseClass, namespace, data):
     """Used to generate test classes inside a namespace since nose generators do not support classes

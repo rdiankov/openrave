@@ -151,7 +151,12 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }
     if( _options & Save_ActiveManipulator ) {
-        probot->SetActiveManipulator(_pManipActive);
+        if( probot == _probot ) {
+            probot->SetActiveManipulator(_pManipActive);
+        }
+        else {
+            probot->SetActiveManipulator(_pManipActive->GetName());
+        }
     }
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
@@ -1802,7 +1807,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     FOREACHC(itmanip, r->_vecManipulators) {
         ManipulatorPtr pmanip(new Manipulator(shared_robot(),*itmanip));
         _vecManipulators.push_back(pmanip);
-        if( !!r->GetActiveManipulator() && (*itmanip)->GetName() == pmanip->GetName() ) {
+        if( !!r->GetActiveManipulator() && r->GetActiveManipulator()->GetName() == pmanip->GetName() ) {
             _pManipActive = pmanip;
         }
     }
