@@ -1798,10 +1798,12 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
+    _pManipActive.reset();
     FOREACHC(itmanip, r->_vecManipulators) {
-        _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),*itmanip)));
-        if( !!_vecManipulators.back()->GetIkSolver() ) {
-            _vecManipulators.back()->SetIkSolver(_vecManipulators.back()->GetIkSolver());
+        ManipulatorPtr pmanip(new Manipulator(shared_robot(),*itmanip));
+        _vecManipulators.push_back(pmanip);
+        if( !!r->GetActiveManipulator() && (*itmanip)->GetName() == pmanip->GetName() ) {
+            _pManipActive = pmanip;
         }
     }
 

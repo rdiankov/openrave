@@ -870,7 +870,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     __hashstructure.resize(0);
     __hashkinematicsstructure.resize(0);
     if( !__pBase || !__pEffector ) {
-        RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%GetName()));
+        RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links %s, %s\n")%GetName()%_info._sBaseLinkName%_info._sEffectorLinkName));
         __armspec = ConfigurationSpecification();
     }
     else {

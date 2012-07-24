@@ -344,6 +344,7 @@ class TestEnvironment(EnvironmentSetup):
             print endtime
             self.CompareEnvironments(env,clonedenv)
             clonedrobot = clonedenv.GetRobot(robot.GetName())
+            assert(clonedrobot.GetActiveManipulator().GetName() == robot.GetActiveManipulator().GetName())
             assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
 
             # change robot and check if cloning is quick
