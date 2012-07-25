@@ -21,3 +21,7 @@ for itry in range(5):
     for i in range(100):
         robot.SetJointTorques(torques,True)
         time.sleep(0.01)
+
+# reset the physics engine
+env.SetPhysicsEngine(None)
+
