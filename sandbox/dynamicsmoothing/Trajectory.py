@@ -150,28 +150,25 @@ def goto(q,npad):
 ################## Torques computation ################################
 
 def ComputeTorques(robot,sample_traj,grav):
+    with robot:
+        robot.GetEnv().GetPhysicsEngine().SetGravity(grav)
+        n_steps=sample_traj.n_steps
+        t_vect=sample_traj.t_vect
+        q_vect=sample_traj.q_vect
+        qd_vect=sample_traj.qd_vect
+        qdd_vect=sample_traj.qdd_vect
+        tau_vect=zeros(shape(q_vect))
 
-    robot.GetEnv().GetPhysicsEngine().SetGravity(grav)
-
-    n_steps=sample_traj.n_steps
-    t_vect=sample_traj.t_vect
-    q_vect=sample_traj.q_vect
-    qd_vect=sample_traj.qd_vect
-    qdd_vect=sample_traj.qdd_vect
-    tau_vect=zeros(shape(q_vect))
-
-    for i in range(n_steps):
-        q=q_vect[:,i]
-        qd=qd_vect[:,i]
-        qdd=qdd_vect[:,i]
-        with robot:
+        for i in range(n_steps):
+            q=q_vect[:,i]
+            qd=qd_vect[:,i]
+            qdd=qdd_vect[:,i]
             robot.SetDOFValues(q)
             robot.SetDOFVelocities(qd)
             tau = robot.ComputeInverseDynamics(qdd,None,returncomponents=False)
+            tau_vect[:,i]=tau
 
-        tau_vect[:,i]=tau
-
-    return tau_vect
+        return tau_vect
 
 
 def PlotTorques(t_vect,tau,tau_min,tau_max):
@@ -423,24 +420,45 @@ def IntegrateAcc(sample_traj):
 ##############################################################
 ####################### Classes ##############################
 ##############################################################
-
+def ComputeTrajectoryAccelerations(spline_traj,robot):
+    newspec = spline_traj.GetConfigurationSpecification()
+    g=ConfigurationSpecification.Group()
+    g.name = 'joint_accelerations %s '%robot.GetName() + ' '.join(str(index) for index in robot.GetActiveDOFIndices())
+    g.dof = robot.GetActiveDOF()
+    g.interpolation = 'next'
+    acceloffset = newspec.AddGroup(g)
+    gvel = newspec.FindCompatibleGroup('joint_velocities',False)
+    gtime = newspec.FindCompatibleGroup('deltatime',False)
+    data = spline_traj.GetWaypoints(0,spline_traj.GetNumWaypoints(),newspec)
+    offset = 0
+    prevvel = None
+    for i in range(spline_traj.GetNumWaypoints()):
+        newvel = data[(offset+gvel.offset):(offset+gvel.offset+gvel.dof)]
+        if i > 0:
+            # have to fill the previous point
+            data[(offset+acceloffset-newspec.GetDOF()):(offset+acceloffset+g.dof-newspec.GetDOF())] = (newvel-prevvel)/data[offset+gtime.offset]
+        prevvel = newvel
+        offset += newspec.GetDOF()
+    spline_traj.Init(newspec)
+    spline_traj.Insert(0,data)
+    return spline_traj
 
 class Trajectory():    
-    def GetSampleTraj(self,duration,t_step):
-        sample_traj=SampleTrajectory()
-        t_vect=arange(0,duration+1e-10,t_step)
-        sample_traj.dim=self.dim
-        sample_traj.t_vect=t_vect
-        sample_traj.n_steps=len(t_vect)
-        sample_traj.t_step=t_step
-        [r_val,r_vel,r_acc]=self.val_vel_acc_vect(t_vect)
-        sample_traj.q_vect=r_val
-        sample_traj.qd_vect=r_vel
-        sample_traj.qdd_vect=r_acc
-        sample_traj.duration=duration
-        sample_traj.t_step=t_step
-
-        return sample_traj
+#     def GetSampleTraj(self,duration,t_step):
+#         sample_traj=SampleTrajectory()
+#         t_vect=arange(0,duration+1e-10,t_step)
+#         sample_traj.dim=self.dim
+#         sample_traj.t_vect=t_vect
+#         sample_traj.n_steps=len(t_vect)
+#         sample_traj.t_step=t_step
+#         [r_val,r_vel,r_acc]=self.val_vel_acc_vect(t_vect)
+#         sample_traj.q_vect=r_val
+#         sample_traj.qd_vect=r_vel
+#         sample_traj.qdd_vect=r_acc
+#         sample_traj.duration=duration
+#         sample_traj.t_step=t_step
+# 
+#         return sample_traj
 
 
     def ResampleTraj(self,s_vect,sdot_vect,t_step):
@@ -479,13 +497,23 @@ class Trajectory():
 
 
 class SampleTrajectory():
-    def __init__(self,q_vect=None):
-        if q_vect!=None:
-            (dim,n_steps)=shape(q_vect)
-            self.q_vect=q_vect
-            self.dim=dim
-            self.n_steps=n_steps
-
+    def __init__(self,traj,t_vect):
+        spec=traj.GetConfigurationSpecification()
+        self.posspec = spec.GetTimeDerivativeSpecification(0)
+        self.velspec = spec.GetTimeDerivativeSpecification(1)
+        self.accelspec = spec.GetTimeDerivativeSpecification(2)
+        self.dim = self.posspec.GetDOF()
+        self.t_vect = t_vect
+        self.n_steps = len(t_vect)
+        self.q_vect = zeros((self.dim,len(t_vect)))
+        self.qd_vect = zeros((self.dim,len(t_vect)))
+        self.qdd_vect = zeros((self.dim,len(t_vect)))
+        self.duration = t_vect[-1]
+        self.t_step = t_vect[1]-t_vect[0]
+        for i,t in enumerate(t_vect):
+            self.q_vect[:,i]=traj.Sample(t,self.posspec)
+            self.qd_vect[:,i]=traj.Sample(t,self.velspec)
+            self.qdd_vect[:,i]=traj.Sample(t,self.accelspec)
 
 class SplineInterpolateTrajectory(Trajectory):
 

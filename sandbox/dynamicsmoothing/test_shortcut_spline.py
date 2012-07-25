@@ -30,7 +30,14 @@ set_printoptions(precision=5)
 
 env = Environment() # create openrave environment
 env.SetViewer('qtcoin') # attach viewer (optional)
-env.Load('/home/cuong/Dropbox/Code/mintime/robots/arm.robot.xml')
+
+xmldata = """<Robot name="Arm">
+  <KinBody file="robots/wam4.kinbody.xml">
+  </KinBody>
+</Robot>"""
+robot=env.ReadRobotData(xmldata)
+env.Add(robot)
+
 env.Load('robots/table.kinbody.xml')
 
 
@@ -68,15 +75,28 @@ qd2=[v2,v2,v2,v2]
 qd3=[v2,v2,v2,v2]
 qd4=[v,v,v,v]
 
-t_vect=array([0,1,2,4,5])
-q_vect=transpose(array([q0,q1,q2,q3,q4]))
-spline_traj=Trajectory.SplineInterpolateTrajectory(t_vect,q_vect,k=4)
+dt_vect=array([0,1,1,2,1])
+t_vect=cumsum(dt_vect)
+q_vect=array([q0,q1,q2,q3,q4])
 
-T=sum(t_vect[-1])
-n_discr=500.
-t_step=T/n_discr
-a=time.time()
-traj=spline_traj.GetSampleTraj(T,t_step)
+spline_traj = RaveCreateTrajectory(env,'')
+spec = robot.GetActiveConfigurationSpecification('quadratic')
+spec.AddDeltaTimeGroup()
+spline_traj.Init(spec)
+spline_traj.Insert(0,c_[q_vect,dt_vect].flatten())
+planningutils.RetimeTrajectory(spline_traj,True)
+spline_traj = Trajectory.ComputeTrajectoryAccelerations(spline_traj,robot)
+
+#robot.GetController().Reset(0)
+#spline_traj=Trajectory.SplineInterpolateTrajectory(t_vect,q_vect,k=4)
+
+traj=Trajectory.SampleTrajectory(spline_traj,arange(0,spline_traj.GetDuration()+0.01,0.01))
+
+# T=sum(t_vect[-1])
+# n_discr=500.
+# t_step=T/n_discr
+# a=time.time()
+# traj=spline_traj.GetSampleTraj(T,t_step)
 
 # Compute the inverse dynamics of the original trajectory and plot
 tau=Trajectory.ComputeTorques(robot,traj,grav)

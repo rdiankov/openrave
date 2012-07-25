@@ -1,4 +1,0 @@
-<Robot name="Arm">
-  <KinBody file="wam4.kinbody.xml">
-  </KinBody>
-</Robot>
