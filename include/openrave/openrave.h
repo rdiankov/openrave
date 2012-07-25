@@ -679,7 +679,7 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable
+class OPENRAVE_API XMLReadable : public UserData
 {
 public:
     XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {

@@ -38,6 +38,15 @@ object PyInterfaceBase::GetUserData() const {
     return openravepy::GetUserData(_pbase->GetUserData());
 }
 
+object PyInterfaceBase::GetReadableInterfaces()
+{
+    boost::python::dict ointerfaces;
+    FOREACH(it,_pbase->GetReadableInterfaces()) {
+        ointerfaces[it->first] = openravepy::GetUserData(it->second);
+    }
+    return ointerfaces;
+}
+
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
 {
 #if BOOST_VERSION < 103500
@@ -1308,6 +1317,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
+        .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)

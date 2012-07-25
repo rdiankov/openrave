@@ -883,7 +883,8 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         break;
     }
     case IKP_Ray4D: {
-        O << ikparam.GetRay4D();
+        RAY r = ikparam.GetRay4D();
+        O << r.dir.x << " " << r.dir.y << " " << r.dir.z << " " << r.pos.x << " " << r.pos.y << " " << r.pos.z << " ";
         break;
     }
     case IKP_Lookat3D: {
@@ -891,9 +892,11 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IKP_TranslationDirection5D:
-        O << ikparam.GetTranslationDirection5D();
+    case IKP_TranslationDirection5D: {
+        RAY r = ikparam.GetTranslationDirection5D();
+        O << r.dir.x << " " << r.dir.y << " " << r.dir.z << " " << r.pos.x << " " << r.pos.y << " " << r.pos.z << " ";
         break;
+    }
     case IKP_TranslationXY2D: {
         Vector v = ikparam.GetTranslationXY2D();
         O << v.x << " " << v.y << " ";
@@ -987,13 +990,13 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_Direction3DVelocity:
         I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
         break;
-    case IKP_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IKP_Ray4D: { RAY r; I >> r.dir.x >> r.dir.y >> r.dir.z >> r.pos.x >> r.pos.y >> r.pos.z; ikparam.SetRay4D(r); break; }
     case IKP_Ray4DVelocity:
     case IKP_TranslationDirection5DVelocity:
         I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
         break;
     case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
-    case IKP_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
+    case IKP_TranslationDirection5D: { RAY r; I >> r.dir.x >> r.dir.y >> r.dir.z >> r.pos.x >> r.pos.y >> r.pos.z; ikparam.SetTranslationDirection5D(r); break; }
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXY2DVelocity:
         I >> ikparam._transform.trans.x >> ikparam._transform.trans.y;
