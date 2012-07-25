@@ -1494,6 +1494,7 @@ int RobotBase::GetActiveManipulatorIndex() const
 
 RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo)
 {
+    OPENRAVE_ASSERT_OP(manipinfo._name.size(),>,0);
     FOREACH(itmanip,_vecManipulators) {
         if( (*itmanip)->GetName() == manipinfo._name ) {
             throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);

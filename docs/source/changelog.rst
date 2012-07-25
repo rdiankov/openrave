@@ -112,6 +112,7 @@ Misc
 
 * collada stores joint **circular**, **weight**, and **resolution** properties
 
+* Added new conveyor robot :ref:`robot-conveyor` that creates trajectory joints.
 
 Version 0.6.6
 =============

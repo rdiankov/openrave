@@ -372,8 +372,27 @@ class RunRobot(EnvironmentSetup):
         assert(len(cjoints)==4)
         assert(all([j.GetName().startswith('l_') for j in cjoints]))
         cdofs = manip.GetChildDOFIndices()
-        assert(cdofs == [22,23,24,25])        
+        assert(cdofs == [22,23,24,25])
 
+        # test if manipulator can be created
+        manip = robot.GetManipulator('leftarm')
+        manipinfo = Robot.ManipulatorInfo()
+        manipinfo._name = 'testmanip'
+        manipinfo._sBaseLinkName = manip.GetBase().GetName()
+        manipinfo._sEffectorLinkName = manip.GetEndEffector().GetName()
+        manipinfo._tLocalTool = eye(4)
+        manipinfo._tLocalTool[2,3] = 1.0
+        manipinfo._vGripperJointNames = ['l_gripper_l_finger_joint']
+        manipinfo._vdirection = [0,1,0]
+        manipinfo._vClosingDirection = [1.0]
+        newmanip = robot.AddManipulator(manipinfo)
+        assert(robot.GetManipulator('testmanip')==newmanip)
+        assert(transdist(newmanip.GetLocalToolTransform(),manipinfo._tLocalTool) <= g_epsilon)
+        robot.SetActiveManipulator(newmanip)
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+            
     def test_grabdynamics(self):
         self.log.info('test is grabbed bodies have correct')
         env=self.env
