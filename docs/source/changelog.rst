@@ -53,6 +53,8 @@ Core
 
 * KinBody StateSaver classes can transfer restoring state to different kinbody/robot.
 
+* fixed major bug in :meth:`.ConfigurationSpecification.InsertJointValues`
+
 Inverse Kinematics
 ------------------
 

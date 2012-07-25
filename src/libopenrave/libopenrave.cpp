@@ -2062,7 +2062,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
                 for(size_t i = 0; i < vgroupindices.size(); ++i) {
                     std::vector<int>::const_iterator it = find(indices.begin(),indices.end(),vgroupindices[i]);
                     if( it != indices.end() ) {
-                        *(itdata+itgroup->offset+i) = *(itvalues+*it);
+                        *(itdata+itgroup->offset+i) = *(itvalues+static_cast<size_t>(it-indices.begin()));
                     }
                 }
                 bfound = true;
