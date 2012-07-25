@@ -145,4 +145,24 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
     return true;
 }
 
+XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
+{
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
+    return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
+}
+
+XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable)
+{
+    boost::mutex::scoped_lock lock(_mutexInterface);
+    READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
+    if( it == __mapReadableInterfaces.end() ) {
+        __mapReadableInterfaces[xmltag] = readable;
+        return XMLReadablePtr();
+    }
+    XMLReadablePtr pprev = it->second;
+    it->second = readable;
+    return pprev;
+}
+
 }
