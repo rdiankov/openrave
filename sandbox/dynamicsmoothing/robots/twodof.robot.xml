@@ -1,0 +1,69 @@
+<Robot name="2DOFRobot">
+  <KinBody>
+
+    <Mass type="mimicgeom">
+      <density>10000000</density>
+    </Mass>
+ 
+
+    <!-- Create the base body, it should never move-->
+    <!-- Note that all translations and rotations are with respect to this base-->
+    <!-- For example, the robot at the identity transformation is equivalent to the identity transformation of the first body.-->
+    <Body name="Base" type="dynamic">
+      <Translation>0.0  0.0  0.0</Translation>
+      <Geom type="cylinder">
+        <rotationaxis>1 0 0 90</rotationaxis>
+        <radius>0.03</radius>
+        <height>0.02</height>
+        <diffuseColor>0.05 0.05 0.05</diffuseColor>
+      </Geom>
+    </Body>
+    
+    <!-- the first movable link-->
+    <Body name="Arm0" type="dynamic">
+      <!-- Offset from is a fast way of specifying that the translation and rotation of this-->
+      <!-- body should be relative to another link-->
+      <offsetfrom>Base</offsetfrom>
+      <!-- Translation relative to Base-->
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <Translation>0.1 0 0</Translation>
+        <Extents>0.1 0.001 0.001</Extents>
+      </Geom> 
+	</Body>
+    <!-- declare a circular hinge joint (circular joints have no limits) -->
+    <Joint circular="true" name="Arm0" type="hinge">
+      <Body>Base</Body>
+      <Body>Arm0</Body>
+      <offsetfrom>Arm0</offsetfrom>
+      <weight>4</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>3</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+    
+    <!-- the second movable link-->
+    <Body name="Arm1" type="dynamic">
+      <offsetfrom>Arm0</offsetfrom>
+      <Translation>0.2 0 0</Translation>
+      <Geom type="box">
+        <Translation>0.1 0 0</Translation>
+        <Extents>0.1 0.001 0.001</Extents>
+      </Geom>
+    </Body>
+    <!-- declare a circular hinge joint (circular joints have no limits) -->
+    <Joint circular="true" name="Arm1" type="hinge">
+      <Body>Arm0</Body>
+      <Body>Arm1</Body>
+      <offsetfrom>Arm1</offsetfrom>
+      <weight>3</weight>
+      <limitsdeg>-180 180</limitsdeg>
+      <axis>0 0 1</axis>
+      <maxvel>4</maxvel>
+      <resolution>1</resolution>
+    </Joint>
+
+
+  </KinBody>
+</Robot>

@@ -1,0 +1,35 @@
+  <KinBody name="floorwalls">
+    <Body type="static">
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <extents>2.5 2.5 0.005</extents>
+        <translation>0 0 -0.005</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 -2.5 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 2.5 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>2.5 0 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>-2.5 0 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+    </Body>
+  </KinBody>
