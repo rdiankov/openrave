@@ -1,19 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2011-2012 Quang-Cuong Pham <cuong.pham@normalesup.org>
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License. 
-
-
-
 """
 Compute the minimum time trajectory under torque limits
 Based on Bobrow, Dubowsky, Schiller, Slotine, Yang
@@ -186,8 +170,8 @@ class RobotMinimumTime():
         [i_list,diff_list]=self.find_tangent_points(i_threshold,slope_threshold)
         #print(i_list)
         # Find the discontinuous points        
-        #i_list2=self.find_discontinuous_points(sdot_threshold)
-        i_list2=[]
+        i_list2=self.find_discontinuous_points(sdot_threshold)
+        #i_list2=[]
         # Find the zero inertia points        
         i_list3=self.find_zero_inertia_points(a_threshold)
         # Merge the lists
