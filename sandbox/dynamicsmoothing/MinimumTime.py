@@ -170,8 +170,8 @@ class RobotMinimumTime():
         [i_list,diff_list]=self.find_tangent_points(i_threshold,slope_threshold)
         #print(i_list)
         # Find the discontinuous points        
-        i_list2=self.find_discontinuous_points(sdot_threshold)
-        #i_list2=[]
+        #i_list2=self.find_discontinuous_points(sdot_threshold)
+        i_list2=[]
         # Find the zero inertia points        
         i_list3=self.find_zero_inertia_points(a_threshold)
         # Merge the lists
