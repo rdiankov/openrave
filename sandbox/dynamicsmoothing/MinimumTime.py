@@ -10,66 +10,11 @@ import bisect
 import Trajectory
 
 
-def respect_bounds(tau,tau_min,tau_max):
-    (k,n)=shape(tau)
-    for i in range(k):
-        for j in range(n):
-            if tau[i,j]>tau_max[i] or tau[i,j]<tau_min[i]:
-                return False
-    return True
-        
-
-
-
-
-
-def ApproximateIntegrate(robot,sample_traj,tau_min,tau_max,grav,ibeg,iend,margin_coef):
-    
-    print '----------------'
-    print ibeg
-    print iend
-
-
-
-
-def ApproximateDichotomy(robot,sample_traj,tau_min,tau_max,grav,ibeg,iend,margin_coef):
-
-
-    print '----------------'
-    print ibeg
-    print iend
-    #print sample_traj.t_vect[ibeg]
-    #print sample_traj.t_vect[iend]
-    
-    #if sample_traj.t_vect[iend]-sample_traj.t_vect[ibeg]<tunings['switchtime']:
-    #    return ([],[])
-
-    T=(sample_traj.t_vect[iend]-sample_traj.t_vect[ibeg])*margin_coef
-
-    if iend-ibeg<4:
-        P_list=Trajectory.InterpolateParabola(sample_traj.q_vect[:,ibeg],sample_traj.qd_vect[:,ibeg],sample_traj.q_vect[:,iend],sample_traj.qd_vect[:,iend],T)
-        return (P_list,[T/2,T/2])
-
-
-    P_list=Trajectory.InterpolateParabola(sample_traj.q_vect[:,ibeg],sample_traj.qd_vect[:,ibeg],sample_traj.q_vect[:,iend],sample_traj.qd_vect[:,iend],T)
-    subtraj=Trajectory.PieceWisePolyTrajectory(P_list,[T/2,T/2]).GetSampleTraj(0.001)
-    tau=Trajectory.ComputeTorques(robot,subtraj,grav)
-
-    if respect_bounds(tau,tau_min,tau_max) and (not Trajectory.CheckCollisionTraj(robot,subtraj)[0]):
-        return (P_list,[T/2,T/2])
-    else:
-        (P1_list,T1_list)=ApproximateDichotomy(robot,sample_traj,tau_min,tau_max,grav,ibeg,(iend+ibeg)/2,margin_coef)
-        (P2_list,T2_list)=ApproximateDichotomy(robot,sample_traj,tau_min,tau_max,grav,(iend+ibeg)/2,iend,margin_coef)
-        P1_list.extend(P2_list)
-        T1_list.extend(T2_list)
-        return (P1_list,T1_list)
-
-
-
-
 class RobotMinimumTime():
 
-    ##########################################
+
+################################ Init ################################
+
     def __init__(self,robot,sample_traj,tau_min,tau_max,tunings,grav):
 
         # Set the robot parameters
@@ -106,7 +51,10 @@ class RobotMinimumTime():
             self.integrate_final()
 
 
-    ##########################################
+
+
+################################ Dynamics ################################
+
     # Compute the dynamics along the sample trajectory
     def sample_dynamics(self):
         a_vect=zeros((self.dim,self.sample_n_steps))
@@ -133,8 +81,31 @@ class RobotMinimumTime():
         self.sample_b_vect=b_vect
         self.sample_c_vect=c_vect   
 
+    # Compute the dynamics coefficient at a given point s
+    # by interpolating along the sample trajectory
+    def dynamics_coefficients(self,s):
+        t_vect=self.sample_t_vect
+        n_steps=self.sample_n_steps
+        a_vect=self.sample_a_vect
+        b_vect=self.sample_b_vect
+        c_vect=self.sample_c_vect
+        if s<t_vect[0]: s=t_vect[0]+1e-5
+        if s>t_vect[n_steps-1]: s=t_vect[n_steps-1]-1e-5
+        i=bisect.bisect_left(t_vect,s)
+        if i>=n_steps-1: 
+            j=n_steps-1
+            return [a_vect[:,j],b_vect[:,j],c_vect[:,j]]
+        r=(s-t_vect[i])/(t_vect[i+1]-t_vect[i])        
+        a=(1-r)*a_vect[:,i]+r*a_vect[:,i+1]
+        b=(1-r)*b_vect[:,i]+r*b_vect[:,i+1]
+        c=(1-r)*c_vect[:,i]+r*c_vect[:,i+1]
+        return [a,b,c]
 
-    ##########################################
+
+
+
+############################ Max velocity curve ################################
+
     # Compute the max velocity curve
     def sample_max_velocity_curve(self):
         max_curve=zeros(self.sample_n_steps)
@@ -142,64 +113,154 @@ class RobotMinimumTime():
             max_curve[i]=self.max_velocity(self.sample_t_vect[i])
         self.sample_max_curve=max_curve
 
-
+    # Compute the max velocity curve for the velocity limit
     def sample_max_velocity_curve_vellim(self,qd_max):        
         n_steps=self.sample_n_steps
-        max_curve=ones(n_steps)*1e10
+        max_curve=ones(n_steps)*1e3
         for i in range(n_steps):
             qd=self.sample_qd_vect[:,i]
             for j in range(self.dim):
                 max_curve[i]=min(max_curve[i],qd_max[j]/abs(qd[j]))
 
         self.sample_max_curve_vellim=max_curve
-       
+
+    # Compute the max velocity at a given point s
+    def max_velocity(self,s):
+        tau_min=self.tau_min
+        tau_max=self.tau_max
+        [a,b,c]=self.dynamics_coefficients(s)
+        tau_alpha=zeros(self.dim)
+        tau_beta=zeros(self.dim)
+        for i in range(self.dim):
+            if a[i]>0:
+                tau_alpha[i]=tau_min[i]
+                tau_beta[i]=tau_max[i]
+            else:
+                tau_alpha[i]=tau_max[i]
+                tau_beta[i]=tau_min[i]
+        sdot_min=1e15
+        for k in range(self.dim):
+            for m in range(k+1,self.dim):
+                r=(a[k]*(tau_alpha[m]-c[m])-a[m]*(tau_beta[k]-c[k]))/(a[k]*b[m]-a[m]*b[k])
+                if r>=0:
+                    sdot=sqrt(r)
+                    if sdot<sdot_min:
+                        sdot_min=sdot
+                r=(a[m]*(tau_alpha[k]-c[k])-a[k]*(tau_beta[m]-c[m]))/(a[m]*b[k]-a[k]*b[m])
+                if r>=0:
+                    sdot=sqrt(r)
+                    if sdot<sdot_min:
+                        sdot_min=sdot
+        return(sdot_min)
+
+    # Compute the acceleration limits at a point (s,sdot)
+    def compute_limits(self,s,sdot):
+        tau_min=self.tau_min
+        tau_max=self.tau_max
+        [a,b,c]=self.dynamics_coefficients(s)
+        alpha=-1e15
+        beta=1e15
+        ialpha=0
+        ibeta=0
+        for i in range(self.dim):
+            if a[i]>0:
+                tau_min_i=tau_min[i]
+                tau_max_i=tau_max[i]
+            else:
+                tau_min_i=tau_max[i]
+                tau_max_i=tau_min[i]
+            alpha_i=(tau_min_i-b[i]*sdot**2-c[i])/a[i]
+            beta_i=(tau_max_i-b[i]*sdot**2-c[i])/a[i]
+            if alpha_i>alpha:
+                alpha=alpha_i
+                ialpha=i
+            if beta_i<beta:
+                beta=beta_i
+                ibeta=i
+        return [alpha,beta,ialpha,ibeta]
 
 
-    ##########################################
+
+
+####################### Find the switch points  ################################
+
     # Find the switching points
     def find_switching_points(self):
 
-        tunings=self.tunings
-        dt=tunings['t_step_integrate']
-        i_threshold=tunings['i_threshold']
-        slope_threshold=tunings['slope_threshold']
-        sdot_threshold=tunings['sdot_threshold']
-        a_threshold=tunings['a_threshold']
-
-        # Find the tangent points
-        [i_list,diff_list]=self.find_tangent_points(i_threshold,slope_threshold)
-        #print(i_list)
-        # Find the discontinuous points        
-        #i_list2=self.find_discontinuous_points(sdot_threshold)
-        i_list2=[]
-        # Find the zero inertia points        
-        i_list3=self.find_zero_inertia_points(a_threshold)
+        i_list=self.find_tangent_points()
+        i_list2=self.find_zero_inertia_points()
         # Merge the lists
         type_list=['t']*len(i_list)
         for x in i_list2:
             index=bisect.bisect_left(i_list,x)
             i_list.insert(index,x)
-            type_list.insert(index,'d')
-        for x in i_list3:
-            index=bisect.bisect_left(i_list,x)
-            i_list.insert(index,x)
             type_list.insert(index,'z')
-        self.i_list=i_list
-        self.type_list=type_list
-
-        # Find the corresponding values of sdot
+        # Find the corresponding values s and sdot
         s_list=[]
         sdot_list=[]
         for j in range(len(i_list)):
             s_list.append(self.sample_t_vect[i_list[j]])
             sdot=self.sample_max_curve[i_list[j]]
             sdot_list.append(sdot)
-        self.s_list=s_list
-        self.sdot_list=sdot_list
+
+        self.sw_i_list=i_list
+        self.sw_type_list=type_list
+        self.sw_s_list=s_list
+        self.sw_sdot_list=sdot_list
 
 
-    ##########################################
-    # Compute the limiting curves
+    # Find the zero inertia points
+    def find_zero_inertia_points(self):
+        if self.sample_n_steps<1:
+            return []
+        s=self.sample_t_vect[0]
+        [ap,bp,cp]=self.dynamics_coefficients(s)
+        i_list=[]
+        for i in range(1,self.sample_n_steps-1):
+            s=self.sample_t_vect[i]
+            [a,b,c]=self.dynamics_coefficients(s)
+            for j in range(self.dim):
+                aj=a[j]
+                ajp=ap[j]
+                if aj*ajp<0:
+                    if abs(aj)<abs(ajp):
+                        i_list.append(i)    
+                    else:
+                        i_list.append(i-1)
+            ap=a
+        return i_list
+
+
+    # Find the tangent points
+    def find_tangent_points(self):
+        if self.sample_n_steps<2:
+            return []
+        slope_threshold=self.tunings['slope_threshold']
+        max_curve=self.sample_max_curve
+        i=0
+        s=self.sample_t_vect[i]
+        sdot=max_curve[i]
+        [alpha,beta,k_alpha,k_beta]=self.compute_limits(s,sdot)
+        diffp=alpha/sdot-(max_curve[i+1]-max_curve[i])/self.sample_t_step
+        i_list=[]
+        for i in range(self.sample_n_steps-1):
+            s=self.sample_t_vect[i]
+            sdot=max_curve[i]
+            [alpha,beta,k_alpha,k_beta]=self.compute_limits(s,sdot)
+            diff=alpha/sdot-(max_curve[i+1]-max_curve[i])/self.sample_t_step
+            if diff*diffp<0  and max(abs(diff),abs(diffp))<slope_threshold:
+                if abs(diff)<abs(diffp):
+                    i_list.append(i)
+                else:
+                    i_list.append(i-1)
+            diffp=diff
+        return i_list
+
+
+
+
+####################### Integrate the limiting curves #########################
+
     def compute_limiting_curves(self):
 
         tunings=self.tunings
@@ -232,17 +293,17 @@ class RobotMinimumTime():
 
         s_target= s_final_backward[0]
         s_farthest=s_forward[-1]
-        s_list_copy=list(self.s_list)
-        sdot_list_copy=list(self.sdot_list)
-        type_list_copy=list(self.type_list)
+        sw_s_list_copy=list(self.sw_s_list)
+        sw_sdot_list_copy=list(self.sw_sdot_list)
+        sw_type_list_copy=list(self.sw_type_list)
 
         while True:
             if s_farthest>s_target: break
             if s_farthest>duration: break
-            if len(s_list_copy)==0: break
-            si=s_list_copy.pop(0)
-            sdoti=sdot_list_copy.pop(0)
-            typei=type_list_copy.pop(0)
+            if len(sw_s_list_copy)==0: break
+            si=sw_s_list_copy.pop(0)
+            sdoti=sw_sdot_list_copy.pop(0)
+            typei=sw_type_list_copy.pop(0)
 
             if si<s_farthest: continue
 
@@ -274,8 +335,10 @@ class RobotMinimumTime():
         self.cat_list=cat_list
 
 
-    ##########################################
-    # Integrate the final trajectory
+
+    
+#######################  Integrate the final trajectory ######################
+
     def integrate_final(self):
 
         s_traj_list=self.s_traj_list
@@ -298,246 +361,12 @@ class RobotMinimumTime():
             self.possible=False
 
 
-    ##########################################
-    # Find the zero inertia points
-    def find_zero_inertia_points(self,a_threshold):
-        i_list=[]
-        for i in range(self.sample_n_steps-1):
-            s=self.sample_t_vect[i]
-            sn=self.sample_t_vect[i+1]
-            [a,b,c]=self.dynamics_coefficients(s)
-            [an,bn,cn]=self.dynamics_coefficients(sn)
-            for j in range(self.dim):
-                aj=a[j]
-                ajn=an[j]
-                if aj*ajn<0:
-                    if abs(aj)<abs(ajn):
-                        i_list.append(i)    
-                    else:
-                        i_list.append(i+1)    
-        return i_list
 
 
-    ##########################################
-    # Find the discontinuous points
-    def find_discontinuous_points(self,sdot_threshold):
-        i_list=[]
-        max_curve=self.sample_max_curve
-        for i in range(1,self.sample_n_steps-1):
-            if max_curve[i+1]-max_curve[i]>sdot_threshold:
-                if max_curve[i]-max_curve[i-1]<sdot_threshold/2:
-                    i_list.append(i)
-        return i_list
+############################## Useful functions ################################
 
-
-    ##########################################
-    # Find the tangent points
-    def find_tangent_points(self,i_threshold,slope_threshold):
-        max_curve=self.sample_max_curve
-        i_list=[]
-        diff_list=[]
-        for i in range(self.sample_n_steps-1):
-            s=self.sample_t_vect[i]
-            sdot=max_curve[i]
-            [alpha,beta,k_alpha,k_beta]=self.compute_limits(s,sdot)
-            diff=abs(alpha/sdot-(max_curve[i+1]-max_curve[i])/self.sample_t_step)
-            if diff<slope_threshold:
-                i_list.append(i)
-                diff_list.append(diff)
-        #print(i_list)
-        """Pruning the list"""
-        i_list_list=[]
-        diff_list_list=[]
-        i=0
-        while i<len(i_list):
-            #create a new list
-            i_list_list.append([])
-            diff_list_list.append([])
-            cont=True
-            while cont:
-                i_list_list[-1].append(i_list[i])
-                diff_list_list[-1].append(diff_list[i])
-                i+=1
-                if i<len(i_list):
-                    if i_list[i]-i_list[i-1]>i_threshold:
-                        cont=False
-                else:
-                    cont=False
-        #print(i_list_list)
-        i_list2=[]
-        diff_list2=[]
-        for i in range(len(i_list_list)):
-            i_best=0
-            diff_best=1e15
-            for j in range(len(i_list_list[i])):
-                if diff_list_list[i][j]<diff_best:
-                    diff_best=diff_list_list[i][j]
-                    i_best=i_list_list[i][j]
-            i_list2.append(i_best)
-            diff_list2.append(diff_best)
-        return [i_list2,diff_list2]
-
-
-    ##########################################
-    # Find the highest sdot that allows passing through switching point
-    def find_sdot_min(self,s,sdot):
-
-        #print '-------'
-        #print s
-        #print sdot
-
-        tunings=self.tunings
-        tolerance=tunings['tolerance']
-        dt=tunings['t_step_integrate']
-        width=tunings['width']
-
-        bound_top=sdot
-        bound_bottom=0.2
-        min_sep=0.01
-        if bound_top<bound_bottom: return 0
-        sdot=bound_top
-        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
-        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
-        #print s_forward
-        #print s_backward
-        if (len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1):
-            return bound_top
-        sdot=bound_bottom
-        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
-        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
-        #print s_forward
-        #print s_backward
-        if not ((len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1)):
-            return 0
-        while bound_top-bound_bottom>min_sep:
-            sdot=(bound_top+bound_bottom)/2
-            [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
-            [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
-            if (len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1):
-                bound_bottom=sdot
-            else:
-                bound_top=sdot
-        return bound_bottom
-
-
-    ##########################################
-    # Compute the dynamics coefficient at a given point s
-    # by interpolating along the sample trajectory
-    def dynamics_coefficients(self,s):
-        t_vect=self.sample_t_vect
-        n_steps=self.sample_n_steps
-        a_vect=self.sample_a_vect
-        b_vect=self.sample_b_vect
-        c_vect=self.sample_c_vect
-        a_threshold=self.tunings['a_threshold']
-        if s<t_vect[0]: s=t_vect[0]+1e-5
-        if s>t_vect[n_steps-1]: s=t_vect[n_steps-1]-1e-5
-        i=bisect.bisect_left(t_vect,s)
-        if i>=n_steps-1: 
-            j=n_steps-1
-            return [a_vect[:,j],b_vect[:,j],c_vect[:,j]]
-        r=(s-t_vect[i])/(t_vect[i+1]-t_vect[i])        
-        # if min(abs(a_vect[:,i]))<a_threshold or min(abs(a_vect[:,i+1]))<a_threshold:
-        #     q=(1-r)*self.sample_q_vect[:,i]+r*self.sample_q_vect[:,i+1]
-        #     qd=(1-r)*self.sample_qd_vect[:,i]+r*self.sample_qd_vect[:,i+1]
-        #     qdd=(1-r)*self.sample_qdd_vect[:,i]+r*self.sample_qdd_vect[:,i+1]
-        #     dynamics=Dynamics.RobotDynamics(self.params,q,self.grav)
-        #     a=dynamics.inertiaTerm(qd)
-        #     b=dynamics.inertiaTerm(qdd)+dynamics.coriolisTerm(qd)
-        #     c=dynamics.gravTerm()
-        #     return [a,b,c]
-        a=(1-r)*a_vect[:,i]+r*a_vect[:,i+1]
-        b=(1-r)*b_vect[:,i]+r*b_vect[:,i+1]
-        c=(1-r)*c_vect[:,i]+r*c_vect[:,i+1]
-        return [a,b,c]
-
-
-    ##########################################
-    # Compute the max velocity at a given point s
-    def max_velocity(self,s):
-        tau_min=self.tau_min
-        tau_max=self.tau_max
-        [a,b,c]=self.dynamics_coefficients(s)
-        tau_alpha=zeros(self.dim)
-        tau_beta=zeros(self.dim)
-        for i in range(self.dim):
-            if a[i]>0:
-                tau_alpha[i]=tau_min[i]
-                tau_beta[i]=tau_max[i]
-            else:
-                tau_alpha[i]=tau_max[i]
-                tau_beta[i]=tau_min[i]
-        sdot_min=1e15
-        for k in range(self.dim):
-            for m in range(k+1,self.dim):
-                r=(a[k]*(tau_alpha[m]-c[m])-a[m]*(tau_beta[k]-c[k]))/(a[k]*b[m]-a[m]*b[k])
-                if r>=0:
-                    sdot=sqrt(r)
-                    if sdot<sdot_min:
-                        sdot_min=sdot
-                r=(a[m]*(tau_alpha[k]-c[k])-a[k]*(tau_beta[m]-c[m]))/(a[m]*b[k]-a[k]*b[m])
-                if r>=0:
-                    sdot=sqrt(r)
-                    if sdot<sdot_min:
-                        sdot_min=sdot
-        return(sdot_min)
-
-
-    ##########################################
-    # Compute the acceleration limits at a point (s,sdot)
-    def compute_limits(self,s,sdot):
-        tau_min=self.tau_min
-        tau_max=self.tau_max
-        [a,b,c]=self.dynamics_coefficients(s)
-        alpha=-1e15
-        beta=1e15
-        ialpha=0
-        ibeta=0
-        for i in range(self.dim):
-            if a[i]>0:
-                tau_min_i=tau_min[i]
-                tau_max_i=tau_max[i]
-            else:
-                tau_min_i=tau_max[i]
-                tau_max_i=tau_min[i]
-            alpha_i=(tau_min_i-b[i]*sdot**2-c[i])/a[i]
-            beta_i=(tau_max_i-b[i]*sdot**2-c[i])/a[i]
-            if alpha_i>alpha:
-                alpha=alpha_i
-                ialpha=i
-            if beta_i<beta:
-                beta=beta_i
-                ibeta=i
-        return [alpha,beta,ialpha,ibeta]
-
-
-    ##########################################
-    # Compute the acceleration limits at a point (s,sdot)
-    def compute_acc(self,s):
-        sdot=self.max_velocity(s)
-        [a,b,c]=self.dynamics_coefficients(s)        
-        a_abs=list(abs(a))
-        i_sat=a_abs.index(min(a_abs))
-        delta=0.01
-
-        [a2,b2,c2]=self.dynamics_coefficients(s-delta)
-        a2=a2[i_sat]
-        b2=b2[i_sat]
-        c2=c2[i_sat]
-
-        a=a[i_sat]
-        b=b[i_sat]
-        c=c[i_sat]
-        ap=-(a2-a)/delta
-        bp=-(b2-b)/delta
-        cp=-(c2-c)/delta
-        return ((-bp*sdot*sdot-cp)/(2*b*sdot+ap*sdot))*sdot
-        
-
-
-    ##########################################
     # Integrate a trajectory forward
-    def integrate_forward(self,s_start,sdot_start,s_traj_list_bw,sdot_traj_list_bw,width=1e15,acc=-1e10):
+    def integrate_forward(self,s_start,sdot_start,s_traj_list_bw,sdot_traj_list_bw,width=1e15,acc=nan):
 
         tunings=self.tunings
         tolerance=tunings['tolerance']
@@ -555,7 +384,7 @@ class RobotMinimumTime():
             if sdot_curr<0: break
             if s_curr>self.sample_duration: break
             if sdot_curr>self.max_velocity(s_curr)+tolerance: break
-            if start<tunings['palier'] and acc>-1e5:
+            if start<tunings['palier'] and not isnan(acc):
                 beta=acc                
             else:
                 [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
@@ -578,9 +407,8 @@ class RobotMinimumTime():
         return(array(s_res),array(sdot_res))
 
 
-    ##########################################
     # Integrate a trajectory backward
-    def integrate_backward(self,s_start,sdot_start,s_traj_list_fw,sdot_traj_list_fw,width=1e15,acc=-1e10):
+    def integrate_backward(self,s_start,sdot_start,s_traj_list_fw,sdot_traj_list_fw,width=1e15,acc=nan):
 
         tunings=self.tunings
         tolerance=tunings['tolerance']
@@ -598,7 +426,7 @@ class RobotMinimumTime():
             if sdot_curr<0: break
             if s_curr<0: break
             if sdot_curr>self.max_velocity(s_curr)+tolerance: break
-            if start<tunings['palier'] and acc>1e-5:
+            if start<tunings['palier'] and not isnan(acc):
                 alpha=acc
             else:
                 [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
@@ -620,7 +448,61 @@ class RobotMinimumTime():
         return(array(s_res)[::-1],array(sdot_res)[::-1])
 
 
-    ##########################################
+    # Compute the correct acceleration at the zero-inertia points
+    def compute_acc(self,s):
+        sdot=self.max_velocity(s)
+        [a,b,c]=self.dynamics_coefficients(s)        
+        a_abs=list(abs(a))
+        i_sat=a_abs.index(min(a_abs))
+        delta=0.01
+
+        [a2,b2,c2]=self.dynamics_coefficients(s-delta)
+        a2=a2[i_sat]
+        b2=b2[i_sat]
+        c2=c2[i_sat]
+
+        a=a[i_sat]
+        b=b[i_sat]
+        c=c[i_sat]
+        ap=-(a2-a)/delta
+        bp=-(b2-b)/delta
+        cp=-(c2-c)/delta
+        return ((-bp*sdot*sdot-cp)/(2*b*sdot+ap*sdot))*sdot
+        
+
+    # Find the highest sdot that allows passing through a switch point
+    def find_sdot_min(self,s,sdot):
+
+        tunings=self.tunings
+        tolerance=tunings['tolerance']
+        dt=tunings['t_step_integrate']
+        width=tunings['width']
+
+        bound_top=sdot
+        bound_bottom=0.2
+        min_sep=0.01
+        if bound_top<bound_bottom: return 0
+        sdot=bound_top
+        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
+        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
+        if (len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1):
+            return bound_top
+        sdot=bound_bottom
+        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
+        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
+        if not ((len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1)):
+            return 0
+        while bound_top-bound_bottom>min_sep:
+            sdot=(bound_top+bound_bottom)/2
+            [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.compute_acc(s))
+            [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.compute_acc(s))
+            if (len(s_forward)>=width or s_forward[-1]>self.sample_duration) and (len(s_backward)>=width or s_backward[0]<-1):
+                bound_bottom=sdot
+            else:
+                bound_top=sdot
+        return bound_bottom
+
+
     # Test whether the point (s,sdot) is above the trajectory (s_traj,sdot_traj)
     def is_above(self,s,sdot,s_traj,sdot_traj):
         if len(s_traj)<1:
@@ -637,7 +519,6 @@ class RobotMinimumTime():
             return sdot>(1-r)*sdota+r*sdotb
 
 
-    ##########################################
     # Test whether the point (s,sdot) is above the a list of trajectories
     def is_underneath_list(self,s,sdot,s_traj_list,sdot_traj_list):
         for i in range(len(s_traj_list)-1,-1,-1):
@@ -648,7 +529,6 @@ class RobotMinimumTime():
         return True
             
 
-    ##########################################
     # Find sdot
     def find_sdot(self,s,s_traj,sdot_traj):
         n=len(s_traj)
@@ -662,7 +542,6 @@ class RobotMinimumTime():
                 return sdot_traj[i-1]+r*(s_traj[i]-s_traj[i-1])
 
 
-    ##########################################
     # Compute the index of the curve which is on top
     def compute_index(self,s,s_traj_list,sdot_traj_list):
 
@@ -677,8 +556,7 @@ class RobotMinimumTime():
 
 
 
-#############################################################################
-# Plotting stuffs
+################################ Plotting ###################################
 
     def plot_limiting_curves(self):
         clf()
@@ -686,13 +564,13 @@ class RobotMinimumTime():
         T=self.sample_duration
         plot(self.sample_t_vect,self.sample_max_curve,'k')
         plot([0,T],array([1,1]),'m:')
-        for i in range(len(self.s_list)):
-            if self.type_list[i]=='t':
-                plot(self.s_list[i],self.sdot_list[i],'ro')
-            if self.type_list[i]=='d':
-                plot(self.s_list[i],self.sdot_list[i],'bo')
-            if self.type_list[i]=='z':
-                plot(self.s_list[i],self.sdot_list[i],'go')
+        for i in range(len(self.sw_s_list)):
+            if self.sw_type_list[i]=='t':
+                plot(self.sw_s_list[i],self.sw_sdot_list[i],'ro')
+            if self.sw_type_list[i]=='d':
+                plot(self.sw_s_list[i],self.sw_sdot_list[i],'bo')
+            if self.sw_type_list[i]=='z':
+                plot(self.sw_s_list[i],self.sw_sdot_list[i],'go')
 
         for i in range(len(self.s_traj_list)):
             plot(self.s_traj_list[i],self.sdot_traj_list[i],'r')
@@ -700,22 +578,7 @@ class RobotMinimumTime():
         plot(self.s_res,self.sdot_res,'k--')
         axis([0,T,0,max(self.sample_max_curve)])
         grid('on')
-        show()       
-
-
-    def plot_arrows(self,si,sdoti,ns,nsdot,dt,dtdot):
-        i=1
-        sv=linspace(si-ns*dt,si+ns*dt,2*ns+1)
-        sdotv=linspace(sdoti-nsdot*dtdot,sdoti+nsdot*dtdot,2*nsdot+1)
-        self.plot_limiting_curves()
-        dtf=dt*0.7
-        for s in sv:
-            for sdot in sdotv:
-                [alpha,beta,ialpha,ibeta]=self.compute_limits(s,sdot)
-                plot([s,s+dtf],[sdot,sdot+dtf*beta/sdot],'r')
-                plot([s,s+dtf],[sdot,sdot+dtf*alpha/sdot],'b')
-                plot([s],[sdot],'k*')
-
+        show()
 
     def compute_flow(self,s_curr,sdot_curr,dt,n_int,alphabeta):
         s_res=[]
@@ -736,12 +599,3 @@ class RobotMinimumTime():
             sdot_curr=sdot_next
 
         return [s_res,sdot_res]
-
-
-
-
-
-
-
-
-

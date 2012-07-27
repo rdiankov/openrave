@@ -87,27 +87,27 @@ tau_min=[-m0,-m1,-m2,-m3]
 tau_max=[m0,m1,m2,m3]
 
 # Time step for the discretization
-t_step=0.01
+t_step=0.005
 
 # Some tuning parameters
 tunings={'':0}
-tunings['i_threshold']=10 # threshold in the tangent points search
-tunings['slope_threshold']=1 # threshold in the tangent points search
-tunings['sdot_threshold']=0.05 # threshold in the discontinuity points search
-tunings['a_threshold']=1e-2 # threshold in the zero inertia points search
-tunings['width']=20 # window to test if we can get through a switching point
-tunings['tolerance']=0.01 #tolerance above the max_curve
+tunings['slope_threshold']=10 # threshold in the tangent points search
+
 tunings['t_step_integrate']=t_step/20 # time step to integrate the limiting curves
+tunings['tolerance']=0.01 #tolerance above the max_curve
+tunings['width']=20 # window to test if we can get through a switching point
+tunings['palier']=10 #length of the palier around zero inertia points
+
 tunings['sdot_init']=1e-2
 tunings['sdot_final']=1e-2
 tunings['threshold_final']=1e-2
 tunings['threshold_waive']=1e-2
-tunings['palier']=10 #length of the palier around zero inertia points
 
 
 ############# Compute a feasible timing for each segment #################
 
 traj_list=[]
+pb_list=[]
 for i_way in range(1,rave_traj.GetNumWaypoints()):
     a_prev=rave_traj.GetWaypoints(i_way-1,i_way)
     a=rave_traj.GetWaypoints(i_way,i_way+1)
@@ -118,6 +118,7 @@ for i_way in range(1,rave_traj.GetNumWaypoints()):
     pwp_traj_linear=Trajectory.PieceWisePolyTrajectory([pieces_list],[T])
     traj=pwp_traj_linear.GetSampleTraj(T,t_step)
     pb=MinimumTime.RobotMinimumTime(robot,traj,tau_min,tau_max,tunings,grav)
+    pb_list.append(pb)
     s_res=pb.s_res
     sdot_res=pb.sdot_res
     undersample_coef=int(round(t_step/tunings['t_step_integrate']))
@@ -139,10 +140,10 @@ show()
 ################# Run the shortcutting algorithm ########################
 
 # Tuning parameters for the shortcutting algorithm
-tunings['t_step_sample']=0.005 # time step to sample the shortcut
-tunings['t_step_integrate']=0.001 # time step to integrate the limiting curves
+tunings['t_step_sample']=0.001 # time step to sample the shortcut
+tunings['t_step_integrate']=0.0005 # time step to integrate the limiting curves
 
-max_time=20 # Upper bound for the execution of the algorithm in seconds
+max_time=40 # Upper bound for the execution of the algorithm in seconds
 mean_len=traj2.duration/2 # Mean length of each shortcut
 std_len=traj2.duration/2 # Std of the length of the shortcut
 
