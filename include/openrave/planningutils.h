@@ -148,6 +148,15 @@ OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
 
+/** \brief computes the trajectory derivatives and modifies the trajetory configuration to store them.
+
+    If necessary will change the configuration specification of the trajectory.
+    If more derivatives are requested than the trajectory supports, will ignore them. For example, acceleration of a linear trajectory.
+    \param traj the re-timed trajectory
+    \param maxderiv the maximum derivative to assure. If 1, will assure velocities, if 2 will assure accelerations, etc.
+ */
+OPENRAVE_API void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv);
+
 /// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid

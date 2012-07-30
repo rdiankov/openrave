@@ -1188,6 +1188,11 @@ void pyConvertTrajectorySpecification(PyTrajectoryBasePtr pytraj, PyConfiguratio
     OpenRAVE::planningutils::ConvertTrajectorySpecification(openravepy::GetTrajectory(pytraj),openravepy::GetConfigurationSpecification(pyspec));
 }
 
+void pyComputeTrajectoryDerivatives(PyTrajectoryBasePtr pytraj, int maxderiv)
+{
+    OpenRAVE::planningutils::ComputeTrajectoryDerivatives(openravepy::GetTrajectory(pytraj),maxderiv);
+}
+
 object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
@@ -1670,6 +1675,8 @@ void init_openravepy_global()
         scope x = class_<object>("planningutils")
                   .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))
                   .staticmethod("ConvertTrajectorySpecification")
+                  .def("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives,args("trajectory","maxderiv"),DOXY_FN1(ComputeTrajectoryDerivatives))
+                  .staticmethod("ComputeTrajectoryDerivatives")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
                   .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))

@@ -640,3 +640,27 @@ class TestTrajectory(EnvironmentSetup):
             totaltime = time.time()-starttime
             # path should be a little faster
             assert(trajclone.GetDuration()<traj.GetDuration())
+
+    def test_computederiv(self):
+        env = self.env
+        self.LoadEnv('data/katanatable.env.xml')
+        robot=env.GetRobots()[0]
+        with env:
+            robot.SetActiveDOFs(range(5))
+            robot.SetDOFVelocityLimits(linspace(1,5,robot.GetDOF()))
+            robot.SetDOFAccelerationLimits(linspace(10,50,robot.GetDOF()))
+            traj = RaveCreateTrajectory(env,'')
+            traj.Init(robot.GetActiveConfigurationSpecification())
+            traj.Insert(0,[-1,-0.5,-1,-1,-1,1,1,1,1,1])
+            traj2 = RaveClone(traj,0)
+            planningutils.SmoothActiveDOFTrajectory(traj2,robot)
+            planningutils.SmoothTrajectory(traj)
+            assert(abs(traj.GetDuration()-traj2.GetDuration()) <= g_epsilon)
+            # try twice to make sure we compute same result
+            for i in range(2):
+                planningutils.ComputeTrajectoryDerivatives(traj,2)
+                gaccel=traj.GetConfigurationSpecification().FindCompatibleGroup('joint_accelerations',False)
+                acceldata=traj.GetWaypoints(0,traj.GetNumWaypoints(),gaccel)
+                expectedaccel=array([  0.00000000e+00,   7.50000000e+00,   1.00000000e+01, 1.00000000e+01,   1.00000000e+01,   0.00000000e+00, 3.50596745e-16,   4.67462326e-16,   4.67462326e-16, 4.67462326e-16,   0.00000000e+00,  -7.50000000e+00, -1.00000000e+01,  -1.00000000e+01,  -1.00000000e+01, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00])
+                assert(transdist(expectedaccel,acceldata) <= g_epsilon)
+

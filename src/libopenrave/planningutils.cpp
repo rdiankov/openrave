@@ -841,6 +841,60 @@ void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationS
     }
 }
 
+void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv)
+{
+    OPENRAVE_ASSERT_OP(maxderiv,>,0);
+    ConfigurationSpecification newspec = traj->GetConfigurationSpecification();
+    for(int i = 1; i <= maxderiv; ++i) {
+        newspec.AddDerivativeGroups(i);
+    }
+    std::vector<dReal> data;
+    traj->GetWaypoints(0,traj->GetNumWaypoints(),data, newspec);
+    if( data.size() == 0 ) {
+        traj->Init(newspec);
+        return;
+    }
+    int numpoints = (int)data.size()/newspec.GetDOF();
+    ConfigurationSpecification velspec = newspec.GetTimeDerivativeSpecification(maxderiv-1);
+    ConfigurationSpecification accelspec = newspec.GetTimeDerivativeSpecification(maxderiv);
+    std::vector<ConfigurationSpecification::Group>::const_iterator itdeltatimegroup = newspec.FindCompatibleGroup("deltatime");
+    if(itdeltatimegroup == newspec._vgroups.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("trajectory does not seem to have time stamps, so derivatives cannot be computed", ORE_InvalidArguments);
+    }
+    OPENRAVE_ASSERT_OP(velspec.GetDOF(), ==, accelspec.GetDOF());
+    int offset = 0;
+    dReal nextdeltatime=0;
+    for(int ipoint = 0; ipoint < numpoints; ++ipoint, offset += newspec.GetDOF()) {
+        if( ipoint < numpoints-1 ) {
+            nextdeltatime = data.at(offset+newspec.GetDOF()+itdeltatimegroup->offset);
+        }
+        else {
+            nextdeltatime = 0;
+        }
+        for(size_t igroup = 0; igroup < velspec._vgroups.size(); ++igroup) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itvel = newspec.FindCompatibleGroup(velspec._vgroups.at(igroup),true);
+            std::vector<ConfigurationSpecification::Group>::const_iterator itaccel = newspec.FindCompatibleGroup(accelspec._vgroups.at(igroup),true);
+            OPENRAVE_ASSERT_OP(itvel->dof,==,itaccel->dof);
+            if( ipoint < numpoints-1 ) {
+                for(int i = 1; i < itvel->dof; ++i) {
+                    if( nextdeltatime > 0 ) {
+                        data.at(offset+itaccel->offset+i) = (data.at(offset+newspec.GetDOF()+itvel->offset+i)-data.at(offset+itvel->offset+i))/nextdeltatime;
+                    }
+                    else {
+                        // time is 0 so leave empty?
+                    }
+                }
+            }
+            else {
+                // what to do with the last point?
+            }
+        }
+    }
+
+    traj->Init(newspec);
+    traj->Insert(0,data);
+}
+
 TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
 {
     vector<dReal> sourcedata;
