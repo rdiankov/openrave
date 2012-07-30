@@ -626,7 +626,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             interpolation = itgroup->interpolation;
         }
     }
-    newspec.AddVelocityGroups(false);
+    newspec.AddDerivativeGroups(1,false);
 
     vector<dReal> vwaypointstart, vwaypointend, vtargetvalues;
     if( waypointindex == 0 ) {
@@ -729,7 +729,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
 
     ConfigurationSpecification spectotal = specpos;
-    spectotal.AddVelocityGroups(false);
+    spectotal.AddDerivativeGroups(1,false);
     OPENRAVE_ASSERT_OP(spectotal.GetDOF(),==,2*(int)dofvalues.size());
     TrajectoryBasePtr ptesttraj;
     TrajectoryBasePtr pBestTrajectory;

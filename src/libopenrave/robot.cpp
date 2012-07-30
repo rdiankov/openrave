@@ -1501,6 +1501,7 @@ RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::Manipulator
         }
     }
     ManipulatorPtr newmanip(new Manipulator(shared_robot(),manipinfo));
+    newmanip->_ComputeInternalInformation();
     _vecManipulators.push_back(newmanip);
     __hashrobotstructure.resize(0);
     return newmanip;

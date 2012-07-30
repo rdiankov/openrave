@@ -386,6 +386,8 @@ class RunRobot(EnvironmentSetup):
         manipinfo._vdirection = [0,1,0]
         manipinfo._vClosingDirection = [1.0]
         newmanip = robot.AddManipulator(manipinfo)
+        assert(newmanip.GetBase().GetName() == manip.GetBase().GetName())
+        assert(newmanip.GetEndEffector().GetName() == manip.GetEndEffector().GetName())
         assert(robot.GetManipulator('testmanip')==newmanip)
         assert(transdist(newmanip.GetLocalToolTransform(),manipinfo._tLocalTool) <= g_epsilon)
         robot.SetActiveManipulator(newmanip)

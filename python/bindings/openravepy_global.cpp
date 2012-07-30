@@ -277,7 +277,13 @@ public:
 
     void AddVelocityGroups(bool adddeltatime)
     {
-        _spec.AddVelocityGroups(adddeltatime);
+        RAVELOG_WARN("openravepy AddVelocityGroups is deprecated, use AddDerivativeGroups\n");
+        _spec.AddDerivativeGroups(1,adddeltatime);
+    }
+
+    void AddDerivativeGroups(int deriv, bool adddeltatime)
+    {
+        _spec.AddDerivativeGroups(deriv,adddeltatime);
     }
 
     int AddDeltaTimeGroup() {
@@ -1551,6 +1557,7 @@ void init_openravepy_global()
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
                                            .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
                                            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
+                                           .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
                                            .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))

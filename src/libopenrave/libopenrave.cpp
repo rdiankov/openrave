@@ -1542,8 +1542,11 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     return FindCompatibleGroup(derivativename,exactmatch);
 }
 
-void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
+void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
+    static const boost::array<string,3> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations"}};
+    static const boost::array<string,3> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations"}};
+    static const boost::array<string,3> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
@@ -1555,15 +1558,15 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
         string replacename;
         int offset = -1;
         if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
-            replacename = "joint_velocities";
+            replacename = s_GroupsJointValues.at(deriv);
             offset = 12;
         }
         else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
-            replacename = "affine_velocities";
+            replacename = s_GroupsAffine.at(deriv);
             offset = 16;
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
-            replacename = "ikparam_velocities";
+            replacename = s_GroupsAffine.at(deriv);
             offset = 14;
         }
 
@@ -1571,7 +1574,7 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
             ConfigurationSpecification::Group g;
             g.name = replacename + itgroup->name.substr(offset);
             g.dof = itgroup->dof;
-            g.interpolation = GetInterpolationDerivative(itgroup->interpolation);
+            g.interpolation = GetInterpolationDerivative(itgroup->interpolation,deriv);
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompat = FindCompatibleGroup(g);
             if( itcompat != _vgroups.end() ) {
                 if( itcompat->dof == g.dof ) {
@@ -2481,16 +2484,16 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
     }
 }
 
-std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation)
+std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation, int deriv)
 {
-    const static boost::array<std::string,6> ordered = {{"next","linear","quadratic","cubic","quadric","quintic"}};
-    for(size_t i = 0; i < ordered.size(); ++i) {
-        if( interpolation == ordered[i] ) {
-            if( i == 0 ) {
-                return ordered.at(0);
+    const static boost::array<std::string,6> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i < deriv ) {
+                return s_InterpolationOrder.at(0);
             }
             else {
-                return ordered.at(i-1);
+                return s_InterpolationOrder.at(i-deriv);
             }
         }
     }

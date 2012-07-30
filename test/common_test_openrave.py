@@ -186,7 +186,7 @@ class EnvironmentSetup(object):
                     robot2=env2.GetRobot(body2.GetName())
                     grabbed = robot.GetGrabbed()
                     grabbed2 = robot2.GetGrabbed()
-                    assert( set(grabbed) == set(grabbed2) )
+                    assert( set([body.GetName() for body in grabbed]) == set([body.GetName() for body in grabbed2]) )
                     assert( transdist(robot.GetActiveDOFIndices(),robot2.GetActiveDOFIndices()) == 0)
                     assert( robot.GetActiveManipulator().GetName() == robot2.GetActiveManipulator().GetName())
                     

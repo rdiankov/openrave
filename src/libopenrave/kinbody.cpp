@@ -842,6 +842,9 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             if( pjoint->IsMimic(0) ) {
                 // vtempvalues should already be init from previous _Eval call
                 int err = pjoint->_Eval(0,0,vtempvalues,veval);
+                if( err != 0 ) {
+                    RAVELOG_WARN(str(boost::format("error with evaluation of joint %s")%pjoint->GetName()));
+                }
                 dReal fvalue = veval[0];
                 if( pjoint->IsCircular(0) ) {
                     fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
