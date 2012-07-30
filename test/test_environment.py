@@ -365,7 +365,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('new clone time: %fs',endtime)
-            assert(endtime <= 0.05)
+            assert(endtime <= 0.1)
             self.CompareEnvironments(env,clonedenv)
 
             robot.Grab(mug2body)
