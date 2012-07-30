@@ -55,7 +55,7 @@ Core
 
 * fixed major bug in :meth:`.ConfigurationSpecification.InsertJointValues`
 
-* added :meth:`.ConfigurationSpecification.AddDerivativeGroups`
+* added :meth:`.ConfigurationSpecification.AddDerivativeGroups`, :meth:`.planningutils.ComputeTrajectoryDerivatives`
 
 Inverse Kinematics
 ------------------
