@@ -883,7 +883,8 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         break;
     }
     case IKP_Ray4D: {
-        O << ikparam.GetRay4D();
+        RAY r = ikparam.GetRay4D();
+        O << r.dir.x << " " << r.dir.y << " " << r.dir.z << " " << r.pos.x << " " << r.pos.y << " " << r.pos.z << " ";
         break;
     }
     case IKP_Lookat3D: {
@@ -891,9 +892,11 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         O << v.x << " " << v.y << " " << v.z << " ";
         break;
     }
-    case IKP_TranslationDirection5D:
-        O << ikparam.GetTranslationDirection5D();
+    case IKP_TranslationDirection5D: {
+        RAY r = ikparam.GetTranslationDirection5D();
+        O << r.dir.x << " " << r.dir.y << " " << r.dir.z << " " << r.pos.x << " " << r.pos.y << " " << r.pos.z << " ";
         break;
+    }
     case IKP_TranslationXY2D: {
         Vector v = ikparam.GetTranslationXY2D();
         O << v.x << " " << v.y << " ";
@@ -987,13 +990,13 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
     case IKP_Direction3DVelocity:
         I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
         break;
-    case IKP_Ray4D: { RAY r; I >> r; ikparam.SetRay4D(r); break; }
+    case IKP_Ray4D: { RAY r; I >> r.dir.x >> r.dir.y >> r.dir.z >> r.pos.x >> r.pos.y >> r.pos.z; ikparam.SetRay4D(r); break; }
     case IKP_Ray4DVelocity:
     case IKP_TranslationDirection5DVelocity:
         I >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z;
         break;
     case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
-    case IKP_TranslationDirection5D: { RAY r; I >> r; ikparam.SetTranslationDirection5D(r); break; }
+    case IKP_TranslationDirection5D: { RAY r; I >> r.dir.x >> r.dir.y >> r.dir.z >> r.pos.x >> r.pos.y >> r.pos.z; ikparam.SetTranslationDirection5D(r); break; }
     case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXY2DVelocity:
         I >> ikparam._transform.trans.x >> ikparam._transform.trans.y;
@@ -1212,7 +1215,7 @@ void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, 
     }
 }
 
-void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis)
+void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis, bool normalize)
 {
     if( affinedofs & DOF_X ) {
         t.trans.x = *itvalues++;
@@ -1232,19 +1235,30 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
         t.rot.w = vActvAffineRotationAxis.z * fsin;
     }
     else if( affinedofs & DOF_Rotation3D ) {
-        dReal x = *itvalues++;
-        dReal y = *itvalues++;
-        dReal z = *itvalues++;
-        dReal fang = RaveSqrt(x*x + y*y + z*z);
-        if( fang > 0 ) {
-            dReal fnormalizer = sin((dReal)0.5 * fang) / fang;
-            t.rot.x = cos((dReal)0.5 * fang);
-            t.rot.y = fnormalizer * x;
-            t.rot.z = fnormalizer * y;
-            t.rot.w = fnormalizer * z;
+        if( normalize ) {
+            dReal x = *itvalues++;
+            dReal y = *itvalues++;
+            dReal z = *itvalues++;
+            dReal fang = RaveSqrt(x*x + y*y + z*z);
+            if( fang > 0 ) {
+                dReal fnormalizer = sin((dReal)0.5 * fang) / fang;
+                t.rot.x = cos((dReal)0.5 * fang);
+                t.rot.y = fnormalizer * x;
+                t.rot.z = fnormalizer * y;
+                t.rot.w = fnormalizer * z;
+            }
+            else {
+                t.rot = Vector(1,0,0,0); // identity
+            }
         }
         else {
-            t.rot = Vector(1,0,0,0); // identity
+            // normalization turned off, but affine dofs have only DOF_Rotation3D. In order to convert this to quaternion velocity
+            // will need current quaternion value (qrot), which is unknown, so assume identity
+            // qvel = [0,axisangle] * qrot * 0.5
+            t.rot[0] = 0;
+            t.rot[1] = 0.5 * *itvalues++;
+            t.rot[2] = 0.5 * *itvalues++;
+            t.rot[3] = 0.5 * *itvalues++;
         }
     }
     else if( affinedofs & DOF_RotationQuat ) {
@@ -1253,7 +1267,9 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
         t.rot.y = *itvalues++;
         t.rot.z = *itvalues++;
         t.rot.w = *itvalues++;
-        t.rot.normalize4();
+        if( normalize ) {
+            t.rot.normalize4();
+        }
     }
 }
 
@@ -1526,8 +1542,11 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     return FindCompatibleGroup(derivativename,exactmatch);
 }
 
-void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
+void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
+    static const boost::array<string,3> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations"}};
+    static const boost::array<string,3> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations"}};
+    static const boost::array<string,3> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
@@ -1539,15 +1558,15 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
         string replacename;
         int offset = -1;
         if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
-            replacename = "joint_velocities";
+            replacename = s_GroupsJointValues.at(deriv);
             offset = 12;
         }
         else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
-            replacename = "affine_velocities";
+            replacename = s_GroupsAffine.at(deriv);
             offset = 16;
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
-            replacename = "ikparam_velocities";
+            replacename = s_GroupsIkparam.at(deriv);
             offset = 14;
         }
 
@@ -1555,7 +1574,7 @@ void ConfigurationSpecification::AddVelocityGroups(bool adddeltatime)
             ConfigurationSpecification::Group g;
             g.name = replacename + itgroup->name.substr(offset);
             g.dof = itgroup->dof;
-            g.interpolation = GetInterpolationDerivative(itgroup->interpolation);
+            g.interpolation = GetInterpolationDerivative(itgroup->interpolation,deriv);
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompat = FindCompatibleGroup(g);
             if( itcompat != _vgroups.end() ) {
                 if( itcompat->dof == g.dof ) {
@@ -1850,7 +1869,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     }
     FOREACHC(itgroup,_vgroups) {
         if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
-            stringstream ss(itgroup->name.substr(16));
+            stringstream ss(itgroup->name.substr(searchname.size()));
             string bodyname;
             int affinedofs=0;
             ss >> bodyname >> affinedofs;
@@ -1858,7 +1877,11 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
                 if( !!pbody && bodyname != pbody->GetName() ) {
                     continue;
                 }
-                RaveGetTransformFromAffineDOFValues(t,itdata+itgroup->offset,affinedofs);
+                Vector vaxis(0,0,1);
+                if( affinedofs & DOF_RotationAxis ) {
+                    ss >> vaxis.x >> vaxis.y >> vaxis.z;
+                }
+                RaveGetTransformFromAffineDOFValues(t,itdata+itgroup->offset,affinedofs, vaxis, timederivative==0);
                 bfound = true;
             }
         }
@@ -2042,7 +2065,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
                 for(size_t i = 0; i < vgroupindices.size(); ++i) {
                     std::vector<int>::const_iterator it = find(indices.begin(),indices.end(),vgroupindices[i]);
                     if( it != indices.end() ) {
-                        *(itdata+itgroup->offset+i) = *(itvalues+*it);
+                        *(itdata+itgroup->offset+i) = *(itvalues+static_cast<size_t>(it-indices.begin()));
                     }
                 }
                 bfound = true;
@@ -2461,16 +2484,16 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
     }
 }
 
-std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation)
+std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation, int deriv)
 {
-    const static boost::array<std::string,6> ordered = {{"next","linear","quadratic","cubic","quadric","quintic"}};
-    for(size_t i = 0; i < ordered.size(); ++i) {
-        if( interpolation == ordered[i] ) {
-            if( i == 0 ) {
-                return ordered.at(0);
+    const static boost::array<std::string,6> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i < deriv ) {
+                return s_InterpolationOrder.at(0);
             }
             else {
-                return ordered.at(i-1);
+                return s_InterpolationOrder.at(i-deriv);
             }
         }
     }

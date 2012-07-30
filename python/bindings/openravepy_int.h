@@ -539,6 +539,8 @@ public:
         return object(sout.str());
     }
 
+    virtual object GetReadableInterfaces();
+
     virtual string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }

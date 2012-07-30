@@ -355,11 +355,13 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             break;
         }
         case JointTrajectory: {
+            //uint64_t starttime = utils::GetMicroTime();
             vector<dReal> vsampledata;
             dReal splitpercentage = 0.01;
             dReal precision(1e-6);
             dReal timemin = 0, timemax = _trajfollow->GetDuration();
             Transform tbest, ttest;
+            int totalcalls = 0;
             while(timemin+precision < timemax) {
                 dReal timestep = (timemax-timemin)*splitpercentage;
                 dReal timeclosest = timemin;
@@ -368,6 +370,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     if( timeclosest > timemax ) {
                         timeclosest = timemax;
                     }
+                    totalcalls += 1;
                     _trajfollow->Sample(vsampledata,timeclosest);
                     if( _trajfollow->GetConfigurationSpecification().ExtractTransform(ttest,vsampledata.begin(),KinBodyConstPtr()) ) {
                         dReal fdist = TransformDistanceFast(ttest,tjoint,0.3);
@@ -382,6 +385,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 timemin = max(timemin,besttime-timestep);
                 timemax = min(timemax, besttime+timestep);
                 splitpercentage = 0.1f;
+                //RAVELOG_INFO(str(boost::format("calls: %d time: %f")%totalcalls%((utils::GetMicroTime()-starttime)*1e-6)));
             }
             return 0.5*(timemin+timemax);
         }

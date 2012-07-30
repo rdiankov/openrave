@@ -357,6 +357,7 @@ class RunRobot(EnvironmentSetup):
             # customfilter shouldn't be executed anymore
             sols = ikmodel.manip.FindIKSolutions(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(numrepeats[0]==4)
+
     def test_manipulators(self):
         env=self.env
         robot=self.LoadRobot('robots/pr2-beta-static.zae')
@@ -371,7 +372,65 @@ class RunRobot(EnvironmentSetup):
         assert(len(cjoints)==4)
         assert(all([j.GetName().startswith('l_') for j in cjoints]))
         cdofs = manip.GetChildDOFIndices()
-        assert(cdofs == [22,23,24,25])        
+        assert(cdofs == [22,23,24,25])
+
+        # test if manipulator can be created
+        manip = robot.GetManipulator('leftarm')
+        manipinfo = Robot.ManipulatorInfo()
+        manipinfo._name = 'testmanip'
+        manipinfo._sBaseLinkName = manip.GetBase().GetName()
+        manipinfo._sEffectorLinkName = manip.GetEndEffector().GetName()
+        manipinfo._tLocalTool = eye(4)
+        manipinfo._tLocalTool[2,3] = 1.0
+        manipinfo._vGripperJointNames = ['l_gripper_l_finger_joint']
+        manipinfo._vdirection = [0,1,0]
+        manipinfo._vClosingDirection = [1.0]
+        newmanip = robot.AddManipulator(manipinfo)
+        assert(newmanip.GetBase().GetName() == manip.GetBase().GetName())
+        assert(newmanip.GetEndEffector().GetName() == manip.GetEndEffector().GetName())
+        assert(robot.GetManipulator('testmanip')==newmanip)
+        assert(transdist(newmanip.GetLocalToolTransform(),manipinfo._tLocalTool) <= g_epsilon)
+        robot.SetActiveManipulator(newmanip)
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot)
+        if not ikmodel.load():
+            ikmodel.autogenerate()
+            
+    def test_grabdynamics(self):
+        self.log.info('test is grabbed bodies have correct')
+        env=self.env
+        with env:
+            robot=self.LoadRobot('robots/pr2-beta-static.zae')
+            body = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(body)
+            manip=robot.SetActiveManipulator('leftarm')
+            velocities = zeros(robot.GetDOF())
+            velocities[manip.GetArmIndices()] = ones(len(manip.GetArmIndices()))
+            robot.SetDOFVelocities(velocities)
+            Tmanip = manip.GetTransform()
+            Tbody = array(Tmanip)
+            Tbody[0,3] += 0.1
+            body.SetTransform(Tbody)
+            robot.Grab(body)
+            diff = Tbody[0:3,3] - Tmanip[0:3,3]
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
+            
+            # change velocity and try again
+            velocities[manip.GetArmIndices()] = -ones(len(manip.GetArmIndices()))
+            robot.SetDOFVelocities(velocities)
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
+            
+            # set robot base velocity
+            robot.SetVelocity([1,2,3],[4,5,6])
+            bodyvelocity = body.GetLinkVelocities()[0]
+            manipvelocity = manip.GetVelocity()
+            assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
+            assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
 
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 

@@ -679,7 +679,7 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable
+class OPENRAVE_API XMLReadable : public UserData
 {
 public:
     XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
@@ -1033,19 +1033,26 @@ protected:
      */
     virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const std::string& name, bool exactmatch=false) const;
 
-    /** \brief adds a velocity group for every position group.
+    /** \brief adds velocity, acceleration, etc groups for every position group.
 
-        If velocities groups already exist, they are checked for and/or modified. Note that the configuration space
+        If the derivative groups already exist, they are checked for and/or modified. Note that the configuration space
         might be re-ordered as a result of this function call. If a new group is added, its interpolation will be
         the derivative of the position group as returned by \ref GetInterpolationDerivative.
+        \param deriv The position derivative to add, this must be greater than 0. If 2 is specified, only the acceleration groups of the alread present position groups will be added.
         \param adddeltatime If true will add the 'deltatime' tag, which is necessary for trajectory sampling
      */
-    virtual void AddVelocityGroups(bool adddeltatime);
+    virtual void AddDerivativeGroups(int deriv, bool adddeltatime=false);
+
+    /// \deprecated (12/07/30)
+    inline void AddVelocityGroups(bool adddeltatime) RAVE_DEPRECATED {
+        AddDerivativeGroups(1,adddeltatime);
+    }
 
     /** \brief converts all the groups to the corresponding velocity groups and returns the specification
 
         The velocity configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative.
+        Only position specifications will be converted, any other groups will be left untouched.
      */
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
@@ -1188,7 +1195,9 @@ protected:
     /// \brief gets the name of the interpolation that represents the derivative of the passed in interpolation.
     ///
     /// For example GetInterpolationDerivative("quadratic") -> "linear"
-    static std::string GetInterpolationDerivative(const std::string& interpolation);
+    /// \param interpolation the interpolation to start at
+    /// \param deriv the number of derivatives to take, should be > 0
+    static std::string GetInterpolationDerivative(const std::string& interpolation, int deriv=1);
 
     std::vector<Group> _vgroups;
 };
@@ -2107,8 +2116,9 @@ OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterat
     \param[in] itvalues the start iterator of the affine dof values
     \param[in] affinedofs the affine dof mask
     \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+    \param[in] if true will normalize rotations, should set to false if extracting velocity data
  */
-OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
+OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1), bool normalize=true);
 
 OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 

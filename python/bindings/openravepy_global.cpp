@@ -277,7 +277,13 @@ public:
 
     void AddVelocityGroups(bool adddeltatime)
     {
-        _spec.AddVelocityGroups(adddeltatime);
+        RAVELOG_WARN("openravepy AddVelocityGroups is deprecated, use AddDerivativeGroups\n");
+        _spec.AddDerivativeGroups(1,adddeltatime);
+    }
+
+    void AddDerivativeGroups(int deriv, bool adddeltatime)
+    {
+        _spec.AddDerivativeGroups(deriv,adddeltatime);
     }
 
     int AddDeltaTimeGroup() {
@@ -1182,6 +1188,11 @@ void pyConvertTrajectorySpecification(PyTrajectoryBasePtr pytraj, PyConfiguratio
     OpenRAVE::planningutils::ConvertTrajectorySpecification(openravepy::GetTrajectory(pytraj),openravepy::GetConfigurationSpecification(pyspec));
 }
 
+void pyComputeTrajectoryDerivatives(PyTrajectoryBasePtr pytraj, int maxderiv)
+{
+    OpenRAVE::planningutils::ComputeTrajectoryDerivatives(openravepy::GetTrajectory(pytraj),maxderiv);
+}
+
 object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
@@ -1202,6 +1213,11 @@ void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities,
     OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),plannername,plannerparameters);
 }
 
+void pySmoothTrajectory(PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+{
+    OpenRAVE::planningutils::SmoothTrajectory(openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+}
+
 void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
     OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
@@ -1210,6 +1226,16 @@ void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyro
 void pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
 {
     OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
+}
+
+void pyRetimeTrajectory(PyTrajectoryBasePtr pytraj, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+{
+    OpenRAVE::planningutils::RetimeTrajectory(openravepy::GetTrajectory(pytraj),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+}
+
+void pyInsertWaypointWithSmoothing(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
+{
+    OpenRAVE::planningutils::InsertWaypointWithSmoothing(index,ExtractArray<dReal>(odofvalues),ExtractArray<dReal>(odofvelocities),openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername);
 }
 
 object pyMergeTrajectories(object pytrajectories)
@@ -1344,8 +1370,11 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
+BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothTrajectory_overloads, planningutils::pySmoothTrajectory, 1, 5)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planningutils::pyRetimeActiveDOFTrajectory, 2, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRetimeTrajectory, 1, 6)
+BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineConfigurationSpecification_overloads, openravepy::pyRaveGetAffineConfigurationSpecification, 1, 3)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineDOFValuesFromTransform_overloads, openravepy::pyRaveGetAffineDOFValuesFromTransform, 2, 3)
@@ -1533,6 +1562,7 @@ void init_openravepy_global()
                                            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
                                            .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
                                            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
+                                           .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
                                            .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))
@@ -1645,6 +1675,8 @@ void init_openravepy_global()
         scope x = class_<object>("planningutils")
                   .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))
                   .staticmethod("ConvertTrajectorySpecification")
+                  .def("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives,args("trajectory","maxderiv"),DOXY_FN1(ComputeTrajectoryDerivatives))
+                  .staticmethod("ComputeTrajectoryDerivatives")
                   .def("ReverseTrajectory",planningutils::pyReverseTrajectory,args("trajectory"),DOXY_FN1(ReverseTrajectory))
                   .staticmethod("ReverseTrajectory")
                   .def("VerifyTrajectory",planningutils::pyVerifyTrajectory,args("parameters","trajectory","samplingstep"),DOXY_FN1(VerifyTrajectory))
@@ -1653,10 +1685,16 @@ void init_openravepy_global()
                   .staticmethod("SmoothActiveDOFTrajectory")
                   .def("SmoothAffineTrajectory",planningutils::pySmoothAffineTrajectory, SmoothAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","plannername","plannerparameters"),DOXY_FN1(SmoothAffineTrajectory)))
                   .staticmethod("SmoothAffineTrajectory")
+                  .def("SmoothTrajectory",planningutils::pySmoothTrajectory, SmoothTrajectory_overloads(args("trajectory","maxvelmult","maxaccelmult","plannername","plannerparameters"),DOXY_FN1(SmoothTrajectory)))
+                  .staticmethod("SmoothTrajectory")
                   .def("RetimeActiveDOFTrajectory",planningutils::pyRetimeActiveDOFTrajectory, RetimeActiveDOFTrajectory_overloads(args("trajectory","robot","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters"),DOXY_FN1(RetimeActiveDOFTrajectory)))
                   .staticmethod("RetimeActiveDOFTrajectory")
                   .def("RetimeAffineTrajectory",planningutils::pyRetimeAffineTrajectory, RetimeAffineTrajectory_overloads(args("trajectory","maxvelocities","maxaccelerations","hastimestamps","plannername","plannerparameters"),DOXY_FN1(RetimeAffineTrajectory)))
                   .staticmethod("RetimeAffineTrajectory")
+                  .def("RetimeTrajectory",planningutils::pyRetimeTrajectory, RetimeTrajectory_overloads(args("trajectory","hastimestamps","maxvelmult","maxaccelmult","plannername","plannerparameters"),DOXY_FN1(RetimeTrajectory)))
+                  .staticmethod("RetimeTrajectory")
+                  .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(args("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername"),DOXY_FN1(InsertWaypointWithSmoothing)))
+                  .staticmethod("InsertWaypointWithSmoothing")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
                   .def("GetDHParameters",planningutils::pyGetDHParameters,args("body"),DOXY_FN1(GetDHParameters))

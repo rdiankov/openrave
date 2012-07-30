@@ -164,7 +164,32 @@ class EnvironmentSetup(object):
         if robot.GetController() is not None and robot.GetController().GetXMLId().lower() == 'idealcontroller':
             # need to throw exceptions so test fails
             robot.GetController().SendCommand('SetThrowExceptions 1')
-            
+
+    @staticmethod
+    def CompareEnvironments(env,env2,options=CloningOptions.Bodies):
+        """compares two environments and raises exceptions if anything is different
+        """
+        if options & CloningOptions.Bodies:
+            bodies=env.GetBodies()
+            bodies2=env2.GetBodies()
+            assert(len(bodies)==len(bodies2))
+            for body in bodies:
+                body2 = env2.GetKinBody(body.GetName())
+                assert(body.GetKinematicsGeometryHash()==body2.GetKinematicsGeometryHash())
+                assert(transdist(body.GetLinkTransformations(),body2.GetLinkTransformations()) <= 10*g_epsilon)
+                assert(transdist(body.GetLinkVelocities(),body2.GetLinkVelocities()) <= 10*g_epsilon)
+                if body.GetDOF() > 0:
+                    assert(transdist(body.GetDOFValues(),body2.GetDOFValues()) <= 10*g_epsilon)
+                    assert(transdist(body.GetDOFVelocities(),body2.GetDOFVelocities()) <= 10*g_epsilon)
+                if body.IsRobot():
+                    robot=env.GetRobot(body.GetName())
+                    robot2=env2.GetRobot(body2.GetName())
+                    grabbed = robot.GetGrabbed()
+                    grabbed2 = robot2.GetGrabbed()
+                    assert( set([body.GetName() for body in grabbed]) == set([body.GetName() for body in grabbed2]) )
+                    assert( transdist(robot.GetActiveDOFIndices(),robot2.GetActiveDOFIndices()) == 0)
+                    assert( robot.GetActiveManipulator().GetName() == robot2.GetActiveManipulator().GetName())
+                    
 def generate_classes(BaseClass, namespace, data):
     """Used to generate test classes inside a namespace since nose generators do not support classes
 

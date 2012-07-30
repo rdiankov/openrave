@@ -145,7 +145,6 @@ protected:
         for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }
-        _psampler->SetSpaceDOF(_lower.size());
         _viscircular.resize(0); _viscircular.resize(GetDOF(),0);
         for(size_t i = 0; i < _probot->GetActiveDOFIndices().size(); ++i) {
             int dof = _probot->GetActiveDOFIndices().at(i);
@@ -161,6 +160,10 @@ protected:
         }
         if( _probot->GetAffineDOF() & DOF_Rotation3D) {
             _affinerot3d = _probot->GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(_probot->GetAffineDOF(),DOF_Rotation3D);
+        }
+
+        if( _lower.size() > 0 ) {
+            _psampler->SetSpaceDOF(_lower.size());
         }
     }
 

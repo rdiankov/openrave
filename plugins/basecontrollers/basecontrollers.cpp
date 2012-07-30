@@ -16,6 +16,7 @@
 #include <openrave/plugin.h>
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput);
+ControllerBasePtr CreateIdealVelocityController(EnvironmentBasePtr penv, std::istream& sinput);
 ControllerBasePtr CreateRedirectController(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -24,6 +25,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     case PT_Controller:
         if( interfacename == "idealcontroller") {
             return CreateIdealController(penv,sinput);
+        }
+        else if( interfacename == "idealvelocitycontroller") {
+            return CreateIdealVelocityController(penv,sinput);
         }
         else if( interfacename == "redirectcontroller" ) {
             return CreateRedirectController(penv,sinput);
@@ -38,6 +42,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_Controller].push_back("IdealController");
+    info.interfacenames[PT_Controller].push_back("IdealVelocityController");
     info.interfacenames[PT_Controller].push_back("RedirectController");
 }
 

@@ -87,12 +87,12 @@ class BaseManipulation:
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
-    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None,jitter=None):
+    def MoveManipulator(self,goal=None,maxiter=None,execute=None,outputtraj=None,maxtries=None,goals=None,steplength=None,outputtrajobj=None,jitter=None,releasegil=False):
         """See :ref:`module-basemanipulation-movemanipulator`
         """
         if goal is not None:
             assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
-        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter)
+        return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter,releasegil=releasegil)
     
     def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False):
         """See :ref:`module-basemanipulation-moveactivejoints`
@@ -131,7 +131,7 @@ class BaseManipulation:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
 
-    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None,goalsampleprob=None):
+    def MoveToHandPosition(self,matrices=None,affinedofs=None,maxiter=None,maxtries=None,translation=None,rotation=None,seedik=None,constraintfreedoms=None,constraintmatrix=None,constrainterrorthresh=None,execute=None,outputtraj=None,steplength=None,goalsamples=None,ikparam=None,ikparams=None,jitter=None,minimumgoalpaths=None,outputtrajobj=None,postprocessing=None,jittergoal=None, constrainttaskmatrix=None, constrainttaskpose=None,goalsampleprob=None,goalmaxsamples=None,goalmaxtries=None):
         """See :ref:`module-basemanipulation-movetohandposition`
 
         postprocessing is two parameters: (plannername,parmaeters)
@@ -183,6 +183,8 @@ class BaseManipulation:
             cmd += 'minimumgoalpaths %d '%minimumgoalpaths
         if goalsampleprob is not None:
             cmd += 'goalsampleprob %.15e '%goalsampleprob
+        if goalmaxtries is not None:
+            cmd += 'goalmaxtries %d '%goalmaxtries
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise planning_error('MoveToHandPosition')

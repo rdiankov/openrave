@@ -1444,7 +1444,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
     //cout<<"PP a: "<<pp.a<<", max vel "<<pp.MaxVelocity()<<endl;
     //cout<<"PLP a: "<<plp.a<<", vel "<<plp.v<<endl;
     a1 = Inf;
-    if(pres && FuzzyEquals(endTime,p.ttotal,EpsilonT) && Abs(p.MaxVelocity()) <= vmax) {
+    if(pres && FuzzyEquals(endTime,p.ttotal,EpsilonT) && Abs(p.MaxVelocity()) <= vmax+EpsilonV) {
         if(FuzzyEquals(p.Evaluate(endTime),x1,EpsilonX) && FuzzyEquals(p.Derivative(endTime),dx1,EpsilonV)) {
             a1 = p.a;
             //tswitch1 = tswitch2 = p.ttotal;
@@ -1462,13 +1462,13 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
             ttotal = endTime;
         }
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax && Abs(pp.a) < Abs(a1)) {
+    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && Abs(pp.a) < Abs(a1)) {
         a1 = pp.a;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
         ttotal = pp.ttotal;
     }
-    if(plpres && Abs(plp.v) <= vmax && Abs(plp.a) < Abs(a1)) {
+    if(plpres && Abs(plp.v) <= vmax+EpsilonV && Abs(plp.a) < Abs(a1)) {
         a1 = plp.a;
         v = plp.v;
         tswitch1 = plp.tswitch1;
@@ -1572,7 +1572,7 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
             }
         }
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax && pp.ttotal < ttotal) {
+    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && pp.ttotal < ttotal) {
         a1 = pp.a;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
@@ -1656,7 +1656,7 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
             }
         }
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax && pp.ttotal < ttotal) {
+    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && pp.ttotal < ttotal) {
         a1 = pp.a;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
@@ -3021,8 +3021,8 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         }
         PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i] && x0[i] <= xmax[i]);
         PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i] && x1[i] <= xmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]);
+        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
+        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     Real endTime = 0;
     ramps.resize(x0.size());
@@ -3129,10 +3129,10 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == vmax.size());
     for(size_t i=0; i<x0.size(); i++) {
-        PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i] && x0[i] <= xmax[i]);
-        PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i] && x1[i] <= xmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]);
+        PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i]-EpsilonX && x0[i] <= xmax[i]+EpsilonX);
+        PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i]-EpsilonX && x1[i] <= xmax[i]+EpsilonX);
+        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
+        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     for(size_t i=0; i<ramps.size(); i++) {
         if(vmax[i]==0) {
@@ -3162,10 +3162,10 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == vmax.size());
     for(size_t i=0; i<x0.size(); i++) {
-        PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i] && x0[i] <= xmax[i]);
-        PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i] && x1[i] <= xmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]);
-        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]);
+        PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i]-EpsilonX && x0[i] <= xmax[i]+EpsilonX);
+        PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i]-EpsilonX && x1[i] <= xmax[i]+EpsilonX);
+        PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
+        PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     for(size_t i=0; i<ramps.size(); i++) {
         if(vmax[i]==0) {

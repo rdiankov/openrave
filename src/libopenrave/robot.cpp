@@ -123,7 +123,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         rotationaxis = _probot->GetAffineRotationAxis();
     }
     if( _options & Save_ActiveManipulator ) {
-        nActiveManip = _probot->_nActiveManip;
+        _pManipActive = _probot->GetActiveManipulator();
     }
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _probot->_vGrabbedBodies;
@@ -132,37 +132,66 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _RestoreRobot();
+    _RestoreRobot(_probot);
 }
 
-void RobotBase::RobotStateSaver::Restore()
+void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)
 {
-    _RestoreRobot();
-    KinBodyStateSaver::Restore();
+    _RestoreRobot(!robot ? _probot : robot);
+    KinBodyStateSaver::Restore(!robot ? KinBodyPtr(_probot) : KinBodyPtr(robot));
 }
 
-void RobotBase::RobotStateSaver::_RestoreRobot()
+void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
-    if( _probot->GetEnvironmentId() == 0 ) {
+    if( probot->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
         return;
     }
     if( _options & Save_ActiveDOF ) {
-        _probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
+        probot->SetActiveDOFs(vactivedofs, affinedofs, rotationaxis);
     }
     if( _options & Save_ActiveManipulator ) {
-        _probot->_nActiveManip = nActiveManip;
+        if( probot == _probot ) {
+            probot->SetActiveManipulator(_pManipActive);
+        }
+        else {
+            if( !_pManipActive ) {
+                probot->SetActiveManipulator(ManipulatorPtr());
+            }
+            else {
+                probot->SetActiveManipulator(_pManipActive->GetName());
+            }
+        }
     }
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
-        _probot->ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(_probot->_vGrabbedBodies.size(),==,0);
+        probot->ReleaseAllGrabbed();
+        OPENRAVE_ASSERT_OP(probot->_vGrabbedBodies.size(),==,0);
         FOREACH(itgrabbed, _vGrabbedBodies) {
             GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
             KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
             if( !!pbody ) {
-                _probot->_AttachBody(pbody);
-                _probot->_vGrabbedBodies.push_back(*itgrabbed);
+                if( probot->GetEnv() == _probot->GetEnv() ) {
+                    probot->_AttachBody(pbody);
+                    probot->_vGrabbedBodies.push_back(*itgrabbed);
+                }
+                else {
+                    // pgrabbed points to a different environment, so have to re-initialize
+                    KinBodyPtr pnewbody = probot->GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId());
+                    if( pbody->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
+                        RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbody->GetName()));
+                    }
+                    else {
+                        GrabbedPtr pnewgrabbed(new Grabbed(pnewbody,probot->GetLinks().at(KinBody::LinkPtr(pgrabbed->_plinkrobot)->GetIndex())));
+                        pnewgrabbed->_troot = pgrabbed->_troot;
+                        pnewgrabbed->_listNonCollidingLinks.clear();
+                        FOREACHC(itlinkref, pgrabbed->_listNonCollidingLinks) {
+                            pnewgrabbed->_listNonCollidingLinks.push_back(probot->GetLinks().at((*itlinkref)->GetIndex()));
+                        }
+                        probot->_AttachBody(pnewbody);
+                        probot->_vGrabbedBodies.push_back(pnewgrabbed);
+                    }
+                }
             }
         }
     }
@@ -173,9 +202,6 @@ RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
     _nAffineDOFs = 0;
     _nActiveDOF = -1;
     vActvAffineRotationAxis = Vector(0,0,1);
-
-    _nActiveManip = 0;
-    _vecManipulators.reserve(16); // make sure to reseve enough, otherwise pIkSolver pointer might get messed up when resizing
 
     //set limits for the affine DOFs
     _vTranslationLowerLimits = Vector(-100,-100,-100);
@@ -259,6 +285,27 @@ void RobotBase::SetTransform(const Transform& trans)
     _UpdateAttachedSensors();
 }
 
+bool RobotBase::SetVelocity(const Vector& linearvel, const Vector& angularvel)
+{
+    if( !KinBody::SetVelocity(linearvel,angularvel) ) {
+        return false;
+    }
+    _UpdateGrabbedBodies();
+    return true;
+}
+
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits)
+{
+    KinBody::SetDOFVelocities(dofvelocities,linearvel,angularvel,checklimits);
+    _UpdateGrabbedBodies();
+    // do sensors need to have their velocities updated?
+}
+
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits)
+{
+    KinBody::SetDOFVelocities(dofvelocities,checklimits); // RobotBase::SetDOFVelocities should be called internally
+}
+
 void RobotBase::_UpdateGrabbedBodies()
 {
     vector<UserDataPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
@@ -266,7 +313,12 @@ void RobotBase::_UpdateGrabbedBodies()
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
         KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
         if( !!pbody ) {
-            pbody->SetTransform(pgrabbed->_plinkrobot->GetTransform() * pgrabbed->_troot);
+            Transform t = pgrabbed->_plinkrobot->GetTransform();
+            pbody->SetTransform(t * pgrabbed->_troot);
+            // set the correct velocity
+            std::pair<Vector, Vector> velocity = pgrabbed->_plinkrobot->GetVelocity();
+            velocity.first += velocity.second.cross(t.rotate(pgrabbed->_troot.trans));
+            pbody->SetVelocity(velocity.first, velocity.second);
             ++itgrabbed;
         }
         else {
@@ -511,7 +563,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
 void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits)
 {
     if(_nActiveDOF < 0) {
-        SetDOFVelocities(velocities);
+        SetDOFVelocities(velocities,true);
         return;
     }
 
@@ -1272,8 +1324,14 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     }
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,plink));
-    pgrabbed->_troot = plink->GetTransform().inverse() * pbody->GetTransform();
+    Transform t = plink->GetTransform();
+    Transform tbody = pbody->GetTransform();
+    pgrabbed->_troot = t.inverse() * tbody;
     pgrabbed->_ProcessCollidingLinks();
+    // set velocity
+    std::pair<Vector, Vector> velocity = plink->GetVelocity();
+    velocity.first += velocity.second.cross(tbody.trans - t.trans);
+    pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
     return true;
@@ -1289,8 +1347,14 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     }
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
-    pgrabbed->_troot = pRobotLinkToGrabWith->GetTransform().inverse() * pbody->GetTransform();
+    Transform t = pRobotLinkToGrabWith->GetTransform();
+    Transform tbody = pbody->GetTransform();
+    pgrabbed->_troot = t.inverse() * tbody;
     pgrabbed->_ProcessCollidingLinks();
+    // set velocity
+    std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
+    velocity.first += velocity.second.cross(tbody.trans - t.trans);
+    pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
     return true;
@@ -1375,38 +1439,86 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 
 void RobotBase::SetActiveManipulator(int index)
 {
-    _nActiveManip = index;
+    _pManipActive = _vecManipulators.at(index);
+}
+
+void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
+{
+    if( !pmanip ) {
+        _pManipActive.reset();
+    }
+    else {
+        FOREACH(itmanip,_vecManipulators) {
+            if( *itmanip == pmanip ) {
+                _pManipActive = *itmanip;
+                return;
+            }
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", pmanip->GetName(), ORE_InvalidArguments);
+    }
 }
 
 void RobotBase::SetActiveManipulator(const std::string& manipname)
 {
     if( manipname.size() > 0 ) {
-        for(size_t i = 0; i < _vecManipulators.size(); ++i ) {
-            if( manipname == _vecManipulators[i]->GetName() ) {
-                _nActiveManip = i;
+        FOREACH(itmanip,_vecManipulators) {
+            if( (*itmanip)->GetName() == manipname ) {
+                _pManipActive = *itmanip;
                 return;
             }
         }
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
     }
-
-    _nActiveManip = -1;
+    _pManipActive.reset();
 }
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()
 {
-    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
-        throw RobotBase::ManipulatorPtr();
-    }
-    return _vecManipulators.at(_nActiveManip);
+    return _pManipActive;
 }
 
 RobotBase::ManipulatorConstPtr RobotBase::GetActiveManipulator() const
 {
-    if((_nActiveManip < 0)&&(_nActiveManip >= (int)_vecManipulators.size())) {
-        return RobotBase::ManipulatorPtr();
+    return _pManipActive;
+}
+
+int RobotBase::GetActiveManipulatorIndex() const
+{
+    for(size_t i = 0; i < _vecManipulators.size(); ++i) {
+        if( _pManipActive == _vecManipulators[i] ) {
+            return (int)i;
+        }
     }
-    return _vecManipulators.at(_nActiveManip);
+    return -1;
+}
+
+RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo)
+{
+    OPENRAVE_ASSERT_OP(manipinfo._name.size(),>,0);
+    FOREACH(itmanip,_vecManipulators) {
+        if( (*itmanip)->GetName() == manipinfo._name ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);
+        }
+    }
+    ManipulatorPtr newmanip(new Manipulator(shared_robot(),manipinfo));
+    newmanip->_ComputeInternalInformation();
+    _vecManipulators.push_back(newmanip);
+    __hashrobotstructure.resize(0);
+    return newmanip;
+}
+
+void RobotBase::RemoveManipulator(ManipulatorPtr manip)
+{
+    if( _pManipActive == manip ) {
+        _pManipActive.reset();
+    }
+    FOREACH(itmanip,_vecManipulators) {
+        if( *itmanip == manip ) {
+            _vecManipulators.erase(itmanip);
+            __hashrobotstructure.resize(0);
+            return;
+        }
+    }
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
@@ -1578,93 +1690,13 @@ void RobotBase::_ComputeInternalInformation()
 
     int manipindex=0;
     FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->GetName().size() == 0 ) {
+        if( (*itmanip)->_info._name.size() == 0 ) {
             stringstream ss;
             ss << "manip" << manipindex;
             RAVELOG_WARN(str(boost::format("robot %s has a manipulator with no name, setting to %s\n")%GetName()%ss.str()));
-            (*itmanip)->_name = ss.str();
+            (*itmanip)->_info._name = ss.str();
         }
-        else if( !utils::IsValidName((*itmanip)->GetName()) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", (*itmanip)->GetName(), ORE_Failed);
-        }
-        if( !!(*itmanip)->GetBase() && !!(*itmanip)->GetEndEffector() ) {
-            vector<JointPtr> vjoints;
-            std::vector<int> vmimicdofs;
-            (*itmanip)->__varmdofindices.resize(0);
-            if( GetChain((*itmanip)->GetBase()->GetIndex(),(*itmanip)->GetEndEffector()->GetIndex(), vjoints) ) {
-                FOREACH(it,vjoints) {
-                    if( (*it)->IsStatic() ) {
-                        // ignore
-                    }
-                    else if( (*it)->IsMimic() ) {
-                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                            if( (*it)->IsMimic(i) ) {
-                                (*it)->GetMimicDOFIndices(vmimicdofs,i);
-                                FOREACHC(itmimicdof,vmimicdofs) {
-                                    if( find((*itmanip)->__varmdofindices.begin(),(*itmanip)->__varmdofindices.end(),*itmimicdof) == (*itmanip)->__varmdofindices.end() ) {
-                                        (*itmanip)->__varmdofindices.push_back(*itmimicdof);
-                                    }
-                                }
-                            }
-                            else if( (*it)->GetDOFIndex() >= 0 ) {
-                                (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
-                            }
-                        }
-                    }
-                    else if( (*it)->GetDOFIndex() < 0) {
-                        RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));
-                    }
-                    else { // ignore static joints
-                        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                            (*itmanip)->__varmdofindices.push_back((*it)->GetDOFIndex()+i);
-                        }
-                    }
-                }
-                // initialize the arm configuration spec
-                (*itmanip)->__armspec = GetConfigurationSpecificationIndices((*itmanip)->__varmdofindices);
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%(*itmanip)->GetName()%(*itmanip)->GetBase()->GetName()%(*itmanip)->GetEndEffector()->GetName()));
-            }
-        }
-        else {
-            RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links\n")%(*itmanip)->GetName()));
-        }
-        // init the gripper dof indices
-        (*itmanip)->__vgripperdofindices.resize(0);
-        std::vector<dReal> vClosingDirection;
-        size_t iclosingdirection = 0;
-        FOREACHC(itjointname,(*itmanip)->_vgripperjointnames) {
-            JointPtr pjoint = GetJoint(*itjointname);
-            if( !pjoint ) {
-                RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%(*itmanip)->GetName()));
-                iclosingdirection++;
-            }
-            else {
-                if( pjoint->GetDOFIndex() >= 0 ) {
-                    for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                        if( find((*itmanip)->__varmdofindices.begin(), (*itmanip)->__varmdofindices.end(), pjoint->GetDOFIndex()+i) != (*itmanip)->__varmdofindices.end() ) {
-                            RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%(*itmanip)->GetName()%(pjoint->GetDOFIndex()+i)));
-                        }
-                        else {
-                            (*itmanip)->__vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
-                            if( iclosingdirection < (*itmanip)->_vClosingDirection.size() ) {
-                                vClosingDirection.push_back((*itmanip)->_vClosingDirection[iclosingdirection++]);
-                            }
-                            else {
-                                vClosingDirection.push_back(0);
-                                RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%(*itmanip)->GetName()));
-                            }
-                        }
-                    }
-                }
-                else {
-                    ++iclosingdirection;
-                    RAVELOG_WARN(str(boost::format("manipulator %s gripper joint %s is not active, so has no dof index. ignoring.")%(*itmanip)->GetName()%*itjointname));
-                }
-            }
-        }
-        (*itmanip)->_vClosingDirection.swap(vClosingDirection);
+        (*itmanip)->_ComputeInternalInformation();
         vector<ManipulatorPtr>::iterator itmanip2 = itmanip; ++itmanip2;
         for(; itmanip2 != _vecManipulators.end(); ++itmanip2) {
             if( (*itmanip)->GetName() == (*itmanip2)->GetName() ) {
@@ -1672,6 +1704,13 @@ void RobotBase::_ComputeInternalInformation()
             }
         }
         manipindex++;
+    }
+    // set active manipulator to first manipulator
+    if( _vecManipulators.size() > 0 ) {
+        _pManipActive = _vecManipulators.at(0);
+    }
+    else {
+        _pManipActive.reset();
     }
 
     int sensorindex=0;
@@ -1694,26 +1733,11 @@ void RobotBase::_ComputeInternalInformation()
 
     {
         __hashrobotstructure.resize(0);
-        FOREACH(itmanip,_vecManipulators) {
-            (*itmanip)->__hashstructure.resize(0);
-            (*itmanip)->__hashkinematicsstructure.resize(0);
-        }
         FOREACH(itsensor,_vecSensors) {
             (*itsensor)->__hashstructure.resize(0);
         }
     }
-    // finally initialize the ik solvers (might depend on the hashes)
-    FOREACH(itmanip, _vecManipulators) {
-        if( !!(*itmanip)->_pIkSolver ) {
-            try {
-                (*itmanip)->_pIkSolver->Init(*itmanip);
-            }
-            catch(const std::exception& e) {
-                RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
-                (*itmanip)->SetIkSolver(IkSolverBasePtr());
-            }
-        }
-    }
+
     if( ComputeAABB().extents.lengthsqr3() > 900.0f ) {
         RAVELOG_WARN(str(boost::format("Robot %s span is greater than 30 meaning that it is most likely defined in a unit other than meters. It is highly encouraged to define all OpenRAVE robots in meters since many metrics, database models, and solvers have been specifically optimized for this unit\n")%GetName()));
     }
@@ -1805,10 +1829,12 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
+    _pManipActive.reset();
     FOREACHC(itmanip, r->_vecManipulators) {
-        _vecManipulators.push_back(ManipulatorPtr(new Manipulator(shared_robot(),**itmanip)));
-        if( !!_vecManipulators.back()->GetIkSolver() ) {
-            _vecManipulators.back()->SetIkSolver(_vecManipulators.back()->GetIkSolver());
+        ManipulatorPtr pmanip(new Manipulator(shared_robot(),*itmanip));
+        _vecManipulators.push_back(pmanip);
+        if( !!r->GetActiveManipulator() && r->GetActiveManipulator()->GetName() == (*itmanip)->GetName() ) {
+            _pManipActive = pmanip;
         }
     }
 
@@ -1821,7 +1847,6 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vActiveDOFIndices = r->_vActiveDOFIndices;
     _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
-    _nActiveManip = r->_nActiveManip;
     _nActiveDOF = r->_nActiveDOF;
     _nAffineDOFs = r->_nAffineDOFs;
 

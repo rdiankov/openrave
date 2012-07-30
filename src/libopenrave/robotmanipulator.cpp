@@ -18,7 +18,7 @@
 
 namespace OpenRAVE {
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot) : _vdirection(0,0,1), _probot(probot) {
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
 }
@@ -26,34 +26,34 @@ RobotBase::Manipulator::~Manipulator() {
 RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
 {
     *this = r;
-    _pIkSolver.reset();
-    if( _strIkSolver.size() > 0 ) {
-        _pIkSolver = RaveCreateIkSolver(GetRobot()->GetEnv(), _strIkSolver);
+    __pIkSolver.reset();
+    if( _info._sIkSolverXMLId.size() > 0 ) {
+        __pIkSolver = RaveCreateIkSolver(GetRobot()->GetEnv(), _info._sIkSolverXMLId);
     }
 }
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::Manipulator& r)
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<RobotBase::Manipulator const> r)
 {
-    *this = r;
-    _probot = probot;
-    if( !!r.GetBase() ) {
-        _pBase = probot->GetLinks().at(r.GetBase()->GetIndex());
+    *this = *r.get();
+    __probot = probot;
+    if( !!r->GetBase() ) {
+        __pBase = probot->GetLinks().at(r->GetBase()->GetIndex());
     }
-    if( !!r.GetEndEffector() ) {
-        _pEndEffector = probot->GetLinks().at(r.GetEndEffector()->GetIndex());
+    if( !!r->GetEndEffector() ) {
+        __pEffector = probot->GetLinks().at(r->GetEndEffector()->GetIndex());
     }
-    _pIkSolver.reset();
-    if( _strIkSolver.size() > 0 ) {
-        _pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _strIkSolver);
-        // cannot call _pIkSolver->Init since this is the constructor...
-    }
+    __pIkSolver.reset(); // will be initialized when needed
+//    if( _info._sIkSolverXMLId.size() > 0 ) {
+//        //__pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
+//        // cannot call __pIkSolver->Init since this is the constructor...
+//    }
 }
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
-    _strIkSolver.resize(0);
-    _pIkSolver.reset();
-    _tLocalTool = t;
+    _info._sIkSolverXMLId.resize(0);
+    __pIkSolver.reset();
+    _info._tLocalTool = t;
     GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
@@ -64,22 +64,54 @@ void RobotBase::Manipulator::SetName(const std::string& name)
     RobotBasePtr probot=GetRobot();
     FOREACHC(itmanip,probot->GetManipulators()) {
         if( *itmanip != shared_from_this() && name == (*itmanip)->GetName() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name change '%s'->'%s' is colliding with other manipulator", _name%name, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name change '%s'->'%s' is colliding with other manipulator", _info._name%name, ORE_InvalidArguments);
         }
     }
-    _name=name;
+    _info._name=name;
     probot->_ParametersChanged(Prop_RobotManipulatorName);
 }
 
 Transform RobotBase::Manipulator::GetTransform() const
 {
-    return _pEndEffector->GetTransform() * _tLocalTool;
+    return __pEffector->GetTransform() * _info._tLocalTool;
+}
+
+std::pair<Vector,Vector> RobotBase::Manipulator::GetVelocity() const
+{
+    Vector vdifference = __pEffector->GetTransform().rotate(_info._tLocalTool.trans);
+    std::pair<Vector,Vector> velocity = __pEffector->GetVelocity();
+    velocity.first += velocity.second.cross(vdifference);
+    return velocity;
+}
+
+IkSolverBasePtr RobotBase::Manipulator::GetIkSolver() const
+{
+    if( !!__pIkSolver || _info._sIkSolverXMLId.size() == 0 ) {
+        return __pIkSolver;
+    }
+
+    // initialize ik solver
+    try {
+        if( _info._sIkSolverXMLId.size() > 0 ) {
+            RobotBasePtr probot(__probot);
+            __pIkSolver = RaveCreateIkSolver(probot->GetEnv(), _info._sIkSolverXMLId);
+            if( !!__pIkSolver ) {
+                // note that ik solvers might look at the manipulator hashes for verification
+                __pIkSolver->Init(shared_from_this());
+            }
+        }
+    }
+    catch(const std::exception& e) {
+        RAVELOG_WARN(str(boost::format("failed to init ik solver: %s\n")%e.what()));
+        __pIkSolver.reset();
+    }
+    return __pIkSolver;
 }
 
 bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 {
     if( !iksolver ) {
-        _pIkSolver.reset();
+        __pIkSolver.reset();
         return true;
     }
 
@@ -87,8 +119,8 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
         RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
     }
     if( iksolver->Init(shared_from_this()) ) {
-        _pIkSolver = iksolver;
-        _strIkSolver = iksolver->GetXMLId();
+        __pIkSolver = iksolver;
+        _info._sIkSolverXMLId = iksolver->GetXMLId();
         GetRobot()->_ParametersChanged(Prop_RobotManipulatorSolver);
         return true;
     }
@@ -103,23 +135,24 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vect
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, vector<dReal>& solution, int filteroptions) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
     RobotBasePtr probot = GetRobot();
-    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     solution.resize(__varmdofindices.size());
     for(size_t i = 0; i < __varmdofindices.size(); ++i) {
         JointConstPtr pjoint = probot->GetJointFromDOFIndex(__varmdofindices[i]);
         solution[i] = pjoint->GetValue(__varmdofindices[i]-pjoint->GetDOFIndex());
     }
     IkParameterization localgoal;
-    if( !!_pBase ) {
-        localgoal = _pBase->GetTransform().inverse()*goal;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*goal;
     }
     else {
         localgoal=goal;
     }
     boost::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
@@ -129,16 +162,17 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, std
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
-    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
-    if( !!_pBase ) {
-        localgoal = _pBase->GetTransform().inverse()*goal;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*goal;
     }
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? _pIkSolver->SolveAll(localgoal,filteroptions,solutions) : _pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,solutions) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,solutions);
 }
 
 
@@ -149,22 +183,23 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int 
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
     RobotBasePtr probot = GetRobot();
-    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     vector<dReal> solution(__varmdofindices.size());
     for(size_t i = 0; i < __varmdofindices.size(); ++i) {
         JointConstPtr pjoint = probot->GetJointFromDOFIndex(__varmdofindices[i]);
         solution[i] = pjoint->GetValue(__varmdofindices[i]-pjoint->GetDOFIndex());
     }
     IkParameterization localgoal;
-    if( !!_pBase ) {
-        localgoal = _pBase->GetTransform().inverse()*goal;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*goal;
     }
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? _pIkSolver->Solve(localgoal, solution, filteroptions, ikreturn) : _pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, ikreturn);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, ikreturn) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, ikreturn);
 }
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
@@ -174,16 +209,17 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int
 
 bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
 {
-    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(_probot)->GetName()%GetName(),ORE_Failed);
-    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    IkSolverBasePtr pIkSolver = GetIkSolver();
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
-    if( !!_pBase ) {
-        localgoal = _pBase->GetTransform().inverse()*goal;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*goal;
     }
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? _pIkSolver->SolveAll(localgoal,filteroptions,vikreturns) : _pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,vikreturns);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,vikreturns) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,vikreturns);
 }
 
 IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizationType iktype, bool inworld) const
@@ -197,19 +233,19 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
     case IKP_Transform6D: ikp.SetTransform6D(t); break;
     case IKP_Rotation3D: ikp.SetRotation3D(t.rot); break;
     case IKP_Translation3D: ikp.SetTranslation3D(t.trans); break;
-    case IKP_Direction3D: ikp.SetDirection3D(t.rotate(_vdirection)); break;
+    case IKP_Direction3D: ikp.SetDirection3D(t.rotate(_info._vdirection)); break;
     case IKP_Ray4D: {
-        ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
+        ikp.SetRay4D(RAY(t.trans,t.rotate(_info._vdirection)));
         break;
     }
     case IKP_Lookat3D: {
         RAVELOG_WARN("RobotBase::Manipulator::GetIkParameterization: Lookat3D type setting goal a distance of 1 from the origin.\n");
-        Vector vdir = t.rotate(_vdirection);
+        Vector vdir = t.rotate(_info._vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir,vdir));
         break;
     }
     case IKP_TranslationDirection5D: {
-        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
+        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_info._vdirection)));
         break;
     }
     case IKP_TranslationXY2D: {
@@ -227,32 +263,32 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
         break;
     }
@@ -273,19 +309,19 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     case IKP_Transform6D: ikp.SetTransform6D(t); break;
     case IKP_Rotation3D: ikp.SetRotation3D(t.rot); break;
     case IKP_Translation3D: ikp.SetTranslation3D(t.trans); break;
-    case IKP_Direction3D: ikp.SetDirection3D(t.rotate(_vdirection)); break;
+    case IKP_Direction3D: ikp.SetDirection3D(t.rotate(_info._vdirection)); break;
     case IKP_Ray4D: {
-        ikp.SetRay4D(RAY(t.trans,t.rotate(_vdirection)));
+        ikp.SetRay4D(RAY(t.trans,t.rotate(_info._vdirection)));
         break;
     }
     case IKP_Lookat3D: {
         // find the closest point to ikparam.GetLookat3D() to the current ray
-        Vector vdir = t.rotate(_vdirection);
+        Vector vdir = t.rotate(_info._vdirection);
         ikp.SetLookat3D(RAY(t.trans + vdir*vdir.dot(ikparam.GetLookat3D()-t.trans),vdir));
         break;
     }
     case IKP_TranslationDirection5D: {
-        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_vdirection)));
+        ikp.SetTranslationDirection5D(RAY(t.trans,t.rotate(_info._vdirection)));
         break;
     }
     case IKP_TranslationXY2D: {
@@ -303,32 +339,32 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         break;
     }
     case IKP_TranslationXAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationXAxisAngle4D(t.trans,RaveAcos(vglobaldirection.x));
         break;
     }
     case IKP_TranslationYAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationYAxisAngle4D(t.trans,RaveAcos(vglobaldirection.y));
         break;
     }
     case IKP_TranslationZAxisAngle4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationZAxisAngle4D(t.trans,RaveAcos(vglobaldirection.z));
         break;
     }
     case IKP_TranslationXAxisAngleZNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationXAxisAngleZNorm4D(t.trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
         break;
     }
     case IKP_TranslationYAxisAngleXNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationYAxisAngleXNorm4D(t.trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
         break;
     }
     case IKP_TranslationZAxisAngleYNorm4D: {
-        Vector vglobaldirection = t.rotate(_vdirection);
+        Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
         break;
     }
@@ -340,9 +376,9 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
 
 void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     vjoints.resize(0);
-    int iattlink = _pEndEffector->GetIndex();
+    int iattlink = __pEffector->GetIndex();
     vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -373,8 +409,8 @@ void RobotBase::Manipulator::GetChildJoints(std::vector<JointPtr>& vjoints) cons
 void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) const
 {
     vdofindices.resize(0);
-    RobotBasePtr probot(_probot);
-    int iattlink = _pEndEffector->GetIndex();
+    RobotBasePtr probot(__probot);
+    int iattlink = __pEffector->GetIndex();
     vector<uint8_t> vhasjoint(probot->GetJoints().size(),false);
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
@@ -407,11 +443,11 @@ void RobotBase::Manipulator::GetChildDOFIndices(std::vector<int>& vdofindices) c
 
 void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     // get all child links of the manipualtor
     vlinks.resize(0);
-    _pEndEffector->GetRigidlyAttachedLinks(vlinks);
-    int iattlink = _pEndEffector->GetIndex();
+    __pEffector->GetRigidlyAttachedLinks(vlinks);
+    int iattlink = __pEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink ) {
@@ -439,13 +475,13 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
 
 bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
 {
-    if( _pEndEffector->IsRigidlyAttached(plink) ) {
+    if( __pEffector->IsRigidlyAttached(plink) ) {
         return true;
     }
 
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     // get all child links of the manipualtor
-    int iattlink = _pEndEffector->GetIndex();
+    int iattlink = __pEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         if( ilink == iattlink ) {
@@ -473,7 +509,7 @@ bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
 
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
         FOREACHC(itindex,__varmdofindices) {
@@ -496,13 +532,13 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     Transform toldEE = GetTransform();
     Transform tdelta = tEE*toldEE.inverse();
     // get all child links of the manipualtor
-    int iattlink = _pEndEffector->GetIndex();
+    int iattlink = __pEffector->GetIndex();
     vector<LinkPtr> vattachedlinks;
-    _pEndEffector->GetRigidlyAttachedLinks(vattachedlinks);
+    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
             return true;
@@ -542,13 +578,14 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         return CheckEndEffectorCollision(ikparam.GetTransform6D());
     }
     RobotBasePtr probot = GetRobot();
+    IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_OP_FORMAT((int)GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
-    OPENRAVE_ASSERT_FORMAT(!!_pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
-    OPENRAVE_ASSERT_FORMAT(_pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%_pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
-    BOOST_ASSERT(_pIkSolver->GetManipulator() == shared_from_this() );
+    OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
+    BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
     IkParameterization localgoal;
-    if( !!_pBase ) {
-        localgoal = _pBase->GetTransform().inverse()*ikparam;
+    if( !!__pBase ) {
+        localgoal = __pBase->GetTransform().inverse()*ikparam;
     }
     else {
         localgoal=ikparam;
@@ -556,7 +593,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     vector<dReal> vsolution;
     boost::shared_ptr< vector<dReal> > psolution(&vsolution, utils::null_deleter());
     // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-    if( !_pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
+    if( !pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
     }
     RobotStateSaver saver(probot);
@@ -567,7 +604,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 
 bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
 
@@ -631,13 +668,13 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
 
 bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
     if( !!plink ) {
-        if((plink == _pEndEffector)||(plink == _pBase)) {
+        if((plink == __pEffector)||(plink == __pBase)) {
             return true;
         }
-        int iattlink = _pEndEffector->GetIndex();
+        int iattlink = __pEffector->GetIndex();
         FOREACHC(itlink, probot->GetLinks()) {
             int ilink = (*itlink)->GetIndex();
             if( ilink == iattlink )
@@ -660,8 +697,8 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
 
 void RobotBase::Manipulator::CalculateJacobian(std::vector<dReal>& jacobian) const
 {
-    RobotBasePtr probot(_probot);
-    probot->ComputeJacobianTranslation(_pEndEffector->GetIndex(), _pEndEffector->GetTransform() * _tLocalTool.trans, jacobian, __varmdofindices);
+    RobotBasePtr probot(__probot);
+    probot->ComputeJacobianTranslation(__pEffector->GetIndex(), __pEffector->GetTransform() * _info._tLocalTool.trans, jacobian, __varmdofindices);
 }
 
 void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjacobian) const
@@ -670,9 +707,9 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
     if( __varmdofindices.size() == 0 ) {
         return;
     }
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     std::vector<dReal> vjacobian;
-    probot->ComputeJacobianTranslation(_pEndEffector->GetIndex(), _pEndEffector->GetTransform() * _tLocalTool.trans, vjacobian, __varmdofindices);
+    probot->ComputeJacobianTranslation(__pEffector->GetIndex(), __pEffector->GetTransform() * _info._tLocalTool.trans, vjacobian, __varmdofindices);
     OPENRAVE_ASSERT_OP(vjacobian.size(),==,3*__varmdofindices.size());
     vector<dReal>::const_iterator itsrc = vjacobian.begin();
     FOREACH(itdst,mjacobian) {
@@ -683,24 +720,24 @@ void RobotBase::Manipulator::CalculateJacobian(boost::multi_array<dReal,2>& mjac
 
 void RobotBase::Manipulator::CalculateRotationJacobian(std::vector<dReal>& jacobian) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),jacobian);
+    probot->CalculateActiveRotationJacobian(__pEffector->GetIndex(),quatMultiply(__pEffector->GetTransform().rot, _info._tLocalTool.rot),jacobian);
 }
 
 void RobotBase::Manipulator::CalculateRotationJacobian(boost::multi_array<dReal,2>& jacobian) const
 {
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     RobotBase::RobotStateSaver saver(probot,RobotBase::Save_ActiveDOF);
     probot->SetActiveDOFs(__varmdofindices);
-    probot->CalculateActiveRotationJacobian(_pEndEffector->GetIndex(),quatMultiply(_pEndEffector->GetTransform().rot, _tLocalTool.rot),jacobian);
+    probot->CalculateActiveRotationJacobian(__pEffector->GetIndex(),quatMultiply(__pEffector->GetTransform().rot, _info._tLocalTool.rot),jacobian);
 }
 
 void RobotBase::Manipulator::CalculateAngularVelocityJacobian(std::vector<dReal>& jacobian) const
 {
-    RobotBasePtr probot(_probot);
-    probot->ComputeJacobianAxisAngle(_pEndEffector->GetIndex(), jacobian, __varmdofindices);
+    RobotBasePtr probot(__probot);
+    probot->ComputeJacobianAxisAngle(__pEffector->GetIndex(), jacobian, __varmdofindices);
 }
 
 void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array<dReal,2>& mjacobian) const
@@ -709,9 +746,9 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
     if( __varmdofindices.size() == 0 ) {
         return;
     }
-    RobotBasePtr probot(_probot);
+    RobotBasePtr probot(__probot);
     std::vector<dReal> vjacobian;
-    probot->ComputeJacobianAxisAngle(_pEndEffector->GetIndex(), vjacobian, __varmdofindices);
+    probot->ComputeJacobianAxisAngle(__pEffector->GetIndex(), vjacobian, __varmdofindices);
     OPENRAVE_ASSERT_OP(vjacobian.size(),==,3*__varmdofindices.size());
     vector<dReal>::const_iterator itsrc = vjacobian.begin();
     FOREACH(itdst,mjacobian) {
@@ -723,60 +760,65 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
 void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
 {
     if( options & SO_RobotManipulators ) {
-        o << (!_pBase ? -1 : _pBase->GetIndex()) << " " << (!_pEndEffector ? -1 : _pEndEffector->GetIndex()) << " ";
+        o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
         // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
-        o << _vgripperjointnames.size() << " ";
-        FOREACHC(it,_vgripperjointnames) {
+        o << _info._vGripperJointNames.size() << " ";
+        FOREACHC(it,_info._vGripperJointNames) {
             o << *it << " ";
         }
-        FOREACHC(it,_vClosingDirection) {
+        FOREACHC(it,_info._vClosingDirection) {
             SerializeRound(o,*it);
         }
-        SerializeRound(o,_tLocalTool);
+        SerializeRound(o,_info._tLocalTool);
     }
     if( options & SO_Kinematics ) {
-        RobotBasePtr probot(_probot);
-        KinBody::KinBodyStateSaver saver(probot,Save_LinkTransformation);
-        vector<dReal> vzeros(probot->GetDOF(),0);
-        probot->SetDOFValues(vzeros,Transform(),true);
-        Transform tbaseinv;
-        if( !!_pBase ) {
-            tbaseinv = _pBase->GetTransform().inverse();
-        }
-        if( !_pEndEffector ) {
-            SerializeRound(o,tbaseinv * _tLocalTool);
-        }
-        else {
-            SerializeRound(o,tbaseinv * GetTransform());
-        }
-        o << __varmdofindices.size() << " ";
-        FOREACHC(it,__varmdofindices) {
-            JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
-            o << pjoint->GetType() << " ";
-            SerializeRound3(o,tbaseinv*pjoint->GetAnchor());
-            SerializeRound3(o,tbaseinv.rotate(pjoint->GetAxis(*it-pjoint->GetDOFIndex())));
-        }
-        // the arm might be dependent on mimic joints, so recompute the chain and output the equations
+        RobotBasePtr probot(__probot);
+        Transform tcur;
         std::vector<JointPtr> vjoints;
-        if( probot->GetChain(GetBase()->GetIndex(),GetEndEffector()->GetIndex(), vjoints) ) {
+        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+            // due to back compat issues, have to compute the end effector transform first
+            FOREACH(itjoint, vjoints) {
+                tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+            }
+            tcur = tcur*_info._tLocalTool;
+            SerializeRound(o,tcur);
+            o << __varmdofindices.size() << " ";
+
+            tcur = Transform();
             int index = 0;
-            FOREACH(it,vjoints) {
-                if( !(*it)->IsStatic() && (*it)->IsMimic() ) {
-                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        if( (*it)->IsMimic(i) ) {
-                            o << "mimic " << index << " ";
-                            for(int ieq = 0; ieq < 3; ++ieq) {
-                                o << (*it)->GetMimicEquation(i,ieq) << " ";
+            FOREACH(itjoint, vjoints) {
+                if( !(*itjoint)->IsStatic() ) {
+                    o << (*itjoint)->GetType() << " ";
+                }
+
+                if( (*itjoint)->GetDOFIndex() >= 0 && find(__varmdofindices.begin(),__varmdofindices.end(),(*itjoint)->GetDOFIndex()) != __varmdofindices.end() ) {
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform();
+                    for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                        SerializeRound3(o,tcur.trans);
+                        SerializeRound3(o,tcur.rotate((*itjoint)->GetInternalHierarchyAxis(idof)));
+                    }
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyRightTransform();
+                }
+                else {
+                    // not sure if this is correct for a mimic joint...
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+                    if( (*itjoint)->IsMimic() ) {
+                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                            if( (*itjoint)->IsMimic(idof) ) {
+                                o << "mimic " << index << " ";
+                                for(int ieq = 0; ieq < 3; ++ieq) {
+                                    o << (*itjoint)->GetMimicEquation(idof,ieq) << " ";
+                                }
                             }
                         }
                     }
                 }
-                ++index;
+                index += 1;
             }
         }
     }
     if( options & (SO_Kinematics|SO_RobotManipulators) ) {
-        SerializeRound3(o,_vdirection);
+        SerializeRound3(o,_info._vdirection);
     }
 }
 
@@ -812,6 +854,99 @@ const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
         __hashkinematicsstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashkinematicsstructure;
+}
+
+void RobotBase::Manipulator::_ComputeInternalInformation()
+{
+    if( !utils::IsValidName(_info._name) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", GetName(), ORE_Failed);
+    }
+    RobotBasePtr probot(__probot);
+    __pBase = probot->GetLink(_info._sBaseLinkName);
+    __pEffector = probot->GetLink(_info._sEffectorLinkName);
+    __varmdofindices.resize(0);
+    __vgripperdofindices.resize(0);
+    __pIkSolver.reset();
+    __hashstructure.resize(0);
+    __hashkinematicsstructure.resize(0);
+    if( !__pBase || !__pEffector ) {
+        RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links %s, %s\n")%GetName()%_info._sBaseLinkName%_info._sEffectorLinkName));
+        __armspec = ConfigurationSpecification();
+    }
+    else {
+        vector<JointPtr> vjoints;
+        std::vector<int> vmimicdofs;
+        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+            FOREACH(it,vjoints) {
+                if( (*it)->IsStatic() ) {
+                    // ignore
+                }
+                else if( (*it)->IsMimic() ) {
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        if( (*it)->IsMimic(i) ) {
+                            (*it)->GetMimicDOFIndices(vmimicdofs,i);
+                            FOREACHC(itmimicdof,vmimicdofs) {
+                                if( find(__varmdofindices.begin(),__varmdofindices.end(),*itmimicdof) == __varmdofindices.end() ) {
+                                    __varmdofindices.push_back(*itmimicdof);
+                                }
+                            }
+                        }
+                        else if( (*it)->GetDOFIndex() >= 0 ) {
+                            __varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                        }
+                    }
+                }
+                else if( (*it)->GetDOFIndex() < 0) {
+                    RAVELOG_WARN(str(boost::format("manipulator arm contains joint %s without a dof index, ignoring...\n")%(*it)->GetName()));
+                }
+                else { // ignore static joints
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        __varmdofindices.push_back((*it)->GetDOFIndex()+i);
+                    }
+                }
+            }
+            // initialize the arm configuration spec
+            __armspec = probot->GetConfigurationSpecificationIndices(__varmdofindices);
+        }
+        else {
+            RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%GetName()%__pBase->GetName()%__pEffector->GetName()));
+        }
+    }
+
+    // init the gripper dof indices
+    std::vector<dReal> vClosingDirection;
+    size_t iclosingdirection = 0;
+    FOREACHC(itjointname,_info._vGripperJointNames) {
+        JointPtr pjoint = probot->GetJoint(*itjointname);
+        if( !pjoint ) {
+            RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%GetName()));
+            iclosingdirection++;
+        }
+        else {
+            if( pjoint->GetDOFIndex() >= 0 ) {
+                for(int i = 0; i < pjoint->GetDOF(); ++i) {
+                    if( find(__varmdofindices.begin(), __varmdofindices.end(), pjoint->GetDOFIndex()+i) != __varmdofindices.end() ) {
+                        RAVELOG_ERROR(str(boost::format("manipulator %s gripper dof %d is also part of arm dof! excluding from gripper...")%GetName()%(pjoint->GetDOFIndex()+i)));
+                    }
+                    else {
+                        __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
+                        if( iclosingdirection < _info._vClosingDirection.size() ) {
+                            vClosingDirection.push_back(_info._vClosingDirection[iclosingdirection++]);
+                        }
+                        else {
+                            vClosingDirection.push_back(0);
+                            RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%GetName()));
+                        }
+                    }
+                }
+            }
+            else {
+                ++iclosingdirection;
+                RAVELOG_WARN(str(boost::format("manipulator %s gripper joint %s is not active, so has no dof index. ignoring.")%GetName()%*itjointname));
+            }
+        }
+    }
+    _info._vClosingDirection.swap(vClosingDirection);
 }
 
 }

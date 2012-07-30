@@ -126,7 +126,7 @@ class TestKinematics(EnvironmentSetup):
                                     deltatrans = Tlinknew[0:3,3] - worldtrans
                                     assert(linalg.norm(deltatrans) < thresh+1e-9) # should always be true
                                     jacobiandeltatrans = dot(Jtrans,deltavalues)
-                                    if dot(jacobiandeltatrans,deltatrans) < 0.9*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
+                                    if dot(jacobiandeltatrans,deltatrans) < 0.8*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
                                         raise ValueError('jacobian dot failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, jacobiandeltatrans=%r, deltatrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
                                     
                                     if linalg.norm(jacobiandeltatrans-deltatrans) > thresh*0.1:
@@ -183,7 +183,7 @@ class TestKinematics(EnvironmentSetup):
                         newlinkvels = random.rand(len(body.GetLinks()),6)-0.5
                         for link,vel in izip(body.GetLinks(),newlinkvels):
                             link.SetVelocity(vel[0:3],vel[3:6])
-                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                            assert( transdist(link.GetVelocity(),vel) <= g_epsilon )
                         assert( transdist(body.GetLinkVelocities(),newlinkvels) <= g_epsilon )
                         body.SetDOFVelocities(dofvelnew,linear=[0,0,0],angular=[0,0,0],checklimits=True)
                         assert( transdist(body.GetDOFVelocities(),dofvelnew) <= g_epsilon )
@@ -193,7 +193,7 @@ class TestKinematics(EnvironmentSetup):
                         for joint in body.GetJoints():
                             assert( transdist(joint.GetVelocities(), dofvelnew[joint.GetDOFIndex():(joint.GetDOFIndex()+joint.GetDOF())]) <= g_epsilon )
                         for link,vel in izip(body.GetLinks(),linkvels):
-                            assert( transdist(link.GetVelocity(),[vel[0:3],vel[3:6]]) <= g_epsilon )
+                            assert( transdist(link.GetVelocity(),vel) <= g_epsilon )
 
                         body.SetDOFValues(dofvaluesnew)
                         body.SetDOFVelocities(dofvelnew,*link0vel,checklimits=False)
@@ -478,7 +478,7 @@ class TestKinematics(EnvironmentSetup):
                         Mexpecteddiff = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
                             Mexpecteddiff += Mpartials[i]*randdelta[i]
-                        assert( sum(abs(Mexpecteddiff-Mtestdiff)) < 5e-5 )
+                        assert( sum(abs(Mexpecteddiff-Mtestdiff)) < 7e-5 )
 
                         C = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
@@ -609,7 +609,7 @@ class TestKinematics(EnvironmentSetup):
             infobox._vGeomData = [0.1,0.2,0.3]
             infobox._bVisible = True
             infobox._fTransparency = 0.5
-            infobox._fDiffuseColor = [1,0,0]
+            infobox._vDiffuseColor = [1,0,0]
             k3 = RaveCreateKinBody(env,'')
             k3.InitFromGeometries([infobox])
             k3.SetName('temp')

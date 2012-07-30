@@ -1795,6 +1795,10 @@ public:
             }
             else {
                 _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                if( !!_pcustomreader ) {
+                    // should set a name for it to get stored
+                    _readername = _pinterface->GetXMLId();
+                }
                 SetFilename(_filename);
             }
         }
@@ -1828,6 +1832,10 @@ public:
             }
             else {
                 _pcustomreader = RaveCallXMLReader(_pinterface->GetInterfaceType(),_pinterface->GetXMLId(),_pinterface,_atts);
+                if( !!_pcustomreader ) {
+                    // should set a name for it to get stored
+                    _readername = _pinterface->GetXMLId();
+                }
             }
 
             SetFilename(_filename);
@@ -2449,18 +2457,18 @@ public:
 class ManipulatorXMLReader : public StreamXMLReader
 {
 public:
-    ManipulatorXMLReader(RobotBase::ManipulatorPtr& pmanip, RobotBasePtr probot, const AttributesList &atts) : _pmanip(pmanip) {
+    ManipulatorXMLReader(RobotBasePtr probot, const AttributesList &atts) {
         _vScaleGeometry = Vector(1,1,1);
-        if( !_pmanip ) {
-            _pmanip.reset(new RobotBase::Manipulator(probot));
-        }
         FOREACHC(itatt,atts) {
             if( itatt->first == "name" ) {
-                _pmanip->_name = itatt->second;
+                _manipinfo._name = itatt->second;
             }
         }
+        _probot = probot;
+    }
 
-        _probot = _pmanip->GetRobot();
+    virtual const RobotBase::ManipulatorInfo& GetInfo() {
+        return _manipinfo;
     }
 
     virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
@@ -2483,51 +2491,50 @@ public:
 
     virtual bool endElement(const std::string& xmlname)
     {
-        if( StreamXMLReader::endElement(xmlname) )
+        if( StreamXMLReader::endElement(xmlname) ) {
             return true;
+        }
 
         if( xmlname == "manipulator" ) {
+            _probot->_vecManipulators.push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(_probot,_manipinfo)));
             return true;
         }
         else if( xmlname == "effector" ) {
-            // look up the correct link
-            string linkname; _ss >> linkname;
-            _pmanip->_pEndEffector = _probot->GetLink(linkname);
-
-            if( !_pmanip->_pEndEffector ) {
-                RAVELOG_WARN("Failed to find manipulator end effector %s\n", linkname.c_str());
+            _ss >> _manipinfo._sEffectorLinkName;
+            if( !!_probot && !_probot->GetLink(_manipinfo._sEffectorLinkName) ) {
+                RAVELOG_WARN(str(boost::format("Failed to find manipulator end effector %s")%_manipinfo._sEffectorLinkName));
                 GetXMLErrorCount()++;
             }
         }
         else if( xmlname == "base" ) {
-            string linkname; _ss >> linkname;
-            _pmanip->_pBase = _probot->GetLink(linkname);
-            if( !_pmanip->_pBase ) {
-                RAVELOG_WARN("Failed to find manipulator base %s\n", linkname.c_str());
+            _ss >> _manipinfo._sBaseLinkName;
+            if( !!_probot && !_probot->GetLink(_manipinfo._sBaseLinkName) ) {
+                RAVELOG_WARN(str(boost::format("Failed to find manipulator base %s")%_manipinfo._sBaseLinkName));
                 GetXMLErrorCount()++;
             }
         }
         else if((xmlname == "joints")||(xmlname == "gripperjoints")) {
-            _pmanip->_vgripperjointnames = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+            _manipinfo._vGripperJointNames = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
         }
         else if( xmlname == "armjoints" ) {
             RAVELOG_WARN("<armjoints> for <manipulator> tag is not used anymore\n");
         }
         else if((xmlname == "direction")||(xmlname == "palmdirection")) {
-            if( xmlname == "palmdirection" )
+            if( xmlname == "palmdirection" ) {
                 RAVELOG_WARN("<palmdirection> tag in Manipulator changed to <direction>\n");
-            _ss >> _pmanip->_vdirection.x >> _pmanip->_vdirection.y >> _pmanip->_vdirection.z;
-            dReal flen = _pmanip->_vdirection.lengthsqr3();
+            }
+            _ss >> _manipinfo._vdirection.x >> _manipinfo._vdirection.y >> _manipinfo._vdirection.z;
+            dReal flen = _manipinfo._vdirection.lengthsqr3();
             if( flen == 0 ) {
                 RAVELOG_WARN("palm direction is 0, setting to default value\n");
-                _pmanip->_vdirection = Vector(0,0,1);
+                _manipinfo._vdirection = Vector(0,0,1);
             }
-            else
-                _pmanip->_vdirection /= RaveSqrt(flen);
+            else {
+                _manipinfo._vdirection /= RaveSqrt(flen);
+            }
         }
         else if( xmlname == "iksolver" ) {
             string iklibraryname = _ss.str();
-
             IkSolverBasePtr piksolver;
             if( RaveHasInterface(PT_IkSolver,iklibraryname) ) {
                 piksolver = RaveCreateIkSolver(_probot->GetEnv(), iklibraryname);
@@ -2555,8 +2562,9 @@ public:
 
                     if( !pIKFastLoader ) {
                         pIKFastLoader = RaveCreateModule(_probot->GetEnv(), "ikfast");
-                        if( !!pIKFastLoader )
+                        if( !!pIKFastLoader ) {
                             _probot->GetEnv()->AddModule(pIKFastLoader,"");
+                        }
                     }
 
                     if( !!pIKFastLoader ) {
@@ -2587,20 +2595,19 @@ public:
                 }
             }
 
-            if( !piksolver )
-                RAVELOG_WARN("failed to create iksolver %s\n", iklibraryname.c_str());
-            else {
-                _pmanip->_strIkSolver = piksolver->GetXMLId();
+            if( !piksolver ) {
+                RAVELOG_WARN(str(boost::format("failed to create iksolver %s")%iklibraryname));
             }
-
-            _pmanip->_pIkSolver = piksolver;
+            else {
+                _manipinfo._sIkSolverXMLId = piksolver->GetXMLId();
+            }
             if( !!piksolver ) {
-                _pmanip->_strIkSolver = piksolver->GetXMLId();
+                _manipinfo._sIkSolverXMLId = piksolver->GetXMLId();
             }
         }
-        else if((xmlname == "closingdirection")||(xmlname == "closingdir")) {
-            _pmanip->_vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            FOREACH(it, _pmanip->_vClosingDirection) {
+        else if( xmlname == "closingdirection" || xmlname == "closingdir" ) {
+            _manipinfo._vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            FOREACH(it, _manipinfo._vClosingDirection) {
                 if( *it > 0 ) {
                     *it = 1;
                 }
@@ -2612,28 +2619,29 @@ public:
         else if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _pmanip->_tLocalTool.trans += v*_vScaleGeometry;
+            _manipinfo._tLocalTool.trans += v*_vScaleGeometry;
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
             _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
             tnew.rot.normalize4();
-            _pmanip->_tLocalTool.rot = (tnew*_pmanip->_tLocalTool).rot;
+            _manipinfo._tLocalTool.rot = (tnew*_manipinfo._tLocalTool).rot;
         }
         else if( xmlname == "rotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-            _pmanip->_tLocalTool.rot = (tnew*_pmanip->_tLocalTool).rot;
+            _manipinfo._tLocalTool.rot = (tnew*_manipinfo._tLocalTool).rot;
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            _pmanip->_tLocalTool.rot = (Transform(tnew)*_pmanip->_tLocalTool).rot;
+            _manipinfo._tLocalTool.rot = (Transform(tnew)*_manipinfo._tLocalTool).rot;
         }
 
-        if( xmlname !=_processingtag )
+        if( xmlname !=_processingtag ) {
             RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%xmlname%_processingtag));
+        }
         _processingtag = "";
         return false;
     }
@@ -2650,8 +2658,8 @@ public:
     }
 
 protected:
+    RobotBase::ManipulatorInfo _manipinfo;
     RobotBasePtr _probot;
-    RobotBase::ManipulatorPtr& _pmanip;
     string _processingtag;
     Vector _vScaleGeometry;
 };
@@ -2881,8 +2889,7 @@ public:
             _pcurreader = CreateInterfaceReader(_penv,PT_KinBody,_pinterface, xmlname, newatts);
         }
         else if( xmlname == "manipulator" ) {
-            _probot->_vecManipulators.push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(_probot)));
-            _pcurreader.reset(new ManipulatorXMLReader(_probot->_vecManipulators.back(), _probot, atts));
+            _pcurreader.reset(new ManipulatorXMLReader(_probot, atts));
         }
         else if( xmlname == "attachedsensor" ) {
             _psensor.reset();
@@ -3030,8 +3037,10 @@ public:
                 }
                 FOREACH(itmanip,_probot->GetManipulators()) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
-                        (*itmanip)->_name = _prefix + (*itmanip)->_name;
-                        FOREACH(itgrippername,(*itmanip)->_vgripperjointnames) {
+                        (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
+                        (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
+                        FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
                             *itgrippername = _prefix + *itgrippername;
                         }
                     }
@@ -3107,21 +3116,17 @@ public:
         }
 
         _CheckInterface();
-        if( !!_pinterface ) {
-            ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
-            if( !!module ) {
-                int ret = _penv->AddModule(module,_args);
-                if( ret ) {
-                    RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
-                    module.reset();
-                    _pinterface.reset();
-                }
-            }
-        }
     }
 
+    const string& GetArgs() const {
+        return _args;
+    }
+
+protected:
     string _args;
 };
+
+typedef boost::shared_ptr<ModuleXMLReader> ModuleXMLReaderPtr;
 
 class SensorXMLReader : public InterfaceXMLReader
 {
@@ -3362,6 +3367,16 @@ public:
                     BOOST_ASSERT(_pinterface->GetInterfaceType()==PT_CollisionChecker);
                     _penv->SetCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(_pinterface));
                 }
+                else if( !!boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader) ) {
+                    ModuleXMLReaderPtr modulereader = boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader);
+                    ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                    if( !!module ) {
+                        int ret = _penv->AddModule(module,modulereader->GetArgs());
+                        if( ret ) {
+                            RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
+                        }
+                    }
+                }
                 else if( !!_pinterface ) {
                     RAVELOG_DEBUG("owning interface %s, type: %s\n",_pinterface->GetXMLId().c_str(),RaveGetInterfaceName(_pinterface->GetInterfaceType()).c_str());
                     _penv->OwnInterface(_pinterface);
@@ -3551,6 +3566,16 @@ public:
                                 }
                                 else {
                                     pbody->SetDOFValues(*kinbodyreader->GetJointValues());
+                                }
+                            }
+                        }
+                        else if( !!boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader) ) {
+                            ModuleXMLReaderPtr modulereader = boost::dynamic_pointer_cast<ModuleXMLReader>(_pcurreader);
+                            ModuleBasePtr module = RaveInterfaceCast<ModuleBase>(_pinterface);
+                            if( !!module ) {
+                                int ret = _penv->AddModule(module,modulereader->GetArgs());
+                                if( ret ) {
+                                    RAVELOG_WARN(str(boost::format("module %s returned %d\n")%module->GetXMLId()%ret));
                                 }
                             }
                         }

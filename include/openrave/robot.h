@@ -30,15 +30,41 @@ namespace OpenRAVE {
 class OPENRAVE_API RobotBase : public KinBody
 {
 public:
+    /// \brief holds all user-set manipulator information used to initialize the Manipulator class
+    class OPENRAVE_API ManipulatorInfo
+    {
+public:
+        ManipulatorInfo() : _vdirection(0,0,1) {
+        }
+        virtual ~ManipulatorInfo() {
+        }
+
+        std::string _name;
+        std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
+        Transform _tLocalTool;
+        std::vector<dReal> _vClosingDirection; ///< the normal direction to move joints to 'close' the hand
+        Vector _vdirection;
+        std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
+        std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
+    };
+    typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
+
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
-        Manipulator(RobotBasePtr probot);
+        Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
-        Manipulator(RobotBasePtr probot, const Manipulator &r);
+
+        /// \brief can switch the underyling robot
+        Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
 
 public:
         virtual ~Manipulator();
+
+        /// \brief return a serializable info holding everything to initialize a manipulator
+        inline const ManipulatorInfo& GetInfo() const {
+            return _info;
+        }
 
         /// \brief Return the transformation of the manipulator frame
         ///
@@ -46,42 +72,43 @@ public:
         /// All inverse kinematics and jacobian queries are specifying this frame.
         virtual Transform GetTransform() const;
 
+        /// \brief return the linear/angular velocity of the manipulator coordinate system
+        virtual std::pair<Vector,Vector> GetVelocity() const;
+
         virtual Transform GetEndEffectorTransform() const {
             return GetTransform();
         }
 
         virtual const std::string& GetName() const {
-            return _name;
+            return _info._name;
         }
         virtual RobotBasePtr GetRobot() const {
-            return RobotBasePtr(_probot);
+            return RobotBasePtr(__probot);
         }
 
         /// \brief Sets the ik solver and initializes it with the current manipulator.
         ///
         /// Due to complications with translation,rotation,direction,and ray ik,
-        /// the ik solver should take into account the grasp transform (_tLocalTool) internally.
+        /// the ik solver should take into account the grasp transform (_info._tLocalTool) internally.
         /// The actual ik primitives are transformed into the base frame only.
         virtual bool SetIkSolver(IkSolverBasePtr iksolver);
 
         /// \brief Returns the currently set ik solver
-        virtual IkSolverBasePtr GetIkSolver() const {
-            return _pIkSolver;
-        }
+        virtual IkSolverBasePtr GetIkSolver() const;
 
         /// \brief the base used for the iksolver
         virtual LinkPtr GetBase() const {
-            return _pBase;
+            return __pBase;
         }
 
         /// \brief the end effector link (used to define workspace distance)
         virtual LinkPtr GetEndEffector() const {
-            return _pEndEffector;
+            return __pEffector;
         }
 
         /// \brief Return transform with respect to end effector defining the grasp coordinate system
         virtual Transform GetLocalToolTransform() const {
-            return _tLocalTool;
+            return _info._tLocalTool;
         }
 
         /// \brief Sets the local tool transform with respect to the end effector.
@@ -113,12 +140,12 @@ public:
 
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const {
-            return _vClosingDirection;
+            return _info._vClosingDirection;
         }
 
         /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
         virtual Vector GetLocalToolDirection() const {
-            return _vdirection;
+            return _info._vdirection;
         }
 
         /// \deprecated (11/10/15) use GetLocalToolDirection
@@ -271,19 +298,16 @@ public:
         /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
 protected:
-        std::string _name;
-        LinkPtr _pBase, _pEndEffector;
-        Transform _tLocalTool;
-        std::vector<dReal> _vClosingDirection;
-        Vector _vdirection;
-        IkSolverBasePtr _pIkSolver;
-        std::string _strIkSolver;
-        std::vector<std::string> _vgripperjointnames;         ///< names of the gripper joints
+        /// \brief compute internal information from user-set info
+        virtual void _ComputeInternalInformation();
 
+        ManipulatorInfo _info; ///< user-set information
 private:
-        RobotBaseWeakPtr _probot;
+        RobotBaseWeakPtr __probot;
+        LinkPtr __pBase, __pEffector; ///< contains weak links to robot
         std::vector<int> __vgripperdofindices, __varmdofindices;
         ConfigurationSpecification __armspec; ///< reflects __varmdofindices
+        mutable IkSolverBasePtr __pIkSolver;
         mutable std::string __hashstructure, __hashkinematicsstructure;
 
 #ifdef RAVE_PRIVATE
@@ -373,16 +397,21 @@ private:
 public:
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
-        virtual void Restore();
+
+        /// \brief restore the state
+        ///
+        /// \param robot if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
+        /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
+        virtual void Restore(boost::shared_ptr<RobotBase> robot=boost::shared_ptr<RobotBase>());
 protected:
         RobotBasePtr _probot;
         std::vector<int> vactivedofs;
         int affinedofs;
         Vector rotationaxis;
-        int nActiveManip;
+        ManipulatorPtr _pManipActive;
         std::vector<UserDataPtr> _vGrabbedBodies;
 private:
-        virtual void _RestoreRobot();
+        virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };
 
     typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
@@ -410,6 +439,10 @@ private:
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
+
+    virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
@@ -560,18 +593,34 @@ private:
     /// computes the configuration difference q1-q2 and stores it in q1. Takes into account joint limits and circular joints
     virtual void SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const;
 
-    /// sets the active manipulator of the robot
-    /// \param index manipulator index
-    virtual void SetActiveManipulator(int index);
-    /// sets the active manipulator of the robot
+    /// \deprecated (12/07/23)
+    virtual void SetActiveManipulator(int index) RAVE_DEPRECATED;
+
+    /// \brief sets the active manipulator of the robot
+    ///
     /// \param manipname manipulator name
+    /// \throw openrave_exception if manipulator not present, will throw an exception
     virtual void SetActiveManipulator(const std::string& manipname);
+    virtual void SetActiveManipulator(ManipulatorConstPtr pmanip);
     virtual ManipulatorPtr GetActiveManipulator();
     virtual ManipulatorConstPtr GetActiveManipulator() const;
-    /// \return index of the current active manipulator
-    virtual int GetActiveManipulatorIndex() const {
-        return _nActiveManip;
-    }
+
+    /// \brief adds a manipulator the list
+    ///
+    /// Will copy the information of this manipulator object into a new manipulator and initialize it with the robot.
+    /// Will change the robot structure hash..
+    /// \return the new manipulator attached to the robot
+    /// \throw openrave_exception If there exists a manipulator with the same name, will throw an exception
+    virtual ManipulatorPtr AddManipulator(const ManipulatorInfo& manipinfo);
+
+    /// \brief removes a manipulator from the robot list.
+    ///
+    /// Will change the robot structure hash..
+    /// if the active manipulator is set to this manipulator, it will be set to None afterwards
+    virtual void RemoveManipulator(ManipulatorPtr manip);
+
+    /// \deprecated (12/07/23)
+    virtual int GetActiveManipulatorIndex() const RAVE_DEPRECATED;
 
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
@@ -751,7 +800,7 @@ protected:
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
-    int _nActiveManip; ///< \see GetActiveManipulatorIndex
+    ManipulatorPtr _pManipActive;
 
     std::vector<AttachedSensorPtr> _vecSensors; ///< \see GetAttachedSensors
 

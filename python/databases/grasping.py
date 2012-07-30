@@ -168,7 +168,7 @@ else:
 
 import numpy
 from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints
-from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
 from .. import interfaces
@@ -607,7 +607,7 @@ class GraspingModel(DatabaseGenerator):
                 order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
                 self.grasps = self.grasps[order]
 
-    def show(self,delay=0.1,options=None,forceclosure=True):
+    def show(self,delay=0.1,options=None,forceclosure=True,showcontacts=True):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?
@@ -632,7 +632,8 @@ class GraspingModel(DatabaseGenerator):
                             #contacts,finalconfig,mindist,volume = self.runGrasp(grasp=grasp,translate=True,forceclosure=True)
                             if mindist == 0:
                                 print 'grasp is not in force closure!'
-                            contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
+                            if showcontacts:
+                                contactgraph = self.drawContacts(contacts) if len(contacts) > 0 else None
                             self.robot.GetController().Reset(0)
                             self.robot.SetDOFValues(finalconfig[0])
                             self.robot.SetTransform(finalconfig[1])
@@ -710,13 +711,19 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
+            if len(self.manip.GetGripperIndices()) == 0:
+                return [],[[],self.robot.GetTransform()],None,None
+            
             return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True,translationstepmult=self.translationstepmult,finestep=self.finestep)
+
+    def GetLocalGraspTransform(self,grasp,collisionfree=False):
+        Tlocalgrasp = eye(4)
+        Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['grasptrans_nocol' if collisionfree else 'igrasptrans']],(4,3)))
+        return Tlocalgrasp
 
     def getGlobalGraspTransform(self,grasp,collisionfree=False):
         """returns the final grasp transform before fingers start closing. If collisionfree is set to True, then will return a grasp that is guaranteed to be not in collision with the target object when at its preshape. This is achieved by by moving the hand back along igraspdir."""
-        Tlocalgrasp = eye(4)
-        Tlocalgrasp[0:3,0:4] = transpose(reshape(grasp[self.graspindices ['grasptrans_nocol' if collisionfree else 'igrasptrans']],(4,3)))
-        return dot(self.target.GetTransform(),Tlocalgrasp)
+        return dot(self.target.GetTransform(),self.GetLocalGraspTransform(grasp,collisionfree))
     def getGlobalApproachDir(self,grasp):
         """returns the global approach direction"""
         return dot(self.target.GetTransform()[0:3,0:3],grasp[self.graspindices.get('igraspdir')])

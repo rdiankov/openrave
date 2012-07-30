@@ -17,6 +17,7 @@
 #include "libopenrave.h"
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
+#include <openrave/plannerparameters.h>
 
 namespace OpenRAVE {
 namespace planningutils {
@@ -288,7 +289,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
     EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
     if( !parameters ) {
         PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
-        newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification());
+        newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
         parameters = newparams;
     }
     TrajectoryVerifier v(parameters);
@@ -310,7 +311,7 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
-    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
@@ -323,7 +324,7 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
         params->_checkpathconstraintsfn.clear();
     }
 
-    params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps>")%hastimestamps);
+    params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
@@ -334,6 +335,49 @@ void _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool 
 
     if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBase::RobotStateSaver saver(probot);
+        planningutils::VerifyTrajectory(params,traj);
+    }
+}
+
+void _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+{
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need velocities, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return;
+    }
+
+    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetConfigurationSpecification(traj->GetEnv(),traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
+    FOREACH(it,params->_vConfigVelocityLimit) {
+        *it *= fmaxvelmult;
+    }
+    FOREACH(it,params->_vConfigAccelerationLimit) {
+        *it *= fmaxaccelmult;
+    }
+    if( !bsmooth ) {
+        params->_setstatefn.clear();
+        params->_checkpathconstraintsfn.clear();
+    }
+
+    params->_hastimestamps = hastimestamps;
+    params->_sExtraParameters += plannerparameters;
+    if( !planner->InitPlan(RobotBasePtr(),params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+    if( planner->PlanPath(traj) != PS_HasSolution ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to PlanPath",ORE_Failed);
+    }
+
+    if( bsmooth && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        PlannerBase::PlannerParameters::StateSaver saver(params);
         planningutils::VerifyTrajectory(params,traj);
     }
 }
@@ -416,7 +460,7 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
     }
     ConvertTrajectorySpecification(traj,newspec);
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
-    PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->_vConfigVelocityLimit = maxvelocities;
     params->_vConfigAccelerationLimit = maxaccelerations;
     params->_configurationspecification = traj->GetConfigurationSpecification();
@@ -492,7 +536,8 @@ static void _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dRea
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
 
     //params->_distmetricfn;
-    params->_sExtraParameters += str(boost::format("<hastimestamps>%d</hastimestamps><forcemaxaccel>1</forcemaxaccel>")%hastimestamps);
+    params->_hastimestamps = hastimestamps;
+    params->_multidofinterp = 1; // always force max acceleration?
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
@@ -510,6 +555,11 @@ void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal
 void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
     _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", true, plannerparameters);
+}
+
+void SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+{
+    _PlanTrajectory(traj,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
 static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std::string& forceplanner=std::string())
@@ -553,6 +603,11 @@ void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& ma
     _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
+void RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+{
+    _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
+}
+
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
@@ -571,7 +626,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             interpolation = itgroup->interpolation;
         }
     }
-    newspec.AddVelocityGroups(false);
+    newspec.AddDerivativeGroups(1,false);
 
     vector<dReal> vwaypointstart, vwaypointend, vtargetvalues;
     if( waypointindex == 0 ) {
@@ -643,6 +698,134 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     }
 }
 
+void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+{
+    if( index != (int)traj->GetNumWaypoints() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("InsertWaypointWithSmoothing only supports adding waypoints at the end",ORE_InvalidArguments);
+    }
+    OPENRAVE_ASSERT_OP(dofvalues.size(),==,dofvelocities.size());
+
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
+    OPENRAVE_ASSERT_OP(specpos.GetDOF(),==,(int)dofvalues.size());
+    params->SetConfigurationSpecification(traj->GetEnv(),specpos);
+    FOREACH(it,params->_vConfigVelocityLimit) {
+        *it *= fmaxvelmult;
+    }
+    FOREACH(it,params->_vConfigAccelerationLimit) {
+        *it *= fmaxaccelmult;
+    }
+
+    params->_hasvelocities = true;
+    params->_hastimestamps = false;
+
+    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolictrajectoryretimer"));
+    if( !planner->InitPlan(RobotBasePtr(),params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
+    }
+
+    dReal fSamplingTime = 0.01; // for collision checking
+    dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
+
+    ConfigurationSpecification spectotal = specpos;
+    spectotal.AddDerivativeGroups(1,false);
+    OPENRAVE_ASSERT_OP(spectotal.GetDOF(),==,2*(int)dofvalues.size());
+    TrajectoryBasePtr ptesttraj;
+    TrajectoryBasePtr pBestTrajectory;
+    dReal fBestDuration = 1e30;
+    int iBestInsertionWaypoint = -1;
+    std::vector<dReal> vstartdata(spectotal.GetDOF(),0), vwaypoint, vprevpoint;
+    std::copy(dofvalues.begin(),dofvalues.end(),vstartdata.begin());
+    std::copy(dofvelocities.begin(),dofvelocities.end(),vstartdata.begin()+dofvalues.size());
+    // look for the waypoints in reverse
+    int N = (int)traj->GetNumWaypoints();
+    dReal fOriginalTime = traj->GetDuration();
+    dReal fRemainingDuration=traj->GetDuration();
+    int iTimeIndex = -1;
+    std::vector<ConfigurationSpecification::Group>::const_iterator itdeltatimegroup = traj->GetConfigurationSpecification().FindCompatibleGroup("deltatime");
+    if( itdeltatimegroup != traj->GetConfigurationSpecification()._vgroups.end() ) {
+        iTimeIndex = itdeltatimegroup->offset;
+    }
+
+    // since inserting from the back, go through each of the waypoints from reverse and record collision free segments
+    // perhaps a faster method would be to delay the collision checking until all the possible segments are already checked...?
+    for(int iwaypoint = 0; iwaypoint < N; ++iwaypoint) {
+        traj->GetWaypoint(N-1-iwaypoint,vwaypoint);
+        dReal deltatime = 0;
+        if( iTimeIndex >= 0 ) {
+            // reset the time in case the trajectory retimer does not reset it
+            deltatime = vwaypoint.at(iTimeIndex);
+            vwaypoint.at(iTimeIndex) = 0;
+        }
+        if( !ptesttraj ) {
+            ptesttraj = RaveCreateTrajectory(traj->GetEnv(),traj->GetXMLId());
+        }
+        ptesttraj->Init(traj->GetConfigurationSpecification());
+        ptesttraj->Insert(0,vwaypoint);
+        ptesttraj->Insert(1,vstartdata,spectotal);
+
+        if( planner->PlanPath(ptesttraj) & PS_HasSolution ) {
+            // before checking, make sure it is better than we currently have
+            dReal fNewDuration = fRemainingDuration+ptesttraj->GetDuration();
+            if( fNewDuration < fBestDuration ) {
+                // have to check for collision by sampling
+                ptesttraj->Sample(vprevpoint,0,specpos);
+                bool bInCollision = false;
+                for(dReal t = fSamplingTime; t < ptesttraj->GetDuration(); t+=fSamplingTime) {
+                    ptesttraj->Sample(vwaypoint,t,specpos);
+                    if( !params->_checkpathconstraintsfn(vprevpoint,vwaypoint,IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
+                        bInCollision = true;
+                        break;
+                    }
+                    vprevpoint = vwaypoint;
+                }
+                if( !bInCollision ) {
+                    iBestInsertionWaypoint = N-1-iwaypoint;
+                    fBestDuration = fNewDuration;
+                    swap(pBestTrajectory,ptesttraj);
+                    if( iwaypoint > 0 && fBestDuration < fOriginalTime+fTimeBuffer ) {
+                        break;
+                    }
+                }
+                else {
+                    if( !!pBestTrajectory ) {
+                        // already have a good trajectory, and chances are that anything after this waypoint will also be in collision, so exit
+                        break;
+                    }
+                }
+            }
+            else {
+                // if it isn't better and we already have a best trajectory, then choose it. most likely things will get worse from now on...
+                if( !!pBestTrajectory ) {
+                    break;
+                }
+            }
+        }
+        fRemainingDuration -= deltatime;
+    }
+
+    if( !pBestTrajectory ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to find connecting trajectory",ORE_Assert);
+    }
+    if( fBestDuration > fOriginalTime+fTimeBuffer ) {
+        RAVELOG_WARN(str(boost::format("new trajectory is greater than expected time %f > %f \n")%fBestDuration%fOriginalTime));
+    }
+    // splice in the new trajectory. pBestTrajectory's first waypoint matches traj's iBestInsertionWaypoint
+    traj->Remove(iBestInsertionWaypoint+1,traj->GetNumWaypoints());
+//    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
+//    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
+//    for(size_t i = 0; i < vprevpoint.size(); ++i) {
+//        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
+//            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
+//        }
+//    }
+    pBestTrajectory->GetWaypoints(1,pBestTrajectory->GetNumWaypoints(),vwaypoint,traj->GetConfigurationSpecification());
+    traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
+    dReal fNewDuration = traj->GetDuration();
+    OPENRAVE_ASSERT_OP( RaveFabs(fNewDuration-fBestDuration), <=, 0.001 );
+}
+
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)
 {
     if( traj->GetConfigurationSpecification() != spec ) {
@@ -656,6 +839,60 @@ void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationS
             traj->Insert(0,data);
         }
     }
+}
+
+void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv)
+{
+    OPENRAVE_ASSERT_OP(maxderiv,>,0);
+    ConfigurationSpecification newspec = traj->GetConfigurationSpecification();
+    for(int i = 1; i <= maxderiv; ++i) {
+        newspec.AddDerivativeGroups(i);
+    }
+    std::vector<dReal> data;
+    traj->GetWaypoints(0,traj->GetNumWaypoints(),data, newspec);
+    if( data.size() == 0 ) {
+        traj->Init(newspec);
+        return;
+    }
+    int numpoints = (int)data.size()/newspec.GetDOF();
+    ConfigurationSpecification velspec = newspec.GetTimeDerivativeSpecification(maxderiv-1);
+    ConfigurationSpecification accelspec = newspec.GetTimeDerivativeSpecification(maxderiv);
+    std::vector<ConfigurationSpecification::Group>::const_iterator itdeltatimegroup = newspec.FindCompatibleGroup("deltatime");
+    if(itdeltatimegroup == newspec._vgroups.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("trajectory does not seem to have time stamps, so derivatives cannot be computed", ORE_InvalidArguments);
+    }
+    OPENRAVE_ASSERT_OP(velspec.GetDOF(), ==, accelspec.GetDOF());
+    int offset = 0;
+    dReal nextdeltatime=0;
+    for(int ipoint = 0; ipoint < numpoints; ++ipoint, offset += newspec.GetDOF()) {
+        if( ipoint < numpoints-1 ) {
+            nextdeltatime = data.at(offset+newspec.GetDOF()+itdeltatimegroup->offset);
+        }
+        else {
+            nextdeltatime = 0;
+        }
+        for(size_t igroup = 0; igroup < velspec._vgroups.size(); ++igroup) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itvel = newspec.FindCompatibleGroup(velspec._vgroups.at(igroup),true);
+            std::vector<ConfigurationSpecification::Group>::const_iterator itaccel = newspec.FindCompatibleGroup(accelspec._vgroups.at(igroup),true);
+            OPENRAVE_ASSERT_OP(itvel->dof,==,itaccel->dof);
+            if( ipoint < numpoints-1 ) {
+                for(int i = 1; i < itvel->dof; ++i) {
+                    if( nextdeltatime > 0 ) {
+                        data.at(offset+itaccel->offset+i) = (data.at(offset+newspec.GetDOF()+itvel->offset+i)-data.at(offset+itvel->offset+i))/nextdeltatime;
+                    }
+                    else {
+                        // time is 0 so leave empty?
+                    }
+                }
+            }
+            else {
+                // what to do with the last point?
+            }
+        }
+    }
+
+    traj->Init(newspec);
+    traj->Insert(0,data);
 }
 
 TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)

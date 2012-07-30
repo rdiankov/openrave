@@ -53,6 +53,16 @@ public:
         return odata;
     }
 
+    void SetUserData(PyUserData pdata) {
+        _ret._userdata = pdata._handle;
+    }
+    void SetSolution(object osolution) {
+        _ret._vsolution = ExtractArray<dReal>(osolution);
+    }
+    void SetMapKeyValue(const std::string& key, object ovalues) {
+        _ret._mapdata[key] = ExtractArray<dReal>(ovalues);
+    }
+
     IkReturn _ret;
 };
 
@@ -263,6 +273,9 @@ void init_openravepy_iksolver()
                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
                          .def("GetMapData",&PyIkReturn::GetMapData, args("key"), "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
                          .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
+                         .def("SetUserData",&PyIkReturn::SetUserData,args("data"),"Set IKReturn::_userdata")
+                         .def("SetSolution",&PyIkReturn::SetSolution,args("solution"),"Set IKReturn::_vsolution")
+                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,args("key,value"),"Adds key/value pair to IKReturn::_mapdata")
         ;
     }
 

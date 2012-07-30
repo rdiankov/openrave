@@ -72,11 +72,12 @@ public:
     inline const READERSMAP& GetReadableInterfaces() const {
         return __mapReadableInterfaces;
     }
-    inline XMLReadablePtr GetReadableInterface(const std::string& xmltag) const
-    {
-        READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
-        return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
-    }
+
+    /// \brief returns the readable interface
+    virtual XMLReadablePtr GetReadableInterface(const std::string& xmltag) const;
+
+    /// \brief set a new readable interface and return the previously set interface if it exists
+    virtual XMLReadablePtr SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
     virtual const std::string& GetDescription() const {

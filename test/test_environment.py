@@ -309,13 +309,14 @@ class TestEnvironment(EnvironmentSetup):
         assert(robot.GetName() == robotname)
         assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
         assert(robot.GetLinks()[0].GetName() == linkname)
-
+                    
     def test_cloneplan(self):
         env=self.env
         self.LoadEnv('data/lab1.env.xml')
         cloningoptions = [CloningOptions.Bodies | CloningOptions.RealControllers | CloningOptions.Simulation, CloningOptions.Bodies | CloningOptions.RealControllers]
         for options in cloningoptions:
             env2 = env.CloneSelf(options)
+            self.CompareEnvironments(env,env2)
             robot = env2.GetRobots()[0]
             basemanip = interfaces.BaseManipulation(robot)
             base_angle = zeros(len(robot.GetActiveManipulator().GetArmIndices()))
@@ -327,16 +328,54 @@ class TestEnvironment(EnvironmentSetup):
 
     def test_clone_basic(self):
         env=self.env
-        self.LoadEnv('data/lab1.env.xml')
-        robot=env.GetRobots()[0]
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
-        if not ikmodel.load(checkforloaded=False):
-            ikmodel.autogenerate()
+        self.LoadEnv('data/pr2test1.env.xml')
+        with env:
+            robot=env.GetRobots()[0]
+            robot.SetActiveManipulator('leftarm')
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load(checkforloaded=False):
+                ikmodel.autogenerate()
 
-        clonedenv = env.CloneSelf(CloningOptions.Bodies)
-        clonedrobot = clonedenv.GetRobot(robot.GetName())
-        assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
-        
+            clonedenv = Environment()
+            starttime=time.time()
+            clonedenv.Clone(env, CloningOptions.Bodies)
+            endtime=time.time()-starttime
+            self.log.info('clone time: %fs',endtime)
+            print endtime
+            self.CompareEnvironments(env,clonedenv)
+            clonedrobot = clonedenv.GetRobot(robot.GetName())
+            assert(clonedrobot.GetActiveManipulator().GetName() == robot.GetActiveManipulator().GetName())
+            assert(clonedrobot.GetActiveManipulator().GetIkSolver() is not None)
+
+            # change robot and check if cloning is quick
+            Trobot=robot.GetTransform()
+            Trobot[0,3] += 1.5
+            robot.SetTransform(Trobot)
+            starttime=time.time()
+            clonedenv.Clone(env, CloningOptions.Bodies)
+            endtime=time.time()-starttime
+            self.log.info('new clone time: %fs',endtime)
+            assert(endtime <= 0.04)
+            self.CompareEnvironments(env,clonedenv)
+
+            env.Remove(env.GetKinBody('mug1'))
+            mug2body = env.ReadKinBodyURI('data/mug2.kinbody.xml')
+            env.Add(mug2body,True)
+            starttime=time.time()
+            clonedenv.Clone(env, CloningOptions.Bodies)
+            endtime=time.time()-starttime
+            self.log.info('new clone time: %fs',endtime)
+            assert(endtime <= 0.1)
+            self.CompareEnvironments(env,clonedenv)
+
+            robot.Grab(mug2body)
+            starttime=time.time()
+            clonedenv.Clone(env, CloningOptions.Bodies)
+            endtime=time.time()-starttime
+            self.log.info('new clone time: %fs',endtime)
+            assert(endtime <= 0.04)
+            self.CompareEnvironments(env,clonedenv)
+            
     def test_multithread(self):
         self.log.info('test multiple threads accessing same resource')
         def mythread(env,threadid):

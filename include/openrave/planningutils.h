@@ -72,6 +72,18 @@ OPENRAVE_API void SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
  */
 OPENRAVE_API void SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
+/** \brief Smooth the trajectory points to avoiding collisions by extracting and using the positional data from the trajectory. <b>[multi-thread safe]</b>
+
+    Only initial and goal configurations are preserved.
+    The velocities for the current trajectory are overwritten.
+    The returned trajectory will contain data only for the currenstly set active dofs of the robot.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
+ */
+OPENRAVE_API void SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+
 /** \brief Retime the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
     Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
@@ -98,6 +110,18 @@ OPENRAVE_API void RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr
  */
 OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
+/** \brief Retime the trajectory points using all the positional data from the trajectory. <b>[multi-thread safe]</b>
+
+    Collision is not checked. Every waypoint in the trajectory is guaranteed to be hit.
+    The velocities for the current trajectory are overwritten.
+    The returned trajectory will contain data only for the currenstly set active dofs of the robot.
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+    \param hastimestamps if true, use the already initialized timestamps of the trajectory
+    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
+ */
+OPENRAVE_API void RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. <b>[multi-thread safe]</b>
 
     Collision is not checked on the modified segments of the trajectory.
@@ -110,8 +134,28 @@ OPENRAVE_API void RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vect
  */
 OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
+/** \brief insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity.
+
+    The PlannerParameters is automatically determined from the trajectory's configuration space
+    \param[in] index The index where to insert the new waypoint. A negative value starts from the end.
+    \param dofvalues the configuration to insert into the trajectcory (active dof values of the robot)
+    \param dofvelocities the velocities that the inserted point should start with
+    \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory smoother.
+ */
+OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
+
+/** \brief computes the trajectory derivatives and modifies the trajetory configuration to store them.
+
+    If necessary will change the configuration specification of the trajectory.
+    If more derivatives are requested than the trajectory supports, will ignore them. For example, acceleration of a linear trajectory.
+    \param traj the re-timed trajectory
+    \param maxderiv the maximum derivative to assure. If 1, will assure velocities, if 2 will assure accelerations, etc.
+ */
+OPENRAVE_API void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv);
 
 /// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///

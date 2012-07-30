@@ -43,6 +43,20 @@ Core
 
 * created new **openrave/xmlreaders.h** to hold XML readers classes like  :class:`.xmlreaders.TrajectoryReader` for parsing trajectory files, and :class:`.xmlreaders.GeometryInfoReader` for parsing geometries.
 
+* custom interface xml readers with top-level interface type xmlid get stored into :meth:`.Interface.GetReadableInterfaces`
+
+* Added :meth:`.Environment.Clone` for quick synchornization cloning depending on how big the differences between the original environment is.
+
+* Update velocity of grabbed objects.
+
+* Added :class:`.Robot.ManipulatorInfo` to hold initialization info for manipulators. Can now dynamically add/remove manipulators with :meth:`.Robot.AddManipulatotr` and :meth:`.Robot.RemoveManipulator`.
+
+* KinBody StateSaver classes can transfer restoring state to different kinbody/robot.
+
+* fixed major bug in :meth:`.ConfigurationSpecification.InsertJointValues`
+
+* added :meth:`.ConfigurationSpecification.AddDerivativeGroups`, :meth:`.planningutils.ComputeTrajectoryDerivatives`
+
 Inverse Kinematics
 ------------------
 
@@ -66,6 +80,10 @@ Planning
 * Added :meth:`.Planner.PlannerParameters.SetConfigurationSpecification` to set planner parameters space directly from configuration specification.
 
 * Added :class:`.Planner.PlannerParameters.StateSaver` for saving states
+
+* Added :meth:`.planningutils.SmoothTrajectory`, :meth:`.planningutils.RetimeTrajectory` that work directly on the trajectory configuration space.
+
+* Added :meth:`.planningutils.InsertWaypointWithSmoothing` for quickly inserting waypoints into trajectories while doing some smoothing.
 
 Database
 --------
@@ -98,6 +116,7 @@ Misc
 
 * collada stores joint **circular**, **weight**, and **resolution** properties
 
+* Added new conveyor robot :ref:`robot-conveyor` that creates trajectory joints.
 
 Version 0.6.6
 =============

@@ -117,13 +117,24 @@ public:
         }
     }
 
-    virtual bool Init(RobotBase::ManipulatorPtr pmanip)
+    virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
             RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
         }
-        _pmanip = pmanip;
         RobotBasePtr probot = pmanip->GetRobot();
+        bool bfound = false;
+        _pmanip.reset();
+        FOREACHC(itmanip,probot->GetManipulators()) {
+            if( *itmanip == pmanip ) {
+                _pmanip = *itmanip;
+                bfound = true;
+            }
+        }
+        if( !bfound ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s not found in robot", pmanip->GetName(), ORE_InvalidArguments);
+        }
+
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IKReal,Solution>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IKReal,Solution> >, weak_solver())));
 
         if( _nTotalDOF != (int)pmanip->GetArmIndices().size() ) {

@@ -68,43 +68,43 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    _RestoreKinBody();
+    _RestoreKinBody(_pbody);
 }
 
-void KinBody::KinBodyStateSaver::Restore()
+void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
 {
-    _RestoreKinBody();
+    _RestoreKinBody(!body ? _pbody : body);
 }
 
-void KinBody::KinBodyStateSaver::_RestoreKinBody()
+void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbody)
 {
-    if( _pbody->GetEnvironmentId() == 0 ) {
-        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%_pbody->GetName()));
+    if( pbody->GetEnvironmentId() == 0 ) {
+        RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%pbody->GetName()));
         return;
     }
     if( _options & Save_LinkTransformation ) {
-        _pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
+        pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
     }
     if( _options & Save_LinkEnable ) {
         // should first enable before calling the parameter callbacks
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
-            if( _pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                _pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
+            if( pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
+                pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
                 bchanged = true;
             }
         }
         if( bchanged ) {
-            _pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
-            _pbody->_ParametersChanged(Prop_LinkEnable);
+            pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
+            pbody->_ParametersChanged(Prop_LinkEnable);
         }
     }
     if( _options & Save_JointMaxVelocityAndAcceleration ) {
-        _pbody->SetDOFVelocityLimits(_vMaxVelocities);
-        _pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
+        pbody->SetDOFVelocityLimits(_vMaxVelocities);
+        pbody->SetDOFAccelerationLimits(_vMaxAccelerations);
     }
     if( _options & Save_LinkVelocities ) {
-        _pbody->SetLinkVelocities(_vLinkVelocities);
+        pbody->SetLinkVelocities(_vLinkVelocities);
     }
 }
 
@@ -127,6 +127,7 @@ KinBody::~KinBody()
 void KinBody::Destroy()
 {
     if( _listAttachedBodies.size() > 0 ) {
+        // could be in the environment destructor?
         stringstream ss; ss << GetName() << " still has attached bodies: ";
         FOREACHC(it,_listAttachedBodies) {
             KinBodyPtr pattached = it->lock();
@@ -134,7 +135,7 @@ void KinBody::Destroy()
                 ss << pattached->GetName();
             }
         }
-        RAVELOG_WARN(ss.str());
+        RAVELOG_VERBOSE(ss.str());
     }
     _listAttachedBodies.clear();
 
@@ -838,10 +839,26 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         }
         else if( pjoint->GetType() == Joint::JointTrajectory ) {
             Transform tlocalvelocity, tlocal;
-            pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            if( pjoint->IsMimic(0) ) {
+                // vtempvalues should already be init from previous _Eval call
+                int err = pjoint->_Eval(0,0,vtempvalues,veval);
+                if( err != 0 ) {
+                    RAVELOG_WARN(str(boost::format("error with evaluation of joint %s")%pjoint->GetName()));
+                }
+                dReal fvalue = veval[0];
+                if( pjoint->IsCircular(0) ) {
+                    fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
+                }
+                pjoint->_trajfollow->Sample(vtempvalues,fvalue);
+            }
+            else {
+                // calling GetValue() could be extremely slow
+                pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+            }
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
             pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
-            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = axisangle * qrot * 0.5 * vel
+            Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
+            gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
             velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
         }
@@ -2725,6 +2742,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
             vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
         }
 
+        // check out: http://en.wikipedia.org/wiki/Rotating_reference_frame
         // compute for global coordinate system
         // code for symbolic computation (python sympy)
         // t=Symbol('t'); q=Function('q')(t); dq=diff(q,t); axis=Matrix(3,1,symbols('ax,ay,az')); delta=Matrix(3,1,[Function('dx')(t), Function('dy')(t), Function('dz')(t)]); vparent=Matrix(3,1,[Function('vparentx')(t),Function('vparenty')(t),Function('vparentz')(t)]); wparent=Matrix(3,1,[Function('wparentx')(t),Function('wparenty')(t),Function('wparentz')(t)]); Mparent=Matrix(3,4,[Function('m%d%d'%(i,j))(t) for i in range(3) for j in range(4)]); c = Matrix(3,1,symbols('cx,cy,cz'))
@@ -3585,8 +3603,9 @@ void KinBody::_ComputeInternalInformation()
         vector<int> vprevdofbranches, vnewdofbranches;
         GetLinkTransformations(vprevtrans, vprevdofbranches);
         vector<dReal> vcurrentvalues;
+        // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        SetDOFValues(vcurrentvalues,true);
+        KinBody::SetDOFValues(vcurrentvalues,true, std::vector<int>());
         GetLinkTransformations(vnewtrans, vnewdofbranches);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
@@ -3945,7 +3964,13 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _listRegisteredCallbacks.clear(); // reset the callbacks
+    // cannot copy the velocities since it requires the physics engine to be initialized with this kinbody, which might not happen before the clone..?
+//    std::vector<std::pair<Vector,Vector> > velocities;
+//    r->GetLinkVelocities(velocities);
+//    SetLinkVelocities(velocities);
+
+    // do not force-reset the callbacks!! since the ChangeCallbackData destructors will crash
+    //_listRegisteredCallbacks.clear();
 
     // cache
     _ResetInternalCollisionCache();

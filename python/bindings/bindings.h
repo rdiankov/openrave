@@ -446,6 +446,15 @@ inline numeric::array toPyArray(const std::vector<T>& v, std::vector<npy_intp>& 
     return toPyArrayN(&v[0],dims);
 }
 
+template <typename T, int N>
+inline numeric::array toPyArray(const boost::array<T,N>& v)
+{
+    if( v.size() == 0 ) {
+        return toPyArrayN((T*)NULL,0);
+    }
+    return toPyArrayN(&v[0],v.size());
+}
+
 #endif
 
 }

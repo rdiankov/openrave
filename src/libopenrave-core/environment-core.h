@@ -420,8 +420,14 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         boost::shared_ptr<Environment> penv(new Environment());
-        penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options);
+        penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options,false);
         return penv;
+    }
+
+    virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        _Clone(boost::static_pointer_cast<Environment const>(preference),cloningoptions,true);
     }
 
     virtual int AddModule(ModuleBasePtr module, const std::string& cmdargs)
@@ -1749,13 +1755,17 @@ protected:
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
-    virtual void _Clone(boost::shared_ptr<Environment const> r, int options)
+    virtual void _Clone(boost::shared_ptr<Environment const> r, int options, bool bCheckSharedResources=false)
     {
-        Destroy();
+        if( !bCheckSharedResources ) {
+            Destroy();
+        }
 
         boost::mutex::scoped_lock lockinit(_mutexInit);
-        SetCollisionChecker(CollisionCheckerBasePtr());
-        SetPhysicsEngine(PhysicsEngineBasePtr());
+        if( !bCheckSharedResources ) {
+            SetCollisionChecker(CollisionCheckerBasePtr());
+            SetPhysicsEngine(PhysicsEngineBasePtr());
+        }
 
         _nBodiesModifiedStamp = r->_nBodiesModifiedStamp;
         _homedirectory = r->_homedirectory;
@@ -1770,42 +1780,130 @@ protected:
 
         SetDebugLevel(r->GetDebugLevel());
 
-        // a little tricky due to a deadlocking situation
-        std::map<int, KinBodyWeakPtr> mapBodies;
-        {
-            boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
-            mapBodies = _mapBodies;
-            _mapBodies.clear();
+        if( !bCheckSharedResources || !(options & Clone_Bodies) ) {
+            {
+                // clear internal interface lists
+                boost::mutex::scoped_lock lock(_mutexInterfaces);
+                // release all grabbed
+                FOREACH(itrobot,_vecrobots) {
+                    (*itrobot)->ReleaseAllGrabbed();
+                }
+                FOREACH(itbody,_vecbodies) {
+                    (*itbody)->Destroy();
+                }
+                _vecbodies.clear();
+                FOREACH(itrobot,_vecrobots) {
+                    (*itrobot)->Destroy();
+                }
+                _vecrobots.clear();
+                _vPublishedBodies.clear();
+            }
+            // a little tricky due to a deadlocking situation
+            std::map<int, KinBodyWeakPtr> mapBodies;
+            {
+                boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+                mapBodies = _mapBodies;
+                _mapBodies.clear();
+            }
+            mapBodies.clear();
         }
-        mapBodies.clear();
+
+        list<ViewerBasePtr> listViewers = _listViewers;
+        {
+            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            _listViewers.clear();
+        }
+
+        if( !(options & Clone_Viewer) ) {
+            RAVELOG_DEBUG("resetting raveviewer\n");
+            FOREACH(itviewer, listViewers) {
+                // don't reset the viewer since it can already be dead
+                // todo: this call could lead into a deadlock if a SIGINT got called from the viewer thread
+                (*itviewer)->quitmainloop();
+            }
+            listViewers.clear();
+        }
 
         _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
-        boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
+        //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
 
+        bool bCollisionCheckerChanged = false;
         if( !!r->GetCollisionChecker() ) {
-            try {
-                CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId());
-                p->Clone(r->GetCollisionChecker(),options);
-                SetCollisionChecker(p);
+            if( !bCheckSharedResources || (!!_pCurrentChecker && _pCurrentChecker->GetXMLId() != r->GetCollisionChecker()->GetXMLId()) ) {
+                try {
+                    CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId());
+                    p->Clone(r->GetCollisionChecker(),options);
+                    SetCollisionChecker(p);
+                    bCollisionCheckerChanged = true;
+                }
+                catch(const std::exception& ex) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone collision checker %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                }
             }
-            catch(const std::exception& ex) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+        }
+        else {
+            SetCollisionChecker(CollisionCheckerBasePtr());
+        }
+
+        bool bPhysicsEngineChanged = false;
+        if( !!r->GetPhysicsEngine() ) {
+            if( !bCheckSharedResources || (!!_pPhysicsEngine && _pPhysicsEngine->GetXMLId() != r->GetPhysicsEngine()->GetXMLId()) ) {
+                try {
+                    PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
+                    p->Clone(r->GetPhysicsEngine(),options);
+                    SetPhysicsEngine(p);
+                    bPhysicsEngineChanged = true;
+                }
+                catch(const std::exception& ex) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                }
             }
+        }
+        else {
+            SetPhysicsEngine(PhysicsEngineBasePtr());
         }
 
         if( options & Clone_Bodies ) {
             boost::mutex::scoped_lock lock(r->_mutexInterfaces);
+            std::vector<RobotBasePtr> vecrobots;
+            std::vector<KinBodyPtr> vecbodies;
+            std::vector<std::pair<Vector,Vector> > linkvelocities;
+            _mapBodies.clear();
+            if( bCheckSharedResources ) {
+                // delete any bodies/robots from mapBodies that are not in r->_vecrobots and r->_vecbodies
+                vecrobots.swap(_vecrobots);
+                vecbodies.swap(_vecbodies);
+            }
             // first initialize the pointers
+            list<KinBodyPtr> listToClone, listToCopyState;
             FOREACHC(itrobot, r->_vecrobots) {
                 try {
-                    RobotBasePtr pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
+                    RobotBasePtr pnewrobot;
+                    if( bCheckSharedResources ) {
+                        FOREACH(itrobot2,vecrobots) {
+                            if( (*itrobot2)->GetName() == (*itrobot)->GetName() && (*itrobot2)->GetKinematicsGeometryHash() == (*itrobot)->GetKinematicsGeometryHash() ) {
+                                pnewrobot = *itrobot2;
+                                break;
+                            }
+                        }
+                    }
+                    if( !pnewrobot ) {
+                        pnewrobot = RaveCreateRobot(shared_from_this(), (*itrobot)->GetXMLId());
+                        pnewrobot->_name = (*itrobot)->_name; // at least copy the names
+                        listToClone.push_back(*itrobot);
+                    }
+                    else {
+                        //TODO
+                        //pnewrobot->ReleaseAllGrabbed(); // will re-grab later?
+                        listToCopyState.push_back(*itrobot);
+                    }
                     pnewrobot->_environmentid = (*itrobot)->GetEnvironmentId();
                     BOOST_ASSERT( _mapBodies.find(pnewrobot->GetEnvironmentId()) == _mapBodies.end() );
-                    _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
                     _vecbodies.push_back(pnewrobot);
                     _vecrobots.push_back(pnewrobot);
+                    _mapBodies[pnewrobot->GetEnvironmentId()] = pnewrobot;
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to clone robot %s: %s")%(*itrobot)->GetName()%ex.what()));
@@ -1816,17 +1914,60 @@ protected:
                     continue;
                 }
                 try {
-                    KinBodyPtr pnewbody(new KinBody(PT_KinBody,shared_from_this()));
+                    KinBodyPtr pnewbody;
+                    if( bCheckSharedResources ) {
+                        FOREACH(itbody2,vecbodies) {
+                            if( (*itbody2)->GetName() == (*itbody)->GetName() && (*itbody2)->GetKinematicsGeometryHash() == (*itbody)->GetKinematicsGeometryHash() ) {
+                                pnewbody = *itbody2;
+                                break;
+                            }
+                        }
+                    }
+                    if( !pnewbody ) {
+                        pnewbody.reset(new KinBody(PT_KinBody,shared_from_this()));
+                        pnewbody->_name = (*itbody)->_name; // at least copy the names
+                        listToClone.push_back(*itbody);
+                    }
+                    else {
+                        listToCopyState.push_back(*itbody);
+                    }
                     pnewbody->_environmentid = (*itbody)->GetEnvironmentId();
-                    _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                     _vecbodies.push_back(pnewbody);
+                    _mapBodies[pnewbody->GetEnvironmentId()] = pnewbody;
                 }
                 catch(const std::exception &ex) {
                     RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
+
+            // copy state before cloning
+            if( listToCopyState.size() > 0 ) {
+                FOREACH(itbody,listToCopyState) {
+                    KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                    if( bCollisionCheckerChanged ) {
+                        GetCollisionChecker()->InitKinBody(pnewbody);
+                    }
+                    if( bPhysicsEngineChanged ) {
+                        GetPhysicsEngine()->InitKinBody(pnewbody);
+                    }
+                    pnewbody->__hashkinematics = (*itbody)->__hashkinematics;
+                    if( pnewbody->IsRobot() ) {
+                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
+                        // don't clone grabbed bodies!
+                        RobotBase::RobotStateSaver saver(poldrobot, 0xffffffff&~KinBody::Save_GrabbedBodies);
+                        saver.Restore(pnewrobot);
+                        pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
+                    }
+                    else {
+                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff);
+                        saver.Restore(pnewbody);
+                    }
+                }
+            }
+
             // now clone
-            FOREACHC(itbody, r->_vecbodies) {
+            FOREACHC(itbody, listToClone) {
                 try {
                     KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
                     if( !!pnewbody ) {
@@ -1837,11 +1978,43 @@ protected:
                     RAVELOG_ERROR(str(boost::format("failed to clone body %s: %s")%(*itbody)->GetName()%ex.what()));
                 }
             }
-            FOREACH(itbody,_vecbodies) {
-                (*itbody)->_ComputeInternalInformation();
+            FOREACH(itbody,listToClone) {
+                KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                pnewbody->_ComputeInternalInformation();
+                GetCollisionChecker()->InitKinBody(pnewbody);
+                GetPhysicsEngine()->InitKinBody(pnewbody);
+                pnewbody->__hashkinematics = (*itbody)->__hashkinematics; /// _ComputeInternalInformation resets the hashes
+                if( pnewbody->IsRobot() ) {
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
+                    pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
+                }
             }
-            FOREACH(itbody, _vecbodies) {
-                GetCollisionChecker()->InitKinBody(*itbody);
+            // update the state after every body is initialized!
+            FOREACH(itbody,listToClone) {
+                KinBodyPtr pnewbody = _mapBodies[(*itbody)->GetEnvironmentId()].lock();
+                if( (*itbody)->IsRobot() ) {
+                    RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                    RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
+                    // need to also update active dof/active manip since it is erased by _ComputeInternalInformation
+                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
+                    saver.Restore(pnewrobot);
+                }
+                else {
+                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_LinkVelocities); // all the others should have been saved?
+                    saver.Restore(pnewbody);
+                }
+            }
+            if( listToCopyState.size() > 0 ) {
+                // check for re-grabs after cloning is done
+                FOREACH(itbody,listToCopyState) {
+                    if( (*itbody)->IsRobot() ) {
+                        RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(*itbody);
+                        RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_mapBodies[(*itbody)->GetEnvironmentId()].lock());
+                        RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies);
+                        saver.Restore(pnewrobot);
+                    }
+                }
             }
         }
         if( options & Clone_Sensors ) {
@@ -1857,45 +2030,56 @@ protected:
                 }
             }
         }
+        // sensors might be attached on a robot?, so have to re-update
+        FOREACH(itrobot, _vecrobots) {
+            (*itrobot)->_UpdateAttachedSensors();
+        }
 
         if( options & Clone_Simulation ) {
-            if( !!r->GetPhysicsEngine() ) {
-                try {
-                    PhysicsEngineBasePtr p = RaveCreatePhysicsEngine(shared_from_this(),r->GetPhysicsEngine()->GetXMLId());
-                    p->Clone(r->GetPhysicsEngine(),options);
-                    SetPhysicsEngine(p);
-                }
-                catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
-                }
-            }
             _bEnableSimulation = r->_bEnableSimulation;
             _nCurSimTime = r->_nCurSimTime;
             _nSimStartTime = r->_nSimStartTime;
         }
-        FOREACH(itbody, _vecbodies) {
-            GetPhysicsEngine()->InitKinBody(*itbody);
-        }
 
         if( options & Clone_Viewer ) {
-            list<ViewerBasePtr> listViewers;
-            r->GetViewers(listViewers);
-            FOREACH(itviewer, listViewers) {
+            list<ViewerBasePtr> listViewers2;
+            r->GetViewers(listViewers2);
+            FOREACH(itviewer2, listViewers2) {
                 try {
-                    ViewerBasePtr p = RaveCreateViewer(shared_from_this(),(*itviewer)->GetXMLId());
-                    p->Clone(*itviewer,options);
-                    AddViewer(p);
+                    ViewerBasePtr pviewer;
+                    if( bCheckSharedResources ) {
+                        FOREACH(itviewer,listViewers) {
+                            if( (*itviewer)->GetXMLId() == (*itviewer2)->GetXMLId() ) {
+                                pviewer = *itviewer;
+                                listViewers.erase(itviewer);
+                                break;
+                            }
+                        }
+                    }
+                    if( !pviewer ) {
+                        pviewer = RaveCreateViewer(shared_from_this(),(*itviewer2)->GetXMLId());
+                    }
+                    pviewer->Clone(*itviewer2,options);
+                    AddViewer(pviewer);
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR(str(boost::format("failed to clone viewer %s: %s")%(*itviewer)->GetName()%ex.what()));
+                    RAVELOG_ERROR(str(boost::format("failed to clone viewer %s: %s")%(*itviewer2)->GetName()%ex.what()));
                 }
             }
         }
 
-        if( !!_threadSimulation ) {
-            _threadSimulation->join();
+        // reset left-over viewers
+        FOREACH(itviewer, listViewers) {
+            (*itviewer)->quitmainloop();
         }
-        _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
+        listViewers.clear();
+
+        if( !bCheckSharedResources ) {
+            if( !!_threadSimulation ) {
+                _threadSimulation->join();
+            }
+            _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
+        }
     }
 
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
