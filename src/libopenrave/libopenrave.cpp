@@ -1566,7 +1566,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
             offset = 16;
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
-            replacename = s_GroupsAffine.at(deriv);
+            replacename = s_GroupsIkparam.at(deriv);
             offset = 14;
         }
 
