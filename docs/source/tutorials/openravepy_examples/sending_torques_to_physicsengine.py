@@ -19,7 +19,9 @@ with env:
 for itry in range(5):
     torques = 100*(numpy.random.rand(robot.GetDOF())-0.5)
     for i in range(100):
-        robot.SetJointTorques(torques,True)
+        # have to lock environment when calling robot methods
+        with env:
+            robot.SetDOFTorques(torques,True)
         time.sleep(0.01)
 
 # reset the physics engine
