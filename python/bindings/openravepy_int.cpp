@@ -41,7 +41,7 @@ object PyInterfaceBase::GetUserData() const {
 object PyInterfaceBase::GetReadableInterfaces()
 {
     boost::python::dict ointerfaces;
-    FOREACH(it,_pbase->GetReadableInterfaces()) {
+    FOREACHC(it,_pbase->GetReadableInterfaces()) {
         ointerfaces[it->first] = openravepy::GetUserData(it->second);
     }
     return ointerfaces;
