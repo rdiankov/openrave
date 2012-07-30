@@ -478,7 +478,7 @@ class TestKinematics(EnvironmentSetup):
                         Mexpecteddiff = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
                             Mexpecteddiff += Mpartials[i]*randdelta[i]
-                        assert( sum(abs(Mexpecteddiff-Mtestdiff)) < 5e-5 )
+                        assert( sum(abs(Mexpecteddiff-Mtestdiff)) < 7e-5 )
 
                         C = zeros((body.GetDOF(),body.GetDOF()))
                         for i in range(body.GetDOF()):
