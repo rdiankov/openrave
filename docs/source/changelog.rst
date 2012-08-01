@@ -68,6 +68,8 @@ Inverse Kinematics
 
 * Added velocities enumerations to IkParameterizationType (like IkParameterizationType.Transform6DVelocity), coordinate transforms can handle velocities.
 
+* Added **IkParameterization * transform** right-transformation
+
 * Added IK solver error codes for notifying user where IK failed.
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.

@@ -1772,7 +1772,7 @@ public:
         return GetConfigurationSpecification(GetType(),interpolation);
     }
 
-    /// \brief in-place transform into a new coordinate system
+    /// \brief in-place left-transform into a new coordinate system. Equivalent to t * ikparam
     inline IkParameterization& MultiplyTransform(const Transform& t) {
         switch(GetType()) {
         case IKP_Transform6D:
@@ -1910,12 +1910,180 @@ public:
             break;
         }
         default:
-            throw openrave_exception(str(boost::format("does not support parameterization 0x%x")%GetType()));
+            throw openrave_exception(str(boost::format("parameterization 0x%x does not support left-transform")%GetType()));
         }
         for(std::map<std::string, std::vector<dReal> >::iterator it = _mapCustomData.begin(); it != _mapCustomData.end(); ++it) {
             _MultiplyTransform(t, it->first, it->second);
         }
         return *this;
+    }
+
+    /** \brief in-place right-transform into a new coordinate system. Equivalent to ikparam*t
+
+        Note that depending on the ikparam type, some information from the passed in transform can get lost or misinterpreted. For example
+        Translation3D types do not have a rotation, so assume identity.
+
+        For ik types that have 3D directions stored, the transformation is the following:
+        \code
+        quatRotate(quatMultiply(quatRotateDirection(Vector(0,0,1),direction), t.rot), Vector(0,0,1))
+        \endcode
+        Basically it is how the local z axis gets transformed and converting that back to world coordinates.
+     */
+    inline IkParameterization& MultiplyTransformRight(const Transform& t) {
+        switch(GetType()) {
+        case IKP_Transform6D:
+            _transform *= t;
+            break;
+//        case IKP_Transform6DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            _transform.rot = quatMultiply(t.rot,_transform.rot);
+//            break;
+        case IKP_Rotation3D:
+//        case IKP_Rotation3DVelocity:
+            _transform.rot = quatMultiply(_transform.rot,t.rot);
+            break;
+        case IKP_Translation3D:
+            _transform.trans = _transform.trans + t.trans;
+            break;
+//        case IKP_Translation3DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            break;
+        case IKP_Direction3D:
+//        case IKP_Direction3DVelocity:
+            _transform.rot = quatRotate(quatMultiply(quatRotateDirection(Vector(0,0,1),_transform.rot), t.rot), Vector(0,0,1));
+            break;
+//        case IKP_Ray4D:
+//            _transform.trans = t * _transform.trans;
+//            _transform.rot = t.rotate(_transform.rot);
+//            break;
+//        case IKP_Ray4DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            _transform.rot = t.rotate(_transform.rot);
+//            break;
+        case IKP_Lookat3D:
+            SetLookat3D(GetLookat3D() + t.trans);
+            break;
+        case IKP_TranslationDirection5D: {
+            Vector qorig = quatRotateDirection(Vector(0,0,1),_transform.rot);
+            Vector q = quatMultiply(qorig, t.rot);
+            _transform.trans += quatRotate(qorig,t.trans);
+            _transform.rot = quatRotate(q, Vector(0,0,1));
+            break;
+        }
+//        case IKP_TranslationDirection5DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            _transform.rot = t.rotate(_transform.rot);
+//            break;
+        case IKP_TranslationXY2D:
+            SetTranslationXY2D(GetTranslationXY2D() + t.trans);
+            break;
+//        case IKP_TranslationXY2DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            break;
+        case IKP_TranslationXYOrientation3D: {
+            Vector v = GetTranslationXYOrientation3D();
+            Vector voldtrans(v.x,v.y,0);
+            Vector q = quatFromAxisAngle(Vector(0,0,1),v.z);
+            Vector vnewtrans = voldtrans + quatRotate(q,t.trans);
+            dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+            SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+            break;
+        }
+//        case IKP_TranslationXYOrientation3DVelocity: {
+//            Vector v = GetTranslationXYOrientation3D();
+//            Vector voldtrans(v.x,v.y,0);
+//            _transform.trans = t.rotate(voldtrans);
+//            _transform.trans.z = quatRotate(t.rot,Vector(0,0,v.z)).z;
+//            break;
+//        }
+        case IKP_TranslationLocalGlobal6D:
+            _transform.trans = _transform.trans + t.trans;
+            break;
+//        case IKP_TranslationLocalGlobal6DVelocity:
+//            _transform.trans = t.rotate(_transform.trans);
+//            break;
+//        case IKP_TranslationXAxisAngle4D: {
+//            _transform.trans = t*_transform.trans;
+//            // do not support rotations
+//            break;
+//        }
+//        case IKP_TranslationXAxisAngle4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // do not support rotations
+//            break;
+//        }
+//        case IKP_TranslationYAxisAngle4D: {
+//            _transform.trans = t*_transform.trans;
+//            // do not support rotations
+//            break;
+//        }
+//        case IKP_TranslationYAxisAngle4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // do not support rotations
+//            break;
+//        }
+//        case IKP_TranslationZAxisAngle4D: {
+//            _transform.trans = t*_transform.trans;
+//            // do not support rotations
+//            break;
+//        }
+//        case IKP_TranslationZAxisAngle4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // do not support rotations
+//            break;
+//        }
+        case IKP_TranslationXAxisAngleZNorm4D: {
+            Vector q = quatFromAxisAngle(Vector(0,0,1),_transform.rot.x);
+            _transform.trans += quatRotate(q,t.trans);
+            // only support rotation along z-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+            break;
+        }
+//        case IKP_TranslationXAxisAngleZNorm4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // only support rotation along z-axis
+//            _transform.rot.x = quatRotate(t.rot,Vector(0,0,_transform.rot.x)).z;
+//            break;
+//        }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            Vector q = quatFromAxisAngle(Vector(1,0,0),_transform.rot.x);
+            _transform.trans += quatRotate(q,t.trans);
+            // only support rotation along x-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(1,0,0),t.rot).first;
+            break;
+        }
+//        case IKP_TranslationYAxisAngleXNorm4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // only support rotation along x-axis
+//            _transform.rot.x = quatRotate(t.rot,Vector(_transform.rot.x,0,0)).x;
+//            break;
+//        }
+        case IKP_TranslationZAxisAngleYNorm4D: {
+            Vector q = quatFromAxisAngle(Vector(0,1,0),_transform.rot.x);
+            _transform.trans += quatRotate(q,t.trans);
+            // only support rotation along y-axis
+            _transform.rot.x -= normalizeAxisRotation(Vector(0,1,0),t.rot).first;
+            break;
+        }
+//        case IKP_TranslationZAxisAngleYNorm4DVelocity: {
+//            _transform.trans = t.rotate(_transform.trans);
+//            // only support rotation along y-axis
+//            _transform.rot.x = quatRotate(t.rot,Vector(0,_transform.rot.x,0)).y;
+//            break;
+//        }
+        default:
+            throw openrave_exception(str(boost::format("parameterization 0x%x does not support right-transforms")%GetType()));
+        }
+        for(std::map<std::string, std::vector<dReal> >::iterator it = _mapCustomData.begin(); it != _mapCustomData.end(); ++it) {
+            _MultiplyTransformRight(t, it->first, it->second);
+        }
+        return *this;
+    }
+
+    inline IkParameterization operator*(const Transform& t) const {
+        IkParameterization iknew(*this);
+        iknew.MultiplyTransformRight(t);
+        return iknew;
     }
 
 protected:
@@ -1955,6 +2123,47 @@ protected:
                 OPENRAVE_ASSERT_OP_FORMAT0(IkParameterization::GetNumberOfValues(newiktype)+1, ==, (int)values.size(),"expected values not equal",ORE_InvalidState);
                 newikparam.SetValues(values.begin()+1,newiktype);
                 newikparam.MultiplyTransform(t);
+                newikparam.GetValues(values.begin()+1);
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("IkParameterization custom data '%s' does not have a valid transform",name,ORE_InvalidState);
+            }
+        }
+    }
+
+    inline static void _MultiplyTransformRight(const Transform& t, const std::string& name, std::vector<dReal>& values)
+    {
+        size_t startoffset = name.find("_transform=");
+        if( startoffset != std::string::npos ) {
+            size_t endoffset = name.find("_", startoffset+11);
+            std::string transformtype;
+            if( endoffset == std::string::npos ) {
+                transformtype = name.substr(startoffset+11);
+            }
+            else {
+                transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
+            }
+            if( transformtype == "direction" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v = quatRotate(quatMultiply(quatRotateDirection(Vector(0,0,1),v), t.rot), Vector(0,0,1));
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "point" ) {
+                Vector v(values.at(0),values.at(1), values.at(2));
+                v += t.trans;
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+            }
+            else if( transformtype == "quat" ) {
+                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                v = quatMultiply(v,t.rot);
+                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+            }
+            else if( transformtype == "ikparam" ) {
+                IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
+                IkParameterization newikparam;
+                OPENRAVE_ASSERT_OP_FORMAT0(IkParameterization::GetNumberOfValues(newiktype)+1, ==, (int)values.size(),"expected values not equal",ORE_InvalidState);
+                newikparam.SetValues(values.begin()+1,newiktype);
+                newikparam.MultiplyTransformRight(t);
                 newikparam.GetValues(values.begin()+1);
             }
             else {

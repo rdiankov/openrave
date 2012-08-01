@@ -81,6 +81,7 @@ class PyModuleBase;
 class PyViewerBase;
 class PySpaceSamplerBase;
 class PyConfigurationSpecification;
+class PyIkParameterization;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -116,6 +117,7 @@ typedef boost::shared_ptr<PySpaceSamplerBase> PySpaceSamplerBasePtr;
 typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
+typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 
 inline uint64_t GetMicroTime()
 {

@@ -102,7 +102,7 @@ public:
         }
 
         ConfigurationSpecification newspec = oldspec;
-        newspec.AddVelocityGroups(true);
+        newspec.AddDerivativeGroups(1,true);
         vector<dReal> vdiffdata, data;
         ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
         // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks

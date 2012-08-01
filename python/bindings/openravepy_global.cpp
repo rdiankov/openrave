@@ -702,10 +702,18 @@ public:
         return ConvertStringToUnicode(__str__());
     }
 
+    PyIkParameterizationPtr __mul__(object otrans)
+    {
+        return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
+    }
+
+    PyIkParameterizationPtr __rmul__(object otrans)
+    {
+        return PyIkParameterizationPtr(new PyIkParameterization(ExtractTransform(otrans) * _param));
+    }
+
     IkParameterization _param;
 };
-
-typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 
 bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
     extract<PyIkParameterizationPtr > pyikparam(o);
@@ -1666,6 +1674,8 @@ void init_openravepy_global()
                                    .def("__str__",&PyIkParameterization::__str__)
                                    .def("__unicode__",&PyIkParameterization::__unicode__)
                                    .def("__repr__",&PyIkParameterization::__repr__)
+                                   .def("__mul__",&PyIkParameterization::__mul__)
+                                   .def("__rmul__",&PyIkParameterization::__rmul__)
                                    .def_pickle(IkParameterization_pickle_suite())
         ;
         ikparameterization.attr("Type") = iktype;

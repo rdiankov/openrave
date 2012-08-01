@@ -230,13 +230,13 @@ void KinBodyItem::Load()
                 psep->addChild(phints);
 
                 switch(geom->GetType()) {
-                case KinBody::Link::GEOMPROPERTIES::GeomSphere: {
+                case KinBody::Link::GeomSphere: {
                     SoSphere* s = new SoSphere();
                     s->radius = geom->GetSphereRadius();
                     psep->addChild(s);
                     break;
                 }
-                case KinBody::Link::GEOMPROPERTIES::GeomBox: {
+                case KinBody::Link::GeomBox: {
                     Vector v;
                     SoCube* c = new SoCube();
                     c->width = geom->GetBoxExtents().x*2.0f;
@@ -245,7 +245,7 @@ void KinBodyItem::Load()
                     psep->addChild(c);
                     break;
                 }
-                case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
+                case KinBody::Link::GeomCylinder: {
                     // make SoCylinder point towards z, not y
                     SbMatrix m;
                     SbRotation(SbVec3f(1,0,0),M_PI/2).getValue(m);
@@ -257,7 +257,7 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
-                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
+                case KinBody::Link::GeomTrimesh: {
                     // set to render for both faces
                     phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
 

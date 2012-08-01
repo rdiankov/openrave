@@ -49,3 +49,17 @@ def test_tutorialexamples():
         basename,ext = os.path.splitext(name)
         if not basename in ignore_examples and ext.lower() == '.py':
                 yield RunTutorialExample(), os.path.join(examplesdir,basename)
+
+def test_ikparam():
+    ikparam = IkParameterization(Ray([1,2,3],[1,0,0]), IkParameterizationType.TranslationDirection5D)
+    T = matrixFromAxisAngle([0,pi/4,0])
+    T[0:3,3] = [0.1,0.2,0.3]
+    # left mult
+    ikparam2 = IkParameterization(ikparam)
+    ikparam2.MultiplyTransform(T)
+    ikparam3 = ikparam.__rmul__(T)
+    assert(ikparam2.ComputeDistanceSqr(ikparam3) <= g_epsilon)
+    # right mult
+    
+    ikparam2 = ikparam*T
+    ikparam2.GetTranslationDirection5D().pos()
