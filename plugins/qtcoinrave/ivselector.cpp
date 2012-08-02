@@ -28,6 +28,7 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
     _selectedItem = pItem;
     _viewer = viewer;
     _scale = draggerScale;
+    _penv = viewer->GetEnv();
     //_ptext = NULL;
 
     // set some default behavioral options
@@ -35,14 +36,14 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
     _prevtransparency = pItem->GetIvTransparency()->value;
     pItem->GetIvTransparency()->value = SoGLRenderAction::SCREEN_DOOR;
 
-    if( !!_selectedItem &&(_selectedItem->GetIvRoot() != NULL)) {
-        _GetBounds(_selectedItem->GetIvRoot(), _ab);
+    if( !!pItem &&(pItem->GetIvRoot() != NULL)) {
+        _GetBounds(pItem->GetIvRoot(), _ab);
 
         // make the item transparent
         SoSearchAction search;
         search.setType(SoMaterial::getClassTypeId());
         search.setInterest(SoSearchAction::ALL);
-        search.apply(_selectedItem->GetIvRoot());
+        search.apply(pItem->GetIvRoot());
         for(int i = 0; i < search.getPaths().getLength(); ++i) {
             SoPath* path = search.getPaths()[i];
             SoMaterial* pmtrl = (SoMaterial*)path->getTail();
@@ -50,10 +51,10 @@ IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
             pmtrl->transparency = 0.25f;
         }
 
-        _vlinkaxes.resize(_selectedItem->GetNumIvLinks());
+        _vlinkaxes.resize(pItem->GetNumIvLinks());
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
             _vlinkaxes[i] = _CreateAxes(i == 0 ? 1.0f : 0.25f,0.5f);
-            _selectedItem->GetIvLink(i)->addChild(_vlinkaxes[i]);
+            pItem->GetIvLink(i)->addChild(_vlinkaxes[i]);
         }
     }
 }
@@ -104,9 +105,10 @@ SoSeparator* IvDragger::_CreateAxes(float fSize,float fColor)
 
 IvDragger::~IvDragger()
 {
-    if( !!_selectedItem &&(_selectedItem->GetIvRoot() != NULL)) {
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !!selectedItem &&(selectedItem->GetIvRoot() != NULL)) {
         for(size_t i = 0; i < _vlinkaxes.size(); ++i) {
-            _selectedItem->GetIvLink(i)->removeChild(_vlinkaxes[i]);
+            selectedItem->GetIvLink(i)->removeChild(_vlinkaxes[i]);
         }
         _vlinkaxes.clear();
 
@@ -114,7 +116,7 @@ IvDragger::~IvDragger()
         SoSearchAction search;
         search.setType(SoMaterial::getClassTypeId());
         search.setInterest(SoSearchAction::ALL);
-        search.apply(_selectedItem->GetIvRoot());
+        search.apply(selectedItem->GetIvRoot());
         for(int i = 0; i < search.getPaths().getLength(); ++i) {
             SoPath* path = search.getPaths()[i];
             SoMaterial* pmtrl = (SoMaterial*)path->getTail();
@@ -122,13 +124,13 @@ IvDragger::~IvDragger()
                 pmtrl->transparency = vtransparency[i];
         }
 
-        _selectedItem->GetIvTransparency()->value = _prevtransparency;
+        selectedItem->GetIvTransparency()->value = _prevtransparency;
     }
 }
 
 void IvDragger::_GetBounds(SoSeparator *subtree, AABB& ab)
 {
-    SoGetBoundingBoxAction bbox(_viewer->GetViewer()->getViewportRegion());
+    SoGetBoundingBoxAction bbox(_viewer.lock()->GetViewer()->getViewportRegion());
     bbox.apply(subtree);
     SbBox3f box = bbox.getBoundingBox();
     RaveVector<float> vmin, vmax;
@@ -139,7 +141,7 @@ void IvDragger::_GetBounds(SoSeparator *subtree, AABB& ab)
 
 void IvDragger::_GetMatrix(SbMatrix &matrix, SoNode *root, SoNode *node)
 {
-    SoGetMatrixAction getXform(_viewer->GetViewer()->getViewportRegion());
+    SoGetMatrixAction getXform(_viewer.lock()->GetViewer()->getViewportRegion());
 
     // get a path from the root to the node
 
@@ -164,14 +166,15 @@ IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float dr
 {
     // create a root node for the dragger nodes
     _draggerRoot = new SoSeparator;
-    _selectedItem->GetIvRoot()->insertChild(_draggerRoot, 0);
+    ItemPtr selectedItem = GetSelectedItem();
+    selectedItem->GetIvRoot()->insertChild(_draggerRoot, 0);
 
     // create and size a transform box dragger and then add it to the scene graph
     _transformBox = new SoTransformBoxDragger;
 
     _transformBox->scaleFactor.setValue(_ab.extents.x * _scale, _ab.extents.y * _scale, _ab.extents.z * _scale);
     _transformBox->translation.setValue(_ab.pos.x, _ab.pos.y, _ab.pos.z);
-    _toffset = _selectedItem->GetTransform();
+    _toffset = selectedItem->GetTransform();
 
     _draggerRoot->addChild(_transformBox);
 
@@ -208,8 +211,12 @@ IvObjectDragger::~IvObjectDragger()
     _SetColor(_normalColor);
 
     _transformBox->removeMotionCallback(_MotionHandler, this);
-    if( _draggerRoot != NULL )
-        _selectedItem->GetIvRoot()->removeChild(_draggerRoot);
+    if( _draggerRoot != NULL ) {
+        ItemPtr selectedItem = GetSelectedItem();
+        if( !!selectedItem ) {
+            selectedItem->GetIvRoot()->removeChild(_draggerRoot);
+        }
+    }
 }
 
 void IvObjectDragger::_SetColor(const SbColor &color)
@@ -223,28 +230,29 @@ void IvObjectDragger::_SetColor(const SbColor &color)
 void IvObjectDragger::CheckCollision(bool flag)
 {
     _checkCollision = flag;
-
-    if (_checkCollision) {
+    ItemPtr selectedItem = GetSelectedItem();
+    if (_checkCollision && !!selectedItem) {
         // synchronize the collision model transform
-        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
         if( !!pbody ) {
-            EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
+            EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
             if( !!lock ) {
-                int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
-                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
+                int prevoptions = _penv->GetCollisionChecker()->GetCollisionOptions();
+                _penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
                 CollisionReportPtr preport(new CollisionReport());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
                     RAVELOG_VERBOSE(str(boost::format("self-collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
-                else if( _viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody()), preport)) {
+                else if( _penv->CheckCollision(KinBodyConstPtr(pbody->GetBody()), preport)) {
                     // if there is a collision, revert to the original transform
                     RAVELOG_VERBOSE(str(boost::format("collision %s\n")%preport->__str__()));
                     _SetColor(COLLISION_COLOR);
                 }
-                else
+                else {
                     _SetColor(CHECK_COLOR);
-                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(prevoptions);
+                }
+                _penv->GetCollisionChecker()->SetCollisionOptions(prevoptions);
             }
         }
     }
@@ -253,6 +261,10 @@ void IvObjectDragger::CheckCollision(bool flag)
 // Update the skeleton transforms based on the dragger.
 void IvObjectDragger::UpdateSkeleton()
 {
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !selectedItem ) {
+        return;
+    }
     RaveTransform<float> tbox;
     const float* q = _transformBox->rotation.getValue().getValue();
     tbox.rot = Vector(q[3], q[0], q[1], q[2]);
@@ -262,25 +274,30 @@ void IvObjectDragger::UpdateSkeleton()
     Transform told; told.trans = -_ab.pos;
 
     RaveTransform<float> tnew = tbox*told*_toffset;
-    SetSoTransform(_selectedItem->GetIvTransform(), tnew);
+    SetSoTransform(selectedItem->GetIvTransform(), tnew);
 
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !!pbody ) {
         pbody->UpdateFromIv();
         CheckCollision(_checkCollision);
     }
     // other motion handler calls
-    _viewer->_UpdateCameraTransform();
+    _viewer.lock()->_UpdateCameraTransform();
 }
 
 void IvObjectDragger::GetMessage(ostream& sout)
 {
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-    if( !pbody )
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !selectedItem ) {
         return;
+    }
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    if( !pbody ) {
+        return;
+    }
 
     Transform t = pbody->GetTransform();
-    sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
+    sout << "Selected " << selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << "  translation = ("
          << std::fixed << std::setprecision(5)
          << std::setw(8) << std::left << t.trans.x << ", "
@@ -423,22 +440,22 @@ void IvJointDragger::_SetColor(const SbColor &color)
 void IvJointDragger::CheckCollision(bool flag)
 {
     _checkCollision = flag;
-
-    if (_checkCollision) {
-        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    ItemPtr selectedItem = GetSelectedItem();
+    if (_checkCollision && !!selectedItem) {
+        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
 
         if( !!pbody ) {
-            EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
+            EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
             if( !!lock ) {
-                int prevoptions = _viewer->GetEnv()->GetCollisionChecker()->GetCollisionOptions();
-                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
-                if (_viewer->GetEnv()->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision()) {
+                int prevoptions = _penv->GetCollisionChecker()->GetCollisionOptions();
+                _penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
+                if (_penv->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision()) {
                     _SetColor(COLLISION_COLOR);
                 }
                 else {
                     _SetColor(CHECK_COLOR);
                 }
-                _viewer->GetEnv()->GetCollisionChecker()->SetCollisionOptions(prevoptions);
+                _penv->GetCollisionChecker()->SetCollisionOptions(prevoptions);
             }
         }
     }
@@ -447,9 +464,14 @@ void IvJointDragger::CheckCollision(bool flag)
 // Update the skeleton transforms based on the dragger.
 void IvJointDragger::UpdateSkeleton()
 {
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
-    if( !pbody )
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !selectedItem ) {
         return;
+    }
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    if( !pbody ) {
+        return;
+    }
 
     // save the transform of the object before dragging
     SbMatrix mrot;
@@ -461,7 +483,7 @@ void IvJointDragger::UpdateSkeleton()
     RobotItemPtr probotitem = boost::dynamic_pointer_cast<RobotItem>(pbody);
 
     {
-        EnvironmentMutex::scoped_try_lock lock(_viewer->GetEnv()->GetMutex());
+        EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
 
         if( !!lock ) {
             KinBody::JointPtr pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
@@ -522,21 +544,25 @@ void IvJointDragger::UpdateSkeleton()
         }
     }
 
-    _viewer->_UpdateCameraTransform();
+    _viewer.lock()->_UpdateCameraTransform();
 
     UpdateDragger();
 
     // do collision checking if required
     CheckCollision(_checkCollision);
 
-    _selectedItem->SetGrab(false, false); // will be updating manually
+    selectedItem->SetGrab(false, false); // will be updating manually
     pbody->UpdateFromModel();
 }
 
 // Update the dragger based on the skeleton.
 void IvJointDragger::UpdateDragger()
 {
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !selectedItem ) {
+        return;
+    }
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }
@@ -565,7 +591,11 @@ void IvJointDragger::UpdateDragger()
 
 void IvJointDragger::GetMessage(ostream& sout)
 {
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(_selectedItem);
+    ItemPtr selectedItem = GetSelectedItem();
+    if( !selectedItem ) {
+        return;
+    }
+    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }
@@ -573,7 +603,7 @@ void IvJointDragger::GetMessage(ostream& sout)
     vector<dReal> vjoints;
     pbody->GetDOFValues(vjoints);
 
-    sout << "Selected " << _selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
+    sout << "Selected " << selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
          << std::fixed << std::setprecision(3)
          << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];
 

@@ -63,13 +63,13 @@ Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
     _ivTransparency->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
     _ivGeom->insertChild(_ivTransparency, 0);
 
-    _viewer->GetBodiesRoot()->addChild(_ivRoot);
+    _viewer.lock()->GetBodiesRoot()->addChild(_ivRoot);
 }
 
 Item::~Item()
 {
     if( _ivRoot != NULL ) {
-        _viewer->GetBodiesRoot()->removeChild(_ivRoot);
+        _viewer.lock()->GetBodiesRoot()->removeChild(_ivRoot);
         _ivRoot->unref();
     }
 
@@ -328,7 +328,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans);
     }
@@ -357,7 +357,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
         if( !lockenv ) {
             return false;
         }

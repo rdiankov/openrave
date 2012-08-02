@@ -101,6 +101,8 @@ Viewer
 
 * Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project.
 
+* Converted many qtcoinrave shared pointers to weak pointers to prevent circular dependencies.
+
 Misc
 ----
 

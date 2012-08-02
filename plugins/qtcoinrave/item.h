@@ -103,7 +103,7 @@ public:
 protected:
 
     // Instance Data
-    QtCoinViewerPtr _viewer;
+    boost::weak_ptr<QtCoinViewer> _viewer;
     string _name;
 
     SoSeparator*   _ivRoot;               //!< root of Inventor data hierarchy
@@ -112,6 +112,7 @@ protected:
     SoTransparencyType* _ivTransparency;
 };
 typedef boost::shared_ptr<Item> ItemPtr;
+typedef boost::weak_ptr<Item> ItemWeakPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
 
 class KinBodyItem : public Item

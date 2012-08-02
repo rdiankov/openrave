@@ -39,7 +39,7 @@ public:
     }                                              // text message about the dragger
 
     virtual ItemPtr GetSelectedItem() {
-        return _selectedItem;
+        return _selectedItem.lock();
     }
 
 protected:
@@ -58,8 +58,9 @@ protected:
 
     bool _checkCollision;
     SbColor _normalColor;
-    ItemPtr _selectedItem;
-    QtCoinViewerPtr _viewer;
+    ItemWeakPtr _selectedItem;
+    boost::weak_ptr<QtCoinViewer> _viewer;
+    EnvironmentBasePtr _penv;
     vector<SoSeparator*> _vlinkaxes;     // axes of the object's origin
     vector<float> vtransparency;
     float _scale;
