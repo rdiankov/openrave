@@ -160,6 +160,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     RegisterCommand("SetFeedbackVisibility",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("ShowWorldAxes",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;

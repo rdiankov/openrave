@@ -21,9 +21,7 @@ class BaseManipulation : public ModuleBase
 {
 public:
     BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques. Most of the MoveX commands by default execute the plan on the current robot by calling :meth:`.RobotBase.SetActiveMotion`. This can be disabled by adding 'execute 0' to the command line";
-        RegisterCommand("SetActiveManip",boost::bind(&BaseManipulation::SetActiveManip,this,_1,_2),
-                        "Set the active manipulator");
+        __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques. Most of the MoveX commands by default execute the plan on the current robot by calling :meth:`.RobotBase.GetController().SetPath`. This can be disabled by adding 'execute 0' to the command line";
         RegisterCommand("Traj",boost::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
         RegisterCommand("GrabBody",boost::bind(&BaseManipulation::GrabBody,this,_1,_2),
@@ -135,38 +133,6 @@ protected:
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
         return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
-    }
-
-    bool SetActiveManip(ostream& sout, istream& sinput)
-    {
-        string manipname;
-        int index = -1;
-
-        if(!sinput.eof()) {
-            sinput >> manipname;
-            if( !sinput ) {
-                return false;
-            }
-            // find the manipulator with the right name
-            index = 0;
-            FOREACHC(itmanip, robot->GetManipulators()) {
-                if( manipname == (*itmanip)->GetName() ) {
-                    break;
-                }
-                ++index;
-            }
-
-            if( index >= (int)robot->GetManipulators().size() ) {
-                index = atoi(manipname.c_str());
-            }
-        }
-
-        if(( index >= 0) &&( index < (int)robot->GetManipulators().size()) ) {
-            robot->SetActiveManipulator(index);
-            return true;
-        }
-
-        return false;
     }
 
     bool Traj(ostream& sout, istream& sinput)
