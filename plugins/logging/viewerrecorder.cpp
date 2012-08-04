@@ -609,7 +609,9 @@ protected:
                 av_write_trailer(_output);
             }
             if( _bWroteURL ) {
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)
+                avio_close(_output->pb);
+#elif LIBAVFORMAT_VERSION_INT >= (52<<16)
                 url_fclose(_output->pb);
 #else
                 url_fclose(&_output->pb);
@@ -668,7 +670,11 @@ protected:
         _output->oformat = fmt;
         snprintf(_output->filename, sizeof(_output->filename), "%s", filename.c_str());
 
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)
+        _stream = avformat_new_stream(_output, 0);
+#else
         _stream = av_new_stream(_output, 0);
+#endif
         BOOST_ASSERT(!!_stream);
 
         codec_ctx = _stream->codec;
@@ -693,14 +699,31 @@ protected:
         codec_ctx->max_b_frames = 1;
         codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)
+	// not necessary to set parameters?
+#else
         if (av_set_parameters(_output, NULL) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("set parameters failed",ORE_Assert);
         }
-
+#endif
         codec = avcodec_find_encoder(codec_ctx->codec_id);
         BOOST_ASSERT(!!codec);
 
         RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%_output->filename%width%height%frameRate%codec->name));
+
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)
+	AVDictionary * RetunedAVDic=NULL;
+        if (avcodec_open2(codec_ctx, codec,&RetunedAVDic) < 0) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
+        }
+
+	int ret = avio_open(&_output->pb, filename.c_str(), AVIO_FLAG_WRITE);
+        if (ret < 0) {
+            throw OPENRAVE_EXCEPTION_FORMAT("_StartVideo: Unable to open %s for writing: %d\n", filename%ret,ORE_Assert);
+        }
+        _bWroteURL = true;
+        avformat_write_header(_output,NULL);
+#else
         if (avcodec_open(codec_ctx, codec) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
@@ -712,6 +735,7 @@ protected:
         _bWroteURL = true;
 
         av_write_header(_output);
+#endif
         _bWroteHeader = true;
 
         _picture = avcodec_alloc_frame();
@@ -735,7 +759,6 @@ protected:
             RAVELOG_DEBUG("video resources destroyed\n");
             return;
         }
-        int size;
 
         // flip vertically
         static vector<char> newdata;
@@ -764,8 +787,31 @@ protected:
         }
 #endif
 
-        size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
-        if (size == -1) {
+
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)
+	int got_packet=0;
+	AVPacket pkt;
+	av_init_packet(&pkt);
+        pkt.data = (uint8_t*)_outbuf;
+	pkt.size = _outbuf_size;
+	int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
+	if( ret < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
+	}        
+	if (got_packet ) {
+            if( _stream->codec->coded_frame) {
+                _stream->codec->coded_frame->pts       = pkt.pts;
+                _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
+	    }
+	}
+        if( av_write_frame(_output, &pkt) < 0) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
+        }
+        pkt.data = NULL;
+        av_destruct_packet(&pkt);
+#else
+        int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
+        if (size < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("error encoding frame",ORE_Assert);
         }
 
@@ -777,6 +823,8 @@ protected:
         if( av_write_frame(_output, &pkt) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
         }
+
+#endif
         _nFrameCount++;
     }
 #endif
