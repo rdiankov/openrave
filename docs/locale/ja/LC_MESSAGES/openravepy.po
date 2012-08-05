@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-07-07 02:28\n"
+"POT-Creation-Date: 2012-08-05 18:32\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -3767,176 +3767,76 @@ msgstr ""
 msgid "Using Generated IK Files"
 msgstr ""
 
-# 70ea7dba082248999180e4d2bf00d1c8
+# 81759115173f4057aa3cbf0215d346b1
 #: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:93
 msgid ""
 "The common usage is to generate a C++ file that can be compiled into a stand-"
 "alone shared object/DLL, an executable program, or linked in statically to a "
-"bigger project. For more complex kinematics, LAPACK_ is needed."
-msgstr ""
-
-# 13822815ee4d41aea54e08c98eb56e37
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:95
-msgid "The C++ file uses the following defines:"
-msgstr ""
-
-# 1651790593134a6da976e4ff9d45654b
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:97
-msgid ""
-"IKFAST_CLIBRARY - Define this linking statically or dynamically to get "
-"correct visibility."
-msgstr ""
-
-# dc6f8b0d907c4e5b8d788b7d284aa3e1
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:98
-msgid ""
-"IKFAST_NO_MAIN - Remove the ``main`` function, usually used with "
-"IKFAST_CLIBRARY"
-msgstr ""
-
-# 2d8bc99902db4c9ebf81b514fc73affd
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:99
-msgid ""
-"IKFAST_ASSERT - Define in order to get a custom assert called when NaNs, "
-"divides by zero, and other invalid conditions are detected."
-msgstr ""
-
-# e030dc9e67f04dd38d713259b2f3798e
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:100
-msgid "IKFAST_REAL - Use to force a custom real number type for IKReal."
-msgstr ""
-
-# dd245e01a8b946ef8634ec9cf29636fd
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:101
-msgid ""
-"IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the "
-"``main`` function is excluded."
-msgstr ""
-
-# 4e20487a8fed4e3a9d102902003c9b26
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:102
-msgid ""
-"IKFAST_HEADER - specify a header file to include at the top. This would in "
-"the form of ``\"header.h\"``. In a compiler command line, it would look "
-"like: ``-DIKFAST_HEADER=\"\\\"header.h\\\"\"``"
-msgstr ""
-
-# 1262bce373f84347aefdbbbcc8646a5e
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:104
-msgid "The global functions are:"
-msgstr ""
-
-# 0706489daeee4821826cdbbb4bf56d4e
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:135
-msgid "Parameters:"
-msgstr ""
-
-# 2b45acef80a3414e8bd54441546e857b
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:137
-msgid ""
-"``eetrans`` - 3 translation values. For iktype "
-"**TranslationXYOrientation3D**, the z-axis is the orientation."
-msgstr ""
-
-# c26b906f38244abba5bb7f6ccaf2fe94
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:138
-msgid "``eerot``"
-msgstr ""
-
-# cecaff13098b40b0a230ba8d9d9d192b
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:139
-msgid "For **Transform6D** it is 9 values for the 3x3 rotation matrix."
-msgstr ""
-
-# 31e98d31b4d24d99a2c72a5f220f8983
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:140
-msgid ""
-"For **Direction3D**, **Ray4D**, and **TranslationDirection5D**, the first 3 "
-"values represent the target direction."
-msgstr ""
-
-# ca2f6be9f6b24378b2ad02acaba82c73
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:141
-msgid ""
-"For **TranslationXAxisAngle4D**, **TranslationYAxisAngle4D**, and "
-"**TranslationZAxisAngle4D** the first value represents the angle."
-msgstr ""
-
-# 11c433c044a747099a8ca9476bd2c888
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:142
-msgid ""
-"For **TranslationLocalGlobal6D**, the diagonal elements ([0],[4],[8]) are "
-"the local translation inside the end effector coordinate system."
-msgstr ""
-
-# c0579d0aa0db4bb6b406a4e553f7595f
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:143
-msgid ""
-"``IKSolution`` - The discrete solutions are returned in this structure. "
-"Sometimes the joint axes of the robot can align allowing an infinite number "
-"of solutions. The ``IKSolution`` structure stores all these solutions in the "
-"form of free variables that the user has to set when querying the solution. "
-"Its prototype is:"
+"bigger project. For more complex kinematics, LAPACK_ is needed. Here is the "
+"header file, which can be found in `share/openrave-X.Y/python/ikfast.h "
+"<../../coreapihtml/ikfast_8h.html`_."
 msgstr ""
 
 # a11fdaa6127a4b1593f7b4ddd12879a8
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:156
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:96
 msgid "Compiling with GCC"
 msgstr ""
 
 # 7753d5de3bd24826b9c866bdb2fdc11d
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:158
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:98
 msgid "The most basic command is:"
 msgstr ""
 
 # 6f190ac99cd44e8d8dde1cd25ba83a70
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:164
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:104
 msgid ""
 "This will generate a small program that outputs all solutions given the end "
 "effector with respect to the robot base."
 msgstr ""
 
-# 87b5a2ae633f45ed803f26e08dbea87b
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:166
-msgid "Using gcc, this requires \"-llapack\" to be added, for MSVC++"
+# 737c4c2320cb438c89745877669d3215
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:106
+msgid ""
+"Using gcc, this requires \"-llapack\" to be added. For MSVC++, users will "
+"have to compile lapack and link it themselves."
 msgstr ""
 
 # d8f4eba442634f82babf40b2af981133
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:169
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:109
 msgid "Compiling with MSVC"
 msgstr ""
 
 # 68be4fa36a434aa0bdbbb4b30fec9a4b
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:171
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:111
 msgid ""
 "`LAPACK For Windows`_ should be installed in order to get complex kinematics "
 "linking correctly."
 msgstr ""
 
 # 3b2189acc69b4a41b79bb508ac43dbc3
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:174
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:114
 msgid "Details"
 msgstr ""
 
 # 2941a416d85749dcaf9e87ebff8ecace
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:176
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:116
 msgid "Terminology:"
 msgstr ""
 
 # 260df688a78d45a5bb5dbb59aedbe5bc
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:178
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:118
 msgid "**solve joints** - the joints to solve for using inverse kinematics"
 msgstr ""
 
 # 444db2d40429416a9b41c3adcc6b5e6a
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:180
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:120
 msgid ""
 "**free joints** - the joints that are specified before the IK is run, these "
 "values are known at runtime, but not known at IK generation time."
 msgstr ""
 
 # 8cd4d962883b4676ab21c01e90017b71
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:183
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:123
 msgid ""
 "The top level class is `ikfast.IKFastSolver` and generates an Abstract "
 "Syntax Tree (AST) using definitions from `ikfast.AST`. The AST is then "
@@ -3945,7 +3845,7 @@ msgid ""
 msgstr ""
 
 # c056cb45f18844d3b3d90a464a1b4607
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:185
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:125
 msgid ""
 "Internal symbolic math uses sympy_. Infinite precision fractions are used in "
 "order to keep track of linearly independent equations and when they evaluate "
@@ -3954,12 +3854,12 @@ msgid ""
 msgstr ""
 
 # 1f50f58f39e74caf965a2e0dafc876ff
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:194
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:134
 msgid "Open Issues"
 msgstr ""
 
 # f3ec16a31445429c8db9d350020efdb8
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:196
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:136
 msgid ""
 "currently ikfast does not handle big decimal numbers well. for example "
 "defining the axes or anchors as 1.032513241 will produce very big fractions "
@@ -3967,37 +3867,37 @@ msgid ""
 msgstr ""
 
 # fce1e1cdcb1e435b9be218e868ac2ad2
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:198
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:138
 msgid ""
 "there are cases when axes align and there are infinite solutions. although "
 "ikfast can detect such cases, we need a lot more work in this area."
 msgstr ""
 
 # 4d333155fa5845f4af5bd0dd44e3fcfc
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:200
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:140
 msgid ""
 "for 6D ik, there are still mechanisms it cannot solve, please send the "
 "kinematics model if such a situation is encountered."
 msgstr ""
 
 # cc32d05730dd4803a1470ad46124336e
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:202
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:142
 msgid ""
 "there are 10 different types of IK, currently ray4d IK needs a lot of work."
 msgstr ""
 
 # 55f438bc8c374aa0bf23930e48ccb5a1
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:205
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:145
 msgid "FAQ"
 msgstr ""
 
 # 6cb6ca0b071441bd94a9fb2799a652d8
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:207
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:147
 msgid "**ikfast has been running for more than an hour, will it ever finish?**"
 msgstr ""
 
 # 296bf60e8d764009880c048febf3283e
-#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:209
+#: ../../openravepy/ikfast.py:docstring of openravepy.ikfast:149
 msgid "Most likely not, usually an iksolver finishes within 10 minutes."
 msgstr ""
 
@@ -5260,9 +5160,11 @@ msgstr ""
 #: openravepy.openravepy_int.Contact:1 openravepy.openravepy_int.Environment:1
 #: openravepy.openravepy_int.Environment:3
 #: openravepy.openravepy_int.IkParameterization:1
+#: openravepy.openravepy_int.KinBody.Link.GeometryInfo:1
 #: openravepy.openravepy_int.Planner.PlannerParameters:1
 #: openravepy.openravepy_int.Planner.PlannerParameters:3
 #: openravepy.openravepy_int.PlannerProgress:1 openravepy.openravepy_int.Ray:1
+#: openravepy.openravepy_int.Robot.ManipulatorInfo:1
 #: openravepy.openravepy_int.Sensor.CameraIntrinsics:1
 #: openravepy.openravepy_int.TriMesh:1 openravepy.openravepy_int.VoidHandle:1
 #: openravepy.openravepy_int.VoidPointer:3 openravepy.openravepy_int.options:1
@@ -5365,7 +5267,7 @@ msgstr ""
 #: openravepy.openravepy_int.KinBody:1
 #: openravepy.openravepy_int.KinBody.Joint:1
 #: openravepy.openravepy_int.KinBody.Link:1
-#: openravepy.openravepy_int.KinBody.Link.GeomProperties:1
+#: openravepy.openravepy_int.KinBody.Link.Geometry:1
 #: openravepy.openravepy_int.KinBody.ManageData:1
 #: openravepy.openravepy_int.Module:1
 #: openravepy.openravepy_int.PhysicsEngine:1
@@ -5755,6 +5657,21 @@ msgstr ""
 # 0d0c6ab2ccee4747a7ea886e4a62fe08
 #: ../../docstring of openravepy.openravepy_int.IkReturn.GetUserData:1
 msgid "Retuns IkReturn::_userdata"
+msgstr ""
+
+# 6337e7dcb9054f66a92ff42dfa371512
+#: ../../docstring of openravepy.openravepy_int.IkReturn.SetMapKeyValue:1
+msgid "Adds key/value pair to IKReturn::_mapdata"
+msgstr ""
+
+# 85531c62306444a59f91d385ca82de6e
+#: ../../docstring of openravepy.openravepy_int.IkReturn.SetSolution:1
+msgid "Set IKReturn::_vsolution"
+msgstr ""
+
+# 83a51a26b4894ca28f9d00f2a86f2a20
+#: ../../docstring of openravepy.openravepy_int.IkReturn.SetUserData:1
+msgid "Set IKReturn::_userdata"
 msgstr ""
 
 # df252d7e4f8149a79a95b4a6ad4cf25c

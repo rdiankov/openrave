@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-29 16:15\n"
+"POT-Creation-Date: 2012-08-05 18:32\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -57,32 +57,32 @@ msgid "planner"
 msgstr ""
 
 # e0d854cdbd37479ea9cdceb6603adeda
-#: ../../source/interface_types.rst:115
+#: ../../source/interface_types.rst:116
 msgid "robot"
 msgstr ""
 
 # 19a098c6a7794fcb9b1052112612bc91
-#: ../../source/interface_types.rst:126
+#: ../../source/interface_types.rst:127
 msgid "sensor"
 msgstr ""
 
 # c75b8973f40347ce9470eac4415ab32a
-#: ../../source/interface_types.rst:142
+#: ../../source/interface_types.rst:143
 msgid "sensorsystem"
 msgstr ""
 
 # a64af577cd4149c39a1860d8c888bdc3
-#: ../../source/interface_types.rst:151
+#: ../../source/interface_types.rst:152
 msgid "spacesampler"
 msgstr ""
 
 # 6043f752ce124801acd9827646e3a515
-#: ../../source/interface_types.rst:163
+#: ../../source/interface_types.rst:164
 msgid "trajectory"
 msgstr ""
 
 # 0eaae922c97740529963f9cccf0da2ad
-#: ../../source/interface_types.rst:173
+#: ../../source/interface_types.rst:174
 msgid "viewer"
 msgstr ""
 
@@ -346,10 +346,11 @@ msgstr ""
 #: ../../source/interface_types/sensor/basespinninglaser2d.rst:41
 #: ../../source/interface_types/spacesampler/halton.rst:31
 #: ../../source/interface_types/spacesampler/mt19937.rst:23
-#: ../../source/interface_types/spacesampler/robotconfiguration.rst:28
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:29
 #: ../../source/interface_types/trajectory/generictrajectory.rst:21
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:23
 #: ../../source/interface_types/viewer/qtcoin.rst:35
+#: ../../source/interface_types/viewer/qtosg.rst:23
 msgid "help"
 msgstr ""
 
@@ -469,10 +470,11 @@ msgstr ""
 #: ../../source/interface_types/sensor/basespinninglaser2d.rst:43
 #: ../../source/interface_types/spacesampler/halton.rst:33
 #: ../../source/interface_types/spacesampler/mt19937.rst:25
-#: ../../source/interface_types/spacesampler/robotconfiguration.rst:30
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:31
 #: ../../source/interface_types/trajectory/generictrajectory.rst:23
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:25
 #: ../../source/interface_types/viewer/qtcoin.rst:37
+#: ../../source/interface_types/viewer/qtosg.rst:25
 msgid "display help commands."
 msgstr ""
 
@@ -2996,16 +2998,29 @@ msgid ""
 "joints appropriately. When creating pass the following parameters::"
 msgstr ""
 
-# 9bd857bb082544129fe6368631421ab4
+# fa54dbdc3744469c9d59424d443f938c
 #: ../../source/interface_types/spacesampler/robotconfiguration.rst:16
 msgid ""
 "The sampler needs to return values in the range [0,1]. Default sampler is "
-"'mt19937'."
+"'mt19937'. If the robot active DOFs change, can use the 'TrackActiveSpace' "
+"command to automatically update the sampling configuration space. By default "
+"this is true."
 msgstr ""
 
 # ecfecf30601c400db256f071bfd0a34a
-#: ../../source/interface_types/spacesampler/robotconfiguration.rst:21
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:22
 msgid "RobotConfiguration Commands"
+msgstr ""
+
+# 1ddfbb56a681497da4c1fcc18e1007de
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:40
+msgid "TrackActiveSpace"
+msgstr ""
+
+# f2c6084d945541d6abb168754e87a944
+#: ../../source/interface_types/spacesampler/robotconfiguration.rst:42
+msgid ""
+"Enable/disable the automating updating of the active configuration space."
 msgstr ""
 
 # 1dc373460f0643c5aed8008805be53f2
@@ -3032,6 +3047,7 @@ msgstr ""
 # 097a493c44a141ad8ee104415dea7a91
 #: ../../source/interface_types/viewer/qtcameraviewer.rst:6
 #: ../../source/interface_types/viewer/qtcoin.rst:6
+#: ../../source/interface_types/viewer/qtosg.rst:6
 msgid ":ref:`interface-viewer`"
 msgstr ""
 
@@ -3095,4 +3111,29 @@ msgstr ""
 msgid ""
 "Accepts 0/1 value that decides whether to render the figure plots in the "
 "camera image through GetCameraImage"
+msgstr ""
+
+# b5358f0fc0804d72b0d298266c738f8d
+#: ../../source/interface_types/viewer/qtosg.rst:4
+msgid "qtosg - qtosgrave"
+msgstr ""
+
+# efe3cd4b8aba48e1adb24fdd32725d39
+#: ../../source/interface_types/viewer/qtosg.rst:8
+msgid ":ref:`plugin-qtosgrave`"
+msgstr ""
+
+# 2869911fc4fa42cfb481a3b30e137572
+#: ../../source/interface_types/viewer/qtosg.rst:10
+msgid "Gustavo Puche"
+msgstr ""
+
+# 33245858e9434b1093c109865de0fffd
+#: ../../source/interface_types/viewer/qtosg.rst:12
+msgid "Provides a viewer based on Open Scene Graph."
+msgstr ""
+
+# d55ae55d64d544b699dd808bca9833a2
+#: ../../source/interface_types/viewer/qtosg.rst:16
+msgid "qtosg Commands"
 msgstr ""

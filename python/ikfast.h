@@ -143,7 +143,7 @@ public:
 
 // Implementations of the abstract classes, user doesn't need to use them
 
-/// \brief default implementation of IkSolutionBase
+/// \brief Default implementation of \ref IkSolutionBase
 template <typename T>
 class IkSolution : public IkSolutionBase<T>
 {
@@ -224,7 +224,7 @@ public:
     std::vector<int> _vfree;
 };
 
-/// \brief manages all the solutions
+/// \brief Default implementation of \ref IkSolutionListBase
 template <typename T>
 class IkSolutionList : public IkSolutionListBase<T>
 {
