@@ -355,7 +355,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('new clone time: %fs',endtime)
-            assert(endtime <= 0.04)
+            assert(endtime <= 0.05)
             self.CompareEnvironments(env,clonedenv)
 
             env.Remove(env.GetKinBody('mug1'))
@@ -373,7 +373,7 @@ class TestEnvironment(EnvironmentSetup):
             clonedenv.Clone(env, CloningOptions.Bodies)
             endtime=time.time()-starttime
             self.log.info('new clone time: %fs',endtime)
-            assert(endtime <= 0.04)
+            assert(endtime <= 0.05)
             self.CompareEnvironments(env,clonedenv)
             
     def test_multithread(self):
