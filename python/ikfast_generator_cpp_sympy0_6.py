@@ -383,9 +383,9 @@ inline double IKsign(double f) {
 
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
-IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>* psolutions) {
+IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
 IKSolver solver;
-return solver.ComputeIk(eetrans,eerot,pfree,vsolutions);
+return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
 IKFAST_API const char* GetKinematicsHash() { return "%s"; }
@@ -414,7 +414,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::vector<IKSolution> vsolutions;
+    IkSolutionList<IkReal> solutions;
     std::vector<IkReal> vfree(GetNumFreeParameters());
     IkReal eerot[9],eetrans[3];
     eerot[0] = atof(argv[1]); eerot[1] = atof(argv[2]); eerot[2] = atof(argv[3]); eetrans[0] = atof(argv[4]);
@@ -422,21 +422,22 @@ int main(int argc, char** argv)
     eerot[6] = atof(argv[9]); eerot[7] = atof(argv[10]); eerot[8] = atof(argv[11]); eetrans[2] = atof(argv[12]);
     for(std::size_t i = 0; i < vfree.size(); ++i)
         vfree[i] = atof(argv[13+i]);
-    bool bSuccess = ComputeIk(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions);
+    bool bSuccess = ComputeIk(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, solutions);
 
     if( !bSuccess ) {
         fprintf(stderr,"Failed to get ik solution\\n");
         return -1;
     }
 
-    printf("Found %d ik solutions:\\n", (int)vsolutions.size());
-    std::vector<IkReal> sol(GetNumJoints());
-    for(std::size_t i = 0; i < vsolutions.size(); ++i) {
-        printf("sol%d (free=%d): ", (int)i, (int)vsolutions[i].GetFree().size());
-        std::vector<IkReal> vsolfree(vsolutions[i].GetFree().size());
-        vsolutions[i].GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
-        for( std::size_t j = 0; j < sol.size(); ++j)
-            printf("%.15f, ", sol[j]);
+    printf("Found %d ik solutions:\\n", (int)solutions.GetNumSolutions());
+    std::vector<IkReal> solvalues(GetNumJoints());
+    for(std::size_t i = 0; i < solutions.GetNumSolutions(); ++i) {
+        const IkSolutionBase<IkReal>& sol = solutions.GetSolution(i);
+        printf("sol%d (free=%d): ", (int)i, (int)sol.GetFree().size());
+        std::vector<IkReal> vsolfree(sol.GetFree().size());
+        sol.GetSolution(&solvalues[0],vsolfree.size()>0?&vsolfree[0]:NULL);
+        for( std::size_t j = 0; j < solvalues.size(); ++j)
+            printf("%.15f, ", solvalues[j]);
         printf("\\n");
     }
     return 0;
@@ -486,14 +487,14 @@ int main(int argc, char** argv)
         return code
 
     def GetIkFunctionPreamble(self, node):
-        code = "bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+        code = "bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {\n"
         for var in node.solvejointvars:
             code += '%s=numeric_limits<IkReal>::quiet_NaN(); _i%s[0] = -1; _i%s[1] = -1; _n%s = -1; '%(var[0].name,var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             code += ' _i%s[0] = -1; _i%s[1] = -1; _n%s = 0; '%(name,name,name)
         code += "\nfor(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        code += "    vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += "    solutions.Clear();\n"
         return code
 
     def getFKFunctionPreamble(self):
@@ -547,7 +548,7 @@ int main(int argc, char** argv)
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -601,7 +602,7 @@ int main(int argc, char** argv)
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -666,7 +667,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -718,7 +719,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -771,7 +772,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -835,7 +836,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -889,7 +890,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -947,7 +948,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -1443,7 +1444,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         return ''
     def generateRotation(self, node):
         if not node.functionid in self.functions:
-            code = 'inline void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
+            code = 'inline void rotationfunction%d(IkSolutionListBase<IkReal>& solutions) {\n'%(node.functionid)
             code += 'for(int rotationiter = 0; rotationiter < 1; ++rotationiter) {\n'
             origequations = self.dictequations
             self.resetequations()
@@ -1458,7 +1459,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n}'
             self.dictequations = origequations
             self.functions[node.functionid] = code
-        return 'rotationfunction%d(vsolutions);\n'%(node.functionid)
+        return 'rotationfunction%d(solutions);\n'%(node.functionid)
 
     def endRotation(self, node):
         return ''
@@ -1488,26 +1489,27 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code += ' )\n'
             self.dictequations = origequations
         code += '{\n'
-        code += 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
-        code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
+        code += 'std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(%d);\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
             offsetvalue = '+%.15e'%node.offsetvalues[i] if node.offsetvalues is not None else ''
-            code += 'solution.basesol[%d].foffset = %s%s;\n'%(i,var,offsetvalue)
+            code += 'vinfos[%d].jointtype = %d;\n'%(i,0x01 if node.isHinge[i] else 0x11)
+            code += 'vinfos[%d].foffset = %s%s;\n'%(i,var,offsetvalue)
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
             if len(vardeps) > 0:
                 freevarname = vardeps[0][0]
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
-                code += 'solution.basesol[%d].fmul = %smul;\n'%(i,var.name)
-                code += 'solution.basesol[%d].freeind = %d;\n'%(i,ifreevar[0])
-                code += 'solution.basesol[%d].maxsolutions = 0;\n'%(i)
+                code += 'vinfos[%d].fmul = %smul;\n'%(i,var.name)
+                code += 'vinfos[%d].freeind = %d;\n'%(i,ifreevar[0])
+                code += 'vinfos[%d].maxsolutions = 0;\n'%(i)
             else:
-                code += 'solution.basesol[%d].indices[0] = _i%s[0];\n'%(i,var)
-                code += 'solution.basesol[%d].indices[1] = _i%s[1];\n'%(i,var)
-                code += 'solution.basesol[%d].maxsolutions = _n%s;\n'%(i,var)
-        code += 'solution.vfree.resize(%d);\n'%len(self.freevars)
+                code += 'vinfos[%d].indices[0] = _i%s[0];\n'%(i,var)
+                code += 'vinfos[%d].indices[1] = _i%s[1];\n'%(i,var)
+                code += 'vinfos[%d].maxsolutions = _n%s;\n'%(i,var)
+        code += 'std::vector<int> vfree(%d);\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
-            code += 'solution.vfree[%d] = %d;\n'%(i,ind[0])
+            code += 'vfree[%d] = %d;\n'%(i,ind[0])
+        code += 'solutions.AddSolution(vinfos,vfree);\n'
         code += '}\n'
         return code
     def endStoreSolution(self, node):

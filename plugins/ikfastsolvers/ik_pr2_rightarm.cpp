@@ -3865,7 +3865,7 @@ int main(int argc, char** argv)
     printf("Found %d ik solutions:\n", (int)solutions.GetNumSolutions());
     std::vector<IkReal> solvalues(GetNumJoints());
     for(std::size_t i = 0; i < solutions.GetNumSolutions(); ++i) {
-        IkSolutionBase<IkReal>& sol = solutions.GetSolution(i);
+        const IkSolutionBase<IkReal>& sol = solutions.GetSolution(i);
         printf("sol%d (free=%d): ", (int)i, (int)sol.GetFree().size());
         std::vector<IkReal> vsolfree(sol.GetFree().size());
         sol.GetSolution(&solvalues[0],vsolfree.size()>0?&vsolfree[0]:NULL);

@@ -113,66 +113,6 @@ Using Generated IK Files
 
 The common usage is to generate a C++ file that can be compiled into a stand-alone shared object/DLL, an executable program, or linked in statically to a bigger project. For more complex kinematics, LAPACK_ is needed.
 
-The C++ file uses the following defines:
-
-- IKFAST_CLIBRARY - Define this linking statically or dynamically to get correct visibility.
-- IKFAST_NO_MAIN - Remove the ``main`` function, usually used with IKFAST_CLIBRARY
-- IKFAST_ASSERT - Define in order to get a custom assert called when NaNs, divides by zero, and other invalid conditions are detected.
-- IKFAST_REAL - Use to force a custom real number type for IKReal.
-- IKFAST_NAMESPACE - Enclose all functions and classes in this namespace, the ``main`` function is excluded.
-- IKFAST_HEADER - specify a header file to include at the top. This would in the form of ``"header.h"``. In a compiler command line, it would look like: ``-DIKFAST_HEADER="\\\"header.h\\\""``
-
-The global functions are:
-
-.. code-block:: c++
-
-  // Computes all IK solutions given a end effector coordinates and the free joints.
-  bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions);
-  
-  // Computes the end effector coordinates givennn the joint values. This function is used to double check ik.
-  void fk(const IKReal* joints, IKReal* eetrans, IKReal* eerot);
-  
-  // returns the number of free parameters users has to set apriori
-  int getNumFreeParameters();
-  
-  // the indices of the free parameters indexed by the chain joints
-  int* getFreeParameters();
-
-  // the total number of indices of the chain
-  int getNumJoints();
-
-  // the size in bytes of the configured number type
-  int getIKRealSize();
-
-  // the ikfast version used to generate this file
-  const char* getIKFastVersion();
-  
-  // the ik type ID
-  int getIKType();
-
-  // a hash of all the chain values used for double checking that the correct IK is used.
-  const char* getKinematicsHash();
-
-Parameters:
-  
-- ``eetrans`` - 3 translation values. For iktype **TranslationXYOrientation3D**, the z-axis is the orientation.
-- ``eerot``
- - For **Transform6D** it is 9 values for the 3x3 rotation matrix.
- - For **Direction3D**, **Ray4D**, and **TranslationDirection5D**, the first 3 values represent the target direction.
- - For **TranslationXAxisAngle4D**, **TranslationYAxisAngle4D**, and **TranslationZAxisAngle4D** the first value represents the angle.
- - For **TranslationLocalGlobal6D**, the diagonal elements ([0],[4],[8]) are the local translation inside the end effector coordinate system.
-- ``IKSolution`` - The discrete solutions are returned in this structure. Sometimes the joint axes of the robot can align allowing an infinite number of solutions. The ``IKSolution`` structure stores all these solutions in the form of free variables that the user has to set when querying the solution. Its prototype is:
-
-.. code-block:: c++
-
-  class IKSolution
-  {
-  public:
-      void GetSolution(IKReal* psolution, const IKReal* pfree) const;
-      const std::vector<int>& GetFree() const;
-  };
-
-
 Compiling with GCC
 ~~~~~~~~~~~~~~~~~~
 
@@ -315,6 +255,7 @@ except ImportError:
 
 import logging
 log = logging.getLogger('openravepy.ikfast')
+log.warn('using sympy v%s, which is too old. please upgrade sympy'%sympy_version)
 
 CodeGenerators = {}
 # try:
@@ -797,9 +738,14 @@ class AST:
         checkgreaterzero = None # used for final sanity checks to ensure IK solution is consistent
         thresh = 0
         offsetvalues = None
-        def __init__(self, alljointvars,checkgreaterzero=None):
+        isHinge = None
+        def __init__(self, alljointvars,checkgreaterzero=None,isHinge=None):
             self.alljointvars = alljointvars
             self.checkgreaterzero = checkgreaterzero
+            self.isHinge=isHinge
+            if isHinge is None:
+                log.warn('SolverStoreSolution.isHinge is not initialized')
+                self.isHinge = [True]*len(self.alljointvars)
         def generate(self, generator):
             return generator.generateStoreSolution(self)
         def end(self, generator):
@@ -1725,7 +1671,7 @@ class IKFastSolver(AutoReloader):
         Tfinal = zeros((4,4))
         Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
             raise self.CannotSolveError('need 2 joints')
@@ -1793,7 +1739,7 @@ class IKFastSolver(AutoReloader):
         frontcond = (Links[-1][0:3,0:3]*basedir).dot(Paccum-(Links[-1][0:3,0:3]*basepos+Links[-1][0:3,3]))
         for v in jointvars:
             frontcond = frontcond.subs(self.Variable(v).subs)
-        endbranchtree = [AST.SolverStoreSolution (jointvars,checkgreaterzero=[frontcond])]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,checkgreaterzero=[frontcond],isHinge=[self.isHinge(var.name) for var in jointvars])]
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,jointvars,uselength=True)
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
@@ -1812,7 +1758,7 @@ class IKFastSolver(AutoReloader):
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 3:
             raise self.CannotSolveError('need 3 joints')
@@ -1843,7 +1789,7 @@ class IKFastSolver(AutoReloader):
         Tfinal = self.multiplyMatrix(Links)
         Tfinal[0:3,3] = Tfinal[0:3,0:3]*basepos+Tfinal[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 3:
             raise self.CannotSolveError('need 3 joints')
@@ -1871,7 +1817,7 @@ class IKFastSolver(AutoReloader):
         Tfinal = self.multiplyMatrix(Links)
         Tfinal[0:2,3] = Tfinal[0:2,0:2]*basepos+Tfinal[0:2,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
             raise self.CannotSolveError('need 2 joints')
@@ -1929,7 +1875,7 @@ class IKFastSolver(AutoReloader):
         Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 4:
             raise self.CannotSolveError('need 4 joints')
@@ -1981,7 +1927,7 @@ class IKFastSolver(AutoReloader):
         basepos = basepos-basedir*offsetdist
         Links = LinksRaw[:]
 
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         numzeros = int(basedir[0]==S.Zero) + int(basedir[1]==S.Zero) + int(basedir[2]==S.Zero)
 #         if numzeros < 2:
 #             try:
@@ -2121,7 +2067,7 @@ class IKFastSolver(AutoReloader):
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 6:
             raise self.CannotSolveError('need 6 joints')
@@ -2357,7 +2303,7 @@ class IKFastSolver(AutoReloader):
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
         Links = LinksRaw[:]
 
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
 
         LinksInv = [self.affineInverse(link) for link in Links]
         Tallmult = self.multiplyMatrix(Links)
@@ -2431,7 +2377,7 @@ class IKFastSolver(AutoReloader):
 
         
         self.sortComplexity(AllEquations)
-        endbranchtree = [AST.SolverStoreSolution (jointvars)]
+        endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         if extravar is not None:
             solution=AST.SolverSolution(extravar[0].name, jointeval=[extravar[1]],isHinge=self.isHinge(extravar[0].name))
             endbranchtree.insert(0,solution)
