@@ -682,11 +682,11 @@ class InverseKinematicsModel(DatabaseGenerator):
         sourcefilename = self.getsourcefilename(False,outputlang)
         statsfilename = self.getstatsfilename(False)
         output_filename = self.getfilename(False)
-
+        sourcedir = os.path.split(sourcefilename)[0]
         if forceikbuild or not os.path.isfile(sourcefilename):
             log.info('creating ik file %s',sourcefilename)
             try:
-                os.makedirs(os.path.split(sourcefilename)[0])
+                os.makedirs(sourcedir)
             except OSError:
                 pass
             
@@ -712,6 +712,12 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.statistics['generationtime'] = time.time()-generationstart
                 self.statistics['usinglapack'] = solver.usinglapack
                 open(sourcefilename,'w').write(code)
+                try:
+                    from pkg_resources import resource_filename
+                    shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))
+                except ImportError,e:
+                    log.warn(e)
+                    
             except self.ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
                 log.warn(e)

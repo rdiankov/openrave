@@ -15,20 +15,27 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 59 generated on 2012-06-21 00:07:42.366331
+/// ikfast version 60 generated on 2012-08-05 17:44:06.265561
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
 ///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -DIKFAST_CLIBRARY -shared -Wl,-soname,libik.so -o libik.so ik.cpp
+#define IKFAST_HAS_LIBRARY
+#include "ikfast.h" // found inside share/openrave-X.Y/python/ikfast.h
+using namespace ikfast;
+
+// check if the included ikfast version matches what this file was compiled with
+#define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==60);
+
 #include <cmath>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
 
-#ifdef IKFAST_HEADER
-#include IKFAST_HEADER
-#endif
+#define IKFAST_STRINGIZE2(s) #s
+#define IKFAST_STRINGIZE(s) IKFAST_STRINGIZE2(s)
 
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
@@ -55,26 +62,15 @@
 #define IKFAST_ALIGNED16(x) x __attribute((aligned(16)))
 #endif
 
-#define IK2PI  ((IKReal)6.28318530717959)
-#define IKPI  ((IKReal)3.14159265358979)
-#define IKPI_2  ((IKReal)1.57079632679490)
+#define IK2PI  ((IkReal)6.28318530717959)
+#define IKPI  ((IkReal)3.14159265358979)
+#define IKPI_2  ((IkReal)1.57079632679490)
 
 #ifdef _MSC_VER
 #ifndef isnan
 #define isnan _isnan
 #endif
 #endif // _MSC_VER
-
-// defined when creating a shared object/dll
-#ifdef IKFAST_CLIBRARY
-#ifdef _MSC_VER
-#define IKFAST_API extern "C" __declspec(dllexport)
-#else
-#define IKFAST_API extern "C"
-#endif
-#else
-#define IKFAST_API
-#endif
 
 // lapack routines
 extern "C" {
@@ -92,93 +88,6 @@ using namespace std; // necessary to get std math routines
 namespace IKFAST_NAMESPACE {
 #endif
 
-#ifdef IKFAST_REAL
-typedef IKFAST_REAL IKReal;
-#else
-typedef double IKReal;
-#endif
-
-class IKSolution
-{
-public:
-    /// Gets a solution given its free parameters
-    /// \param pfree The free parameters required, range is in [-pi,pi]
-    void GetSolution(IKReal* psolution, const IKReal* pfree) const {
-        for(std::size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 )
-                psolution[i] = basesol[i].foffset;
-            else {
-                IKFAST_ASSERT(pfree != NULL);
-                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > IKPI ) {
-                    psolution[i] -= IK2PI;
-                }
-                else if( psolution[i] < -IKPI ) {
-                    psolution[i] += IK2PI;
-                }
-            }
-        }
-    }
-
-    /// Gets the free parameters the solution requires to be set before a full solution can be returned
-    /// \return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const { return vfree; }
-
-    struct VARIABLE
-    {
-        VARIABLE() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
-            indices[0] = indices[1] = -1;
-        }
-        IKReal fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-        signed char freeind; ///< if >= 0, mimics another joint
-        unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
-        unsigned char indices[2]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
-    };
-
-    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
-    std::vector<int> vfree;
-
-    bool Validate() const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].maxsolutions == (unsigned char)-1) {
-                return false;
-            }
-            if( basesol[i].maxsolutions > 0 ) {
-                if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
-                    return false;
-                }
-                if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    void GetSolutionIndices(std::vector<unsigned int>& v) const {
-        v.resize(0);
-        v.push_back(0);
-        for(int i = (int)basesol.size()-1; i >= 0; --i) {
-            if( basesol[i].maxsolutions != (unsigned char)-1 && basesol[i].maxsolutions > 1 ) {
-                for(size_t j = 0; j < v.size(); ++j) {
-                    v[j] *= basesol[i].maxsolutions;
-                }
-                size_t orgsize=v.size();
-                if( basesol[i].indices[1] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v.push_back(v[j]+basesol[i].indices[1]);
-                    }
-                }
-                if( basesol[i].indices[0] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v[j] += basesol[i].indices[0];
-                    }
-                }
-            }
-        }
-    }
-};
-
 inline float IKabs(float f) { return fabsf(f); }
 inline double IKabs(double f) { return fabs(f); }
 
@@ -190,17 +99,17 @@ inline double IKlog(double f) { return log(f); }
 
 // allows asin and acos to exceed 1
 #ifndef IKFAST_SINCOS_THRESH
-#define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#define IKFAST_SINCOS_THRESH ((IkReal)0.000001)
 #endif
 
 // used to check input to atan2 for degenerate cases
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IKReal)2e-6)
+#define IKFAST_ATAN2_MAGTHRESH ((IkReal)2e-6)
 #endif
 
 // minimum distance of separate solutions
 #ifndef IKFAST_SOLUTION_THRESH
-#define IKFAST_SOLUTION_THRESH ((IKReal)1e-6)
+#define IKFAST_SOLUTION_THRESH ((IkReal)1e-6)
 #endif
 
 inline float IKasin(float f)
@@ -301,50 +210,50 @@ inline double IKsign(double f) {
 
 /// solves the forward kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
-IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {
-IKReal x0,x1,x2,x3,x4,x5;
+IKFAST_API void ComputeFk(const IkReal* j, IkReal* eetrans, IkReal* eerot) {
+IkReal x0,x1,x2,x3,x4,x5;
 x0=IKcos(j[1]);
 x1=IKsin(j[1]);
 x2=IKsin(j[2]);
 x3=IKcos(j[2]);
-x4=((0.0232000000000000)*(x3));
-x5=((0.0980000000000000)*(x2));
-eetrans[0]=((-0.0670700000000000)+(((x0)*(x4)))+(((x0)*(x5)))+(((0.0680000000000000)*(x0)))+(((-0.0300000000000000)*(x1))));
-eetrans[1]=((((x1)*(x5)))+(((x1)*(x4)))+(((0.0680000000000000)*(x1)))+(((0.0300000000000000)*(x0))));
-eetrans[2]=((1.12112500000000)+(((0.0980000000000000)*(x3)))+(j[0])+(((-0.0232000000000000)*(x2))));
+x4=((IkReal(0.0232000000000000))*(x3));
+x5=((IkReal(0.0980000000000000))*(x2));
+eetrans[0]=((IkReal(-0.0670700000000000))+(((x0)*(x4)))+(((x0)*(x5)))+(((IkReal(0.0680000000000000))*(x0)))+(((IkReal(-0.0300000000000000))*(x1))));
+eetrans[1]=((((x1)*(x5)))+(((x1)*(x4)))+(((IkReal(0.0680000000000000))*(x1)))+(((IkReal(0.0300000000000000))*(x0))));
+eetrans[2]=((IkReal(1.12112500000000))+(((IkReal(0.0980000000000000))*(x3)))+(j[0])+(((IkReal(-0.0232000000000000))*(x2))));
 eerot[0]=((x0)*(x3));
 eerot[1]=((x1)*(x3));
-eerot[2]=((-1.00000000000000)*(x2));
+eerot[2]=((IkReal(-1.00000000000000))*(x2));
 }
 
-IKFAST_API int getNumFreeParameters() { return 1; }
-IKFAST_API int* getFreeParameters() { static int freeparams[] = {0}; return freeparams; }
-IKFAST_API int getNumJoints() { return 3; }
+IKFAST_API int GetNumFreeParameters() { return 1; }
+IKFAST_API int* GetFreeParameters() { static int freeparams[] = {0}; return freeparams; }
+IKFAST_API int GetNumJoints() { return 3; }
 
-IKFAST_API int getIKRealSize() { return sizeof(IKReal); }
+IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }
 
-IKFAST_API int getIKType() { return 0x23000006; }
+IKFAST_API int GetIkType() { return 0x23000006; }
 
 class IKSolver {
 public:
-IKReal j13,cj13,sj13,htj13,j14,cj14,sj14,htj14,j12,cj12,sj12,htj12,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
+IkReal j13,cj13,sj13,htj13,j14,cj14,sj14,htj14,j12,cj12,sj12,htj12,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 unsigned char _ij13[2], _nj13,_ij14[2], _nj14,_ij12[2], _nj12;
 
-bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
-j13=numeric_limits<IKReal>::quiet_NaN(); _ij13[0] = -1; _ij13[1] = -1; _nj13 = -1; j14=numeric_limits<IKReal>::quiet_NaN(); _ij14[0] = -1; _ij14[1] = -1; _nj14 = -1;  _ij12[0] = -1; _ij12[1] = -1; _nj12 = 0; 
+bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
+j13=numeric_limits<IkReal>::quiet_NaN(); _ij13[0] = -1; _ij13[1] = -1; _nj13 = -1; j14=numeric_limits<IkReal>::quiet_NaN(); _ij14[0] = -1; _ij14[1] = -1; _nj14 = -1;  _ij12[0] = -1; _ij12[1] = -1; _nj12 = 0; 
 for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
-    vsolutions.resize(0); vsolutions.reserve(8);
+    solutions.Clear();
 px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];
 
 j12=pfree[0]; cj12=cos(pfree[0]); sj12=sin(pfree[0]);
-new_px=((0.0670700000000000)+(px));
+new_px=((IkReal(0.0670700000000000))+(px));
 new_py=py;
-new_pz=((-1.12112500000000)+(((-1.00000000000000)*(j12)))+(pz));
+new_pz=((IkReal(-1.12112500000000))+(((IkReal(-1.00000000000000))*(j12)))+(pz));
 px = new_px; py = new_py; pz = new_pz;
 pp=(((px)*(px))+((py)*(py))+((pz)*(pz)));
 {
-IKReal dummyeval[1];
-dummyeval[0]=((-1.00000000000000)+(((-33.3333333333333)*(py))));
+IkReal dummyeval[1];
+dummyeval[0]=((IkReal(-1.00000000000000))+(((IkReal(-33.3333333333333))*(py))));
 if( IKabs(dummyeval[0]) < 0.0000010000000000  )
 {
 continue;
@@ -352,18 +261,18 @@ continue;
 } else
 {
 {
-IKReal j13array[2], cj13array[2], sj13array[2];
+IkReal j13array[2], cj13array[2], sj13array[2];
 bool j13valid[2]={false};
 _nj13 = 2;
-IKReal x6=((IKabs(((-0.0600000000000000)+(((-2.00000000000000)*(py))))) != 0)?((IKReal)1/(((-0.0600000000000000)+(((-2.00000000000000)*(py)))))):(IKReal)1.0e30);
-IKReal x7=((2.00000000000000)*(px)*(x6));
-if( (((-0.00360000000000000)+(((4.00000000000000)*((py)*(py))))+(((4.00000000000000)*((px)*(px)))))) < (IKReal)-0.00001 )
+IkReal x6=((IKabs(((IkReal(-0.0600000000000000))+(((IkReal(-2.00000000000000))*(py))))) != 0)?((IkReal)1/(((IkReal(-0.0600000000000000))+(((IkReal(-2.00000000000000))*(py)))))):(IkReal)1.0e30);
+IkReal x7=((IkReal(2.00000000000000))*(px)*(x6));
+if( (((IkReal(-0.00360000000000000))+(((IkReal(4.00000000000000))*((py)*(py))))+(((IkReal(4.00000000000000))*((px)*(px)))))) < (IkReal)-0.00001 )
     continue;
-IKReal x8=((x6)*(IKsqrt(((-0.00360000000000000)+(((4.00000000000000)*((py)*(py))))+(((4.00000000000000)*((px)*(px))))))));
-j13array[0]=((2.00000000000000)*(atan(((x7)+(((-1.00000000000000)*(x8)))))));
+IkReal x8=((x6)*(IKsqrt(((IkReal(-0.00360000000000000))+(((IkReal(4.00000000000000))*((py)*(py))))+(((IkReal(4.00000000000000))*((px)*(px))))))));
+j13array[0]=((IkReal(2.00000000000000))*(atan(((x7)+(((IkReal(-1.00000000000000))*(x8)))))));
 sj13array[0]=IKsin(j13array[0]);
 cj13array[0]=IKcos(j13array[0]);
-j13array[1]=((2.00000000000000)*(atan(((x7)+(x8)))));
+j13array[1]=((IkReal(2.00000000000000))*(atan(((x7)+(x8)))));
 sj13array[1]=IKsin(j13array[1]);
 cj13array[1]=IKcos(j13array[1]);
 if( j13array[0] > IKPI )
@@ -399,17 +308,17 @@ if( j13valid[iij13] && IKabs(cj13array[ij13]-cj13array[iij13]) < IKFAST_SOLUTION
 j13 = j13array[ij13]; cj13 = cj13array[ij13]; sj13 = sj13array[ij13];
 
 {
-IKReal dummyeval[1];
-IKReal x9=(sj13)*(sj13);
-dummyeval[0]=((((4.53333333333333)*(cj13)*(sj13)))+(((-151.111111111111)*(py)*(sj13)))+((cj13)*(cj13))+(((1111.11111111111)*(x9)*((pz)*(pz))))+(((-66.6666666666667)*(cj13)*(py)))+(((5.13777777777778)*(x9)))+(((1111.11111111111)*((py)*(py)))));
+IkReal dummyeval[1];
+IkReal x9=(sj13)*(sj13);
+dummyeval[0]=((((IkReal(4.53333333333333))*(cj13)*(sj13)))+(((IkReal(-151.111111111111))*(py)*(sj13)))+((cj13)*(cj13))+(((IkReal(1111.11111111111))*(x9)*((pz)*(pz))))+(((IkReal(-66.6666666666667))*(cj13)*(py)))+(((IkReal(5.13777777777778))*(x9)))+(((IkReal(1111.11111111111))*((py)*(py)))));
 if( IKabs(dummyeval[0]) < 0.0000010000000000  )
 {
 {
-IKReal dummyeval[1];
-IKReal x10=(cj13)*(cj13);
-IKReal x11=(px)*(px);
-IKReal x12=((1111.11111111111)*(x11));
-dummyeval[0]=((-1.00000000000000)+(((1111.11111111111)*(x10)*((py)*(py))))+(((-1.00000000000000)*(x10)*(x12)))+(x12)+(((-2222.22222222222)*(cj13)*(px)*(py)*(sj13))));
+IkReal dummyeval[1];
+IkReal x10=(cj13)*(cj13);
+IkReal x11=(px)*(px);
+IkReal x12=((IkReal(1111.11111111111))*(x11));
+dummyeval[0]=((IkReal(-1.00000000000000))+(((IkReal(1111.11111111111))*(x10)*((py)*(py))))+(((IkReal(-1.00000000000000))*(x10)*(x12)))+(x12)+(((IkReal(-2222.22222222222))*(cj13)*(px)*(py)*(sj13))));
 if( IKabs(dummyeval[0]) < 0.0000010000000000  )
 {
 continue;
@@ -417,21 +326,21 @@ continue;
 } else
 {
 {
-IKReal j14array[4], cj14array[4], sj14array[4];
+IkReal j14array[4], cj14array[4], sj14array[4];
 bool j14valid[4]={false};
 _nj14 = 4;
-IKReal x13=(cj13)*(cj13);
-IKReal x14=(py)*(py);
-IKReal x15=(px)*(px);
-IKReal x16=((x13)*(x14));
-IKReal x17=((2.00000000000000)*(cj13)*(px)*(py)*(sj13));
-IKReal x18=((1.00000000000000)*(x13)*(x15));
-IKReal x19=((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(x16))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(x16)))):(IKReal)1.0e30);
-if( (((((-1.00000000000000)*(x17)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-2.00000000000000)*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-2.00000000000000)*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16)))):(IKReal)1.0e30))))+(((x16)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(((x13)*(x14))))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(((x13)*(x14)))))):(IKReal)1.0e30))))+(((-0.000900000000000000)*(x19)))+(((x15)*(x19)))+(((-1.00000000000000)*(x18)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x17)))+(((-1.00000000000000)*(x13)*(x15)))+(x15)+(x16))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x17)))+(((-1.00000000000000)*(x13)*(x15)))+(x15)+(x16)))):(IKReal)1.0e30)))))) < (IKReal)-0.00001 )
+IkReal x13=(cj13)*(cj13);
+IkReal x14=(py)*(py);
+IkReal x15=(px)*(px);
+IkReal x16=((x13)*(x14));
+IkReal x17=((IkReal(2.00000000000000))*(cj13)*(px)*(py)*(sj13));
+IkReal x18=((IkReal(1.00000000000000))*(x13)*(x15));
+IkReal x19=((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(x16))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(x16)))):(IkReal)1.0e30);
+if( (((((IkReal(-1.00000000000000))*(x17)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-2.00000000000000))*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-2.00000000000000))*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16)))):(IkReal)1.0e30))))+(((x16)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(((x13)*(x14))))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(((x13)*(x14)))))):(IkReal)1.0e30))))+(((IkReal(-0.000900000000000000))*(x19)))+(((x15)*(x19)))+(((IkReal(-1.00000000000000))*(x18)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x17)))+(((IkReal(-1.00000000000000))*(x13)*(x15)))+(x15)+(x16))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x17)))+(((IkReal(-1.00000000000000))*(x13)*(x15)))+(x15)+(x16)))):(IkReal)1.0e30)))))) < (IkReal)-0.00001 )
     continue;
-IKReal x20=IKsqrt(((((-1.00000000000000)*(x17)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-2.00000000000000)*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-2.00000000000000)*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16)))):(IKReal)1.0e30))))+(((x16)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(((x13)*(x14))))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x18)))+(((-1.00000000000000)*(x17)))+(x15)+(((x13)*(x14)))))):(IKReal)1.0e30))))+(((-0.000900000000000000)*(x19)))+(((x15)*(x19)))+(((-1.00000000000000)*(x18)*(((IKabs(((-0.000900000000000000)+(((-1.00000000000000)*(x17)))+(((-1.00000000000000)*(x13)*(x15)))+(x15)+(x16))) != 0)?((IKReal)1/(((-0.000900000000000000)+(((-1.00000000000000)*(x17)))+(((-1.00000000000000)*(x13)*(x15)))+(x15)+(x16)))):(IKReal)1.0e30))))));
+IkReal x20=IKsqrt(((((IkReal(-1.00000000000000))*(x17)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-2.00000000000000))*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-2.00000000000000))*(cj13)*(px)*(py)*(sj13)))+(x15)+(x16)))):(IkReal)1.0e30))))+(((x16)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(((x13)*(x14))))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x18)))+(((IkReal(-1.00000000000000))*(x17)))+(x15)+(((x13)*(x14)))))):(IkReal)1.0e30))))+(((IkReal(-0.000900000000000000))*(x19)))+(((x15)*(x19)))+(((IkReal(-1.00000000000000))*(x18)*(((IKabs(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x17)))+(((IkReal(-1.00000000000000))*(x13)*(x15)))+(x15)+(x16))) != 0)?((IkReal)1/(((IkReal(-0.000900000000000000))+(((IkReal(-1.00000000000000))*(x17)))+(((IkReal(-1.00000000000000))*(x13)*(x15)))+(x15)+(x16)))):(IkReal)1.0e30))))));
 cj14array[0]=x20;
-cj14array[2]=((-1.00000000000000)*(x20));
+cj14array[2]=((IkReal(-1.00000000000000))*(x20));
 if( cj14array[0] >= -1-IKFAST_SINCOS_THRESH && cj14array[0] <= 1+IKFAST_SINCOS_THRESH )
 {
     j14valid[0] = j14valid[1] = true;
@@ -478,50 +387,53 @@ if( j14valid[iij14] && IKabs(cj14array[ij14]-cj14array[iij14]) < IKFAST_SOLUTION
 }
 j14 = j14array[ij14]; cj14 = cj14array[ij14]; sj14 = sj14array[ij14];
 {
-IKReal evalcond[3];
-IKReal x21=IKsin(j14);
-IKReal x22=IKcos(j14);
-IKReal x23=(cj13)*(cj13);
-IKReal x24=(pz)*(pz);
-IKReal x25=(py)*(py);
-IKReal x26=((cj13)*(sj13));
-IKReal x27=(x22)*(x22);
-IKReal x28=(x21)*(x21)*(x21);
-IKReal x29=((py)*(x21));
-IKReal x30=((0.0133280000000000)*(x23));
-IKReal x31=((0.0300000000000000)*(x21));
-IKReal x32=((sj13)*(x21));
-IKReal x33=((pz)*(sj13)*(x22));
-IKReal x34=((x24)*(x27));
-IKReal x35=((x21)*(x27));
-evalcond[0]=((((cj13)*(x29)))+(((-1.00000000000000)*(x31)))+(((-1.00000000000000)*(px)*(x32))));
-evalcond[1]=((((-0.0980000000000000)*(sj13)))+(x33)+(x29)+(((-1.00000000000000)*(cj13)*(x31)))+(((-0.0680000000000000)*(x32))));
-evalcond[2]=((0.0142280000000000)+(((-1.00000000000000)*(x34)))+(((-0.00408000000000000)*(x26)*(x27)))+(((-2.00000000000000)*(x29)*(x33)))+(((x23)*(x34)))+(((-1.00000000000000)*(x30)*(x35)))+(((0.0133280000000000)*(x35)))+(((-1.00000000000000)*(x28)*(x30)))+(((-1.00000000000000)*(x25)))+(((0.0133280000000000)*(x28)))+(((-1.00000000000000)*(x30)))+(((0.00588000000000000)*(x26)*(x28)))+(((-0.00462400000000000)*(x27)))+(((0.00408000000000000)*(x26)))+(((x25)*(x27)))+(((0.00372400000000000)*(x23)*(x27)))+(((0.00588000000000000)*(x26)*(x35))));
+IkReal evalcond[3];
+IkReal x21=IKsin(j14);
+IkReal x22=IKcos(j14);
+IkReal x23=(cj13)*(cj13);
+IkReal x24=(pz)*(pz);
+IkReal x25=(py)*(py);
+IkReal x26=((cj13)*(sj13));
+IkReal x27=(x22)*(x22);
+IkReal x28=(x21)*(x21)*(x21);
+IkReal x29=((py)*(x21));
+IkReal x30=((IkReal(0.0133280000000000))*(x23));
+IkReal x31=((IkReal(0.0300000000000000))*(x21));
+IkReal x32=((sj13)*(x21));
+IkReal x33=((pz)*(sj13)*(x22));
+IkReal x34=((x24)*(x27));
+IkReal x35=((x21)*(x27));
+evalcond[0]=((((cj13)*(x29)))+(((IkReal(-1.00000000000000))*(x31)))+(((IkReal(-1.00000000000000))*(px)*(x32))));
+evalcond[1]=((((IkReal(-0.0980000000000000))*(sj13)))+(x33)+(x29)+(((IkReal(-1.00000000000000))*(cj13)*(x31)))+(((IkReal(-0.0680000000000000))*(x32))));
+evalcond[2]=((IkReal(0.0142280000000000))+(((IkReal(-1.00000000000000))*(x34)))+(((IkReal(-0.00408000000000000))*(x26)*(x27)))+(((IkReal(-2.00000000000000))*(x29)*(x33)))+(((x23)*(x34)))+(((IkReal(-1.00000000000000))*(x30)*(x35)))+(((IkReal(0.0133280000000000))*(x35)))+(((IkReal(-1.00000000000000))*(x28)*(x30)))+(((IkReal(-1.00000000000000))*(x25)))+(((IkReal(0.0133280000000000))*(x28)))+(((IkReal(-1.00000000000000))*(x30)))+(((IkReal(0.00588000000000000))*(x26)*(x28)))+(((IkReal(-0.00462400000000000))*(x27)))+(((IkReal(0.00408000000000000))*(x26)))+(((x25)*(x27)))+(((IkReal(0.00372400000000000))*(x23)*(x27)))+(((IkReal(0.00588000000000000))*(x26)*(x35))));
 if( IKabs(evalcond[0]) > 0.000001  || IKabs(evalcond[1]) > 0.000001  || IKabs(evalcond[2]) > 0.000001  )
 {
 continue;
 }
 }
 
-IKReal soleval[1];
-soleval[0]=((-0.0232000000000000)+(((cj14)*(((-0.0680000000000000)+(((cj13)*(px)))+(((py)*(sj13)))))))+(((-1.00000000000000)*(pz)*(sj14))));
+IkReal soleval[1];
+soleval[0]=((IkReal(-0.0232000000000000))+(((cj14)*(((IkReal(-0.0680000000000000))+(((cj13)*(px)))+(((py)*(sj13)))))))+(((IkReal(-1.00000000000000))*(pz)*(sj14))));
 if( soleval[0] > 0.0000000000000000  )
 {
-vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
-solution.basesol.resize(3);
-solution.basesol[0].foffset = j12;
-solution.basesol[0].indices[0] = _ij12[0];
-solution.basesol[0].indices[1] = _ij12[1];
-solution.basesol[0].maxsolutions = _nj12;
-solution.basesol[1].foffset = j13;
-solution.basesol[1].indices[0] = _ij13[0];
-solution.basesol[1].indices[1] = _ij13[1];
-solution.basesol[1].maxsolutions = _nj13;
-solution.basesol[2].foffset = j14;
-solution.basesol[2].indices[0] = _ij14[0];
-solution.basesol[2].indices[1] = _ij14[1];
-solution.basesol[2].maxsolutions = _nj14;
-solution.vfree.resize(0);
+std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(3);
+vinfos[0].jointtype = 17;
+vinfos[0].foffset = j12;
+vinfos[0].indices[0] = _ij12[0];
+vinfos[0].indices[1] = _ij12[1];
+vinfos[0].maxsolutions = _nj12;
+vinfos[1].jointtype = 1;
+vinfos[1].foffset = j13;
+vinfos[1].indices[0] = _ij13[0];
+vinfos[1].indices[1] = _ij13[1];
+vinfos[1].maxsolutions = _nj13;
+vinfos[2].jointtype = 1;
+vinfos[2].foffset = j14;
+vinfos[2].indices[0] = _ij14[0];
+vinfos[2].indices[1] = _ij14[1];
+vinfos[2].maxsolutions = _nj14;
+std::vector<int> vfree(0);
+solutions.AddSolution(vinfos,vfree);
 }
 }
 }
@@ -533,22 +445,22 @@ solution.vfree.resize(0);
 } else
 {
 {
-IKReal j14array[2], cj14array[2], sj14array[2];
+IkReal j14array[2], cj14array[2], sj14array[2];
 bool j14valid[2]={false};
 _nj14 = 2;
-IKReal x36=((((-0.0680000000000000)*(sj13)))+(py)+(((-0.0300000000000000)*(cj13))));
+IkReal x36=((((IkReal(-0.0680000000000000))*(sj13)))+(py)+(((IkReal(-0.0300000000000000))*(cj13))));
 if( IKabs(((pz)*(sj13))) < IKFAST_ATAN2_MAGTHRESH && IKabs(x36) < IKFAST_ATAN2_MAGTHRESH )
     continue;
-IKReal x37=((1.00000000000000)*(IKatan2(((pz)*(sj13)), x36)));
-if( ((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))) < (IKReal)-0.00001 )
+IkReal x37=((IkReal(1.00000000000000))*(IKatan2(((pz)*(sj13)), x36)));
+if( ((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))) < (IkReal)-0.00001 )
     continue;
-if( (((0.0980000000000000)*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IKReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IKReal)1.0e30)))) < -1-IKFAST_SINCOS_THRESH || (((0.0980000000000000)*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IKReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IKReal)1.0e30)))) > 1+IKFAST_SINCOS_THRESH )
+if( (((IkReal(0.0980000000000000))*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IkReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IkReal)1.0e30)))) < -1-IKFAST_SINCOS_THRESH || (((IkReal(0.0980000000000000))*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IkReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IkReal)1.0e30)))) > 1+IKFAST_SINCOS_THRESH )
     continue;
-IKReal x38=IKasin(((0.0980000000000000)*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IKReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IKReal)1.0e30))));
-j14array[0]=((((-1.00000000000000)*(x37)))+(x38));
+IkReal x38=IKasin(((IkReal(0.0980000000000000))*(sj13)*(((IKabs(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36)))))) != 0)?((IkReal)1/(IKabs(IKsqrt((((((pz)*(pz))*((sj13)*(sj13))))+((x36)*(x36))))))):(IkReal)1.0e30))));
+j14array[0]=((((IkReal(-1.00000000000000))*(x37)))+(x38));
 sj14array[0]=IKsin(j14array[0]);
 cj14array[0]=IKcos(j14array[0]);
-j14array[1]=((3.14159265358979)+(((-1.00000000000000)*(x38)))+(((-1.00000000000000)*(x37))));
+j14array[1]=((IkReal(3.14159265358979))+(((IkReal(-1.00000000000000))*(x38)))+(((IkReal(-1.00000000000000))*(x37))));
 sj14array[1]=IKsin(j14array[1]);
 cj14array[1]=IKcos(j14array[1]);
 if( j14array[0] > IKPI )
@@ -583,54 +495,57 @@ if( j14valid[iij14] && IKabs(cj14array[ij14]-cj14array[iij14]) < IKFAST_SOLUTION
 }
 j14 = j14array[ij14]; cj14 = cj14array[ij14]; sj14 = sj14array[ij14];
 {
-IKReal evalcond[3];
-IKReal x39=IKsin(j14);
-IKReal x40=(px)*(px);
-IKReal x41=(cj13)*(cj13);
-IKReal x42=(py)*(py);
-IKReal x43=(pz)*(pz);
-IKReal x44=IKcos(j14);
-IKReal x45=((cj13)*(py));
-IKReal x46=((2.00000000000000)*(sj13));
-IKReal x47=((0.00408000000000000)*(sj13));
-IKReal x48=(x44)*(x44);
-IKReal x49=(x39)*(x39)*(x39);
-IKReal x50=((1.00000000000000)*(x40));
-IKReal x51=((0.0133280000000000)*(x39));
-IKReal x52=((sj13)*(x39));
-IKReal x53=((0.0133280000000000)*(x41));
-IKReal x54=((1.00000000000000)*(x42));
-IKReal x55=((cj13)*(x48));
-IKReal x56=((x43)*(x48));
-IKReal x57=((x41)*(x48));
-evalcond[0]=((((-0.0300000000000000)*(x39)))+(((x39)*(x45)))+(((-1.00000000000000)*(px)*(x52))));
-evalcond[1]=((0.000900000000000000)+(((-0.000900000000000000)*(x48)))+(((-1.00000000000000)*(x41)*(x54)))+(((x40)*(x48)))+(((x40)*(x41)))+(((x42)*(x57)))+(((px)*(x45)*(x46)))+(((-1.00000000000000)*(px)*(x45)*(x46)*(x48)))+(((-1.00000000000000)*(x50)))+(((-1.00000000000000)*(x50)*(x57))));
-evalcond[2]=((0.0142280000000000)+(((-1.00000000000000)*(x51)*(x57)))+(((0.0133280000000000)*(x49)))+(((-1.00000000000000)*(x49)*(x53)))+(((0.00372400000000000)*(x57)))+(((-1.00000000000000)*(x47)*(x55)))+(((x42)*(x48)))+(((cj13)*(x47)))+(((x48)*(x51)))+(((-0.00462400000000000)*(x48)))+(((0.00588000000000000)*(cj13)*(sj13)*(x49)))+(((x41)*(x56)))+(((-1.00000000000000)*(x54)))+(((-1.00000000000000)*(x53)))+(((-1.00000000000000)*(py)*(pz)*(x39)*(x44)*(x46)))+(((-1.00000000000000)*(x56)))+(((0.00588000000000000)*(x52)*(x55))));
+IkReal evalcond[3];
+IkReal x39=IKsin(j14);
+IkReal x40=(px)*(px);
+IkReal x41=(cj13)*(cj13);
+IkReal x42=(py)*(py);
+IkReal x43=(pz)*(pz);
+IkReal x44=IKcos(j14);
+IkReal x45=((cj13)*(py));
+IkReal x46=((IkReal(2.00000000000000))*(sj13));
+IkReal x47=((IkReal(0.00408000000000000))*(sj13));
+IkReal x48=(x44)*(x44);
+IkReal x49=(x39)*(x39)*(x39);
+IkReal x50=((IkReal(1.00000000000000))*(x40));
+IkReal x51=((IkReal(0.0133280000000000))*(x39));
+IkReal x52=((sj13)*(x39));
+IkReal x53=((IkReal(0.0133280000000000))*(x41));
+IkReal x54=((IkReal(1.00000000000000))*(x42));
+IkReal x55=((cj13)*(x48));
+IkReal x56=((x43)*(x48));
+IkReal x57=((x41)*(x48));
+evalcond[0]=((((IkReal(-0.0300000000000000))*(x39)))+(((x39)*(x45)))+(((IkReal(-1.00000000000000))*(px)*(x52))));
+evalcond[1]=((IkReal(0.000900000000000000))+(((IkReal(-0.000900000000000000))*(x48)))+(((IkReal(-1.00000000000000))*(x41)*(x54)))+(((x40)*(x48)))+(((x40)*(x41)))+(((x42)*(x57)))+(((px)*(x45)*(x46)))+(((IkReal(-1.00000000000000))*(px)*(x45)*(x46)*(x48)))+(((IkReal(-1.00000000000000))*(x50)))+(((IkReal(-1.00000000000000))*(x50)*(x57))));
+evalcond[2]=((IkReal(0.0142280000000000))+(((IkReal(-1.00000000000000))*(x51)*(x57)))+(((IkReal(0.0133280000000000))*(x49)))+(((IkReal(-1.00000000000000))*(x49)*(x53)))+(((IkReal(0.00372400000000000))*(x57)))+(((IkReal(-1.00000000000000))*(x47)*(x55)))+(((x42)*(x48)))+(((cj13)*(x47)))+(((x48)*(x51)))+(((IkReal(-0.00462400000000000))*(x48)))+(((IkReal(0.00588000000000000))*(cj13)*(sj13)*(x49)))+(((x41)*(x56)))+(((IkReal(-1.00000000000000))*(x54)))+(((IkReal(-1.00000000000000))*(x53)))+(((IkReal(-1.00000000000000))*(py)*(pz)*(x39)*(x44)*(x46)))+(((IkReal(-1.00000000000000))*(x56)))+(((IkReal(0.00588000000000000))*(x52)*(x55))));
 if( IKabs(evalcond[0]) > 0.000001  || IKabs(evalcond[1]) > 0.000001  || IKabs(evalcond[2]) > 0.000001  )
 {
 continue;
 }
 }
 
-IKReal soleval[1];
-soleval[0]=((-0.0232000000000000)+(((cj14)*(((-0.0680000000000000)+(((cj13)*(px)))+(((py)*(sj13)))))))+(((-1.00000000000000)*(pz)*(sj14))));
+IkReal soleval[1];
+soleval[0]=((IkReal(-0.0232000000000000))+(((cj14)*(((IkReal(-0.0680000000000000))+(((cj13)*(px)))+(((py)*(sj13)))))))+(((IkReal(-1.00000000000000))*(pz)*(sj14))));
 if( soleval[0] > 0.0000000000000000  )
 {
-vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();
-solution.basesol.resize(3);
-solution.basesol[0].foffset = j12;
-solution.basesol[0].indices[0] = _ij12[0];
-solution.basesol[0].indices[1] = _ij12[1];
-solution.basesol[0].maxsolutions = _nj12;
-solution.basesol[1].foffset = j13;
-solution.basesol[1].indices[0] = _ij13[0];
-solution.basesol[1].indices[1] = _ij13[1];
-solution.basesol[1].maxsolutions = _nj13;
-solution.basesol[2].foffset = j14;
-solution.basesol[2].indices[0] = _ij14[0];
-solution.basesol[2].indices[1] = _ij14[1];
-solution.basesol[2].maxsolutions = _nj14;
-solution.vfree.resize(0);
+std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(3);
+vinfos[0].jointtype = 17;
+vinfos[0].foffset = j12;
+vinfos[0].indices[0] = _ij12[0];
+vinfos[0].indices[1] = _ij12[1];
+vinfos[0].maxsolutions = _nj12;
+vinfos[1].jointtype = 1;
+vinfos[1].foffset = j13;
+vinfos[1].indices[0] = _ij13[0];
+vinfos[1].indices[1] = _ij13[1];
+vinfos[1].maxsolutions = _nj13;
+vinfos[2].jointtype = 1;
+vinfos[2].foffset = j14;
+vinfos[2].indices[0] = _ij14[0];
+vinfos[2].indices[1] = _ij14[1];
+vinfos[2].maxsolutions = _nj14;
+std::vector<int> vfree(0);
+solutions.AddSolution(vinfos,vfree);
 }
 }
 }
@@ -645,7 +560,7 @@ solution.vfree.resize(0);
 
 }
 }
-return vsolutions.size()>0;
+return solutions.GetNumSolutions()>0;
 }
 
 };
@@ -653,14 +568,14 @@ return vsolutions.size()>0;
 
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
-IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
+IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
 IKSolver solver;
-return solver.ik(eetrans,eerot,pfree,vsolutions);
+return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
-IKFAST_API const char* getKinematicsHash() { return "2640ae411e0c87b03f56bf289296f9d8"; }
+IKFAST_API const char* GetKinematicsHash() { return "2640ae411e0c87b03f56bf289296f9d8"; }
 
-IKFAST_API const char* getIKFastVersion() { return "59"; }
+IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace
@@ -674,37 +589,38 @@ using namespace IKFAST_NAMESPACE;
 #endif
 int main(int argc, char** argv)
 {
-    if( argc != 12+getNumFreeParameters()+1 ) {
+    if( argc != 12+GetNumFreeParameters()+1 ) {
         printf("\nUsage: ./ik r00 r01 r02 t0 r10 r11 r12 t1 r20 r21 r22 t2 free0 ...\n\n"
                "Returns the ik solutions given the transformation of the end effector specified by\n"
                "a 3x3 rotation R (rXX), and a 3x1 translation (tX).\n"
-               "There are %d free parameters that have to be specified.\n\n",getNumFreeParameters());
+               "There are %d free parameters that have to be specified.\n\n",GetNumFreeParameters());
         return 1;
     }
 
-    std::vector<IKSolution> vsolutions;
-    std::vector<IKReal> vfree(getNumFreeParameters());
-    IKReal eerot[9],eetrans[3];
+    IkSolutionList<IkReal> solutions;
+    std::vector<IkReal> vfree(GetNumFreeParameters());
+    IkReal eerot[9],eetrans[3];
     eerot[0] = atof(argv[1]); eerot[1] = atof(argv[2]); eerot[2] = atof(argv[3]); eetrans[0] = atof(argv[4]);
     eerot[3] = atof(argv[5]); eerot[4] = atof(argv[6]); eerot[5] = atof(argv[7]); eetrans[1] = atof(argv[8]);
     eerot[6] = atof(argv[9]); eerot[7] = atof(argv[10]); eerot[8] = atof(argv[11]); eetrans[2] = atof(argv[12]);
     for(std::size_t i = 0; i < vfree.size(); ++i)
         vfree[i] = atof(argv[13+i]);
-    bool bSuccess = ik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions);
+    bool bSuccess = ComputeIk(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, solutions);
 
     if( !bSuccess ) {
         fprintf(stderr,"Failed to get ik solution\n");
         return -1;
     }
 
-    printf("Found %d ik solutions:\n", (int)vsolutions.size());
-    std::vector<IKReal> sol(getNumJoints());
-    for(std::size_t i = 0; i < vsolutions.size(); ++i) {
-        printf("sol%d (free=%d): ", (int)i, (int)vsolutions[i].GetFree().size());
-        std::vector<IKReal> vsolfree(vsolutions[i].GetFree().size());
-        vsolutions[i].GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
-        for( std::size_t j = 0; j < sol.size(); ++j)
-            printf("%.15f, ", sol[j]);
+    printf("Found %d ik solutions:\n", (int)solutions.GetNumSolutions());
+    std::vector<IkReal> solvalues(GetNumJoints());
+    for(std::size_t i = 0; i < solutions.GetNumSolutions(); ++i) {
+        IkSolutionBase<IkReal>& sol = solutions.GetSolution(i);
+        printf("sol%d (free=%d): ", (int)i, (int)sol.GetFree().size());
+        std::vector<IkReal> vsolfree(sol.GetFree().size());
+        sol.GetSolution(&solvalues[0],vsolfree.size()>0?&vsolfree[0]:NULL);
+        for( std::size_t j = 0; j < solvalues.size(); ++j)
+            printf("%.15f, ", solvalues[j]);
         printf("\n");
     }
     return 0;
@@ -712,17 +628,19 @@ int main(int argc, char** argv)
 
 #endif
 
-#include "ikbase.h"
+#include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
-#ifdef RAVE_REGISTER_BOOST
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(IKSolution)
-#endif
-IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>& vfreeinc) {
-    std::vector<int> vfree(getNumFreeParameters());
-    for(size_t i = 0; i < vfree.size(); ++i) {
-        vfree[i] = getFreeParameters()[i];
-    }
-    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),static_cast<IkParameterizationType>(getIKType()), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, const std::vector<dReal>& vfreeinc) {
+    boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions(new ikfast::IkFastFunctions<IkReal>());
+    ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
+    ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
+    ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
+    ikfunctions->_GetFreeParameters = IKFAST_NAMESPACE::GetFreeParameters;
+    ikfunctions->_GetNumJoints = IKFAST_NAMESPACE::GetNumJoints;
+    ikfunctions->_GetIkRealSize = IKFAST_NAMESPACE::GetIkRealSize;
+    ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;
+    ikfunctions->_GetIkType = IKFAST_NAMESPACE::GetIkType;
+    ikfunctions->_GetKinematicsHash = IKFAST_NAMESPACE::GetKinematicsHash;
+    return CreateIkFastSolver(penv,sinput,ikfunctions,vfreeinc);
 }
 } // end namespace

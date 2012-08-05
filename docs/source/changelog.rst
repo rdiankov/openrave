@@ -74,7 +74,9 @@ Inverse Kinematics
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
-* Many ikfast bug fixes, upgraded version to 59
+* Many ikfast bug fixes, upgraded version to **60**
+
+* ikfast now comes with an **ikfast.h** header file that can be used to load all the ik solvers. Check out share/openrave-X.Y/ikfast.h. **breaks existing code directly linking ikfast c++ files**.
 
 Planning
 --------

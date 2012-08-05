@@ -58,7 +58,7 @@ openravepy_changed:
 openrave_plugins_changed:
 	touch openrave_plugins_changed
 
-openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/ja/coreapixml/index.xml
+openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/ja/coreapixml/index.xml ../python/bindings/*.cpp
 	rm -f openravepy_internal_doc
 	python build_openravepy_internal.py --languagecode en --languagecode ja
 	#touch openravepy_internal_doc
