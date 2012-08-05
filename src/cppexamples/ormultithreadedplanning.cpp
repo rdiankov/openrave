@@ -73,7 +73,7 @@ public:
         // find a manipulator chain to move
         for(size_t i = 0; i < probot->GetManipulators().size(); ++i) {
             if( probot->GetManipulators()[i]->GetName().find("arm") != string::npos ) {
-                probot->SetActiveManipulator(i);
+                probot->SetActiveManipulator(probot->GetManipulators()[i]);
                 break;
             }
         }
