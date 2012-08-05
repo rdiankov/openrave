@@ -21,11 +21,12 @@
 
 namespace OpenRAVE {
 
-WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorelastcollisionee(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
+WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
     _vXMLParameters.push_back("maxdeviationangle");
     _vXMLParameters.push_back("maintaintiming");
     _vXMLParameters.push_back("greedysearch");
     _vXMLParameters.push_back("ignorefirstcollision");
+    _vXMLParameters.push_back("ignorefirstcollisionee");
     _vXMLParameters.push_back("ignorelastcollisionee");
     _vXMLParameters.push_back("minimumcompletetime");
     _vXMLParameters.push_back("workspacetraj"); // back-compat
@@ -42,6 +43,7 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O) const
     O << "<maintaintiming>" << maintaintiming << "</maintaintiming>" << std::endl;
     O << "<greedysearch>" << greedysearch << "</greedysearch>" << std::endl;
     O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << std::endl;
+    O << "<ignorefirstcollisionee>" << ignorefirstcollisionee << "</ignorefirstcollisionee>" << std::endl;
     O << "<ignorelastcollisionee>" << ignorelastcollisionee << "</ignorelastcollisionee>" << std::endl;
     O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << std::endl;
     if( !!workspacetraj ) {
@@ -73,7 +75,7 @@ BaseXMLReader::ProcessElement WorkspaceTrajectoryParameters::startElement(const 
         _bProcessing = false;
         return PE_Support;
     }
-    _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="ignorelastcollisionee" || name=="minimumcompletetime" || name=="workspacetraj";
+    _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="ignorefirstcollisionee" || name=="ignorelastcollisionee" || name=="minimumcompletetime" || name=="workspacetraj";
     return _bProcessing ? PE_Support : PE_Pass;
 }
 
@@ -103,6 +105,9 @@ bool WorkspaceTrajectoryParameters::endElement(const std::string& name)
         }
         else if( name == "ignorefirstcollision" ) {
             _ss >> ignorefirstcollision;
+        }
+        else if( name == "ignorefirstcollisionee" ) {
+            _ss >> ignorefirstcollisionee;
         }
         else if( name == "ignorelastcollisionee" ) {
             _ss >> ignorelastcollisionee;
