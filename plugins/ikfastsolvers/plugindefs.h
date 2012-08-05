@@ -67,102 +67,20 @@ using namespace OpenRAVE;
 
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 
-template <typename Real>
-class IKSolutionTemplate
-{
-public:
-    typedef Real IKReal;
-    /// Gets a solution given its free parameters
-    /// \param pfree The free parameters required, range is in [-pi,pi]
-    void GetSolution(Real* psolution, const Real* pfree) const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 ) {
-                psolution[i] = basesol[i].foffset;
-            }
-            else {
-                BOOST_ASSERT(pfree != NULL);
-                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > PI ) {
-                    psolution[i] -= 2*PI;
-                }
-                else if( psolution[i] < -PI ) {
-                    psolution[i] += 2*PI;
-                }
-            }
-        }
-    }
-
-    /// Gets the free parameters the solution requires to be set before a full solution can be returned
-    /// \return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const {
-        return vfree;
-    }
-
-    struct VARIABLE
-    {
-        VARIABLE() : fmul(0), foffset(0), freeind(-1), maxsolutions(-1) {
-            indices[0] = indices[1] = -1;
-        }
-        IKReal fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-        signed char freeind; ///< if >= 0, mimics another joint
-        unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
-        unsigned char indices[2]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
-    };
-
-    std::vector<VARIABLE> basesol;           ///< solution and their offsets if joints are mimiced
-    std::vector<int> vfree;
-
-    bool Validate() const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].maxsolutions == (unsigned char)-1) {
-                throw OPENRAVE_EXCEPTION_FORMAT("max solutions for joint %d not initialized\n",i,ORE_Assert);
-            }
-            if( basesol[i].maxsolutions > 0 ) {
-                if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
-                }
-                if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("2nd index %d >= max solutions %d for joint %d\n",(int)basesol[i].indices[0]%(int)basesol[i].maxsolutions%i,ORE_Assert);
-                }
-            }
-        }
-        return true;
-    }
-
-    void GetSolutionIndices(std::vector<unsigned int>& v) const {
-        v.resize(0);
-        v.push_back(0);
-        for(int i = (int)basesol.size()-1; i >= 0; --i) {
-            if( basesol[i].maxsolutions != (unsigned char)-1 && basesol[i].maxsolutions > 1 ) {
-                for(size_t j = 0; j < v.size(); ++j) {
-                    v[j] *= basesol[i].maxsolutions;
-                }
-                size_t orgsize=v.size();
-                if( basesol[i].indices[1] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v.push_back(v[j]+basesol[i].indices[1]);
-                    }
-                }
-                if( basesol[i].indices[0] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v[j] += basesol[i].indices[0];
-                    }
-                }
-            }
-        }
-    }
-};
-
-typedef IKSolutionTemplate<float> IKSolutionFloat;
-typedef IKSolutionTemplate<double> IKSolutionDouble;
-
 #define IKFAST_ASSERT BOOST_ASSERT
 #define IKFAST_REAL double
 #define IKFAST_NO_MAIN
 
+#include "ikfast.h"
+
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const std::vector<dReal>& vfreeinc);
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const std::vector<dReal>& vfreeinc);
+
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TEMPLATE(IKSolutionTemplate, 1)
+BOOST_TYPEOF_REGISTER_TEMPLATE(IkSingleDOFSolutionBase, 1)
+BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolution, 1)
+BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolutionList, 1)
 #endif
 
 #endif

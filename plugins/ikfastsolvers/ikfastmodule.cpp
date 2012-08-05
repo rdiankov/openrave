@@ -1,6 +1,18 @@
-#ifndef OPENRAVE_IKFAST_PROBLEM
-#define OPENRAVE_IKFAST_PROBLEM
-
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -37,24 +49,36 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-#define DECLFNPTR(name, paramlist) (*name)paramlist
+#define LOAD_IKFUNCTION(fnname) { \
+        ikfunctions->_ ## fnname = (typename ikfast::IkFastFunctions<T>::fnname ## Fn)SysLoadSym(plib, # fnname); \
+        if( !ikfunctions->_ ## fnname ) { \
+            RAVELOG_WARN(str(boost::format("failed to find " # fnname " in %s. If the library is correct, have you compiled with IKFAST_CLIBRARY define that enables extern \"C\"?")%_libraryname)); \
+            return false; \
+        } \
+}
 
-class IKFastProblem : public ModuleBase
+class IkFastModule : public ModuleBase
 {
-    typedef int DECLFNPTR (getNumFreeParametersFn, ());
-    typedef int* DECLFNPTR (getFreeParametersFn, ());
-    typedef int DECLFNPTR (getNumJointsFn, ());
-    typedef const char* DECLFNPTR (getKinematicsHashFn, ());
-    typedef const char* DECLFNPTR (getIKFastVersionFn, ());
-    typedef int DECLFNPTR (getIKRealSizeFn, ());
-    typedef int DECLFNPTR (getIKTypeFn, ());
-
-    class IKLibrary : public boost::enable_shared_from_this<IKLibrary>
+    class IkLibrary : public boost::enable_shared_from_this<IkLibrary>
     {
 public:
-        IKLibrary() : getKinematicsHash(NULL), plib(NULL) {
+        template <typename T>
+        class MyFunctions : public ikfast::IkFastFunctions<T>
+        {
+public:
+            MyFunctions() : ikfast::IkFastFunctions<T>() {
+            }
+            MyFunctions(const MyFunctions& r) {
+                *this = r;
+            }
+            boost::shared_ptr<IkLibrary> _library;
+        };
+
+        IkLibrary() : plib(NULL) {
         }
-        ~IKLibrary() {
+        ~IkLibrary() {
+            _ikfloat.reset();
+            _ikdouble.reset();
             if( plib != NULL ) {
                 SysCloseLibrary(plib);
             }
@@ -66,103 +90,100 @@ public:
             _libraryname = libraryname;
             plib = SysLoadLibrary(_libraryname.c_str());
             if( plib == NULL ) {
-                RAVELOG_WARN("failed to load library %s\n", _libraryname.c_str());
+                RAVELOG_WARN(str(boost::format("failed to load library %s")%_libraryname));
                 return false;
             }
 
-            getNumFreeParameters = (getNumFreeParametersFn)SysLoadSym(plib, "getNumFreeParameters");
-            if( getNumFreeParameters == NULL ) {
-                RAVELOG_WARN(str(boost::format("failed to find getNumFreeParameters in %s. If the library is correct, have you compiled with IKFAST_CLIBRARY define that enables extern \"C\"?")%_libraryname));
-                return false;
-            }
-            getFreeParameters = (getFreeParametersFn)SysLoadSym(plib, "getFreeParameters");
-            if( getFreeParameters == NULL ) {
-                RAVELOG_WARN("failed to find getFreeParameters in %s\n", _libraryname.c_str());
-                return false;
-            }
-            getNumJoints = (getNumJointsFn)SysLoadSym(plib, "getNumJoints");
-            if( getNumJoints == NULL ) {
-                RAVELOG_WARN("failed to find getNumJoints in %s\n", _libraryname.c_str());
-                return false;
-            }
-            getIKRealSize = (getIKRealSizeFn)SysLoadSym(plib, "getIKRealSize");
-            if( getIKRealSize == NULL ) {
-                RAVELOG_WARN("failed to find getIKRealSize in %s\n", _libraryname.c_str());
+            // don't matter what the template is
+            ikfast::IkFastFunctions<void>::GetIkRealSizeFn GetIkRealSize = (ikfast::IkFastFunctions<void>::GetIkRealSizeFn)SysLoadSym(plib, "GetIkRealSize");
+            if( GetIkRealSize == NULL ) {
+                RAVELOG_WARN(str(boost::format("failed to find GetIkRealSize in %s")%_libraryname));
                 return false;
             }
 
-            getIKFastVersion = (getIKFastVersionFn)SysLoadSym(plib, "getIKFastVersion");
-            if( getIKFastVersion == NULL ) {
-                RAVELOG_WARN("failed to find getIKFastVersion in %s\n", _libraryname.c_str());
+            int realsize = GetIkRealSize();
+            if( realsize == 4 ) {
+                boost::shared_ptr<MyFunctions<float> > ikfunctions(new MyFunctions<float>());
+                _InitFunctions(ikfunctions);
+                _ikfloat=ikfunctions;
+            }
+            else if( realsize == 8 ) {
+                boost::shared_ptr<MyFunctions<double> > ikfunctions(new MyFunctions<double>());
+                _InitFunctions(ikfunctions);
+                _ikdouble=ikfunctions;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unsupported size ikfast real size %d")%realsize));
                 return false;
             }
+            return true;
+        }
 
-            getIKType = (getIKTypeFn)SysLoadSym(plib, "getIKType");
-            if( getIKType == NULL ) {
-                RAVELOG_WARN("failed to find getIKType in %s, setting to 6D transform\n", _libraryname.c_str());
-                return false;
-            }
-
-            getKinematicsHash = (getKinematicsHashFn)SysLoadSym(plib, "getKinematicsHash");
-            if( getKinematicsHash == NULL ) {
-                RAVELOG_WARN("failed to find getKinematicsHash in %s, will not be able to validate inverse kinematics structure\n", _libraryname.c_str());
-            }
-
-            ikfn = SysLoadSym(plib, "ik");
-            if( ikfn == NULL ) {
-                RAVELOG_WARN("failed to find ik in %s\n", _libraryname.c_str());
-                return false;
-            }
-            fkfn = SysLoadSym(plib, "fk");
-
-            vfree.resize(getNumFreeParameters());
-            for(size_t i = 0; i < vfree.size(); ++i) {
-                vfree[i] = getFreeParameters()[i];
-            }
+        template <typename T>
+        bool _InitFunctions(boost::shared_ptr<MyFunctions<T> > ikfunctions)
+        {
+            LOAD_IKFUNCTION(ComputeIk);
+            LOAD_IKFUNCTION(ComputeFk);
+            LOAD_IKFUNCTION(GetNumFreeParameters);
+            LOAD_IKFUNCTION(GetFreeParameters);
+            LOAD_IKFUNCTION(GetNumJoints);
+            LOAD_IKFUNCTION(GetIkRealSize);
+            LOAD_IKFUNCTION(GetIkFastVersion);
+            LOAD_IKFUNCTION(GetIkType);
+            LOAD_IKFUNCTION(GetKinematicsHash);
             return true;
         }
 
         IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc)
         {
-            string kinematicshash;
-            if( getKinematicsHash != NULL ) {
-                kinematicshash = getKinematicsHash();
-            }
-            int ikfastversion = boost::lexical_cast<int>(getIKFastVersion());
-            if( ikfastversion < 51 ) {
+            int ikfastversion = boost::lexical_cast<int>(GetIkFastVersion());
+            if( ikfastversion < 60 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("ikfast version %d not supported", ikfastversion, ORE_InvalidArguments);
             }
-            if( getIKRealSize() == 4 ) {
-                return IkSolverBasePtr(new IkFastSolver<float,IKSolutionFloat >((IkFastSolver<float,IKSolutionFloat >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
+            std::stringstream ss;
+            if( !!_ikfloat ) {
+                boost::shared_ptr<MyFunctions<float> > newfunctions(new MyFunctions<float>(*_ikfloat));
+                newfunctions->_library = shared_from_this();
+                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
             }
-            else if( getIKRealSize() == 8 ) {
-                return IkSolverBasePtr(new IkFastSolver<double,IKSolutionDouble >((IkFastSolver<double,IKSolutionDouble >::IkFn)ikfn,vfree,vfreeinc,getNumJoints(),(IkParameterizationType)getIKType(),shared_from_this(),kinematicshash, penv));
+            if( !!_ikdouble ) {
+                boost::shared_ptr<MyFunctions<double> > newfunctions(new MyFunctions<double>(*_ikdouble));
+                newfunctions->_library = shared_from_this();
+                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
             }
-            throw OPENRAVE_EXCEPTION_FORMAT("bad real size %d",getIKRealSize(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
         }
 
-        const vector<string>& GetIKNames() const {
+        const vector<string>& GetIkNames() const {
             return _viknames;
         }
-        void AddIKName(const string& ikname) {
+        void AddIkName(const string& ikname) {
             _viknames.push_back(ikname);
         }
         const string& GetLibraryName() const {
             return _libraryname;
         }
         int GetIKType() {
-            return getIKType();
+            if( !!_ikfloat ) {
+                return _ikfloat->_GetIkType();
+            }
+            if( !!_ikdouble ) {
+                return _ikdouble->_GetIkType();
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
+        }
+        std::string GetIkFastVersion() {
+            if( !!_ikfloat ) {
+                return _ikfloat->_GetIkFastVersion();
+            }
+            if( !!_ikdouble ) {
+                return _ikdouble->_GetIkFastVersion();
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
         }
 
-        getNumFreeParametersFn getNumFreeParameters;
-        getFreeParametersFn getFreeParameters;
-        getNumJointsFn getNumJoints;
-        getKinematicsHashFn getKinematicsHash;
-        getIKFastVersionFn getIKFastVersion;
-        getIKRealSizeFn getIKRealSize;
-        getIKTypeFn getIKType;
-        void* ikfn, *fkfn;
-
+        boost::shared_ptr<MyFunctions<float> > _ikfloat;
+        boost::shared_ptr<MyFunctions<double> > _ikdouble;
 private:
         void* SysLoadLibrary(const char* lib)
         {
@@ -201,37 +222,36 @@ private:
         void* plib;
         string _libraryname;
         vector<string> _viknames;
-        vector<int> vfree;
     };
 
-    inline boost::shared_ptr<IKFastProblem> shared_problem() {
-        return boost::dynamic_pointer_cast<IKFastProblem>(shared_from_this());
+    inline boost::shared_ptr<IkFastModule> shared_problem() {
+        return boost::dynamic_pointer_cast<IkFastModule>(shared_from_this());
     }
-    inline boost::shared_ptr<IKFastProblem const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<IKFastProblem const>(shared_from_this());
+    inline boost::shared_ptr<IkFastModule const> shared_problem_const() const {
+        return boost::dynamic_pointer_cast<IkFastModule const>(shared_from_this());
     }
 
 public:
-    IKFastProblem(EnvironmentBasePtr penv) : ModuleBase(penv)
+    IkFastModule(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nAllows dynamic loading and registering of ikfast shared objects to openrave plugins.\nAlso contains several test routines for inverse kinematics.";
-        RegisterCommand("AddIkLibrary",boost::bind(&IKFastProblem::AddIkLibrary,this,_1,_2),
+        RegisterCommand("AddIkLibrary",boost::bind(&IkFastModule::AddIkLibrary,this,_1,_2),
                         "Dynamically adds an ik solver to openrave by loading a shared object (based on ikfast code generation).\n"
                         "Usage::\n\n  AddIkLibrary iksolvername iklibrarypath\n\n"
                         "return the type of inverse kinematics solver (IkParamterization::Type)");
 #ifdef Boost_IOSTREAMS_FOUND
-        RegisterCommand("LoadIKFastSolver",boost::bind(&IKFastProblem::LoadIKFastSolver,this,_1,_2),
+        RegisterCommand("LoadIKFastSolver",boost::bind(&IkFastModule::LoadIKFastSolver,this,_1,_2),
                         "Dynamically calls the inversekinematics.py script to generate an ik solver for a robot, or to load an existing one\n"
                         "Usage::\n\n  LoadIKFastSolver robotname iktype_id [free increment]\n\n"
                         "return nothing, but does call the SetIKSolver for the robot");
 #endif
-        RegisterCommand("PerfTiming",boost::bind(&IKFastProblem::PerfTiming,this,_1,_2),
+        RegisterCommand("PerfTiming",boost::bind(&IkFastModule::PerfTiming,this,_1,_2),
                         "Times the ik call of a given library.\n"
                         "Usage::\n\n  PerfTiming [options] iklibrarypath\n\n"
                         "return the set of time measurements made in nano-seconds");
-        RegisterCommand("IKTest",boost::bind(&IKFastProblem::IKtest,this,_1,_2),
+        RegisterCommand("IKTest",boost::bind(&IkFastModule::IKtest,this,_1,_2),
                         "Tests for an IK solution if active manipulation has an IK solver attached");
-        RegisterCommand("DebugIK",boost::bind(&IKFastProblem::DebugIK,this,_1,_2),
+        RegisterCommand("DebugIK",boost::bind(&IkFastModule::DebugIK,this,_1,_2),
                         "Function used for debugging and testing an IK solver. Input parameters are:\n\n\
 * string readfile - file containing joint values to read, starts with number of entries.\n\n\
 * int numtests - if file not specified, number of random tests to perform (defualt is 1000).\n\n\
@@ -240,7 +260,7 @@ public:
 * string robot - name of the robot to test. the active manipulator of the roobt is used.\n\n");
     }
 
-    virtual ~IKFastProblem() {
+    virtual ~IkFastModule() {
     }
 
     int main(const string& cmd)
@@ -269,7 +289,7 @@ public:
             return false;
         }
 
-        boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikname,libraryname);
+        boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikname,libraryname);
         if( !lib ) {
             return false;
         }
@@ -277,7 +297,7 @@ public:
         return true;
     }
 
-    boost::shared_ptr<IKLibrary> _AddIkLibrary(const string& ikname, const string& _libraryname)
+    boost::shared_ptr<IkLibrary> _AddIkLibrary(const string& ikname, const string& _libraryname)
     {
 #ifdef HAVE_BOOST_FILESYSTEM
         string libraryname = boost::filesystem::system_complete(boost::filesystem::path(_libraryname, boost::filesystem::native)).string();
@@ -287,18 +307,18 @@ public:
 
         // before adding a new library, check for existing
         boost::mutex::scoped_lock lock(GetLibraryMutex());
-        boost::shared_ptr<IKLibrary> lib;
+        boost::shared_ptr<IkLibrary> lib;
         FOREACH(it, *GetLibraries()) {
             if( libraryname == (*it)->GetLibraryName() ) {
                 lib = *it;
-                lib->AddIKName(ikname);
+                lib->AddIkName(ikname);
                 break;
             }
         }
         if( !lib ) {
-            lib.reset(new IKLibrary());
+            lib.reset(new IkLibrary());
             if( !lib->Init(ikname, libraryname) ) {
-                return boost::shared_ptr<IKLibrary>();
+                return boost::shared_ptr<IkLibrary>();
             }
             GetLibraries()->push_back(lib);
         }
@@ -395,7 +415,7 @@ public:
 
         boost::trim(ikfilename);
         string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
-        boost::shared_ptr<IKLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
+        boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
         bool bsuccess = true;
         if( !lib ) {
             bsuccess = false;
@@ -455,17 +475,17 @@ public:
         if( libraryname.size() == 0 ) {
             return false;
         }
-        boost::shared_ptr<IKLibrary> lib(new IKLibrary());
+        boost::shared_ptr<IkLibrary> lib(new IkLibrary());
         if( !lib->Init("", libraryname) ) {
             RAVELOG_WARN(str(boost::format("failed to init library %s\n")%libraryname));
             return false;
         }
 
-        if( lib->getIKRealSize() == 4 ) {
-            return _PerfTiming<IKSolutionFloat>(sout,lib,num, maxtime);
+        if( !!lib->_ikfloat ) {
+            return _PerfTiming<float>(sout,lib->_ikfloat,num, maxtime);
         }
-        else if( lib->getIKRealSize() == 8 ) {
-            return _PerfTiming<IKSolutionDouble>(sout,lib,num, maxtime);
+        else if( !!lib->_ikdouble ) {
+            return _PerfTiming<double>(sout,lib->_ikdouble,num, maxtime);
         }
         else {
             throw openrave_exception("bad real size");
@@ -473,18 +493,15 @@ public:
         return true;
     }
 
-    template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<IKLibrary> lib, int num, dReal maxtime)
+    template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<ikfast::IkFastFunctions<T> > ikfunctions, int num, dReal maxtime)
     {
-        BOOST_ASSERT(lib->getIKRealSize()==sizeof(typename T::IKReal));
-        typename IkFastSolver<typename T::IKReal,T>::IkFn ikfn = (typename IkFastSolver<typename T::IKReal,T>::IkFn)lib->ikfn;
-        typename IkFastSolver<typename T::IKReal,T>::FkFn fkfn = (typename IkFastSolver<typename T::IKReal,T>::FkFn)lib->fkfn;
-        if( !ikfn || !fkfn ) {
-            return false;
-        }
+        OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(T));
+        BOOST_ASSERT(!!ikfunctions->_ComputeIk && !!ikfunctions->_ComputeFk);
+
         vector<uint64_t> vtimes(num);
-        vector<T> vsolutions; vsolutions.reserve(32);
-        vector<typename T::IKReal> vjoints(lib->getNumJoints()), vfree(lib->getNumFreeParameters());
-        typename T::IKReal eerot[9],eetrans[3];
+        ikfast::IkSolutionList<T> solutions;
+        vector<T> vjoints(ikfunctions->_GetNumJoints()), vfree(ikfunctions->_GetNumFreeParameters());
+        T eerot[9],eetrans[3];
         uint32_t runstarttimems = utils::GetMilliTime();
         uint32_t runmaxtimems = (uint32_t)(1000*maxtime);
         size_t i = 0;
@@ -497,14 +514,14 @@ public:
                 vjoints[j] = RaveRandomDouble()*2*PI;
             }
             for(size_t j = 0; j < vfree.size(); ++j) {
-                vfree[j] = vjoints[lib->getFreeParameters()[j]];
+                vfree[j] = vjoints[ikfunctions->_GetFreeParameters()[j]];
             }
-            fkfn(&vjoints[0],eetrans,eerot);
-            vsolutions.resize(0);
+            ikfunctions->_ComputeFk(&vjoints[0],eetrans,eerot);
+            solutions.Clear();
             uint64_t numtoaverage=10;
             uint64_t starttime = utils::GetNanoPerformanceTime();
             for(uint64_t j = 0; j < numtoaverage; ++j) {
-                ikfn(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,vsolutions);
+                ikfunctions->_ComputeIk(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,solutions);
             }
             vtimes[i] = (utils::GetNanoPerformanceTime()-starttime)/numtoaverage;
         }
@@ -721,7 +738,7 @@ public:
         if(bReadFile) {
             fsfile.open(readfilename.c_str(),ios_base::in);
             if(!fsfile.is_open()) {
-                RAVELOG_ERROR("IKFastProblem::DebugIK - Error: Cannot open specified file.\n");
+                RAVELOG_ERROR("IkFastModule::DebugIK - Error: Cannot open specified file.\n");
                 return false;
             }
             fsfile >> num_itrs;
@@ -1165,11 +1182,11 @@ public:
         }
     }
 
-    static list< boost::shared_ptr<IKLibrary> >*& GetLibraries()
+    static list< boost::shared_ptr<IkLibrary> >*& GetLibraries()
     {
-        static list< boost::shared_ptr<IKLibrary> >* s_vStaticLibraries=NULL;
+        static list< boost::shared_ptr<IkLibrary> >* s_vStaticLibraries=NULL;
         if( s_vStaticLibraries == NULL ) {
-            s_vStaticLibraries = new list< boost::shared_ptr<IKLibrary> >();
+            s_vStaticLibraries = new list< boost::shared_ptr<IkLibrary> >();
         }
         return s_vStaticLibraries;
     }
@@ -1181,14 +1198,14 @@ public:
     }
 
     /// sinput holds the freeindices and other run-time configuraiton parameters
-    static IkSolverBasePtr CreateIkSolver(const string& _name, std::vector<dReal> vfreeinc, EnvironmentBasePtr penv)
+    static IkSolverBasePtr CreateIkSolver(const string& _name, const std::vector<dReal>& vfreeinc, EnvironmentBasePtr penv)
     {
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
         /// start from the newer libraries
         boost::mutex::scoped_lock lock(GetLibraryMutex());
-        for(list< boost::shared_ptr<IKLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
-            FOREACHC(itikname,(*itlib)->GetIKNames()) {
+        for(list< boost::shared_ptr<IkLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
+            FOREACHC(itikname,(*itlib)->GetIkNames()) {
                 if( name == *itikname ) {
                     return (*itlib)->CreateSolver(penv,vfreeinc);
                 }
@@ -1198,11 +1215,17 @@ public:
     }
 };
 
-#ifdef RAVE_REGISTER_BOOST
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(IKSolutionFloat)
-BOOST_TYPEOF_REGISTER_TYPE(IKSolutionDouble)
-BOOST_TYPEOF_REGISTER_TYPE(IKFastProblem)
-#endif
+ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return ModuleBasePtr(new IkFastModule(penv,sinput));
+}
 
-#endif
+void DestroyIkFastLibraries() {
+    delete IkFastModule::GetLibraries();
+    IkFastModule::GetLibraries() = NULL;
+}
+
+IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, EnvironmentBasePtr penv)
+{
+    return IkFastModule::CreateIkSolver(_name,vfreeinc,penv);
+}

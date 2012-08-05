@@ -160,6 +160,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
     RegisterCommand("SetFeedbackVisibility",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("ShowWorldAxes",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -456,7 +458,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetSize(_width, _height);
+        QtCoinViewerPtr(_pviewer)->_SetSize(_width, _height);
         EnvMessage::viewerexecute();
     }
 
@@ -483,7 +485,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_Move(_x, _y);
+        QtCoinViewerPtr(_pviewer)->_Move(_x, _y);
         EnvMessage::viewerexecute();
     }
 
@@ -510,7 +512,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetName(_title.c_str());
+        QtCoinViewerPtr(_pviewer)->_SetName(_title.c_str());
         EnvMessage::viewerexecute();
     }
 
@@ -566,7 +568,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = (void*)_pviewer->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
+        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_GetCameraImage(_memory, _width, _height, _extrinsic, _KK);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
@@ -606,7 +608,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = (void*)_pviewer->_WriteCameraImage(_width, _height, _t, _KK, _fileName, _extension);
+        void* ret = (void*)QtCoinViewerPtr(_pviewer)->_WriteCameraImage(_width, _height, _t, _KK, _fileName, _extension);
         if( _ppreturn != NULL )
             *_ppreturn = ret;
         EnvMessage::viewerexecute();
@@ -644,7 +646,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetCamera(_trans,_focalDistance);
+        QtCoinViewerPtr(_pviewer)->_SetCamera(_trans,_focalDistance);
         EnvMessage::viewerexecute();
     }
 
@@ -708,33 +710,40 @@ public:
     }
 
     virtual void viewerexecute() {
+        QtCoinViewerPtr pviewer(_pviewer);
         void* ret=NULL;
         switch(_type) {
         case DT_Point:
-            if( _bManyColors )
-                ret = _pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
-            else
-                ret = _pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
-
+            if( _bManyColors ) {
+                ret = pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
+            }
+            else  {
+                ret = pviewer->_plot3(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            }
             break;
         case DT_Sphere:
-            if( _bManyColors )
-                ret = _pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
-            else
-                ret = _pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
-
+            if( _bManyColors ) {
+                ret = pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0],_bhasalpha);
+            }
+            else {
+                ret = pviewer->_drawspheres(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            }
             break;
         case DT_LineStrip:
-            if( _bManyColors )
-                ret = _pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
-            else
-                ret = _pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            if( _bManyColors ) {
+                ret = pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+            }
+            else {
+                ret = pviewer->_drawlinestrip(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            }
             break;
         case DT_LineList:
-            if( _bManyColors )
-                ret = _pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
-            else
-                ret = _pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            if( _bManyColors ) {
+                ret = pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, &_vcolors[0]);
+            }
+            else {
+                ret = pviewer->_drawlinelist(_handle, &_vpoints[0], _numPoints, _stride, _fwidth, _color);
+            }
             break;
         }
 
@@ -818,7 +827,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
+        void* ret = QtCoinViewerPtr(_pviewer)->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
         BOOST_ASSERT( _handle == ret );
         EnvMessage::viewerexecute();
     }
@@ -846,7 +855,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawbox(_handle, _vpos, _vextents);
+        void* ret = QtCoinViewerPtr(_pviewer)->_drawbox(_handle, _vpos, _vextents);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -873,7 +882,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawplane(_handle, _tplane,_vextents,_vtexture);
+        void* ret = QtCoinViewerPtr(_pviewer)->_drawplane(_handle, _tplane,_vextents,_vtexture);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -919,7 +928,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
+        void* ret = QtCoinViewerPtr(_pviewer)->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -956,7 +965,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = _pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
+        void* ret = QtCoinViewerPtr(_pviewer)->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -992,7 +1001,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_closegraph(_handle);
+        QtCoinViewerPtr(_pviewer)->_closegraph(_handle);
         EnvMessage::viewerexecute();
     }
 
@@ -1014,7 +1023,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetGraphTransform(_handle,_t);
+        QtCoinViewerPtr(_pviewer)->_SetGraphTransform(_handle,_t);
         EnvMessage::viewerexecute();
     }
 
@@ -1037,7 +1046,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetGraphShow(_handle,_bshow);
+        QtCoinViewerPtr(_pviewer)->_SetGraphShow(_handle,_bshow);
         EnvMessage::viewerexecute();
     }
 
@@ -1060,7 +1069,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_deselect();
+        QtCoinViewerPtr(_pviewer)->_deselect();
         EnvMessage::viewerexecute();
     }
 };
@@ -1079,7 +1088,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_Reset();
+        QtCoinViewerPtr(_pviewer)->_Reset();
         EnvMessage::viewerexecute();
     }
 };
@@ -1109,7 +1118,7 @@ public:
     }
 
     virtual void viewerexecute() {
-        _pviewer->_SetBkgndColor(_color);
+        QtCoinViewerPtr(_pviewer)->_SetBkgndColor(_color);
         EnvMessage::viewerexecute();
     }
 
@@ -3335,8 +3344,9 @@ void QtCoinViewer::EnvMessage::callerexecute()
     }
     else {
         {
-            boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
-            _pviewer->_listMessages.push_back(shared_from_this());
+            QtCoinViewerPtr pviewer(_pviewer);
+            boost::mutex::scoped_lock lock(pviewer->_mutexMessages);
+            pviewer->_listMessages.push_back(shared_from_this());
         }
 
         if( bWaitForMutex ) {

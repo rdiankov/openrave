@@ -1,4 +1,5 @@
-// Copyright (C) 2006-2010 Carnegie Mellon University (rosen.diankov@gmail.com)
+// -*- coding: utf-8 -*-
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -13,11 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/*! --------------------------------------------------------------------
-   \file   ravep.h
-   \brief  Defines the private headers that every source file used to
-   build openrave must include (used in place of rave.h). Precompiled header.
-   -------------------------------------------------------------------- */
+/** \file   libopenrave.h
+    \brief  Defines the private headers for libopenrave
+ */
 
 #ifndef RAVE_LIBOPENRAVE_H
 #define RAVE_LIBOPENRAVE_H

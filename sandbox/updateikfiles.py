@@ -65,18 +65,20 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
 """%robotid
                 code += open(ikmodel.getsourcefilename(True),'r').read()
                 code += """
-#include "ikbase.h"
+#include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
-#ifdef RAVE_REGISTER_BOOST
-#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(IKSolution)
-#endif
-IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, const std::vector<dReal>& vfreeinc) {
-    std::vector<int> vfree(getNumFreeParameters());
-    for(size_t i = 0; i < vfree.size(); ++i) {
-        vfree[i] = getFreeParameters()[i];
-    }
-    return IkSolverBasePtr(new IkFastSolver<IKReal,IKSolution>(ik,vfree,vfreeinc,getNumJoints(),static_cast<IkParameterizationType>(getIKType()), boost::shared_ptr<void>(), getKinematicsHash(), penv));
+IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, const std::vector<dReal>& vfreeinc) {
+    boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions(new ikfast::IkFastFunctions<IkReal>());
+    ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
+    ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
+    ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
+    ikfunctions->_GetFreeParameters = IKFAST_NAMESPACE::GetFreeParameters;
+    ikfunctions->_GetNumJoints = IKFAST_NAMESPACE::GetNumJoints;
+    ikfunctions->_GetIkRealSize = IKFAST_NAMESPACE::GetIkRealSize;
+    ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;
+    ikfunctions->_GetIkType = IKFAST_NAMESPACE::GetIkType;
+    ikfunctions->_GetKinematicsHash = IKFAST_NAMESPACE::GetKinematicsHash;
+    return CreateIkFastSolver(penv,sinput,ikfunctions,vfreeinc);
 }
 } // end namespace
 """
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] <arg>"
     parser = OptionParser(usage)
     parser.add_option("-n", "--numthreads", dest="numthreads", default=multiprocessing.cpu_count(), help='the number of using core')
-    parser.add_option("-l", "--timelimit", dest="time_limit", default='600', help='time to stop test ik.')
+    parser.add_option("-l", "--timelimit", dest="time_limit", default='800', help='time to stop test ik.')
     parser.add_option("-d", "--destdir", dest="destdir", default=None,
                       help='destination directory to save ik file results ')
     parser.add_option("-r", "--robot", dest="robot", default=None, help='Robot file path')
@@ -229,7 +231,8 @@ if __name__ == "__main__":
                 findex = offset
                 break
         if findex is None:
-            raise ValueError('ik has failures')
+            raise ValueError('ik has failures: %r'%args[offset])
+        
         findices.append(findex)
 
     for i in findices:

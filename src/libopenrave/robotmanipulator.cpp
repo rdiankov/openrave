@@ -590,16 +590,37 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     else {
         localgoal=ikparam;
     }
-    vector<dReal> vsolution;
-    boost::shared_ptr< vector<dReal> > psolution(&vsolution, utils::null_deleter());
+
     // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-    if( !pIkSolver->Solve(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions|IKFO_IgnoreJointLimits,psolution) ) {
+    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
+    std::vector< std::vector<dReal> > vsolutions;
+    if( !pIkSolver->SolveAll(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions,vsolutions) ) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
     }
     RobotStateSaver saver(probot);
     probot->SetActiveDOFs(GetArmIndices());
-    probot->SetActiveDOFValues(vsolution,false);
-    return CheckEndEffectorCollision(GetTransform(),report);
+    // have to check all solutions since the 6D transform can change even though the ik parameterization doesn't
+    std::list<Transform> listprevtransforms;
+    FOREACH(itsolution,vsolutions) {
+        probot->SetActiveDOFValues(*itsolution,false);
+        Transform t = GetTransform();
+        // check if previous transforms exist
+        bool bhassimilar = false;
+        FOREACH(ittrans,listprevtransforms) {
+            if( TransformDistanceFast(t,*ittrans) < g_fEpsilonLinear*10 ) {
+                bhassimilar = true;
+                break;
+            }
+        }
+        if( !bhassimilar ) {
+            if( CheckEndEffectorCollision(GetTransform(),report) ) {
+                return true;
+            }
+            listprevtransforms.push_back(t);
+        }
+    }
+
+    return false;
 }
 
 bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const

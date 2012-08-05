@@ -68,11 +68,15 @@ Inverse Kinematics
 
 * Added velocities enumerations to IkParameterizationType (like IkParameterizationType.Transform6DVelocity), coordinate transforms can handle velocities.
 
+* Added **IkParameterization * transform** right-transformation
+
 * Added IK solver error codes for notifying user where IK failed.
 
 * :meth:`.IkSolver.Solve` and :meth:`.Robot.Manipulator.FindIKSolution` now returns results through the :class:`.IkReturn` object. It can output reason of IK failures (:class:`.IkReturnAction`) and custom data returned from IK filters.
 
-* Many ikfast bug fixes, upgraded version to 59
+* Many ikfast bug fixes, upgraded version to **60**
+
+* ikfast now comes with an **ikfast.h** header file that can be used to load all the ik solvers. Check out share/openrave-X.Y/ikfast.h. **breaks existing code directly linking ikfast c++ files**.
 
 Planning
 --------
@@ -98,6 +102,8 @@ Viewer
 * Fixed dead lock condition when destroying items, by introducing Item::PrepForDeletion
 
 * Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project.
+
+* Converted many qtcoinrave shared pointers to weak pointers to prevent circular dependencies.
 
 Misc
 ----

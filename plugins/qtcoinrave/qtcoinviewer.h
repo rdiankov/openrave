@@ -213,7 +213,7 @@ public:
         }
 
 protected:
-        QtCoinViewerPtr _pviewer;
+        boost::weak_ptr<QtCoinViewer> _pviewer;
         void** _ppreturn;
         boost::mutex _mutex;
         boost::shared_ptr<boost::mutex::scoped_lock> _plock;

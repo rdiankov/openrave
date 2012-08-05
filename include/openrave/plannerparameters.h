@@ -516,9 +516,9 @@ public:
     bool maintaintiming;     ///< maintain timing with input trajectory
     bool greedysearch;     ///< if true, will greeidly choose solutions (can possibly fail even a solution exists)
     dReal ignorefirstcollision;     ///< if > 0, will allow the robot to be in environment collision for the initial 'ignorefirstcollision' seconds of the trajectory. Once the robot gets out of collision, it will execute its normal following phase until it gets into collision again. This option is used when lifting objects from a surface, where the object is already in collision with the surface.
+    dReal ignorelastcollisionee; /// if > 0, will allow the manipulator end effector to get into collision with the environment for the last 'ignorelastcollisionee' seconds of the trajrectory. The kinematics, self collisions, and environment collisions with the other parts of the robot will still be checked
     dReal minimumcompletetime;     ///< specifies the minimum trajectory that must be followed for planner to declare success. If 0, then the entire trajectory has to be followed.
     TrajectoryBasePtr workspacetraj;     ///< workspace trajectory
-    Vector conveyorspeed; ///< velocity of the coordinate system. used if object is on is moving at a constant speed on a conveyor
 
 protected:
     EnvironmentBasePtr _penv;

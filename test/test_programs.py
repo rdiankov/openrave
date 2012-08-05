@@ -85,10 +85,12 @@ def CompileProject(cmakedir,cmakebuilddir=None):
         programdir += '\\RelWithDebInfo'
 
     try:
-        os.mkdir(cmakebuilddir)
-        
-    except OSError,e:
+        # remove dir first since it could contain cached information of previous versions
+        shutil.rmtree(cmakebuilddir)
+    except:
         pass
+
+    os.mkdir(cmakebuilddir)
 
     curdir = os.getcwd()
     try:
@@ -110,7 +112,7 @@ def CompileRunCPP(name,cppdata):
     try:
         shutil.rmtree(name)
     except:
-        pass    
+        pass
 
     try:
         os.mkdir(name)
@@ -134,11 +136,8 @@ install(TARGETS %(name)s DESTINATION .)
         shutil.rmtree(name)
         
 def test_cppexamples():
-    try:
-        programdir = CompileProject(os.path.join('..','src','cppexamples'))
-        
-    finally:
-        shutil.rmtree(programdir)
+    programdir = CompileProject(os.path.join('..','src','cppexamples'))
+    shutil.rmtree(programdir)
         
 def test_cppgeometry_standalone():
     cppdata="""#include <openrave/geometry.h>

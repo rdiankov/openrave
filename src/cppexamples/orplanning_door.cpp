@@ -142,7 +142,7 @@ public:
 
     // due to discontinues check that the robot midpoint is also along the door's expected trajectory
     // take the midpoint of the solutions and ikparameterization and see if they are close
-    IkFilterReturn _CheckContinuityFilter(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
+    IkReturn _CheckContinuityFilter(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
     {
         Transform tmanipnew = ikp.GetTransform6D();
         std::vector<dReal> vmidsolution(_probot->GetActiveDOF());
@@ -159,9 +159,9 @@ public:
         dReal middist2 = TransformDistance2(tmanipmid, _tmanipmidreal);
         if( middist2 > g_fEpsilon && middist2 > ikmidpointmaxdist2mult*realdist2 ) {
             RAVELOG_VERBOSE(str(boost::format("rejected due to discontinuity at mid-point %e > %e")%middist2%(ikmidpointmaxdist2mult*realdist2)));
-            return IKFR_Reject;
+            return IKRA_Reject;
         }
-        return IKFR_Success;
+        return IKRA_Success;
     }
 
     void SetPlannerParameters(PlannerBase::PlannerParametersPtr params)
@@ -199,7 +199,9 @@ public:
         params->_diffstatefn = boost::bind(&DoorConfiguration::DiffState,shared_from_this(),_1,_2);
         params->_neighstatefn = boost::bind(&DoorConfiguration::NeightState,shared_from_this(),_1,_2,_3);
 
-        _collision.reset(new planningutils::LineCollisionConstraint());
+        std::list<KinBodyPtr> listCheckCollisions;
+        listCheckCollisions.push_back(_probot);
+        _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
         params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _probot, _1, _2, _3, _4);
 
         _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));

@@ -11,15 +11,15 @@ Getting Started
 
 * :ref:`install`
 
- * :ref:`changelog`, `Roadmap <https://sourceforge.net/apps/trac/openrave/roadmap>`_
+  * :ref:`changelog`, `Roadmap <https://sourceforge.net/apps/trac/openrave/roadmap>`_
 
 * :ref:`getting_started`
 
- * :ref:`openravepy_beginning`, :ref:`command_line_tools`, :ref:`writing_plugins`, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB>`_
+  * :ref:`openravepy_beginning`, :ref:`command_line_tools`, :ref:`writing_plugins`, :ref:`environment_variables`, `Octave/MATLAB <http://openrave.programmingvision.com/wiki/index.php/OctaveMATLAB>`_
 
 * :ref:`overview`
 
- * :ref:`architecture`, :ref:`interface_concepts`, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
+  * :ref:`architecture`, :ref:`interface_concepts`, :ref:`package-databases`, :ref:`robots_overview`, :ref:`geometric_conventions`
 
 * :ref:`openrave_examples`
 

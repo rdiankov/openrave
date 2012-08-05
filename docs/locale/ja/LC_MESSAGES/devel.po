@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRAVE 0.7.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-07-07 02:28\n"
+"POT-Creation-Date: 2012-08-05 18:32\n"
 "PO-Revision-Date: 2012-06-19 18:04+0900\n"
 "Last-Translator: Rosen Diankov <rosen.diankov@gmail.com>\n"
 "Language-Team: Japanese\n"
@@ -200,19 +200,19 @@ msgid ""
 msgstr ""
 
 # b4b242ba78454a9da18480dcd3d7f73f
-#: ../../source/devel/documentation_system.rst:52
+#: ../../source/devel/documentation_system.rst:54
 msgid "Create the packages to be sent to the doc server:"
 msgstr ""
 
 # a81df4a822cf47b086d5014f090987ae
-#: ../../source/devel/documentation_system.rst:59
+#: ../../source/devel/documentation_system.rst:61
 msgid ""
 "Most build files are stored in the **docs/build** directory. All images are "
 "saved into **docs/images**, including automatically generated ones."
 msgstr ""
 
 # 642dc0d7928e4951a76ff3d009f91c1a
-#: ../../source/devel/documentation_system.rst:62
+#: ../../source/devel/documentation_system.rst:64
 msgid ""
 "Because generation can take a long time, developers should execute the "
 "individual commands pertaining to the part of the system they are "
@@ -220,17 +220,17 @@ msgid ""
 msgstr ""
 
 # 75d6560594e34670b44c9a2865c72bee
-#: ../../source/devel/documentation_system.rst:65
+#: ../../source/devel/documentation_system.rst:67
 msgid "Python (reStructuredText)"
 msgstr ""
 
 # ed8066a568b5459ba89e840b11313120
-#: ../../source/devel/documentation_system.rst:67
+#: ../../source/devel/documentation_system.rst:69
 msgid "Compiling the python documentation is divided into several steps."
 msgstr ""
 
 # 209b85814b0540f1bf833f9f8e38a221
-#: ../../source/devel/documentation_system.rst:69
+#: ../../source/devel/documentation_system.rst:71
 msgid ""
 "# Take in the doxygen comments from the C++ API and creates ``python/"
 "bindings/docstrings.cpp``, which is then compiled into the "
@@ -238,31 +238,31 @@ msgid ""
 msgstr ""
 
 # f5dc212671294d0f880337e087386ff4
-#: ../../source/devel/documentation_system.rst:71
+#: ../../source/devel/documentation_system.rst:73
 msgid ""
 "# Generate rst files from all the openravepy modules using ``sphinx-"
 "autopackage-script/generate_modules.py``."
 msgstr ""
 
 # 7a633bbe810a46f3914beb3b2a48d0a8
-#: ../../source/devel/documentation_system.rst:73
+#: ../../source/devel/documentation_system.rst:75
 msgid ""
 "# Generate rst files from the interfaces documentation and testing results."
 msgstr ""
 
 # 5351f187fd67409f8b872195edcd1cb6
-#: ../../source/devel/documentation_system.rst:75
+#: ../../source/devel/documentation_system.rst:77
 msgid "# Compile with ``sphinx-build``"
 msgstr ""
 
 # dd26e5d6341e42acadebcbdf9a31712c
-#: ../../source/devel/documentation_system.rst:77
+#: ../../source/devel/documentation_system.rst:79
 msgid ""
 "In order to generate files managed by openrave.org, it has to be called with:"
 msgstr ""
 
 # b289e6f87b9647209f8f3e61b325c5e5
-#: ../../source/devel/documentation_system.rst:83
+#: ../../source/devel/documentation_system.rst:85
 msgid ""
 "Because the documentation for openravepy is built from the install "
 "directory, whenever a change to the openravepy documentation made openrave "
@@ -270,22 +270,22 @@ msgid ""
 msgstr ""
 
 # dcc4cd73251b4e42ad21c33dc90654c1
-#: ../../source/devel/documentation_system.rst:86
+#: ../../source/devel/documentation_system.rst:88
 msgid "C++ Core Documentation (doxygen)"
 msgstr ""
 
 # d142e5a9d4b14c07bcafd10de03ae251
-#: ../../source/devel/documentation_system.rst:88
+#: ../../source/devel/documentation_system.rst:90
 msgid "Compiling HTML and Latex:"
 msgstr ""
 
 # d36a670a8f754b389362d6c7c34b829d
-#: ../../source/devel/documentation_system.rst:97
+#: ../../source/devel/documentation_system.rst:99
 msgid "The script internally makes these calls:"
 msgstr ""
 
 # 94c8ba222c5249a3977bfa23868cb748
-#: ../../source/devel/documentation_system.rst:105
+#: ../../source/devel/documentation_system.rst:107
 msgid ""
 "The **build/Doxyfile.html.en** file is generated from **Doxyfile.html** and "
 "**Doxyfile.en**. The separation is necessary in order to provide better "
@@ -293,66 +293,66 @@ msgid ""
 msgstr ""
 
 # a700ddbf1df74c5bbdbfcdaff5e9a1da
-#: ../../source/devel/documentation_system.rst:107
+#: ../../source/devel/documentation_system.rst:109
 msgid ""
 "The mainpage and bulk of the documentation is in **docs/mainpage.dox**. "
 "Installation instructions are in **docs/install.dox**."
 msgstr ""
 
 # 8d50e7af5ca84af599becbe9e5cb46cd
-#: ../../source/devel/documentation_system.rst:109
+#: ../../source/devel/documentation_system.rst:111
 msgid ""
 "Use the **\\en**, **\\ja**, **\\~** tags to switch between language modes."
 msgstr ""
 
 # 3e0e38b068654c458bd79bff6e9e557c
-#: ../../source/devel/documentation_system.rst:111
+#: ../../source/devel/documentation_system.rst:113
 msgid "To reference image in **docs/images/tutorial0_myimage.png**, write::"
 msgstr ""
 
 # c2e1835ad95846b59269f2294f3d6598
-#: ../../source/devel/documentation_system.rst:117
+#: ../../source/devel/documentation_system.rst:119
 msgid "Interfaces"
 msgstr ""
 
 # 35d5767fb7894bbe846bf79dab779c0c
-#: ../../source/devel/documentation_system.rst:119
+#: ../../source/devel/documentation_system.rst:121
 msgid "To build the webpage of interface descriptions, run"
 msgstr ""
 
 # 7b8c7e3570d84bee8ef0bf29f7122237
-#: ../../source/devel/documentation_system.rst:125
+#: ../../source/devel/documentation_system.rst:127
 msgid ""
 "This outputs a set of reStructuredText files, which can be used by sphinx to "
 "build up the page."
 msgstr ""
 
 # 23ed0a1a8ab84bb49446ce7fd66093d8
-#: ../../source/devel/documentation_system.rst:128
+#: ../../source/devel/documentation_system.rst:130
 msgid "Robots Database"
 msgstr ""
 
 # 7e6d59d6cfcd4fdb872c8542d9594aff
-#: ../../source/devel/documentation_system.rst:130
+#: ../../source/devel/documentation_system.rst:132
 msgid ""
 "Generate a set of webpages for each robot using the statistics file output "
 "from **test/test_ikfast.py**."
 msgstr ""
 
 # 0e77bb87cd0b4c2094198e2bda875618
-#: ../../source/devel/documentation_system.rst:132
+#: ../../source/devel/documentation_system.rst:134
 msgid ""
 "An image of all the robots in openrave can be extracted using the "
 "**build_ikdatabase.py** script:"
 msgstr ""
 
 # fe9af9d12b394a1d9ced3d7c5cd2b41d
-#: ../../source/devel/documentation_system.rst:140
+#: ../../source/devel/documentation_system.rst:142
 msgid "Internationalization"
 msgstr ""
 
 # e32607d2d3b044c78e2900e0e910f849
-#: ../../source/devel/documentation_system.rst:142
+#: ../../source/devel/documentation_system.rst:144
 msgid ""
 "Use gettext internationalization to store separate translation files for "
 "each language `Sphinx Internationalization <http://sphinx.pocoo.org/latest/"
@@ -360,7 +360,7 @@ msgid ""
 msgstr ""
 
 # 33cbec1b954a4937bd80bb09faaf5145
-#: ../../source/devel/documentation_system.rst:144
+#: ../../source/devel/documentation_system.rst:146
 msgid ""
 "The translation PO files are stored in `https://openrave.svn.sourceforge.net/"
 "svnroot/openrave/trunk/docs/locale`_. Anyone is welcome to send diff files "
@@ -368,13 +368,13 @@ msgid ""
 msgstr ""
 
 # 1ec51162dca9489aa8443975064b4c39
-#: ../../source/devel/documentation_system.rst:146
+#: ../../source/devel/documentation_system.rst:148
 msgid ""
 "In order to test how the translation looks for the Japanese language, execute"
 msgstr ""
 
 # 8a862950ed6947d4a20d1d082593983a
-#: ../../source/devel/documentation_system.rst:152
+#: ../../source/devel/documentation_system.rst:154
 msgid "Note that both **LANG** and **language** have to be set."
 msgstr ""
 

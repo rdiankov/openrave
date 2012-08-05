@@ -44,7 +44,7 @@ For more details, please see
 
 .. only:: jsontag or gettext
 
-  `Writing Plugins and Interfaces in C++ <../coreapihtml/writing_plugins.html>`_
+  `Writing Plugins and Interfaces in C++ <../../coreapihtml/writing_plugins.html>`_
 
 Programs
 --------

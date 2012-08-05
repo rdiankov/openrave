@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
-# Copyright (C) 2009-2012 Rosen Diankov
+# Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
 #
 # ikfast is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -186,15 +186,22 @@ class CodeGenerator(AutoReloader):
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
 ///     gcc -fPIC -lstdc++ -DIKFAST_NO_MAIN -DIKFAST_CLIBRARY -shared -Wl,-soname,libik.so -o libik.so ik.cpp
+#define IKFAST_HAS_LIBRARY
+#include "ikfast.h" // found inside share/openrave-X.Y/python/ikfast.h
+using namespace ikfast;
+
+// check if the included ikfast version matches what this file was compiled with
+#define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
+
 #include <cmath>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
 
-#ifdef IKFAST_HEADER
-#include IKFAST_HEADER
-#endif
+#define IKFAST_STRINGIZE2(s) #s
+#define IKFAST_STRINGIZE(s) IKFAST_STRINGIZE2(s)
 
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
@@ -221,26 +228,15 @@ class CodeGenerator(AutoReloader):
 #define IKFAST_ALIGNED16(x) x __attribute((aligned(16)))
 #endif
 
-#define IK2PI  ((IKReal)6.28318530717959)
-#define IKPI  ((IKReal)3.14159265358979)
-#define IKPI_2  ((IKReal)1.57079632679490)
+#define IK2PI  ((IkReal)6.28318530717959)
+#define IKPI  ((IkReal)3.14159265358979)
+#define IKPI_2  ((IkReal)1.57079632679490)
 
 #ifdef _MSC_VER
 #ifndef isnan
 #define isnan _isnan
 #endif
 #endif // _MSC_VER
-
-// defined when creating a shared object/dll
-#ifdef IKFAST_CLIBRARY
-#ifdef _MSC_VER
-#define IKFAST_API extern "C" __declspec(dllexport)
-#else
-#define IKFAST_API extern "C"
-#endif
-#else
-#define IKFAST_API
-#endif
 
 // lapack routines
 extern "C" {
@@ -258,93 +254,6 @@ using namespace std; // necessary to get std math routines
 namespace IKFAST_NAMESPACE {
 #endif
 
-#ifdef IKFAST_REAL
-typedef IKFAST_REAL IKReal;
-#else
-typedef double IKReal;
-#endif
-
-class IKSolution
-{
-public:
-    /// Gets a solution given its free parameters
-    /// \\param pfree The free parameters required, range is in [-pi,pi]
-    void GetSolution(IKReal* psolution, const IKReal* pfree) const {
-        for(std::size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].freeind < 0 )
-                psolution[i] = basesol[i].foffset;
-            else {
-                IKFAST_ASSERT(pfree != NULL);
-                psolution[i] = pfree[basesol[i].freeind]*basesol[i].fmul + basesol[i].foffset;
-                if( psolution[i] > IKPI ) {
-                    psolution[i] -= IK2PI;
-                }
-                else if( psolution[i] < -IKPI ) {
-                    psolution[i] += IK2PI;
-                }
-            }
-        }
-    }
-
-    /// Gets the free parameters the solution requires to be set before a full solution can be returned
-    /// \\return vector of indices indicating the free parameters
-    const std::vector<int>& GetFree() const { return vfree; }
-
-    struct VARIABLE
-    {
-        VARIABLE() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
-            indices[0] = indices[1] = -1;
-        }
-        IKReal fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
-        signed char freeind; ///< if >= 0, mimics another joint
-        unsigned char maxsolutions; ///< max possible indices, 0 if controlled by free index or a free joint itself
-        unsigned char indices[2]; ///< unique index of the solution used to keep track on what part it came from. sometimes a solution can be repeated for different indices. store at least another repeated root
-    };
-
-    std::vector<VARIABLE> basesol;       ///< solution and their offsets if joints are mimiced
-    std::vector<int> vfree;
-
-    bool Validate() const {
-        for(size_t i = 0; i < basesol.size(); ++i) {
-            if( basesol[i].maxsolutions == (unsigned char)-1) {
-                return false;
-            }
-            if( basesol[i].maxsolutions > 0 ) {
-                if( basesol[i].indices[0] >= basesol[i].maxsolutions ) {
-                    return false;
-                }
-                if( basesol[i].indices[1] != (unsigned char)-1 && basesol[i].indices[1] >= basesol[i].maxsolutions ) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    void GetSolutionIndices(std::vector<unsigned int>& v) const {
-        v.resize(0);
-        v.push_back(0);
-        for(int i = (int)basesol.size()-1; i >= 0; --i) {
-            if( basesol[i].maxsolutions != (unsigned char)-1 && basesol[i].maxsolutions > 1 ) {
-                for(size_t j = 0; j < v.size(); ++j) {
-                    v[j] *= basesol[i].maxsolutions;
-                }
-                size_t orgsize=v.size();
-                if( basesol[i].indices[1] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v.push_back(v[j]+basesol[i].indices[1]);
-                    }
-                }
-                if( basesol[i].indices[0] != (unsigned char)-1 ) {
-                    for(size_t j = 0; j < orgsize; ++j) {
-                        v[j] += basesol[i].indices[0];
-                    }
-                }
-            }
-        }
-    }
-};
-
 inline float IKabs(float f) { return fabsf(f); }
 inline double IKabs(double f) { return fabs(f); }
 
@@ -356,17 +265,17 @@ inline double IKlog(double f) { return log(f); }
 
 // allows asin and acos to exceed 1
 #ifndef IKFAST_SINCOS_THRESH
-#define IKFAST_SINCOS_THRESH ((IKReal)0.000001)
+#define IKFAST_SINCOS_THRESH ((IkReal)0.000001)
 #endif
 
 // used to check input to atan2 for degenerate cases
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IKReal)2e-6)
+#define IKFAST_ATAN2_MAGTHRESH ((IkReal)2e-6)
 #endif
 
 // minimum distance of separate solutions
 #ifndef IKFAST_SOLUTION_THRESH
-#define IKFAST_SOLUTION_THRESH ((IKReal)1e-6)
+#define IKFAST_SOLUTION_THRESH ((IkReal)1e-6)
 #endif
 
 inline float IKasin(float f)
@@ -465,7 +374,7 @@ inline double IKsign(double f) {
     return 0;
 }
 
-"""%(self.version,str(datetime.datetime.now()))
+"""%(self.version,str(datetime.datetime.now()),self.version)
         code += solvertree.generate(self)
         code += solvertree.end(self)
 
@@ -473,19 +382,19 @@ inline double IKsign(double f) {
 
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
-IKFAST_API bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {
+IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
 IKSolver solver;
-return solver.ik(eetrans,eerot,pfree,vsolutions);
+return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
-IKFAST_API const char* getKinematicsHash() { return "%s"; }
+IKFAST_API const char* GetKinematicsHash() { return "%s"; }
 
-IKFAST_API const char* getIKFastVersion() { return "%s"; }
+IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace
 #endif
-"""%(self.kinematicshash, self.version)
+"""%(self.kinematicshash)
 
         code += """
 #ifndef IKFAST_NO_MAIN
@@ -496,37 +405,38 @@ using namespace IKFAST_NAMESPACE;
 #endif
 int main(int argc, char** argv)
 {
-    if( argc != 12+getNumFreeParameters()+1 ) {
+    if( argc != 12+GetNumFreeParameters()+1 ) {
         printf("\\nUsage: ./ik r00 r01 r02 t0 r10 r11 r12 t1 r20 r21 r22 t2 free0 ...\\n\\n"
                "Returns the ik solutions given the transformation of the end effector specified by\\n"
                "a 3x3 rotation R (rXX), and a 3x1 translation (tX).\\n"
-               "There are %d free parameters that have to be specified.\\n\\n",getNumFreeParameters());
+               "There are %d free parameters that have to be specified.\\n\\n",GetNumFreeParameters());
         return 1;
     }
 
-    std::vector<IKSolution> vsolutions;
-    std::vector<IKReal> vfree(getNumFreeParameters());
-    IKReal eerot[9],eetrans[3];
+    IkSolutionList<IkReal> solutions;
+    std::vector<IkReal> vfree(GetNumFreeParameters());
+    IkReal eerot[9],eetrans[3];
     eerot[0] = atof(argv[1]); eerot[1] = atof(argv[2]); eerot[2] = atof(argv[3]); eetrans[0] = atof(argv[4]);
     eerot[3] = atof(argv[5]); eerot[4] = atof(argv[6]); eerot[5] = atof(argv[7]); eetrans[1] = atof(argv[8]);
     eerot[6] = atof(argv[9]); eerot[7] = atof(argv[10]); eerot[8] = atof(argv[11]); eetrans[2] = atof(argv[12]);
     for(std::size_t i = 0; i < vfree.size(); ++i)
         vfree[i] = atof(argv[13+i]);
-    bool bSuccess = ik(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, vsolutions);
+    bool bSuccess = ComputeIk(eetrans, eerot, vfree.size() > 0 ? &vfree[0] : NULL, solutions);
 
     if( !bSuccess ) {
         fprintf(stderr,"Failed to get ik solution\\n");
         return -1;
     }
 
-    printf("Found %d ik solutions:\\n", (int)vsolutions.size());
-    std::vector<IKReal> sol(getNumJoints());
-    for(std::size_t i = 0; i < vsolutions.size(); ++i) {
-        printf("sol%d (free=%d): ", (int)i, (int)vsolutions[i].GetFree().size());
-        std::vector<IKReal> vsolfree(vsolutions[i].GetFree().size());
-        vsolutions[i].GetSolution(&sol[0],vsolfree.size()>0?&vsolfree[0]:NULL);
-        for( std::size_t j = 0; j < sol.size(); ++j)
-            printf("%.15f, ", sol[j]);
+    printf("Found %d ik solutions:\\n", (int)solutions.GetNumSolutions());
+    std::vector<IkReal> solvalues(GetNumJoints());
+    for(std::size_t i = 0; i < solutions.GetNumSolutions(); ++i) {
+        const IkSolutionBase<IkReal>& sol = solutions.GetSolution(i);
+        printf("sol%d (free=%d): ", (int)i, (int)sol.GetFree().size());
+        std::vector<IkReal> vsolfree(sol.GetFree().size());
+        sol.GetSolution(&solvalues[0],vsolfree.size()>0?&vsolfree[0]:NULL);
+        for( std::size_t j = 0; j < solvalues.size(); ++j)
+            printf("%.15f, ", solvalues[j]);
         printf("\\n");
     }
     return 0;
@@ -537,19 +447,19 @@ int main(int argc, char** argv)
         return code
 
     def getClassInit(self,node,iktype,userotation=7,usetranslation=7):
-        code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
+        code = "IKFAST_API int GetNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API int* GetFreeParameters() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API int* GetFreeParameters() { static int freeparams[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
             code += "}; return freeparams; }\n"
-        code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
-        code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
-        code += 'IKFAST_API int getIKType() { return 0x%x; }\n\n'%iktype
+        code += "IKFAST_API int GetNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
+        code += "IKFAST_API int GetIkRealSize() { return sizeof(IkReal); }\n\n"
+        code += 'IKFAST_API int GetIkType() { return 0x%x; }\n\n'%iktype
         code += "class IKSolver {\npublic:\n"
         
         usedvars = []
@@ -571,25 +481,25 @@ int main(int argc, char** argv)
             usedvars += ['new_pz', 'pz', 'npz']
         if usetranslation ==7:
             usedvars.append('pp')
-        code += 'IKReal ' + ','.join(usedvars) + ';\n'
+        code += 'IkReal ' + ','.join(usedvars) + ';\n'
         code += 'unsigned char ' + ','.join('_i%s[2], _n%s'%(var[0].name,var[0].name) for var in node.solvejointvars+node.freejointvars) + ';\n\n'
         return code
 
-    def getIKFunctionPreamble(self, node):
-        code = "bool ik(const IKReal* eetrans, const IKReal* eerot, const IKReal* pfree, std::vector<IKSolution>& vsolutions) {\n"
+    def GetIkFunctionPreamble(self, node):
+        code = "bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {\n"
         for var in node.solvejointvars:
-            code += '%s=numeric_limits<IKReal>::quiet_NaN(); _i%s[0] = -1; _i%s[1] = -1; _n%s = -1; '%(var[0].name,var[0].name,var[0].name,var[0].name)
+            code += '%s=numeric_limits<IkReal>::quiet_NaN(); _i%s[0] = -1; _i%s[1] = -1; _n%s = -1; '%(var[0].name,var[0].name,var[0].name,var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             code += ' _i%s[0] = -1; _i%s[1] = -1; _n%s = 0; '%(name,name,name)
         code += "\nfor(int dummyiter = 0; dummyiter < 1; ++dummyiter) {\n"
-        code += "    vsolutions.resize(0); vsolutions.reserve(8);\n"
+        code += "    solutions.Clear();\n"
         return code
 
     def getFKFunctionPreamble(self):
         code = "/// solves the forward kinematics equations.\n"
         code += "/// \\param pfree is an array specifying the free joints of the chain.\n"
-        code += "IKFAST_API void fk(const IKReal* j, IKReal* eetrans, IKReal* eerot) {\n"
+        code += "IKFAST_API void ComputeFk(const IkReal* j, IkReal* eetrans, IkReal* eerot) {\n"
         return code
     
     def generateChain(self, node):
@@ -607,7 +517,7 @@ int main(int argc, char** argv)
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -615,7 +525,7 @@ int main(int argc, char** argv)
             code += self.indentCode(fcode,4)
             code += '}\n\n'
         code += self.getClassInit(node,IkType.Transform6D)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -637,7 +547,7 @@ int main(int argc, char** argv)
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -662,7 +572,7 @@ int main(int argc, char** argv)
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -671,7 +581,7 @@ int main(int argc, char** argv)
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Rotation3D,usetranslation=0)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -691,7 +601,7 @@ int main(int argc, char** argv)
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -720,13 +630,13 @@ int main(int argc, char** argv)
                 fcode = """
 // necessary for local/global translation3d
 eerot[0] = eerot[4] = eerot[8] = 0;
-IKReal r00 = 0, r11 = 0, r22 = 0;
+IkReal r00 = 0, r11 = 0, r22 = 0;
 """
             else:
                 fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode += 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode += 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -738,7 +648,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += self.getClassInit(node,IkType.TranslationLocalGlobal6D,userotation=7)
         else:
             code += self.getClassInit(node,IkType.Translation3D,userotation=0)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -756,7 +666,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -784,7 +694,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -793,7 +703,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationXY2D,userotation=0,usetranslation=3)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -808,7 +718,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -836,7 +746,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -845,7 +755,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Direction3D,userotation=1,usetranslation=0)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -861,7 +771,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -892,7 +802,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -901,7 +811,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D,userotation=1)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -919,13 +829,13 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         if node.is5dray:
             fcode += "px = new_px; py = new_py; pz = new_pz;\n\n"
         else:
-            fcode += "\nIKReal new_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02;\n"
+            fcode += "\nIkReal new_pdotd = new_px*new_r00+new_py*new_r01+new_pz*new_r02;\n"
             fcode += "px = new_px-new_pdotd * new_r00; py = new_py- new_pdotd * new_r01; pz = new_pz - new_pdotd * new_r02;\n\n"
         if node.dictequations is not None:
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -956,7 +866,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -965,7 +875,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Lookat3D,userotation=0)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -979,7 +889,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
             code += self.indentCode(functioncode,4)
@@ -1009,7 +919,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fcode = ''
             if len(subexprs) > 0:
                 vars = [var for var,expr in subexprs]
-                fcode = 'IKReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
+                fcode = 'IkReal ' + ','.join(str(var) for var,expr in subexprs) + ';\n'
                 for var,expr in subexprs:
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
@@ -1019,7 +929,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += 'return;\n}\nIKFAST_ASSERT(0);\n}\n\n'
 
         code += self.getClassInit(node,node.iktype,userotation=1)
-        code += self.getIKFunctionPreamble(node)
+        code += self.GetIkFunctionPreamble(node)
         fcode = "px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];\n\n"
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
@@ -1037,7 +947,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn vsolutions.size()>0;\n}\n"
+        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
@@ -1059,7 +969,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         node.HasFreeVar = False
         allnumsolutions = 0
         for var,value in node.dictequations:
-            eqcode += 'IKReal %s;\n'%var
+            eqcode += 'IkReal %s;\n'%var
             eqcode += self.writeEquations(lambda k: var,value)
 
         if node.jointeval is not None:
@@ -1078,7 +988,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                             if m is not None:
                                 self.freevardependencies.append((freevar,name))
                                 assert(len(node.jointeval)==1)
-                                code += 'IKReal ' + self.writeEquations(lambda i: '%smul'%name, m[a])
+                                code += 'IkReal ' + self.writeEquations(lambda i: '%smul'%name, m[a])
                                 code += self.writeEquations(lambda i: name, m[b])
                                 node.HasFreeVar = True
                                 return code
@@ -1150,7 +1060,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         if not declarearray:
             return eqcode,allnumsolutions
 
-        code += '{\nIKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
+        code += '{\nIkReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
         code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += eqcode
@@ -1168,7 +1078,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
         if node.getEquationsUsed() is not None and len(node.getEquationsUsed()) > 0:
-            code += '{\nIKReal evalcond[%d];\n'%len(node.getEquationsUsed())
+            code += '{\nIkReal evalcond[%d];\n'%len(node.getEquationsUsed())
             code += self.writeEquations(lambda i: 'evalcond[%d]'%(i),node.getEquationsUsed())
             code += 'if( '
             for i in range(len(node.getEquationsUsed())):
@@ -1201,7 +1111,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         AddHalfTanValue = False
         checkcode = ''
         for var,value in node.dictequations:
-            checkcode += 'IKReal %s;\n'%var
+            checkcode += 'IkReal %s;\n'%var
             checkcode += self.writeEquations(lambda k: var,value)
         for solversolution in node.solversolutions:
             assert len(solversolution.checkforzeros) > 0
@@ -1225,8 +1135,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         checkcode += '}\n'*len(node.solversolutions)
         checkcode += 'if( numsolutions%s == 0 )\n{\n    continue;\n}\n'%name
 
-        code = '{\nIKReal evalcond[%d]; int numsolutions%s = 0;\n'%(maxchecks,name)
-        code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
+        code = '{\nIkReal evalcond[%d]; int numsolutions%s = 0;\n'%(maxchecks,name)
+        code += 'IkReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
         code += '_n%s = %d;\n'%(name,allnumsolutions)
         code += self.indentCode(checkcode,4)
@@ -1254,7 +1164,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         polyroots=self.using_polyroots(D)
         name = node.jointname
         polyvar = node.poly.gens[0].name
-        code = 'IKReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
+        code = 'IkReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
         numevals = 0
         if node.postcheckforzeros is not None:
             numevals = max(numevals,len(node.postcheckforzeros))
@@ -1263,17 +1173,17 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         if node.postcheckforrange is not None:
             numevals = max(numevals,len(node.postcheckforrange))
         if numevals > 0:
-            code += 'IKReal %sevalpoly[%d];\n'%(name,numevals)
+            code += 'IkReal %sevalpoly[%d];\n'%(name,numevals)
         for var,value in node.dictequations:
-            code += 'IKReal %s;\n'%var
+            code += 'IkReal %s;\n'%var
             code += self.writeEquations(lambda k: var,value)
         polydict = node.poly.as_dict()
         code += self.writeEquations(lambda i: 'op[%d]'%(i),[polydict.get((i,),S.Zero) for i in range(D,-1,-1)])
         code += "%s(op,zeror,numroots);\n"%(polyroots)
-        code += 'IKReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
+        code += 'IkReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
         code += 'int numsolutions = 0;\n'
         code += 'for(int i%s = 0; i%s < numroots; ++i%s)\n{\n'%(name,name,name)
-        fcode = 'IKReal %s = zeror[i%s];\n'%(polyvar,name)
+        fcode = 'IkReal %s = zeror[i%s];\n'%(polyvar,name)
         origequations = self.copyequations()
         fcode += self.writeEquations(lambda i: 'temp%sarray[%d]'%(name,i), node.jointeval)
         self.dictequations = origequations
@@ -1349,11 +1259,11 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             fnname=self.using_solvedialyticpoly8qep()
         else:
             fnname = 'unknownfn'
-        code = 'IKReal op[%d], zeror[%d];\nint numroots;\n'%(len(node.exportcoeffeqs),node.rootmaxdim*len(node.jointnames))
+        code = 'IkReal op[%d], zeror[%d];\nint numroots;\n'%(len(node.exportcoeffeqs),node.rootmaxdim*len(node.jointnames))
         numevals = 0
         code += self.writeEquations(lambda i: 'op[%d]'%(i),node.exportcoeffeqs)
         code += "%s(op,zeror,numroots);\n"%(fnname)
-        code += 'IKReal '
+        code += 'IkReal '
         for i,name in enumerate(node.jointnames):
             code += '%sarray[%d], c%sarray[%d], s%sarray[%d]'%(name,node.rootmaxdim,name,node.rootmaxdim,name,node.rootmaxdim)
             if i+1 < len(node.jointnames):
@@ -1362,7 +1272,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 code += ';\n'
         code += 'int numsolutions = 0;\n'
         code += 'for(int i%s = 0; i%s < numroots; i%s += %d)\n{\n'%(firstname,firstname,firstname,len(node.jointnames))
-        fcode = 'IKReal '
+        fcode = 'IkReal '
         for i in range(len(node.exportvar)):
             fcode += '%s = zeror[i%s+%d]'%(node.exportvar[i],firstname,i)
             if i+1<len(node.exportvar):
@@ -1430,7 +1340,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code = ''
         # for some reason things work even if the determinant is 0....
 #         if len(node.checkforzeros) > 0:
-#             code = 'IKReal matrixcondition[%d];\n'%(len(node.checkforzeros))
+#             code = 'IkReal matrixcondition[%d];\n'%(len(node.checkforzeros))
 #             code += self.writeEquations(lambda i: 'matrixcondition[%d]'%(i),node.checkforzeros)
 #             code += 'if( '
 #             for i in range(len(node.checkforzeros)):
@@ -1438,7 +1348,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 #                     code += ' || '
 #                 code += 'IKabs(matrixcondition[%d]) < 1e-14 '%(i)
 #             code += ' )\n{  continue;\n}\n'
-        code += 'IKReal IKFAST_ALIGNED16(matrixinvcoeffs[%d]);\n'%(node.A.shape[0]*node.A.shape[1])
+        code += 'IkReal IKFAST_ALIGNED16(matrixinvcoeffs[%d]);\n'%(node.A.shape[0]*node.A.shape[1])
         code += self.writeEquations(lambda i: 'matrixinvcoeffs[%d]'%(i),node.A.transpose()[:])
         code += 'if( !%s<%d>(matrixinvcoeffs) ) {\ncontinue;\n}\n'%(matrixinverse,node.A.shape[0]);
         # create the variables
@@ -1449,7 +1359,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                     if len(mcode) > 0:
                         mcode += ', '
                     else:
-                        mcode = 'IKReal '
+                        mcode = 'IkReal '
                     mcode += '%s=matrixinvcoeffs[%d]'%(node.Asymbols[i][j],i+j*node.A.shape[0])
         if len(mcode)> 0:
             code += mcode + ';\n'
@@ -1466,7 +1376,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 if numevals is None or numevals < len(branch[0]):
                     numevals=len(branch[0])
         if numevals is not None:
-            code += 'IKReal evalcond[%d];\n'%numevals
+            code += 'IkReal evalcond[%d];\n'%numevals
         for branch in node.jointbranches:
             self.dictequations = self.copyequations(origequations)
             if branch[0] is None:
@@ -1492,9 +1402,9 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
     def generateCheckZeros(self, node):
         origequations = self.copyequations()
         name = node.jointname if node.jointname is None else 'dummy'
-        code = 'IKReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
+        code = 'IkReal %seval[%d];\n'%(name,len(node.jointcheckeqs))
         for var,value in node.dictequations:
-            code += 'IKReal %s;\n'%var
+            code += 'IkReal %s;\n'%var
             code += self.writeEquations(lambda k: var,value)
         code += self.writeEquations(lambda i: '%seval[%d]'%(name,i),node.jointcheckeqs)
         if len(node.jointcheckeqs) > 0:
@@ -1522,7 +1432,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         #print 'free variable ',node.jointname,': ',self.freevars
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
-        code = 'IKReal %smul = 1;\n%s=0;\n'%(node.jointname,node.jointname)
+        code = 'IkReal %smul = 1;\n%s=0;\n'%(node.jointname,node.jointname)
         return code+self.generateTree(node.jointtree)
     def endFreeParameter(self, node):
         self.freevars.pop()
@@ -1534,7 +1444,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         return ''
     def generateRotation(self, node):
         if not node.functionid in self.functions:
-            code = 'inline void rotationfunction%d(std::vector<IKSolution>& vsolutions) {\n'%(node.functionid)
+            code = 'inline void rotationfunction%d(IkSolutionListBase<IkReal>& solutions) {\n'%(node.functionid)
             code += 'for(int rotationiter = 0; rotationiter < 1; ++rotationiter) {\n'
             origequations = self.dictequations
             self.resetequations()
@@ -1549,7 +1459,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += '}\n}'
             self.dictequations = origequations
             self.functions[node.functionid] = code
-        return 'rotationfunction%d(vsolutions);\n'%(node.functionid)
+        return 'rotationfunction%d(solutions);\n'%(node.functionid)
 
     def endRotation(self, node):
         return ''
@@ -1569,7 +1479,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         code = ''
         if node.checkgreaterzero is not None and len(node.checkgreaterzero) > 0:
             origequations = self.copyequations()
-            code += 'IKReal soleval[%d];\n'%(len(node.checkgreaterzero))
+            code += 'IkReal soleval[%d];\n'%(len(node.checkgreaterzero))
             code += self.writeEquations(lambda i: 'soleval[%d]'%(i),node.checkgreaterzero)
             code += 'if( '
             for i in range(len(node.checkgreaterzero)):
@@ -1579,26 +1489,27 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             code += ' )\n'
             self.dictequations = origequations
         code += '{\n'
-        code += 'vsolutions.push_back(IKSolution()); IKSolution& solution = vsolutions.back();\n'
-        code += 'solution.basesol.resize(%d);\n'%len(node.alljointvars)
+        code += 'std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(%d);\n'%len(node.alljointvars)
         for i,var in enumerate(node.alljointvars):
             offsetvalue = '+%.15e'%node.offsetvalues[i] if node.offsetvalues is not None else ''
-            code += 'solution.basesol[%d].foffset = %s%s;\n'%(i,var,offsetvalue)
+            code += 'vinfos[%d].jointtype = %d;\n'%(i,0x01 if node.isHinge[i] else 0x11)
+            code += 'vinfos[%d].foffset = %s%s;\n'%(i,var,offsetvalue)
             vardeps = [vardep for vardep in self.freevardependencies if vardep[1]==var.name]
             if len(vardeps) > 0:
                 freevarname = vardeps[0][0]
                 ifreevar = [j for j in range(len(self.freevars)) if freevarname==self.freevars[j]]
-                code += 'solution.basesol[%d].fmul = %smul;\n'%(i,var.name)
-                code += 'solution.basesol[%d].freeind = %d;\n'%(i,ifreevar[0])
-                code += 'solution.basesol[%d].maxsolutions = 0;\n'%(i)
+                code += 'vinfos[%d].fmul = %smul;\n'%(i,var.name)
+                code += 'vinfos[%d].freeind = %d;\n'%(i,ifreevar[0])
+                code += 'vinfos[%d].maxsolutions = 0;\n'%(i)
             else:
-                code += 'solution.basesol[%d].indices[0] = _i%s[0];\n'%(i,var)
-                code += 'solution.basesol[%d].indices[1] = _i%s[1];\n'%(i,var)
-                code += 'solution.basesol[%d].maxsolutions = _n%s;\n'%(i,var)
-        code += 'solution.vfree.resize(%d);\n'%len(self.freevars)
+                code += 'vinfos[%d].indices[0] = _i%s[0];\n'%(i,var)
+                code += 'vinfos[%d].indices[1] = _i%s[1];\n'%(i,var)
+                code += 'vinfos[%d].maxsolutions = _n%s;\n'%(i,var)
+        code += 'std::vector<int> vfree(%d);\n'%len(self.freevars)
         for i,varname in enumerate(self.freevars):
             ind = [j for j in range(len(node.alljointvars)) if varname==node.alljointvars[j].name]
-            code += 'solution.vfree[%d] = %d;\n'%(i,ind[0])
+            code += 'vfree[%d] = %d;\n'%(i,ind[0])
+        code += 'solutions.AddSolution(vinfos,vfree);\n'
         code += '}\n'
         return code
     def endStoreSolution(self, node):
@@ -1649,7 +1560,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 for i in range(N):
                     if self.dictequations[1][i] is not None and comparerep-self.dictequations[1][i]==S.Zero:
                         #self.dictequations.append((rep[0],self.dictequations[0][i][0],self.dictequations[1][i]))
-                        code += 'IKReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0])
+                        code += 'IkReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0])
                         found = True
                         break
             else:
@@ -1658,7 +1569,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 self.dictequations[0].append(rep)
                 self.dictequations[1].append(comparerep)
                 code2,sepcode2 = self.writeExprCode(rep[1])
-                code += sepcode2+'IKReal %s=%s;\n'%(rep[0],code2)
+                code += sepcode2+'IkReal %s=%s;\n'%(rep[0],code2)
         for i,rexpr in enumerate(reduced_exprs):
             code2,sepcode2 = self.writeExprCode(rexpr)
             code += sepcode2+'%s=%s;\n'%(varnamefn(i+ioffset), code2)
@@ -1740,7 +1651,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                         code += ','
             return code + ')',sepcode
         elif expr.is_number:
-            return 'IKReal('+self.strprinter.doprint(expr.evalf())+')',sepcode
+            return 'IkReal('+self.strprinter.doprint(expr.evalf())+')',sepcode
         elif expr.is_Mul:
             code += '('
             for arg in expr.args:
@@ -1759,20 +1670,20 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                         code += '*('+exprbase+')'
                     return code,sepcode
                 elif expr.exp-0.5 == S.Zero:
-                    sepcode += 'if( (%s) < (IKReal)-0.00001 )\n    continue;\n'%exprbase
+                    sepcode += 'if( (%s) < (IkReal)-0.00001 )\n    continue;\n'%exprbase
                     return 'IKsqrt('+exprbase+')',sepcode
                 elif expr.exp+1 == S.Zero:
                     # check if exprbase is 0
-                    return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+exprbase+')):(IKReal)1.0e30)',sepcode
+                    return '((IKabs('+exprbase+') != 0)?((IkReal)1/('+exprbase+')):(IkReal)1.0e30)',sepcode
                 elif expr.exp.is_integer and expr.exp.evalf() < 0:
                     # check if exprbase is 0
                     fcode = '('+exprbase+')'
                     for i in range(1,-expr.exp.evalf()):
                         fcode += '*('+exprbase+')'
-                    return '((IKabs('+exprbase+') != 0)?((IKReal)1/('+fcode+')):(IKReal)1.0e30)',sepcode
+                    return '((IKabs('+exprbase+') != 0)?((IkReal)1/('+fcode+')):(IkReal)1.0e30)',sepcode
                 elif expr.exp < 0:
                     # check if exprbase is 0
-                    return '((IKabs('+exprbase+') != 0)?(pow(' + exprbase + ',' + str(expr.exp.evalf()) + ')):(IKReal)1.0e30)',sepcode
+                    return '((IKabs('+exprbase+') != 0)?(pow(' + exprbase + ',' + str(expr.exp.evalf()) + ')):(IkReal)1.0e30)',sepcode
                     
             exprexp,sepcode2 = self.writeExprCode(expr.exp)
             sepcode += sepcode2
@@ -1810,7 +1721,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         name = 'polyroots%d'%deg
         if not name in self.functions:
             if deg == 1:            
-                fcode = """static inline void %s(IKReal rawcoeffs[1+1], IKReal rawroots[1], int& numroots) {
+                fcode = """static inline void %s(IkReal rawcoeffs[1+1], IkReal rawroots[1], int& numroots) {
     numroots=0;
     if( rawcoeffs[0] != 0 ) {
         rawroots[0] = -rawcoeffs[1]/rawcoeffs[0];
@@ -1819,8 +1730,8 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 }
 """%name
             elif deg == 2:
-                fcode = """static inline void %s(IKReal rawcoeffs[2+1], IKReal rawroots[2], int& numroots) {
-    IKReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
+                fcode = """static inline void %s(IkReal rawcoeffs[2+1], IkReal rawroots[2], int& numroots) {
+    IkReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
     if( det < 0 ) {
         numroots=0;
     }
@@ -1837,39 +1748,39 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
 }
 """%name
             elif False:#deg == 3: # amazing, cubic formula is not as accurate as iterative method...
-                fcode = """static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
+                fcode = """static inline void %s(IkReal rawcoeffs[%d+1], IkReal rawroots[%d], int& numroots)
 {
     using std::complex;
     IKFAST_ASSERT(rawcoeffs[0] != 0);
-    IKReal a0 = rawcoeffs[3]/rawcoeffs[0], a1 = rawcoeffs[2]/rawcoeffs[0], a2 = rawcoeffs[1]/rawcoeffs[0];
-    IKReal a2_3 = a2/3.0;
-    IKReal Q = (3*a1-a2*a2)/9, R = (9*a2*a1-27*a0-2*a2*a2*a2)/54;
-    complex<IKReal> D(Q*Q*Q+R*R,0.0);
-    complex<IKReal> Dsqrt = sqrt(D);
-    complex<IKReal> S, T;
+    IkReal a0 = rawcoeffs[3]/rawcoeffs[0], a1 = rawcoeffs[2]/rawcoeffs[0], a2 = rawcoeffs[1]/rawcoeffs[0];
+    IkReal a2_3 = a2/3.0;
+    IkReal Q = (3*a1-a2*a2)/9, R = (9*a2*a1-27*a0-2*a2*a2*a2)/54;
+    complex<IkReal> D(Q*Q*Q+R*R,0.0);
+    complex<IkReal> Dsqrt = sqrt(D);
+    complex<IkReal> S, T;
     if( imag(Dsqrt) != 0 ) {
-        S = pow(complex<IKReal>(R,0)+Dsqrt,IKReal(1.0/3.0));
-        T = pow(complex<IKReal>(R,0)-Dsqrt,IKReal(1.0/3.0));
+        S = pow(complex<IkReal>(R,0)+Dsqrt,IkReal(1.0/3.0));
+        T = pow(complex<IkReal>(R,0)-Dsqrt,IkReal(1.0/3.0));
     }
     else {
-        IKReal temp = R+real(Dsqrt);
-        S = pow(IKabs(temp),IKReal(1.0/3.0));
+        IkReal temp = R+real(Dsqrt);
+        S = pow(IKabs(temp),IkReal(1.0/3.0));
         if( temp < 0 ) {
             S = -S;
         }
         temp = R-real(Dsqrt);
-        T = pow(IKabs(temp),IKReal(1.0/3.0));
+        T = pow(IKabs(temp),IkReal(1.0/3.0));
         if( temp < 0 ) {
             T = -T;
         }
     }
-    complex<IKReal> B = S+T, A = S-T;
+    complex<IkReal> B = S+T, A = S-T;
     numroots = 0;
-    if( IKabs(imag(B)) < 40*std::numeric_limits<IKReal>::epsilon() ) {
+    if( IKabs(imag(B)) < 40*std::numeric_limits<IkReal>::epsilon() ) {
         rawroots[numroots++] = -a2_3+real(B);
     }
-    complex<IKReal> Arot = complex<IKReal>(0,SQRT_3)*A;
-    if( IKabs(imag(B-Arot)) < 40*std::numeric_limits<IKReal>::epsilon() ) {
+    complex<IkReal> Arot = complex<IkReal>(0,SQRT_3)*A;
+    if( IKabs(imag(B-Arot)) < 40*std::numeric_limits<IkReal>::epsilon() ) {
         rawroots[numroots++] = -a2_3-0.5*real(B-Arot);
         rawroots[numroots++] = -a2_3-0.5*real(B+Arot);
     }
@@ -1881,21 +1792,21 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
                 # http://www.springerlink.com/content/t72g1635574u10q3/
                 # the following poly has 2 double roots and requires 105-110 steps to get accurate roots (-2.48003364697210,  -0.266182031226875, -0.399192786087098, 5.23118700753098, 1.42932474708659, -3.56915690046190, 1.51649127129379, -0.100045756315578, -1.36239190484780)
                 # on universalrobots-ur6-85-5-a.zae (deg 8), 110 steps is 87.5%, 150 steps is 88.8%, performance difference is 200ms
-                fcode = """static inline void %s(IKReal rawcoeffs[%d+1], IKReal rawroots[%d], int& numroots)
+                fcode = """static inline void %s(IkReal rawcoeffs[%d+1], IkReal rawroots[%d], int& numroots)
 {
     using std::complex;
     IKFAST_ASSERT(rawcoeffs[0] != 0);
-    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
-    const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
-    complex<IKReal> coeffs[%d];
+    const IkReal tol = 128.0*std::numeric_limits<IkReal>::epsilon();
+    const IkReal tolsqrt = sqrt(std::numeric_limits<IkReal>::epsilon());
+    complex<IkReal> coeffs[%d];
     const int maxsteps = 110;
     for(int i = 0; i < %d; ++i) {
-        coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
+        coeffs[i] = complex<IkReal>(rawcoeffs[i+1]/rawcoeffs[0]);
     }
-    complex<IKReal> roots[%d];
-    IKReal err[%d];
-    roots[0] = complex<IKReal>(1,0);
-    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity works
+    complex<IkReal> roots[%d];
+    IkReal err[%d];
+    roots[0] = complex<IkReal>(1,0);
+    roots[1] = complex<IkReal>(0.4,0.9); // any complex number not a root of unity works
     err[0] = 1.0;
     err[1] = 1.0;
     for(int i = 2; i < %d; ++i) {
@@ -1908,7 +1819,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
             if ( err[i] >= tol ) {
                 changed = true;
                 // evaluate
-                complex<IKReal> x = roots[i] + coeffs[0];
+                complex<IkReal> x = roots[i] + coeffs[0];
                 for(int j = 1; j < %d; ++j) {
                     x = roots[i] * x + coeffs[j];
                 }
@@ -1934,7 +1845,7 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         if( !visited[i] ) {
             // might be a multiple root, in which case it will have more error than the other roots
             // find any neighboring roots, and take the average
-            complex<IKReal> newroot=roots[i];
+            complex<IkReal> newroot=roots[i];
             int n = 1;
             for(int j = i+1; j < %d; ++j) {
                 if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
@@ -1961,13 +1872,13 @@ IKReal r00 = 0, r11 = 0, r22 = 0;
         name = 'checkconsistency12'
         if not name in self.functions:
             fcode = """
-static inline bool %s(const IKReal* Breal)
+static inline bool %s(const IkReal* Breal)
 {
-    IKReal norm = 0.1;
+    IkReal norm = 0.1;
     for(int i = 0; i < 11; ++i) {
         norm += IKabs(Breal[i]);
     }
-    IKReal tol = 1e-6*norm; // have to increase the threshold since many computations are involved
+    IkReal tol = 1e-6*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[0]*Breal[0]-Breal[1]) < tol && IKabs(Breal[0]*Breal[2]-Breal[3]) < tol && IKabs(Breal[1]*Breal[2]-Breal[4]) < tol && IKabs(Breal[2]*Breal[2]-Breal[5]) < tol && IKabs(Breal[0]*Breal[5]-Breal[6]) < tol && IKabs(Breal[1]*Breal[5]-Breal[7]) < tol && IKabs(Breal[2]*Breal[5]-Breal[8]) < tol && IKabs(Breal[0]*Breal[8]-Breal[9]) < tol && IKabs(Breal[1]*Breal[8]-Breal[10]) < tol;
 }
 """%name
@@ -1979,11 +1890,11 @@ static inline bool %s(const IKReal* Breal)
         if not name in self.functions:
             fcode = """
 template<int D>
-static inline bool %s(IKReal* A)
+static inline bool %s(IkReal* A)
 {
     int n = D;
     int info;
-    IKReal IKFAST_ALIGNED16(work[D*D*(D-1)]);
+    IkReal IKFAST_ALIGNED16(work[D*D*(D-1)]);
     int ipiv[D];
     dgetrf_(&n, &n, A, &n, &ipiv[0], &info);
     if( info != 0 ) {
@@ -2005,12 +1916,12 @@ static inline bool %s(IKReal* A)
 /// \\brief Solve the det Ax^2+Bx+C = 0 problem using the Manocha and Canny method (1994)
 ///
 /// matcoeffs is of length 54*3, for 3 matrices
-static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
+static inline void %s(const IkReal* matcoeffs, IkReal* rawroots, int& numroots)
 {
-    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
-    IKReal IKFAST_ALIGNED16(M[24*24]) = {0};
-    IKReal IKFAST_ALIGNED16(A[12*12]);
-    IKReal IKFAST_ALIGNED16(work[24*24*23]);
+    const IkReal tol = 128.0*std::numeric_limits<IkReal>::epsilon();
+    IkReal IKFAST_ALIGNED16(M[24*24]) = {0};
+    IkReal IKFAST_ALIGNED16(A[12*12]);
+    IkReal IKFAST_ALIGNED16(work[24*24*23]);
     int ipiv[12];
     int info, coeffindex;
     const int worksize=24*24*23;
@@ -2037,7 +1948,7 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             A[j+matrixdim*k] = A[(j+6)+matrixdim*(k+9)] = 0;
         }
     }
-    const IKReal lfpossibilities[4][4] = {{1,-1,1,1},{1,0,-2,1},{1,1,2,0},{1,-1,4,1}};
+    const IkReal lfpossibilities[4][4] = {{1,-1,1,1},{1,0,-2,1},{1,1,2,0},{1,-1,4,1}};
     int lfindex = -1;
     bool bsingular = true;
     do {
@@ -2059,12 +1970,12 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         }
         // transform by the linear functional
         lfindex++;
-        const IKReal* lf = lfpossibilities[lfindex];
+        const IkReal* lf = lfpossibilities[lfindex];
         // have to reinitialize A
         coeffindex = 0;
         for(int j = 0; j < 6; ++j) {
             for(int k = 0; k < 9; ++k) {
-                IKReal a = matcoeffs[coeffindex+108], b = matcoeffs[coeffindex+54], c = matcoeffs[coeffindex];
+                IkReal a = matcoeffs[coeffindex+108], b = matcoeffs[coeffindex+54], c = matcoeffs[coeffindex];
                 A[(j+6)+matrixdim*k] = A[j+matrixdim*(k+3)] = lf[0]*lf[0]*a+lf[0]*lf[2]*b+lf[2]*lf[2]*c;
                 M[matrixdim+(j+6)+2*matrixdim*k] = M[matrixdim+j+2*matrixdim*(k+3)] = -(lf[1]*lf[1]*a + lf[1]*lf[3]*b + lf[3]*lf[3]*c);
                 M[matrixdim+(j+6)+2*matrixdim*k+matrixdim*2*matrixdim] = M[matrixdim+j+2*matrixdim*(k+3)+matrixdim*2*matrixdim] = -(2*lf[0]*lf[1]*a + (lf[0]*lf[3]+lf[1]*lf[2])*b + 2*lf[2]*lf[3]*c);
@@ -2088,18 +1999,18 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
     for(int j = 0; j < matrixdim; ++j) {
         M[matrixdim*2*matrixdim+j+matrixdim*2*j] = 1;
     }
-    IKReal IKFAST_ALIGNED16(wr[24]);
-    IKReal IKFAST_ALIGNED16(wi[24]);
-    IKReal IKFAST_ALIGNED16(vr[24*24]);
+    IkReal IKFAST_ALIGNED16(wr[24]);
+    IkReal IKFAST_ALIGNED16(wi[24]);
+    IkReal IKFAST_ALIGNED16(vr[24*24]);
     int one=1;
     dgeev_("N", "V", &matrixdim2, M, &matrixdim2, wr, wi,NULL, &one, vr, &matrixdim2, work, &worksize, &info);
     if( info != 0 ) {
         return;
     }
-    IKReal Breal[matrixdim-1];
+    IkReal Breal[matrixdim-1];
     for(int i = 0; i < matrixdim2; ++i) {
         if( IKabs(wi[i]) < tol*100 ) {
-            IKReal* ev = vr+matrixdim2*i;
+            IkReal* ev = vr+matrixdim2*i;
             if( IKabs(wr[i]) > 1 ) {
                 ev += matrixdim;
             }
@@ -2107,13 +2018,13 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             if( IKabs(ev[0]) < tol ) {
                 continue;
             }
-            IKReal iconst = 1/ev[0];
+            IkReal iconst = 1/ev[0];
             for(int j = 1; j < matrixdim; ++j) {
                 Breal[j-1] = ev[j]*iconst;
             }
             if( %s(Breal) ) {
                 if( lfindex >= 0 ) {
-                    const IKReal* lf = lfpossibilities[lfindex];
+                    const IkReal* lf = lfpossibilities[lfindex];
                     rawroots[numroots++] = (wr[i]*lf[0]+lf[1])/(wr[i]*lf[2]+lf[3]);
                 }
                 else {
@@ -2148,13 +2059,13 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         name = 'checkconsistency8'
         if not name in self.functions:
             fcode = """
-static inline bool %s(const IKReal* Breal)
+static inline bool %s(const IkReal* Breal)
 {
-    IKReal norm = 0.1;
+    IkReal norm = 0.1;
     for(int i = 0; i < 7; ++i) {
         norm += IKabs(Breal[i]);
     }
-    IKReal tol = 1e-5*norm; // have to increase the threshold since many computations are involved
+    IkReal tol = 1e-5*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[0]*Breal[1]-Breal[2]) < tol && IKabs(Breal[1]*Breal[1]-Breal[3]) < tol && IKabs(Breal[0]*Breal[3]-Breal[4]) < tol && IKabs(Breal[1]*Breal[3]-Breal[5]) < tol && IKabs(Breal[0]*Breal[5]-Breal[6]) < tol;
 }"""%name
             self.functions[name] = fcode
@@ -2168,12 +2079,12 @@ static inline bool %s(const IKReal* Breal)
 /// \\brief Solve the det Ax^2+Bx+C = 0 problem using the Manocha and Canny method (1994)
 ///
 /// matcoeffs is of length 54*3, for 3 matrices
-static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
+static inline void %s(const IkReal* matcoeffs, IkReal* rawroots, int& numroots)
 {
-    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
-    IKReal IKFAST_ALIGNED16(M[16*16]) = {0};
-    IKReal IKFAST_ALIGNED16(A[8*8]);
-    IKReal IKFAST_ALIGNED16(work[16*16*15]);
+    const IkReal tol = 128.0*std::numeric_limits<IkReal>::epsilon();
+    IkReal IKFAST_ALIGNED16(M[16*16]) = {0};
+    IkReal IKFAST_ALIGNED16(A[8*8]);
+    IkReal IKFAST_ALIGNED16(work[16*16*15]);
     int ipiv[8];
     int info, coeffindex;
     const int worksize=16*16*15;
@@ -2200,7 +2111,7 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             A[j+matrixdim*k] = A[(j+4)+matrixdim*(k+6)] = 0;
         }
     }
-    const IKReal lfpossibilities[4][4] = {{1,-1,1,1},{1,0,-2,1},{1,1,2,0},{1,-1,4,1}};
+    const IkReal lfpossibilities[4][4] = {{1,-1,1,1},{1,0,-2,1},{1,1,2,0},{1,-1,4,1}};
     int lfindex = -1;
     bool bsingular = true;
     do {
@@ -2222,12 +2133,12 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         }
         // transform by the linear functional
         lfindex++;
-        const IKReal* lf = lfpossibilities[lfindex];
+        const IkReal* lf = lfpossibilities[lfindex];
         // have to reinitialize A
         coeffindex = 0;
         for(int j = 0; j < 4; ++j) {
             for(int k = 0; k < 6; ++k) {
-                IKReal a = matcoeffs[coeffindex+48], b = matcoeffs[coeffindex+24], c = matcoeffs[coeffindex];
+                IkReal a = matcoeffs[coeffindex+48], b = matcoeffs[coeffindex+24], c = matcoeffs[coeffindex];
                 A[(j+4)+matrixdim*k] = A[j+matrixdim*(k+2)] = lf[0]*lf[0]*a+lf[0]*lf[2]*b+lf[2]*lf[2]*c;
                 M[matrixdim+(j+4)+2*matrixdim*k] = M[matrixdim+j+2*matrixdim*(k+2)] = -(lf[1]*lf[1]*a + lf[1]*lf[3]*b + lf[3]*lf[3]*c);
                 M[matrixdim+(j+4)+2*matrixdim*k+matrixdim*2*matrixdim] = M[matrixdim+j+2*matrixdim*(k+2)+matrixdim*2*matrixdim] = -(2*lf[0]*lf[1]*a + (lf[0]*lf[3]+lf[1]*lf[2])*b + 2*lf[2]*lf[3]*c);
@@ -2251,18 +2162,18 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
     for(int j = 0; j < matrixdim; ++j) {
         M[matrixdim*2*matrixdim+j+matrixdim*2*j] = 1;
     }
-    IKReal IKFAST_ALIGNED16(wr[16]);
-    IKReal IKFAST_ALIGNED16(wi[16]);
-    IKReal IKFAST_ALIGNED16(vr[16*16]);
+    IkReal IKFAST_ALIGNED16(wr[16]);
+    IkReal IKFAST_ALIGNED16(wi[16]);
+    IkReal IKFAST_ALIGNED16(vr[16*16]);
     int one=1;
     dgeev_("N", "V", &matrixdim2, M, &matrixdim2, wr, wi,NULL, &one, vr, &matrixdim2, work, &worksize, &info);
     if( info != 0 ) {
         return;
     }
-    IKReal Breal[matrixdim-1];
+    IkReal Breal[matrixdim-1];
     for(int i = 0; i < matrixdim2; ++i) {
         if( IKabs(wi[i]) < tol*100 ) {
-            IKReal* ev = vr+matrixdim2*i;
+            IkReal* ev = vr+matrixdim2*i;
             if( IKabs(wr[i]) > 1 ) {
                 ev += matrixdim;
             }
@@ -2270,13 +2181,13 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             if( IKabs(ev[0]) < tol ) {
                 continue;
             }
-            IKReal iconst = 1/ev[0];
+            IkReal iconst = 1/ev[0];
             for(int j = 1; j < matrixdim; ++j) {
                 Breal[j-1] = ev[j]*iconst;
             }
             if( %s(Breal) ) {
                 if( lfindex >= 0 ) {
-                    const IKReal* lf = lfpossibilities[lfindex];
+                    const IkReal* lf = lfpossibilities[lfindex];
                     rawroots[numroots++] = (wr[i]*lf[0]+lf[1])/(wr[i]*lf[2]+lf[3]);
                 }
                 else {
@@ -2311,13 +2222,13 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         name = 'checkconsistency16'
         if not name in self.functions:
             fcode = """
-static inline bool %s(const IKReal* Breal)
+static inline bool %s(const IkReal* Breal)
 {
-    IKReal norm = 0.1;
+    IkReal norm = 0.1;
     for(int i = 0; i < 15; ++i) {
         norm += IKabs(Breal[i]);
     }
-    IKReal tol = 5e-5*norm; // have to increase the threshold since many computations are involved
+    IkReal tol = 5e-5*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[2]*Breal[2]-Breal[3]) < tol && IKabs(Breal[0]*Breal[4]-Breal[5]) < tol && IKabs(Breal[1]*Breal[4]-Breal[6]) < tol && IKabs(Breal[2]*Breal[4]-Breal[7]) < tol && IKabs(Breal[3]*Breal[4]-Breal[8]) < tol && IKabs(Breal[4]*Breal[4]-Breal[9]) < tol && IKabs(Breal[2]*Breal[9]-Breal[10]) < tol && IKabs(Breal[3]*Breal[9]-Breal[11]) < tol && IKabs(Breal[4]*Breal[9]-Breal[12]) < tol && IKabs(Breal[2]*Breal[12]-Breal[13]) < tol && IKabs(Breal[3]*Breal[12]-Breal[14]) < tol;
 };
 """%name
@@ -2331,13 +2242,13 @@ static inline bool %s(const IKReal* Breal)
 /// \\brief Solve the det Bx-A = 0 problem
 ///
 /// matcoeffs is of length 88*2, for 2 matrices
-static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
+static inline void %s(const IkReal* matcoeffs, IkReal* rawroots, int& numroots)
 {
-    const IKReal tol = std::numeric_limits<IKReal>::epsilon();
+    const IkReal tol = std::numeric_limits<IkReal>::epsilon();
     const int matrixdim = 16;
-    IKReal IKFAST_ALIGNED16(M[2][matrixdim*matrixdim]);
+    IkReal IKFAST_ALIGNED16(M[2][matrixdim*matrixdim]);
     const int worksize=matrixdim*matrixdim*(matrixdim-1);
-    IKReal IKFAST_ALIGNED16(work[worksize]);
+    IkReal IKFAST_ALIGNED16(work[worksize]);
     int ipiv[matrixdim];
     int info, coeffindex;
     const int secondrowindices[11] = {0,1,2,3,4,5,8,9,10,11,12};
@@ -2352,9 +2263,9 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
             M[degree][(j+8)+matrixdim*6] = M[degree][(j+8)+matrixdim*7] = M[degree][(j+8)+matrixdim*13] = M[degree][(j+8)+matrixdim*14] = M[degree][(j+8)+matrixdim*15] = 0;
         }
     }
-    const IKReal lfpossibilities[2][4] = {{1,-1,1,1},{1,0,-2,1}};
+    const IkReal lfpossibilities[2][4] = {{1,-1,1,1},{1,0,-2,1}};
     int lfindex = -1;
-    IKReal polymultiplier = 0;
+    IkReal polymultiplier = 0;
     bool bsingular = false;
     do {
         dgetrf_(&matrixdim,&matrixdim,M[1],&matrixdim,&ipiv[0],&info);
@@ -2378,11 +2289,11 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         }
         // transform by the linear functional
         lfindex++;
-        const IKReal* lf = lfpossibilities[lfindex];
+        const IkReal* lf = lfpossibilities[lfindex];
         coeffindex = 0;
         for(int j = 0; j < 8; ++j) {
             for(int k = 0; k < 11; ++k) {
-                IKReal b = matcoeffs[coeffindex+88], a = matcoeffs[coeffindex];
+                IkReal b = matcoeffs[coeffindex+88], a = matcoeffs[coeffindex];
                 M[0][(j+8)+matrixdim*secondrowindices[k]] = M[0][j+matrixdim*(k+5)] = lf[1]*b+lf[3]*a;
                 M[1][(j+8)+matrixdim*secondrowindices[k]] = M[1][j+matrixdim*(k+5)] = lf[0]*b+lf[2]*a;
                 ++coeffindex;
@@ -2403,31 +2314,31 @@ static inline void %s(const IKReal* matcoeffs, IKReal* rawroots, int& numroots)
         return;
     }
 
-    IKReal IKFAST_ALIGNED16(wr[matrixdim]);
-    IKReal IKFAST_ALIGNED16(wi[matrixdim]);
-    IKReal IKFAST_ALIGNED16(vr[matrixdim*matrixdim]);
+    IkReal IKFAST_ALIGNED16(wr[matrixdim]);
+    IkReal IKFAST_ALIGNED16(wi[matrixdim]);
+    IkReal IKFAST_ALIGNED16(vr[matrixdim*matrixdim]);
     int one=1;
     dgeev_("N", "V", &matrixdim, M[0], &matrixdim, wr, wi,NULL, &one, vr, &matrixdim, work, &worksize, &info);
     if( info != 0 ) {
         return;
     }
     // eigen values are negatives of the real solution
-    IKReal Breal[matrixdim-1];
+    IkReal Breal[matrixdim-1];
     for(int i = 0; i < matrixdim; ++i) {
         if( IKabs(wi[i]) < tol*10000 ) {
-            IKReal* ev = vr+matrixdim*i;
+            IkReal* ev = vr+matrixdim*i;
             // consistency has to be checked!!
             if( IKabs(ev[0]) < tol ) {
                 continue;
             }
-            IKReal iconst = 1/ev[0];
-            IKReal constsign = ev[0] > 0 ? IKReal(1) : IKReal(-1);
+            IkReal iconst = 1/ev[0];
+            IkReal constsign = ev[0] > 0 ? IkReal(1) : IkReal(-1);
             for(int j = 1; j < matrixdim; ++j) {
                 Breal[j-1] = ev[j]*iconst;
             }
             if( %s(Breal) ) {
                 if( lfindex >= 0 ) {
-                    const IKReal* lf = lfpossibilities[lfindex];
+                    const IkReal* lf = lfpossibilities[lfindex];
                     rawroots[numroots++] = (-wr[i]*lf[0]+lf[1])/(-wr[i]*lf[2]+lf[3]);
                 }
                 else {

@@ -16,13 +16,13 @@ using namespace OpenRAVE;
 using namespace std;
 
 // quit after 100 milliseconds
-IkFilterReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&, uint32_t starttime)
+IkReturn MyTimeoutFilter(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&, uint32_t starttime)
 {
     if( utils::GetMilliTime()-starttime > 100 ) {
         RAVELOG_INFO("quitting\n");
-        return IKFR_Quit;
+        return IKRA_Quit;
     }
-    return IKFR_Success;
+    return IKRA_Success;
 }
 
 int main(int argc, char ** argv)
