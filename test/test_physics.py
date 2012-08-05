@@ -102,7 +102,7 @@ class RunPhysics(EnvironmentSetup):
         with env:
             T3 = body.GetTransform()
             self.log.info('differences: %f, %f', (T[2,3]-Tinit[2,3]),(T3[2,3]-T2[2,3]))
-            assert( abs((T[2,3]-Tinit[2,3]) - (T3[2,3]-T2[2,3])) < 0.001)
+            assert( abs((T[2,3]-Tinit[2,3]) - (T3[2,3]-T2[2,3])) < 0.01)
         assert(abs(1e-6*env.GetSimulationTime()-simtime1-(simtime0-starttime)) < g_epsilon)
 
         env.StartSimulation(timestep=0.01,realtime=False)

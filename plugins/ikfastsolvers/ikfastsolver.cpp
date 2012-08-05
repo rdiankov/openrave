@@ -719,7 +719,7 @@ private:
                 for(size_t ifree = 0; ifree < iksol.GetFree().size(); ++ifree) {
                     vsolfree[ifree] = q0.at(iksol.GetFree()[ifree]);
                 }
-                iksol.GetSolution(&sol[0],vsolfree.size()>0 ? &vsolfree[0] : NULL);
+                iksol.GetSolution(sol,vsolfree);
                 for(int i = 0; i < iksol.GetDOF(); ++i) {
                     vravesol.at(i) = (dReal)sol[i];
                 }

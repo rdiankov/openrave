@@ -48,7 +48,7 @@ class IkSingleDOFSolutionBase
 {
 public:
     IkSingleDOFSolutionBase() : fmul(0), foffset(0), freeind(-1), maxsolutions(1) {
-        indices[0] = indices[1] = indices[2] = indices[3] = indices[5] = -1;
+        indices[0] = indices[1] = indices[2] = indices[3] = indices[4] = -1;
     }
     T fmul, foffset; ///< joint value is fmul*sol[freeind]+foffset
     signed char freeind; ///< if >= 0, mimics another joint
