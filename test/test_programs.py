@@ -134,11 +134,8 @@ install(TARGETS %(name)s DESTINATION .)
         shutil.rmtree(name)
         
 def test_cppexamples():
-    try:
-        programdir = CompileProject(os.path.join('..','src','cppexamples'))
-        
-    finally:
-        shutil.rmtree(programdir)
+    programdir = CompileProject(os.path.join('..','src','cppexamples'))
+    shutil.rmtree(programdir)
         
 def test_cppgeometry_standalone():
     cppdata="""#include <openrave/geometry.h>
