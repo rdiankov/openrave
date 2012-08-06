@@ -141,8 +141,16 @@ void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)
     KinBodyStateSaver::Restore(!robot ? KinBodyPtr(_probot) : KinBodyPtr(robot));
 }
 
+void RobotBase::RobotStateSaver::Release()
+{
+    _probot.reset();
+    KinBodyStateSaver::Release();
+}
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
+    if( !probot ) {
+        return;
+    }
     if( probot->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
         return;

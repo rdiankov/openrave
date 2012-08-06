@@ -625,16 +625,41 @@ class TestKinematics(EnvironmentSetup):
         with env:
             s = 'this is a test string'
             body.SetUserData(s)
+            body.SetTransform(eye(4))
             assert(body.GetUserData()==s)
 
             originalvel = body.GetDOFVelocityLimits()
             originalaccel = body.GetDOFAccelerationLimits()
-            with KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration):
-                body.SetDOFVelocityLimits(zeros(body.GetDOF()))
-                body.SetDOFAccelerationLimits(zeros(body.GetDOF()))
+#             with KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration):
+#                 body.SetDOFVelocityLimits(zeros(body.GetDOF()))
+#                 body.SetDOFAccelerationLimits(zeros(body.GetDOF()))
+#             assert(transdist(body.GetDOFVelocityLimits(),originalvel) <= g_epsilon)
+#             assert(transdist(body.GetDOFAccelerationLimits(),originalaccel) <= g_epsilon)
+
+            T = eye(4)
+            T[0:3,3] = [1,2,3]
+            body.SetTransform(T)
+            statesaver = KinBody.KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration|KinBody.SaveParameters.LinkTransformation)
+            body.SetTransform(T)
+            body.SetDOFVelocityLimits(zeros(body.GetDOF()))
+            body.SetDOFAccelerationLimits(zeros(body.GetDOF()))
+
+            # test restoring
+            statesaver.Restore()
+            assert(transdist(body.GetTransform(),T) <= g_epsilon)
+            body.SetTransform(T)
+
+            body2=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
+            env.Add(body2,True)
+            statesaver.Restore(body2)
+            assert(transdist(body2.GetTransform(),T) <= g_epsilon)
+
+            # finally destroy
+            del statesaver
             assert(transdist(body.GetDOFVelocityLimits(),originalvel) <= g_epsilon)
             assert(transdist(body.GetDOFAccelerationLimits(),originalaccel) <= g_epsilon)
-        
+            assert(transdist(body.GetTransform(),T) <= g_epsilon)
+
     def test_geometrychange(self):
         self.log.info('change geometry and test if changes are updated')
         env=self.env

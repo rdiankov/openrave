@@ -1018,6 +1018,11 @@ public:
         /// \param body if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
         /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
         virtual void Restore(boost::shared_ptr<KinBody> body=boost::shared_ptr<KinBody>());
+
+        /// \brief release the body state. _pbody will not get restored on destruction
+        ///
+        /// After this call, it will still be possible to use \ref Restore.
+        virtual void Release();
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;

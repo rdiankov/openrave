@@ -306,10 +306,10 @@ public:
             return toPyArray<dReal,6>(v);
         }
 
-        string __repr__() {
+        std::string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
         }
-        string __str__() {
+        std::string __str__() {
             return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName());
         }
         object __unicode__() {
@@ -555,6 +555,42 @@ public:
     };
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
     typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
+
+    class PyKinBodyStateSaver
+    {
+        PyEnvironmentBasePtr _pyenv;
+        KinBody::KinBodyStateSaver _state;
+public:
+        PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
+        }
+        PyKinBodyStateSaver(PyKinBodyPtr pybody, int options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),options) {
+        }
+        virtual ~PyKinBodyStateSaver() {
+        }
+
+        object GetBody() const {
+            return object(toPyKinBody(_state.GetBody(),_pyenv));
+        }
+
+        void Restore(PyKinBodyPtr pybody=PyKinBodyPtr()) {
+            _state.Restore(!pybody ? KinBodyPtr() : pybody->GetBody());
+        }
+
+        void Release() {
+            _state.Release();
+        }
+
+        std::string __str__() {
+            KinBodyPtr pbody = _state.GetBody();
+            if( !pbody ) {
+                return "state empty";
+            }
+            return boost::str(boost::format("state for %s")%pbody->GetName());
+        }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
+    };
 
     class PyManageData
     {
@@ -2124,6 +2160,42 @@ public:
         }
     };
 
+    class PyRobotStateSaver
+    {
+        PyEnvironmentBasePtr _pyenv;
+        RobotBase::RobotStateSaver _state;
+public:
+        PyRobotStateSaver(PyRobotBasePtr pyrobot) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot()) {
+        }
+        PyRobotStateSaver(PyRobotBasePtr pyrobot, int options) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot(),options) {
+        }
+        virtual ~PyRobotStateSaver() {
+        }
+
+        object GetBody() const {
+            return object(toPyRobot(RaveInterfaceCast<RobotBase>(_state.GetBody()),_pyenv));
+        }
+
+        void Restore(PyRobotBasePtr pyrobot=PyRobotBasePtr()) {
+            _state.Restore(!pyrobot ? RobotBasePtr() : pyrobot->GetRobot());
+        }
+
+        void Release() {
+            _state.Release();
+        }
+
+        std::string __str__() {
+            KinBodyPtr pbody = _state.GetBody();
+            if( !pbody ) {
+                return "robot state empty";
+            }
+            return boost::str(boost::format("robot state for %s")%pbody->GetName());
+        }
+        object __unicode__() {
+            return ConvertStringToUnicode(__str__());
+        }
+    };
+
     PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {
     }
     PyRobotBase(const PyRobotBase &r) : PyKinBody(r._probot,r._pyenv) {
@@ -2791,6 +2863,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianAxisAngle_overloads, Compu
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, ComputeHessianTranslation, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianAxisAngle_overloads, ComputeHessianAxisAngle, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 
 void init_openravepy_kinbody()
 {
@@ -3146,6 +3219,18 @@ void init_openravepy_kinbody()
         }
 
         {
+            scope statesaver = class_<PyKinBody::PyKinBodyStateSaver, boost::shared_ptr<PyKinBody::PyKinBodyStateSaver> >("KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver), no_init)
+                               .def(init<PyKinBodyPtr>(args("body")))
+                               .def(init<PyKinBodyPtr,int>(args("body","options")))
+                               .def("GetBody",&PyKinBody::PyKinBodyStateSaver::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
+                               .def("Restore",&PyKinBody::PyKinBodyStateSaver::Restore,Restore_overloads(args("body"), DOXY_FN(KinBody::KinBodyStateSaver, Restore)))
+                               .def("Release",&PyKinBody::PyKinBodyStateSaver::Release,DOXY_FN(KinBody::KinBodyStateSaver, Release))
+                               .def("__str__",&PyKinBody::PyKinBodyStateSaver::__str__)
+                               .def("__unicode__",&PyKinBody::PyKinBodyStateSaver::__unicode__)
+            ;
+        }
+
+        {
             scope managedata = class_<PyKinBody::PyManageData, boost::shared_ptr<PyKinBody::PyManageData> >("ManageData", DOXY_CLASS(KinBody::ManageData),no_init)
                                .def("GetSystem", &PyKinBody::PyManageData::GetSystem, DOXY_FN(KinBody::ManageData,GetSystem))
                                .def("GetData", &PyKinBody::PyManageData::GetData, DOXY_FN(KinBody::ManageData,GetData))
@@ -3371,6 +3456,16 @@ void init_openravepy_kinbody()
         .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)
         .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
+        ;
+
+        class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)
+        .def(init<PyRobotBasePtr>(args("robot")))
+        .def(init<PyRobotBasePtr,int>(args("robot","options")))
+        .def("GetBody",&PyRobotBase::PyRobotStateSaver::GetBody,DOXY_FN(Robot::RobotStateSaver, GetBody))
+        .def("Restore",&PyRobotBase::PyRobotStateSaver::Restore,Restore_overloads(args("body"), DOXY_FN(Robot::RobotStateSaver, Restore)))
+        .def("Release",&PyRobotBase::PyRobotStateSaver::Release,DOXY_FN(Robot::RobotStateSaver, Release))
+        .def("__str__",&PyRobotBase::PyRobotStateSaver::__str__)
+        .def("__unicode__",&PyRobotBase::PyRobotStateSaver::__unicode__)
         ;
     }
 
