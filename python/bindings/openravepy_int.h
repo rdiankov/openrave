@@ -505,8 +505,8 @@ public:
     string GetPluginName() const {
         return _pbase->GetPluginName();
     }
-    string GetDescription() const {
-        return _pbase->GetDescription();
+    object GetDescription() const {
+        return ConvertStringToUnicode(_pbase->GetDescription());
     }
     void SetDescription(const std::string& s) {
         _pbase->SetDescription(s);

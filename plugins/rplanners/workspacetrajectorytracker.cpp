@@ -151,8 +151,12 @@ Planner Parameters\n\
         workspacetraj->Sample(vtrajpoint,workspacetraj->GetDuration());
         workspacetraj->GetConfigurationSpecification().ExtractIkParameterization(ikparam,vtrajpoint.begin());
         Transform tlasttrans = ikparam.GetTransform6D();
+        dReal minimumcompletetime = _parameters->minimumcompletetime;
+        if( minimumcompletetime <= 0 ) {
+            minimumcompletetime += workspacetraj->GetDuration();
+        }
         if( _manip->CheckEndEffectorCollision(tlasttrans,_report) ) {
-            if( _parameters->minimumcompletetime >= workspacetraj->GetDuration() ) {
+            if( minimumcompletetime >= workspacetraj->GetDuration() ) {
                 RAVELOG_DEBUG(str(boost::format("final configuration colliding: %s\n")%_report->__str__()));
                 return PS_Failed;
             }
@@ -173,7 +177,7 @@ Planner Parameters\n\
                     continue;
                 }
                 if( !bPrevInCollision ) {
-                    if( ftime >= _parameters->minimumcompletetime ) {
+                    if( ftime >= minimumcompletetime ) {
                         fendtime = ftime;
                         break;
                     }
@@ -245,7 +249,7 @@ Planner Parameters\n\
                 }
                 else {
                     if( !bPrevInCollision ) {
-                        if( ftime >= _parameters->minimumcompletetime ) {
+                        if( ftime >= minimumcompletetime ) {
                             fendtime = ftime;
                             break;
                         }
