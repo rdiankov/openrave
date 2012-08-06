@@ -1117,7 +1117,7 @@ public:
     }
 
     void SetDebugLevel(object olevel) {
-        _penv->SetDebugLevel(pyGetDebugLevelFromPy(olevel));
+        _penv->SetDebugLevel(pyGetIntFromPy(olevel));
     }
     int GetDebugLevel() const {
         return _penv->GetDebugLevel();

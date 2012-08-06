@@ -883,7 +883,7 @@ void raveLogVerbose(const string &s)
     raveLog(s,Level_Verbose);
 }
 
-int pyGetDebugLevelFromPy(object olevel)
+int pyGetIntFromPy(object olevel)
 {
     int level = Level_Info;
     if( olevel != object() ) {
@@ -896,7 +896,6 @@ int pyGetDebugLevelFromPy(object olevel)
         else {
             extract<uint64_t> leveluint64(olevel);
             if( leveluint64.check() ) {
-                RAVELOG_INFO("4\n");
                 level = static_cast<int>((uint64_t)leveluint64);
             }
             else {
@@ -910,7 +909,7 @@ int pyGetDebugLevelFromPy(object olevel)
                         level = (int)levelint32;
                     }
                     else {
-                        RAVELOG_WARN("failed to extract level from RaveInitialize call\n");
+                        RAVELOG_WARN("failed to extract int\n");
                     }
                 }
             }
@@ -921,13 +920,13 @@ int pyGetDebugLevelFromPy(object olevel)
 
 void pyRaveSetDebugLevel(object olevel)
 {
-    OpenRAVE::RaveSetDebugLevel(pyGetDebugLevelFromPy(olevel));
+    OpenRAVE::RaveSetDebugLevel(pyGetIntFromPy(olevel));
 }
 
 int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
 {
 
-    return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetDebugLevelFromPy(olevel));
+    return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel));
 }
 
 object RaveGetPluginInfo()

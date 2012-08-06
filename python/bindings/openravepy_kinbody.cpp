@@ -563,7 +563,7 @@ public:
 public:
         PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
         }
-        PyKinBodyStateSaver(PyKinBodyPtr pybody, int options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),options) {
+        PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),pyGetIntFromPy(options)) {
         }
         virtual ~PyKinBodyStateSaver() {
         }
@@ -2167,7 +2167,7 @@ public:
 public:
         PyRobotStateSaver(PyRobotBasePtr pyrobot) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot()) {
         }
-        PyRobotStateSaver(PyRobotBasePtr pyrobot, int options) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot(),options) {
+        PyRobotStateSaver(PyRobotBasePtr pyrobot, object options) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot(),pyGetIntFromPy(options)) {
         }
         virtual ~PyRobotStateSaver() {
         }
@@ -3221,7 +3221,7 @@ void init_openravepy_kinbody()
         {
             scope statesaver = class_<PyKinBody::PyKinBodyStateSaver, boost::shared_ptr<PyKinBody::PyKinBodyStateSaver> >("KinBodyStateSaver", DOXY_CLASS(KinBody::KinBodyStateSaver), no_init)
                                .def(init<PyKinBodyPtr>(args("body")))
-                               .def(init<PyKinBodyPtr,int>(args("body","options")))
+                               .def(init<PyKinBodyPtr,object>(args("body","options")))
                                .def("GetBody",&PyKinBody::PyKinBodyStateSaver::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
                                .def("Restore",&PyKinBody::PyKinBodyStateSaver::Restore,Restore_overloads(args("body"), DOXY_FN(KinBody::KinBodyStateSaver, Restore)))
                                .def("Release",&PyKinBody::PyKinBodyStateSaver::Release,DOXY_FN(KinBody::KinBodyStateSaver, Release))
@@ -3460,7 +3460,7 @@ void init_openravepy_kinbody()
 
         class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)
         .def(init<PyRobotBasePtr>(args("robot")))
-        .def(init<PyRobotBasePtr,int>(args("robot","options")))
+        .def(init<PyRobotBasePtr,object>(args("robot","options")))
         .def("GetBody",&PyRobotBase::PyRobotStateSaver::GetBody,DOXY_FN(Robot::RobotStateSaver, GetBody))
         .def("Restore",&PyRobotBase::PyRobotStateSaver::Restore,Restore_overloads(args("body"), DOXY_FN(Robot::RobotStateSaver, Restore)))
         .def("Release",&PyRobotBase::PyRobotStateSaver::Release,DOXY_FN(Robot::RobotStateSaver, Release))
