@@ -21,7 +21,7 @@
 
 namespace OpenRAVE {
 
-WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(1e30f), _penv(penv), _bProcessing(false) {
+WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {
     _vXMLParameters.push_back("maxdeviationangle");
     _vXMLParameters.push_back("maintaintiming");
     _vXMLParameters.push_back("greedysearch");
