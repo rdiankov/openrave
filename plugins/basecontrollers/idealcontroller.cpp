@@ -210,17 +210,27 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
             // first process all grab info
             list<KinBodyPtr> listrelease;
+            list<pair<KinBodyPtr, KinBody::LinkPtr> > listgrab;
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
                     KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
                     if( bodyid < 0 ) {
-                        if( _probot->IsGrabbing(pbody) ) {
+                        if( !!_probot->IsGrabbing(pbody) ) {
                             listrelease.push_back(pbody);
                         }
                     }
                     else {
-                        _probot->Grab(pbody,_probot->GetLinks().at(itgrabinfo->second));
+                        KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(pbody);
+                        if( !!pgrabbinglink ) {
+                            if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
+                                listrelease.push_back(pbody);
+                                listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                            }
+                        }
+                        else {
+                            listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                        }
                     }
                 }
             }
@@ -248,6 +258,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // always release after setting dof values
             FOREACH(itbody,listrelease) {
                 _probot->Release(*itbody);
+            }
+            FOREACH(it,listgrab) {
+                _probot->Grab(it->first,it->second);
             }
 
             if( _fCommandTime > ptraj->GetDuration() ) {
