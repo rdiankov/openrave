@@ -15,7 +15,7 @@ class RobotMinimumTime():
 
 ################################ Init ################################
 
-    def __init__(self,robot,sample_traj,tau_min,tau_max,tunings,grav):
+    def __init__(self,robot,sample_traj,tunings,grav,tau_min,tau_max,qd_max=None,sdot_init=1,sdot_final=1):
 
         # Set the robot parameters
         self.robot=robot
@@ -34,17 +34,24 @@ class RobotMinimumTime():
 
         self.tau_min=tau_min
         self.tau_max=tau_max
+        self.qd_max=qd_max
 
         self.tunings=tunings
 
         self.grav=grav
 
         self.sample_dynamics()
-        self.sample_max_velocity_curve()
+        self.compute_sample_max_curve_acc()
+        self.compute_sample_max_curve_vel()
+
+        self.sample_max_curve=zeros(self.sample_n_steps)
+        for i in range(self.sample_n_steps):
+            self.sample_max_curve[i]=min(self.sample_max_curve_acc[i],self.sample_max_curve_vel[i])
+
         self.find_switching_points()
 
-        self.sdot_init=1
-        self.sdot_final=1
+        self.sdot_init=sdot_init
+        self.sdot_final=sdot_final
         self.possible=True
         self.compute_limiting_curves()
         if self.possible:
@@ -106,26 +113,29 @@ class RobotMinimumTime():
 
 ############################ Max velocity curve ################################
 
-    # Compute the max velocity curve
-    def sample_max_velocity_curve(self):
-        max_curve=zeros(self.sample_n_steps)
-        for i in range(self.sample_n_steps):
-            max_curve[i]=self.max_velocity(self.sample_t_vect[i])
-        self.sample_max_curve=max_curve
-
-    # Compute the max velocity curve for the velocity limit
-    def sample_max_velocity_curve_vellim(self,qd_max):        
+    # Compute the max velocity curve caused by velocity constraints
+    def compute_sample_max_curve_vel(self):
+        qd_max=self.qd_max        
         n_steps=self.sample_n_steps
-        max_curve=ones(n_steps)*1e3
+        max_curve=ones(n_steps)*1e5
         for i in range(n_steps):
             qd=self.sample_qd_vect[:,i]
             for j in range(self.dim):
-                max_curve[i]=min(max_curve[i],qd_max[j]/abs(qd[j]))
+                if qd_max!=None:
+                    max_curve[i]=min(max_curve[i],qd_max[j]/abs(qd[j]))
+                else:
+                    max_curve[i]=1e15
+        self.sample_max_curve_vel=max_curve
 
-        self.sample_max_curve_vellim=max_curve
+    # Compute the max velocity curve caused by torque constraints
+    def compute_sample_max_curve_acc(self):
+        max_curve=zeros(self.sample_n_steps)
+        for i in range(self.sample_n_steps):
+            max_curve[i]=self.compute_max_sdot_acc(self.sample_t_vect[i])
+        self.sample_max_curve_acc=max_curve
 
-    # Compute the max velocity at a given point s
-    def max_velocity(self,s):
+    # Compute the max velocity caused by torque constraints at a given point s
+    def compute_max_sdot_acc(self,s):
         tau_min=self.tau_min
         tau_max=self.tau_max
         [a,b,c]=self.dynamics_coefficients(s)
@@ -152,6 +162,36 @@ class RobotMinimumTime():
                     if sdot<sdot_min:
                         sdot_min=sdot
         return(sdot_min)
+
+
+    # Compute the max velocity at a given point s by interpolating
+    def compute_max_sdot(self,s):
+        t_vect=self.sample_t_vect
+        n_steps=self.sample_n_steps
+        if s<t_vect[0]: s=t_vect[0]+1e-5
+        if s>t_vect[n_steps-1]: s=t_vect[n_steps-1]-1e-5
+        i=bisect.bisect_left(t_vect,s)
+        if i>=n_steps-1: 
+            j=n_steps-1
+            return self.sample_max_curve[j]
+        r=(s-t_vect[i])/(t_vect[i+1]-t_vect[i])
+        m=(1-r)*self.sample_max_curve[i]+r*self.sample_max_curve[i+1]
+        return m
+
+    # Compute the max velocity caused by velocity limits at a given point s by interpolating
+    def compute_max_sdot_vel(self,s):
+        t_vect=self.sample_t_vect
+        n_steps=self.sample_n_steps
+        if s<t_vect[0]: s=t_vect[0]+1e-5
+        if s>t_vect[n_steps-1]: s=t_vect[n_steps-1]-1e-5
+        i=bisect.bisect_left(t_vect,s)
+        if i>=n_steps-1: 
+            j=n_steps-1
+            return self.sample_max_curve_vel[j]
+        r=(s-t_vect[i])/(t_vect[i+1]-t_vect[i])
+        m=(1-r)*self.sample_max_curve_vel[i]+r*self.sample_max_curve_vel[i+1]
+        return m
+
 
     # Compute the acceleration limits at a point (s,sdot)
     def compute_limits(self,s,sdot):
@@ -264,8 +304,8 @@ class RobotMinimumTime():
     def compute_limiting_curves(self):
 
         tunings=self.tunings
-        sdot_init=tunings['sdot_init']
-        sdot_final=tunings['sdot_final']
+        sdot_init=self.sdot_init
+        sdot_final=self.sdot_final
         tolerance=tunings['tolerance']
         dt=tunings['t_step_integrate']
         width=tunings['width']
@@ -383,18 +423,43 @@ class RobotMinimumTime():
             if len(s_res)>width: break
             if sdot_curr<0: break
             if s_curr>self.sample_duration: break
-            if sdot_curr>self.max_velocity(s_curr)+tolerance: break
-            if start<tunings['palier'] and not isnan(acc):
-                beta=acc                
-            else:
-                [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
-            start+=1
-            s_res.append(s_curr)
-            sdot_res.append(sdot_curr)
-            sdot_next=sdot_curr+beta*dt
-            s_next=s_curr+sdot_curr*dt
-            s_curr=s_next
-            sdot_curr=sdot_next
+            if sdot_curr>self.compute_max_sdot(s_curr)+tolerance:
+                if sdot_curr<self.compute_max_sdot_vel(s_curr)+tolerance:
+                    break
+                else:
+                    while True:
+                        s_next=s_curr+sdot_curr*dt
+                        sdot_next_vel=self.compute_max_sdot_vel(s_next)
+                        [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
+                        if sdot_next_vel<sdot_next_vel+beta*dt and sdot_next_vel>sdot_next_vel+alpha*dt and s_curr<self.sample_duration:
+                            s_res.append(s_curr)
+                            sdot_res.append(sdot_curr)
+                            s_curr=s_next
+                            sdot_curr=sdot_next_vel
+                        elif sdot_next_vel<sdot_curr+alpha*dt:
+                            cont=False
+                            break
+                        
+                        else:
+                            s_res.append(s_curr)
+                            sdot_res.append(sdot_curr)
+                            sdot_next=sdot_curr+beta*dt
+                            s_next=s_curr+sdot_curr*dt
+                            s_curr=s_next
+                            sdot_curr=sdot_next
+                            break
+            else:                    
+                if start<tunings['palier'] and not isnan(acc):
+                    beta=acc                
+                else:
+                    [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
+                start+=1
+                s_res.append(s_curr)
+                sdot_res.append(sdot_curr)
+                sdot_next=sdot_curr+beta*dt
+                s_next=s_curr+sdot_curr*dt
+                s_curr=s_next
+                sdot_curr=sdot_next
             for j in range(n_list-1,-1,-1):
                 s_traj_bw=s_traj_list_bw[j]
                 sdot_traj_bw=sdot_traj_list_bw[j]
@@ -425,7 +490,7 @@ class RobotMinimumTime():
             if len(s_res)>width: break
             if sdot_curr<0: break
             if s_curr<0: break
-            if sdot_curr>self.max_velocity(s_curr)+tolerance: break
+            if sdot_curr>self.compute_max_sdot(s_curr)+tolerance: break
             if start<tunings['palier'] and not isnan(acc):
                 alpha=acc
             else:
@@ -450,7 +515,7 @@ class RobotMinimumTime():
 
     # Compute the correct acceleration at the zero-inertia points
     def compute_acc(self,s):
-        sdot=self.max_velocity(s)
+        sdot=self.compute_max_sdot(s)
         [a,b,c]=self.dynamics_coefficients(s)        
         a_abs=list(abs(a))
         i_sat=a_abs.index(min(a_abs))
@@ -562,7 +627,8 @@ class RobotMinimumTime():
         clf()
         hold('on')
         T=self.sample_duration
-        plot(self.sample_t_vect,self.sample_max_curve,'k')
+        plot(self.sample_t_vect,self.sample_max_curve_acc,'b')
+        plot(self.sample_t_vect,self.sample_max_curve_vel,'k')
         plot([0,T],array([1,1]),'m:')
         for i in range(len(self.sw_s_list)):
             if self.sw_type_list[i]=='t':
@@ -576,7 +642,7 @@ class RobotMinimumTime():
             plot(self.s_traj_list[i],self.sdot_traj_list[i],'r')
 
         plot(self.s_res,self.sdot_res,'k--')
-        axis([0,T,0,max(self.sample_max_curve)])
+        axis([0,T,0,1.1*max(max(self.sample_max_curve_acc),max(self.sample_max_curve_vel))])
         grid('on')
         show()
 
@@ -586,7 +652,7 @@ class RobotMinimumTime():
         for i in range(n_int):
             if sdot_curr<0: break
             if s_curr>self.sample_duration: break
-            if sdot_curr>self.max_velocity(s_curr): break
+            if sdot_curr>self.compute_max_sdot(s_curr): break
             [alpha,beta,ialpha,ibeta]=self.compute_limits(s_curr,sdot_curr)
             s_res.append(s_curr)
             sdot_res.append(sdot_curr)
