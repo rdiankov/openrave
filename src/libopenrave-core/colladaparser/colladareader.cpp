@@ -71,6 +71,18 @@ public:
                 if (!!visualnode) {
                     break;
                 }
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pae);
+                if( !!inode ) {
+                    visualnode = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
+                    if (!!visualnode) {
+                        // have to clone since the parents are different
+                        std::string idSuffix = str(boost::format(".%s")%pae->getParent()->getID());
+                        visualnode = daeSafeCast<domNode>(visualnode->clone(idSuffix.c_str()));
+                        pae->getParentElement()->add(visualnode);
+                        BOOST_ASSERT(pae->getParentElement() == visualnode->getParentElement());
+                        break;
+                    }
+                }
                 pae = pae->getParentElement();
             }
 
@@ -693,6 +705,7 @@ public:
         plink->_name = name;
         plink->_mass = 1.0;
         plink->_bStatic = false;
+        plink->_t = getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
         bool bhasgeometry = ExtractGeometry(pdomnode,plink,bindings,vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
@@ -749,7 +762,11 @@ public:
 
         RAVELOG_VERBOSE(str(boost::format("Number of root links in the kmodel %d\n")%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, bindings);
+            Transform tnode;
+            if( ilink == 0 ) {
+                tnode = getNodeParentTransform(pnode);
+            }
+            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), tnode, vdomjoints, bindings);
         }
 
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
@@ -1372,7 +1389,8 @@ public:
             return false;
         }
 
-        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
+        TransformMatrix tnodeparent = getNodeParentTransform(pdomnode);
+        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * tnodeparent * _ExtractFullTransform(pdomnode);
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
@@ -2546,10 +2564,24 @@ private:
             }
 
             // visual information
-            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
+            daeElement* pnodeelt = daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt;
+            domNodeRef node = daeSafeCast<domNode>(pnodeelt);
             if (!node) {
-                RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
-                continue;
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnodeelt);
+                if( !!inode ) {
+                    node = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
+                    if( !!node ) {
+                        // have to clone since the parents are different
+                        std::string idSuffix = str(boost::format(".%s")%pnodeelt->getParent()->getID());
+                        node = daeSafeCast<domNode>(node->clone(idSuffix.c_str()));
+                        pnodeelt->getParentElement()->add(node);
+                        BOOST_ASSERT(pnodeelt->getParentElement() == node->getParentElement());
+                    }
+                }
+                if( !node ) {
+                    RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
+                    continue;
+                }
             }
 
             //  kinematics information

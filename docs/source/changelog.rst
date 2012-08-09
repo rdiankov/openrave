@@ -120,7 +120,9 @@ Misc
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
 
-* collada stores joint **circular**, **weight**, and **resolution** properties
+* COLLADA writer/reader supports joint **circular**, **weight**, and **resolution** properties
+
+* COLLADA support for **<instance_node>** and saving/restoring scenes with similar bodies.
 
 * Added new conveyor robot :ref:`robot-conveyor` that creates trajectory joints.
 

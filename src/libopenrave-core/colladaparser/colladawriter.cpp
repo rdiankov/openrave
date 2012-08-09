@@ -216,7 +216,9 @@ public:
             int iaxis;
             string jointnodesid;
         };
+        KinBodyPtr pbody; ///< the body written for
         domKinematics_modelRef kmodel;
+        domNodeRef noderoot; ///< root node containing the body transform it should have only one child pointing to the first link of the body
         std::vector<axis_output> vaxissids;     ///< no ordering
         std::vector<std::string > vlinksids;     ///< same ordering as the link indices
     };
@@ -435,7 +437,7 @@ public:
         domKinematics_techniqueRef kt = daeSafeCast<domKinematics_technique>(kinematics->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(pbody,kinematics,askid);
-
+        std::string kmodelid = _GetKinematicsModelId(pbody);
         for(size_t idof = 0; idof < ikmout->vaxissids.size(); ++idof) {
             string axis_infosid = str(boost::format("axis_info_inst%d")%idof);
             KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(idof).pjoint;
@@ -443,7 +445,7 @@ public:
 
             //  Kinematics axis info
             domKinematics_axis_infoRef kai = daeSafeCast<domKinematics_axis_info>(kt->add(COLLADA_ELEMENT_AXIS_INFO));
-            kai->setAxis(str(boost::format("%s/%s")%ikmout->kmout->kmodel->getID()%ikmout->kmout->vaxissids.at(idof).sid).c_str());
+            kai->setAxis(str(boost::format("%s/%s")%kmodelid%ikmout->kmout->vaxissids.at(idof).sid).c_str());
             kai->setSid(axis_infosid.c_str());
             domCommon_bool_or_paramRef active = daeSafeCast<domCommon_bool_or_param>(kai->add(COLLADA_ELEMENT_ACTIVE));
             daeSafeCast<domCommon_bool_or_param::domBool>(active->add(COLLADA_ELEMENT_BOOL))->setValue(pjoint->GetDOFIndex()>=0);
@@ -542,6 +544,7 @@ public:
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(KinBodyPtr(probot),kinematics,askid);
 
+        std::string kmodelid = _GetKinematicsModelId(probot);
         for(size_t idof = 0; idof < ikmout->vaxissids.size(); ++idof) {
             string axis_infosid = str(boost::format("axis_info_inst%d")%idof);
             KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(idof).pjoint;
@@ -549,7 +552,7 @@ public:
 
             //  Kinematics axis info
             domKinematics_axis_infoRef kai = daeSafeCast<domKinematics_axis_info>(kt->add(COLLADA_ELEMENT_AXIS_INFO));
-            kai->setAxis(str(boost::format("%s/%s")%ikmout->kmout->kmodel->getID()%ikmout->kmout->vaxissids.at(idof).sid).c_str());
+            kai->setAxis(str(boost::format("%s/%s")%kmodelid%ikmout->kmout->vaxissids.at(idof).sid).c_str());
             kai->setSid(axis_infosid.c_str());
             domCommon_bool_or_paramRef active = daeSafeCast<domCommon_bool_or_param>(kai->add(COLLADA_ELEMENT_ACTIVE));
             daeSafeCast<domCommon_bool_or_param::domBool>(active->add(COLLADA_ELEMENT_BOOL))->setValue(pjoint->GetDOFIndex()>=0);
@@ -634,7 +637,7 @@ public:
         }
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
-        string kmodelid = kmout->kmodel->getID(); kmodelid += "/";
+        kmodelid += "/";
         FOREACHC(itjoint,probot->GetJoints()) {
             domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
             pextra->setName(str(boost::format("motor%d")%(*itjoint)->GetJointIndex()).c_str());
@@ -736,14 +739,15 @@ public:
             symscope = sidscope+string("_");
             refscope = sidscope+string("/");
         }
-        string ikmsid = str(boost::format("%s_inst")%kmout->kmodel->getID());
+        string kmodelid = _GetKinematicsModelId(pbody);
+        string ikmsid = str(boost::format("%s_inst")%kmodelid);
         ikmout->ikm->setUrl(str(boost::format("#%s")%kmout->kmodel->getID()).c_str());
         ikmout->ikm->setSid(ikmsid.c_str());
 
         domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
         kbind->setSid((symscope+ikmsid).c_str());
         daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
-        ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("visual%d/node0")%pbody->GetEnvironmentId())));
+        ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("%s/node0")%_GetNodeId(pbody))));
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
         int i = 0;
@@ -775,13 +779,14 @@ public:
         boost::shared_ptr<instance_physics_model_output> ipmout(new instance_physics_model_output());
         ipmout->pmout = pmout;
         ipmout->ipm = daeSafeCast<domInstance_physics_model>(parent->add(COLLADA_ELEMENT_INSTANCE_PHYSICS_MODEL));
-        string nodeid;
-        if( pbody->GetLinks().size() > 0 ) {
-            nodeid = _GetNodeId(KinBody::LinkConstPtr(pbody->GetLinks().at(0)));
+        string nodeid = _GetNodeId(pbody);
+        boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
+        if( !kmout ) {
+            RAVELOG_WARN(str(boost::format("kinematics_model for %s should be present")%pbody->GetName()));
         }
-        else {
-            nodeid = _GetNodeId(pbody);
-        }
+
+        // always use the root node of the kinbody rather than the node pointing to the kinbody link. it should have the correct transformation
+
         ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+nodeid));
         string symscope, refscope;
         if( sidscope.size() > 0 ) {
@@ -794,7 +799,21 @@ public:
         for(size_t i = 0; i < pmout->vrigidbodysids.size(); ++i) {
             domInstance_rigid_bodyRef pirb = daeSafeCast<domInstance_rigid_body>(ipmout->ipm->add(COLLADA_ELEMENT_INSTANCE_RIGID_BODY));
             pirb->setBody(pmout->vrigidbodysids[i].c_str());
-            pirb->setTarget(xsAnyURI(*pirb,str(boost::format("#%s")%_GetNodeId(KinBody::LinkConstPtr(pbody->GetLinks().at(i))))));
+            string rigidnodeid;
+            if( !kmout ) {
+                rigidnodeid = nodeid;
+            }
+            else {
+                if( kmout->pbody == pbody ) {
+                    rigidnodeid = _GetNodeId(KinBody::LinkConstPtr(pbody->GetLinks().at(i)));
+                }
+                else {
+                    // todo, how do we assign ids to instanced nodes?
+                    // current method is probably unsupported
+                    rigidnodeid = str(boost::format("%s.%s")%_GetNodeId(KinBody::LinkConstPtr(kmout->pbody->GetLinks().at(i)))%nodeid);
+                }
+            }
+            pirb->setTarget(xsAnyURI(*pirb,str(boost::format("#%s")%rigidnodeid)));
         }
 
         return ipmout;
@@ -805,11 +824,32 @@ public:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         if( !!kmout ) {
+            // the base model is the same, but the instance information like joint values and visual transform could be different
+            vector<dReal> vjointvalues;
+            pbody->GetDOFValues(vjointvalues);
+            Transform tnode = pbody->GetTransform();
+
+            //  Create root node for the visual scene
+            domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
+            string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
+            pnoderoot->setId(bodyid.c_str());
+            pnoderoot->setSid(bodyid.c_str());
+            pnoderoot->setName(pbody->GetName().c_str());
+            // write the body transform
+            _WriteTransformation(pnoderoot, tnode);
+            // create an instance_node pointing to kmout
+            domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
+            domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
+            OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",kmout->noderoot->getName(),ORE_Assert);
+            inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
+            if( pbody->GetLinks().size() > 0 ) {
+                inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
+            }
             return kmout;
         }
 
         domKinematics_modelRef kmodel = daeSafeCast<domKinematics_model>(_kinematicsModelsLib->add(COLLADA_ELEMENT_KINEMATICS_MODEL));
-        string kmodelid = str(boost::format("kmodel%d")%pbody->GetEnvironmentId());
+        string kmodelid = _GetKinematicsModelId(pbody);
         kmodel->setId(kmodelid.c_str());
         kmodel->setName(pbody->GetName().c_str());
 
@@ -827,6 +867,8 @@ public:
         vector<dReal> vjointvalues, vzero(pbody->GetDOF());
         pbody->GetDOFValues(vjointvalues);
         pbody->SetDOFValues(vzero);
+        Transform tnode = pbody->GetTransform();
+        pbody->SetTransform(Transform());
 
         //  Create root node for the visual scene
         domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
@@ -834,6 +876,9 @@ public:
         pnoderoot->setId(bodyid.c_str());
         pnoderoot->setSid(bodyid.c_str());
         pnoderoot->setName(pbody->GetName().c_str());
+        // write the body transform before the link nodes start to make it possible
+        // to reuse the visual scene for other bodies
+        _WriteTransformation(pnoderoot, tnode);
 
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
@@ -848,7 +893,9 @@ public:
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
         kmout.reset(new kinematics_model_output());
+        kmout->pbody = pbody;
         kmout->kmodel = kmodel;
+        kmout->noderoot = pnoderoot;
         kmout->vaxissids.resize(0);
         kmout->vlinksids.resize(pbody->GetLinks().size());
 
@@ -901,8 +948,9 @@ public:
             listunusedlinks.push_back((*itlink)->GetIndex());
         }
 
+        domNodeRef nodehead = pnoderoot;
         while(listunusedlinks.size()>0) {
-            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, pnoderoot, kmodel->getID(), vjoints);
+            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
             Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
             _WriteTransformation(childinfo.pnode, t);
@@ -910,6 +958,9 @@ public:
                 kmout->vlinksids.at(itused->first) = itused->second;
                 listunusedlinks.remove(itused->first);
             }
+            // update the root so that newer nodes go inside the hierarchy of the first link
+            // this is necessary for instance_node to work correctly and to get the relative transform of the link right
+            nodehead = childinfo.pnode;
         }
 
         // interface type
@@ -1203,7 +1254,7 @@ private:
         domNodeRef pnode = daeSafeCast<domNode>(pnodeparent->add(COLLADA_ELEMENT_NODE));
         std::string nodeid = _GetNodeId(plink);
         pnode->setId( nodeid.c_str() );
-        string nodesid = str(boost::format("node%d")%plink->GetIndex());
+        string nodesid = _GetNodeSid(plink);
         pnode->setSid(nodesid.c_str());
         pnode->setName(plink->GetName().c_str());
 
@@ -1411,6 +1462,9 @@ private:
     virtual std::string _GetNodeId(KinBody::LinkConstPtr plink) {
         return str(boost::format("v%d.node%d")%plink->GetParent()->GetEnvironmentId()%plink->GetIndex());
     }
+    virtual std::string _GetNodeSid(KinBody::LinkConstPtr plink) {
+        return str(boost::format("node%d")%plink->GetIndex());
+    }
 
     virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
         return str(boost::format("link%d")%plink->GetIndex());
@@ -1431,6 +1485,10 @@ private:
             }
         }
         return str(boost::format("node_joint%d_axis%d")%index%iaxis);
+    }
+
+    virtual std::string _GetKinematicsModelId(KinBodyConstPtr pbody) {
+        return str(boost::format("kmodel%d")%pbody->GetEnvironmentId());
     }
 
     /// \brief compute the link transform when all joints are zero (regardless of mimic joints). This is the state
