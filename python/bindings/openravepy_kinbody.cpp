@@ -1108,7 +1108,7 @@ public:
         return _pbody->SetVelocity(ExtractVector3(olinearvel),ExtractVector3(oangularvel));
     }
 
-    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, bool checklimits)
+    void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, uint32_t checklimits)
     {
         _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),ExtractVector3(olinearvel),ExtractVector3(oangularvel),checklimits);
     }
@@ -1123,7 +1123,7 @@ public:
         _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities));
     }
 
-    void SetDOFVelocities(object odofvelocities, bool checklimits)
+    void SetDOFVelocities(object odofvelocities, uint32_t checklimits)
     {
         _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),checklimits);
     }
@@ -1276,7 +1276,7 @@ public:
         _pbody->SetDOFValues(values,ExtractTransform(otrans),true);
     }
 
-    void SetDOFValues(object o, object indices, bool checklimits)
+    void SetDOFValues(object o, object indices, uint32_t checklimits)
     {
         if( _pbody->GetDOF() == 0 ) {
             return;
@@ -1468,7 +1468,7 @@ public:
         return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices,interpolation)));
     }
 
-    void SetConfigurationValues(object ovalues, bool checklimits) {
+    void SetConfigurationValues(object ovalues, uint32_t checklimits) {
         vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
         BOOST_ASSERT((int)vvalues.size()==_pbody->GetDOF()+7);
         _pbody->SetConfigurationValues(vvalues.begin(),checklimits);
@@ -2884,7 +2884,7 @@ void init_openravepy_kinbody()
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
-        void (PyKinBody::*psetdofvalues3)(object,object,bool) = &PyKinBody::SetDOFValues;
+        void (PyKinBody::*psetdofvalues3)(object,object,uint32_t) = &PyKinBody::SetDOFValues;
         PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
         PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
@@ -2909,8 +2909,8 @@ void init_openravepy_kinbody()
         object (PyKinBody::*getjoints2)(object) const = &PyKinBody::GetJoints;
         void (PyKinBody::*setdofvelocities1)(object) = &PyKinBody::SetDOFVelocities;
         void (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
-        void (PyKinBody::*setdofvelocities3)(object,bool) = &PyKinBody::SetDOFVelocities;
-        void (PyKinBody::*setdofvelocities4)(object,object,object,bool) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities3)(object,uint32_t) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
@@ -3040,6 +3040,12 @@ void init_openravepy_kinbody()
         .value("ActiveDOF",KinBody::Save_ActiveDOF)
         .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
         .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
+        ;
+        enum_<KinBody::CheckLimitsAction>("CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
+        .value("Nothing",KinBody::CLA_Nothing)
+        .value("CheckLimits",KinBody::CLA_CheckLimits)
+        .value("CheckLimitsSilent",KinBody::CLA_CheckLimitsSilent)
+        .value("CheckLimitsThrow",KinBody::CLA_CheckLimitsThrow)
         ;
         enum_<KinBody::AdjacentOptions>("AdjacentOptions" DOXY_ENUM(AdjacentOptions))
         .value("Enabled",KinBody::AO_Enabled)

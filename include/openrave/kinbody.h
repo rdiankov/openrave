@@ -64,6 +64,14 @@ public:
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
     };
 
+    /// \brief used for specifying the type of limit checking and the messages associated with it
+    enum CheckLimitsAction {
+        CLA_Nothing = 0, ///< no checking
+        CLA_CheckLimits = 1, /// < checks and warns if the limits are overboard (default)
+        CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
+        CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
+    };
+
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
     {
@@ -1286,16 +1294,16 @@ private:
         \param[in] linearvel linear velocity of base link
         \param[in] angularvel angular velocity rotation_axis*theta_dot
         \param[in] dofvelocities - velocities of each of the degrees of freeom
-        \param[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+        \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint velocity limits before setting the values and clamp them.
      */
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] dofvelocities - velocities of each of the degrees of freeom
-    /// \praam[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
+    /// \param[in] checklimits if >0, will excplicitly check the joint velocity limits before setting the values and clamp them. If == 1, then will warn if the limits are overboard, if == 2, then will not warn (used for code that knows it's giving bad values)
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief Returns the linear and angular velocities for each link
     ///
@@ -1348,24 +1356,24 @@ private:
     /// \brief Sets the joint values of the robot.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = true, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
-        SetDOFValues(values,checklimits);
+        SetDOFValues(values,static_cast<uint32_t>(checklimits));
     }
 
     /// \brief Sets the joint values and transformation of the body.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \param transform represents the transformation of the first body.
-    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true);
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 
     virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true)
     {
-        SetDOFValues(values,transform,checklimits);
+        SetDOFValues(values,transform,static_cast<uint32_t>(checklimits));
     }
 
     /// \brief sets the transformations of all the links at once
@@ -1627,7 +1635,8 @@ private:
     /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
     ///
     /// \param itvalues the iterator to the vector containing the dof values. Must have GetConfigurationSpecification().GetDOF() values!
-    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits = true);
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief returns the configuration values as specified by \ref GetConfigurationSpecification()
     virtual void GetConfigurationValues(std::vector<dReal>& v) const;

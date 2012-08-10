@@ -57,6 +57,8 @@ Core
 
 * added :meth:`.ConfigurationSpecification.AddDerivativeGroups`, :meth:`.planningutils.ComputeTrajectoryDerivatives`
 
+* **checklimits** parameter in :meth:`.KinBody.SetDOFValues` is now an enum :meth:`.KinBody.CheckLimitsAction` that controls warning actions
+
 Inverse Kinematics
 ------------------
 

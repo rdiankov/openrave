@@ -63,7 +63,7 @@ public:
         return object(openravepy::toPyRobot(_pcontroller->GetRobot(),_pyenv));
     }
 
-    void Reset(int options) {
+    void Reset(int options=0) {
         _pcontroller->Reset(options);
     }
 
@@ -135,6 +135,8 @@ PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::
     return PyControllerBasePtr(new PyControllerBase(p,pyenv));
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
+
 void init_openravepy_controller()
 {
     {
@@ -148,7 +150,7 @@ void init_openravepy_controller()
         .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))
         .def("IsControlTransformation",&PyControllerBase::IsControlTransformation, DOXY_FN(ControllerBase,IsControlTransformation))
         .def("GetRobot",&PyControllerBase::GetRobot, DOXY_FN(ControllerBase,GetRobot))
-        .def("Reset",&PyControllerBase::Reset, DOXY_FN(ControllerBase,Reset))
+        .def("Reset",&PyControllerBase::Reset, Reset_overloads(args("options"), DOXY_FN(ControllerBase,Reset)))
         .def("SetDesired",setdesired1, args("values"), DOXY_FN(ControllerBase,SetDesired))
         .def("SetDesired",setdesired2, args("values","transform"), DOXY_FN(ControllerBase,SetDesired))
         .def("SetPath",&PyControllerBase::SetPath, DOXY_FN(ControllerBase,SetPath))

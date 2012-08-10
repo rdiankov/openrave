@@ -440,15 +440,15 @@ private:
         return _vecSensors;
     }
 
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, bool checklimits = true, const std::vector<int>& dofindices = std::vector<int>());
-    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool checklimits = true);
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1);
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
 
     virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1);
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
@@ -580,9 +580,9 @@ private:
         return _fQuatAngleResolution;
     }
 
-    virtual void SetActiveDOFValues(const std::vector<dReal>& values, bool checklimits=true);
+    virtual void SetActiveDOFValues(const std::vector<dReal>& values, uint32_t checklimits=1);
     virtual void GetActiveDOFValues(std::vector<dReal>& v) const;
-    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool checklimits=true);
+    virtual void SetActiveDOFVelocities(const std::vector<dReal>& velocities, uint32_t checklimits=1);
     virtual void GetActiveDOFVelocities(std::vector<dReal>& velocities) const;
     virtual void GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>& upper) const;
     virtual void GetActiveDOFResolutions(std::vector<dReal>& v) const;

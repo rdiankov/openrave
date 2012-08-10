@@ -59,7 +59,7 @@ public:
 
     /// \brief Resets the current controller trajectories and any other state associated with the robot
     /// \param options - specific options that can be used to control what to reset
-    virtual void Reset(int options) = 0;
+    virtual void Reset(int options=0) = 0;
 
     /// \brief go to a specific position in configuration space. <b>[multi-thread safe]</b>
     /// \param values the final configuration in the control dofs
@@ -143,7 +143,7 @@ public:
     /// \brief gets the controller responsible for dof (in the robot). If dof < 0, returns the transform controller. <b>[multi-thread safe]</b>
     virtual ControllerBasePtr GetController(int dof) const;
 
-    virtual void Reset(int options);
+    virtual void Reset(int options=0);
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans=TransformConstPtr());
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj);
     virtual void SimulationStep(dReal fTimeElapsed);
