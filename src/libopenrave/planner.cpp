@@ -607,7 +607,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             samplefns[isavegroup].second = g.dof;
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
             sampleneighfns[isavegroup].second = g.dof;
-            void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, bool, const std::vector<int>&) = &KinBody::SetDOFValues;
+            void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
             setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, true, dofindices);
             setstatefns[isavegroup].second = g.dof;
             getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
