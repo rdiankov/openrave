@@ -165,8 +165,6 @@ public:
         }
     }
     virtual ~ColladaReader() {
-        _dae.reset();
-        DAE::cleanup();
     }
 
     bool InitFromFile(const string& filename,const AttributesList& atts)

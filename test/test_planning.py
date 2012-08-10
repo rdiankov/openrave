@@ -414,7 +414,7 @@ class RunPlanning(EnvironmentSetup):
                 Trolls = [matrixFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,pi/2)] + [matrixFromAxisAngle(array((1,0,0)),roll) for roll in [pi/2,pi,1.5*pi]]
                 dests = []
                 Torg = eye(4)
-                with KinBodyStateSaver(target):
+                with target:
                     dests = []
                     for translation in translations:
                         for Troll in Trolls:

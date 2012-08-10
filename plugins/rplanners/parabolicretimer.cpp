@@ -88,7 +88,7 @@ protected:
         }
         _ramps.resize(info->gpos.dof);
         dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
-        BOOST_ASSERT(mintime>=0);
+        OPENRAVE_ASSERT_OP(mintime,>=,0);
         return mintime;
     }
 

@@ -96,7 +96,7 @@ class CalibrationViews:
             if self.Tpatternrobot is not None:
                 self.vmodel.target.SetTransform(dot(self.vmodel.manip.GetEndEffectorTransform(),linalg.inv(self.Tpatternrobot)))
             with RobotStateSaver(self.robot,KinBody.SaveParameters.GrabbedBodies):
-                with KinBodyStateSaver(self.vmodel.target,KinBody.SaveParameters.LinkTransformation):
+                with self.vmodel.target.CreateKinBodyStateSaver(KinBody.SaveParameters.LinkTransformation):
                     self.vmodel.target.SetTransform(eye(4))
                     ab=self.vmodel.target.ComputeAABB()
                 centers = dot(array(((0,0,0),(0.5,0.5,0),(-0.5,0.5,0),(0.5,-0.5,0),(-0.5,-0.5,0))),diag(ab.extents()))

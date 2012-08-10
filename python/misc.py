@@ -372,7 +372,7 @@ class MultiManipIKSolver:
         with self.robot:
             alljointvalues = []
             grabbed = self.robot.GetGrabbed()
-            statesavers = [body.CreateKinBodyStateSaver() for body in grabbed]
+            statesavers = [KinBody.KinBodyStateSaver(body) for body in grabbed]
             try:
                 with openravepy_ext.RobotStateSaver(self.robot): # for storing enabled state
                     for i,manip in enumerate(self.manips):
@@ -389,7 +389,8 @@ class MultiManipIKSolver:
                             return None
                         
             finally:
-                del statesavers # destroy them
+                for saver in statesavers:
+                    saver.Restore()
 
             if dooptimize:
                 curvalues = [self.robot.GetDOFValues(manip.GetArmIndices()) for main in self.manips]

@@ -265,12 +265,12 @@ public:
         daeErrorHandler::setErrorHandler(this);
 
         RAVELOG_VERBOSE("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
-        _collada.reset(new DAE);
-        _collada->setIOPlugin( NULL );
-        _collada->setDatabase( NULL );
+        _dae.reset(new DAE);
+        _dae->setIOPlugin( NULL );
+        _dae->setDatabase( NULL );
 
         const char* documentName = "openrave_snapshot";
-        daeInt error = _collada->getDatabase()->insertDocument(documentName, &_doc );     // also creates a collada root
+        daeInt error = _dae->getDatabase()->insertDocument(documentName, &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
         _dom = daeSafeCast<domCOLLADA>(_doc->getDomRoot());
 
@@ -335,13 +335,11 @@ public:
         _actuatorsLib->setProfile("OpenRAVE");
     }
     virtual ~ColladaWriter() {
-        _collada.reset();
-        DAE::cleanup();
     }
 
     virtual void Save(const string& filename)
     {
-        if(!_collada->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
+        if(!_dae->writeTo(_doc->getDocumentURI()->getURI(), filename.c_str()) ) {
             throw openrave_exception(str(boost::format("failed to save collada file to %s")%filename));
         }
     }
@@ -1515,7 +1513,7 @@ private:
         RAVELOG_WARN("COLLADA warning: %s\n", msg);
     }
 
-    boost::shared_ptr<DAE> _collada;
+    boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     daeDocument* _doc;
     domCOLLADA::domSceneRef _globalscene;

@@ -21,6 +21,33 @@
 
 namespace openravepy {
 
+class PyStateRestoreContextBase
+{
+public:
+    virtual ~PyStateRestoreContextBase() {
+    }
+    virtual object __enter__() = 0;
+    virtual void __exit__(object type, object value, object traceback) = 0;
+};
+
+template <typename T>
+class PyStateRestoreContext : public PyStateRestoreContextBase
+{
+    T _state;
+public:
+    PyStateRestoreContext(T state) : _state(state) {
+    }
+    virtual ~PyStateRestoreContext() {
+    }
+    virtual object __enter__() {
+        return object(_state);
+    }
+    virtual void __exit__(object type, object value, object traceback) {
+        _state->Restore();
+    }
+};
+
+
 class PyKinBody : public PyInterfaceBase
 {
 protected:
@@ -565,7 +592,12 @@ public:
         }
         PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),pyGetIntFromPy(options)) {
         }
+        PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(pbody) {
+        }
+        PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options)) {
+        }
         virtual ~PyKinBodyStateSaver() {
+            _state.Release();
         }
 
         object GetBody() const {
@@ -591,6 +623,7 @@ public:
             return ConvertStringToUnicode(__str__());
         }
     };
+    typedef boost::shared_ptr<PyKinBodyStateSaver> PyKinBodyStateSaverPtr;
 
     class PyManageData
     {
@@ -1547,11 +1580,15 @@ public:
     string GetKinematicsGeometryHash() const {
         return _pbody->GetKinematicsGeometryHash();
     }
-    PyVoidHandle CreateKinBodyStateSaver() {
-        return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody)));
-    }
-    PyVoidHandle CreateKinBodyStateSaver(int options) {
-        return PyVoidHandle(boost::shared_ptr<void>(new KinBody::KinBodyStateSaver(_pbody, options)));
+    PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object()) {
+        PyKinBodyStateSaverPtr saver;
+        if( options == object() ) {
+            saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv));
+        }
+        else {
+            saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv,options));
+        }
+        return new PyStateRestoreContext<PyKinBodyStateSaverPtr>(saver);
     }
 
     virtual string __repr__() {
@@ -2169,6 +2206,10 @@ public:
         }
         PyRobotStateSaver(PyRobotBasePtr pyrobot, object options) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot(),pyGetIntFromPy(options)) {
         }
+        PyRobotStateSaver(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(probot) {
+        }
+        PyRobotStateSaver(RobotBasePtr probot, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(probot,pyGetIntFromPy(options)) {
+        }
         virtual ~PyRobotStateSaver() {
         }
 
@@ -2195,6 +2236,7 @@ public:
             return ConvertStringToUnicode(__str__());
         }
     };
+    typedef boost::shared_ptr<PyRobotStateSaver> PyRobotStateSaverPtr;
 
     PyRobotBase(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : PyKinBody(probot,pyenv), _probot(probot) {
     }
@@ -2660,11 +2702,16 @@ public:
     string GetRobotStructureHash() const {
         return _probot->GetRobotStructureHash();
     }
-    PyVoidHandle CreateRobotStateSaver() {
-        return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
-    }
-    PyVoidHandle CreateRobotStateSaver(int options) {
-        return PyVoidHandle(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot,options)));
+
+    PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
+        PyRobotStateSaverPtr saver;
+        if( options == object() ) {
+            saver.reset(new PyRobotStateSaver(_probot,_pyenv));
+        }
+        else {
+            saver.reset(new PyRobotStateSaver(_probot,_pyenv,options));
+        }
+        return new PyStateRestoreContext<PyRobotStateSaverPtr>(saver);
     }
 
     virtual string __repr__() {
@@ -2684,7 +2731,6 @@ public:
         }
         _listStateSavers.push_back(boost::shared_ptr<void>(new RobotBase::RobotStateSaver(_probot)));
     }
-
 };
 
 object PyKinBody::PyLink::GetParent() const
@@ -2864,6 +2910,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, Comp
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianAxisAngle_overloads, ComputeHessianAxisAngle, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateRobotStateSaver_overloads, CreateRobotStateSaver, 0,1)
 
 void init_openravepy_kinbody()
 {
@@ -2879,14 +2927,16 @@ void init_openravepy_kinbody()
                        .value("Transform",DOF_Transform)
     ;
 
+    class_<PyStateRestoreContextBase, boost::noncopyable>("StateRestoreContext",no_init)
+    .def("__enter__",&PyStateRestoreContextBase::__enter__,"returns the object storing the state")
+    .def("__exit__",&PyStateRestoreContextBase::__exit__,"restores the state held in the object")
+    ;
     {
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues3)(object,object,uint32_t) = &PyKinBody::SetDOFValues;
-        PyVoidHandle (PyKinBody::*statesaver1)() = &PyKinBody::CreateKinBodyStateSaver;
-        PyVoidHandle (PyKinBody::*statesaver2)(int) = &PyKinBody::CreateKinBodyStateSaver;
         object (PyKinBody::*getdofvalues1)() const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvalues2)(object) const = &PyKinBody::GetDOFValues;
         object (PyKinBody::*getdofvelocities1)() const = &PyKinBody::GetDOFVelocities;
@@ -3024,8 +3074,7 @@ void init_openravepy_kinbody()
                         .def("GetUpdateStamp",&PyKinBody::GetUpdateStamp, DOXY_FN(KinBody,GetUpdateStamp))
                         .def("serialize",&PyKinBody::serialize,args("options"), DOXY_FN(KinBody,serialize))
                         .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
-                        .def("CreateKinBodyStateSaver",statesaver1, "Creates KinBodySaveStater for this body")
-                        .def("CreateKinBodyStateSaver",statesaver2, args("options"), "Creates KinBodySaveStater for this body")
+                        .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
                         .def("__enter__",&PyKinBody::__enter__)
                         .def("__exit__",&PyKinBody::__exit__)
                         .def("__repr__",&PyKinBody::__repr__)
@@ -3271,8 +3320,6 @@ void init_openravepy_kinbody()
 
         object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
         object (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
-        PyVoidHandle (PyRobotBase::*statesaver1)() = &PyRobotBase::CreateRobotStateSaver;
-        PyVoidHandle (PyRobotBase::*statesaver2)(int) = &PyRobotBase::CreateRobotStateSaver;
         bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
@@ -3361,8 +3408,7 @@ void init_openravepy_kinbody()
                       .def("GetGrabbed",&PyRobotBase::GetGrabbed, DOXY_FN(RobotBase,GetGrabbed))
                       .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), "Wait until the robot controller is done")
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
-                      .def("CreateRobotStateSaver",statesaver1,"Creates RobotSaveStater for this robot.")
-                      .def("CreateRobotStateSaver",statesaver2,args("options"),"Creates RobotSaveStater for this robot.")
+                      .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
                       .def("__repr__", &PyRobotBase::__repr__)
                       .def("__str__", &PyRobotBase::__str__)
                       .def("__unicode__", &PyRobotBase::__unicode__)
