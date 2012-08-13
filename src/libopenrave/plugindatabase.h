@@ -85,28 +85,41 @@ public:
     class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
     {
 public:
-        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false) {
+        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false), _bInitializing(true) {
         }
         virtual ~Plugin() {
             Destroy();
         }
 
         virtual void Destroy() {
-            if( plibrary ) {
-                Load_DestroyPlugin();
+            if( _bInitializing ) {
+                if( plibrary ) {
+                    if( OPENRAVE_LAZY_LOADING ) {
+                        // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the memory around, and create a new one with RTLD_NOW if necessary
+                    }
+                    else {
+                        RaveDatabase::_SysCloseLibrary(plibrary);
+                    }
+                    plibrary = NULL;
+                }
             }
-            boost::mutex::scoped_lock lock(_mutex);
-            // do some more checking here, there still might be instances of robots, planners, and sensors out there
-            if (plibrary) {
-                RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
-                if( pfnDestroyPlugin != NULL ) {
-                    pfnDestroyPlugin();
+            else {
+                if( plibrary ) {
+                    Load_DestroyPlugin();
                 }
-                boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
-                if( !!pdatabase ) {
-                    pdatabase->_QueueLibraryDestruction(plibrary);
+                boost::mutex::scoped_lock lock(_mutex);
+                // do some more checking here, there still might be instances of robots, planners, and sensors out there
+                if (plibrary) {
+                    RAVELOG_DEBUG("RaveDatabase: closing plugin %s\n", ppluginname.c_str());        // Sleep(10);
+                    if( pfnDestroyPlugin != NULL ) {
+                        pfnDestroyPlugin();
+                    }
+                    boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
+                    if( !!pdatabase ) {
+                        pdatabase->_QueueLibraryDestruction(plibrary);
+                    }
+                    plibrary = NULL;
                 }
-                plibrary = NULL;
             }
             pfnCreate = NULL;
             pfnCreateNew = NULL;
@@ -290,6 +303,7 @@ protected:
         boost::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
         boost::condition _cond;
         bool _bShutdown;         ///< managed by plugin database
+        bool _bInitializing; ///< still in the initialization phase
 
         friend class RaveDatabase;
     };
@@ -860,7 +874,8 @@ protected:
 
         try {
             if( !p->Load_GetPluginAttributes() ) {
-                RAVELOG_WARN(str(boost::format("%s: can't load GetPluginAttributes function\n")%libraryname));
+                // might not be a plugin
+                RAVELOG_VERBOSE(str(boost::format("%s: can't load GetPluginAttributes function, might not be an OpenRAVE plugin\n")%libraryname));
                 return PluginPtr();
             }
 
@@ -875,16 +890,10 @@ protected:
             }
         }
         catch(const std::exception& ex) {
-            if( OPENRAVE_LAZY_LOADING ) {
-                p->plibrary = NULL;     // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
-            }
             RAVELOG_WARN(str(boost::format("%s failed to load: %s\n")%libraryname%ex.what()));
             return PluginPtr();
         }
         catch(...) {
-            if( OPENRAVE_LAZY_LOADING ) {
-                p->plibrary = NULL;     // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW
-            }
             RAVELOG_WARN(str(boost::format("%s: unknown exception\n")%libraryname));
             return PluginPtr();
         }
@@ -899,6 +908,8 @@ protected:
         }
         RAVELOG_DEBUG("loading plugin: %s\n", info.dli_fname);
 #endif
+
+        p->_bInitializing = false;
         if( OPENRAVE_LAZY_LOADING ) {
             // have confirmed that plugin is ok, so reload with no-lazy loading
             p->plibrary = NULL;     // NOTE: for some reason, closing the lazy loaded library can make the system crash, so instead keep the pointer around, but create a new one with RTLD_NOW

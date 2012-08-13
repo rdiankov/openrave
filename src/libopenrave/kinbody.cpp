@@ -4047,6 +4047,11 @@ void KinBody::_ParametersChanged(int parameters)
     }
 }
 
+void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    InterfaceBase::Serialize(writer,options);
+}
+
 void KinBody::serialize(std::ostream& o, int options) const
 {
     o << _veclinks.size() << " ";

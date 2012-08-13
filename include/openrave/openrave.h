@@ -669,6 +669,13 @@ typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 
+class BaseXMLReader;
+typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
+typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
+class BaseXMLWriter;
+typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
+typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
+
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
     Clone_Bodies = 1, ///< clone all the bodies/robots of the environment, exclude attached interfaces like sensors/controllers
@@ -689,6 +696,9 @@ public:
     virtual const std::string& GetXMLId() const {
         return __xmlid;
     }
+    /// \brief serializes the interface
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
+    }
 private:
     std::string __xmlid;
 };
@@ -699,9 +709,9 @@ typedef std::list<std::pair<std::string,std::string> > AttributesList;
 /// \deprecated (11/02/18)
 typedef AttributesList XMLAttributesList RAVE_DEPRECATED;
 
-/// base class for all xml readers. XMLReaders are used to process data from
-/// xml files. Custom readers can be registered through EnvironmentBase.
-/// By default it can record all data that is encountered inside the xml reader
+/// \brief base class for all xml readers. XMLReaders are used to process data from xml files.
+///
+/// Custom readers can be registered through \ref RaveRegisterXMLReader.
 class OPENRAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
 {
 public:
@@ -741,9 +751,6 @@ public:
     std::string _filename;
 };
 
-typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
-typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
-
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
 /// reads until the tag ends
@@ -762,6 +769,28 @@ private:
     std::string _fieldname;
     boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
     boost::shared_ptr<BaseXMLReader> _pcurreader;
+};
+
+/// \brief base class for writing to XML files.
+///
+/// OpenRAVE Interfaces accept a BaseXMLWriter instance and call its write methods to write the data.
+class OPENRAVE_API BaseXMLWriter : public boost::enable_shared_from_this<BaseXMLWriter>
+{
+public:
+    virtual ~BaseXMLWriter() {
+    }
+    /// \brief return the format for the data writing, should be all lower capitals.
+    ///
+    /// Samples formats are 'openrave', 'collada'
+    virtual const std::string& GetFormat() const = 0;
+
+    /// \brief saves character data to the child. Special characters like '<' are automatically converted to fit inside XML.
+    ///
+    /// \throw openrave_exception throws if this element cannot have character data or the character data was not written
+    virtual void SetCharData(const std::string& data) = 0;
+
+    /// \brief returns a writer for child elements
+    virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
 
 } // end namespace OpenRAVE
@@ -882,8 +911,10 @@ enum IkParameterizationType {
     IKP_CustomDataBit = 0x00010000, ///< bit is set if the ikparameterization contains custom data, this is only used when serializing the ik parameterizations
 };
 
-/// \brief returns a string of the ik parameterization type names (can include upper case in order to match \ref IkParameterizationType)
-OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap();
+/// \brief returns a string of the ik parameterization type names
+///
+/// \param[in] alllowercase If 1, sets all characters to lower case. Otherwise can include upper case in order to match \ref IkParameterizationType definition.
+OPENRAVE_API const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap(int alllowercase=0);
 
 /// \brief returns the IkParameterizationType given the unique id detmerined b IKP_UniqueIdMask
 OPENRAVE_API IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid);
@@ -1278,6 +1309,8 @@ public:
     inline IkParameterizationType GetType() const {
         return _type;
     }
+
+    /// \brief returns a string version of \ref GetType
     inline const std::string& GetName() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
@@ -2661,6 +2694,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::ConfigurationSpecification::Reader)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveVector, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransform, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::RaveTransformMatrix, 1)
+BOOST_TYPEOF_REGISTER_TEMPLATE(OpenRAVE::OrientedBox, 1)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Joint)
@@ -2686,6 +2720,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::PLUGININFO)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLReader)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLWriter)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase::BODYSTATE)

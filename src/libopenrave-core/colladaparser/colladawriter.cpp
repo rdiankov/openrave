@@ -260,6 +260,40 @@ public:
     };
 
 
+    class ColladaInterfaceWriter : public BaseXMLWriter
+    {
+public:
+        ColladaInterfaceWriter(daeElementRef elt) : _elt(elt) {
+        }
+        const std::string& GetFormat() const {
+            static const std::string _format("collada");
+            return _format;
+        }
+        virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts) {
+            daeElementRef childelt = _elt->add(xmltag.c_str());
+            if( !childelt ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("collada writer failed to create child %s from parent %s",xmltag%_elt->getElementName(),ORE_InvalidArguments);
+            }
+            FOREACHC(itatt,atts) {
+                if( !childelt->setAttribute(itatt->first.c_str(),itatt->second.c_str()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to add attribute %s to element %s", xmltag%itatt->first, ORE_InvalidArguments);
+                }
+            }
+            return BaseXMLWriterPtr(new ColladaInterfaceWriter(childelt));
+        }
+        virtual void SetCharData(const std::string& data) {
+            if( !_elt->setCharData(data) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed to write char data to element %s: %s",_elt->getElementName()%data, ORE_InvalidState);
+            }
+        }
+
+        virtual daeElementRef GetElement() const {
+            return _elt;
+        }
+private:
+        daeElementRef _elt;
+    };
+
     ColladaWriter(EnvironmentBaseConstPtr penv) : _dom(NULL), _penv(penv)
     {
         daeErrorHandler::setErrorHandler(this);
@@ -495,18 +529,24 @@ public:
         }
 
         boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
-        // interface type
-        {
-            domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_kinematics->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setType("interface_type");
-            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
-            ptec->setProfile("OpenRAVE");
-            daeElementRef pelt = ptec->add("interface");
-            pelt->setAttribute("type","kinbody");
-            pelt->setCharData(pbody->GetXMLId());
-        }
-
+        _WriteKinBodyExtraInfo(pbody,articulated_system_kinematics);
         return iasout;
+    }
+
+    void _WriteKinBodyExtraInfo(KinBodyPtr pbody, daeElementRef eltbody, bool serializeextra=true)
+    {
+        // interface type
+        domExtraRef pextra = daeSafeCast<domExtra>(eltbody->add(COLLADA_ELEMENT_EXTRA));
+        pextra->setType("interface_type");
+        domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+        ptec->setProfile("OpenRAVE");
+        daeElementRef pelt = ptec->add("interface");
+        pelt->setAttribute("type", pbody->IsRobot() ? "robot" : "kinbody");
+        pelt->setCharData(pbody->GetXMLId());
+        if( serializeextra ) {
+            BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
+            pbody->Serialize(extrawriter,0);
+        }
     }
 
     /// \brief Write robot in a given scene
@@ -622,17 +662,7 @@ public:
         }
 
         boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(probot,_scene.pscene,_scene.pscene->getID());
-
-        // interface type
-        {
-            domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setType("interface_type");
-            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
-            ptec->setProfile("OpenRAVE");
-            daeElementRef pelt = ptec->add("interface");
-            pelt->setAttribute("type","robot");
-            pelt->setCharData(probot->GetXMLId());
-        }
+        _WriteKinBodyExtraInfo(probot,articulated_system_motion,false);
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
         kmodelid += "/";
@@ -961,16 +991,7 @@ public:
             nodehead = childinfo.pnode;
         }
 
-        // interface type
-        {
-            domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setType("interface_type");
-            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
-            ptec->setProfile("OpenRAVE");
-            daeElementRef pelt = ptec->add("interface");
-            pelt->setAttribute("type", pbody->IsRobot() ? "robot" : "kinbody");
-            pelt->setCharData(pbody->GetXMLId());
-        }
+        _WriteKinBodyExtraInfo(pbody,kmout->kmodel);
 
         // collision data
         {

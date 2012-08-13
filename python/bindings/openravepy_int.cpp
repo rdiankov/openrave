@@ -42,9 +42,14 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     boost::python::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = openravepy::GetUserData(it->second);
+        ointerfaces[it->first] = toPyXMLReadable(it->second);
     }
     return ointerfaces;
+}
+
+void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
+{
+    _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1294,7 +1299,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();
 
-    class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment", DOXY_CLASS(EnvironmentBase));
+    class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));
 
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
@@ -1529,6 +1534,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     openravepy::init_openravepy_collisionchecker();
     openravepy::init_openravepy_controller();
+    openravepy::init_openravepy_ikparameterization();
     openravepy::init_openravepy_iksolver();
     openravepy::init_openravepy_kinbody();
     openravepy::init_openravepy_module();

@@ -33,7 +33,7 @@ Core
 
 * Fixed bug in geometry collision meshes :meth:`.KinBody.Link.GeomProperties.GetCollisionMesh`.
 
-* Added **openrave/plannerparameters.h** to official OpenRAVE headers
+* Added `openrave/plannerparameters.h <../coreapihtml/plannerparameters_8h.html>`_ to official OpenRAVE headers
 
 * Added new :ref:`.KinBody.Joint.Type.Trajectory` joint type allowing a joint to transform a child link in any way.
 
@@ -41,7 +41,7 @@ Core
 
 * Created a new class to store geometry info :class:`.KinBody.Link.GeometryInfo` that can be used to initialize new geometry objects via :meth:`.KinBody.InitFromGeometries`. **could break existing code**.
 
-* created new **openrave/xmlreaders.h** to hold XML readers classes like  :class:`.xmlreaders.TrajectoryReader` for parsing trajectory files, and :class:`.xmlreaders.GeometryInfoReader` for parsing geometries.
+* created new `openrave/xmlreaders.h <../coreapihtml/xmlreaders_8h.html>`_ to hold XML readers classes like  :class:`.xmlreaders.TrajectoryReader` for parsing trajectory files, and :class:`.xmlreaders.GeometryInfoReader` for parsing geometries.
 
 * custom interface xml readers with top-level interface type xmlid get stored into :meth:`.Interface.GetReadableInterfaces`
 
@@ -58,6 +58,14 @@ Core
 * added :meth:`.ConfigurationSpecification.AddDerivativeGroups`, :meth:`.planningutils.ComputeTrajectoryDerivatives`
 
 * **checklimits** parameter in :meth:`.KinBody.SetDOFValues` is now an enum :meth:`.KinBody.CheckLimitsAction` that controls warning actions
+
+* Added :meth:`.Interface.Serialize` method for exporting interface information to COLLADA/OpenRAVEXML, and created new :class:`.BaseXMLWriter` class to handle managing this serialization.
+
+* Added :meth:`.Interface.SetReadableInterface` and :class:`.XMLReadable` to allow readable objects to be editing in python.
+
+* Fixed bug with plugin loading when shared object is not an OpenRAVE plugin.
+
+* Added OpenRAVE_PYTHON_DIR export to openrave-config.cmake
 
 Inverse Kinematics
 ------------------
@@ -78,7 +86,7 @@ Inverse Kinematics
 
 * Many ikfast bug fixes, upgraded version to **60**
 
-* ikfast now comes with an **ikfast.h** header file that can be used to load all the ik solvers. Check out share/openrave-X.Y/ikfast.h. **breaks existing code directly linking ikfast c++ files**.
+* ikfast now comes with an `ikfast.h  <../coreapihtml/ikfast_8h.html>`_ header file that can be used to load all the ik solvers. Check out share/openrave-X.Y/ikfast.h. **breaks existing code directly linking ikfast c++ files**.
 
 Planning
 --------
@@ -94,7 +102,7 @@ Planning
 Database
 --------
 
-* Introduced HDF5 loading/saving of the :mod:`.databases.kinematicreachability` and :mod:`.databases.linkstatistics databases` making computation much faster, it also allows C++ to access it.
+* Introduced HDF5 loading/saving of the :mod:`.databases.kinematicreachability` and :mod:`.databases.linkstatistics` making computation much faster, it also allows C++ to access it.
 
 Viewer
 ------
@@ -158,7 +166,7 @@ Core
 
 * Added more :ref:`.ErrorCode` error codes and many new types of OPENRAVE_ASSERT_X macros.
 
-* Added **openrave/utils.h** file for common programming constructs not related to the OpenRAVE API.
+* Added `openrave/utils.h  <../coreapihtml/utils_8h.html>`_ file for common programming constructs not related to the OpenRAVE API.
 
 * Fixed bug in closed-chain kinematics when static links are present.
 

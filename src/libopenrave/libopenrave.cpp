@@ -328,7 +328,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapinterfacenames[PT_SpaceSampler] = "spacesampler";
         BOOST_ASSERT(_mapinterfacenames.size()==PT_NumberOfInterfaces);
 
-        _mapikparameterization[IKP_Transform6D] = "Transform6d";
+        _mapikparameterization[IKP_Transform6D] = "Transform6D";
         _mapikparameterization[IKP_Rotation3D] = "Rotation3D";
         _mapikparameterization[IKP_Translation3D] = "Translation3D";
         _mapikparameterization[IKP_Direction3D] = "Direction3D";
@@ -345,6 +345,11 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         _mapikparameterization[IKP_TranslationYAxisAngleXNorm4D] = "TranslationYAxisAngleXNorm4D";
         _mapikparameterization[IKP_TranslationZAxisAngleYNorm4D] = "TranslationZAxisAngleYNorm4D";
         BOOST_ASSERT(_mapikparameterization.size()==IKP_NumberOfParameterizations);
+        FOREACH(it,_mapikparameterization) {
+            std::string name = it->second;
+            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+            _mapikparameterizationlower[it->first] = name;
+        }
     }
 public:
     virtual ~RaveGlobal() {
@@ -521,7 +526,10 @@ protected:
     const std::map<InterfaceType,std::string>& GetInterfaceNamesMap() const {
         return _mapinterfacenames;
     }
-    const std::map<IkParameterizationType,std::string>& GetIkParameterizationMap() {
+    const std::map<IkParameterizationType,std::string>& GetIkParameterizationMap(int alllowercase=0) {
+        if( alllowercase ) {
+            return _mapikparameterizationlower;
+        }
         return _mapikparameterization;
     }
 
@@ -619,7 +627,7 @@ private:
     boost::mutex _mutexXML;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
-    std::map<IkParameterizationType,string> _mapikparameterization;
+    std::map<IkParameterizationType,string> _mapikparameterization, _mapikparameterizationlower;
     std::map<int, EnvironmentBase*> _mapenvironments;
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
@@ -650,9 +658,9 @@ const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
     return RaveGlobal::instance()->GetInterfaceNamesMap();
 }
 
-const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap()
+const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap(int alllowercase)
 {
-    return RaveGlobal::instance()->GetIkParameterizationMap();
+    return RaveGlobal::instance()->GetIkParameterizationMap(alllowercase);
 }
 
 IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid)

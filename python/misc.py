@@ -278,7 +278,7 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
 def DrawAxes(env,target,dist=1.0,linewidth=1):
     """draws xyz coordinate system around target.
 
-    target can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
+    :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     """
     if isinstance(target,basestring):
         T = self.env.GetKinBody(target).GetTransform()
@@ -288,6 +288,29 @@ def DrawAxes(env,target,dist=1.0,linewidth=1):
         T = numpy.array(target)
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]]))
 
+def DrawIkparam(env,ikparam,dist=1.0,linewidth=1):
+    """draws an IkParameterization
+
+    """
+    if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
+        return DrawAxes(env,ikparam.GetTransform6D(),dist,linewidth)
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationDirection5D:
+        ray = ikparam.GetTranslationDirection5D()
+        return env.drawlinelist(numpy.array([ray.pos(),ray.pos()+ray.dir()*dist]),linewidth,colors=numpy.array([[0,0,0],[1,0,0]]))
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.Translation3D:
+        return env.plot3(ikparam.GetTranslation3D(),linewidth,colors=numpy.array([[0,0,0]]))
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
+        pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,0,angle])
+        T[0:3,3] = pos
+        return DrawAxes(env,T,dist,linewidth)
+    
+    else:
+        raise NotImplemented('iktype %s'%str(ikparam.GetType()))
+    
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
     indices = numpy.reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))

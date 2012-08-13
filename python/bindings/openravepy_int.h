@@ -82,6 +82,7 @@ class PyViewerBase;
 class PySpaceSamplerBase;
 class PyConfigurationSpecification;
 class PyIkParameterization;
+class PyXMLReadable;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -118,6 +119,7 @@ typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
+typedef boost::shared_ptr<PyXMLReadable> PyXMLReadablePtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -477,6 +479,7 @@ public:
 
 object toPyGraphHandle(const GraphHandlePtr p);
 object toPyUserData(UserDataPtr p);
+void init_openravepy_ikparameterization();
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyAABB(const AABB& ab);
@@ -542,6 +545,8 @@ public:
     }
 
     virtual object GetReadableInterfaces();
+
+    virtual void SetReadableInterface(const std::string& xmltag, object oreadable);
 
     virtual string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
@@ -643,6 +648,12 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
 
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();
+
+/// used externally, don't change definitions
+//@{
+XMLReadablePtr ExtractXMLReadable(object o);
+object toPyXMLReadable(XMLReadablePtr p);
+//@}
 
 }
 

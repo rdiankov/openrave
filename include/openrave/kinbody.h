@@ -1601,7 +1601,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
-    virtual void serialize(std::ostream& o, int options) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -1642,6 +1642,9 @@ private:
     virtual void GetConfigurationValues(std::vector<dReal>& v) const;
 
     //@}
+
+    /// only used for hashes...
+    virtual void serialize(std::ostream& o, int options) const;
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
