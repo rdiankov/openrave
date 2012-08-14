@@ -529,11 +529,12 @@ private:
         }
 
         boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
-        _WriteKinBodyExtraInfo(pbody,articulated_system_kinematics);
+        _WriteKinBodyType(pbody,articulated_system_kinematics);
+        _WriteKinBodyExtraInfo(pbody,ias);
         return iasout;
     }
 
-    void _WriteKinBodyExtraInfo(KinBodyPtr pbody, daeElementRef eltbody, bool serializeextra=true)
+    void _WriteKinBodyType(KinBodyPtr pbody, daeElementRef eltbody)
     {
         // interface type
         domExtraRef pextra = daeSafeCast<domExtra>(eltbody->add(COLLADA_ELEMENT_EXTRA));
@@ -543,10 +544,14 @@ private:
         daeElementRef pelt = ptec->add("interface");
         pelt->setAttribute("type", pbody->IsRobot() ? "robot" : "kinbody");
         pelt->setCharData(pbody->GetXMLId());
-        if( serializeextra ) {
-            BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
-            pbody->Serialize(extrawriter,0);
-        }
+    }
+
+    /// \brief that is independent of the kinematics/visuals so should belong in the instance_* extra fields, preferably instance_articulated_system
+    void _WriteKinBodyExtraInfo(KinBodyPtr pbody, daeElementRef eltbody)
+    {
+        BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
+        pbody->Serialize(extrawriter,0);
+
     }
 
     /// \brief Write robot in a given scene
@@ -662,7 +667,7 @@ private:
         }
 
         boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(probot,_scene.pscene,_scene.pscene->getID());
-        _WriteKinBodyExtraInfo(probot,articulated_system_motion,false);
+        _WriteKinBodyExtraInfo(probot,ias);
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
         kmodelid += "/";
@@ -991,7 +996,7 @@ private:
             nodehead = childinfo.pnode;
         }
 
-        _WriteKinBodyExtraInfo(pbody,kmout->kmodel);
+        _WriteKinBodyType(pbody,kmout->kmodel);
 
         // collision data
         {

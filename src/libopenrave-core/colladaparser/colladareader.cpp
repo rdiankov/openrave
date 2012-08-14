@@ -605,6 +605,7 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system);
             ExtractRobotAttachedActuators(probot, articulated_system);
         }
+        _ExtractExtraData(pbody,ias->getExtra_array());
         return true;
     }
 
@@ -2200,13 +2201,19 @@ public:
             pcurreader.reset();
             return false;
         }
-        _ProcessXMLReader(pcurreader,domsensor);
-        psensor->__mapReadableInterfaces[psensor->GetXMLId()] = pcurreader->GetReadable();
+        if( _ProcessXMLReader(pcurreader,domsensor) ) {
+            if( !!pcurreader->GetReadable() ) {
+                psensor->SetReadableInterface(psensor->GetXMLId(),pcurreader->GetReadable());
+            }
+        }
         return true;
     }
 
     /// \brief feed the collada data into the base readers xml class
-    static void _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt)
+    ///
+    /// \param preader the reader returned from RaveCallXMLReader
+    /// \param elt the parent element (usually <extra>)
+    static bool _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt)
     {
         daeTArray<daeElementRef> children;
         elt->getChildren(children);
@@ -2219,12 +2226,19 @@ public:
             for(size_t j = 0; j < domatts.getCount(); ++j) {
                 atts.push_back(make_pair(domatts[j].name,domatts[j].value));
             }
-            if( preader->startElement(xmltag,atts) == BaseXMLReader::PE_Support ) {
+            BaseXMLReader::ProcessElement action = preader->startElement(xmltag,atts);
+            if( action  == BaseXMLReader::PE_Support ) {
                 _ProcessXMLReader(preader,children[i]);
                 preader->characters(children[i]->getCharData());
-                preader->endElement(xmltag);
+                if( preader->endElement(xmltag) ) {
+                    return true;
+                }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unprocessed tag: %s/%s")%elt->getElementName()%xmltag));
             }
         }
+        return false;
     }
 
     inline daeElementRef _getElementFromUrl(const daeURI &uri)
@@ -2686,6 +2700,36 @@ private:
             }
         }
         return domInstance_physics_modelRef();
+    }
+
+    /// \brief extract kinematics/geometry independent parameters from instance_articulated_system extra fields
+    void _ExtractExtraData(KinBodyPtr pbody, const domExtra_Array& arr) {
+        AttributesList atts;
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            _ExtractAttributesList(arr[i],atts);
+            string extratype = arr[i]->getType();
+            BaseXMLReaderPtr preader = RaveCallXMLReader(pbody->IsRobot() ? PT_Robot : PT_KinBody, extratype, pbody,atts);
+            if( !!preader ) {
+                if( _ProcessXMLReader(preader,arr[i]) ) {
+                    if( !!preader->GetReadable() ) {
+                        pbody->SetReadableInterface(extratype,preader->GetReadable());
+                    }
+                }
+            }
+        }
+    }
+
+    void _ExtractAttributesList(daeElementRef elt, AttributesList& atts)
+    {
+        atts.clear();
+        size_t num = elt->getAttributeCount();
+        std::ostringstream buffer; buffer << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        for(size_t i = 0; i < num; ++i) {
+            daeMetaAttribute* pmeta = elt->getAttributeObject(i);
+            buffer.str("");  buffer.clear();
+            pmeta->memoryToString(elt, buffer);
+            atts.push_back(make_pair(string(pmeta->getName()), buffer.str()));
+        }
     }
 
     /// \brief returns an openrave interface type from the extra array

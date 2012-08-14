@@ -28,6 +28,39 @@ void SetReturnTransformQuaternions(bool bset) {
     s_bReturnTransformQuaternions = bset;
 }
 
+Transform ExtractTransform(const object& oraw)
+{
+    return ExtractTransformType<dReal>(oraw);
+}
+
+TransformMatrix ExtractTransformMatrix(const object& oraw)
+{
+    return ExtractTransformMatrixType<dReal>(oraw);
+}
+
+object toPyArray(const TransformMatrix& t)
+{
+    npy_intp dims[] = { 4,4};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
+    pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
+    pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
+    pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+
+object toPyArray(const Transform& t)
+{
+    npy_intp dims[] = { 7};
+    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
+    pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);
@@ -1323,6 +1356,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
+        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)

@@ -335,59 +335,9 @@ class IkParameterization_pickle_suite : public pickle_suite
 public:
     static tuple getinitargs(const PyIkParameterization &r)
     {
-        object o;
-        switch(r._param.GetType()) {
-        case IKP_Transform6D:
-            o = toPyArray(r._param.GetTransform6D());
-            break;
-        case IKP_Rotation3D:
-            o = toPyVector4(r._param.GetRotation3D());
-            break;
-        case IKP_Translation3D:
-            o = toPyVector3(r._param.GetTranslation3D());
-            break;
-        case IKP_Direction3D:
-            o = toPyVector4(r._param.GetDirection3D());
-            break;
-        case IKP_Ray4D:
-            return boost::python::make_tuple(r._param.GetRay4D(),r._param.GetType());
-        case IKP_Lookat3D:
-            o = toPyVector3(r._param.GetLookat3D());
-            break;
-        case IKP_TranslationDirection5D:
-            return boost::python::make_tuple(r._param.GetTranslationDirection5D(),r._param.GetType());
-        case IKP_TranslationXY2D:
-            o = toPyVector3(r._param.GetTranslationXY2D());
-            break;
-        case IKP_TranslationXYOrientation3D:
-            o = toPyVector3(r._param.GetTranslationXYOrientation3D());
-            break;
-        case IKP_TranslationLocalGlobal6D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationLocalGlobal6D().first), toPyVector3(r._param.GetTranslationLocalGlobal6D().second));
-            break;
-        case IKP_TranslationXAxisAngle4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationXAxisAngle4D().first),object(r._param.GetTranslationXAxisAngle4D().second));
-            break;
-        case IKP_TranslationYAxisAngle4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationYAxisAngle4D().first),object(r._param.GetTranslationYAxisAngle4D().second));
-            break;
-        case IKP_TranslationZAxisAngle4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationZAxisAngle4D().first),object(r._param.GetTranslationZAxisAngle4D().second));
-            break;
-        case IKP_TranslationXAxisAngleZNorm4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationXAxisAngleZNorm4D().first),object(r._param.GetTranslationXAxisAngleZNorm4D().second));
-            break;
-        case IKP_TranslationYAxisAngleXNorm4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationYAxisAngleXNorm4D().first),object(r._param.GetTranslationYAxisAngleXNorm4D().second));
-            break;
-        case IKP_TranslationZAxisAngleYNorm4D:
-            o = boost::python::make_tuple(toPyVector3(r._param.GetTranslationZAxisAngleYNorm4D().first),object(r._param.GetTranslationZAxisAngleYNorm4D().second));
-            break;
-        default:
-            throw OPENRAVE_EXCEPTION_FORMAT("incorrect ik parameterization type 0x%x", r._param.GetType(), ORE_InvalidArguments);
-        }
-
-        return boost::python::make_tuple(o,r._param.GetType());
+        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        ss << r._param;
+        return make_tuple(ss.str());
     }
 };
 
