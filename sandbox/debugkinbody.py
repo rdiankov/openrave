@@ -18,18 +18,25 @@ from openravepy import *
 from numpy import *
 from itertools import izip
 
-def test_drawjoints():
+def test_drawjoints(robot):
     """draws the joint axes of the robot
     """
     env = robot.GetEnv()
-    while True:
+    h = None
+    try:
+        while True:
+            h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,float(j.GetDOFIndex())/robot.GetDOF()]))  for j in robot.GetJoints() if not j.IsStatic()]
+            h += [env.drawlinelist(array([j.GetAnchor()-0.25*j.GetAxis(0),j.GetAnchor()+0.25*j.GetAxis(0)]),20,array([0,float(j.GetDOFIndex())/robot.GetDOF(),0]))  for j in robot.GetPassiveJoints() if not j.IsStatic()]
+            time.sleep(0.1)
+    finally:
         h = None
-        h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,float(j.GetDOFIndex())/robot.GetDOF()]))  for j in robot.GetJoints()]
-        time.sleep(0.1)
 
+def test_drawmanip(manip):
+    robot=manip.GetRobot()
+    env=robot.GetEnv()
     while True:
         h = None
-        joints = [robot.GetJoints()[i] for i in robot.GetManipulator('arm').GetArmJoints()]
+        joints = [robot.GetJoints()[i] for i in manip.GetArmJoints()]
         h = [env.drawlinelist(array([j.GetAnchor()-j.GetAxis(0),j.GetAnchor()+j.GetAxis(0)]),5,array([0,0,i/8.0]))  for i,j in enumerate(joints)]
         time.sleep(0.1)
 

@@ -173,7 +173,7 @@ class RunPlanning(EnvironmentSetup):
             robot.SetDOFVelocities(ones(robot.GetDOF()))
             env2 = Environment()
             env2.Clone(env,CloningOptions.Bodies|CloningOptions.Simulation)
-            self.CompareEnvironments(env,env2)
+            misc.CompareEnvironments(env,env2,epsilon=g_epsilon)
             
     def test_movehandstraight(self):
         env = self.env
