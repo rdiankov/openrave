@@ -106,15 +106,16 @@ class CubeAssembly(object):
                 self.gmodels.append(gmodel)
 
     def ShowGoal(self,Tgoal):
+        savers = []
         try:
             with self.env:
-                savers = []
                 for gmodel in self.gmodels:
-                    savers.append(gmodel.target.CreateKinBodyStateSaver())
+                    savers.append(KinBody.KinBodyStateSaver(gmodel.target))
                     gmodel.target.SetTransform(Tgoal)
             raw_input('press any key')
         finally:
-            del savers
+            for saver in savers:
+                saver.Restore()
 
     def SetGoal(self,Tgoal,randomize=True):
         """sets the goal of all the target bodies and randomizes the obstacles across the plane

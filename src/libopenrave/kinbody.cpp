@@ -76,8 +76,16 @@ void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
     _RestoreKinBody(!body ? _pbody : body);
 }
 
+void KinBody::KinBodyStateSaver::Release()
+{
+    _pbody.reset();
+}
+
 void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbody)
 {
+    if( !pbody ) {
+        return;
+    }
     if( pbody->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%pbody->GetName()));
         return;
@@ -182,7 +190,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
@@ -223,7 +231,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
@@ -259,7 +267,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         trimesh = geom->GetCollisionMesh();
         trimesh.ApplyTransform(geom->GetTransform());
@@ -301,7 +309,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& l
     plink->_bStatic = true;
     FOREACHC(itinfo,listGeometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,*itinfo));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
@@ -694,7 +702,7 @@ bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
     return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
-void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, uint32_t checklimits)
 {
     CHECK_INTERNAL_COMPUTATION;
     OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "not enough values %d!=%d", vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
@@ -703,7 +711,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     velocities.at(0).second = angularvel;
 
     vector<dReal> vlower,vupper,vtempvalues, veval;
-    if( checklimits ) {
+    if( checklimits != CLA_Nothing ) {
         GetDOFVelocityLimits(vlower,vupper);
     }
 
@@ -781,11 +789,21 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
         if( checklimits &&(dofindex >= 0)) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i) ) {
-                    RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %e<%e")%i%pvalues[i]%vlower.at(dofindex+i)));
+                    if( checklimits == CLA_CheckLimits ) {
+                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %e<%e")%i%pvalues[i]%vlower.at(dofindex+i)));
+                    }
+                    else if( checklimits == CLA_CheckLimitsThrow ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %e<%e", i%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
+                    }
                     dummyvalues[i] = vlower[i];
                 }
                 else if( pvalues[i] > vupper.at(dofindex+i) ) {
-                    RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %e>%e")%i%pvalues[i]%vupper.at(dofindex+i)));
+                    if( checklimits == CLA_CheckLimits ) {
+                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %e>%e")%i%pvalues[i]%vupper.at(dofindex+i)));
+                    }
+                    else if( checklimits == CLA_CheckLimitsThrow ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %e>%e", i%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
+                    }
                     dummyvalues[i] = vupper[i];
                 }
                 else {
@@ -887,7 +905,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     SetLinkVelocities(velocities);
 }
 
-void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, bool checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits)
 {
     Vector linearvel,angularvel;
     _veclinks.at(0)->GetVelocity(linearvel,angularvel);
@@ -1053,7 +1071,7 @@ void KinBody::SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& ve
     GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
 }
 
-void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, bool bCheckLimits)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, uint32_t checklimits)
 {
     if( _veclinks.size() == 0 ) {
         return;
@@ -1065,10 +1083,10 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     for(size_t i = 1; i < _veclinks.size(); ++i) {
         _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
     }
-    SetDOFValues(vJointValues,bCheckLimits);
+    SetDOFValues(vJointValues,checklimits);
 }
 
-void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits, const std::vector<int>& dofindices)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits, const std::vector<int>& dofindices)
 {
     CHECK_INTERNAL_COMPUTATION;
     _nUpdateStampId++;
@@ -1079,7 +1097,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
     OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "not enough values %d<%d", vJointValues.size()%GetDOF(),ORE_InvalidArguments);
 
     const dReal* pJointValues = &vJointValues[0];
-    if( bCheckLimits || dofindices.size() > 0 ) {
+    if( checklimits != CLA_Nothing || dofindices.size() > 0 ) {
         _vTempJoints.resize(GetDOF());
         if( dofindices.size() > 0 ) {
             // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
@@ -1131,13 +1149,23 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
                     else {
                         if( p[i] < lowerlim[i] ) {
                             if( p[i] < lowerlim[i]-g_fEpsilonEvalJointLimit ) {
-                                RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
+                                if( checklimits == CLA_CheckLimits ) {
+                                    RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
+                                }
+                                else if( checklimits == CLA_CheckLimitsThrow ) {
+                                    throw OPENRAVE_EXCEPTION_FORMAT("dof %d value is not in limits %e<%e", ((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i], ORE_InvalidArguments);
+                                }
                             }
                             *ptempjoints++ = lowerlim[i];
                         }
                         else if( p[i] > upperlim[i] ) {
                             if( p[i] > upperlim[i]+g_fEpsilonEvalJointLimit ) {
-                                RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
+                                if( checklimits == CLA_CheckLimits ) {
+                                    RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
+                                }
+                                else if( checklimits == CLA_CheckLimitsThrow ) {
+                                    throw OPENRAVE_EXCEPTION_FORMAT("dof %d value is not in limits %e<%e",((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
+                                }
                             }
                             *ptempjoints++ = upperlim[i];
                         }
@@ -1241,16 +1269,26 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLi
 
                         if( veval.empty() ) {
                             FORIT(iteval,vevalcopy) {
-                                if( !bCheckLimits || pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
+                                if( checklimits == CLA_Nothing || pjoint->GetType() == Joint::JointSpherical || pjoint->IsCircular(i) ) {
                                     veval.push_back(*iteval);
                                 }
                                 else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
                                     veval.push_back(pjoint->_vlowerlimit[i]);
-                                    RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
+                                    if( checklimits == CLA_CheckLimits ) {
+                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
+                                    }
+                                    else if( checklimits == CLA_CheckLimitsThrow ) {
+                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: lower limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval, ORE_InvalidArguments);
+                                    }
                                 }
                                 else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
                                     veval.push_back(pjoint->_vupperlimit[i]);
-                                    RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
+                                    if( checklimits == CLA_CheckLimits ) {
+                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
+                                    }
+                                    else if( checklimits == CLA_CheckLimitsThrow ) {
+                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: upper limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval, ORE_InvalidArguments);
+                                    }
                                 }
                                 else {
                                     veval.push_back(*iteval);
@@ -4009,6 +4047,11 @@ void KinBody::_ParametersChanged(int parameters)
     }
 }
 
+void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    InterfaceBase::Serialize(writer,options);
+}
+
 void KinBody::serialize(std::ostream& o, int options) const
 {
     o << _veclinks.size() << " ";
@@ -4049,7 +4092,7 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
     return __hashkinematics;
 }
 
-void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits)
+void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)
 {
     vector<dReal> vdofvalues(GetDOF());
     if( GetDOF() > 0 ) {

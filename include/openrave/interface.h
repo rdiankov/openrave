@@ -131,8 +131,21 @@ public:
      */
     virtual bool SendCommand(std::ostream& os, std::istream& is);
 
-    // serializes the interface, use an official serialization library?
-    //virtual void Serialize(std::ostream& o, int options) const;
+    /** \brief serializes the interface
+
+        The readable interfaces are also serialized within the tag, for example:
+
+        \code{.xml}
+        <sometag> <!-- root writer -->
+          <interface> <!-- first child -->
+            <readableinterface/> <!-- readable interface -->
+          </interface>
+        </sometag>
+        \endcode
+
+        Depending on the writer format, extra tags might be created.
+     */
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
 protected:
     /// \brief The function to be executed for every command.

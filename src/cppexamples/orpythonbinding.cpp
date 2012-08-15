@@ -6,24 +6,24 @@
     The compilation procedure will produce a orpythonbinding shared object or DLL, which can then be directly included into python.
 
     The following python example will register 'mysimfunction' with the enviornment thread, and run it until it returns true.
-    \verbatim
+   \code{*.py}
    from openravepy import *
    env=Environment()
    RaveSetDebugLevel(DebugLevel.Debug)
    import orpythonbinding
    orpythonbinding.Init(RaveGlobalState())
    totaltime = 0
- # return True to end the thread
    def mysimfunction(elapsedtime):
-    global totaltime
-    totaltime += elapsedtime
-    print 'this is the time',totaltime
-    return totaltime > 5
+       """return True to end the thread"""
+       global totaltime
+       totaltime += elapsedtime
+       print 'this is the time',totaltime
+       return totaltime > 5
 
    module = orpythonbinding.RegisterSimulationFunction(RaveGetEnvironmentId(env),mysimfunction)
    while True:
-    sleep(1)
-    \endverbatim
+       sleep(1)
+    \endcode
 
     <b>Full Example Code:</b>
  */

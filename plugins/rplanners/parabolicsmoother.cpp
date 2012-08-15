@@ -143,7 +143,7 @@ public:
             ConfigurationSpecification oldspec = _parameters->_configurationspecification;
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
-            newspec.AddVelocityGroups(true);
+            newspec.AddDerivativeGroups(1,true);
             int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
 
             int timeoffset=-1;

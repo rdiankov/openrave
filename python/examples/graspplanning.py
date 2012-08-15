@@ -245,7 +245,7 @@ class GraspPlanning:
                     Torg = eye(4)
                     if preserverotation:
                         Torg[0:3,0:3] = target.GetTransform()[0:3,0:3]
-                    with KinBodyStateSaver(target):
+                    with target.CreateKinBodyStateSaver():
                         target.Enable(True)
                         dests = []
                         for translation in translations:

@@ -22,33 +22,12 @@ except:
 import logging
 log = logging.getLogger('openravepy')
 
-class KinBodyStateSaver:
-    """Saves/restores the body state, use **with** statement.
-    """
-    def __init__(self,body,options=None):
-        self.body = body
-        self.options=options
-    def __enter__(self):
-        if self.options is None:
-            self.handle = self.body.CreateKinBodyStateSaver()
-        else:
-            self.handle = self.body.CreateKinBodyStateSaver(self.options)
-    def __exit__(self, type, value, traceback):
-        self.handle.close()
-
-class RobotStateSaver:
-    """Saves/restores the robot state, use **with** statement.
-    """
-    def __init__(self,robot,options=None):
-        self.robot = robot
-        self.options = options
-    def __enter__(self):
-        if self.options is None:
-            self.handle = self.robot.CreateRobotStateSaver()
-        else:
-            self.handle = self.robot.CreateRobotStateSaver(self.options)
-    def __exit__(self, type, value, traceback):
-        self.handle.close()
+def KinBodyStateSaver(body,options=None):
+    log.warn('use body.CreateKinBodyStateSaver instead of KinBodyStateSaver')
+    return body.CreateKinBodyStateSaver(options)
+def RobotStateSaver(body,options=None):
+    log.warn('use body.CreateRobotStateSaver instead of RobotStateSaver')
+    return body.CreateRobotStateSaver(options)
 
 class CollisionOptionsStateSaver:
     """Saves/restores the state of the collision checker options

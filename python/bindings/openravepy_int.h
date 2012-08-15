@@ -82,6 +82,7 @@ class PyViewerBase;
 class PySpaceSamplerBase;
 class PyConfigurationSpecification;
 class PyIkParameterization;
+class PyXMLReadable;
 
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
@@ -118,6 +119,7 @@ typedef boost::shared_ptr<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
 typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
+typedef boost::shared_ptr<PyXMLReadable> PyXMLReadablePtr;
 
 inline uint64_t GetMicroTime()
 {
@@ -133,9 +135,22 @@ inline uint64_t GetMicroTime()
 #endif
 }
 
+/// used externally, don't change definitions
+//@{
+Transform ExtractTransform(const object& oraw);
+TransformMatrix ExtractTransformMatrix(const object& oraw);
+object toPyArray(const TransformMatrix& t);
+object toPyArray(const Transform& t);
 
-struct null_deleter { void operator()(void const *) const {
-                      }
+XMLReadablePtr ExtractXMLReadable(object o);
+object toPyXMLReadable(XMLReadablePtr p);
+bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+object toPyIkParameterization(const IkParameterization& ikparam);
+//@}
+
+struct null_deleter {
+    void operator()(void const *) const {
+    }
 };
 
 class PythonThreadSaver
@@ -258,28 +273,6 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
     return t;
 }
 
-inline Transform ExtractTransform(const object& oraw)
-{
-    return ExtractTransformType<dReal>(oraw);
-}
-
-inline TransformMatrix ExtractTransformMatrix(const object& oraw)
-{
-    return ExtractTransformMatrixType<dReal>(oraw);
-}
-
-inline object toPyArray(const TransformMatrix& t)
-{
-    npy_intp dims[] = { 4,4};
-    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
-    pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
-    pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
-    pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
 inline object toPyArrayRotation(const TransformMatrix& t)
 {
     npy_intp dims[] = { 3,3};
@@ -288,16 +281,6 @@ inline object toPyArrayRotation(const TransformMatrix& t)
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
     pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
     pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
-    return static_cast<numeric::array>(handle<>(pyvalues));
-}
-
-inline object toPyArray(const Transform& t)
-{
-    npy_intp dims[] = { 7};
-    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
-    pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
-    pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
@@ -349,7 +332,7 @@ inline object toPyVector4(Vector v)
 inline AttributesList toAttributesList(boost::python::dict odict)
 {
     AttributesList atts;
-    if( !!odict ) {
+    if( odict != object() ) {
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         for (int i = 0; i < boost::python::len(iterkeys); i++) {
             // Because we know they're strings, we can do this
@@ -359,6 +342,14 @@ inline AttributesList toAttributesList(boost::python::dict odict)
         }
     }
     return atts;
+}
+
+inline AttributesList toAttributesList(boost::python::object odict)
+{
+    if( odict != object() ) {
+        return toAttributesList(boost::python::dict(odict));
+    }
+    return AttributesList();
 }
 
 bool GetReturnTransformQuaternions();
@@ -477,8 +468,7 @@ public:
 
 object toPyGraphHandle(const GraphHandlePtr p);
 object toPyUserData(UserDataPtr p);
-bool ExtractIkParameterization(object o, IkParameterization& ikparam);
-object toPyIkParameterization(const IkParameterization& ikparam);
+void init_openravepy_ikparameterization();
 object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
 RAY ExtractRay(object o);
@@ -505,8 +495,8 @@ public:
     string GetPluginName() const {
         return _pbase->GetPluginName();
     }
-    string GetDescription() const {
-        return _pbase->GetDescription();
+    object GetDescription() const {
+        return ConvertStringToUnicode(_pbase->GetDescription());
     }
     void SetDescription(const std::string& s) {
         _pbase->SetDescription(s);
@@ -542,6 +532,8 @@ public:
     }
 
     virtual object GetReadableInterfaces();
+
+    virtual void SetReadableInterface(const std::string& xmltag, object oreadable);
 
     virtual string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
@@ -636,7 +628,7 @@ void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
-int pyGetDebugLevelFromPy(object olevel);
+int pyGetIntFromPy(object olevel);
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);

@@ -413,7 +413,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
 .. image:: ../../../images/interface_visualfeedback_occlusions.jpg\n\
   :height: 200\n\
 ";
-        _nManipIndex = -1;
         _fMaxVelMult=1;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
@@ -528,13 +527,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "manipname" ) {
                 string manipname;
                 sinput >> manipname;
-                _nManipIndex = 0;
                 FOREACH(itmanip,_robot->GetManipulators()) {
                     if( (*itmanip)->GetName() == manipname ) {
                         pmanip = *itmanip;
                         break;
                     }
-                    _nManipIndex++;
                 }
             }
             else if( cmd == "convexdata" ) {
@@ -629,14 +626,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
             else {
-                _nManipIndex = 0;
                 FOREACHC(itmanip,_robot->GetManipulators()) {
                     if(( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink()) ||( find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end()) ) {
                         pmanip = *itmanip;
                         _bCameraOnManip = true;
                         break;
                     }
-                    _nManipIndex++;
                 }
 
                 if( !pmanip ) {
@@ -892,7 +887,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     bool ComputeVisibility(ostream& sout, istream& sinput)
     {
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
@@ -960,7 +955,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         vector<dReal> vsample;
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) ) {
@@ -1002,7 +997,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
         CollisionReportPtr preport(new CollisionReport());
@@ -1091,7 +1086,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices(), affinedofs);
 
         boost::shared_ptr<GoalSampleFunction> pgoalsampler(new GoalSampleFunction(shared_problem(),_visibilitytransforms));
@@ -1217,7 +1212,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->SetActiveManipulator(_nManipIndex); BOOST_ASSERT(_robot->GetActiveManipulator()==_pmanip);
+        _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         params->SetRobotActiveJoints(_robot);
 
@@ -1276,7 +1271,6 @@ protected:
     dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
-    int _nManipIndex;
     bool _bCameraOnManip;     ///< true if camera is attached to manipulator
     boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
     Transform _ttogripper;     ///< transforms a coord system to the gripper coordsystem

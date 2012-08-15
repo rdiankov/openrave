@@ -827,7 +827,7 @@ class GraspingModel(DatabaseGenerator):
             order = range(startindex,len(self.grasps))
         for i in order:
             grasp = self.grasps[i]
-            with KinBodyStateSaver(self.robot):
+            with self.robot.CreateKinBodyStateSaver():
                 self.setPreshape(grasp)
                 Tglobalgrasp = self.getGlobalGraspTransform(grasp,collisionfree=True)
                 if checkik:

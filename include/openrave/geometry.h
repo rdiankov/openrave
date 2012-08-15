@@ -651,6 +651,16 @@ public:
 /// \brief An oriented bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
+class OrientedBox
+{
+public:
+    RaveTransform<T> transform;
+    RaveVector<T> extents;
+};
+
+/// \brief An oriented bounding box.
+/// \ingroup geometric_primitives
+template <typename T>
 class obb
 {
 public:

@@ -28,6 +28,39 @@ void SetReturnTransformQuaternions(bool bset) {
     s_bReturnTransformQuaternions = bset;
 }
 
+Transform ExtractTransform(const object& oraw)
+{
+    return ExtractTransformType<dReal>(oraw);
+}
+
+TransformMatrix ExtractTransformMatrix(const object& oraw)
+{
+    return ExtractTransformMatrixType<dReal>(oraw);
+}
+
+object toPyArray(const TransformMatrix& t)
+{
+    npy_intp dims[] = { 4,4};
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2]; pdata[3] = t.trans.x;
+    pdata[4] = t.m[4]; pdata[5] = t.m[5]; pdata[6] = t.m[6]; pdata[7] = t.trans.y;
+    pdata[8] = t.m[8]; pdata[9] = t.m[9]; pdata[10] = t.m[10]; pdata[11] = t.trans.z;
+    pdata[12] = 0; pdata[13] = 0; pdata[14] = 0; pdata[15] = 1;
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
+
+object toPyArray(const Transform& t)
+{
+    npy_intp dims[] = { 7};
+    PyObject *pyvalues = PyArray_SimpleNew(1,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+    pdata[0] = t.rot.x; pdata[1] = t.rot.y; pdata[2] = t.rot.z; pdata[3] = t.rot.w;
+    pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
+    return static_cast<numeric::array>(handle<>(pyvalues));
+}
+
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);
@@ -42,9 +75,14 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     boost::python::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = openravepy::GetUserData(it->second);
+        ointerfaces[it->first] = toPyXMLReadable(it->second);
     }
     return ointerfaces;
+}
+
+void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
+{
+    _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -615,11 +653,17 @@ public:
         return _penv->LoadData(data, toAttributesList(odictatts));
     }
 
-    void Save(const string &filename) {
-        _penv->Save(filename);
-    }
-    void Save(const string &filename, EnvironmentBase::SelectionOptions options, const string &name) {
-        _penv->Save(filename,options,name);
+    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+        extract<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            _penv->Save(filename,options,atts);
+        }
+        else {
+            _penv->Save(filename,options,toAttributesList(odictatts));
+        }
     }
 
     object ReadRobotURI(const string &filename)
@@ -1117,7 +1161,7 @@ public:
     }
 
     void SetDebugLevel(object olevel) {
-        _penv->SetDebugLevel(pyGetDebugLevelFromPy(olevel));
+        _penv->SetDebugLevel(pyGetIntFromPy(olevel));
     }
     int GetDebugLevel() const {
         return _penv->GetDebugLevel();
@@ -1251,6 +1295,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1294,7 +1339,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     exception_translator<openrave_exception>();
     exception_translator<std::runtime_error>();
 
-    class_<PyEnvironmentBase, boost::shared_ptr<PyEnvironmentBase> > classenv("Environment", DOXY_CLASS(EnvironmentBase));
+    class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));
 
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
@@ -1318,6 +1363,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
+        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)
@@ -1365,8 +1411,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         bool (PyEnvironmentBase::*load2)(const string &, dict) = &PyEnvironmentBase::Load;
         bool (PyEnvironmentBase::*loaddata1)(const string &) = &PyEnvironmentBase::LoadData;
         bool (PyEnvironmentBase::*loaddata2)(const string &, dict) = &PyEnvironmentBase::LoadData;
-        void (PyEnvironmentBase::*save1)(const string &) = &PyEnvironmentBase::Save;
-        void (PyEnvironmentBase::*save2)(const string &, EnvironmentBase::SelectionOptions, const string &) = &PyEnvironmentBase::Save;
         object (PyEnvironmentBase::*readrobotxmlfile1)(const string &) = &PyEnvironmentBase::ReadRobotURI;
         object (PyEnvironmentBase::*readrobotxmlfile2)(const string &,dict) = &PyEnvironmentBase::ReadRobotURI;
         object (PyEnvironmentBase::*readrobotxmldata1)(const string &) = &PyEnvironmentBase::ReadRobotData;
@@ -1413,8 +1457,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
-                    .def("Save",save1,args("filename"), DOXY_FN(EnvironmentBase,Save))
-                    .def("Save",save2,args("filename","options","selectname"), DOXY_FN(EnvironmentBase,Save))
+                    .def("Save",&PyEnvironmentBase::Save,Save_overloads(args("filename","options","atts"), DOXY_FN(EnvironmentBase,Save)))
                     .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
@@ -1509,7 +1552,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                                   .value("Everything",EnvironmentBase::SO_Everything)
                                   .value("Body",EnvironmentBase::SO_Body)
                                   .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
-                                  .value("BodyList",EnvironmentBase::SO_BodyList)
         ;
         env.attr("TriangulateOptions") = selectionoptions;
     }
@@ -1521,7 +1563,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov";
-    scope().attr("__copyright__") = "2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
+    scope().attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
 
@@ -1529,6 +1571,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     openravepy::init_openravepy_collisionchecker();
     openravepy::init_openravepy_controller();
+    openravepy::init_openravepy_ikparameterization();
     openravepy::init_openravepy_iksolver();
     openravepy::init_openravepy_kinbody();
     openravepy::init_openravepy_module();

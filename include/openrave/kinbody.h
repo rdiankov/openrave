@@ -64,6 +64,14 @@ public:
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
     };
 
+    /// \brief used for specifying the type of limit checking and the messages associated with it
+    enum CheckLimitsAction {
+        CLA_Nothing = 0, ///< no checking
+        CLA_CheckLimits = 1, /// < checks and warns if the limits are overboard (default)
+        CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
+        CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
+    };
+
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
     {
@@ -97,7 +105,7 @@ public:
             GeomNone = 0,
             GeomBox = 1,
             GeomSphere = 2,
-            GeomCylinder = 3,
+            GeomCylinder = 3, ///< oriented towards z-axis
             GeomTrimesh = 4,
         };
 
@@ -110,6 +118,24 @@ public:
             GeometryInfo();
             virtual ~GeometryInfo() {
             }
+
+            /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
+            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
+            bool InitCollisionMesh(float fTessellation=1);
+
+            inline dReal GetSphereRadius() const {
+                return _vGeomData.x;
+            }
+            inline dReal GetCylinderRadius() const {
+                return _vGeomData.x;
+            }
+            inline dReal GetCylinderHeight() const {
+                return _vGeomData.y;
+            }
+            inline const Vector& GetBoxExtents() const {
+                return _vGeomData;
+            }
+
             Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
             Vector _vGeomData; ///< for boxes, first 3 values are extents
             ///< for sphere it is radius
@@ -248,10 +274,6 @@ public:
             virtual void SetRenderFilename(const std::string& renderfilename);
 
 protected:
-            /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
-            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
-            bool InitCollisionMesh(float fTessellation=1);
-
             boost::weak_ptr<Link> _parent;
             GeometryInfo _info; ///< geometry info
 #ifdef RAVE_PRIVATE
@@ -1018,6 +1040,11 @@ public:
         /// \param body if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
         /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
         virtual void Restore(boost::shared_ptr<KinBody> body=boost::shared_ptr<KinBody>());
+
+        /// \brief release the body state. _pbody will not get restored on destruction
+        ///
+        /// After this call, it will still be possible to use \ref Restore.
+        virtual void Release();
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
@@ -1281,16 +1308,16 @@ private:
         \param[in] linearvel linear velocity of base link
         \param[in] angularvel angular velocity rotation_axis*theta_dot
         \param[in] dofvelocities - velocities of each of the degrees of freeom
-        \param[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
+        \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint velocity limits before setting the values and clamp them.
      */
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits = true);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief Sets the velocity of the joints.
     ///
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] dofvelocities - velocities of each of the degrees of freeom
-    /// \praam[in] checklimits if true, will excplicitly check the joint velocity limits before setting the values.
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits = true);
+    /// \param[in] checklimits if >0, will excplicitly check the joint velocity limits before setting the values and clamp them. If == 1, then will warn if the limits are overboard, if == 2, then will not warn (used for code that knows it's giving bad values)
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief Returns the linear and angular velocities for each link
     ///
@@ -1343,24 +1370,24 @@ private:
     /// \brief Sets the joint values of the robot.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
-    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
     /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
-    virtual void SetDOFValues(const std::vector<dReal>& values, bool checklimits = true, const std::vector<int>& dofindices = std::vector<int>());
+    virtual void SetDOFValues(const std::vector<dReal>& values, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     virtual void SetJointValues(const std::vector<dReal>& values, bool checklimits = true) {
-        SetDOFValues(values,checklimits);
+        SetDOFValues(values,static_cast<uint32_t>(checklimits));
     }
 
     /// \brief Sets the joint values and transformation of the body.
     ///
     /// \param values the values to set the joint angles (ordered by the dof indices)
     /// \param transform represents the transformation of the first body.
-    /// \praam checklimits if true, will excplicitly check the joint limits before setting the values.
-    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true);
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    virtual void SetDOFValues(const std::vector<dReal>& values, const Transform& transform, uint32_t checklimits = CLA_CheckLimits);
 
     virtual void SetJointValues(const std::vector<dReal>& values, const Transform& transform, bool checklimits = true)
     {
-        SetDOFValues(values,transform,checklimits);
+        SetDOFValues(values,transform,static_cast<uint32_t>(checklimits));
     }
 
     /// \brief sets the transformations of all the links at once
@@ -1588,7 +1615,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback);
 
-    virtual void serialize(std::ostream& o, int options) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -1622,12 +1649,16 @@ private:
     /// \brief sets joint values and transform of the body using configuration values as specified by \ref GetConfigurationSpecification()
     ///
     /// \param itvalues the iterator to the vector containing the dof values. Must have GetConfigurationSpecification().GetDOF() values!
-    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, bool checklimits = true);
+    /// \param[in] checklimits one of \ref CheckLimitsAction and will excplicitly check the joint limits before setting the values and clamp them.
+    virtual void SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits = CLA_CheckLimits);
 
     /// \brief returns the configuration values as specified by \ref GetConfigurationSpecification()
     virtual void GetConfigurationValues(std::vector<dReal>& v) const;
 
     //@}
+
+    /// only used for hashes...
+    virtual void serialize(std::ostream& o, int options) const;
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

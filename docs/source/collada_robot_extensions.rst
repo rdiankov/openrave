@@ -1,27 +1,22 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.2.1)
+COLLADA Robot Extensions (Version 0.3.0)
 ----------------------------------------
 
-OpenRAVE fully supports the COLLADA file format for specifying robots and adds its own set of robot-specific extensions. The `COLLADA <https://collada.org/mediawiki/index.php/COLLADA_-_Digital_Asset_and_FX_Exchange_Schema>`_ format is used to specify all robot and scene related information. Robots are standardized with the COLLADA 1.5 file format. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and kinematics. 
-
-The robot extensions include:
+OpenRAVE maintains a set of robot-specific extensions to the COLLADA 1.5 specification in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
 
 * manipulators
 * sensors
+* collision data - geometries for environment, self-collision, visual info, etc
 * planning-specific parameters
-* collision data
-
-
-COLLADA files saved as **dae** store the raw XML, files stored as **zae** stored the compressed XML. In order to preserve space, most robots in OpenRAVE are stored as **zae**. This document describes how to extend the format to handle robot-specific information.
 
 COLLADA allows extensions of any of its tags using the **<extra>** tag. Each **<extra>** defines what type of information to provide and a format for that information, also called **technique**. All custom data defined here uses the **OpenRAVE** technique. 
 
 There are one-to-one correspondences between the OpenRAVE interface types and COLLADA tags:
 
-* Robot <-> articulated_system
-* KinBody <-> kinematics_model
-* Sensor <-> sensor (new)
+* Robot/KinBody <-> articulated_system
+* Sensor <-> sensor
+* Manipulator <-> manipulator
 
 interface_type
 ==============
@@ -222,15 +217,15 @@ The IK types are meant to be hints as to how a manipulator can be used. Multiple
 
 * Why is a manipulator frame necessary?
 
- * Answer: Manipulator frames allow the user to define a coordinate system where it makes target tasks easier to complete. In this regard, the manipulator frame can be freely chosen by the user without worrying about destroying the link coordinate systems. For example, link frames are usually aligned with joint axes and center of masses and robot state is defined by their 6D transform in space. Having them also represent task-specific information could destroy consistency when the task changes. Also, the z-axis of the manipulator frame can define the "direction" of the manipulator. Direction can be used in many places like sensor line of sight and grasping approach, which makes it possible to quickly use the robot for planning.
+  * Answer: Manipulator frames allow the user to define a coordinate system where it makes target tasks easier to complete. In this regard, the manipulator frame can be freely chosen by the user without worrying about destroying the link coordinate systems. For example, link frames are usually aligned with joint axes and center of masses and robot state is defined by their 6D transform in space. Having them also represent task-specific information could destroy consistency when the task changes. Also, the z-axis of the manipulator frame can define the "direction" of the manipulator. Direction can be used in many places like sensor line of sight and grasping approach, which makes it possible to quickly use the robot for planning.
 
 * Question: For dual arm manipulation, would a leftright manipulator ever be used including all joints? In this case, will it might be necessary to define two frame tips (one for left arm and one for right arm)?
 
- * Answer: Having a leftright manipulator destroys the one-to-one correspondence between gripper joints and ik solver, and not much is gained. So better to have only have one frame tip and origin and treat two arms as separate. The constraint between the end effectors of the two arms is not always rigid, it very task dependent. Therefore, the user should take care of the dual relation.
+  * Answer: Having a leftright manipulator destroys the one-to-one correspondence between gripper joints and ik solver, and not much is gained. So better to have only have one frame tip and origin and treat two arms as separate. The constraint between the end effectors of the two arms is not always rigid, it very task dependent. Therefore, the user should take care of the dual relation.
 
 * Question: What about closing gripper direction for complex hands? Fingers with many DOF might need special grasping strategies.
 
- * Answer: The closing direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
+  * Answer: The closing direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
 
 Example
 ~~~~~~~
@@ -239,38 +234,100 @@ The example defines an arm with an end effector at link wam7 with a local coordi
 
 .. code-block:: xml
 
-  <extra type="manipulator" name="leftarm">
-    <technique profile="OpenRAVE">
-      <frame_origin link="wam0"/>
-      <frame_tip link="wam7">
-        <translate>0.0 0.0 0.22</translate>
-        <rotate>0.0 1.0 0.0 90.0</rotate>
-        <direction>0.0 0.0 1.0</direction>
-      </frame_tip>
-      <gripper_joint joint="jointname">
-        <closing_direction axis="axis0">
-          <float>1</float>
-        </closing_direction>
-      </gripper_joint>
-      <gripper_joint joint="jointname2">
-        <closing_direction axis="axis0">
-          <float>-1</float>
-        </closing_direction>
-      </gripper_joint>
-      <iksolver type="Transform6D">
-        <free_joint joint="jointname3"/>
-        <interface_type>
-          <technique profile="OpenRAVE">
-            <interface>WAM7ikfast</interface>
-            <plugin>WAM7ikfast</plugin>
-          </technique>
-        </interface_type>
-      </iksolver>
-      <iksolver type="Translation3D">
-        <free_joint joint="jointname4"/>
-      </iksolver>
-    </technique>
-  </extra>
+  <articulated_system>
+    <extra type="manipulator" name="leftarm">
+      <technique profile="OpenRAVE">
+        <frame_origin link="wam0"/>
+        <frame_tip link="wam7">
+          <translate>0.0 0.0 0.22</translate>
+          <rotate>0.0 1.0 0.0 90.0</rotate>
+          <direction>0.0 0.0 1.0</direction>
+        </frame_tip>
+        <gripper_joint joint="jointname">
+          <closing_direction axis="axis0">
+            <float>1</float>
+          </closing_direction>
+        </gripper_joint>
+        <gripper_joint joint="jointname2">
+          <closing_direction axis="axis0">
+            <float>-1</float>
+          </closing_direction>
+        </gripper_joint>
+        <iksolver type="Transform6D">
+          <free_joint joint="jointname3"/>
+          <interface_type>
+            <technique profile="OpenRAVE">
+              <interface>WAM7ikfast</interface>
+              <plugin>WAM7ikfast</plugin>
+            </technique>
+          </interface_type>
+        </iksolver>
+        <iksolver type="Translation3D">
+          <free_joint joint="jointname4"/>
+        </iksolver>
+      </technique>
+    </extra>
+  </articulated_system>
+
+dynamic_rigid_constraints
+=========================
+
+Introduction
+~~~~~~~~~~~~
+
+Defines a list of rigid constraints within pairs of bodies modeling dynamic relationships like robot hand grabbing object.
+
+Concepts
+~~~~~~~~
+
+Allows new rigid constraints to be specified that are not associated with physics models, but instead of with the instantiated physics and visual scenes. Common rigid constraints for robotics are:
+
+- a robot hand grasping an object with its hand.
+- robot grasping a tool, which then grasps the object
+- robot hand grasps a cylindrical pole, so it is free to rotate the hand with respect to the cylinder axis.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 80
+  
+  Parent elements | <instance_physics_scene>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+  
+  <rigid_constraint> | A list of rigid constraints | 0 or more
+
+Details
+~~~~~~~
+
+Example
+~~~~~~~
+
+Describes robot whose physics model SID is **pmodel1_inst** grabbing with its **rigid_hand** link an object whose physics model SID is **pmodel2_inst**. **rigid_hand** is the SID of the **<instance_rigid_body>** inside **pmodel1_inst**.
+
+.. code-block:: xml
+
+  <instance_physics_scene url="#pscene">
+    <extra type="dynamic_rigid_constraints">
+      <technique profile="OpenRAVE">
+        <rigid_constraint>
+          <ref_attachment rigid_body="./pmodel1_inst/rigid_hand"/>
+          <attachment rigid_body="./pmodel2_inst/rigid0"/>
+        </rigid_constraint>
+      </technique>
+    </extra>
+  </instance_physics_scene>
+
 
 collision
 =========
@@ -284,6 +341,7 @@ Concepts
 ~~~~~~~~
 
 A link can have three different collision meshes:
+
 * for visual rendering
 * for self-collisions
 * for environment collisions
@@ -374,6 +432,79 @@ Example
         </technique>
       </extra>
   </library_kinematics_models>
+
+.. _geometry_info:
+
+geometry_info
+=============
+
+Introduction
+~~~~~~~~~~~~
+
+Uses the COLLADA Physics specification of Analytical Shapes to summarize geometric information in simpler terms like box, cylinder, sphere, etc.
+
+Concepts
+~~~~~~~~
+
+A simple geometric element like an oriented box can be very difficult to exactly define with
+triangle meshes or brep presentations. Furthermore, elements like spheres must use brep, which
+require a deep understanding of the new brep specification. By using the **<geometry_info>**
+element, a user can give a hint to the user as to what shape the geometry mesh represents using the
+physics specifications like **<box>**.
+
+In order to represent an oriented bounding box, a coordinate system can be defined within
+**<geometry_info>** by using the **<translate>** and **<rotate>** tags.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  
+  Parent elements | <geometry>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+
+  <visible> | Contains a **common_bool_or_param_type** that specifies whether the geometry is visible or not. | 0 or 1
+  <translate> | Translate the simple geometry shape. See main entry in Core. | 0 or more
+  <rotate> | Rotation axis for rotating the simple geometry. See main entry in Core. | 0 or more
+  *geometry of the shape* | An inline definition using one of the following COLLADA Physics analytical shape elements: **<plane>**, **<box>**, **<sphere>**, **<cylinder>**, or **<capsule>** | 0 or 1
+
+Attributes for <parameters>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Details
+~~~~~~~
+
+It is possible to only define the local coordinate system of the geometry without defining an extra analytical shape.
+
+Example
+~~~~~~~
+
+Translation box center to (0,0,0.5) and rotate 45 degrees around z axis.
+
+.. code-block:: xml
+
+  <geometry>
+    <extra type="geometry_info">
+      <technique profile="OpenRAVE">
+        <box>
+          <half_extents>0.1 0.2 0.3</half_extents>
+        </box>
+        <translate>0 0 0.5</translate>
+        <rotate>0 0 1 45</rotate>
+        <visible><bool>true</bool></visible>
+      </technique>
+    </extra>
+  </geometry>
 
 library_sensors
 ===============
@@ -945,13 +1076,11 @@ COLLADA Usage
 COLLADA Format Notes
 ~~~~~~~~~~~~~~~~~~~~
 
-* **articulated_system** tag is equivalent to OpenRAVE robot
+* **articulated_system** tag is used for saving both Robot and KinBody objects
 
- *  if child is a **motion** tag, get accelerations and velocity limits from it
-
-* **kinematics_model** tag is equivalent to KinBody
-* If visual_scene tag present, but no kinematics, then add each node tree as a rigid link.
-* In order to set a static link in physics, use the <instance_rigid_body>/<dynamic> tag.
+  *  if child is a **motion** tag, get accelerations and velocity limits from it
+* If **<visual_scene>** tag present, but no kinematics, then add each root node tree as a rigid link.
+* In order to set a static link in physics, use the **<instance_rigid_body>/<dynamic>** tag.
 
 Hard and Soft Joint Limits
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -967,11 +1096,6 @@ Composition
 
 Robots usually have grippers, robot arms, and robot bases in separate files, then we have one file that references all of them and specifies the links to merge together (ie, we do not complicate things by creating dummy joints). This can be done with articulated systems since <kinematics> tag supports multiple <instance_kinematics_model> tags.
 
-Geometric Primitives
-~~~~~~~~~~~~~~~~~~~~
-
-Use COLLADA <brep> for spheres, cylinders, boxes, etc. 
-
 Storing Convex Decompositions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -982,6 +1106,7 @@ Calibration vs Static Data
 
 One thing that separates a base description of the robot from the real
 robot that will be used in labs is calibration:
+
 * where each sensor is with respect to the robot (6D pose)
 * intrinsic parameters for each sensor
 * joint offsets for encoder calibration
@@ -998,4 +1123,5 @@ Specifying controller parameters in the collada file falls somewhere in between 
 Contributors
 ============
 
-* University of Tokyo - Rosen Diankov and Ryohei Ueda
+* Rosen Diankov - `MUJIN Inc <http://www.mujin.co.jp>`_
+* Ryohei Ueda - `University of Tokyo JSK Lab <http://www.jsk.t.u-tokyo.ac.jp/>`_

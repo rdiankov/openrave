@@ -45,6 +45,7 @@ class TestTrajectory(EnvironmentSetup):
         with env:
             self.LoadEnv('robots/pr2-beta-static.zae')
             robot=env.GetRobots()[0]
+            originalvalues = robot.GetDOFValues()
             basemanip=interfaces.BaseManipulation(robot)
             manip1=robot.SetActiveManipulator('leftarm')
             Tgoal1 = manip1.GetTransform()
@@ -64,7 +65,7 @@ class TestTrajectory(EnvironmentSetup):
         traj1grab.Init(newspec)
         data=traj1.GetWaypoints(0,traj1.GetNumWaypoints(),newspec)
         data[graboffset] = body1.GetEnvironmentId()
-        data[-newspec.GetDOF()+graboffset] = -body1.GetEnvironmentId()
+        data[-newspec.GetDOF()+graboffset] = -body1.GetEnvironmentId() # release in the end
         traj1grab.Insert(0,data)
 
         # run the trajectory
@@ -72,9 +73,10 @@ class TestTrajectory(EnvironmentSetup):
         env.StartSimulation(0.01,False)
         robot.GetController().SetPath(traj1grab)
         assert(robot.WaitForController(traj1grab.GetDuration()+1))
-        assert(transdist(body1.GetTransform(),Tgoal1) <= g_epsilon )
-        assert(len(robot.GetGrabbed())==0)
-
+        with env:
+            assert(transdist(body1.GetTransform(),Tgoal1) <= g_epsilon )
+            assert(len(robot.GetGrabbed())==0)
+        
         # try with another arm
         with env:
             manip2=robot.SetActiveManipulator('rightarm')
@@ -83,30 +85,37 @@ class TestTrajectory(EnvironmentSetup):
             Tgoal2[1,3] -= 0.5
             Tgoal2[2,3] += 0.2
             traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
-
-        with env:
+            # create body
             body2=env.ReadKinBodyURI('data/mug1.kinbody.xml')
             env.Add(body2,True)
             body2.SetTransform(manip2.GetTransform())
-
-        newspec = traj2.GetConfigurationSpecification()
-        newspec.AddGroup('grab %s %d'%(robot.GetName(),manip2.GetEndEffector().GetIndex()),1,'previous')
-        graboffset = newspec.GetGroupFromName('grab').offset
-        traj2grab = RaveCreateTrajectory(env,'')
-        traj2grab.Init(newspec)
-        data=traj2.GetWaypoints(0,traj2.GetNumWaypoints(),newspec)
-        data[graboffset] = body2.GetEnvironmentId()
-        data[-newspec.GetDOF()+graboffset] = -body2.GetEnvironmentId()
-        traj2grab.Insert(0,data)
-        
-        traj3=planningutils.MergeTrajectories([traj1grab,traj2grab])
+            # create traj
+            newspec = traj2.GetConfigurationSpecification()
+            newspec.AddGroup('grab %s %d'%(robot.GetName(),manip2.GetEndEffector().GetIndex()),1,'previous')
+            graboffset = newspec.GetGroupFromName('grab').offset
+            traj2grab = RaveCreateTrajectory(env,'')
+            traj2grab.Init(newspec)
+            data=traj2.GetWaypoints(0,traj2.GetNumWaypoints(),newspec)
+            data[graboffset] = body2.GetEnvironmentId()
+            data[-newspec.GetDOF()+graboffset] = -body2.GetEnvironmentId()
+            traj2grab.Insert(0,data)
+            
+            # reset back to the original scene
+            robot.GetController().Reset()
+            robot.SetActiveManipulator(manip1)
+            robot.Grab(body1)
+            robot.SetDOFValues(originalvalues)
+            robot.ReleaseAllGrabbed()
+            # merge
+            traj3=planningutils.MergeTrajectories([traj1grab,traj2grab])
 
         # run the trajectory
         robot.GetController().SetPath(traj3)
-        assert(robot.WaitForController(traj3.GetDuration()+1))
-        assert(transdist(body1.GetTransform(),Tgoal1) <= g_epsilon )
-        assert(transdist(body2.GetTransform(),Tgoal2) <= g_epsilon )
-        assert(len(robot.GetGrabbed())==0)
+        assert(robot.WaitForController(0))#traj3.GetDuration()+1))
+        with env:
+            assert(transdist(body1.GetTransform(),Tgoal1) <= g_epsilon )
+            assert(transdist(body2.GetTransform(),Tgoal2) <= g_epsilon )
+            assert(len(robot.GetGrabbed())==0)
 
     def test_grabonly(self):
         env = self.env

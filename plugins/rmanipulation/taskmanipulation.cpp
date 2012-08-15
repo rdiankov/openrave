@@ -475,7 +475,7 @@ protected:
         std::copy(pmanip->GetGripperIndices().begin(),pmanip->GetGripperIndices().end(),vindices.begin()+pmanip->GetArmIndices().size());
         _robot->SetActiveDOFs(vindices, nMobileAffine, _robot->GetAffineRotationAxis());
         ConfigurationSpecification specfinal = _robot->GetActiveConfigurationSpecification();
-        specfinal.AddVelocityGroups(true);
+        specfinal.AddDerivativeGroups(1,true);
         specfinal.AddDeltaTimeGroup();
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -1358,7 +1358,7 @@ protected:
             return false;
         }
 
-        _robot->SetActiveManipulator(-1);     // reset the manipulator
+        _robot->SetActiveManipulator(RobotBase::ManipulatorPtr());     // reset the manipulator
         graspparams->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(graspparams->vinitialconfig);
         graspparams->btransformrobot = false;

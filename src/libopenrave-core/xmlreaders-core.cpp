@@ -1111,7 +1111,7 @@ public:
 
                         // call before attaching the geom
                         KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(_plink,*info));
-                        geom->InitCollisionMesh();
+                        geom->_info.InitCollisionMesh();
                         FOREACH(it,info->_meshcollision.vertices) {
                             *it = tmres * *it;
                         }

@@ -6,7 +6,7 @@ Documentation System
 
 Describes the OpenRAVE documentation system and all necessary function calls for generating and maintaining the documents. Meant for developers.
 
-Because documentation is uploaded to `http://www.openrave.org/docs`_, its HTML/CSS is managed by :ref:`openrave.org` system.
+Because documentation is uploaded to `http://www.openrave.org/docs/`_ , its HTML/CSS is managed by :ref:`openrave.org` system.
 
 Installation
 ------------
@@ -17,7 +17,7 @@ Installation
   apt-get install python-pygments python-setuptools python-lxml python-matplotlib dvipng dia-common python-svn
   pip install --upgrade docutils sphinx sphinx-gettext-helper
 
-`doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ version 1.7.1 or later is required.
+`doxygen <http://www.stack.nl/~dimitri/doxygen/download.html#latestsrc>`_ version 1.8.2 or later is required.
 
 `breathe <http://github.com/michaeljones/breathe>`_ is used for converting doxygen to python comments so that python users can be internal help for the C++ bindings. The breathe sources are in **docs/breathe**.
 

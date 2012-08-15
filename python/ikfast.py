@@ -3446,7 +3446,12 @@ class IKFastSolver(AutoReloader):
                         numerator = self.trigsimp(numerator.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
                         numerator, common = self.removecommonexprs(numerator,onlygcd=True,returncommon=True)
                         denominator = self.trigsimp((denominator/common).subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
-                        q,r=div(numerator*AUdet,denominator,self.freevars)
+                        try:
+                            q,r=div(numerator*AUdet,denominator,self.freevars)
+                        except PolynomialError, e:
+                            # 1/(-9000000*cj16 - 9000000) contains an element of the generators set
+                            raise self.CannotSolveError('cannot divide for matrix inversion: %s'%e)
+                        
                         if r != S.Zero:
                             # sines and cosines can mix things up a lot, try converting to all sines
                             numerator2 = (numerator*AUdet).subs(sinsubs)

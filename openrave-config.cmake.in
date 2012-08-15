@@ -16,6 +16,7 @@
 # OpenRAVE_LIBRARY_DIRS - link directories
 # OpenRAVE_LIBRARIES - libraries to link plugins with
 # OpenRAVE_CORE_LIBRARIES - libraries to link openrave run-time with
+# OpenRAVE_PYTHON_DIR - installed path of the openravepy library, might be necessary for using shared resources
 # OpenRAVE_Boost_VERSION - the boost version openrave was compiled with
 
 #==================================================================================
@@ -65,6 +66,7 @@ set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/@OPENRAVE_INCLUDE_INSTA
 set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib@LIB_SUFFIX@")
 set( OpenRAVE_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX})
 set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave-core${OpenRAVE_LIBRARY_SUFFIX})
+set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVE_PYTHON_INSTALL_DIR@")
 set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
 
 if( WIN32 )
@@ -90,16 +92,6 @@ MARK_AS_ADVANCED(
   OpenRAVE_INCLUDE_DIRS
   OpenRAVE_LIBRARIES
   OpenRAVE_CORE_LIBRARIES
+  OpenRAVE_PYTHON_DIR
   OpenRAVE_Boost_VERSION
 )
-
-#add_library(openrave SHARED IMPORTED)
-#if( MSVC )
-#  set_property(TARGET openrave PROPERTY IMPORTED_LOCATION c:/path/to/bar.dll IMPORTED_IMPLIB c:/path/to/bar.lib)
-#endif()
-
-#if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" GREATER 2.6.1)
-#  find_library(FOO_LIBRARY NAMES foo)
-#  add_library(foo UNKNOWN IMPORTED)
-#  set_property(TARGET foo PROPERTY IMPORTED_LOCATION "${FOO_LIBRARY}")
-#endif()

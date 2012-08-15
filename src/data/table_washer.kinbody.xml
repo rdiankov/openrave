@@ -102,4 +102,10 @@
       <diffuseColor>0.5 0.5 0.5</diffuseColor>
     </Geom>
   </Body>
+
+  <joint type="hinge" name="dummy">
+    <body>table</body>
+    <body>dishrack</body>
+    <limitsrad>0 0</limitsrad>
+  </joint>
 </KinBody>

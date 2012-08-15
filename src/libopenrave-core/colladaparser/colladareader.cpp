@@ -71,6 +71,18 @@ public:
                 if (!!visualnode) {
                     break;
                 }
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pae);
+                if( !!inode ) {
+                    visualnode = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
+                    if (!!visualnode) {
+                        // have to clone since the parents are different
+                        std::string idSuffix = str(boost::format(".%s")%pae->getParent()->getID());
+                        visualnode = daeSafeCast<domNode>(visualnode->clone(idSuffix.c_str()));
+                        pae->getParentElement()->add(visualnode);
+                        BOOST_ASSERT(pae->getParentElement() == visualnode->getParentElement());
+                        break;
+                    }
+                }
                 pae = pae->getParentElement();
             }
 
@@ -153,15 +165,18 @@ public:
         }
     }
     virtual ~ColladaReader() {
-        _dae.reset();
-        DAE::cleanup();
     }
 
-    bool InitFromFile(const string& filename,const AttributesList& atts)
+    bool InitFromFile(const string& filename, const AttributesList& atts)
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
         _bOpeningZAE = filename.find(".zae") == filename.size()-4;
+        if( !!_dae->getIOPlugin() ) {
+            FOREACHC(itatt,atts) {
+                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+            }
+        }
         _dom = daeSafeCast<domCOLLADA>(_dae->open(filename));
         _bOpeningZAE = false;
         if (!_dom) {
@@ -175,6 +190,11 @@ public:
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
+        if( !!_dae->getIOPlugin() ) {
+            FOREACHC(itatt,atts) {
+                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+            }
+        }
         _dom = daeSafeCast<domCOLLADA>(_dae->openFromMemory(".",pdata.c_str()));
         if (!_dom) {
             return false;
@@ -225,6 +245,7 @@ public:
 
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
+        std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
             domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
@@ -233,7 +254,7 @@ public:
             }
 
             daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
-            KinematicsSceneBindings bindings;
+            KinematicsSceneBindings& bindings = allbindings[iscene];
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
             FOREACH(itbinding,bindings.listModelBindings) {
@@ -272,6 +293,100 @@ public:
                 KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
                 if( !!pbody ) {
                     _penv->Add(pbody, true);
+                }
+            }
+        }
+
+        // process grabbed objects
+        for(size_t iscene = 0; iscene < allscene->getInstance_physics_scene_array().getCount(); ++iscene) {
+            domInstance_with_extraRef piscene = allscene->getInstance_physics_scene_array()[iscene];
+            for(size_t ie = 0; ie < piscene->getExtra_array().getCount(); ++ie) {
+                domExtraRef pextra = piscene->getExtra_array()[ie];
+                std::string extra_type = pextra->getType();
+                if( extra_type == "dynamic_rigid_constraints" ) {
+                    domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                    if( !!tec ) {
+                        for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                            daeElementRef pchild = tec->getContents()[ic];
+                            if( std::string(pchild->getElementName()) == "rigid_constraint" ) {
+                                // parse the rigid attachment
+                                daeElementRef pref_attachment = pchild->getChild("ref_attachment");
+                                daeElementRef pattachment = pchild->getChild("attachment");
+                                if( !!pref_attachment && !!pattachment ) {
+                                    string ref_attachment_sid = pref_attachment->getAttribute("rigid_body");
+                                    string attachment_sid = pattachment->getAttribute("rigid_body");
+                                    daeElementRef ref_attachment_rigid_body = daeSidRef(ref_attachment_sid,piscene).resolve().elt;
+                                    daeElementRef attachment_rigid_body = daeSidRef(attachment_sid,piscene).resolve().elt;
+                                    if( !!ref_attachment_rigid_body && !!attachment_rigid_body ) {
+                                        domInstance_physics_modelRef ref_ipmodel = daeSafeCast<domInstance_physics_model>(daeSidRef(ref_attachment_sid.substr(0,ref_attachment_sid.rfind('/')), piscene).resolve().elt);
+                                        domInstance_physics_modelRef ipmodel = daeSafeCast<domInstance_physics_model>(daeSidRef(attachment_sid.substr(0,attachment_sid.rfind('/')), piscene).resolve().elt);
+                                        // get the instance_rigid_body
+                                        domInstance_rigid_bodyRef ref_irigidbody, irigidbody;
+                                        string sidfind = ref_attachment_rigid_body->getAttribute("sid");
+                                        KinBody::LinkPtr ref_link, link;
+                                        for(size_t irigid = 0; irigid < ref_ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
+                                            domInstance_rigid_bodyRef temprigid = ref_ipmodel->getInstance_rigid_body_array()[irigid];
+                                            if( temprigid->getBody() == sidfind ) {
+                                                ref_irigidbody = temprigid;
+                                                string nodeid = temprigid->getTarget().getElement()->getID();
+                                                FOREACH(itbinding,allbindings) {
+                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            ref_link = itlinkbinding->_link;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if( !!ref_link ) {
+                                                        break;
+                                                    }
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        sidfind = attachment_rigid_body->getAttribute("sid");
+                                        for(size_t irigid = 0; irigid < ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
+                                            domInstance_rigid_bodyRef temprigid = ipmodel->getInstance_rigid_body_array()[irigid];
+                                            if( temprigid->getBody() == sidfind ) {
+                                                irigidbody = temprigid;
+                                                string nodeid = temprigid->getTarget().getElement()->getID();
+                                                FOREACH(itbinding,allbindings) {
+                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            link = itlinkbinding->_link;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if( !!link ) {
+                                                        break;
+                                                    }
+                                                }
+                                                break;
+                                            }
+                                        }
+
+                                        if( !!ref_link && !!link ) {
+                                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
+                                            if( !!probot ) {
+                                                probot->Grab(link->GetParent(),ref_link);
+                                            }
+                                            else {
+                                                RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));
+                                            }
+                                        }
+                                        else {
+                                            RAVELOG_WARN(str(boost::format("failed to find KinBody::LinkPtr from instance_rigid_body sidrefs: %s and %s")%ref_attachment_sid%attachment_sid));
+                                        }
+                                    }
+                                    else {
+                                        RAVELOG_WARN(str(boost::format("invalid rigid_body references for rigid_constraint %s")%pchild->getAttribute("sid")));
+                                    }
+                                }
+                                else {
+                                    RAVELOG_WARN(str(boost::format("could not find ref_attachment and attachment elements for rigid_constraint %s")%pchild->getAttribute("sid")));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -379,6 +494,7 @@ public:
                 }
             }
         }
+
         return bSuccess;
     }
 
@@ -595,6 +711,7 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system);
             ExtractRobotAttachedActuators(probot, articulated_system);
         }
+        _ExtractExtraData(pbody,ias->getExtra_array());
         return true;
     }
 
@@ -693,7 +810,8 @@ public:
         plink->_name = name;
         plink->_mass = 1.0;
         plink->_bStatic = false;
-        bool bhasgeometry = ExtractGeometry(pdomnode,plink,bindings,vprocessednodes);
+        plink->_t = getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
+        bool bhasgeometry = ExtractGeometries(pdomnode,plink,bindings,vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
         }
@@ -749,7 +867,11 @@ public:
 
         RAVELOG_VERBOSE(str(boost::format("Number of root links in the kmodel %d\n")%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
-            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), Transform(), vdomjoints, bindings);
+            Transform tnode;
+            if( ilink == 0 ) {
+                tnode = getNodeParentTransform(pnode);
+            }
+            ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), tnode, vdomjoints, bindings);
         }
 
         for (size_t iform = 0; iform < ktec->getFormula_array().getCount(); ++iform) {
@@ -973,7 +1095,7 @@ public:
         }
 
         if (!pdomlink) {
-            ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>());
+            ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>());
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
@@ -984,7 +1106,7 @@ public:
             }
 
             // Get the geometry
-            if( !ExtractGeometry(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+            if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
                 RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
             }
 
@@ -1303,7 +1425,7 @@ public:
     /// Extract Geometry and apply the transformations of the node
     /// \param pdomnode Node to extract the goemetry
     /// \param plink    Link of the kinematics model
-    bool ExtractGeometry(const domNodeRef pdomnode,KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
+    bool ExtractGeometries(const domNodeRef pdomnode,KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
             return false;
@@ -1333,14 +1455,14 @@ public:
                 continue;
             }
 
-            bhasgeometry |= ExtractGeometry(pdomnode->getNode_array()[i],plink, bindings, vprocessednodes);
+            bhasgeometry |= ExtractGeometries(pdomnode->getNode_array()[i],plink, bindings, vprocessednodes);
             // Plink stayes the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
             // put everything in a subroutine in order to process pdomnode too!
         }
 
-        size_t nGeomBefore =  plink->_vGeometries.size();     // #of Meshes already associated to this link
+        std::list<KinBody::Link::GeometryInfo> listGeometryInfos;
 
         // get the geometry
         for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
@@ -1364,7 +1486,7 @@ public:
             }
 
             //  Gets the geometry
-            bhasgeometry |= ExtractGeometry(domgeom, mapmaterials, plink);
+            bhasgeometry |= ExtractGeometry(domgeom, mapmaterials, listGeometryInfos);
         }
 
         if( !bhasgeometry ) {
@@ -1372,46 +1494,44 @@ public:
             return false;
         }
 
-        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
+        TransformMatrix tnodeparent = getNodeParentTransform(pdomnode);
+        TransformMatrix tmnodegeom = (TransformMatrix) plink->_t.inverse() * tnodeparent * _ExtractFullTransform(pdomnode);
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
 
-        std::vector<KinBody::Link::GeometryPtr>::iterator itgeom = plink->_vGeometries.begin();
-        for (unsigned int i=0; i< nGeomBefore; i++) {
-            itgeom++;     // change only the transformations of the newly found geometries.
-        }
-
-        //  Switch between different type of geometry PRIMITIVES
-        for (; itgeom != plink->_vGeometries.end(); ++itgeom) {
-            KinBody::Link::GeometryPtr geom = *itgeom;
-            geom->_info._t = tnodegeom;
-            switch (geom->GetType()) {
+        FOREACH(itgeominfo, listGeometryInfos) {
+            //  Switch between different type of geometry PRIMITIVES
+            Transform toriginal = itgeominfo->_t;
+            itgeominfo->_t = tnodegeom * itgeominfo->_t;
+            switch (itgeominfo->_type) {
             case KinBody::Link::GeomBox:
-                geom->_info._vGeomData *= vscale;
+                itgeominfo->_vGeomData *= vscale;
                 break;
             case KinBody::Link::GeomSphere:
-                geom->_info._vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
+                itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
                 break;
             case KinBody::Link::GeomCylinder:
-                geom->_info._vGeomData.x *= max(vscale.x, vscale.y);
-                geom->_info._vGeomData.y *= vscale.z;
+                itgeominfo->_vGeomData.x *= max(vscale.x, vscale.y);
+                itgeominfo->_vGeomData.y *= vscale.z;
                 break;
             case KinBody::Link::GeomTrimesh:
-                geom->_info._meshcollision.ApplyTransform(tmnodegeom);
-                geom->_info._t = Transform();     // reset back to identity
+                itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(itgeominfo->_t).inverse() * tmnodegeom * TransformMatrix(toriginal));
                 break;
             default:
-                RAVELOG_WARN("unknown geometry type: %d\n", geom->GetType());
+                RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
             }
 
-            //  Gets collision mesh
-            KinBody::Link::TRIMESH trimesh = geom->GetCollisionMesh();
-            trimesh.ApplyTransform(geom->_info._t);
+            KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,*itgeominfo));
+            pgeom->_info.InitCollisionMesh();
+            plink->_vGeometries.push_back(pgeom);
+            //  Append the collision mesh
+            KinBody::Link::TRIMESH trimesh = pgeom->GetCollisionMesh();
+            trimesh.ApplyTransform(pgeom->_info._t);
             plink->collision.Append(trimesh);
         }
 
-        return bhasgeometry || plink->_vGeometries.size() > nGeomBefore;
+        return bhasgeometry || listGeometryInfos.size() > 0;
     }
 
     /// Paint the Geometry with the color material
@@ -1436,16 +1556,17 @@ public:
     }
 
     /// Extract the Geometry in TRIANGLES and adds it to OpenRave
-    /// \param  triRef  Array of triangles of the COLLADA's model
-    /// \param  vertsRef    Array of vertices of the COLLADA's model
-    /// \param  mapmaterials    Materials applied to the geometry
-    /// \param  plink   Link of the kinematics model
-    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    /// \param triRef  Array of triangles of the COLLADA's model
+    /// \param vertsRef    Array of vertices of the COLLADA's model
+    /// \param mapmaterials    Materials applied to the geometry
+    /// \param geom The geometry info to store
+    /// \param transgeom transform all vertices before storing
+    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::GeometryInfo geom;
+
         KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
         geom._type = KinBody::Link::GeomTrimesh;
 
@@ -1499,7 +1620,7 @@ public:
                                 domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
                                 trimesh.indices.push_back(trimesh.vertices.size());
-                                trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                                trimesh.vertices.push_back(transgeom*Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                             }
                         }
                     }
@@ -1513,9 +1634,6 @@ public:
         if( trimesh.indices.size() != 3*triRef->getCount() ) {
             RAVELOG_WARN("triangles declares wrong count!\n");
         }
-        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
-        pgeom->InitCollisionMesh();
-        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1523,13 +1641,13 @@ public:
     /// \param  triRef  Array of triangle fans of the COLLADA's model
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
-    /// \param  plink   Link of the kinematics model
-    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    /// \param  geom The geometry info to store
+    /// \param transgeom transform all vertices before storing
+    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::GeometryInfo geom;
         KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
         geom._type = KinBody::Link::GeomTrimesh;
 
@@ -1591,7 +1709,7 @@ public:
                             domFloat fl1 = listFloats.get(size_t(index0+1));
                             domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
-                            trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                            trimesh.vertices.push_back(transgeom*Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
                         for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
                             trimesh.indices.push_back(startoffset);
@@ -1606,10 +1724,6 @@ public:
                 }
             }
         }
-
-        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
-        pgeom->InitCollisionMesh();
-        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1617,13 +1731,13 @@ public:
     /// \param  triRef  Array of Triangle Strips of the COLLADA's model
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
-    /// \param  plink   Link of the kinematics model
-    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    /// \param  geom The geometry info to store
+    /// \param transgeom transform all vertices before storing
+    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::GeometryInfo geom;
         KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
         geom._type = KinBody::Link::GeomTrimesh;
 
@@ -1685,7 +1799,7 @@ public:
                             domFloat fl1 = listFloats.get(size_t(index0+1));
                             domFloat fl2 = listFloats.get(size_t(index0+2));
                             k+=triangleIndexStride;
-                            trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                            trimesh.vertices.push_back(transgeom*Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                         }
 
                         bool bFlip = false;
@@ -1703,9 +1817,6 @@ public:
                 }
             }
         }
-        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
-        pgeom->InitCollisionMesh();
-        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
@@ -1713,13 +1824,13 @@ public:
     /// \param  triRef  Array of Triangle Strips of the COLLADA's model
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
-    /// \param  plink   Link of the kinematics model
-    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    /// \param  geom The geometry info to store
+    /// \param transgeom transform all vertices before storing
+    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::GeometryInfo geom;
         KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
         geom._type = KinBody::Link::GeomTrimesh;
 
@@ -1770,7 +1881,7 @@ public:
                                 domFloat fl1 = listFloats.get(size_t(index0+1));
                                 domFloat fl2 = listFloats.get(size_t(index0+2));
                                 k+=triangleIndexStride;
-                                trimesh.vertices.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                                trimesh.vertices.push_back(transgeom*Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                             }
                             for(size_t ivert = startoffset+2; ivert < trimesh.vertices.size(); ++ivert) {
                                 trimesh.indices.push_back(startoffset);
@@ -1786,130 +1897,203 @@ public:
                 break;
             }
         }
-        KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
-        pgeom->InitCollisionMesh();
-        plink->_vGeometries.push_back(pgeom);
         return true;
     }
 
-    /// Extract the Geometry and adds it to OpenRave
-    /// \param  geom    Geometry to extract of the COLLADA's model
-    /// \param  mapmaterials    Materials applied to the geometry
-    /// \param  plink   Link of the kinematics model
-    bool ExtractGeometry(const domGeometryRef geom, const map<string,domMaterialRef>& mapmaterials, KinBody::LinkPtr plink)
+    domMaterialRef _ExtractFirstMaterial(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials)
     {
-        if( !geom ) {
-            return false;
-        }
-        vector<Vector> vconvexhull;
-        if (geom->getMesh()) {
-            const domMeshRef meshRef = geom->getMesh();
+        map<string,domMaterialRef>::const_iterator itmat;
+        if (!!domgeom->getMesh()) {
+            const domMeshRef meshRef = domgeom->getMesh();
             for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
-                _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                itmat = mapmaterials.find(meshRef->getTriangles_array()[tg]->getMaterial());
+                if( itmat != mapmaterials.end() ) {
+                    return itmat->second;
+                }
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
-                _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                itmat = mapmaterials.find(meshRef->getTrifans_array()[tg]->getMaterial());
+                if( itmat != mapmaterials.end() ) {
+                    return itmat->second;
+                }
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
-                _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                itmat = mapmaterials.find(meshRef->getTristrips_array()[tg]->getMaterial());
+                if( itmat != mapmaterials.end() ) {
+                    return itmat->second;
+                }
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
-                _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, plink);
+                itmat = mapmaterials.find(meshRef->getPolylist_array()[tg]->getMaterial());
+                if( itmat != mapmaterials.end() ) {
+                    return itmat->second;
+                }
+            }
+            for (size_t tg = 0; tg<meshRef->getPolygons_array().getCount(); tg++) {
+                itmat = mapmaterials.find(meshRef->getPolygons_array()[tg]->getMaterial());
+                if( itmat != mapmaterials.end() ) {
+                    return itmat->second;
+                }
+            }
+        }
+        else if( !!domgeom->getConvex_mesh() ) {
+            const domConvex_meshRef convexRef = domgeom->getConvex_mesh();
+            daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
+            if ( !!otherElemRef ) {
+                domGeometryRef linkedGeom = daeSafeCast<domGeometry>(otherElemRef);
+                if( !linkedGeom ) {
+                    return domMaterialRef();
+                }
+                return _ExtractFirstMaterial(linkedGeom,mapmaterials);
+            }
+        }
+
+        return domMaterialRef();
+    }
+
+    /// Extract the Geometry and adds it to OpenRave
+    /// \param  domgeom    Geometry to extract of the COLLADA's model
+    /// \param  mapmaterials    Materials applied to the geometry
+    /// \param  listGeometryInfos the geometry infos to output
+    bool ExtractGeometry(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials, std::list<KinBody::Link::GeometryInfo>& listGeometryInfos)
+    {
+        if( !domgeom ) {
+            return false;
+        }
+
+        Transform tlocalgeom;
+        // check for OpenRAVE profile simple geometric primitives
+        for(size_t ie = 0; ie < domgeom->getExtra_array().getCount(); ++ie) {
+            domExtraRef pextra = domgeom->getExtra_array()[ie];
+            string extra_type = pextra->getType();
+            if( extra_type == "geometry_info" ) {
+                daeElementRef ptec = _ExtractOpenRAVEProfile(pextra);
+                if( !!ptec ) {
+                    bool bfoundgeom = false;
+                    tlocalgeom = _ExtractFullTransformFromChildren(ptec);
+                    KinBody::Link::GeometryInfo geominfo;
+                    daeTArray<daeElementRef> children;
+                    ptec->getChildren(children);
+                    for(size_t i = 0; i < children.getCount(); ++i) {
+                        std::string name = children[i]->getElementName();
+                        if( name == "box" ) {
+                            daeElementRef phalf_extents = children[i]->getChild("half_extents");
+                            if( !!phalf_extents ) {
+                                stringstream ss(phalf_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = KinBody::Link::GeomBox;
+                                    geominfo._vGeomData = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "sphere" ) {
+                            daeElementRef pradius = children[i]->getChild("radius");
+                            if( !!pradius ) {
+                                dReal fradius = 0;
+                                stringstream ss(pradius->getCharData());
+                                ss >> fradius;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = KinBody::Link::GeomSphere;
+                                    geominfo._vGeomData.x = fradius;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "cylinder" ) {
+                            daeElementRef pradius = children[i]->getChild("radius");
+                            daeElementRef pheight = children[i]->getChild("height");
+                            if( !!pradius && !!pheight ) {
+                                Vector vGeomData;
+                                stringstream ss(pradius->getCharData());
+                                ss >> vGeomData.x;
+                                stringstream ss2(pheight->getCharData());
+                                ss2 >> vGeomData.y;
+                                if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
+                                    Transform trot(quatRotateDirection(Vector(0,0,1),Vector(0,1,0)),Vector());
+                                    tlocalgeom = tlocalgeom * trot;
+                                    geominfo._type = KinBody::Link::GeomCylinder;
+                                    geominfo._vGeomData = vGeomData;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "capsule" ) {
+                            RAVELOG_WARN("capsule geometries are not supported");
+                        }
+                        else if( name == "plane" ) {
+                            RAVELOG_WARN("plane geometries are not supported");
+                        }
+                        else if( name == "visible" ) {
+                            resolveCommon_bool_or_param(children[i],domgeom,geominfo._bVisible);
+                        }
+                    }
+                    if( bfoundgeom ) {
+                        FillGeometryColor(_ExtractFirstMaterial(domgeom,mapmaterials),geominfo);
+                        listGeometryInfos.push_back(geominfo);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        Transform tlocalgeominv = tlocalgeom.inverse();
+        if (!!domgeom->getMesh()) {
+            const domMeshRef meshRef = domgeom->getMesh();
+            for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
+                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._t = tlocalgeom;
+            }
+            for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
+                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._t = tlocalgeom;
+            }
+            for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
+                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._t = tlocalgeom;
+            }
+            for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
+                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._t = tlocalgeom;
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
                 RAVELOG_WARN("openrave does not support collada polygons\n");
             }
-
-            //            if( alltrimesh.vertices.size() == 0 ) {
-            //                const domVerticesRef vertsRef = meshRef->getVertices();
-            //                for (size_t i=0;i<vertsRef->getInput_array().getCount();i++) {
-            //                    domInput_localRef localRef = vertsRef->getInput_array()[i];
-            //                    daeString str = localRef->getSemantic();
-            //                    if ( strcmp(str,"POSITION") == 0 ) {
-            //                        const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
-            //                        if( !node )
-            //                            continue;
-            //                        dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
-            //                        const domFloat_arrayRef flArray = node->getFloat_array();
-            //                        if (!!flArray) {
-            //                            const domList_of_floats& listFloats = flArray->getValue();
-            //                            int vertexStride = 3;//instead of hardcoded stride, should use the 'accessor'
-            //                            vconvexhull.reserve(vconvexhull.size()+listFloats.getCount());
-            //                            for (size_t vertIndex = 0;vertIndex < listFloats.getCount();vertIndex+=vertexStride) {
-            //                                //btVector3 verts[3];
-            //                                domFloat fl0 = listFloats.get(vertIndex);
-            //                                domFloat fl1 = listFloats.get(vertIndex+1);
-            //                                domFloat fl2 = listFloats.get(vertIndex+2);
-            //                                vconvexhull.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
-            //                            }
-            //                        }
-            //                    }
-            //                }
-            //
-            //                _computeConvexHull(vconvexhull,alltrimesh);
-            //            }
-
             return true;
         }
-        else if (geom->getConvex_mesh()) {
-            {
-                const domConvex_meshRef convexRef = geom->getConvex_mesh();
-                daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
-                if ( !!otherElemRef ) {
-                    domGeometryRef linkedGeom = *(domGeometryRef*)&otherElemRef;
-                    RAVELOG_WARN( "otherLinked\n");
+        else if (!!domgeom->getConvex_mesh()) {
+            vector<Vector> vconvexhull;
+            const domConvex_meshRef convexRef = domgeom->getConvex_mesh();
+            daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
+            if ( !!otherElemRef ) {
+                domGeometryRef linkedGeom = daeSafeCast<domGeometry>(otherElemRef);
+                if( !linkedGeom ) {
+                    RAVELOG_WARN("convex_hull_of invalid geometry id\n");
+                    return false;
                 }
-                else {
-                    RAVELOG_WARN("convexMesh polyCount = %d\n",(int)convexRef->getPolygons_array().getCount());
-                    RAVELOG_WARN("convexMesh triCount = %d\n",(int)convexRef->getTriangles_array().getCount());
-                }
-            }
 
-            const domConvex_meshRef convexRef = geom->getConvex_mesh();
-            //daeString urlref = convexRef->getConvex_hull_of().getURI();
-            daeString urlref2 = convexRef->getConvex_hull_of().getOriginalURI();
-            if (urlref2) {
-                daeElementRef otherElemRef = convexRef->getConvex_hull_of().getElement();
-
-                // Load all the geometry libraries
-                for ( size_t i = 0; i < _dom->getLibrary_geometries_array().getCount(); i++) {
-                    domLibrary_geometriesRef libgeom = _dom->getLibrary_geometries_array()[i];
-                    for (size_t i = 0; i < libgeom->getGeometry_array().getCount(); i++) {
-                        domGeometryRef lib = libgeom->getGeometry_array()[i];
-                        if (!strcmp(lib->getId(),urlref2+1)) {     // skip the # at the front of urlref2
-                            //found convex_hull geometry
-                            domMesh *meshElement = lib->getMesh();     //linkedGeom->getMesh();
-                            if (meshElement) {
-                                const domVerticesRef vertsRef = meshElement->getVertices();
-                                for (size_t i=0; i<vertsRef->getInput_array().getCount(); i++) {
-                                    domInput_localRef localRef = vertsRef->getInput_array()[i];
-                                    daeString str = localRef->getSemantic();
-                                    if ( strcmp(str,"POSITION") == 0) {
-                                        const domSourceRef node = daeSafeCast<domSource>(localRef->getSource().getElement());
-                                        if( !node ) {
-                                            continue;
-                                        }
-                                        dReal fUnitScale = _GetUnitScale(node,_fGlobalScale);
-                                        const domFloat_arrayRef flArray = node->getFloat_array();
-                                        if (!!flArray) {
-                                            vconvexhull.reserve(vconvexhull.size()+size_t(flArray->getCount()));
-                                            const domList_of_floats& listFloats = flArray->getValue();
-                                            for (size_t k=0; k+2<flArray->getCount(); k+=3) {
-                                                domFloat fl0 = listFloats.get(k);
-                                                domFloat fl1 = listFloats.get(k+1);
-                                                domFloat fl2 = listFloats.get(k+2);
-                                                vconvexhull.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                std::list<KinBody::Link::GeometryInfo> listNewGeometryInfos;
+                ExtractGeometry(linkedGeom, mapmaterials, listNewGeometryInfos);
+                // need to get the convex hull of listNewGeometryInfos, quickest way is to use Geometry to compute the geometry vertices
+                FOREACH(itgeominfo,listNewGeometryInfos) {
+                    itgeominfo->InitCollisionMesh();
+                    Transform tnew = tlocalgeominv * itgeominfo->_t;
+                    FOREACH(itvertex, itgeominfo->_meshcollision.vertices) {
+                        vconvexhull.push_back(tnew * *itvertex);
                     }
                 }
             }
             else {
-                //no getConvex_hull_of but direct vertices
+                // no getConvex_hull_of but direct vertices
                 const domVerticesRef vertsRef = convexRef->getVertices();
                 for (size_t i=0; i<vertsRef->getInput_array().getCount(); i++) {
                     domInput_localRef localRef = vertsRef->getInput_array()[i];
@@ -1928,7 +2112,7 @@ public:
                                 domFloat fl0 = listFloats.get(k);
                                 domFloat fl1 = listFloats.get(k+1);
                                 domFloat fl2 = listFloats.get(k+2);
-                                vconvexhull.push_back(Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
+                                vconvexhull.push_back(tlocalgeominv * Vector(fl0*fUnitScale,fl1*fUnitScale,fl2*fUnitScale));
                             }
                         }
                     }
@@ -1936,17 +2120,13 @@ public:
             }
 
             if( vconvexhull.size()> 0 ) {
-                KinBody::Link::GeometryInfo geom;
-                KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
-                geom._type = KinBody::Link::GeomTrimesh;
-                _computeConvexHull(vconvexhull,trimesh);
-                KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,geom));
-                pgeom->InitCollisionMesh();
-                plink->_vGeometries.push_back(pgeom);
+                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                listGeometryInfos.back()._type = KinBody::Link::GeomTrimesh;
+                listGeometryInfos.back()._t = tlocalgeom;
+                _computeConvexHull(vconvexhull,listGeometryInfos.back()._meshcollision);
             }
             return true;
         }
-
         return false;
     }
 
@@ -1964,8 +2144,8 @@ public:
                 if( !!tec ) {
                     RobotBase::ManipulatorInfo manipinfo;
                     manipinfo._name = _ConvertToOpenRAVEName(name);
-                    daeElement* pframe_origin = tec->getChild("frame_origin");
-                    daeElement* pframe_tip = tec->getChild("frame_tip");
+                    daeElementRef pframe_origin = tec->getChild("frame_origin");
+                    daeElementRef pframe_tip = tec->getChild("frame_tip");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -1986,7 +2166,7 @@ public:
                             continue;
                         }
                         manipinfo._tLocalTool = _ExtractFullTransformFromChildren(pframe_tip);
-                        daeElement* pdirection = pframe_tip->getChild("direction");
+                        daeElementRef pdirection = pframe_tip->getChild("direction");
                         if( !!pdirection ) {
                             stringstream ss(pdirection->getCharData());
                             ss >> manipinfo._vdirection.x >> manipinfo._vdirection.y >> manipinfo._vdirection.z;
@@ -2064,7 +2244,7 @@ public:
                 if( !!tec ) {
                     RobotBase::AttachedSensorPtr pattachedsensor(new RobotBase::AttachedSensor(probot));
                     pattachedsensor->_name = _ConvertToOpenRAVEName(name);
-                    daeElement* pframe_origin = tec->getChild("frame_origin");
+                    daeElementRef pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
@@ -2184,13 +2364,19 @@ public:
             pcurreader.reset();
             return false;
         }
-        _ProcessXMLReader(pcurreader,domsensor);
-        psensor->__mapReadableInterfaces[psensor->GetXMLId()] = pcurreader->GetReadable();
+        if( _ProcessXMLReader(pcurreader,domsensor) ) {
+            if( !!pcurreader->GetReadable() ) {
+                psensor->SetReadableInterface(psensor->GetXMLId(),pcurreader->GetReadable());
+            }
+        }
         return true;
     }
 
     /// \brief feed the collada data into the base readers xml class
-    static void _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt)
+    ///
+    /// \param preader the reader returned from RaveCallXMLReader
+    /// \param elt the parent element (usually <extra>)
+    static bool _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt)
     {
         daeTArray<daeElementRef> children;
         elt->getChildren(children);
@@ -2203,12 +2389,19 @@ public:
             for(size_t j = 0; j < domatts.getCount(); ++j) {
                 atts.push_back(make_pair(domatts[j].name,domatts[j].value));
             }
-            if( preader->startElement(xmltag,atts) == BaseXMLReader::PE_Support ) {
+            BaseXMLReader::ProcessElement action = preader->startElement(xmltag,atts);
+            if( action  == BaseXMLReader::PE_Support ) {
                 _ProcessXMLReader(preader,children[i]);
                 preader->characters(children[i]->getCharData());
-                preader->endElement(xmltag);
+                if( preader->endElement(xmltag) ) {
+                    return true;
+                }
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unprocessed tag: %s/%s")%elt->getElementName()%xmltag));
             }
         }
+        return false;
     }
 
     inline daeElementRef _getElementFromUrl(const daeURI &uri)
@@ -2406,6 +2599,39 @@ public:
         return false;
     }
 
+    static bool resolveCommon_bool_or_param(daeElementRef pcommon, daeElementRef parent, bool& bvalue)
+    {
+        if( !pcommon ) {
+            return false;
+        }
+        daeElement* pbool = pcommon->getChild("bool");
+        if( !!pbool ) {
+            if( pbool->getCharData() == "true" ) {
+                bvalue = true;
+                return true;
+            }
+            else if( pbool->getCharData() == "false" ) {
+                bvalue = false;
+                return true;
+            }
+            RAVELOG_WARN(str(boost::format("invalid bool data in element %s: %s")%pcommon->getElementName()%pbool->getCharData()));
+            return false;
+        }
+        daeElement* pparam = pcommon->getChild("param");
+        if( !!pparam ) {
+            if( pparam->hasAttribute("ref") ) {
+                RAVELOG_WARN("cannot process param ref\n");
+            }
+            else {
+                daeElement* pelt = daeSidRef(pparam->getCharData(),parent).resolve().elt;
+                if( !!pelt ) {
+                    RAVELOG_WARN(str(boost::format("found param ref: %s from %s\n")%pelt->getCharData()%pparam->getCharData()));
+                }
+            }
+        }
+        return false;
+    }
+
     /// Gets all transformations applied to the node
     TransformMatrix getTransform(daeElementRef pelt)
     {
@@ -2546,10 +2772,24 @@ private:
             }
 
             // visual information
-            domNodeRef node = daeSafeCast<domNode>(daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt);
+            daeElement* pnodeelt = daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt;
+            domNodeRef node = daeSafeCast<domNode>(pnodeelt);
             if (!node) {
-                RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
-                continue;
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnodeelt);
+                if( !!inode ) {
+                    node = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
+                    if( !!node ) {
+                        // have to clone since the parents are different
+                        std::string idSuffix = str(boost::format(".%s")%pnodeelt->getParent()->getID());
+                        node = daeSafeCast<domNode>(node->clone(idSuffix.c_str()));
+                        pnodeelt->getParentElement()->add(node);
+                        BOOST_ASSERT(pnodeelt->getParentElement() == node->getParentElement());
+                    }
+                }
+                if( !node ) {
+                    RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
+                    continue;
+                }
             }
 
             //  kinematics information
@@ -2658,6 +2898,36 @@ private:
         return domInstance_physics_modelRef();
     }
 
+    /// \brief extract kinematics/geometry independent parameters from instance_articulated_system extra fields
+    void _ExtractExtraData(KinBodyPtr pbody, const domExtra_Array& arr) {
+        AttributesList atts;
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            _ExtractAttributesList(arr[i],atts);
+            string extratype = arr[i]->getType();
+            BaseXMLReaderPtr preader = RaveCallXMLReader(pbody->IsRobot() ? PT_Robot : PT_KinBody, extratype, pbody,atts);
+            if( !!preader ) {
+                if( _ProcessXMLReader(preader,arr[i]) ) {
+                    if( !!preader->GetReadable() ) {
+                        pbody->SetReadableInterface(extratype,preader->GetReadable());
+                    }
+                }
+            }
+        }
+    }
+
+    void _ExtractAttributesList(daeElementRef elt, AttributesList& atts)
+    {
+        atts.clear();
+        size_t num = elt->getAttributeCount();
+        std::ostringstream buffer; buffer << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        for(size_t i = 0; i < num; ++i) {
+            daeMetaAttribute* pmeta = elt->getAttributeObject(i);
+            buffer.str("");  buffer.clear();
+            pmeta->memoryToString(elt, buffer);
+            atts.push_back(make_pair(string(pmeta->getName()), buffer.str()));
+        }
+    }
+
     /// \brief returns an openrave interface type from the extra array
     InterfaceTypePtr _ExtractInterfaceType(const daeElementRef pelt) {
         daeTArray<daeElementRef> children;
@@ -2666,7 +2936,7 @@ private:
             if( children[i]->getElementName() == string("interface_type") ) {
                 daeElementRef ptec = _ExtractOpenRAVEProfile(children[i]);
                 if( !!ptec ) {
-                    daeElement* ptype = ptec->getChild("interface");
+                    daeElementRef ptype = ptec->getChild("interface");
                     if( !!ptype ) {
                         return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
                     }
@@ -2682,7 +2952,7 @@ private:
             if( strcmp(arr[i]->getType(),"interface_type") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
                 if( !!tec ) {
-                    daeElement* ptype = tec->getChild("interface");
+                    daeElementRef ptype = tec->getChild("interface");
                     if( !!ptype ) {
                         return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
                     }

@@ -93,3 +93,8 @@ Plan Multiple Robots
 --------------------
 
 .. literalinclude:: openravepy_examples/plan_multiple_robots.py
+
+Directly Launching Planners
+---------------------------
+
+.. literalinclude:: openravepy_examples/directly_launch_planners.py

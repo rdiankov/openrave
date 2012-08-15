@@ -71,7 +71,7 @@ def main(env,options):
         Ttarget0 = target.GetTransform()
         Ttarget1 = dot(Ttarget0,matrixFromAxisAngle([pi/2,0,0]))
 
-        # with KinBodyStateSaver(target):
+        # with target.CreateKinBodyStateSaver():
         #     target.SetTransform(Ttarget1)
         #     raw_input('as')
         Tgrasp0 = dot(matrixFromAxisAngle([pi/2,0,0]),matrixFromAxisAngle([0,pi/2,0]))

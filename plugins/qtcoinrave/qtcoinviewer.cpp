@@ -710,7 +710,10 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr pviewer(_pviewer);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
         void* ret=NULL;
         switch(_type) {
         case DT_Point:
@@ -827,7 +830,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = QtCoinViewerPtr(_pviewer)->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        void* ret = pviewer->_drawarrow(_handle, _p1, _p2, _fwidth, _color);
         BOOST_ASSERT( _handle == ret );
         EnvMessage::viewerexecute();
     }
@@ -855,7 +862,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = QtCoinViewerPtr(_pviewer)->_drawbox(_handle, _vpos, _vextents);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        void* ret = pviewer->_drawbox(_handle, _vpos, _vextents);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -882,7 +893,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = QtCoinViewerPtr(_pviewer)->_drawplane(_handle, _tplane,_vextents,_vtexture);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        void* ret = pviewer->_drawplane(_handle, _tplane,_vextents,_vtexture);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -928,7 +943,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = QtCoinViewerPtr(_pviewer)->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        void* ret = pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_color);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -965,7 +984,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        void* ret = QtCoinViewerPtr(_pviewer)->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        void* ret = pviewer->_drawtrimesh(_handle, &_vpoints[0], 3*sizeof(float), NULL, _vpoints.size()/9,_colors);
         BOOST_ASSERT( _handle == ret);
         EnvMessage::viewerexecute();
     }
@@ -1001,7 +1024,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_closegraph(_handle);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_closegraph(_handle);
         EnvMessage::viewerexecute();
     }
 
@@ -1023,7 +1050,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_SetGraphTransform(_handle,_t);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_SetGraphTransform(_handle,_t);
         EnvMessage::viewerexecute();
     }
 
@@ -1046,7 +1077,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_SetGraphShow(_handle,_bshow);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_SetGraphShow(_handle,_bshow);
         EnvMessage::viewerexecute();
     }
 
@@ -1069,7 +1104,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_deselect();
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_deselect();
         EnvMessage::viewerexecute();
     }
 };
@@ -1088,7 +1127,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_Reset();
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_Reset();
         EnvMessage::viewerexecute();
     }
 };
@@ -1118,7 +1161,11 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_SetBkgndColor(_color);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_SetBkgndColor(_color);
         EnvMessage::viewerexecute();
     }
 
@@ -3344,9 +3391,11 @@ void QtCoinViewer::EnvMessage::callerexecute()
     }
     else {
         {
-            QtCoinViewerPtr pviewer(_pviewer);
-            boost::mutex::scoped_lock lock(pviewer->_mutexMessages);
-            pviewer->_listMessages.push_back(shared_from_this());
+            QtCoinViewerPtr pviewer = _pviewer.lock();
+            if( !!pviewer ) {
+                boost::mutex::scoped_lock lock(pviewer->_mutexMessages);
+                pviewer->_listMessages.push_back(shared_from_this());
+            }
         }
 
         if( bWaitForMutex ) {

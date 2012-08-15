@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+import pickle
 
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
@@ -242,3 +243,7 @@ class TestIkSolver(EnvironmentSetup):
             newangularvelocity = 2*quatMultiply(newquatvelocity, quatInverse(ikparam2.GetValues()[0:4]))
             assert(transdist(newangularvelocity[1:4], dot(T[0:3,0:3],angularvelocity)) <= g_epsilon)
             assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)
+
+            # test pickling
+            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3))
+            assert(str(ikparam3pickled) == str(ikparam3))

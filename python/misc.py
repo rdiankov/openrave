@@ -278,7 +278,7 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
 def DrawAxes(env,target,dist=1.0,linewidth=1):
     """draws xyz coordinate system around target.
 
-    target can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
+    :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     """
     if isinstance(target,basestring):
         T = self.env.GetKinBody(target).GetTransform()
@@ -288,6 +288,29 @@ def DrawAxes(env,target,dist=1.0,linewidth=1):
         T = numpy.array(target)
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]]))
 
+def DrawIkparam(env,ikparam,dist=1.0,linewidth=1):
+    """draws an IkParameterization
+
+    """
+    if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
+        return DrawAxes(env,ikparam.GetTransform6D(),dist,linewidth)
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationDirection5D:
+        ray = ikparam.GetTranslationDirection5D()
+        return env.drawlinelist(numpy.array([ray.pos(),ray.pos()+ray.dir()*dist]),linewidth,colors=numpy.array([[0,0,0],[1,0,0]]))
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.Translation3D:
+        return env.plot3(ikparam.GetTranslation3D(),linewidth,colors=numpy.array([[0,0,0]]))
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
+        pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,0,angle])
+        T[0:3,3] = pos
+        return DrawAxes(env,T,dist,linewidth)
+    
+    else:
+        raise NotImplemented('iktype %s'%str(ikparam.GetType()))
+    
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
     indices = numpy.reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
@@ -372,7 +395,7 @@ class MultiManipIKSolver:
         with self.robot:
             alljointvalues = []
             grabbed = self.robot.GetGrabbed()
-            statesavers = [body.CreateKinBodyStateSaver() for body in grabbed]
+            statesavers = [KinBody.KinBodyStateSaver(body) for body in grabbed]
             try:
                 with openravepy_ext.RobotStateSaver(self.robot): # for storing enabled state
                     for i,manip in enumerate(self.manips):
@@ -389,7 +412,8 @@ class MultiManipIKSolver:
                             return None
                         
             finally:
-                del statesavers # destroy them
+                for saver in statesavers:
+                    saver.Restore()
 
             if dooptimize:
                 curvalues = [self.robot.GetDOFValues(manip.GetArmIndices()) for main in self.manips]
@@ -574,3 +598,149 @@ class SpaceSamplerExtra:
                 oldpts[:,maxaxis] += meddimdist
                 pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
         return pts
+
+def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,epsilon=1e-10):
+    """Compares that two bodies are structurally and positionally equivalent without hashes, used for debug checking.
+    """
+    def transdist(list0,list1):
+        assert(len(list0)==len(list1))
+        return numpy.sum([numpy.sum(abs(item0-item1)) for item0, item1 in izip(list0,list1)])
+    
+    assert(body0.IsRobot() == body1.IsRobot())
+    assert(len(body0.GetJoints())==len(body1.GetJoints()))
+    assert(len(body0.GetPassiveJoints()) == len(body1.GetPassiveJoints()))
+    assert(body0.GetDOF()==body1.GetDOF())
+    assert(body1.GetDescription()==body0.GetDescription())
+    assert(transdist(body0.GetTransform(), body1.GetTransform()) <= epsilon)
+    body1.SetDOFValues(body0.GetDOFValues()) # in case
+    joints0 = body0.GetJoints()+body0.GetPassiveJoints()
+    joints1 = body1.GetJoints()+body1.GetPassiveJoints()
+    for j0 in joints0:
+        assert( len(j0.GetName()) > 0 )
+        if j0.GetJointIndex() >= 0:
+            # if not passive, indices should match
+            j1 = joints1[j0.GetJointIndex()]
+            assert(j1.GetJointIndex()==j0.GetJointIndex() and j1.GetDOFIndex() == j0.GetDOFIndex())
+        else:
+            j1s = [j1 for j1 in joints1 if j0.GetName() == j1.GetName()]
+            assert( len(j1s) == 1 )
+            j1 = j1s[0]
+        assert( transdist(j0.GetAnchor(),j1.GetAnchor()) <= epsilon )
+        assert( j0.GetDOF() == j1.GetDOF() and j0.GetType() == j1.GetType() )
+        # todo, once physics is complete, uncomment
+        #assert( j0.GetHierarchyParentLink().GetName() == j1.GetHierarchyParentLink().GetName() )
+        #assert( j0.GetHierarchyChildLink().GetName() == j1.GetHierarchyChildLink().GetName() )
+        assert( transdist(j0.GetInternalHierarchyLeftTransform(),j1.GetInternalHierarchyLeftTransform()) <= epsilon )
+        assert( transdist(j0.GetInternalHierarchyRightTransform(),j1.GetInternalHierarchyRightTransform()) <= epsilon )
+        assert( j0.IsStatic() == j1.IsStatic() )
+        assert( transdist(j0.GetLimits(),j1.GetLimits()) <= epsilon )
+        assert( transdist(j0.GetWeights(),j1.GetWeights()) <= epsilon )
+        assert( transdist(j0.GetResolutions(),j1.GetResolutions()) <= epsilon )
+        for idof in range(j0.GetDOF()):
+            if not j0.IsStatic():
+                assert( abs(j0.GetMaxVel(idof)-j1.GetMaxVel(idof)) <= epsilon )
+                assert( abs(j0.GetMaxAccel(idof)-j1.GetMaxAccel(idof)) <= epsilon )
+                assert( abs(j0.GetWeight(idof)-j1.GetWeight(idof)) <= epsilon )
+                assert( abs(j0.GetResolution(idof)-j1.GetResolution(idof)) <= epsilon )
+            assert( j0.IsCircular(idof) == j1.IsCircular(idof) )
+            assert( j0.IsRevolute(idof) == j1.IsRevolute(idof) )
+            assert( j0.IsPrismatic(idof) == j1.IsPrismatic(idof) )
+            assert( transdist(j0.GetInternalHierarchyAxis(idof),j1.GetInternalHierarchyAxis(idof)) <= epsilon )
+            assert( j0.IsMimic(idof) == j1.IsMimic(idof) )
+            if j0.IsMimic(idof):
+                mimicjoints0 = [body0.GetJointFromDOFIndex(index).GetName() for index in j0.GetMimicDOFIndices(idof)]
+                mimicjoints1 = [body1.GetJointFromDOFIndex(index).GetName() for index in j1.GetMimicDOFIndices(idof)]
+                assert( mimicjoints0 == mimicjoints1 )
+                # is it possible to compare equations? perhaps just set random values and see if both robots behave the same?
+                # assert( j0.GetMimicEquation(idof) == j1.GetMimicEquation(idof) )
+    assert(len(body0.GetLinks())==len(body1.GetLinks()))
+    indexmap = []
+    for link0 in body0.GetLinks():
+        if len(link0.GetName()) == 0:
+            # skip
+            continue
+        link1s = [link1 for link1 in body1.GetLinks() if link0.GetName() == link1.GetName()]
+        assert( len(link1s) == 1 )
+        link1 = link1s[0]
+        indexmap.append(link1.GetIndex())
+        assert( transdist(link0.GetTransform(),link1.GetTransform()) <= epsilon )
+        #assert( link0.IsStatic() == link1.IsStatic() )
+        assert( len(link0.GetParentLinks()) == len(link1.GetParentLinks()) )
+        assert( all([lp0.GetName()==lp1.GetName() for lp0, lp1 in izip(link0.GetParentLinks(),link1.GetParentLinks())]) )
+        if comparegeometries:
+            assert( len(link0.GetGeometries()) == len(link1.GetGeometries()) )
+        ab0=link0.ComputeAABB()
+        ab1=link1.ComputeAABB()
+        assert(transdist(ab0.pos(),ab1.pos()) <= epsilon*200) # tesselation
+        assert(transdist(ab0.extents(),ab1.extents()) <= epsilon*200) # tesselation
+        assert(abs(link0.GetMass()-link1.GetMass()) <= epsilon)
+        assert(transdist(link0.GetLocalMassFrame(),link1.GetLocalMassFrame()) <= epsilon)
+        assert(transdist(link0.GetGlobalCOM(),link1.GetGlobalCOM()) <= epsilon) # redundant
+        assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)
+        if comparegeometries:
+            for ig,g0 in enumerate(link0.GetGeometries()):
+                g1=link1.GetGeometries()[ig]
+                assert(g0.GetType()==g1.GetType())
+                assert(transdist(g0.GetTransform(),g1.GetTransform()) <= epsilon)
+                assert(transdist(g0.GetBoxExtents(),g1.GetBoxExtents()) <= epsilon)
+                assert(transdist(g0.GetDiffuseColor(),g1.GetDiffuseColor()) <= epsilon)
+                assert(transdist(g0.GetAmbientColor(),g1.GetAmbientColor()) <= epsilon)
+                assert(g0.IsVisible()==g1.IsVisible())
+    adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
+    assert(adjacentlinks == set(body1.GetAdjacentLinks()))
+    if body0.IsRobot():
+        robot0 = body0.GetEnv().GetRobot(body0.GetName())
+        robot1 = body1.GetEnv().GetRobot(body1.GetName())
+        if comparemanipulators:
+            assert(len(robot0.GetManipulators()) == len(robot1.GetManipulators()))
+            for manip0 in robot0.GetManipulators():
+                manip1 = robot1.GetManipulator(manip0.GetName())
+                assert(transdist(manip0.GetLocalToolTransform(),manip1.GetLocalToolTransform()) <= epsilon)
+                assert(manip0.GetBase().GetName() == manip1.GetBase().GetName())
+                assert(manip0.GetEndEffector().GetName() == manip1.GetEndEffector().GetName())
+                assert(all(manip0.GetArmIndices() == manip1.GetArmIndices()))
+                assert(all(manip0.GetGripperIndices() == manip1.GetGripperIndices()))
+        if comparegrabbed:
+            grabbed0 = robot0.GetGrabbed()
+            grabbed1 = robot1.GetGrabbed()
+            assert( set([body.GetName() for body in grabbed0]) == set([body.GetName() for body in grabbed1]) )
+            for g0 in grabbed0:
+                g1 = robot1.GetEnv().GetKinBody(g0.GetName())
+                grabbedlink0 = robot0.IsGrabbing(g0)
+                grabbedlink1 = robot1.IsGrabbing(g1)
+                assert(grabbedlink0.GetName()==grabbedlink1.GetName())
+            # compare the positions
+            
+        if comparesensors:
+            pass
+            #assert(len(robot0.GetAttachedSensors()) == len(robot1.GetAttachedSensors()))
+
+def CompareEnvironments(env,env2,options=openravepy_int.CloningOptions.Bodies,epsilon=1e-10):
+    """compares two state of two environments and raises exceptions if anything is different, used for debugging.
+
+    Structural information of bodies is compared with hashes.
+    """
+    if options & openravepy_int.CloningOptions.Bodies:
+        def transdist(list0,list1):
+            assert(len(list0)==len(list1))
+            return numpy.sum([numpy.sum(abs(item0-item1)) for item0, item1 in izip(list0,list1)])
+        
+        bodies=env.GetBodies()
+        bodies2=env2.GetBodies()
+        assert(len(bodies)==len(bodies2))
+        for body in bodies:
+            body2 = env2.GetKinBody(body.GetName())
+            assert(body.GetKinematicsGeometryHash()==body2.GetKinematicsGeometryHash())
+            assert(transdist(body.GetLinkTransformations(),body2.GetLinkTransformations()) <= epsilon)
+            assert(transdist(body.GetLinkVelocities(),body2.GetLinkVelocities()) <= epsilon)
+            if body.GetDOF() > 0:
+                assert(transdist(body.GetDOFValues(),body2.GetDOFValues()) <= epsilon)
+                assert(transdist(body.GetDOFVelocities(),body2.GetDOFVelocities()) <= epsilon)
+            if body.IsRobot():
+                robot=env.GetRobot(body.GetName())
+                robot2=env2.GetRobot(body2.GetName())
+                grabbed = robot.GetGrabbed()
+                grabbed2 = robot2.GetGrabbed()
+                assert( set([body.GetName() for body in grabbed]) == set([body.GetName() for body in grabbed2]) )
+                assert( transdist(robot.GetActiveDOFIndices(),robot2.GetActiveDOFIndices()) == 0)
+                assert( robot.GetActiveManipulator().GetName() == robot2.GetActiveManipulator().GetName())

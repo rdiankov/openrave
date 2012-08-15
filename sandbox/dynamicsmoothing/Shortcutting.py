@@ -1,18 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (C) 2011-2012 Quang-Cuong Pham <cuong.pham@normalesup.org>
-# 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License. 
-
-
 from openravepy import *
 from numpy import *
 from pylab import *
@@ -22,7 +7,7 @@ import time
 
 
 
-def IterateSmooth(robot,traj_orig,tau_min,tau_max,tunings,grav,max_time,mean_len,std_len):
+def IterateSmooth(robot,traj_orig,tunings,grav,max_time,mean_len,std_len,tau_min,tau_max,qd_max):
 
     n_shortcuts=0
     n_collisions=0
@@ -34,13 +19,14 @@ def IterateSmooth(robot,traj_orig,tau_min,tau_max,tunings,grav,max_time,mean_len
     while time.time()-deb<max_time: 
         T=traj.duration
         rand_len=mean_len+randn()*std_len
-        rand_mid=rand()*T
-        t1=rand_mid-rand_len
-        t2=rand_mid+rand_len
-        if t1<0 or t2>T or t1>t2: continue
+        if rand_len>T or rand_len<0: 
+            continue
+        t1=rand()*(T-rand_len)
+        t2=t1+rand_len
+        #if t1<0 or t2>T or t1>t2: continue
         reps+=1
         print '\n***** '+str(reps)+' *****'
-        [success,traj2]=Smooth(robot,traj,t1,t2,tau_min,tau_max,tunings,grav)
+        [success,traj2]=Smooth(robot,traj,t1,t2,tunings,grav,tau_min,tau_max,qd_max)
         d_list_all.append(traj2.duration)
         if success=='great':
             traj=traj2
@@ -63,10 +49,10 @@ def IterateSmooth(robot,traj_orig,tau_min,tau_max,tunings,grav,max_time,mean_len
 
 
 
-def Smooth(robot,traj_orig,t1,t2,tau_min,tau_max,tunings,grav):
+def Smooth(robot,traj_orig,t1,t2,tunings,grav,tau_min,tau_max,qd_max):
 
+    global coco
     deb=time.time()
-
     i1=0
     t_vect=traj_orig.t_vect
     n_steps=traj_orig.n_steps
@@ -87,8 +73,10 @@ def Smooth(robot,traj_orig,t1,t2,tau_min,tau_max,tunings,grav):
     print 'Final time: '+str(t2)
     print 'Duration: '+str(t2-t1)
 
+    c_sdot=1
+
     q_list=[q_vect[:,i1],q_vect[:,i2]]
-    qd_list=[qd_vect[:,i1],qd_vect[:,i2]]
+    qd_list=[qd_vect[:,i1]/c_sdot,qd_vect[:,i2]/c_sdot]
     T_list=[t2-t1]
     pwp_traj_shortcut=Trajectory.Interpolate(q_list,qd_list,T_list)
     sample_traj_shortcut=pwp_traj_shortcut.GetSampleTraj(pwp_traj_shortcut.duration,tunings['t_step_sample'])
@@ -98,7 +86,7 @@ def Smooth(robot,traj_orig,t1,t2,tau_min,tau_max,tunings,grav):
         print 'Computation time was: '+str(time.time()-deb)
         return ['collision',traj_orig]
 
-    pb=MinimumTime.RobotMinimumTime(robot,sample_traj_shortcut,tau_min,tau_max,tunings,grav)
+    pb=MinimumTime.RobotMinimumTime(robot,sample_traj_shortcut,tunings,grav,tau_min,tau_max,qd_max,c_sdot,c_sdot)
     if not pb.possible:
         print 'Shortcut is dynamically imposible, returning'
         print 'Computation time was: '+str(time.time()-deb)

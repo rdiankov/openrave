@@ -141,8 +141,16 @@ void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)
     KinBodyStateSaver::Restore(!robot ? KinBodyPtr(_probot) : KinBodyPtr(robot));
 }
 
+void RobotBase::RobotStateSaver::Release()
+{
+    _probot.reset();
+    KinBodyStateSaver::Release();
+}
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
+    if( !probot ) {
+        return;
+    }
     if( probot->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s not added to environment, skipping restore")%_pbody->GetName()));
         return;
@@ -252,14 +260,14 @@ bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<in
     return false;
 }
 
-void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, bool bCheckLimits, const std::vector<int>& dofindices)
+void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
-void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, bool bCheckLimits)
+void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t bCheckLimits)
 {
     KinBody::SetDOFValues(vJointValues, transbase, bCheckLimits); // should call RobotBase::SetDOFValues, so no need to upgrade grabbed bodies, attached sensors
 }
@@ -294,14 +302,14 @@ bool RobotBase::SetVelocity(const Vector& linearvel, const Vector& angularvel)
     return true;
 }
 
-void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,bool checklimits)
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits)
 {
     KinBody::SetDOFVelocities(dofvelocities,linearvel,angularvel,checklimits);
     _UpdateGrabbedBodies();
     // do sensors need to have their velocities updated?
 }
 
-void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, bool checklimits)
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits)
 {
     KinBody::SetDOFVelocities(dofvelocities,checklimits); // RobotBase::SetDOFVelocities should be called internally
 }
@@ -497,7 +505,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
     _ParametersChanged(Prop_RobotActiveDOFs);
 }
 
-void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, bool bCheckLimits)
+void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bCheckLimits)
 {
     if(_nActiveDOF < 0) {
         SetDOFValues(values,bCheckLimits);
@@ -560,7 +568,7 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
     RaveGetAffineDOFValuesFromTransform(itvalues,t,_nAffineDOFs,vActvAffineRotationAxis);
 }
 
-void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, bool bCheckLimits)
+void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, uint32_t bCheckLimits)
 {
     if(_nActiveDOF < 0) {
         SetDOFVelocities(velocities,true);

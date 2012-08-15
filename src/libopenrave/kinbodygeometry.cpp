@@ -19,6 +19,115 @@
 
 namespace OpenRAVE {
 
+#define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */ \
+    (dReal)0.850650808352039932181540497063011072240401406
+#define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */ \
+    (dReal)0.525731112119133606025669084847876607285497935
+#define GTS_M_ICOSAHEDRON_Z (dReal)0.0
+
+// generate a sphere triangulation starting with an icosahedron
+// all triangles are oriented counter clockwise
+void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
+{
+    KinBody::Link::TRIMESH temp, temp2;
+
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
+    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
+    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
+    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
+    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
+
+    const int nindices=60;
+    int indices[nindices] = {
+        0, 1, 2,
+        1, 3, 4,
+        3, 5, 6,
+        2, 4, 7,
+        5, 6, 8,
+        2, 7, 9,
+        0, 5, 8,
+        7, 9, 10,
+        0, 1, 5,
+        7, 10, 11,
+        1, 3, 5,
+        6, 10, 11,
+        3, 6, 11,
+        9, 10, 8,
+        3, 4, 11,
+        6, 8, 10,
+        4, 7, 11,
+        1, 2, 4,
+        0, 8, 9,
+        0, 2, 9
+    };
+
+    Vector v[3];
+
+    // make sure oriented CCW
+    for(int i = 0; i < nindices; i += 3 ) {
+        v[0] = temp.vertices[indices[i]];
+        v[1] = temp.vertices[indices[i+1]];
+        v[2] = temp.vertices[indices[i+2]];
+        if( v[0].dot3((v[1]-v[0]).cross(v[2]-v[0])) < 0 ) {
+            swap(indices[i], indices[i+1]);
+        }
+    }
+
+    temp.indices.resize(nindices);
+    std::copy(&indices[0],&indices[nindices],temp.indices.begin());
+
+    KinBody::Link::TRIMESH* pcur = &temp;
+    KinBody::Link::TRIMESH* pnew = &temp2;
+    while(levels-- > 0) {
+
+        pnew->vertices.resize(0);
+        pnew->vertices.reserve(2*pcur->vertices.size());
+        pnew->vertices.insert(pnew->vertices.end(), pcur->vertices.begin(), pcur->vertices.end());
+        pnew->indices.resize(0);
+        pnew->indices.reserve(4*pcur->indices.size());
+
+        map< uint64_t, int > mapnewinds;
+        map< uint64_t, int >::iterator it;
+
+        for(size_t i = 0; i < pcur->indices.size(); i += 3) {
+            // for ever tri, create 3 new vertices and 4 new triangles.
+            v[0] = pcur->vertices[pcur->indices[i]];
+            v[1] = pcur->vertices[pcur->indices[i+1]];
+            v[2] = pcur->vertices[pcur->indices[i+2]];
+
+            int inds[3];
+            for(int j = 0; j < 3; ++j) {
+                uint64_t key = ((uint64_t)pcur->indices[i+j]<<32)|(uint64_t)pcur->indices[i + ((j+1)%3) ];
+                it = mapnewinds.find(key);
+
+                if( it == mapnewinds.end() ) {
+                    inds[j] = mapnewinds[key] = mapnewinds[(key<<32)|(key>>32)] = (int)pnew->vertices.size();
+                    pnew->vertices.push_back((v[j]+v[(j+1)%3 ]).normalize3());
+                }
+                else {
+                    inds[j] = it->second;
+                }
+            }
+
+            pnew->indices.push_back(pcur->indices[i]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[2]);
+            pnew->indices.push_back(inds[0]);    pnew->indices.push_back(pcur->indices[i+1]);    pnew->indices.push_back(inds[1]);
+            pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[1]);
+            pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[1]);    pnew->indices.push_back(pcur->indices[i+2]);
+        }
+
+        swap(pnew,pcur);
+    }
+
+    tri = *pcur;
+}
+
 void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices) {
@@ -147,6 +256,90 @@ KinBody::Link::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
     _bModifiable = true;
 }
 
+bool KinBody::Link::GeometryInfo::InitCollisionMesh(float fTessellation)
+{
+    if( _type == KinBody::Link::GeomTrimesh ) {
+        return true;
+    }
+    _meshcollision.indices.clear();
+    _meshcollision.vertices.clear();
+
+    if( fTessellation < 0.01f ) {
+        fTessellation = 0.01f;
+    }
+    // start tesselating
+    switch(_type) {
+    case KinBody::Link::GeomSphere: {
+        // log_2 (1+ tess)
+        GenerateSphereTriangulation(_meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
+        dReal fRadius = GetSphereRadius();
+        FOREACH(it, _meshcollision.vertices) {
+            *it *= fRadius;
+        }
+        break;
+    }
+    case KinBody::Link::GeomBox: {
+        // trivial
+        Vector ex = GetBoxExtents();
+        Vector v[8] = { Vector(ex.x, ex.y, ex.z),
+                        Vector(ex.x, ex.y, -ex.z),
+                        Vector(ex.x, -ex.y, ex.z),
+                        Vector(ex.x, -ex.y, -ex.z),
+                        Vector(-ex.x, ex.y, ex.z),
+                        Vector(-ex.x, ex.y, -ex.z),
+                        Vector(-ex.x, -ex.y, ex.z),
+                        Vector(-ex.x, -ex.y, -ex.z) };
+        const int nindices = 36;
+        int indices[] = {
+            0, 2, 1,
+            1, 2, 3,
+            4, 5, 6,
+            5, 7, 6,
+            0, 1, 4,
+            1, 5, 4,
+            2, 6, 3,
+            3, 6, 7,
+            0, 4, 2,
+            2, 4, 6,
+            1, 3, 5,
+            3, 7, 5
+        };
+        _meshcollision.vertices.resize(8);
+        std::copy(&v[0],&v[8],_meshcollision.vertices.begin());
+        _meshcollision.indices.resize(nindices);
+        std::copy(&indices[0],&indices[nindices],_meshcollision.indices.begin());
+        break;
+    }
+    case KinBody::Link::GeomCylinder: {
+        // cylinder is on z axis
+        dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
+        int numverts = (int)(fTessellation*48.0f) + 3;
+        dReal dtheta = 2 * PI / (dReal)numverts;
+        _meshcollision.vertices.push_back(Vector(0,0,len));
+        _meshcollision.vertices.push_back(Vector(0,0,-len));
+        _meshcollision.vertices.push_back(Vector(rad,0,len));
+        _meshcollision.vertices.push_back(Vector(rad,0,-len));
+        for(int i = 0; i < numverts+1; ++i) {
+            dReal s = rad * RaveSin(dtheta * (dReal)i);
+            dReal c = rad * RaveCos(dtheta * (dReal)i);
+            int off = (int)_meshcollision.vertices.size();
+            _meshcollision.vertices.push_back(Vector(c, s, len));
+            _meshcollision.vertices.push_back(Vector(c, s, -len));
+
+            _meshcollision.indices.push_back(0);       _meshcollision.indices.push_back(off-2);       _meshcollision.indices.push_back(off);
+            _meshcollision.indices.push_back(1);       _meshcollision.indices.push_back(off+1);       _meshcollision.indices.push_back(off-1);
+            _meshcollision.indices.push_back(off-2);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off);
+            _meshcollision.indices.push_back(off);   _meshcollision.indices.push_back(off-1);         _meshcollision.indices.push_back(off+1);
+        }
+        break;
+    }
+    default:
+        throw OPENRAVE_EXCEPTION_FORMAT("unrecognized geom type %d!", _type, ORE_InvalidArguments);
+    }
+
+    return true;
+}
+
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
@@ -210,199 +403,6 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
     }
 
     return ab;
-}
-
-#define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */ \
-    (dReal)0.850650808352039932181540497063011072240401406
-#define GTS_M_ICOSAHEDRON_Y /* sqrt(2)/sqrt(5+sqrt(5))         */ \
-    (dReal)0.525731112119133606025669084847876607285497935
-#define GTS_M_ICOSAHEDRON_Z (dReal)0.0
-
-// generate a sphere triangulation starting with an icosahedron
-// all triangles are oriented counter clockwise
-void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
-{
-    KinBody::Link::TRIMESH temp, temp2;
-
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
-    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
-    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
-    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X));
-    temp.vertices.push_back(Vector(-GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
-    temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, -GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y));
-
-    const int nindices=60;
-    int indices[nindices] = {
-        0, 1, 2,
-        1, 3, 4,
-        3, 5, 6,
-        2, 4, 7,
-        5, 6, 8,
-        2, 7, 9,
-        0, 5, 8,
-        7, 9, 10,
-        0, 1, 5,
-        7, 10, 11,
-        1, 3, 5,
-        6, 10, 11,
-        3, 6, 11,
-        9, 10, 8,
-        3, 4, 11,
-        6, 8, 10,
-        4, 7, 11,
-        1, 2, 4,
-        0, 8, 9,
-        0, 2, 9
-    };
-
-    Vector v[3];
-
-    // make sure oriented CCW
-    for(int i = 0; i < nindices; i += 3 ) {
-        v[0] = temp.vertices[indices[i]];
-        v[1] = temp.vertices[indices[i+1]];
-        v[2] = temp.vertices[indices[i+2]];
-        if( v[0].dot3((v[1]-v[0]).cross(v[2]-v[0])) < 0 ) {
-            swap(indices[i], indices[i+1]);
-        }
-    }
-
-    temp.indices.resize(nindices);
-    std::copy(&indices[0],&indices[nindices],temp.indices.begin());
-
-    KinBody::Link::TRIMESH* pcur = &temp;
-    KinBody::Link::TRIMESH* pnew = &temp2;
-    while(levels-- > 0) {
-
-        pnew->vertices.resize(0);
-        pnew->vertices.reserve(2*pcur->vertices.size());
-        pnew->vertices.insert(pnew->vertices.end(), pcur->vertices.begin(), pcur->vertices.end());
-        pnew->indices.resize(0);
-        pnew->indices.reserve(4*pcur->indices.size());
-
-        map< uint64_t, int > mapnewinds;
-        map< uint64_t, int >::iterator it;
-
-        for(size_t i = 0; i < pcur->indices.size(); i += 3) {
-            // for ever tri, create 3 new vertices and 4 new triangles.
-            v[0] = pcur->vertices[pcur->indices[i]];
-            v[1] = pcur->vertices[pcur->indices[i+1]];
-            v[2] = pcur->vertices[pcur->indices[i+2]];
-
-            int inds[3];
-            for(int j = 0; j < 3; ++j) {
-                uint64_t key = ((uint64_t)pcur->indices[i+j]<<32)|(uint64_t)pcur->indices[i + ((j+1)%3) ];
-                it = mapnewinds.find(key);
-
-                if( it == mapnewinds.end() ) {
-                    inds[j] = mapnewinds[key] = mapnewinds[(key<<32)|(key>>32)] = (int)pnew->vertices.size();
-                    pnew->vertices.push_back((v[j]+v[(j+1)%3 ]).normalize3());
-                }
-                else {
-                    inds[j] = it->second;
-                }
-            }
-
-            pnew->indices.push_back(pcur->indices[i]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[2]);
-            pnew->indices.push_back(inds[0]);    pnew->indices.push_back(pcur->indices[i+1]);    pnew->indices.push_back(inds[1]);
-            pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[0]);    pnew->indices.push_back(inds[1]);
-            pnew->indices.push_back(inds[2]);    pnew->indices.push_back(inds[1]);    pnew->indices.push_back(pcur->indices[i+2]);
-        }
-
-        swap(pnew,pcur);
-    }
-
-    tri = *pcur;
-}
-
-bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
-{
-    if( _info._type == KinBody::Link::GeomTrimesh ) {
-        return true;
-    }
-    _info._meshcollision.indices.clear();
-    _info._meshcollision.vertices.clear();
-
-    if( fTessellation < 0.01f ) {
-        fTessellation = 0.01f;
-    }
-    // start tesselating
-    switch(_info._type) {
-    case KinBody::Link::GeomSphere: {
-        // log_2 (1+ tess)
-        GenerateSphereTriangulation(_info._meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
-        dReal fRadius = GetSphereRadius();
-        FOREACH(it, _info._meshcollision.vertices) {
-            *it *= fRadius;
-        }
-        break;
-    }
-    case KinBody::Link::GeomBox: {
-        // trivial
-        Vector ex = GetBoxExtents();
-        Vector v[8] = { Vector(ex.x, ex.y, ex.z),
-                        Vector(ex.x, ex.y, -ex.z),
-                        Vector(ex.x, -ex.y, ex.z),
-                        Vector(ex.x, -ex.y, -ex.z),
-                        Vector(-ex.x, ex.y, ex.z),
-                        Vector(-ex.x, ex.y, -ex.z),
-                        Vector(-ex.x, -ex.y, ex.z),
-                        Vector(-ex.x, -ex.y, -ex.z) };
-        const int nindices = 36;
-        int indices[] = {
-            0, 2, 1,
-            1, 2, 3,
-            4, 5, 6,
-            5, 7, 6,
-            0, 1, 4,
-            1, 5, 4,
-            2, 6, 3,
-            3, 6, 7,
-            0, 4, 2,
-            2, 4, 6,
-            1, 3, 5,
-            3, 7, 5
-        };
-        _info._meshcollision.vertices.resize(8);
-        std::copy(&v[0],&v[8],_info._meshcollision.vertices.begin());
-        _info._meshcollision.indices.resize(nindices);
-        std::copy(&indices[0],&indices[nindices],_info._meshcollision.indices.begin());
-        break;
-    }
-    case KinBody::Link::GeomCylinder: {
-        // cylinder is on z axis
-        dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
-        int numverts = (int)(fTessellation*48.0f) + 3;
-        dReal dtheta = 2 * PI / (dReal)numverts;
-        _info._meshcollision.vertices.push_back(Vector(0,0,len));
-        _info._meshcollision.vertices.push_back(Vector(0,0,-len));
-        _info._meshcollision.vertices.push_back(Vector(rad,0,len));
-        _info._meshcollision.vertices.push_back(Vector(rad,0,-len));
-        for(int i = 0; i < numverts+1; ++i) {
-            dReal s = rad * RaveSin(dtheta * (dReal)i);
-            dReal c = rad * RaveCos(dtheta * (dReal)i);
-            int off = (int)_info._meshcollision.vertices.size();
-            _info._meshcollision.vertices.push_back(Vector(c, s, len));
-            _info._meshcollision.vertices.push_back(Vector(c, s, -len));
-
-            _info._meshcollision.indices.push_back(0);       _info._meshcollision.indices.push_back(off-2);       _info._meshcollision.indices.push_back(off);
-            _info._meshcollision.indices.push_back(1);       _info._meshcollision.indices.push_back(off+1);       _info._meshcollision.indices.push_back(off-1);
-            _info._meshcollision.indices.push_back(off-2);   _info._meshcollision.indices.push_back(off-1);         _info._meshcollision.indices.push_back(off);
-            _info._meshcollision.indices.push_back(off);   _info._meshcollision.indices.push_back(off-1);         _info._meshcollision.indices.push_back(off+1);
-        }
-        break;
-    }
-    default:
-        throw OPENRAVE_EXCEPTION_FORMAT("unrecognized geom type %d!", _info._type, ORE_InvalidArguments);
-    }
-
-    return true;
 }
 
 void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const

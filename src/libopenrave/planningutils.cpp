@@ -43,7 +43,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             newdof = curdof;
             if( !neighstatefn(newdof,deltadof,0) ) {
-                robot->SetActiveDOFValues(curdof,true);
+                robot->SetActiveDOFValues(curdof,KinBody::CLA_CheckLimitsSilent);
                 return -1;
             }
         }
@@ -52,7 +52,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 newdof[i] = curdof[i]+*itperturbation;
             }
         }
-        robot->SetActiveDOFValues(newdof,true);
+        robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
 
         if(robot->CheckSelfCollision(preport)) {
             bCollision = true;
@@ -68,7 +68,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
 
     if( !bCollision || fRand <= 0 ) {
         // have to restore to initial non-perturbed configuration!
-        robot->SetActiveDOFValues(curdof);
+        robot->SetActiveDOFValues(curdof,KinBody::CLA_Nothing);
         return -1;
     }
 
@@ -85,7 +85,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             if( bConstraint ) {
                 newdof = curdof;
-                robot->SetActiveDOFValues(newdof,true);
+                robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
                 if( !neighstatefn(newdof,deltadof2,0) ) {
                     if( *itperturbation != 0 ) {
                         RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
@@ -99,7 +99,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                     newdof[j] = curdof[j] + deltadof2[j];
                 }
             }
-            robot->SetActiveDOFValues(newdof,true);
+            robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
             if(robot->CheckSelfCollision() || robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
                 bCollision = true;
                 break;
@@ -109,7 +109,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             // have to restore to non-perturbed configuration!
             if( bConstraint ) {
                 newdof = curdof;
-                robot->SetActiveDOFValues(newdof,true);
+                robot->SetActiveDOFValues(newdof,KinBody::CLA_Nothing);
                 if( !neighstatefn(newdof,deltadof,0) ) {
                     RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
                     continue;
@@ -120,7 +120,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                     newdof[j] = curdof[j] + deltadof[j];
                 }
             }
-            robot->SetActiveDOFValues(newdof);
+            robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
             return 1;
         }
     }

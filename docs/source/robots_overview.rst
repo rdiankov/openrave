@@ -17,7 +17,11 @@ Robot Repositories
 File Formats
 ------------
 
+OpenRAVE supports the COLLADA file format for specifying robots and adds its own set of robot-specific extensions. The `COLLADA <https://collada.org/mediawiki/index.php/COLLADA_-_Digital_Asset_and_FX_Exchange_Schema>`_ format can be used to specify all robot and scene related information.
+
 :ref:`collada_robot_extensions` - (\*.dae, \*.zae)
+
+COLLADA files saved as **dae** store the raw XML, files stored as **zae** stored the compressed XML. In order to preserve space, most robots in OpenRAVE are stored as **zae**.
 
 OpenRAVE XML
 ~~~~~~~~~~~~

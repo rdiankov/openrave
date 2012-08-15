@@ -121,8 +121,12 @@ public:
     virtual ~PyPlannerBase() {
     }
 
-    bool InitPlan(PyRobotBasePtr pbase, PyPlannerParametersPtr pparams)
+    bool InitPlan(PyRobotBasePtr pbase, PyPlannerParametersPtr pparams, bool releasegil=false)
     {
+        openravepy::PythonThreadSaverPtr statesaver;
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),pparams->GetParameters());
     }
 
@@ -132,8 +136,12 @@ public:
         return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
     }
 
-    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj)
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
+        openravepy::PythonThreadSaverPtr statesaver;
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
         return _pplanner->PlanPath(openravepy::GetTrajectory(pytraj));
     }
 
@@ -216,6 +224,9 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
     return PyPlannerBasePtr(new PyPlannerBase(p,pyenv));
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
+
 void init_openravepy_planner()
 {
     object plannerstatus = enum_<PlannerStatus>("PlannerStatus" DOXY_ENUM(PlannerStatus))
@@ -235,12 +246,12 @@ void init_openravepy_planner()
     ;
 
     {
-        bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr) = &PyPlannerBase::InitPlan;
+        bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
         scope planner = class_<PyPlannerBase, boost::shared_ptr<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
-                        .def("InitPlan",InitPlan1,args("robot","params"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr"))
+                        .def("InitPlan",InitPlan1,InitPlan_overloads(args("robot","params","releasegil"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; PlannerParametersConstPtr")))
                         .def("InitPlan",InitPlan2,args("robot","xmlparams"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
-                        .def("PlanPath",&PyPlannerBase::PlanPath,args("traj"), DOXY_FN(PlannerBase,PlanPath))
+                        .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(args("traj","releasegil"), DOXY_FN(PlannerBase,PlanPath)))
                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
         ;
 
