@@ -286,7 +286,7 @@ void init_openravepy_iksolver()
         object (PyIkSolverBase::*SolveAllFree)(object, object, int) = &PyIkSolverBase::SolveAll;
         class_<PyIkSolverBase, boost::shared_ptr<PyIkSolverBase>, bases<PyInterfaceBase> >("IkSolver", DOXY_CLASS(IkSolverBase), no_init)
         .def("Solve",Solve,args("ikparam","q0","filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; int; IkReturnPtr"))
-        .def("Solve",SolveFree,args("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; boost::shared_ptr"))
+        .def("Solve",SolveFree,args("ikparam","q0","freeparameters", "filteroptions"), DOXY_FN(IkSolverBase, Solve "const IkParameterization&; const std::vector; const std::vector; int; IkReturnPtr"))
         .def("SolveAll",SolveAll,args("ikparam","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; int; std::vector<IkReturnPtr>"))
         .def("SolveAll",SolveAllFree,args("ikparam","freeparameters","filteroptions"), DOXY_FN(IkSolverBase, SolveAll "const IkParameterization&; const std::vector; int; std::vector<IkReturnPtr>"))
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
