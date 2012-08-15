@@ -232,6 +232,33 @@ class TestEnvironment(EnvironmentSetup):
         assert(len(body2.GetJoints())==len(body.GetJoints()))
         assert(len(body2.GetPassiveJoints())==len(body.GetPassiveJoints()))
 
+    def test_colladagrabbing(self):
+        self.log.info('test if robot grabbing information can be exported')
+        env=self.env
+        with env:
+            robot = self.LoadRobot('robots/pr2-beta-static.zae')
+            target1 = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(target1,True)
+            T1 = eye(4)
+            T1[0:3,3] = [0.88,0.18,0.8]
+            target1.SetTransform(T1)
+            robot.SetActiveManipulator('leftarm')
+            robot.Grab(target1)
+            
+            target2 = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+            env.Add(target2,True)
+            T2 = matrixFromAxisAngle([pi/2,0,0])
+            T2[0:3,3] = [0.88,-0.18,0.8]
+            target2.SetTransform(T2)
+            robot.SetActiveManipulator('rightarm')
+            robot.Grab(target2)
+            
+            env.Save('test_colladagrabbing.dae')
+            
+            env2=Environment()
+            env2.Load('test_colladagrabbing.dae')
+            misc.CompareBodies(robot,env2.GetRobot(robot.GetName()))
+            
     def test_unicode(self):
         env=self.env
         name = 'テスト名前'.decode('utf-8')
