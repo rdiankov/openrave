@@ -678,12 +678,14 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
         assert(transdist(link0.GetGlobalCOM(),link1.GetGlobalCOM()) <= epsilon) # redundant
         assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)
         if comparegeometries:
-            pass
-                # todo: compare geometry, collada still does not support writing boxes
-#                     for ig in range(len(link0.GetGeometries())):
-#                         g0=link0.GetGeometries()[ig]
-#                         g1=link1.GetGeometries()[ig]
-#                         assert(g0.GetType()==g1.GetType())
+            for ig,g0 in enumerate(link0.GetGeometries()):
+                g1=link1.GetGeometries()[ig]
+                assert(g0.GetType()==g1.GetType())
+                assert(transdist(g0.GetTransform(),g1.GetTransform()) <= epsilon)
+                assert(transdist(g0.GetBoxExtents(),g1.GetBoxExtents()) <= epsilon)
+                assert(transdist(g0.GetDiffuseColor(),g1.GetDiffuseColor()) <= epsilon)
+                assert(transdist(g0.GetAmbientColor(),g1.GetAmbientColor()) <= epsilon)
+                assert(g0.IsVisible()==g1.IsVisible())
     adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
     assert(adjacentlinks == set(body1.GetAdjacentLinks()))
     if body0.IsRobot():

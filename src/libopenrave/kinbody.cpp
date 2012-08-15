@@ -190,7 +190,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
@@ -231,7 +231,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
@@ -267,7 +267,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
         info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         trimesh = geom->GetCollisionMesh();
         trimesh.ApplyTransform(geom->GetTransform());
@@ -309,7 +309,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& l
     plink->_bStatic = true;
     FOREACHC(itinfo,listGeometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,*itinfo));
-        geom->InitCollisionMesh();
+        geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }

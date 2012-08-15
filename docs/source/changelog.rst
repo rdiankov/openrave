@@ -113,7 +113,18 @@ Viewer
 
 * Added Qt/OpenSceneGraph viewer from Gustavo Puche and the OpenGrasp project.
 
-* Converted many qtcoinrave shared pointers to weak pointers to prevent circular dependencies.
+* Converted many qtcoinrave shared pointers to weak pointers to prevent circular dependencies, fixed race conditions with invalid weak_ptr.
+
+COLLADA
+-------
+
+* COLLADA writer/reader supports joint **circular**, **weight**, and **resolution** properties
+
+* COLLADA support for **<instance_node>** and saving/restoring scenes with similar bodies.
+
+* COLLADA can read/write geometric primitives like boxes, cylinders, etc
+
+* COLLADA can read/write XMLReadable interfaces registered through :meth:`.RaveRegisterXMLReader`
 
 Misc
 ----
@@ -129,10 +140,6 @@ Misc
 * Support doc internationalization using sphinx 1.1
 
 * Added **orplanning_multirobot** C++ example to show how to plan with multiple robots in same configuration space
-
-* COLLADA writer/reader supports joint **circular**, **weight**, and **resolution** properties
-
-* COLLADA support for **<instance_node>** and saving/restoring scenes with similar bodies.
 
 * Added new conveyor robot :ref:`robot-conveyor` that creates trajectory joints.
 

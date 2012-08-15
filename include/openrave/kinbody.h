@@ -105,7 +105,7 @@ public:
             GeomNone = 0,
             GeomBox = 1,
             GeomSphere = 2,
-            GeomCylinder = 3,
+            GeomCylinder = 3, ///< oriented towards z-axis
             GeomTrimesh = 4,
         };
 
@@ -118,6 +118,24 @@ public:
             GeometryInfo();
             virtual ~GeometryInfo() {
             }
+
+            /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
+            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
+            bool InitCollisionMesh(float fTessellation=1);
+
+            inline dReal GetSphereRadius() const {
+                return _vGeomData.x;
+            }
+            inline dReal GetCylinderRadius() const {
+                return _vGeomData.x;
+            }
+            inline dReal GetCylinderHeight() const {
+                return _vGeomData.y;
+            }
+            inline const Vector& GetBoxExtents() const {
+                return _vGeomData;
+            }
+
             Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
             Vector _vGeomData; ///< for boxes, first 3 values are extents
             ///< for sphere it is radius
@@ -256,10 +274,6 @@ public:
             virtual void SetRenderFilename(const std::string& renderfilename);
 
 protected:
-            /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
-            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
-            bool InitCollisionMesh(float fTessellation=1);
-
             boost::weak_ptr<Link> _parent;
             GeometryInfo _info; ///< geometry info
 #ifdef RAVE_PRIVATE

@@ -146,6 +146,7 @@ public:
                 _pgeometry->SetRenderFilename(filename);
             }
             bool IsDraw() {
+                RAVELOG_WARN("IsDraw deprecated, use Geometry.IsVisible\n");
                 return _pgeometry->IsVisible();
             }
             bool IsVisible() {
@@ -181,7 +182,12 @@ public:
             float GetTransparency() const {
                 return _pgeometry->GetTransparency();
             }
-
+            object GetDiffuseColor() const {
+                return toPyVector3(_pgeometry->GetDiffuseColor());
+            }
+            object GetAmbientColor() const {
+                return toPyVector3(_pgeometry->GetAmbientColor());
+            }
             bool __eq__(boost::shared_ptr<PyGeometry> p) {
                 return !!p && _pgeometry == p->_pgeometry;
             }
@@ -3179,6 +3185,7 @@ void init_openravepy_kinbody()
                                  .def("SetAmbientColor",&PyKinBody::PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
                                  .def("SetRenderFilename",&PyKinBody::PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
                                  .def("IsDraw",&PyKinBody::PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
+                                 .def("IsVisible",&PyKinBody::PyLink::PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
                                  .def("IsModifiable",&PyKinBody::PyLink::PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
                                  .def("GetType",&PyKinBody::PyLink::PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
                                  .def("GetTransform",&PyKinBody::PyLink::PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))
@@ -3189,6 +3196,8 @@ void init_openravepy_kinbody()
                                  .def("GetRenderScale",&PyKinBody::PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                  .def("GetRenderFilename",&PyKinBody::PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
                                  .def("GetTransparency",&PyKinBody::PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
+                                 .def("GetDiffuseColor",&PyKinBody::PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
+                                 .def("GetAmbientColor",&PyKinBody::PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
                                  .def("__eq__",&PyKinBody::PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
                 ;

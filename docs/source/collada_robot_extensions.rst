@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.2.1)
+COLLADA Robot Extensions (Version 0.2.2)
 ----------------------------------------
 
 OpenRAVE fully supports the COLLADA file format for specifying robots and adds its own set of robot-specific extensions. The `COLLADA <https://collada.org/mediawiki/index.php/COLLADA_-_Digital_Asset_and_FX_Exchange_Schema>`_ format is used to specify all robot and scene related information. Robots are standardized with the COLLADA 1.5 file format. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and kinematics. 
@@ -239,38 +239,40 @@ The example defines an arm with an end effector at link wam7 with a local coordi
 
 .. code-block:: xml
 
-  <extra type="manipulator" name="leftarm">
-    <technique profile="OpenRAVE">
-      <frame_origin link="wam0"/>
-      <frame_tip link="wam7">
-        <translate>0.0 0.0 0.22</translate>
-        <rotate>0.0 1.0 0.0 90.0</rotate>
-        <direction>0.0 0.0 1.0</direction>
-      </frame_tip>
-      <gripper_joint joint="jointname">
-        <closing_direction axis="axis0">
-          <float>1</float>
-        </closing_direction>
-      </gripper_joint>
-      <gripper_joint joint="jointname2">
-        <closing_direction axis="axis0">
-          <float>-1</float>
-        </closing_direction>
-      </gripper_joint>
-      <iksolver type="Transform6D">
-        <free_joint joint="jointname3"/>
-        <interface_type>
-          <technique profile="OpenRAVE">
-            <interface>WAM7ikfast</interface>
-            <plugin>WAM7ikfast</plugin>
-          </technique>
-        </interface_type>
-      </iksolver>
-      <iksolver type="Translation3D">
-        <free_joint joint="jointname4"/>
-      </iksolver>
-    </technique>
-  </extra>
+  <articulated_system>
+    <extra type="manipulator" name="leftarm">
+      <technique profile="OpenRAVE">
+        <frame_origin link="wam0"/>
+        <frame_tip link="wam7">
+          <translate>0.0 0.0 0.22</translate>
+          <rotate>0.0 1.0 0.0 90.0</rotate>
+          <direction>0.0 0.0 1.0</direction>
+        </frame_tip>
+        <gripper_joint joint="jointname">
+          <closing_direction axis="axis0">
+            <float>1</float>
+          </closing_direction>
+        </gripper_joint>
+        <gripper_joint joint="jointname2">
+          <closing_direction axis="axis0">
+            <float>-1</float>
+          </closing_direction>
+        </gripper_joint>
+        <iksolver type="Transform6D">
+          <free_joint joint="jointname3"/>
+          <interface_type>
+            <technique profile="OpenRAVE">
+              <interface>WAM7ikfast</interface>
+              <plugin>WAM7ikfast</plugin>
+            </technique>
+          </interface_type>
+        </iksolver>
+        <iksolver type="Translation3D">
+          <free_joint joint="jointname4"/>
+        </iksolver>
+      </technique>
+    </extra>
+  </articulated_system>
 
 collision
 =========
@@ -374,6 +376,79 @@ Example
         </technique>
       </extra>
   </library_kinematics_models>
+
+.. _geometry_info:
+
+geometry_info
+=============
+
+Introduction
+~~~~~~~~~~~~
+
+Uses the COLLADA Physics specification of Analytical Shapes to summarize geometric information in simpler terms like box, cylinder, sphere, etc.
+
+Concepts
+~~~~~~~~
+
+A simple geometric element like an oriented box can be very difficult to exactly define with
+triangle meshes or brep presentations. Furthermore, elements like spheres must use brep, which
+require a deep understanding of the new brep specification. By using the **<geometry_info>**
+element, a user can give a hint to the user as to what shape the geometry mesh represents using the
+physics specifications like **<box>**.
+
+In order to represent an oriented bounding box, a coordinate system can be defined within
+**<geometry_info>** by using the **<translate>** and **<rotate>** tags.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  
+  Parent elements | <geometry>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+
+  <visible> | Contains a **common_bool_or_param_type** that specifies whether the geometry is visible or not. | 0 or 1
+  <translate> | Translate the simple geometry shape. See main entry in Core. | 0 or more
+  <rotate> | Rotation axis for rotating the simple geometry. See main entry in Core. | 0 or more
+  *geometry of the shape* | An inline definition using one of the following COLLADA Physics analytical shape elements: **<plane>**, **<box>**, **<sphere>**, **<cylinder>**, or **<capsule>** | 0 or 1
+
+Attributes for <parameters>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Details
+~~~~~~~
+
+It is possible to only define the local coordinate system of the geometry without defining an extra analytical shape.
+
+Example
+~~~~~~~
+
+Translation box center to (0,0,0.5) and rotate 45 degrees around z axis.
+
+.. code-block:: xml
+
+  <geometry>
+    <extra type="geometry_info">
+      <technique profile="OpenRAVE">
+        <box>
+          <half_extents>0.1 0.2 0.3</half_extents>
+        </box>
+        <translate>0 0 0.5</translate>
+        <rotate>0 0 1 45</rotate>
+        <visible><bool>true</bool></visible>
+      </technique>
+    </extra>
+  </geometry>
 
 library_sensors
 ===============

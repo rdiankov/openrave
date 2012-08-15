@@ -713,7 +713,7 @@ private:
                 }
                 daeElementRef closing_direction = gripper_joint->add("closing_direction");
                 closing_direction->setAttribute("axis",str(boost::format("./axis%d")%(*itindex-pjoint->GetDOFIndex())).c_str());
-                closing_direction->add("float")->setCharData(str(boost::format("%f")%(*itmanip)->GetClosingDirection().at(i)));
+                closing_direction->add("float")->setCharData(boost::lexical_cast<std::string>((*itmanip)->GetClosingDirection().at(i)));
                 ++i;
             }
             //            <iksolver interface="WAM7ikfast" type="Transform6D">
@@ -1194,12 +1194,48 @@ private:
                     pvertoffset->setSource(domUrifragment(*pverts, string("#")+parentid+string("_vertices")));
                     domPRef pindices = daeSafeCast<domP>(ptris->add(COLLADA_ELEMENT_P));
                     pindices->getValue().setCount(mesh.indices.size());
-                    for(size_t ind = 0; ind < mesh.indices.size(); ++ind)
+                    for(size_t ind = 0; ind < mesh.indices.size(); ++ind) {
                         pindices->getValue()[ind] = mesh.indices[ind];
+                    }
                 }
             }
         }
 
+        {
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            // write the geometry_info tag
+            domExtraRef pextra = daeSafeCast<domExtra>(pdomgeom->add(COLLADA_ELEMENT_EXTRA));
+            pextra->setType("geometry_info");
+            domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+            ptec->setProfile("OpenRAVE");
+            Transform tlocalgeom = geom->GetTransform();
+            switch(geom->GetType()) {
+            case KinBody::Link::GeomBox:
+                ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
+                ptec->add("box")->add("half_extents")->setCharData(ss.str());
+                break;
+            case KinBody::Link::GeomSphere:
+                ptec->add("sphere")->add("radius")->setCharData(ss.str());
+                break;
+            case KinBody::Link::GeomCylinder: {
+                daeElementRef pcylinder = ptec->add("cylinder");
+                ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
+                pcylinder->add("radius")->setCharData(ss.str());
+                pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
+                // collada cylinder is oriented toward y-axis while openrave is toward z-axis
+                Transform trot(quatRotateDirection(Vector(0,1,0),Vector(0,0,1)),Vector());
+                tlocalgeom = tlocalgeom * trot;
+                break;
+            }
+            case KinBody::Link::GeomNone:
+            case KinBody::Link::GeomTrimesh:
+                // don't add anything
+                break;
+            }
+            // add the coordinate system
+            _WriteTransformation(ptec, tlocalgeom);
+            ptec->add("visible")->add("bool")->setCharData(geom->IsVisible() ? "true" : "false");
+        }
         return pdomgeom;
     }
 
