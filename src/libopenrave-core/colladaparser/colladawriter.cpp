@@ -1464,7 +1464,7 @@ private:
                 probot->GetGrabbed(vGrabbedBodies);
                 FOREACHC(itgrabbed,vGrabbedBodies) {
                     boost::shared_ptr<instance_articulated_system_output> grabbedias;
-                    FOREACH(itias2,listModelDatabase) {
+                    FOREACHC(itias2,listModelDatabase) {
                         if( (*itias2)->pbody == *itgrabbed ) {
                             grabbedias = *itias2;
                             break;
