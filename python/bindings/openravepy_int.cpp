@@ -653,11 +653,17 @@ public:
         return _penv->LoadData(data, toAttributesList(odictatts));
     }
 
-    void Save(const string &filename) {
-        _penv->Save(filename);
-    }
-    void Save(const string &filename, EnvironmentBase::SelectionOptions options, const string &name) {
-        _penv->Save(filename,options,name);
+    void Save(const string &filename, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+        extract<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            _penv->Save(filename,options,atts);
+        }
+        else {
+            _penv->Save(filename,options,toAttributesList(odictatts));
+        }
     }
 
     object ReadRobotURI(const string &filename)
@@ -1289,6 +1295,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1404,8 +1411,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         bool (PyEnvironmentBase::*load2)(const string &, dict) = &PyEnvironmentBase::Load;
         bool (PyEnvironmentBase::*loaddata1)(const string &) = &PyEnvironmentBase::LoadData;
         bool (PyEnvironmentBase::*loaddata2)(const string &, dict) = &PyEnvironmentBase::LoadData;
-        void (PyEnvironmentBase::*save1)(const string &) = &PyEnvironmentBase::Save;
-        void (PyEnvironmentBase::*save2)(const string &, EnvironmentBase::SelectionOptions, const string &) = &PyEnvironmentBase::Save;
         object (PyEnvironmentBase::*readrobotxmlfile1)(const string &) = &PyEnvironmentBase::ReadRobotURI;
         object (PyEnvironmentBase::*readrobotxmlfile2)(const string &,dict) = &PyEnvironmentBase::ReadRobotURI;
         object (PyEnvironmentBase::*readrobotxmldata1)(const string &) = &PyEnvironmentBase::ReadRobotData;
@@ -1452,8 +1457,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
-                    .def("Save",save1,args("filename"), DOXY_FN(EnvironmentBase,Save))
-                    .def("Save",save2,args("filename","options","selectname"), DOXY_FN(EnvironmentBase,Save))
+                    .def("Save",&PyEnvironmentBase::Save,Save_overloads(args("filename","options","atts"), DOXY_FN(EnvironmentBase,Save)))
                     .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
@@ -1548,7 +1552,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                                   .value("Everything",EnvironmentBase::SO_Everything)
                                   .value("Body",EnvironmentBase::SO_Body)
                                   .value("AllExceptBody",EnvironmentBase::SO_AllExceptBody)
-                                  .value("BodyList",EnvironmentBase::SO_BodyList)
         ;
         env.attr("TriangulateOptions") = selectionoptions;
     }
@@ -1560,7 +1563,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;
     scope().attr("__author__") = "Rosen Diankov";
-    scope().attr("__copyright__") = "2009-2010 Rosen Diankov (rosen.diankov@gmail.com)";
+    scope().attr("__copyright__") = "2009-2012 Rosen Diankov (rosen.diankov@gmail.com)";
     scope().attr("__license__") = "Lesser GPL";
     scope().attr("__docformat__") = "restructuredtext";
 

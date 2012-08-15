@@ -21,7 +21,8 @@ There are one-to-one correspondences between the OpenRAVE interface types and CO
 
 * Robot <-> articulated_system
 * KinBody <-> kinematics_model
-* Sensor <-> sensor (new)
+* Sensor <-> sensor
+* Manipulator <-> manipulator
 
 interface_type
 ==============
@@ -222,15 +223,15 @@ The IK types are meant to be hints as to how a manipulator can be used. Multiple
 
 * Why is a manipulator frame necessary?
 
- * Answer: Manipulator frames allow the user to define a coordinate system where it makes target tasks easier to complete. In this regard, the manipulator frame can be freely chosen by the user without worrying about destroying the link coordinate systems. For example, link frames are usually aligned with joint axes and center of masses and robot state is defined by their 6D transform in space. Having them also represent task-specific information could destroy consistency when the task changes. Also, the z-axis of the manipulator frame can define the "direction" of the manipulator. Direction can be used in many places like sensor line of sight and grasping approach, which makes it possible to quickly use the robot for planning.
+  * Answer: Manipulator frames allow the user to define a coordinate system where it makes target tasks easier to complete. In this regard, the manipulator frame can be freely chosen by the user without worrying about destroying the link coordinate systems. For example, link frames are usually aligned with joint axes and center of masses and robot state is defined by their 6D transform in space. Having them also represent task-specific information could destroy consistency when the task changes. Also, the z-axis of the manipulator frame can define the "direction" of the manipulator. Direction can be used in many places like sensor line of sight and grasping approach, which makes it possible to quickly use the robot for planning.
 
 * Question: For dual arm manipulation, would a leftright manipulator ever be used including all joints? In this case, will it might be necessary to define two frame tips (one for left arm and one for right arm)?
 
- * Answer: Having a leftright manipulator destroys the one-to-one correspondence between gripper joints and ik solver, and not much is gained. So better to have only have one frame tip and origin and treat two arms as separate. The constraint between the end effectors of the two arms is not always rigid, it very task dependent. Therefore, the user should take care of the dual relation.
+  * Answer: Having a leftright manipulator destroys the one-to-one correspondence between gripper joints and ik solver, and not much is gained. So better to have only have one frame tip and origin and treat two arms as separate. The constraint between the end effectors of the two arms is not always rigid, it very task dependent. Therefore, the user should take care of the dual relation.
 
 * Question: What about closing gripper direction for complex hands? Fingers with many DOF might need special grasping strategies.
 
- * Answer: The closing direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
+  * Answer: The closing direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
 
 Example
 ~~~~~~~
@@ -286,6 +287,7 @@ Concepts
 ~~~~~~~~
 
 A link can have three different collision meshes:
+
 * for visual rendering
 * for self-collisions
 * for environment collisions
@@ -1020,13 +1022,11 @@ COLLADA Usage
 COLLADA Format Notes
 ~~~~~~~~~~~~~~~~~~~~
 
-* **articulated_system** tag is equivalent to OpenRAVE robot
+* **articulated_system** tag is used for saving both Robot and KinBody objects
 
- *  if child is a **motion** tag, get accelerations and velocity limits from it
-
-* **kinematics_model** tag is equivalent to KinBody
-* If visual_scene tag present, but no kinematics, then add each node tree as a rigid link.
-* In order to set a static link in physics, use the <instance_rigid_body>/<dynamic> tag.
+  *  if child is a **motion** tag, get accelerations and velocity limits from it
+* If **<visual_scene>** tag present, but no kinematics, then add each root node tree as a rigid link.
+* In order to set a static link in physics, use the **<instance_rigid_body>/<dynamic>** tag.
 
 Hard and Soft Joint Limits
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1042,11 +1042,6 @@ Composition
 
 Robots usually have grippers, robot arms, and robot bases in separate files, then we have one file that references all of them and specifies the links to merge together (ie, we do not complicate things by creating dummy joints). This can be done with articulated systems since <kinematics> tag supports multiple <instance_kinematics_model> tags.
 
-Geometric Primitives
-~~~~~~~~~~~~~~~~~~~~
-
-Use COLLADA <brep> for spheres, cylinders, boxes, etc. 
-
 Storing Convex Decompositions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1057,6 +1052,7 @@ Calibration vs Static Data
 
 One thing that separates a base description of the robot from the real
 robot that will be used in labs is calibration:
+
 * where each sensor is with respect to the robot (6D pose)
 * intrinsic parameters for each sensor
 * joint offsets for encoder calibration
@@ -1073,4 +1069,5 @@ Specifying controller parameters in the collada file falls somewhere in between 
 Contributors
 ============
 
-* University of Tokyo - Rosen Diankov and Ryohei Ueda
+* Rosen Diankov - `MUJIN Inc <http://www.mujin.co.jp>`_
+* Ryohei Ueda - `University of Tokyo JSK Lab <http://www.jsk.t.u-tokyo.ac.jp/>`_

@@ -499,22 +499,27 @@ public:
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    virtual void Save(const std::string& filename, SelectionOptions options, const std::string& selectname)
+    virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
-        std::list<RobotBasePtr> listrobots;
         switch(options) {
         case SO_Everything:
-            RaveWriteColladaFile(shared_from_this(),filename);
-            break;
+            RaveWriteColladaFile(shared_from_this(),filename,atts);
+            return;
+
         case SO_Body: {
-            RobotBasePtr probot = GetRobot(selectname);
-            if( !!probot ) {
-                RaveWriteColladaFile(probot,filename);
-            }
-            else {
-                RaveWriteColladaFile(GetKinBody(selectname),filename);
+            std::string targetname;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    KinBodyPtr pbody = GetKinBody(itatt->second);
+                    if( !pbody ) {
+                        RAVELOG_WARN(str(boost::format("failed to get body %s")%itatt->second));
+                    }
+                    else {
+                        listbodies.push_back(pbody);
+                    }
+                }
             }
             break;
         }
@@ -527,40 +532,30 @@ public:
             break;
         case SO_Robots:
             FOREACH(itrobot,_vecrobots) {
-                listrobots.push_back(*itrobot);
+                listbodies.push_back(*itrobot);
             }
             break;
-        case SO_AllExceptBody:
+        case SO_AllExceptBody: {
+            std::list<std::string> listignore;
+            FOREACHC(itatt,atts) {
+                if( itatt->first == "target" ) {
+                    listignore.push_back(itatt->second);
+                }
+            }
             FOREACH(itbody,_vecbodies) {
-                if( (*itbody)->GetName() != selectname ) {
-                    if( (*itbody)->IsRobot() ) {
-                        listrobots.push_back(RaveInterfaceCast<RobotBase>(*itbody));
-                    }
-                    else {
-                        listbodies.push_back(*itbody);
-                    }
+                if( find(listignore.begin(),listignore.end(),(*itbody)->GetName()) == listignore.end() ) {
+                    listbodies.push_back(*itbody);
                 }
             }
             break;
-        case SO_BodyList:
-            stringstream ss(selectname);
-            while(!ss.eof()) {
-                string name;
-                ss >> name;
-                if( !ss ) {
-                    break;
-                }
-                KinBodyPtr pbody = GetKinBody(name);
-                if( !!pbody ) {
-                    if( pbody->IsRobot() ) {
-                        listrobots.push_back(RaveInterfaceCast<RobotBase>(pbody));
-                    }
-                    else {
-                        listbodies.push_back(pbody);
-                    }
-                }
-            }
-            break;
+        }
+        }
+
+        if( listbodies.size() == 1 ) {
+            RaveWriteColladaFile(listbodies.front(),filename,atts);
+        }
+        else {
+            RaveWriteColladaFile(listbodies,filename,atts);
         }
     }
 
@@ -1018,18 +1013,6 @@ public:
     virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        std::list<string> listnames;
-        if( options == SO_BodyList ) {
-            stringstream ss(selectname);
-            while(!ss.eof()) {
-                string name;
-                ss >> name;
-                if( !ss ) {
-                    break;
-                }
-                listnames.push_back(name);
-            }
-        }
         FOREACH(itbody, _vecbodies) {
             RobotBasePtr robot;
             if( (*itbody)->IsRobot() ) {
@@ -1060,10 +1043,10 @@ public:
                     Triangulate(trimesh, *itbody);
                 }
                 break;
-            case SO_BodyList:
-                if( find(listnames.begin(),listnames.end(),(*itbody)->GetName()) != listnames.end() ) {
-                    Triangulate(trimesh,*itbody);
-                }
+//            case SO_BodyList:
+//                if( find(listnames.begin(),listnames.end(),(*itbody)->GetName()) != listnames.end() ) {
+//                    Triangulate(trimesh,*itbody);
+//                }
             }
         }
     }

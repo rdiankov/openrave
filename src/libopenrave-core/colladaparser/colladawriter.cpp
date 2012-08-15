@@ -294,14 +294,18 @@ private:
         daeElementRef _elt;
     };
 
-    ColladaWriter(EnvironmentBaseConstPtr penv) : _dom(NULL), _penv(penv)
+    ColladaWriter(EnvironmentBaseConstPtr penv, const AttributesList& atts) : _dom(NULL), _penv(penv)
     {
         daeErrorHandler::setErrorHandler(this);
-
         RAVELOG_VERBOSE("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
         _dae.reset(new DAE);
-        _dae->setIOPlugin( NULL );
-        _dae->setDatabase( NULL );
+        //_dae->setIOPlugin( NULL );
+        //_dae->setDatabase( NULL );
+        if( !!_dae->getIOPlugin() ) {
+            FOREACHC(itatt,atts) {
+                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+            }
+        }
 
         const char* documentName = "openrave_snapshot";
         daeInt error = _dae->getDatabase()->insertDocument(documentName, &_doc );     // also creates a collada root
@@ -379,44 +383,46 @@ private:
     }
 
     /// \brief Write down environment
-    virtual bool Write(EnvironmentBasePtr penv)
+    virtual bool Write()
     {
-        EnvironmentMutex::scoped_lock lockenv(penv->GetMutex());
+        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        vector<KinBodyPtr> vbodies;
+        _penv->GetBodies(vbodies);
+        std::list<KinBodyPtr> listbodies(vbodies.begin(),vbodies.end());
+        return Write(listbodies);
+    }
+
+    virtual bool Write(const std::list<KinBodyPtr>& listbodies)
+    {
+        if( listbodies.size() == 0 ) {
+            return false;
+        }
         _CreateScene();
         domPhysics_scene::domTechnique_commonRef common = daeSafeCast<domPhysics_scene::domTechnique_common>(_scene.pscene->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         //  Create gravity
         domTargetable_float3Ref g = daeSafeCast<domTargetable_float3>(common->add(COLLADA_ELEMENT_GRAVITY));
-        Vector vgravity = penv->GetPhysicsEngine()->GetGravity();
+        Vector vgravity = _penv->GetPhysicsEngine()->GetGravity();
         g->getValue().set3 (vgravity.x, vgravity.y, vgravity.z);
 
-        vector<RobotBasePtr> vrobots;
-        penv->GetRobots(vrobots);
-        FOREACHC(it, vrobots) {
-            boost::shared_ptr<instance_articulated_system_output> iasout = _WriteRobot(*it);
-            if( !!iasout ) {
-                _WriteBindingsInstance_kinematics_scene(_scene.kiscene,KinBodyConstPtr(*it),iasout->vaxissids,iasout->vkinematicsbindings);
+        FOREACHC(itbody,listbodies) {
+            BOOST_ASSERT((*itbody)->GetEnv()==_penv);
+            boost::shared_ptr<instance_articulated_system_output> iasout;
+            if( (*itbody)->IsRobot() ) {
+                iasout = _WriteRobot(RaveInterfaceCast<RobotBase>(*itbody));
             }
             else {
-                RAVELOG_WARN(str(boost::format("failed to write robot %s\n")%(*it)->GetName()));
+                iasout = _WriteKinBody(*itbody,_scene.kscene,_scene.kscene->getID());
+            }
+
+            if( !!iasout ) {
+                _WriteBindingsInstance_kinematics_scene(_scene.kiscene,KinBodyConstPtr(*itbody),iasout->vaxissids,iasout->vkinematicsbindings);
+                //boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(*itbody,_scene.pscene,_scene.pscene->getID());
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("collada writer failed to write body %s\n")%(*itbody)->GetName()));
             }
         }
-
-        vector<KinBodyPtr> vbodies;
-        penv->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
-            if( !(*itbody)->IsRobot() ) {
-                boost::shared_ptr<instance_articulated_system_output> iasout = _WriteKinBody(*itbody,_scene.kscene,_scene.kscene->getID());
-                if( !!iasout ) {
-                    _WriteBindingsInstance_kinematics_scene(_scene.kiscene,*itbody,iasout->vaxissids,iasout->vkinematicsbindings);
-                    //boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(*itbody,_scene.pscene,_scene.pscene->getID());
-                }
-                else {
-                    RAVELOG_WARN(str(boost::format("failed to write body %s\n")%(*itbody)->GetName()));
-                }
-            }
-        }
-
         return true;
     }
 
@@ -436,6 +442,9 @@ private:
     /// \brief Write one kinematic body as a file
     virtual bool Write(KinBodyPtr pbody)
     {
+        if( pbody->IsRobot() ) {
+            return Write(RaveInterfaceCast<RobotBase>(pbody));
+        }
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene();
         boost::shared_ptr<instance_articulated_system_output> iasout = _WriteKinBody(pbody,_scene.kscene,_scene.kscene->getID());
@@ -1603,29 +1612,31 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::instance_kinematics_model_output)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 #endif
 
-void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename)
+void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
-    ColladaWriter writer(penv);
-    if( !writer.Write(penv) ) {
+    ColladaWriter writer(penv, atts);
+    if( !writer.Write() ) {
         throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
     }
     writer.Save(filename);
 }
 
-void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename)
+void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
-    ColladaWriter writer(pbody->GetEnv());
+    ColladaWriter writer(pbody->GetEnv(),atts);
     if( !writer.Write(pbody) ) {
         throw openrave_exception("ColladaWriter::Write(KinBodyPtr) failed");
     }
     writer.Save(filename);
 }
 
-void RaveWriteColladaFile(RobotBasePtr probot, const string& filename)
+void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
 {
-    ColladaWriter writer(probot->GetEnv());
-    if( !writer.Write(probot) ) {
-        throw openrave_exception("ColladaWriter::Write(RobotBasePtr) failed");
+    if( listbodies.size() > 0 ) {
+        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        if( !writer.Write(listbodies) ) {
+            throw openrave_exception("ColladaWriter::Write(list<KinBodyPtr>) failed");
+        }
+        writer.Save(filename);
     }
-    writer.Save(filename);
 }

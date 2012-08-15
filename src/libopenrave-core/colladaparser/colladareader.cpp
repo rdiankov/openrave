@@ -167,11 +167,16 @@ public:
     virtual ~ColladaReader() {
     }
 
-    bool InitFromFile(const string& filename,const AttributesList& atts)
+    bool InitFromFile(const string& filename, const AttributesList& atts)
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
         _dae.reset(new DAE);
         _bOpeningZAE = filename.find(".zae") == filename.size()-4;
+        if( !!_dae->getIOPlugin() ) {
+            FOREACHC(itatt,atts) {
+                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+            }
+        }
         _dom = daeSafeCast<domCOLLADA>(_dae->open(filename));
         _bOpeningZAE = false;
         if (!_dom) {
@@ -185,6 +190,11 @@ public:
     {
         RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae.reset(new DAE);
+        if( !!_dae->getIOPlugin() ) {
+            FOREACHC(itatt,atts) {
+                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+            }
+        }
         _dom = daeSafeCast<domCOLLADA>(_dae->openFromMemory(".",pdata.c_str()));
         if (!_dom) {
             return false;

@@ -332,7 +332,7 @@ inline object toPyVector4(Vector v)
 inline AttributesList toAttributesList(boost::python::dict odict)
 {
     AttributesList atts;
-    if( !!odict ) {
+    if( odict != object() ) {
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         for (int i = 0; i < boost::python::len(iterkeys); i++) {
             // Because we know they're strings, we can do this
@@ -342,6 +342,14 @@ inline AttributesList toAttributesList(boost::python::dict odict)
         }
     }
     return atts;
+}
+
+inline AttributesList toAttributesList(boost::python::object odict)
+{
+    if( odict != object() ) {
+        return toAttributesList(boost::python::dict(odict));
+    }
+    return AttributesList();
 }
 
 bool GetReturnTransformQuaternions();

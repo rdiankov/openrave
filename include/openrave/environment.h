@@ -184,20 +184,25 @@ public:
     enum SelectionOptions
     {
         SO_NoRobots = 1,               ///< everything but robots
-        TO_Obstacles = 1,               ///< everything but robots
+        TO_Obstacles = 1,
         SO_Robots = 2,                  ///< all robots
-        TO_Robots = 2,                  ///< all robots
+        TO_Robots = 2,
         SO_Everything = 3,              ///< all bodies and robots everything
-        TO_Everything = 3,              ///< all bodies and robots everything
-        SO_Body = 4,                    ///< only triangulate robot/kinbody
-        TO_Body = 4,                    ///< only triangulate robot/kinbody
-        SO_AllExceptBody = 5,             ///< select everything but the robot/kinbody
-        TO_AllExceptBody = 5,             ///< select everything but the robot/kinbody
-        SO_BodyList = 6,                 ///< provide a list of body names
+        TO_Everything = 3,
+        SO_Body = 4,                    ///< robot/kinbody. atts 'target' key contains the body name. If multiple targets are specified, then will save all related bodies.
+        TO_Body = 4,
+        SO_AllExceptBody = 5,             ///< save everything but the robot/kinbody objects specified through the atts 'target' key. Multiple targets can be specified.
+        TO_AllExceptBody = 5,
     };
     typedef SelectionOptions TriangulateOptions;
 
-    /// \brief Loads a scene from a file and adds all objects in the environment. <b>[multi-thread safe]</b>
+    /** \brief Loads a scene from a file and adds all objects in the environment. <b>[multi-thread safe]</b>
+
+        For collada readers, the options are passed through to
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+     */
     virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
@@ -207,13 +212,27 @@ public:
         return LoadData(data,atts);
     }
 
-    /// \brief Saves a scene depending on the filename extension. Default is in COLLADA format
-    ///
-    /// \param filename the filename to save the results at
-    /// \param options controls what to save
-    /// \param selectname
-    /// \throw openrave_exception Throw if failed to save anything
-    virtual void Save(const std::string& filename, SelectionOptions options=SO_Everything, const std::string& selectname="") = 0;
+    /** \brief Saves a scene depending on the filename extension. Default is in COLLADA format
+
+        \param filename the filename to save the results at
+        \param options controls what to save
+        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+        Several default options are:
+        - 'target' - the target body name of the options, if relevant
+        - 'password' - the password/key to encrypt the data with, collada supports this through zae zip archives
+        \throw openrave_exception Throw if failed to save anything
+     */
+    virtual void Save(const std::string& filename, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+
+    /// \deprecated (12/08/15)
+    virtual void Save(const std::string& filename, SelectionOptions options, const std::string& selectname) RAVE_DEPRECATED {
+        AttributesList atts;
+        atts.push_back(std::make_pair(std::string("target"),selectname));
+        Save(filename,options,atts);
+    }
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
