@@ -245,6 +245,7 @@ public:
 
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
+        std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
             domInstance_kinematics_sceneRef kiscene = allscene->getInstance_kinematics_scene_array()[iscene];
             domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
@@ -253,7 +254,7 @@ public:
             }
 
             daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
-            KinematicsSceneBindings bindings;
+            KinematicsSceneBindings& bindings = allbindings[iscene];
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
             FOREACH(itbinding,bindings.listModelBindings) {
@@ -292,6 +293,100 @@ public:
                 KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
                 if( !!pbody ) {
                     _penv->Add(pbody, true);
+                }
+            }
+        }
+
+        // process grabbed objects
+        for(size_t iscene = 0; iscene < allscene->getInstance_physics_scene_array().getCount(); ++iscene) {
+            domInstance_with_extraRef piscene = allscene->getInstance_physics_scene_array()[iscene];
+            for(size_t ie = 0; ie < piscene->getExtra_array().getCount(); ++ie) {
+                domExtraRef pextra = piscene->getExtra_array()[ie];
+                std::string extra_type = pextra->getType();
+                if( extra_type == "dynamic_rigid_constraints" ) {
+                    domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                    if( !!tec ) {
+                        for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                            daeElementRef pchild = tec->getContents()[ic];
+                            if( std::string(pchild->getElementName()) == "rigid_constraint" ) {
+                                // parse the rigid attachment
+                                daeElementRef pref_attachment = pchild->getChild("ref_attachment");
+                                daeElementRef pattachment = pchild->getChild("attachment");
+                                if( !!pref_attachment && !!pattachment ) {
+                                    string ref_attachment_sid = pref_attachment->getAttribute("rigid_body");
+                                    string attachment_sid = pattachment->getAttribute("rigid_body");
+                                    daeElementRef ref_attachment_rigid_body = daeSidRef(ref_attachment_sid,piscene).resolve().elt;
+                                    daeElementRef attachment_rigid_body = daeSidRef(attachment_sid,piscene).resolve().elt;
+                                    if( !!ref_attachment_rigid_body && !!attachment_rigid_body ) {
+                                        domInstance_physics_modelRef ref_ipmodel = daeSafeCast<domInstance_physics_model>(daeSidRef(ref_attachment_sid.substr(0,ref_attachment_sid.rfind('/')), piscene).resolve().elt);
+                                        domInstance_physics_modelRef ipmodel = daeSafeCast<domInstance_physics_model>(daeSidRef(attachment_sid.substr(0,attachment_sid.rfind('/')), piscene).resolve().elt);
+                                        // get the instance_rigid_body
+                                        domInstance_rigid_bodyRef ref_irigidbody, irigidbody;
+                                        string sidfind = ref_attachment_rigid_body->getAttribute("sid");
+                                        KinBody::LinkPtr ref_link, link;
+                                        for(size_t irigid = 0; irigid < ref_ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
+                                            domInstance_rigid_bodyRef temprigid = ref_ipmodel->getInstance_rigid_body_array()[irigid];
+                                            if( temprigid->getBody() == sidfind ) {
+                                                ref_irigidbody = temprigid;
+                                                string nodeid = temprigid->getTarget().getElement()->getID();
+                                                FOREACH(itbinding,allbindings) {
+                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            ref_link = itlinkbinding->_link;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if( !!ref_link ) {
+                                                        break;
+                                                    }
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        sidfind = attachment_rigid_body->getAttribute("sid");
+                                        for(size_t irigid = 0; irigid < ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
+                                            domInstance_rigid_bodyRef temprigid = ipmodel->getInstance_rigid_body_array()[irigid];
+                                            if( temprigid->getBody() == sidfind ) {
+                                                irigidbody = temprigid;
+                                                string nodeid = temprigid->getTarget().getElement()->getID();
+                                                FOREACH(itbinding,allbindings) {
+                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            link = itlinkbinding->_link;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if( !!link ) {
+                                                        break;
+                                                    }
+                                                }
+                                                break;
+                                            }
+                                        }
+
+                                        if( !!ref_link && !!link ) {
+                                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
+                                            if( !!probot ) {
+                                                probot->Grab(link->GetParent(),ref_link);
+                                            }
+                                            else {
+                                                RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));
+                                            }
+                                        }
+                                        else {
+                                            RAVELOG_WARN(str(boost::format("failed to find KinBody::LinkPtr from instance_rigid_body sidrefs: %s and %s")%ref_attachment_sid%attachment_sid));
+                                        }
+                                    }
+                                    else {
+                                        RAVELOG_WARN(str(boost::format("invalid rigid_body references for rigid_constraint %s")%pchild->getAttribute("sid")));
+                                    }
+                                }
+                                else {
+                                    RAVELOG_WARN(str(boost::format("could not find ref_attachment and attachment elements for rigid_constraint %s")%pchild->getAttribute("sid")));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -399,6 +494,7 @@ public:
                 }
             }
         }
+
         return bSuccess;
     }
 

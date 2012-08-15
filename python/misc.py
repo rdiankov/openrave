@@ -704,6 +704,11 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
             grabbed0 = robot0.GetGrabbed()
             grabbed1 = robot1.GetGrabbed()
             assert( set([body.GetName() for body in grabbed0]) == set([body.GetName() for body in grabbed1]) )
+            for g0 in grabbed0:
+                g1 = robot1.GetEnv().GetKinBody(g0.GetName())
+                grabbedlink0 = robot0.IsGrabbing(g0)
+                grabbedlink1 = robot1.IsGrabbing(g1)
+                assert(grabbedlink0.GetName()==grabbedlink1.GetName())
             # compare the positions
             
         if comparesensors:

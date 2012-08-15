@@ -1,26 +1,20 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.2.2)
+COLLADA Robot Extensions (Version 0.3.0)
 ----------------------------------------
 
-OpenRAVE fully supports the COLLADA file format for specifying robots and adds its own set of robot-specific extensions. The `COLLADA <https://collada.org/mediawiki/index.php/COLLADA_-_Digital_Asset_and_FX_Exchange_Schema>`_ format is used to specify all robot and scene related information. Robots are standardized with the COLLADA 1.5 file format. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and kinematics. 
-
-The robot extensions include:
+OpenRAVE maintains a set of robot-specific extensions to the COLLADA 1.5 specification in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
 
 * manipulators
 * sensors
+* collision data - geometries for environment, self-collision, visual info, etc
 * planning-specific parameters
-* collision data
-
-
-COLLADA files saved as **dae** store the raw XML, files stored as **zae** stored the compressed XML. In order to preserve space, most robots in OpenRAVE are stored as **zae**. This document describes how to extend the format to handle robot-specific information.
 
 COLLADA allows extensions of any of its tags using the **<extra>** tag. Each **<extra>** defines what type of information to provide and a format for that information, also called **technique**. All custom data defined here uses the **OpenRAVE** technique. 
 
 There are one-to-one correspondences between the OpenRAVE interface types and COLLADA tags:
 
-* Robot <-> articulated_system
-* KinBody <-> kinematics_model
+* Robot/KinBody <-> articulated_system
 * Sensor <-> sensor
 * Manipulator <-> manipulator
 
@@ -274,6 +268,66 @@ The example defines an arm with an end effector at link wam7 with a local coordi
       </technique>
     </extra>
   </articulated_system>
+
+dynamic_rigid_constraints
+=========================
+
+Introduction
+~~~~~~~~~~~~
+
+Defines a list of rigid constraints within pairs of bodies modeling dynamic relationships like robot hand grabbing object.
+
+Concepts
+~~~~~~~~
+
+Allows new rigid constraints to be specified that are not associated with physics models, but instead of with the instantiated physics and visual scenes. Common rigid constraints for robotics are:
+
+- a robot hand grasping an object with its hand.
+- robot grasping a tool, which then grasps the object
+- robot hand grasps a cylindrical pole, so it is free to rotate the hand with respect to the cylinder axis.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 80
+  
+  Parent elements | <instance_physics_scene>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+  
+  <rigid_constraint> | A list of rigid constraints | 0 or more
+
+Details
+~~~~~~~
+
+Example
+~~~~~~~
+
+Describes robot whose physics model SID is **pmodel1_inst** grabbing with its **rigid_hand** link an object whose physics model SID is **pmodel2_inst**. **rigid_hand** is the SID of the **<instance_rigid_body>** inside **pmodel1_inst**.
+
+.. code-block:: xml
+
+  <instance_physics_scene url="#pscene">
+    <extra type="dynamic_rigid_constraints">
+      <technique profile="OpenRAVE">
+        <rigid_constraint>
+          <ref_attachment rigid_body="./pmodel1_inst/rigid_hand"/>
+          <attachment rigid_body="./pmodel2_inst/rigid0"/>
+        </rigid_constraint>
+      </technique>
+    </extra>
+  </instance_physics_scene>
+
 
 collision
 =========

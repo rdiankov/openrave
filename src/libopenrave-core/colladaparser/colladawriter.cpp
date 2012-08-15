@@ -238,18 +238,20 @@ public:
         std::vector<std::pair<std::string,std::string> > vkinematicsbindings;     // node and kinematics model bindings
     };
 
-    struct instance_articulated_system_output
-    {
-        domInstance_articulated_systemRef ias;
-        std::vector<axis_sids> vaxissids;
-        std::vector<std::string > vlinksids;
-        std::vector<std::pair<std::string,std::string> > vkinematicsbindings;
-    };
-
     struct instance_physics_model_output
     {
         domInstance_physics_modelRef ipm;
         boost::shared_ptr<physics_model_output> pmout;
+    };
+
+    struct instance_articulated_system_output
+    {
+        KinBodyPtr pbody; ///< the body written for
+        domInstance_articulated_systemRef ias;
+        boost::shared_ptr<instance_physics_model_output> ipmout;
+        std::vector<axis_sids> vaxissids;
+        std::vector<std::string > vlinksids;
+        std::vector<std::pair<std::string,std::string> > vkinematicsbindings;
     };
 
     struct kinbody_models
@@ -405,6 +407,7 @@ private:
         Vector vgravity = _penv->GetPhysicsEngine()->GetGravity();
         g->getValue().set3 (vgravity.x, vgravity.y, vgravity.z);
 
+        std::list<boost::shared_ptr<instance_articulated_system_output> > listModelDatabase;
         FOREACHC(itbody,listbodies) {
             BOOST_ASSERT((*itbody)->GetEnv()==_penv);
             boost::shared_ptr<instance_articulated_system_output> iasout;
@@ -417,12 +420,13 @@ private:
 
             if( !!iasout ) {
                 _WriteBindingsInstance_kinematics_scene(_scene.kiscene,KinBodyConstPtr(*itbody),iasout->vaxissids,iasout->vkinematicsbindings);
-                //boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(*itbody,_scene.pscene,_scene.pscene->getID());
+                listModelDatabase.push_back(iasout);
             }
             else {
                 RAVELOG_WARN(str(boost::format("collada writer failed to write body %s\n")%(*itbody)->GetName()));
             }
         }
+        _WriteDynamicRigidConstraints(_scene.piscene,listModelDatabase);
         return true;
     }
 
@@ -452,7 +456,6 @@ private:
             return false;
         }
         _WriteBindingsInstance_kinematics_scene(_scene.kiscene,KinBodyConstPtr(pbody),iasout->vaxissids,iasout->vkinematicsbindings);
-        //boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
         return true;
     }
 
@@ -469,6 +472,7 @@ private:
         ias->setName(pbody->GetName().c_str());
 
         boost::shared_ptr<instance_articulated_system_output> iasout(new instance_articulated_system_output());
+        iasout->pbody = pbody;
         iasout->ias = ias;
 
         // kinematics info
@@ -537,7 +541,7 @@ private:
             iasout->vaxissids.push_back(axis_sids(string(ab->getSid()),valuesid,kas.jointnodesid));
         }
 
-        boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
+        iasout->ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
         _WriteKinBodyType(pbody,articulated_system_kinematics);
         _WriteKinBodyExtraInfo(pbody,ias);
         return iasout;
@@ -578,6 +582,7 @@ private:
         ias->setName(probot->GetName().c_str());
 
         boost::shared_ptr<instance_articulated_system_output> iasout(new instance_articulated_system_output());
+        iasout->pbody = probot;
         iasout->ias = ias;
 
         // motion info
@@ -675,7 +680,7 @@ private:
             iasout->vaxissids.push_back(axis_sids(string(ab->getSid()),valuesid,kas.jointnodesid));
         }
 
-        boost::shared_ptr<instance_physics_model_output> ipmout = _WriteInstance_physics_model(probot,_scene.pscene,_scene.pscene->getID());
+        iasout->ipmout = _WriteInstance_physics_model(probot,_scene.pscene,_scene.pscene->getID());
         _WriteKinBodyExtraInfo(probot,ias);
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(KinBodyPtr(probot));
@@ -841,6 +846,8 @@ private:
         for(size_t i = 0; i < pmout->vrigidbodysids.size(); ++i) {
             domInstance_rigid_bodyRef pirb = daeSafeCast<domInstance_rigid_body>(ipmout->ipm->add(COLLADA_ELEMENT_INSTANCE_RIGID_BODY));
             pirb->setBody(pmout->vrigidbodysids[i].c_str());
+            // On export you can create the URI with the string, ie daeURI uri( body1->getSid() );
+            pirb->setSid(pmout->vrigidbodysids[i].c_str()); // set the same sid as <rigid_body> sid just in case
             string rigidnodeid;
             if( !kmout ) {
                 rigidnodeid = nodeid;
@@ -1293,15 +1300,18 @@ private:
 
         // Create instance visual scene
         _scene.viscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE ));
-        _scene.viscene->setUrl( (string("#") + string(_scene.vscene->getID())).c_str() );
+        _scene.viscene->setUrl(str(boost::format("#%s")%_scene.vscene->getID()).c_str());
+        _scene.viscene->setSid(str(boost::format("%s_inst")%_scene.vscene->getID()).c_str());
 
         // Create instance kinematics scene
         _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
-        _scene.kiscene->setUrl( (string("#") + string(_scene.kscene->getID())).c_str() );
+        _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getID()).c_str());
+        _scene.kiscene->setSid(str(boost::format("%s_inst")%_scene.kscene->getID()).c_str());
 
         // Create instance physics scene
         _scene.piscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_PHYSICS_SCENE ));
-        _scene.piscene->setUrl( (string("#") + string(_scene.pscene->getID())).c_str() );
+        _scene.piscene->setUrl(str(boost::format("#%s")%_scene.pscene->getID()).c_str());
+        _scene.piscene->setSid(str(boost::format("%s_inst")%_scene.pscene->getID()).c_str());
     }
 
     /** \brief Write link of a kinematic body
@@ -1425,7 +1435,7 @@ private:
         _SetVector3(daeSafeCast<domTranslate>(pelt->add(COLLADA_ELEMENT_TRANSLATE,0))->getValue(),t.trans);
     }
 
-    // binding in instance_kinematics_scene
+    /// \brief binding in instance_kinematics_scene
     void _WriteBindingsInstance_kinematics_scene(domInstance_kinematics_sceneRef ikscene, KinBodyConstPtr pbody, const std::vector<axis_sids>& vaxissids, const std::vector<std::pair<std::string,std::string> >& vkinematicsbindings)
     {
         FOREACHC(it, vkinematicsbindings) {
@@ -1438,6 +1448,50 @@ private:
             pjointbind->setTarget(it->jointnodesid.c_str());
             daeSafeCast<domCommon_param>(pjointbind->add(COLLADA_ELEMENT_AXIS)->add(COLLADA_TYPE_PARAM))->setValue(it->axissid.c_str());
             daeSafeCast<domCommon_param>(pjointbind->add(COLLADA_ELEMENT_VALUE)->add(COLLADA_TYPE_PARAM))->setValue(it->valuesid.c_str());
+        }
+    }
+
+    /// \brief writes the dynamic rigid constr
+    void _WriteDynamicRigidConstraints(domInstance_with_extraRef piscene, const std::list<boost::shared_ptr<instance_articulated_system_output> >& listModelDatabase)
+    {
+        domTechniqueRef ptec;
+        // go through every robot and check if it has grabbed bodies
+        std::vector<KinBodyPtr> vGrabbedBodies;
+        size_t idynamicconstraint = 0;
+        FOREACHC(itias, listModelDatabase) {
+            if( (*itias)->pbody->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>((*itias)->pbody);
+                probot->GetGrabbed(vGrabbedBodies);
+                FOREACHC(itgrabbed,vGrabbedBodies) {
+                    boost::shared_ptr<instance_articulated_system_output> grabbedias;
+                    FOREACH(itias2,listModelDatabase) {
+                        if( (*itias2)->pbody == *itgrabbed ) {
+                            grabbedias = *itias2;
+                            break;
+                        }
+                    }
+                    if( !grabbedias ) {
+                        RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
+                        continue;
+                    }
+
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabbed);
+                    if( !ptec ) {
+                        domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
+                        pextra->setType("dynamic_rigid_constraints");
+                        ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                        ptec->setProfile("OpenRAVE");
+                    }
+
+                    daeElementRef pconstraint = ptec->add("rigid_constraint");
+                    pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
+                    idynamicconstraint++;
+                    string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+                    pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                    rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
+                    pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                }
+            }
         }
     }
 
