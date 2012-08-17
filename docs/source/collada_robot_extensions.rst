@@ -3,7 +3,7 @@
 COLLADA Robot Extensions (Version 0.3.0)
 ----------------------------------------
 
-OpenRAVE maintains a set of robot-specific extensions to the COLLADA 1.5 specification in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
+OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
 
 * manipulators
 * sensors

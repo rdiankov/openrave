@@ -329,28 +329,11 @@ inline object toPyVector4(Vector v)
     return numeric::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
 }
 
-inline AttributesList toAttributesList(boost::python::dict odict)
-{
-    AttributesList atts;
-    if( odict != object() ) {
-        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
-        for (int i = 0; i < boost::python::len(iterkeys); i++) {
-            // Because we know they're strings, we can do this
-            std::string key = boost::python::extract<std::string>(iterkeys[i]);
-            std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
-            atts.push_back(make_pair(key,value));
-        }
-    }
-    return atts;
-}
-
-inline AttributesList toAttributesList(boost::python::object odict)
-{
-    if( odict != object() ) {
-        return toAttributesList(boost::python::dict(odict));
-    }
-    return AttributesList();
-}
+/// \brief converts dictionary of keyvalue pairs
+AttributesList toAttributesList(boost::python::dict odict);
+/// \brief converts list of tuples [(key,value),(key,value)], it is possible for keys to repeat
+AttributesList toAttributesList(boost::python::list olist);
+AttributesList toAttributesList(boost::python::object oattributes);
 
 bool GetReturnTransformQuaternions();
 

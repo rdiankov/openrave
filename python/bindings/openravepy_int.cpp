@@ -61,6 +61,51 @@ object toPyArray(const Transform& t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
+AttributesList toAttributesList(boost::python::dict odict)
+{
+    AttributesList atts;
+    if( odict != object() ) {
+        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        size_t num = boost::python::len(iterkeys);
+        for (size_t i = 0; i < num; i++) {
+            // Because we know they're strings, we can do this
+            std::string key = boost::python::extract<std::string>(iterkeys[i]);
+            std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
+            atts.push_back(make_pair(key,value));
+        }
+    }
+    return atts;
+}
+
+AttributesList toAttributesList(boost::python::list oattributes)
+{
+    AttributesList atts;
+    if( oattributes != object() ) {
+        size_t num=len(oattributes);
+        for (size_t i = 0; i < num; i++) {
+            // Because we know they're strings, we can do this
+            std::string key = boost::python::extract<std::string>(oattributes[i][0]);
+            std::string value = boost::python::extract<std::string>(oattributes[i][1]);
+            atts.push_back(make_pair(key,value));
+        }
+    }
+    return atts;
+}
+
+AttributesList toAttributesList(boost::python::object oattributes)
+{
+    if( oattributes != object() ) {
+        boost::python::extract<boost::python::dict> odictextractor(oattributes);
+        if( odictextractor.check() ) {
+            return toAttributesList((boost::python::dict)odictextractor());
+        }
+        // assume list
+        boost::python::extract<boost::python::list> olistextractor(oattributes);
+        return toAttributesList((boost::python::list)olistextractor());
+    }
+    return AttributesList();
+}
+
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);

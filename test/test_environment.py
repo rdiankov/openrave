@@ -258,6 +258,11 @@ class TestEnvironment(EnvironmentSetup):
             env2=Environment()
             env2.Load('test_colladagrabbing.dae')
             misc.CompareBodies(robot,env2.GetRobot(robot.GetName()))
+
+    def test_collada_savingoptions(self):
+        self.log.info('test collada saving options')
+        env=self.env
+        robot = self.Load('data/pr2test1.env.xml')
             
     def test_unicode(self):
         env=self.env

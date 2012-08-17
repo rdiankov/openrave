@@ -122,9 +122,11 @@ COLLADA
 
 * COLLADA support for **<instance_node>** and saving/restoring scenes with similar bodies.
 
-* COLLADA can read/write geometric primitives like boxes, cylinders, etc
+* COLLADA can read/write geometric primitives like boxes, cylinders, etc through **<geometry_info>**
 
 * COLLADA can read/write XMLReadable interfaces registered through :meth:`.RaveRegisterXMLReader`
+
+* COLLADA can read/write the grabbed state of robots through **<dynamic_rigid_constraints>**.
 
 Misc
 ----

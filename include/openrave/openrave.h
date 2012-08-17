@@ -705,9 +705,9 @@ private:
 
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+
+/// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
-/// \deprecated (11/02/18)
-typedef AttributesList XMLAttributesList RAVE_DEPRECATED;
 
 /// \brief base class for all xml readers. XMLReaders are used to process data from xml files.
 ///
@@ -2634,11 +2634,11 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 
-/// \deprecated
-typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
+/// \deprecated (12/01/01)
+typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) RAVE_DEPRECATED;
 
-/// \deprecated
-typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
+/// \deprecated (12/01/01)
+typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;
 
 // define inline functions
 const std::string& IkParameterization::GetName() const
