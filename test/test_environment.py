@@ -385,6 +385,7 @@ class TestEnvironment(EnvironmentSetup):
 
     def test_dataccess(self):
         RaveDestroy()
+        OPENRAVE_DATA = os.environ.get('OPENRAVE_DATA','')
         os.environ['OPENRAVE_DATA'] = os.path.join(os.getcwd(),'testdata')
         env2=Environment() # should reread the OPENRAVE_DATA
         try:
@@ -400,8 +401,11 @@ class TestEnvironment(EnvironmentSetup):
             env2.Reset()
             assert(not env2.Load('../ikfastrobots/fail1.dae'))
         finally:
+            # have to restore everything
             RaveSetDataAccess(0)
+            os.environ['OPENRAVE_DATA'] = OPENRAVE_DATA
             env2.Destroy()
+            RaveDestroy()
             
     def test_load_cwd(self):
         env=self.env
