@@ -2466,9 +2466,10 @@ OPENRAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool 
 
 /// \brief Explicitly initializes the global OpenRAVE state (optional).
 ///
-/// Optional function to initialize openrave plugins and logging.
+/// Optional function to initialize openrave plugins, logging, and read OPENRAVE_* environment variables.
 /// Although environment creation will automatically make sure this function is called, users might want
 /// explicit control of when this happens.
+/// Will not do anything if OpenRAVE runtime is already initialized. If OPENRAVE_* environment variables must be re-read, first call \ref RaveDestroy.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
 OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, int level = Level_Info);
@@ -2582,6 +2583,27 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
+
+/** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
+
+    The OpenRAVE paths consist of a list of directories specified by $OPENRAVE_DATA environment variable and custom added user paths.
+    Requires boost::filesystem to be installed
+    \param filename the filename to look for
+    \param curdir the current directory in case the filename is relative
+    \return an empty string if file isn't found, otherwise path to full filename on local filesystem
+ */
+OPENRAVE_API std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir="");
+
+/// \brief Sets the default data access options for cad resources/robot files
+///
+/// Controls how files are processed in functions like \ref RaveFindLocalFile
+/// \param accessoptions - if 1 will only allow resources inside directories specified from OPERNAVE_DATA environment variable. This allows reject of full paths from unsecure/unauthenticated resources.
+OPENRAVE_API void RaveSetDataAccess(int accessoptions);
+
+/// \brief Returns the acess options set
+///
+/// \see RaveSetDataAccess
+OPENRAVE_API int RaveGetDataAccess();
 
 //@}
 

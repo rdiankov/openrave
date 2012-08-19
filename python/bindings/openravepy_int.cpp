@@ -1211,12 +1211,6 @@ public:
     int GetDebugLevel() const {
         return _penv->GetDebugLevel();
     }
-    void SetDataAccess(int options) {
-        return _penv->SetDataAccess(options);
-    }
-    int GetDataAccess() const {
-        return _penv->GetDataAccess();
-    }
 
     string GetHomeDirectory() {
         RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory();
@@ -1576,8 +1570,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))
                     .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(EnvironmentBase,GetDebugLevel))
-                    .def("SetDataAccess",&PyEnvironmentBase::SetDataAccess,args("level"), DOXY_FN(EnvironmentBase,SetDataAccess))
-                    .def("GetDataAccess",&PyEnvironmentBase::GetDataAccess, DOXY_FN(EnvironmentBase,GetDataAccess))
                     .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(EnvironmentBase,GetHomeDirectory))
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))

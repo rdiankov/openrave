@@ -268,17 +268,15 @@ public:
 };
 
 int& GetXMLErrorCount();
-void SetDataDirs(const std::vector<std::string>& vdatadirs, int accessoptions);
+
+/// \param bResetParseDirectory if true, will reset the parse directory to the current working directory
 bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
 bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
 BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
-boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts, bool bAddToEnvironment);
 bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
-
 bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries);
-
 }
 
 #ifdef _WIN32

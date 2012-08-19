@@ -91,7 +91,6 @@ protected:
 public:
     Environment() : EnvironmentBase()
     {
-        _nDataAccessOptions = 0;
         _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUG(str(boost::format("setting openrave home directory to %s")%_homedirectory));
 
@@ -109,72 +108,6 @@ public:
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
         _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
-
-        {
-            bool bExists=false;
-#ifdef _WIN32
-            const char* delim = ";";
-#else
-            const char* delim = ":";
-#endif
-            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA"); // getenv not thread-safe?
-            if( pOPENRAVE_DATA != NULL ) {
-                utils::TokenizeString(pOPENRAVE_DATA, delim, _vdatadirs);
-            }
-            string installdir = OPENRAVE_DATA_INSTALL_DIR;
-#ifdef HAVE_BOOST_FILESYSTEM
-            if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
-#ifdef _WIN32
-                HKEY hkey;
-                if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\" OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
-                    DWORD dwType = REG_SZ;
-                    CHAR szInstallRoot[4096];     // dont' take chances, it is windows
-                    DWORD dwSize = sizeof(szInstallRoot);
-                    RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
-                    RegCloseKey(hkey);
-                    installdir.assign(szInstallRoot);
-                    installdir += str(boost::format("%cshare%copenrave-%d.%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
-                    RAVELOG_VERBOSE(str(boost::format("window registry data dir '%s'")%installdir));
-                }
-                else
-#endif
-                {
-                    RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
-                }
-            }
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
-#else
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
-#endif
-
-            FOREACH(itname, _vdatadirs) {
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
-#else
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) )
-#endif
-                {
-                    bExists = true;
-                    break;
-                }
-            }
-#else
-            string datafilename=installdir;
-            FOREACH(itname, _vdatadirs) {
-                if( datafilename == installdir ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#endif
-            if( !bExists ) {
-                _vdatadirs.push_back(installdir);
-            }
-            FOREACHC(itdir,_vdatadirs) {
-                RAVELOG_VERBOSE(str(boost::format("data dir: %s")%*itdir));
-            }
-        }
     }
 
     virtual ~Environment()
@@ -457,13 +390,11 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(), _nDataAccessOptions);
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 return true;
             }
         }
         if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
@@ -493,7 +424,6 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( _IsColladaData(data) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
@@ -1069,13 +999,11 @@ public:
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
@@ -1191,13 +1119,11 @@ public:
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
@@ -1301,7 +1227,6 @@ public:
     {
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
@@ -1328,7 +1253,6 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1337,7 +1261,6 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1352,7 +1275,6 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1361,7 +1283,6 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1420,9 +1341,8 @@ public:
     virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
-        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-        if( !filedata ) {
+        string filedata = RaveFindLocalFile(filename);
+        if( filedata.size() == 0 ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
         Vector vScaleGeometry(1,1,1);
@@ -1439,7 +1359,7 @@ public:
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
@@ -1448,9 +1368,8 @@ public:
     virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
-        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-        if( !filedata ) {
+        string filedata = RaveFindLocalFile(filename);
+        if( filedata.size() == 0 ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
         Vector vScaleGeometry(1,1,1);
@@ -1463,7 +1382,7 @@ public:
                 }
             }
         }
-        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
+        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries);
     }
 
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
@@ -1671,15 +1590,6 @@ public:
         return RaveGetDebugLevel();
     }
 
-    virtual void SetDataAccess(int options) {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _nDataAccessOptions = options;
-    }
-    virtual int GetDataAccess() const {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _nDataAccessOptions;
-    }
-
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
     {
         boost::mutex::scoped_lock lock(_mutexInterfaces);
@@ -1707,10 +1617,6 @@ public:
         }
     }
 
-    const vector<string>& GetDataDirs() const {
-        return _vdatadirs;
-    }
-
 protected:
 
     void _SetDefaultGravity()
@@ -1727,14 +1633,12 @@ protected:
     virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
     }
 
     virtual bool _ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
@@ -1806,8 +1710,6 @@ protected:
             }
             listViewers.clear();
         }
-
-        _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
         //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
@@ -2299,7 +2201,6 @@ protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     int _nEnvironmentIndex;                   ///< next network index
-    int _nDataAccessOptions;
     std::map<int, KinBodyWeakPtr> _mapBodies;     ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
@@ -2310,7 +2211,6 @@ protected:
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;
-    vector<string> _vdatadirs;
     string _homedirectory;
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

@@ -259,11 +259,6 @@ class TestEnvironment(EnvironmentSetup):
             env2.Load('test_colladagrabbing.dae')
             misc.CompareBodies(robot,env2.GetRobot(robot.GetName()))
 
-    def test_collada_savingoptions(self):
-        self.log.info('test collada saving options')
-        env=self.env
-        robot = self.Load('data/pr2test1.env.xml')
-            
     def test_unicode(self):
         env=self.env
         name = 'テスト名前'.decode('utf-8')
@@ -389,20 +384,69 @@ class TestEnvironment(EnvironmentSetup):
             t.join()
 
     def test_dataccess(self):
+        RaveDestroy()
         os.environ['OPENRAVE_DATA'] = os.path.join(os.getcwd(),'testdata')
         env2=Environment() # should reread the OPENRAVE_DATA
         try:
-            env2.SetDataAccess(0)
+            RaveSetDataAccess(0)
             assert(env2.Load('bobcat.robot.xml'))
             assert(env2.Load('../ikfastrobots/fail1.robot.xml'))
             env2.Reset()
             assert(env2.Load('../ikfastrobots/fail1.dae'))
-            env2.SetDataAccess(1)
+            RaveSetDataAccess(1)
             env2.Reset()
             assert(env2.Load('bobcat.robot.xml'))
             assert(not env2.Load('../ikfastrobots/fail1.robot.xml'))
             env2.Reset()
             assert(not env2.Load('../ikfastrobots/fail1.dae'))
         finally:
+            RaveSetDataAccess(0)
             env2.Destroy()
             
+    def test_load_cwd(self):
+        env=self.env
+        oldcwd = os.getcwd()
+        try:
+            assert(env.Load('testdata/box0.dae'))
+            assert(not env.Load('box0.dae'))
+            os.chdir('testdata')
+            assert(env.Load('box0.dae'))
+        finally:
+            os.chdir(oldcwd)
+    
+    def test_collada_savingoptions(self):
+        self.log.info('test collada saving options')
+        env=self.env
+        self.LoadEnv('data/pr2test1.env.xml')
+        env.Save('test_collada_savingoptions.dae',Environment.SelectionOptions.Body,[('target','pr2'),('target','mug1')])
+
+        env2=Environment()
+        assert(env2.Load('test_collada_savingoptions.dae'))
+        assert(len(env2.GetBodies())==2)
+        misc.CompareBodies(env.GetKinBody('pr2'),env2.GetKinBody('pr2'))
+        misc.CompareBodies(env.GetKinBody('mug1'),env2.GetKinBody('mug1'))
+
+        env.Save('test_collada_savingoptions.dae',Environment.SelectionOptions.Body,{'target':'mug1'})
+        xmldata = '''
+  <COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
+    <asset>
+      <created/>
+      <modified/>
+    </asset>
+    <scene>
+      <instance_physics_scene url="./test_collada_savingoptions.dae#pscene" sid="pscene_inst"/>
+      <instance_visual_scene url="./test_collada_savingoptions.dae#vscene" sid="vscene_inst"/>
+      <instance_kinematics_scene url="./test_collada_savingoptions.dae#kscene" sid="kscene_inst">
+        <bind_kinematics_model node="visual1/node0">
+          <param>kscene_kmodel1_inst</param>
+        </bind_kinematics_model>
+        <bind_joint_axis target="visual1/node_joint0_axis0">
+          <axis><param>kscene_kmodel1_inst_robot1_kinematics_kmodel1_inst_joint0.axis0</param></axis>
+          <value><float>1.5</float></value>
+        </bind_joint_axis>
+      </instance_kinematics_scene>
+    </scene>
+  </COLLADA>
+'''
+        env2.Reset()
+        assert(env2.LoadData(xmldata))

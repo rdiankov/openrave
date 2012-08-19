@@ -369,8 +369,11 @@ bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
         ppbody = RaveCreateKinBody(penv,"");
     }
     XFileReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    reader.ReadFile(ppbody,filedata->second,atts);
+    string filedata = RaveFindLocalFile(filename);
+    if( filedata.size() == 0 ) {
+        return false;
+    }
+    reader.ReadFile(ppbody,filedata,atts);
     return true;
 }
 
@@ -380,8 +383,11 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
         pprobot = RaveCreateRobot(penv,"GenericRobot");
     }
     XFileReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    reader.ReadFile(pprobot,filedata->second,atts);
+    string filedata = RaveFindLocalFile(filename);
+    if( filedata.size() == 0 ) {
+        return false;
+    }
+    reader.ReadFile(pprobot,filedata,atts);
     return true;
 }
 

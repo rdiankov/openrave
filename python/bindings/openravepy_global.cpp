@@ -587,6 +587,11 @@ int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
     return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel));
 }
 
+void pyRaveSetDataAccess(object oaccess)
+{
+    OpenRAVE::RaveSetDataAccess(pyGetIntFromPy(oaccess));
+}
+
 object RaveGetPluginInfo()
 {
     boost::python::list plugins;
@@ -1038,6 +1043,7 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 }
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothTrajectory_overloads, planningutils::pySmoothTrajectory, 1, 5)
@@ -1288,6 +1294,9 @@ void init_openravepy_global()
 
     def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
+    def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess,args("accessoptions"), DOXY_FN1(RaveSetDataAccess));
+    def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess,DOXY_FN1(RaveGetDataAccess));
+    def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(args("filename","curdir"), DOXY_FN1(RaveFindLocalFile_overloads)));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
     def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
     def("RaveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");

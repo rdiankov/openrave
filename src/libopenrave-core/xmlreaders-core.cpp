@@ -115,94 +115,26 @@ EnvironmentMutex* GetXMLMutex()
 std::string& GetParseDirectory() {
     static string s; return s;
 }
-/// full filename currently parsing
-std::string& GetFullFilename() {
-    static string s; return s;
-}
 
-std::vector<string>& GetDataDirs()
+class SetParseDirectoryScope
 {
-    static vector<string> v;
-    return v;
-}
+public:
+    SetParseDirectoryScope(const std::string& newdir) {
+        _olddir = GetParseDirectory();
+        GetParseDirectory() = newdir;
+    }
+    ~SetParseDirectoryScope() {
+        GetParseDirectory() = _olddir;
+    }
 
-#ifdef HAVE_BOOST_FILESYSTEM
-/// \brief returns absolute filenames of the data
-std::vector<boost::filesystem::path>& GetDataDirsBoost()
-{
-    static vector<boost::filesystem::path> v;
-    return v;
-}
-#endif
-
-int& GetAccessOptions() {
-    static int accessoptions = 0;
-    return accessoptions;
-}
+private:
+    std::string _olddir;
+};
 
 int& GetXMLErrorCount()
 {
     static int errorcount=0;
     return errorcount;
-}
-
-#ifdef HAVE_BOOST_FILESYSTEM
-void CustomNormalizePath(boost::filesystem::path& p)
-{
-#ifndef BOOST_FILESYSTEM_NO_DEPRECATED
-    p.normalize();
-#else
-    boost::filesystem::path result;
-    for(boost::filesystem::path::iterator it=p.begin(); it!=p.end(); ++it)
-    {
-        if(*it == "..") {
-            // /a/b/.. is not necessarily /a if b is a symbolic link
-            if(boost::filesystem::is_symlink(result) ) {
-                result /= *it;
-            }
-            // /a/b/../.. is not /a/b/.. under most circumstances
-            // We can end up with ..s in our result because of symbolic links
-            else if(result.filename() == "..") {
-                result /= *it;
-            }
-            // Otherwise it should be safe to resolve the parent
-            else {
-                result = result.parent_path();
-            }
-        }
-        else if(*it == ".") {
-            // Ignore
-        }
-        else {
-            // Just cat other path entries
-            result /= *it;
-        }
-    }
-    p = result;
-#endif
-}
-#endif
-
-void SetDataDirs(const vector<string>& vdatadirs, int accessoptions) {
-    EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-    GetDataDirs() = vdatadirs;
-#ifdef HAVE_BOOST_FILESYSTEM
-    GetDataDirsBoost().resize(0);
-    FOREACHC(itfilename,vdatadirs) {
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itfilename));
-#else
-        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(*itfilename, boost::filesystem::native));
-#endif
-        CustomNormalizePath(fullfilename);
-        if( fullfilename.filename() == "." ) {
-            // fullfilename ends in '/', so remove it
-            fullfilename = fullfilename.parent_path();
-        }
-        GetDataDirsBoost().push_back(fullfilename);
-    }
-#endif
-    GetAccessOptions() = accessoptions;
 }
 
 #ifdef OPENRAVE_ASSIMP
@@ -536,169 +468,34 @@ static int raveXmlSAXUserParseMemory(xmlSAXHandlerPtr sax, BaseXMLReaderPtr prea
     return ret;
 }
 
-/// \brief returns true if filename is valid
-bool _ValidateFilename(const std::string& filename)
-{
-    if( !ifstream(filename.c_str()) ) {
-        return false;
-    }
-
-    if( GetAccessOptions() & 1 ) {
-        // check if filename is within GetDataDirs()
-#ifdef HAVE_BOOST_FILESYSTEM
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(filename));
-#else
-        boost::filesystem::path fullfilename = boost::filesystem::system_complete(boost::filesystem::path(filename, boost::filesystem::native));
-#endif
-        CustomNormalizePath(fullfilename);
-        bool bfound = false;
-        // check with GetDataDirsBoost()
-        FOREACHC(itpath,GetDataDirsBoost()) {
-            boost::filesystem::path testfilename = fullfilename.parent_path();
-            while( testfilename >= *itpath ) {
-                if( testfilename == *itpath ) {
-                    bfound = true;
-                    break;
-                }
-                testfilename = testfilename.parent_path();
-            }
-            if( bfound ) {
-                break;
-            }
-        }
-        if( !bfound ) {
-            return false;
-        }
-#else
-        RAVELOG_WARN("cannot validate filename with data access\n");
-#endif
-    }
-
-    return true;
-}
-
-/// \brief searches for filename in the filesystem and GetDataDirs() directories and returns the full filename
-boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename)
-{
-    if( filename.size() == 0 ) {
-        return boost::shared_ptr<pair<string,string> >();
-    }
-    EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
-
-    // init the dir (for some reason msvc confuses the linking of the string class with soqt, so do it the old fashioned way)
-    string appended;
-    size_t sepindex = filename.find_last_of('/');
-    if( sepindex == string::npos ) {
-        sepindex = filename.find_last_of('\\');
-    }
-    string parsedirectory = GetParseDirectory(), fullfilename = GetFullFilename();
-
-    // check for absolute paths
-#ifdef _WIN32
-    if((filename.size() > 2)&&(filename[1] == ':')) {
-#else
-    if((filename[0] == '/')||(filename[0] == '~')) {
-#endif
-        parsedirectory = "";
-        fullfilename = filename;
-    }
-    else {
-        fullfilename.resize(parsedirectory.size()+filename.size());
-        fullfilename = parsedirectory;
-        fullfilename += filename;
-    }
-
-    if( sepindex != string::npos) {
-        appended = filename.substr(0,sepindex+1);
-        parsedirectory += appended;
-    }
-
-    // test if exists
-    bool bFileFound = false;
-    do {
-        if( !!ifstream(fullfilename.c_str()) ) {
-            bFileFound = true;
-            break;
-        }
-
-        // try the set openrave directories
-        FOREACHC(itdir, GetDataDirs()) {
-            string newparse;
-            newparse = *itdir; newparse.push_back(s_filesep);
-            newparse += parsedirectory;
-            fullfilename = newparse; fullfilename += filename;
-
-            if( _ValidateFilename(fullfilename) ) {
-                parsedirectory = newparse; parsedirectory += appended;
-                bFileFound = true;
-                break;
-            }
-
-            newparse = *itdir; newparse.push_back(s_filesep);
-            fullfilename = newparse; fullfilename += filename;
-
-            if( _ValidateFilename(fullfilename) ) {
-                parsedirectory = newparse; parsedirectory += appended;
-                bFileFound = true;
-                break;
-            }
-        }
-        if( bFileFound ) {
-            break;
-        }
-
-    } while(0);
-
-    if( !bFileFound ) {
-        GetXMLErrorCount()++;
-        RAVELOG_WARN(str(boost::format("could not find file %s\n")%filename));
-        return boost::shared_ptr<pair<string,string> >();
-    }
-
-#ifdef HAVE_BOOST_FILESYSTEM
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename)).string();
-#else
-    fullfilename = boost::filesystem::system_complete(boost::filesystem::path(fullfilename, boost::filesystem::native)).string();
-#endif
-#endif
-    return boost::shared_ptr<pair<string,string> >(new pair<string,string>(parsedirectory,fullfilename));
-}
-
 bool ParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
 {
-    boost::shared_ptr<pair<string,string> > filedata = FindFile(filename);
-    if( !filedata ) {
+    string filedata = RaveFindLocalFile(filename,GetParseDirectory());
+    if( filedata.size() == 0 ) {
         return false;
     }
     EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
 
-    string olddir = GetParseDirectory();
-    string oldfile = GetFullFilename();
-    GetParseDirectory() = filedata->first;
-    GetFullFilename() = filedata->second;
-    preader->_filename = filedata->second;
+#ifdef HAVE_BOOST_FILESYSTEM
+    SetParseDirectoryScope scope(boost::filesystem::path(filedata).parent_path().string());
+#endif
+    preader->_filename = filedata;
 
     int ret=-1;
     try {
-        ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, GetFullFilename().c_str());
+        ret = raveXmlSAXUserParseFile(GetSAXHandler(), preader, filedata.c_str());
         if( ret != 0 ) {
-            RAVELOG_WARN(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%GetFullFilename()%ret));
+            RAVELOG_WARN(str(boost::format("xmlSAXUserParseFile: error parsing %s (error %d)\n")%filedata%ret));
         }
     }
     catch(const std::exception& ex) {
-        RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s: %s\n")%GetFullFilename()%ex.what()));
+        RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s: %s\n")%filedata%ex.what()));
         ret = -1;
     }
-    catch (...) {
-        RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s\n")%GetFullFilename()));
-        ret = -1;
-    }
-
-    // restore
-    GetParseDirectory() = olddir;
-    GetFullFilename() = oldfile;
+//    catch (...) {
+//        RAVELOG_ERROR(str(boost::format("xmlSAXUserParseFile: error parsing %s\n")%filedata));
+//        ret = -1;
+//    }
 
     // hmm....... necessary?
     //xmlCleanupParser();
@@ -1027,10 +824,14 @@ public:
                     Vector geomspacescale(RaveSqrt(tmres.m[0]*tmres.m[0]+tmres.m[4]*tmres.m[4]+tmres.m[8]*tmres.m[8]),RaveSqrt(tmres.m[1]*tmres.m[1]+tmres.m[5]*tmres.m[5]+tmres.m[9]*tmres.m[9]),RaveSqrt(tmres.m[2]*tmres.m[2]+tmres.m[6]*tmres.m[6]+tmres.m[10]*tmres.m[10]));
 
                     if( !!_fnGetModelsDir ) {
+                        bool bsame = info->_filenamerender == info->_filenamecollision;
                         info->_filenamerender = _fnGetModelsDir(info->_filenamerender);
-                    }
-                    if( !!_fnGetModelsDir ) {
-                        info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
+                        if( bsame ) {
+                            info->_filenamecollision = info->_filenamerender;
+                        }
+                        else {
+                            info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
+                        }
                     }
                     std::list<KinBody::Link::GeometryInfo> listGeometries;
                     if( info->_type == KinBody::Link::GeomTrimesh ) {
@@ -1722,27 +1523,26 @@ public:
 
                 //BaseXMLReaderPtr preader = CreateInterfaceReader(_penv,_type,_pinterface, xmltag, listnewatts);
                 //bool bSuccess = ParseXMLFile(preader, itatt->second);
-                boost::shared_ptr<pair<string,string> > filedata = FindFile(itatt->second);
-                if( !filedata ) {
+                string filedata = RaveFindLocalFile(itatt->second,GetParseDirectory());
+                if( filedata.size() == 0 ) {
                     continue;
                 }
 
-                string olddir = GetParseDirectory();
-                string oldfile = GetFullFilename();
                 try {
-                    GetParseDirectory() = filedata->first;
-                    GetFullFilename() = filedata->second;
+#ifdef HAVE_BOOST_FILESYSTEM
+                    SetParseDirectoryScope scope(boost::filesystem::path(filedata).parent_path().string());
+#endif
                     if( !_pinterface ) {
                         // reason to bring all the other attributes since interface is not created yet? (there might be a problem with this?)
                         switch(_type) {
                         case PT_KinBody:
-                            _pinterface = _penv->ReadKinBodyURI(KinBodyPtr(), filedata->second, listnewatts);
+                            _pinterface = _penv->ReadKinBodyURI(KinBodyPtr(), filedata, listnewatts);
                             break;
                         case PT_Robot:
-                            _pinterface = _penv->ReadRobotURI(RobotBasePtr(), filedata->second, listnewatts);
+                            _pinterface = _penv->ReadRobotURI(RobotBasePtr(), filedata, listnewatts);
                             break;
                         default:
-                            _pinterface = _penv->ReadInterfaceURI(filedata->second, listnewatts);
+                            _pinterface = _penv->ReadInterfaceURI(filedata, listnewatts);
                         }
                         if( !!_pinterface &&( _pinterface->GetInterfaceType() != _type) ) {
                             RAVELOG_ERROR(str(boost::format("unexpected interface created %s\n")%RaveGetInterfaceName(_pinterface->GetInterfaceType())));
@@ -1752,13 +1552,13 @@ public:
                     else {
                         switch(_type) {
                         case PT_KinBody:
-                            _pinterface = _penv->ReadKinBodyURI(RaveInterfaceCast<KinBody>(_pinterface),filedata->second,listnewatts);
+                            _pinterface = _penv->ReadKinBodyURI(RaveInterfaceCast<KinBody>(_pinterface),filedata,listnewatts);
                             break;
                         case PT_Robot:
-                            _pinterface = _penv->ReadRobotURI(RaveInterfaceCast<RobotBase>(_pinterface),filedata->second,listnewatts);
+                            _pinterface = _penv->ReadRobotURI(RaveInterfaceCast<RobotBase>(_pinterface),filedata,listnewatts);
                             break;
                         default:
-                            _pinterface = _penv->ReadInterfaceURI(_pinterface,_type,filedata->second,listnewatts);
+                            _pinterface = _penv->ReadInterfaceURI(_pinterface,_type,filedata,listnewatts);
                         }
 
                     }
@@ -1767,12 +1567,10 @@ public:
                     RAVELOG_ERROR(str(boost::format("failed to process %s: %s\n")%itatt->second%ex.what()));
                     _pinterface.reset();
                 }
-                catch(...) {
-                    RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));
-                    _pinterface.reset();
-                }
-                GetParseDirectory() = olddir;
-                GetFullFilename() = oldfile;
+//                catch(...) {
+//                    RAVELOG_ERROR(str(boost::format("failed to process %s\n")%itatt->second));
+//                    _pinterface.reset();
+//                }
 
                 if( !_pinterface ) {
                     RAVELOG_DEBUG(str(boost::format("Failed to load filename %s\n")%itatt->second));
@@ -2022,7 +1820,7 @@ public:
         return _vTransforms.at(plink->GetIndex());
     }
 
-    string GetModelsDir(const std::string& filename) const
+    std::string GetModelsDir(const std::string& filename) const
     {
         if( filename.size() == 0 ) {
             return filename;
@@ -2032,37 +1830,24 @@ public:
             return filename;
         }
 #else
-        if(( filename[0] == '/') ||( filename[0] == '~') ) {
+        if( filename[0] == '/' ) {
             return filename;
         }
 #endif
 
-        list<string> listmodelsdir;
-        listmodelsdir.push_back(_strModelsDir);
-        if( GetParseDirectory().size() > 0 ) {
-            listmodelsdir.push_back(GetParseDirectory());
-            listmodelsdir.back().push_back(s_filesep);
-            listmodelsdir.back() += _strModelsDir;
-        }
-
-        string temp;
-        FOREACH(itmodelsdir, listmodelsdir) {
-            temp = *itmodelsdir; temp += filename;
-            //RAVELOG_INFOA("modelsdir: %s, modelname: %s\n", itmodelsdir->c_str(), temp.c_str());
-            if( !!ifstream(temp.c_str()) ) {
-                return temp;
-            }
-            FOREACHC(itdir, GetDataDirs()) {
-                temp = *itdir; temp.push_back(s_filesep);
-                temp += *itmodelsdir;
-                temp += filename;
-                if( !!ifstream(temp.c_str()) ) {
-                    return temp;
-                }
+        std::string fullfilename;
+        if( _strModelsDir.size() > 0 ) {
+            string s = GetParseDirectory();
+            s += s_filesep;
+            s += _strModelsDir;
+            fullfilename = RaveFindLocalFile(filename, s);
+            if( fullfilename.size() > 0 ) {
+                return fullfilename;
             }
         }
 
-        return "";         // bad filename
+        // failed to find in _strModelsDir, so try the regular GetParseDirectory()
+        return RaveFindLocalFile(filename, GetParseDirectory());
     }
 
     virtual ProcessElement startElement(const std::string& xmlname, const AttributesList &atts)
@@ -3264,11 +3049,11 @@ public:
                     }
                 }
 
-                boost::shared_ptr<pair<string,string> > filedata = FindFile(itatt->second);
-                if( !filedata ) {
+                string filedata = RaveFindLocalFile(itatt->second,GetParseDirectory());
+                if( filedata.size() == 0 ) {
                     continue;
                 }
-                _penv->Load(filedata->second);
+                _penv->Load(filedata);
             }
         }
         _tCamera.trans = Vector(0, 1.5f, 0.8f);

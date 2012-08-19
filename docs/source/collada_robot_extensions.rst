@@ -269,6 +269,8 @@ The example defines an arm with an end effector at link wam7 with a local coordi
     </extra>
   </articulated_system>
 
+.. _collada_dynamic_rigid_constraints:
+
 dynamic_rigid_constraints
 =========================
 
@@ -433,7 +435,7 @@ Example
       </extra>
   </library_kinematics_models>
 
-.. _geometry_info:
+.. _collada_geometry_info:
 
 geometry_info
 =============
@@ -1119,6 +1121,78 @@ Controllers
 ~~~~~~~~~~~
 
 Specifying controller parameters in the collada file falls somewhere in between calibration parameters and parameters that will never change and should be in the main robot file. In my opinion it is very hard to find static parameters especially when considering controllers in simulation along with real world controllers. Also, there's as many control algorithms out there as planners, and I wouldn't feel comfortable specifying planning algorithms and parameters inside a robot file.
+
+Custom Data
+~~~~~~~~~~~
+
+OpenRAVE provides a user to hook up an XML writer and reader to a robot, which should be written as **<extra>** elements under **<instance_articulated_system>**.
+
+.. code-block:: xml
+  <library_kinematics_scenes id="kscenes">
+    <kinematics_scene id="kscene" name="OpenRAVE Kinematics Scene">
+      <instance_articulated_system sid="body1_kinematics_inst" url="#body1_kinematics" name="box0">
+        <newparam sid="kscene_kmodel1_inst">
+          <SIDREF>body1_kinematics/body1_kinematics_kmodel1_inst</SIDREF>
+        </newparam>
+      </instance_articulated_system>
+      <extra type="mycustomparams">
+        <technique profile="myprofile">
+          <mylocalparam>1</mylocalparam>
+        </technique>
+      </extra>
+  </kinematics_scene>
+
+.. _collada_openrave_uri:
+
+OpenRAVE Database URI
+~~~~~~~~~~~~~~~~~~~~~
+
+OpenRAVE uses the **$OPENRAVE_DATA** environment variable to build its database of robots. Only files inside these directories can be accessed. Syntax::
+
+  openrave://[user[:password]@]host[:port]/path
+
+Saving Scenes with Resource References
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Although COLLADA is very flexible in terms of referencing libraries of models, in almost all cases, instantiating a robot will only change the following peices of information:
+
+* robot joint values
+* robot position
+* what bodies the robot is grabbing (:ref:`dynamic_rigid_constraints`)
+* joint limits
+
+For most cases, the **<kinematics_scene>** defined in the separate robot file can be left intact and overrides can happen inside **<instance_kinematics_scene>**. For example, a minimal file that references a robot and sets joint0's value to 1.5 is:
+
+.. code-bloxk:: xml
+
+  <COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
+    <asset>
+      <created/>
+      <modified/>
+    </asset>
+    <scene>
+      <instance_physics_scene url="./robot.dae#pscene" sid="pscene_inst"/>
+      <instance_visual_scene url="./robot.dae#vscene" sid="vscene_inst"/>
+      <instance_kinematics_scene url="./robot.dae#kscene" sid="kscene_inst">
+        <bind_kinematics_model node="visual1/node0">
+          <param>kscene_kmodel1_inst</param>
+        </bind_kinematics_model>
+        <bind_joint_axis target="visual1/node_joint0_axis0">
+          <axis><param>kscene_kmodel1_inst_robot1_kinematics_kmodel1_inst_joint0.axis0</param></axis>
+          <value><float>1.5</float></value>
+        </bind_joint_axis>
+      </instance_kinematics_scene>
+    </scene>
+  </COLLADA>
+
+Addressing files on local or network file systems:
+* `RFC 1738 <http://tools.ietf.org/html/rfc1738>`_ - **file://[host]/path**
+* `RFC 3986 <http://tools.ietf.org/html/rfc3986>`_ - **file:[//host]/path**
+* `Using URIs in COLLADA <http://collada.org/mediawiki/index.php/Using_URIs_in_COLLADA>`_
+* :ref:`collada_openrave_uri`
+
+Composing Robots
+~~~~~~~~~~~~~~~~
 
 Contributors
 ============

@@ -574,12 +574,6 @@ public:
     virtual int GetDebugLevel() const = 0;
     //@}
 
-    /// \brief sets the data access options for cad resources/robot files
-    ///
-    /// \param options - if 1 will only allow resources inside directories specified from OPERNAVE_DATA environment variable. This allows reject of full paths from unsecure/unauthenticated resources.
-    virtual void SetDataAccess(int options) = 0;
-    virtual int GetDataAccess() const = 0;
-
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;

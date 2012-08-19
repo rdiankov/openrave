@@ -40,6 +40,39 @@ class ColladaReader : public daeErrorHandler
         return t->getSid();
     }
 
+    class daeOpenRAVEURIResolver : public daeURIResolver
+    {
+public:
+        daeOpenRAVEURIResolver(DAE& dae) : daeURIResolver(dae) {
+        }
+
+        ~daeOpenRAVEURIResolver() {
+        }
+
+public:
+        virtual daeElement* resolveElement(const daeURI& uri) {
+            string docuri = cdom::assembleUri(uri.scheme(), uri.authority(), uri.path(), "", "");
+            daeDocument* doc = dae->getDatabase()->getDocument(docuri.c_str(), true);
+            //daeDocument* doc = uri.getReferencedDocument();
+            if (!doc) {
+                dae->open(uri.str());
+                doc = uri.getReferencedDocument();
+                if (!doc) {
+                    RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                    return NULL;
+                }
+            }
+            daeElement* elt = dae->getDatabase()->idLookup(uri.id(), doc);
+            if (!elt) {
+                RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+            }
+            return elt;
+        }
+        virtual daeString getName() {
+            return "OpenRAVEResolver";
+        }
+    };
+
     class InterfaceType
     {
 public:
@@ -253,7 +286,6 @@ public:
                 continue;
             }
 
-            daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
             KinematicsSceneBindings& bindings = allbindings[iscene];
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
@@ -3490,8 +3522,8 @@ private:
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract();
@@ -3500,8 +3532,8 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract(pbody);
@@ -3510,8 +3542,8 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract(probot);

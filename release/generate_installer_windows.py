@@ -552,7 +552,7 @@ done:
 FunctionEnd
 
 Function GetPythonSetupTools
-  MessageBox MB_YESNO "Need to install Python SetupTools Library. Continue with auto-download and install?" /SD IDYES IDNO done 
+  MessageBox MB_YESNO "Need to install Python SetupTools 0.6c11 Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "setuptools-0.6c11.win32-py%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 %(python_setuptools_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
