@@ -518,7 +518,7 @@ void raveLog(const string &s, int level)
 
 void raveLogFatal(const string &s)
 {
-    raveLog(s,Level_Verbose);
+    raveLog(s,Level_Fatal);
 }
 void raveLogError(const string &s)
 {
