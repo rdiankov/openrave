@@ -23,8 +23,6 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-//#include <boost/thread/timed_mutex.hpp>
-
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
             throw openrave_exception(str(boost::format("Interface %s:%s is from a different environment")%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
@@ -1066,7 +1064,7 @@ public:
             }
             if( !!robot ) {
                 std::list<KinBody::Link::GeometryInfo> listGeometries;
-                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1183,7 +1181,7 @@ public:
             }
             if( !!body ) {
                 std::list<KinBody::Link::GeometryInfo> listGeometries;
-                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1414,7 +1412,7 @@ public:
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    virtual bool _ReadGeometriesFile(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);

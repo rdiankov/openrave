@@ -1838,7 +1838,9 @@ public:
         std::string fullfilename;
         if( _strModelsDir.size() > 0 ) {
             string s = GetParseDirectory();
-            s += s_filesep;
+            if( s.size() > 0 ) {
+                s += s_filesep;
+            }
             s += _strModelsDir;
             fullfilename = RaveFindLocalFile(filename, s);
             if( fullfilename.size() > 0 ) {
