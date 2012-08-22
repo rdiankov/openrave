@@ -203,7 +203,8 @@ class TestCOLLADA(EnvironmentSetup):
     def test_collada_readexternal(self):
         self.log.info('test collada loading with external references')
         env=self.env
-        assert(env.Load('openrave:/robots/schunk-lwa3.zae',{'colladaurischeme':'openrave'}))
+        env.LoadEnvURI('openrave:/robots/schunk-lwa3.zae',{'colladaurischeme':'openrave'})
+        assert(len(env.GetRobots())==1)
         
     def test_saving(self):
         self.log.info('test collada saving options')
