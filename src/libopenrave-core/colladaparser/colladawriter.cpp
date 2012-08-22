@@ -302,6 +302,9 @@ private:
                     _vExternalRefExports = std::vector<string>((istream_iterator<string>(ss)), istream_iterator<string>());
                 }
             }
+            else if( itatt->first == "openravescheme" ) {
+                _vForceResolveOpenRAVEScheme = itatt->second;
+            }
             else {
                 if( !!_dae->getIOPlugin() ) {
                     // catch all
@@ -309,9 +312,14 @@ private:
                 }
             }
         }
+    }
+    virtual ~ColladaWriter() {
+    }
 
-        const char* documentName = "openrave_snapshot";
-        daeInt error = _dae->getDatabase()->insertDocument(documentName, &_doc );     // also creates a collada root
+    /// \param docname the top level document?
+    virtual void Init(const string& docname)
+    {
+        daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
         _dom = daeSafeCast<domCOLLADA>(_doc->getDomRoot());
 
@@ -374,8 +382,6 @@ private:
         pextra_library_actuators->setType("library_actuators");
         _actuatorsLib = daeSafeCast<domTechnique>(pextra_library_actuators->add(COLLADA_ELEMENT_TECHNIQUE));
         _actuatorsLib->setProfile("OpenRAVE");
-    }
-    virtual ~ColladaWriter() {
     }
 
     virtual void Save(const string& filename)
@@ -487,6 +493,25 @@ private:
         return !!pcolladainfo;
     }
 
+    /// \brief compute correct external URI
+    daeURI _ComputeExternalURI(const daeURI& uri)
+    {
+        // check if it comes from same document
+        if( uri.getReferencedDocument() == _doc ) {
+            return uri;
+        }
+        if( _vForceResolveOpenRAVEScheme.size() > 0 && uri.scheme() == "file" ) {
+            // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
+            std::string filename;
+            if( RaveInvertFileLookup(filename,uri.path()) ) {
+                daeURI newuri(*_dae);
+                newuri.set(_vForceResolveOpenRAVEScheme, "", string("/")+filename, uri.query(), uri.fragment());
+                return newuri;
+            }
+        }
+        return uri;
+    }
+
     /// \brief try to write kinbody as an external reference
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
     {
@@ -498,7 +523,7 @@ private:
         string iassid = str(boost::format("%s_inst")%askid);
         domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(_scene.kscene->add(COLLADA_ELEMENT_INSTANCE_ARTICULATED_SYSTEM));
         ias->setSid(iassid.c_str());
-        ias->setUrl(pcolladainfo->_articulated_systemURL.c_str());
+        ias->setUrl(_ComputeExternalURI(daeURI(*_dae,pcolladainfo->_articulated_systemURL)));
         ias->setName(pbody->GetName().c_str());
 
         boost::shared_ptr<instance_articulated_system_output> iasout(new instance_articulated_system_output());
@@ -537,7 +562,7 @@ private:
             _WriteTransformation(pnoderoot, tnode, true);
             // write instance
             domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
-            inode->setUrl(xsAnyURI(*_dae,itmodel->vmodel));
+            inode->setUrl(_ComputeExternalURI(daeURI(*_dae,itmodel->vmodel)));
             if( pbody->GetLinks().size() > 0 ) {
                 inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
             }
@@ -560,12 +585,12 @@ private:
             // because we're instantiating the node, the full url isn't needed
             size_t fragmentindex = itmodel->vmodel.find_last_of('#');
             if( fragmentindex != std::string::npos ) {
-                ipmout->ipm->setParent(daeURI(*pnoderoot,itmodel->vmodel.substr(fragmentindex)+string(".")+nodeid));
+                ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel.substr(fragmentindex)+string(".")+nodeid)));
             }
             else {
-                ipmout->ipm->setParent(daeURI(*pnoderoot,itmodel->vmodel));
+                ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel)));
             }
-            ipmout->ipm->setUrl(xsAnyURI(*ipmout->ipm,itmodel->pmodel));
+            ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
             ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%pbody->GetEnvironmentId()).c_str());
 
             // only write the links that are in this model
@@ -577,10 +602,10 @@ private:
 
                     size_t fragmentindex = itlink->vmodel.find_last_of('#');
                     if( fragmentindex != std::string::npos ) {
-                        pirb->setTarget(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid));
+                        pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid)));
                     }
                     else {
-                        pirb->setTarget(daeURI(*pnoderoot,itlink->vmodel));
+                        pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel)));
                     }
                 }
             }
@@ -965,7 +990,7 @@ private:
             RAVELOG_WARN(str(boost::format("kinematics_model for %s should be present")%pbody->GetName()));
         }
 
-        //ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,string("#")+_GetNodeId(pbody->GetLinks().at(0))));
+        //ipmout->ipm->setParent(daeURI(*ipmout->ipm,string("#")+_GetNodeId(pbody->GetLinks().at(0))));
         string symscope, refscope;
         if( sidscope.size() > 0 ) {
             symscope = sidscope+string("_");
@@ -993,11 +1018,11 @@ private:
                     rigidnodeid += str(boost::format("%s.%s")%_GetNodeId(KinBody::LinkConstPtr(kmout->pbody->GetLinks().at(i)))%nodeid);
                 }
             }
-            pirb->setTarget(xsAnyURI(*pirb,rigidnodeid));
+            pirb->setTarget(daeURI(*pirb,rigidnodeid));
 
             if( i == 0 ) {
                 // always use the node pointing to the first link since that doesn't have any transforms applied and all of the physics model's rigid bodies are in the first link's local coordinate sysytem.
-                ipmout->ipm->setParent(xsAnyURI(*ipmout->ipm,rigidnodeid));
+                ipmout->ipm->setParent(daeURI(*ipmout->ipm,rigidnodeid));
             }
         }
 
@@ -1269,7 +1294,7 @@ private:
                 // there is a weird bug here where _WriteTranformation will fail to create rotate/translate elements in instance_geometry is created first... (is this part of the spec?)
                 _WriteTransformation(pdomshape,tbaseinv*tlink0*(*itgeom)->GetTransform());
                 domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pdomshape->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
-                pinstgeom->setUrl(xsAnyURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
+                pinstgeom->setUrl(daeURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
                 ++igeom;
             }
         }
@@ -1320,7 +1345,7 @@ private:
                     domSource::domTechnique_commonRef psourcetec = daeSafeCast<domSource::domTechnique_common>(pvertsource->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
                     domAccessorRef pacc = daeSafeCast<domAccessor>(psourcetec->add(COLLADA_ELEMENT_ACCESSOR));
                     pacc->setCount(mesh.vertices.size());
-                    pacc->setSource(xsAnyURI(*pacc, string("#")+parentid+string("_positions-array")));
+                    pacc->setSource(daeURI(*pacc, string("#")+parentid+string("_positions-array")));
                     pacc->setStride(3);
 
                     domParamRef px = daeSafeCast<domParam>(pacc->add(COLLADA_ELEMENT_PARAM));
@@ -1489,7 +1514,7 @@ private:
             domBind_materialRef pmat = daeSafeCast<domBind_material>(pinstgeom->add(COLLADA_ELEMENT_BIND_MATERIAL));
             domBind_material::domTechnique_commonRef pmattec = daeSafeCast<domBind_material::domTechnique_common>(pmat->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             domInstance_materialRef pinstmat = daeSafeCast<domInstance_material>(pmattec->add(COLLADA_ELEMENT_INSTANCE_MATERIAL));
-            pinstmat->setTarget(xsAnyURI(*pinstmat, string("#")+geomid+string("_mat")));
+            pinstmat->setTarget(daeURI(*pinstmat, string("#")+geomid+string("_mat")));
             pinstmat->setSymbol("mat0");
         }
 
@@ -1792,6 +1817,7 @@ private:
     SCENE _scene;
     EnvironmentBaseConstPtr _penv;
     std::list<kinbody_models> _listkinbodies;
+    std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme
 };
 
 // register for typeof (MSVC only)
@@ -1806,6 +1832,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
     ColladaWriter writer(penv, atts);
+    writer.Init("openrave_snapshot");
     if( !writer.Write() ) {
         throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
     }
@@ -1815,6 +1842,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
     ColladaWriter writer(pbody->GetEnv(),atts);
+    writer.Init("openrave_snapshot");
     if( !writer.Write(pbody) ) {
         throw openrave_exception("ColladaWriter::Write(KinBodyPtr) failed");
     }
@@ -1825,6 +1853,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 {
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        writer.Init("openrave_snapshot");
         if( !writer.Write(listbodies) ) {
             throw openrave_exception("ColladaWriter::Write(list<KinBodyPtr>) failed");
         }

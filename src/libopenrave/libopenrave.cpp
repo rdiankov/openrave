@@ -652,6 +652,35 @@ protected:
 #endif
     }
 
+    bool InvertFileLookup(std::string& newfilename, const std::string& filename)
+    {
+#ifndef HAVE_BOOST_FILESYSTEM
+        RAVELOG_WARN("need to compile with boost::filesystem\n");
+#else
+        // check if filename is within _vBoostDataDirs
+        boost::filesystem::path fullfilename = boost::filesystem::complete(filename);
+        _CustomNormalizePath(fullfilename);
+        FOREACHC(itpath,_vBoostDataDirs) {
+            std::list<boost::filesystem::path> listfilenameparts;
+            boost::filesystem::path testfilename = fullfilename.parent_path();
+            while( testfilename >= *itpath ) {
+                if( testfilename == *itpath ) {
+                    boost::filesystem::path relpath;
+                    FOREACH(itpart,listfilenameparts) {
+                        relpath /= *itpart;
+                    }
+                    relpath /= fullfilename.filename();
+                    newfilename=relpath.string();
+                    return true;
+                }
+                listfilenameparts.push_front(testfilename.filename());
+                testfilename = testfilename.parent_path();
+            }
+        }
+#endif
+        return false;
+    }
+
     void SetDataAccess(int options) {
         boost::mutex::scoped_lock lock(_mutexXML);
         _nDataAccessOptions = options;
@@ -813,6 +842,7 @@ protected:
         }
         return true;
     }
+
 #endif
 
 private:
@@ -1061,6 +1091,11 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
 std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir)
 {
     return RaveGlobal::instance()->FindLocalFile(filename,curdir);
+}
+
+bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename)
+{
+    return RaveGlobal::instance()->InvertFileLookup(newfilename,filename);
 }
 
 void RaveSetDataAccess(int options)

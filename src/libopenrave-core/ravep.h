@@ -99,6 +99,8 @@ class XFileReader;
 namespace OpenRAVE
 {
 
+bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
+
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);

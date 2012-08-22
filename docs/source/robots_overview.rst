@@ -31,12 +31,14 @@ The following attributes can be passed to the :class:`.Environment` Load/Read me
 * **skipgeometry="true"/"false"** - whether to skip geometry or not
 * **scalegeometry="10 10 10"** - scale all geometry by this amount
 * **prefix="newname_"** - add prefix to all links/joints/sensors/etc
-* **colladaurischeme="x1 x2"** - external references relative to OpenRAVE paths are only specified with **x1:** or **x2:**. If there is an authority, use **x1://authority**. The multiple schemes are all alias for the OpenRAVE database.
+* **openravescheme="x1 x2"** - external references relative to $OPENRAVE_DATA paths are only specified with **x1:/** or **x2:/**. If there is an authority, use **x1://authority**. The multiple schemes are all alias for the OpenRAVE database.
 * **uripassword="URI password"** - adds an entry for a URI/password key-value pair to be used if the archive is encrypted
 
 The following attributes can be passed to the :class:`.Environment` Save/Write methods:
 
 * **externalref="bodyname1 bodyname2"** - if writing collada, specify the names that should be exported via external references. If **\***, then export all possible values via external references.
+
+* **openravescheme="customscheme"** - if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme.
 
 * **password="????"**
 Any attributes are also set through the collada-dom DAE::getIOPlugin::setOption.

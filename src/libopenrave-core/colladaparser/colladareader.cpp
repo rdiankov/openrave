@@ -32,7 +32,7 @@ class ColladaReader : public daeErrorHandler
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
 public:
-        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme) : daeURIResolver(dae), _scheme(scheme) {
+        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader) : daeURIResolver(dae), _scheme(scheme), _preader(preader) {
         }
 
         ~daeOpenRAVEURIResolver() {
@@ -61,16 +61,33 @@ public:
                     }
                     domCOLLADAProxy* proxy = dae->open(docurifull);
                     if( !!proxy ) {
+                        if( !!_preader ) {
+                            _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
+                        }
                         doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
                         if( !!doc ) {
                             // insert it again with the original URI
-                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc);
+                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
                         }
                     }
                 }
                 else {
                     dae->open(docuri);
                     doc = uri.getReferencedDocument();
+                    if( !!doc && !!doc->getDocumentURI() ) {
+                        // this document could be extracted from a zae, so have to link with the original zae
+                        daeUInt num = dae->getDatabase()->getDocumentCount();
+                        for(daeUInt i = 0; i < num; ++i) {
+                            daeDocument* doctest = dae->getDatabase()->getDocument(i);
+                            if( doctest->getExtractedFileURI().str() == docuri ) {
+                                // found
+                                if( !!doctest->getDocumentURI() ) {
+                                    _preader->_mapInverseResolvedURIList.insert(make_pair(doc->getDocumentURI()->str(),*doctest->getDocumentURI()));
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
                 if (!doc) {
                     RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
@@ -88,6 +105,7 @@ public:
         }
 
         std::string _scheme;
+        ColladaReader *_preader;
     };
 
     class InterfaceType
@@ -224,7 +242,7 @@ public:
                 return NULL;
             }
             // remove first slash because we need relative file
-            std::string docurifull="file:";
+            uriresolved="file:";
             if( urioriginal.path().at(0) == '/' ) {
                 uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
             }
@@ -236,6 +254,9 @@ public:
             }
         }
         _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : uristr));
+        if( !!_dom && uriresolved.size() > 0 ) {
+            _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
+        }
         return _InitPostOpen(atts);
     }
 
@@ -278,7 +299,7 @@ public:
             else if( itatt->first == "name" ) {
                 RAVELOG_VERBOSE(str(boost::format("collada reader robot name=%s is processed from xmlreaders side")%itatt->second));
             }
-            else if( itatt->first == "colladaurischeme" ) {
+            else if( itatt->first == "openravescheme" ) {
                 _dae->getURIResolvers().list().clear();
                 stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
@@ -306,7 +327,7 @@ public:
             _vOpenRAVESchemeAliases.push_back("openrave");
         }
         FOREACHC(itname,_vOpenRAVESchemeAliases) {
-            _dae->getURIResolvers().list().prepend(new daeOpenRAVEURIResolver(*_dae,*itname));
+            _dae->getURIResolvers().list().prepend(new daeOpenRAVEURIResolver(*_dae,*itname,this));
         }
         return true;
     }
@@ -3826,6 +3847,19 @@ private:
         return startscale;
     }
 
+    /// \brief do the inverse resolve file:/... -> openrave:/...
+    ///
+    /// if none found, returns the original uri
+    daeURI _ResolveInverse(const daeURI& uri)
+    {
+        std::map<std::string,daeURI>::iterator itindex = _mapInverseResolvedURIList.find(uri.str());
+        if( itindex != _mapInverseResolvedURIList.end() ) {
+            // try to resolve again
+            return _ResolveInverse(itindex->second);
+        }
+        return uri;
+    }
+
     /// \brief returns a string with the full URI
     std::string _MakeFullURI(const xsAnyURI& uri, daeElementRef pelt) {
         daeURI* docuri = pelt->getDocumentURI();
@@ -3834,8 +3868,9 @@ private:
             return uri.str();
         }
         else {
-            //xsAnyURI cdom::nativePathToUri;
-            daeURI newuri(*docuri,uri.str());
+            // don't use uri.str() since it resolves to temporary dae files if coming from a zae
+            daeURI newdocuri = _ResolveInverse(*docuri);
+            daeURI newuri(newdocuri,uri.getOriginalURI());
             return newuri.str();
         }
     }
@@ -3846,7 +3881,8 @@ private:
             RAVELOG_WARN(str(boost::format("failed to get the URI of the document, so cannot resolve id %s")%id));
             return string("#")+id;
         }
-        daeURI newuri(*docuri,string("#")+id);
+        daeURI newdocuri = _ResolveInverse(*docuri);
+        daeURI newuri(newdocuri,string("#")+id);
         return newuri.str();
     }
 
@@ -3859,13 +3895,14 @@ private:
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
-    bool _bOpeningZAE;
+    bool _bOpeningZAE; ///< true if currently opening a zae
     bool _bSkipGeometry;
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
     std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
     std::vector<std::string> _vOpenRAVESchemeAliases;
+    std::map<std::string,daeURI> _mapInverseResolvedURIList; ///< holds a list of inverse resolved relationships file:// -> openrave://
 };
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)

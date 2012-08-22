@@ -203,7 +203,7 @@ class TestCOLLADA(EnvironmentSetup):
     def test_collada_readexternal(self):
         self.log.info('test collada loading with external references')
         env=self.env
-        env.LoadEnvURI('openrave:/robots/schunk-lwa3.zae',{'colladaurischeme':'openrave'})
+        env.LoadURI('openrave:/robots/schunk-lwa3.zae',{'colladaurischeme':'openrave'})
         assert(len(env.GetRobots())==1)
         
     def test_saving(self):
@@ -235,12 +235,25 @@ class TestCOLLADA(EnvironmentSetup):
         self.log.info('test collada loading with external references')
         env=self.env
         reffile = 'openrave:/robots/schunk-lwa3.zae'
-        env.LoadURI(reffile)
+        env2=Environment()
+        assert(env.LoadURI(reffile))
         robot=env.GetRobots()[0]
         robot.SetDOFValues(ones(robot.GetDOF()))
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
         filedata=open('test_externalref_joints.dae','r').read()
         assert(filedata.find(reffile)>=0)
-        env2=Environment()
+        assert(len(filedata)<7000) # should be small
         assert(env2.Load('test_externalref_joints.dae'))
         misc.CompareBodies(robot,env2.GetRobots()[0])
+        assert(len(env.GetBodies())==len(env2.GetBodies()))
+
+        env.Reset()
+        env2.Reset()
+        
+        assert(env.Load('robots/schunk-lwa3.zae'))
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme'})
+        filedata=open('test_externalref_joints.dae','r').read()
+        assert(filedata.find('testscheme:/')>=0)
+        assert(env2.Load('test_externalref_joints.dae',{'openravescheme':'testscheme'}))
+        misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
+        assert(len(env.GetBodies())==len(env2.GetBodies()))
