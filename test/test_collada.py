@@ -239,6 +239,8 @@ class TestCOLLADA(EnvironmentSetup):
         robot=env.GetRobots()[0]
         robot.SetDOFValues(ones(robot.GetDOF()))
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        filedata=open('test_externalref_joints.dae','r').read()
+        assert(filedata.find(reffile)>=0)
         env2=Environment()
         assert(env2.Load('test_externalref_joints.dae'))
         misc.CompareBodies(robot,env2.GetRobots()[0])

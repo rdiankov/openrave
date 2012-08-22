@@ -312,7 +312,7 @@ class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_
         //RaveInitRandomGeneration(GetMilliTime());
         _nDebugLevel = Level_Info;
         _nGlobalEnvironmentId = 0;
-        _nDataAccessOptions = 1;
+        _nDataAccessOptions = 0;
 
         _mapinterfacenames[PT_Planner] = "planner";
         _mapinterfacenames[PT_Robot] = "robot";
