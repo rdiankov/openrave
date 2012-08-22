@@ -28,62 +28,6 @@ EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
 }
 }
 
-#ifndef OPENRAVE_COLLADA_SUPPORT
-
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-    return false;
-}
-
-
-void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-}
-
-void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-}
-
-void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
-{
-    RAVELOG_ERROR("collada files not supported\n");
-}
-
-#endif
-
 #ifndef OPENRAVE_ASSIMP
 
 bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts)

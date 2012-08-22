@@ -328,11 +328,15 @@ void MainOpenRAVEThread()
         EnvironmentMutex::scoped_lock lock(penv->GetMutex());
 
         if( s_sceneFile.size() > 0 ) {
-            penv->Load(s_sceneFile);
+            if( !penv->Load(s_sceneFile) ) {
+                penv->LoadURI(s_sceneFile);
+            }
         }
         vector<string>::iterator it;
         FORIT(it, vResourceFiles) {
-            penv->Load(*it);
+            if( !penv->Load(*it) ) {
+                penv->LoadURI(*it);
+            }
         }
         list< pair<string, string> >::iterator itprob;
         FORIT(itprob, s_listModules) {

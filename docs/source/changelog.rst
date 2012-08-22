@@ -69,6 +69,8 @@ Core
 
 * Added :meth:`.RaveFindLocalFile` to find local resource files in the OpenRAVE path.
 
+* Added **timeout** fields to a lot of Environment.Get\* methods to avoid deadlocks.
+
 Inverse Kinematics
 ------------------
 
@@ -131,6 +133,8 @@ COLLADA
 * COLLADA can read/write the grabbed state of robots through :ref:`collada_dynamic_rigid_constraints`
 
 * COLLADA can read external files references through the **openrave://** URI scheme
+
+* COLLADA can write files with external references by passing in **externalref=\*** option.
 
 Misc
 ----

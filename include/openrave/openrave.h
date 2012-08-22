@@ -147,6 +147,7 @@ enum OpenRAVEErrorCode {
     ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
     ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
+    ORE_Timeout=11, ///< process timed out
 };
 
 inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
@@ -163,6 +164,7 @@ inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_InconsistentConstraints: return "InconsistentConstraints";
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
+    case ORE_Timeout: return "Timeout";
     }
     // should throw an exception?
     return "";

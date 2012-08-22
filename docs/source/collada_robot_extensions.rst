@@ -277,7 +277,7 @@ dynamic_rigid_constraints
 Introduction
 ~~~~~~~~~~~~
 
-Defines a list of rigid constraints within pairs of bodies modeling dynamic relationships like robot hand grabbing object.
+Defines a list of rigid constraints within pairs of bodies modeling dynamic inter-relationships of physics models like a robot hand grabbing an object.
 
 Concepts
 ~~~~~~~~
@@ -1185,11 +1185,41 @@ For most cases, the **<kinematics_scene>** defined in the separate robot file ca
     </scene>
   </COLLADA>
 
-Addressing files on local or network file systems:
-* `RFC 1738 <http://tools.ietf.org/html/rfc1738>`_ - **file://[host]/path**
-* `RFC 3986 <http://tools.ietf.org/html/rfc3986>`_ - **file:[//host]/path**
-* `Using URIs in COLLADA <http://collada.org/mediawiki/index.php/Using_URIs_in_COLLADA>`_
-* :ref:`collada_openrave_uri`
+Unfortunately, COLLADA only allows one **instance_kinematics_scene** and one **instance_visual_scene**, which means that for multiple objects, the kinematics/physics/visual models have to be referenced directly instead of the scenes.
+
+Instantiating Nodes with Similar Ids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When the same visual hierarchy nodes are instanced in the same scene like this:
+
+.. code-block:: xml
+
+  <node name="body1">
+    <translate>1 0 0</translate>
+    <instance_node url="#somenode"/>
+  </node>
+  <node name="body2">
+    <translate>1 0 0</translate>
+    <instance_node url="#somenode"/>
+  </node>
+
+The Ids fo the child nodes in #somenode will clash, therefore add a **<extra>** tag to allow suffixing of the Ids:
+
+.. code-block:: xml
+
+  <node name="body1">
+    <translate>1 0 0</translate>
+    <instance_node url="#somenode">
+      <extra type="idsuffix" name=".b1"/>
+    </instance_node>
+  </node>
+  <node name="body2">
+    <translate>1 0 0</translate>
+    <instance_node url="#somenode">
+      <extra type="idsuffix" name=".b2"/>
+    </instance_node>
+  </node>
+
 
 Composing Robots
 ~~~~~~~~~~~~~~~~

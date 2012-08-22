@@ -586,8 +586,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(size_t i = 0; i < vaxes.size(); ++i) {
         _vaxes[i] = vaxes[i];
     }
-    // make sure first body is always closer to the root, unless the second body is static
-    if( _attachedbodies[1]->IsStatic() ) {
+    // make sure first body is always closer to the root, unless the second body is static and the first body is not the root link
+    if( _attachedbodies[1]->IsStatic() && _attachedbodies[0]->GetIndex() > 0) {
         if( !_attachedbodies[0]->IsStatic() ) {
             Transform tswap = plink1->GetTransform().inverse() * plink0->GetTransform();
             for(int i = 0; i < GetDOF(); ++i) {
@@ -596,10 +596,6 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             vanchor = tswap*vanchor;
             swap(_attachedbodies[0],_attachedbodies[1]);
         }
-    }
-
-    if( _attachedbodies[1]->IsStatic() ) {
-        RAVELOG_WARN(str(boost::format("joint %s: all attached links are static!\n")%GetName()));
     }
 
     tbody0 = _attachedbodies[0]->GetTransform();
@@ -726,6 +722,10 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         }
     }
     _bInitialized = true;
+
+    if( _attachedbodies[1]->IsStatic() && !IsStatic() ) {
+        RAVELOG_WARN(str(boost::format("joint %s: all attached links are static, but joint is not!\n")%GetName()));
+    }
 }
 
 KinBody::LinkPtr KinBody::Joint::GetHierarchyParentLink() const

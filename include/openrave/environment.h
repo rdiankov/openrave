@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -205,6 +205,15 @@ public:
      */
     virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
 
+    /** \brief Loads a scene from a URI and adds all objects in the environment. <b>[multi-thread safe]</b>
+
+        Currently only collada files are supported. Options are passed through to
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+     */
+    virtual bool LoadURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
     virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
 
@@ -368,7 +377,9 @@ public:
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
     ///
     /// The sensors come from the currently loaded robots and the explicitly added sensors
-    virtual void GetSensors(std::vector<SensorBasePtr>& sensors) const = 0;
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetSensors(std::vector<SensorBasePtr>& sensors, uint64_t timeout=0) const = 0;
 
     /// \brief Removes a currently loaded interface from the environment. <b>[multi-thread safe]</b>
     ///
@@ -393,22 +404,36 @@ public:
     virtual RobotBasePtr GetRobot(const std::string& name) const =0;
 
     /// \brief Get all bodies loaded in the environment (including robots). <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the bodies.
     /// \param[out] bodies filled with all the bodies
-    virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const = 0;
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout=0) const = 0;
 
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
-    virtual void GetRobots(std::vector<RobotBasePtr>& robots) const = 0;
+    ///
+    /// A separate **interface mutex** is locked for reading the bodies.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
 
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
+    /// A separate **interface mutex** is locked for reading the modules.
     /// Note that the pbody pointer might become invalid as soon as GetPublishedBodies returns.
-    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies) = 0;
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
 
-    /// updates the published bodies that viewers and other programs listening in on the environment see.
+    /// \brief Updates the published bodies that viewers and other programs listening in on the environment see.
+    ///
     /// For example, calling this function inside a planning loop allows the viewer to update the environment
     /// reflecting the status of the planner.
     /// Assumes that the physics are locked.
-    virtual void UpdatePublishedBodies() = 0;
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
@@ -439,8 +464,11 @@ public:
 
     /// \brief Fills a list with the loaded modules in the environment.
     ///
+    /// A separate **interface mutex** is locked for reading the modules.
     /// If the environment is locked, the modules are guaranteed to stay loaded in the environment.
-    virtual void GetModules(std::list<ModuleBasePtr>& listModules) const = 0;
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetModules(std::list<ModuleBasePtr>& listModules, uint64_t timeout=0) const = 0;
 
     /// \deprecated (12/01/30)
     virtual void GetLoadedProblems(std::list<ModuleBasePtr>& listModules) const {

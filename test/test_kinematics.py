@@ -24,6 +24,9 @@ class TestKinematics(EnvironmentSetup):
                 for i in range(20):
                     T = eye(4)
                     for body in env.GetBodies():
+                        if len(body.GetJoints()) > 0:
+                            # make sure the root link is the parent of at least one joint
+                            assert(any([body.GetLinks()[0]==j.GetHierarchyParentLink() for j in body.GetJoints()+body.GetPassiveJoints()]))
                         # change the staticness of the first link (shouldn't affect anything)
                         body.GetLinks()[0].SetStatic((i%2)>0)
 

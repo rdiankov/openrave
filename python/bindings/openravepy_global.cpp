@@ -1072,6 +1072,7 @@ void init_openravepy_global()
     .value("InconsistentConstraints",ORE_InconsistentConstraints)
     .value("NotInitialized",ORE_NotInitialized)
     .value("InvalidState",ORE_InvalidState)
+    .value("Timeout",ORE_Timeout)
     ;
     enum_<DebugLevel>("DebugLevel" DOXY_ENUM(DebugLevel))
     .value("Fatal",Level_Fatal)
