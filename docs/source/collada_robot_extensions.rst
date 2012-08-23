@@ -1227,5 +1227,5 @@ Composing Robots
 Contributors
 ============
 
-* Rosen Diankov - `MUJIN Inc <http://www.mujin.co.jp>`_
+* Rosen Diankov
 * Ryohei Ueda - `University of Tokyo JSK Lab <http://www.jsk.t.u-tokyo.ac.jp/>`_
