@@ -330,7 +330,7 @@ bool KinBodyItem::UpdateFromIv()
 
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
-        _pchain->SetLinkTransformations(vtrans);
+        _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
     else {
         RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
@@ -366,7 +366,7 @@ bool KinBodyItem::UpdateFromModel()
         }
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
-            _pchain->GetLinkTransformations(_vtrans);
+            _pchain->GetLinkTransformations(_vtrans,_vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }
         else {
@@ -382,10 +382,11 @@ void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
     vjoints = _vjointvalues;
 }
 
-void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans) const
+void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& vdofbranches) const
 {
     boost::mutex::scoped_lock lock(_mutexjoints);
     vtrans = _vtrans;
+    vdofbranches = _vdofbranches;
 }
 
 bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)

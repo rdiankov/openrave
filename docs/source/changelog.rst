@@ -37,7 +37,7 @@ Core
 
 * Added new :ref:`.KinBody.Joint.Type.Trajectory` joint type allowing a joint to transform a child link in any way.
 
-* Added :meth:`.Environment.SetDataAccess` to restrict filenames from only being opened from $OPENRAVE_DATA directories
+* Added :meth:`.RaveSetDataAccess` to restrict filenames from only being opened from $OPENRAVE_DATA directories
 
 * Created a new class to store geometry info :class:`.KinBody.Link.GeometryInfo` that can be used to initialize new geometry objects via :meth:`.KinBody.InitFromGeometries`. **could break existing code**.
 
@@ -59,13 +59,17 @@ Core
 
 * **checklimits** parameter in :meth:`.KinBody.SetDOFValues` is now an enum :meth:`.KinBody.CheckLimitsAction` that controls warning actions
 
-* Added :meth:`.Interface.Serialize` method for exporting interface information to COLLADA/OpenRAVEXML, and created new :class:`.BaseXMLWriter` class to handle managing this serialization.
+* Added :meth:`.Interface.Serialize` method for exporting interface information to XML (COLLADA/OpenRAVEXML), and created new :class:`.BaseXMLWriter` class to handle managing this serialization.
 
 * Added :meth:`.Interface.SetReadableInterface` and :class:`.XMLReadable` to allow readable objects to be editing in python.
 
 * Fixed bug with plugin loading when shared object is not an OpenRAVE plugin.
 
 * Added OpenRAVE_PYTHON_DIR export to openrave-config.cmake
+
+* Added :meth:`.RaveFindLocalFile` to find local resource files in the OpenRAVE path.
+
+* Added **timeout** fields to a lot of Environment.Get\* methods to avoid deadlocks.
 
 Inverse Kinematics
 ------------------
@@ -122,9 +126,15 @@ COLLADA
 
 * COLLADA support for **<instance_node>** and saving/restoring scenes with similar bodies.
 
-* COLLADA can read/write geometric primitives like boxes, cylinders, etc
+* COLLADA can read/write geometric primitives like boxes, cylinders, etc through new :ref:`collada_geometry_info` tag
 
 * COLLADA can read/write XMLReadable interfaces registered through :meth:`.RaveRegisterXMLReader`
+
+* COLLADA can read/write the grabbed state of robots through :ref:`collada_dynamic_rigid_constraints`
+
+* COLLADA can read external files references through the **openrave://** URI scheme
+
+* COLLADA can write files with external references by passing in **externalref=\*** option.
 
 Misc
 ----

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2010 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef RAVE_ENVIRONMENT_H
 #define RAVE_ENVIRONMENT_H
+
+#include "colladaparser/colladacommon.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -91,7 +93,6 @@ protected:
 public:
     Environment() : EnvironmentBase()
     {
-        _nDataAccessOptions = 0;
         _homedirectory = RaveGetHomeDirectory();
         RAVELOG_DEBUG(str(boost::format("setting openrave home directory to %s")%_homedirectory));
 
@@ -109,72 +110,6 @@ public:
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
         _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
-
-        {
-            bool bExists=false;
-#ifdef _WIN32
-            const char* delim = ";";
-#else
-            const char* delim = ":";
-#endif
-            char* pOPENRAVE_DATA = getenv("OPENRAVE_DATA"); // getenv not thread-safe?
-            if( pOPENRAVE_DATA != NULL ) {
-                utils::TokenizeString(pOPENRAVE_DATA, delim, _vdatadirs);
-            }
-            string installdir = OPENRAVE_DATA_INSTALL_DIR;
-#ifdef HAVE_BOOST_FILESYSTEM
-            if( !boost::filesystem::is_directory(boost::filesystem::path(installdir)) ) {
-#ifdef _WIN32
-                HKEY hkey;
-                if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\OpenRAVE\\" OPENRAVE_VERSION_STRING), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS) {
-                    DWORD dwType = REG_SZ;
-                    CHAR szInstallRoot[4096];     // dont' take chances, it is windows
-                    DWORD dwSize = sizeof(szInstallRoot);
-                    RegQueryValueEx(hkey, TEXT("InstallRoot"), NULL, &dwType, (PBYTE)szInstallRoot, &dwSize);
-                    RegCloseKey(hkey);
-                    installdir.assign(szInstallRoot);
-                    installdir += str(boost::format("%cshare%copenrave-%d.%d")%s_filesep%s_filesep%OPENRAVE_VERSION_MAJOR%OPENRAVE_VERSION_MINOR);
-                    RAVELOG_VERBOSE(str(boost::format("window registry data dir '%s'")%installdir));
-                }
-                else
-#endif
-                {
-                    RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
-                }
-            }
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
-#else
-            boost::filesystem::path datafilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
-#endif
-
-            FOREACH(itname, _vdatadirs) {
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
-#else
-                if( datafilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)) )
-#endif
-                {
-                    bExists = true;
-                    break;
-                }
-            }
-#else
-            string datafilename=installdir;
-            FOREACH(itname, _vdatadirs) {
-                if( datafilename == installdir ) {
-                    bExists = true;
-                    break;
-                }
-            }
-#endif
-            if( !bExists ) {
-                _vdatadirs.push_back(installdir);
-            }
-            FOREACHC(itdir,_vdatadirs) {
-                RAVELOG_VERBOSE(str(boost::format("data dir: %s")%*itdir));
-            }
-        }
     }
 
     virtual ~Environment()
@@ -271,7 +206,7 @@ public:
         list<ModuleBasePtr> listModules;
         list<ViewerBasePtr> listViewers = _listViewers;
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             listModules = _listModules;
             listViewers = _listViewers;
         }
@@ -301,7 +236,7 @@ public:
 
             // clear internal interface lists
             {
-                boost::mutex::scoped_lock lock(_mutexInterfaces);
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // release all grabbed
                 FOREACH(itrobot,_vecrobots) {
                     (*itrobot)->ReleaseAllGrabbed();
@@ -352,7 +287,7 @@ public:
             _pCurrentChecker->DestroyEnvironment();
         }
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
 
             FOREACH(itbody,_vecbodies) {
@@ -379,7 +314,7 @@ public:
 
         list<ModuleBasePtr> listModules;
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             listModules = _listModules;
         }
 
@@ -405,14 +340,14 @@ public:
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
     virtual void DisownInterface(InterfaceBasePtr pinterface)
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         _listOwnedInterfaces.remove(pinterface);
     }
 
@@ -439,17 +374,31 @@ public:
         }
         else {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _listModules.push_back(module);
         }
 
         return ret;
     }
 
-    void GetModules(std::list<ModuleBasePtr>& listModules) const
+    void GetModules(std::list<ModuleBasePtr>& listModules, uint64_t timeout) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
-        listModules = _listModules;
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            listModules = _listModules;
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            listModules = _listModules;
+        }
+    }
+
+    virtual bool LoadURI(const std::string& uri, const AttributesList& atts)
+    {
+        return RaveParseColladaURI(shared_from_this(), uri, atts);
     }
 
     virtual bool Load(const std::string& filename, const AttributesList& atts)
@@ -457,13 +406,11 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(), _nDataAccessOptions);
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 return true;
             }
         }
         if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
@@ -493,7 +440,6 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         if( _IsColladaData(data) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
@@ -596,7 +542,7 @@ public:
             }
         }
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _vecbodies.push_back(pbody);
             SetEnvironmentId(pbody);
             _nBodiesModifiedStamp++;
@@ -628,7 +574,7 @@ public:
             }
         }
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _vecbodies.push_back(robot);
             _vecrobots.push_back(robot);
             SetEnvironmentId(robot);
@@ -658,7 +604,7 @@ public:
             }
         }
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _listSensors.push_back(psensor);
         }
         psensor->Configure(SensorBase::CC_PowerOn);
@@ -667,7 +613,7 @@ public:
     virtual bool Remove(InterfaceBasePtr pinterface)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
@@ -737,7 +683,7 @@ public:
 
     virtual KinBodyPtr GetKinBody(const std::string& pname) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecbodies) {
             if((*it)->GetName()==pname) {
                 return *it;
@@ -749,7 +695,7 @@ public:
 
     virtual RobotBasePtr GetRobot(const std::string& pname) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(it, _vecrobots) {
             if((*it)->GetName()==pname) {
                 return *it;
@@ -761,7 +707,7 @@ public:
 
     virtual SensorBasePtr GetSensor(const std::string& name) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         FOREACHC(itrobot,_vecrobots) {
             FOREACHC(itsensor, (*itrobot)->GetAttachedSensors()) {
                 SensorBasePtr psensor = (*itsensor)->GetSensor();
@@ -941,7 +887,7 @@ public:
         list<SensorBasePtr> listSensors;
         list<ModuleBasePtr> listModules;
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             vecbodies = _vecbodies;
             vecrobots = _vecrobots;
             listSensors = _listSensors;
@@ -975,21 +921,53 @@ public:
         return _mutexEnvironment;
     }
 
-    virtual void GetBodies(std::vector<KinBodyPtr>& bodies) const
+    virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
-        bodies = _vecbodies;
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            bodies = _vecbodies;
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            bodies = _vecbodies;
+        }
     }
 
-    virtual void GetRobots(std::vector<RobotBasePtr>& robots) const
+    virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
-        robots = _vecrobots;
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            robots = _vecrobots;
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            robots = _vecrobots;
+        }
     }
 
-    virtual void GetSensors(std::vector<SensorBasePtr>& vsensors) const
+    virtual void GetSensors(std::vector<SensorBasePtr>& vsensors, uint64_t timeout) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _GetSensors(vsensors);
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            _GetSensors(vsensors);
+        }
+    }
+
+    virtual void _GetSensors(std::vector<SensorBasePtr>& vsensors) const
+    {
         vsensors.resize(0);
         FOREACHC(itrobot,_vecrobots) {
             FOREACHC(itsensor, (*itrobot)->GetAttachedSensors()) {
@@ -999,7 +977,6 @@ public:
                 }
             }
         }
-        vsensors.insert(vsensors.end(),_listSensors.begin(),_listSensors.end());
     }
 
     virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)
@@ -1062,20 +1039,18 @@ public:
 
         if( !!robot ) {
             robot->SetViewerData(UserDataPtr());
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
@@ -1089,7 +1064,7 @@ public:
             }
             if( !!robot ) {
                 std::list<KinBody::Link::GeometryInfo> listGeometries;
-                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1142,7 +1117,7 @@ public:
 
         if( !!robot ) {
             robot->SetViewerData(UserDataPtr());
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
@@ -1184,20 +1159,18 @@ public:
 
         if( !!body ) {
             body->SetViewerData(UserDataPtr());
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
         }
 
         if( _IsColladaFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
         else if( _IsXFile(filename) ) {
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             if( !RaveParseXFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
@@ -1208,7 +1181,7 @@ public:
             }
             if( !!body ) {
                 std::list<KinBody::Link::GeometryInfo> listGeometries;
-                if( _ReadGeometriesURI(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1261,7 +1234,7 @@ public:
 
         if( !!body ) {
             body->SetViewerData(UserDataPtr());
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
@@ -1301,7 +1274,6 @@ public:
     {
         try {
             EnvironmentMutex::scoped_lock lockenv(GetMutex());
-            OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,false);
             if( !preader ) {
                 return InterfaceBasePtr();
@@ -1328,7 +1300,6 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1337,7 +1308,6 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1352,7 +1322,6 @@ public:
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1361,7 +1330,6 @@ public:
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
                 if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
                     return InterfaceBasePtr();
                 }
@@ -1420,9 +1388,8 @@ public:
     virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
-        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-        if( !filedata ) {
+        string filedata = RaveFindLocalFile(filename);
+        if( filedata.size() == 0 ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
         Vector vScaleGeometry(1,1,1);
@@ -1439,18 +1406,17 @@ public:
         if( !ptrimesh ) {
             ptrimesh.reset(new KinBody::Link::TRIMESH());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata->second, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesURI(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    virtual bool _ReadGeometriesFile(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
-        boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-        if( !filedata ) {
+        string filedata = RaveFindLocalFile(filename);
+        if( filedata.size() == 0 ) {
             return boost::shared_ptr<KinBody::Link::TRIMESH>();
         }
         Vector vScaleGeometry(1,1,1);
@@ -1463,14 +1429,14 @@ public:
                 }
             }
         }
-        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata->second, vScaleGeometry, listGeometries);
+        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries);
     }
 
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
     {
         CHECK_INTERFACE(pnewviewer);
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         BOOST_ASSERT(find(_listViewers.begin(),_listViewers.end(),pnewviewer) == _listViewers.end() );
         _CheckUniqueName(ViewerBaseConstPtr(pnewviewer),true);
         _listViewers.push_back(pnewviewer);
@@ -1478,7 +1444,7 @@ public:
 
     virtual ViewerBasePtr GetViewer(const std::string& name) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( name.size() == 0 ) {
             return _listViewers.size() > 0 ? _listViewers.front() : ViewerBasePtr();
         }
@@ -1492,13 +1458,13 @@ public:
 
     void GetViewers(std::list<ViewerBasePtr>& listViewers) const
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         listViewers = _listViewers;
     }
 
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1510,7 +1476,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1522,7 +1488,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1534,7 +1500,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1546,7 +1512,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1558,7 +1524,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1570,7 +1536,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1582,7 +1548,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1594,7 +1560,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1606,7 +1572,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1618,7 +1584,7 @@ public:
     }
     virtual OpenRAVE::GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
@@ -1631,7 +1597,7 @@ public:
 
     virtual KinBodyPtr GetBodyFromEnvironmentId(int id)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         boost::mutex::scoped_lock locknetwork(_mutexEnvironmentIds);
         map<int, KinBodyWeakPtr>::iterator it = _mapBodies.find(id);
         if( it != _mapBodies.end() ) {
@@ -1671,26 +1637,39 @@ public:
         return RaveGetDebugLevel();
     }
 
-    virtual void SetDataAccess(int options) {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _nDataAccessOptions = options;
-    }
-    virtual int GetDataAccess() const {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        return _nDataAccessOptions;
-    }
-
-    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies)
+    virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout)
     {
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
-        vbodies = _vPublishedBodies;
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            vbodies = _vPublishedBodies;
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            vbodies = _vPublishedBodies;
+        }
     }
 
-    virtual void UpdatePublishedBodies()
+    virtual void UpdatePublishedBodies(uint64_t timeout=0)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::mutex::scoped_lock lock(_mutexInterfaces);
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            _UpdatePublishedBodies();
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            _UpdatePublishedBodies();
+        }
+    }
 
+    virtual void _UpdatePublishedBodies()
+    {
         // updated the published bodies
         _vPublishedBodies.resize(_vecbodies.size());
 
@@ -1705,10 +1684,6 @@ public:
             itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }
-    }
-
-    const vector<string>& GetDataDirs() const {
-        return _vdatadirs;
     }
 
 protected:
@@ -1727,14 +1702,12 @@ protected:
     virtual bool _ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLFile(preader, filename);
     }
 
     virtual bool _ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        OpenRAVEXMLParser::SetDataDirs(GetDataDirs(),_nDataAccessOptions);
         return OpenRAVEXMLParser::ParseXMLData(preader, pdata);
     }
 
@@ -1766,7 +1739,7 @@ protected:
         if( !bCheckSharedResources || !(options & Clone_Bodies) ) {
             {
                 // clear internal interface lists
-                boost::mutex::scoped_lock lock(_mutexInterfaces);
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 // release all grabbed
                 FOREACH(itrobot,_vecrobots) {
                     (*itrobot)->ReleaseAllGrabbed();
@@ -1793,7 +1766,7 @@ protected:
 
         list<ViewerBasePtr> listViewers = _listViewers;
         {
-            boost::mutex::scoped_lock lock(_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _listViewers.clear();
         }
 
@@ -1806,8 +1779,6 @@ protected:
             }
             listViewers.clear();
         }
-
-        _vdatadirs = r->_vdatadirs;
 
         EnvironmentMutex::scoped_lock lock(GetMutex());
         //boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds); // why is this here? if locked, then KinBody::_ComputeInternalInformation freezes on GetBodyFromEnvironmentId call
@@ -1849,7 +1820,7 @@ protected:
         }
 
         if( options & Clone_Bodies ) {
-            boost::mutex::scoped_lock lock(r->_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
             std::vector<RobotBasePtr> vecrobots;
             std::vector<KinBodyPtr> vecbodies;
             std::vector<std::pair<Vector,Vector> > linkvelocities;
@@ -2001,7 +1972,7 @@ protected:
             }
         }
         if( options & Clone_Sensors ) {
-            boost::mutex::scoped_lock lock(r->_mutexInterfaces);
+            boost::timed_mutex::scoped_lock lock(r->_mutexInterfaces);
             FOREACHC(itsensor,r->_listSensors) {
                 try {
                     SensorBasePtr pnewsensor = RaveCreateSensor(shared_from_this(), (*itsensor)->GetXMLId());
@@ -2173,7 +2144,13 @@ protected:
                 }
                 if( !!lockenv ) {
                     nLastUpdateTime = utils::GetMicroTime();
-                    UpdatePublishedBodies();
+                    // environment might be getting destroyed during this call, so to avoid a potential deadlock, add a timeout
+                    try {
+                        UpdatePublishedBodies(1000000); // 1.0s
+                    }
+                    catch(const std::exception& ex) {
+                        RAVELOG_WARN("timeout of UpdatePublishedBodies\n");
+                    }
                 }
             }
 
@@ -2299,18 +2276,16 @@ protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     int _nEnvironmentIndex;                   ///< next network index
-    int _nDataAccessOptions;
     std::map<int, KinBodyWeakPtr> _mapBodies;     ///< a map of all the bodies in the environment. Controlled through the KinBody constructor and destructors
 
     boost::shared_ptr<boost::thread> _threadSimulation;                      ///< main loop for environment simulation
 
     mutable EnvironmentMutex _mutexEnvironment;          ///< protects internal data from multithreading issues
     mutable boost::mutex _mutexEnvironmentIds;      ///< protects _vecbodies/_vecrobots from multithreading issues
-    mutable boost::mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
+    mutable boost::timed_mutex _mutexInterfaces;     ///< lock when managing interfaces like _listOwnedInterfaces, _listModules, _mapBodies
     mutable boost::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies;
-    vector<string> _vdatadirs;
     string _homedirectory;
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

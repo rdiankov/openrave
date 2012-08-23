@@ -676,8 +676,10 @@ void PlannerBase::PlannerParameters::Validate() const
 
     // check all stateless functions, which means ie anything but configuration samplers
     vector<dReal> vstate;
-    _getstatefn(vstate);
-    OPENRAVE_ASSERT_OP(vstate.size(),==,(size_t)GetDOF());
+    if( !!_getstatefn ) {
+        _getstatefn(vstate);
+        OPENRAVE_ASSERT_OP(vstate.size(),==,(size_t)GetDOF());
+    }
     if( !!_setstatefn ) {
         // need to save/restore state before calling this function?
         //_setstatefn();
@@ -695,14 +697,14 @@ void PlannerBase::PlannerParameters::Validate() const
     if( !!_checkpathconstraintsfn ) {
         _checkpathconstraintsfn(vstate,vstate,IT_OpenStart,ConfigurationListPtr());
     }
-    if( !!_neighstatefn ) {
+    if( !!_neighstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2 = vstate;
         vector<dReal> vzeros(vstate.size());
         _neighstatefn(vstate2,vzeros,0);
         dReal dist = _distmetricfn(vstate,vstate2);
         OPENRAVE_ASSERT_OP(dist,<=,10*g_fEpsilon);
     }
-    if( !!_diffstatefn ) {
+    if( !!_diffstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2=vstate;
         _diffstatefn(vstate2,vstate);
         OPENRAVE_ASSERT_OP(vstate2.size(),==,(size_t)GetDOF());

@@ -2713,7 +2713,13 @@ void QtCoinViewer::UpdateFromModel()
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
-    GetEnv()->GetPublishedBodies(vecbodies);
+    try {
+        GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN("timeout of GetPublishedBodies\n");
+        return;
+    }
     FOREACH(it, _mapbodies) {
         it->second->SetUserData(0);
     }

@@ -525,7 +525,7 @@ done:
 FunctionEnd
 
 Function GetNumPy
-  MessageBox MB_YESNO "Need to install Python NumPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
+  MessageBox MB_YESNO "Need to install Python NumPy %(numpy_version)s Library. Continue with auto-download and install?" /SD IDYES IDNO done 
   StrCpy $2 "numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe"
   nsisdl::download /TIMEOUT=30000 %(python_numpy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
@@ -551,8 +551,35 @@ start:
 done:
 FunctionEnd
 
+Function GetPythonSetupTools
+  MessageBox MB_YESNO "Need to install Python SetupTools 0.6c11 Library. Continue with auto-download and install?" /SD IDYES IDNO done 
+  StrCpy $2 "setuptools-0.6c11.win32-py%(python_version)s.exe"
+  nsisdl::download /TIMEOUT=30000 %(python_setuptools_url)s $TEMP\\$2
+  Pop $R0 ;Get the return value
+  StrCmp $R0 "success" install
+    MessageBox MB_OK "Download failed: $R0"  /SD IDOK
+    Quit
+install:
+  ExecWait "$TEMP\\$2"
+  Delete "$TEMP\\$2"
+done:
+FunctionEnd
+
+Function DetectPythonSetupTools
+  ClearErrors
+  ReadRegStr $1 HKLM "SOFTWARE\\Python\\PythonCore\\%(python_version)s\\InstallPath" ""
+  IfErrors 0 start
+    MessageBox MB_OK "Failed to find python installation"  /SD IDOK
+    Quit
+start:
+  ExecWait '"$1\\python.exe" -c "from pkg_resources import resource_filename"' $0
+  StrCmp $0 "0" done
+    Call GetPythonSetupTools
+done:
+FunctionEnd
+
 Function GetSymPy
-  MessageBox MB_YESNO "Need to install Python SymPy Library. Continue with auto-download and install?" /SD IDYES IDNO done 
+  MessageBox MB_YESNO "Need to install Python SymPy %(sympy_version)s Library. Continue with auto-download and install?" /SD IDYES IDNO done
   StrCpy $2 "sympy-%(sympy_version)s.win32.exe"
   nsisdl::download /TIMEOUT=30000 %(python_sympy_url)s $TEMP\\$2
   Pop $R0 ;Get the return value
@@ -584,6 +611,7 @@ Section
   Call DetectPython
   Call DetectNumPy
   Call DetectSymPy
+  Call DetectPythonSetupTools
   SetOutPath $INSTDIR\\bin
   File /r %(installdir)s\\bin\\*.py
   CreateDirectory $INSTDIR\\%(openravepy_reldir)s\\openravepy
@@ -865,10 +893,9 @@ if __name__ == "__main__":
 
     python_url = 'http://www.python.org/ftp/python/%(python_version_full)s/python-%(python_version_full)s%(python_architecture)s.msi'%args
     args['python_url'] = python_url
-    python_numpy_url = 'http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe'%args
-    args['python_numpy_url'] = python_numpy_url
-    python_sympy_url = 'http://sympy.googlecode.com/files/sympy-%(sympy_version)s.win32.exe'%args
-    args['python_sympy_url'] = python_sympy_url
+    args['python_numpy_url'] = 'http://downloads.sourceforge.net/project/numpy/NumPy/%(numpy_version)s/numpy-%(numpy_version)s-win32-superpack-python%(python_version)s.exe'%args
+    args['python_setuptools_url'] = 'http://pypi.python.org/packages/%(python_version)s/s/setuptools/setuptools-0.6c11.win32-py%(python_version)s.exe'%args
+    args['python_sympy_url'] = 'http://sympy.googlecode.com/files/sympy-%(sympy_version)s.win32.exe'%args
 
     open(args['output_name']+'.nsi','w').write(nsiscript%args)
     os.system('"C:\\Program Files\\NSIS\\makensis.exe" %s.nsi'%args['output_name'])

@@ -61,6 +61,51 @@ object toPyArray(const Transform& t)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
+AttributesList toAttributesList(boost::python::dict odict)
+{
+    AttributesList atts;
+    if( odict != object() ) {
+        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        size_t num = boost::python::len(iterkeys);
+        for (size_t i = 0; i < num; i++) {
+            // Because we know they're strings, we can do this
+            std::string key = boost::python::extract<std::string>(iterkeys[i]);
+            std::string value = boost::python::extract<std::string>(odict[iterkeys[i]]);
+            atts.push_back(make_pair(key,value));
+        }
+    }
+    return atts;
+}
+
+AttributesList toAttributesList(boost::python::list oattributes)
+{
+    AttributesList atts;
+    if( oattributes != object() ) {
+        size_t num=len(oattributes);
+        for (size_t i = 0; i < num; i++) {
+            // Because we know they're strings, we can do this
+            std::string key = boost::python::extract<std::string>(oattributes[i][0]);
+            std::string value = boost::python::extract<std::string>(oattributes[i][1]);
+            atts.push_back(make_pair(key,value));
+        }
+    }
+    return atts;
+}
+
+AttributesList toAttributesList(boost::python::object oattributes)
+{
+    if( oattributes != object() ) {
+        boost::python::extract<boost::python::dict> odictextractor(oattributes);
+        if( odictextractor.check() ) {
+            return toAttributesList((boost::python::dict)odictextractor());
+        }
+        // assume list
+        boost::python::extract<boost::python::list> olistextractor(oattributes);
+        return toAttributesList((boost::python::list)olistextractor());
+    }
+    return AttributesList();
+}
+
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);
@@ -643,13 +688,16 @@ public:
     bool Load(const string &filename) {
         return _penv->Load(filename);
     }
-    bool Load(const string &filename, dict odictatts) {
+    bool Load(const string &filename, object odictatts) {
         return _penv->Load(filename, toAttributesList(odictatts));
+    }
+    bool LoadURI(const string &filename, object odictatts=object()) {
+        return _penv->LoadURI(filename, toAttributesList(odictatts));
     }
     bool LoadData(const string &data) {
         return _penv->LoadData(data);
     }
-    bool LoadData(const string &data, dict odictatts) {
+    bool LoadData(const string &data, object odictatts) {
         return _penv->LoadData(data, toAttributesList(odictatts));
     }
 
@@ -670,7 +718,7 @@ public:
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
     }
-    object ReadRobotURI(const string &filename, dict odictatts)
+    object ReadRobotURI(const string &filename, object odictatts)
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotURI(RobotBasePtr(), filename,toAttributesList(odictatts)),shared_from_this()));
     }
@@ -678,7 +726,7 @@ public:
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, AttributesList()), shared_from_this()));
     }
-    object ReadRobotData(const string &data, dict odictatts)
+    object ReadRobotData(const string &data, object odictatts)
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotData(RobotBasePtr(), data, toAttributesList(odictatts)),shared_from_this()));
     }
@@ -686,7 +734,7 @@ public:
     {
         return object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(filename), shared_from_this()));
     }
-    object ReadKinBodyURI(const string &filename, dict odictatts)
+    object ReadKinBodyURI(const string &filename, object odictatts)
     {
         return object(openravepy::toPyKinBody(_penv->ReadKinBodyURI(KinBodyPtr(), filename, toAttributesList(odictatts)),shared_from_this()));
     }
@@ -694,7 +742,7 @@ public:
     {
         return object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, AttributesList()),shared_from_this()));
     }
-    object ReadKinBodyData(const string &data, dict odictatts)
+    object ReadKinBodyData(const string &data, object odictatts)
     {
         return object(openravepy::toPyKinBody(_penv->ReadKinBodyData(KinBodyPtr(), data, toAttributesList(odictatts)),shared_from_this()));
     }
@@ -702,7 +750,7 @@ public:
     {
         return _toPyInterface(_penv->ReadInterfaceURI(filename));
     }
-    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, dict odictatts)
+    PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts)
     {
         return _toPyInterface(_penv->ReadInterfaceURI(filename, toAttributesList(odictatts)));
     }
@@ -714,7 +762,7 @@ public:
         }
         return toPyTriMesh(*ptrimesh);
     }
-    object ReadTrimeshURI(const std::string& filename, dict odictatts)
+    object ReadTrimeshURI(const std::string& filename, object odictatts)
     {
         boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
@@ -1166,12 +1214,6 @@ public:
     int GetDebugLevel() const {
         return _penv->GetDebugLevel();
     }
-    void SetDataAccess(int options) {
-        return _penv->SetDataAccess(options);
-    }
-    int GetDataAccess() const {
-        return _penv->GetDataAccess();
-    }
 
     string GetHomeDirectory() {
         RAVELOG_WARN("Environment.GetHomeDirectory is deprecated, use RaveGetHomeDirectory\n"); return RaveGetHomeDirectory();
@@ -1283,6 +1325,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
     return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
@@ -1408,21 +1451,21 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
         void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         bool (PyEnvironmentBase::*load1)(const string &) = &PyEnvironmentBase::Load;
-        bool (PyEnvironmentBase::*load2)(const string &, dict) = &PyEnvironmentBase::Load;
+        bool (PyEnvironmentBase::*load2)(const string &, object) = &PyEnvironmentBase::Load;
         bool (PyEnvironmentBase::*loaddata1)(const string &) = &PyEnvironmentBase::LoadData;
-        bool (PyEnvironmentBase::*loaddata2)(const string &, dict) = &PyEnvironmentBase::LoadData;
+        bool (PyEnvironmentBase::*loaddata2)(const string &, object) = &PyEnvironmentBase::LoadData;
         object (PyEnvironmentBase::*readrobotxmlfile1)(const string &) = &PyEnvironmentBase::ReadRobotURI;
-        object (PyEnvironmentBase::*readrobotxmlfile2)(const string &,dict) = &PyEnvironmentBase::ReadRobotURI;
+        object (PyEnvironmentBase::*readrobotxmlfile2)(const string &,object) = &PyEnvironmentBase::ReadRobotURI;
         object (PyEnvironmentBase::*readrobotxmldata1)(const string &) = &PyEnvironmentBase::ReadRobotData;
-        object (PyEnvironmentBase::*readrobotxmldata2)(const string &,dict) = &PyEnvironmentBase::ReadRobotData;
+        object (PyEnvironmentBase::*readrobotxmldata2)(const string &,object) = &PyEnvironmentBase::ReadRobotData;
         object (PyEnvironmentBase::*readkinbodyxmlfile1)(const string &) = &PyEnvironmentBase::ReadKinBodyURI;
-        object (PyEnvironmentBase::*readkinbodyxmlfile2)(const string &,dict) = &PyEnvironmentBase::ReadKinBodyURI;
+        object (PyEnvironmentBase::*readkinbodyxmlfile2)(const string &,object) = &PyEnvironmentBase::ReadKinBodyURI;
         object (PyEnvironmentBase::*readkinbodyxmldata1)(const string &) = &PyEnvironmentBase::ReadKinBodyData;
-        object (PyEnvironmentBase::*readkinbodyxmldata2)(const string &,dict) = &PyEnvironmentBase::ReadKinBodyData;
+        object (PyEnvironmentBase::*readkinbodyxmldata2)(const string &,object) = &PyEnvironmentBase::ReadKinBodyData;
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile1)(const string &) = &PyEnvironmentBase::ReadInterfaceURI;
-        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string &,dict) = &PyEnvironmentBase::ReadInterfaceURI;
+        PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string &,object) = &PyEnvironmentBase::ReadInterfaceURI;
         object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
-        object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,dict) = &PyEnvironmentBase::ReadTrimeshURI;
+        object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
         scope env = classenv
                     .def(init<>())
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -1453,6 +1496,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
                                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
+                    .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(args("filename","atts"), DOXY_FN(EnvironmentBase,LoadURI)))
                     .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
@@ -1531,8 +1575,6 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))
                     .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(EnvironmentBase,GetDebugLevel))
-                    .def("SetDataAccess",&PyEnvironmentBase::SetDataAccess,args("level"), DOXY_FN(EnvironmentBase,SetDataAccess))
-                    .def("GetDataAccess",&PyEnvironmentBase::GetDataAccess, DOXY_FN(EnvironmentBase,GetDataAccess))
                     .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(EnvironmentBase,GetHomeDirectory))
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))

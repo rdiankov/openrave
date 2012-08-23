@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2011-2012 Rosen Diankov <rosen.diankov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,183 +81,6 @@ class TestEnvironment(EnvironmentSetup):
                 for link in body3.GetLinks():
                     for geom in link.GetGeometries():
                         assert( transdist(geom.GetRenderScale(),scalefactor) <= g_epsilon )
-            
-    def test_collada(self):
-        self.log.info('test that collada import/export works for robots')
-        env=self.env
-        testdesc='asdfa{}<>ff\nffas\nff<f>'
-        with env:
-            for robotfile in g_robotfiles:
-                env.Reset()
-                robot0=self.LoadRobot(robotfile)
-                # add a transform to test that offsets are handled correctly
-                Trobot = matrixFromAxisAngle([pi/4,0,0])
-                Trobot[0:3,3] = [1.0,2.0,3.0]
-                robot0.SetTransform(Trobot)
-                robot0.SetDescription(testdesc)
-                env.Save('test.zae')
-                robot1=self.LoadRobot('test.zae')
-                misc.CompareBodies(robot0,robot1,epsilon=g_epsilon)
-
-            # test if collada can store current joint values
-            env.Reset()
-            robot0=self.LoadRobot(g_robotfiles[0])
-            robot0.SetTransform(eye(4))
-            lower,upper = robot0.GetDOFLimits()
-            # try to limit circular joints since they throw off precision
-            values = lower+random.rand(robot0.GetDOF())*(upper-lower)
-            for j in robot0.GetJoints():
-                if j.IsCircular(0):
-                    values[j.GetDOFIndex()] = (random.rand()-pi)*2*pi
-            robot0.SetDOFValues(values)
-            
-            env.Save('test.dae')
-            oldname = robot0.GetName()
-            robot0.SetName('__dummy__')
-            self.LoadEnv('test.dae')
-            robot1=env.GetRobot(oldname)
-            # for now have to use this precision until collada-dom can store doubles
-            assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= robot0.GetDOF()*1e-4 )
-
-    def test_colladascene_simple(self):
-        self.log.info('test that collada simple import/export')
-        env=self.env
-        xmldata = """<kinbody name="a" scalegeometry="10">
-  <translation>1 1 1</translation>
-  <body name="b">
-    <mass type="mimicgeom">
-      <density>1000</density>
-    </mass>
-    <geom type="box">
-      <extents>0.2 0.4 0.5</extents>
-      <translation>1 0.01 0.02</translation>
-    </geom>
-    <geom type="box">
-      <extents>0.1 0.2 0.3</extents>
-      <translation>1.3 0.21 0.02</translation>
-    </geom>
-  </body>
-</kinbody>
-"""
-        body = env.ReadKinBodyData(xmldata)
-        env.Add(body)
-        env.Save('test_colladascenes.dae')
-        
-        env2 = Environment()
-        env2.Load('test_colladascenes.dae')
-        assert(len(env2.GetBodies())==len(env.GetBodies()))
-        body2=env2.GetBodies()[0]
-        assert(body.GetName() == body2.GetName())
-        assert(len(body2.GetLinks())==len(body.GetLinks()))
-        link=body.GetLinks()[0]
-        link2=body2.GetLinks()[0]
-        assert(len(link2.GetGeometries())==len(link.GetGeometries()))
-        
-        assert(transdist(link.ComputeAABB().pos(), link2.ComputeAABB().pos()) <= g_epsilon)
-        assert(transdist(link.ComputeAABB().extents(), link2.ComputeAABB().extents()) <= g_epsilon)
-        for ig,g in enumerate(link.GetGeometries()):
-            g2 = link2.GetGeometries()[ig]
-            ab = g.ComputeAABB(eye(4))
-            ab2 = g2.ComputeAABB(eye(4))
-            assert(transdist(ab.pos(), ab2.pos()) <= g_epsilon)
-            assert(transdist(ab.extents(), ab2.extents()) <= g_epsilon)
-
-    def test_colladascenes(self):
-        self.log.info('test that collada import/export works for scenes with multiple objects')
-        env=self.env
-        env2 = Environment()
-        xmldata = """<environment>
-  <kinbody name="b1">
-    <body name="base">
-      <geom type="box">
-        <extents>1 1 1</extents>
-      </geom>
-    </body>
-  </kinbody>
-  <kinbody name="b2">
-    <translation> 0 0 2.1</translation>
-    <body name="base">
-      <geom type="box">
-        <extents>1 1 1</extents>
-      </geom>
-    </body>
-  </kinbody>
-</environment>
-"""
-        open('test_colladascenes.env.xml','w').write(xmldata)
-        with env:
-            with env2:
-                for name in ['test_colladascenes.env.xml','data/lab1.env.xml']:
-                    env.Reset()
-                    env.Load(name)
-                    env.Save('test_colladascenes_new.dae',Environment.SelectionOptions.Everything,'')
-                    env2.Reset()
-                    env2.Load('test_colladascenes_new.dae')
-                    assert(len(env.GetBodies())==len(env2.GetBodies()))
-                    for body in env.GetBodies():
-                        body2 = env2.GetKinBody(body.GetName())
-                        misc.CompareBodies(body,body2,epsilon=g_epsilon)
-                
-    def test_collada_dummyjoints(self):
-        env=self.env
-        xmldata="""<kinbody name="a">
-  <body name="b1">
-  </body>
-  <body name="b2">
-  </body>
-  <body name="b3">
-  </body>
-  <joint name="j1" type="hinge">
-    <body>b1</body>
-    <body>b2</body>
-  </joint>
-  <joint name="j2" type="hinge" enable="false">
-    <body>b2</body>
-    <body>b3</body>
-  </joint>
-</kinbody>
-        """
-        body = env.ReadKinBodyData(xmldata)
-        env.Add(body)
-        env.Save('test_dummyjoints.dae')
-        assert(len(body.GetJoints())==1)
-        assert(len(body.GetPassiveJoints())==1)
-        
-        env2 = Environment()
-        env2.Load('test_dummyjoints.dae')
-        assert(len(env2.GetBodies())==len(env.GetBodies()))
-        body2=env2.GetBodies()[0]
-        assert(not body2.IsRobot())
-        assert(body.GetName() == body2.GetName())
-        assert(len(body2.GetJoints())==len(body.GetJoints()))
-        assert(len(body2.GetPassiveJoints())==len(body.GetPassiveJoints()))
-
-    def test_colladagrabbing(self):
-        self.log.info('test if robot grabbing information can be exported')
-        env=self.env
-        with env:
-            robot = self.LoadRobot('robots/pr2-beta-static.zae')
-            target1 = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.Add(target1,True)
-            T1 = eye(4)
-            T1[0:3,3] = [0.88,0.18,0.8]
-            target1.SetTransform(T1)
-            robot.SetActiveManipulator('leftarm')
-            robot.Grab(target1)
-            
-            target2 = env.ReadKinBodyURI('data/mug1.kinbody.xml')
-            env.Add(target2,True)
-            T2 = matrixFromAxisAngle([pi/2,0,0])
-            T2[0:3,3] = [0.88,-0.18,0.8]
-            target2.SetTransform(T2)
-            robot.SetActiveManipulator('rightarm')
-            robot.Grab(target2)
-            
-            env.Save('test_colladagrabbing.dae')
-            
-            env2=Environment()
-            env2.Load('test_colladagrabbing.dae')
-            misc.CompareBodies(robot,env2.GetRobot(robot.GetName()))
             
     def test_unicode(self):
         env=self.env
@@ -384,20 +207,37 @@ class TestEnvironment(EnvironmentSetup):
             t.join()
 
     def test_dataccess(self):
+        RaveDestroy()
+        OPENRAVE_DATA = os.environ.get('OPENRAVE_DATA','')
         os.environ['OPENRAVE_DATA'] = os.path.join(os.getcwd(),'testdata')
         env2=Environment() # should reread the OPENRAVE_DATA
         try:
-            env2.SetDataAccess(0)
+            RaveSetDataAccess(0)
             assert(env2.Load('bobcat.robot.xml'))
             assert(env2.Load('../ikfastrobots/fail1.robot.xml'))
             env2.Reset()
             assert(env2.Load('../ikfastrobots/fail1.dae'))
-            env2.SetDataAccess(1)
+            RaveSetDataAccess(1)
             env2.Reset()
             assert(env2.Load('bobcat.robot.xml'))
             assert(not env2.Load('../ikfastrobots/fail1.robot.xml'))
             env2.Reset()
             assert(not env2.Load('../ikfastrobots/fail1.dae'))
         finally:
+            # have to restore everything
+            RaveSetDataAccess(0)
+            os.environ['OPENRAVE_DATA'] = OPENRAVE_DATA
             env2.Destroy()
+            RaveDestroy()
             
+    def test_load_cwd(self):
+        env=self.env
+        oldcwd = os.getcwd()
+        try:
+            assert(env.Load('testdata/box0.dae'))
+            assert(not env.Load('box0.dae'))
+            os.chdir('testdata')
+            assert(env.Load('box0.dae'))
+        finally:
+            os.chdir(oldcwd)
+    

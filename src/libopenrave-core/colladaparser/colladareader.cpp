@@ -14,19 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "../ravep.h"
-
-#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
-namespace ColladaDOM150 {} // declare in case earlier versions are used
-
-#include <dae.h>
-#include <dae/daeErrorHandler.h>
-#include <dae/domAny.h>
-#include <dae/daeStandardURIResolver.h>
-#include <1.5/dom/domCOLLADA.h>
-#include <1.5/dom/domConstants.h>
-#include <1.5/dom/domTriangles.h>
-#include <boost/lexical_cast.hpp>
+#include "colladacommon.h"
+#include <boost/algorithm/string.hpp>
 using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
@@ -39,6 +28,85 @@ class ColladaReader : public daeErrorHandler
         }
         return t->getSid();
     }
+
+    class daeOpenRAVEURIResolver : public daeURIResolver
+    {
+public:
+        daeOpenRAVEURIResolver(DAE& dae, const std::string& scheme, ColladaReader* preader) : daeURIResolver(dae), _scheme(scheme), _preader(preader) {
+        }
+
+        ~daeOpenRAVEURIResolver() {
+        }
+
+public:
+        virtual daeElement* resolveElement(const daeURI& uri) {
+            string docuri = cdom::assembleUri(uri.scheme(), uri.authority(), uri.path(), "", "");
+            daeDocument* doc = dae->getDatabase()->getDocument(docuri.c_str(), true);
+            if( !doc ) {
+                if( uri.scheme() == _scheme ) {
+                    if( uri.path().size() == 0 ) {
+                        return NULL;
+                    }
+                    // remove first slash because we need relative file
+                    std::string docurifull="file:";
+                    if( uri.path().at(0) == '/' ) {
+                        docurifull += RaveFindLocalFile(uri.path().substr(1), "/");
+                    }
+                    else {
+                        docurifull += RaveFindLocalFile(uri.path(), "/");
+                    }
+                    if( docurifull.size() == 5 ) {
+                        RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                        return NULL;
+                    }
+                    domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
+                    if( !!proxy ) {
+                        if( !!_preader ) {
+                            _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
+                        }
+                        doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
+                        if( !!doc ) {
+                            // insert it again with the original URI
+                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+                        }
+                    }
+                }
+                else {
+                    dae->open(docuri);
+                    doc = uri.getReferencedDocument();
+                    if( !!doc && !!doc->getDocumentURI() ) {
+                        // this document could be extracted from a zae, so have to link with the original zae
+                        daeUInt num = dae->getDatabase()->getDocumentCount();
+                        for(daeUInt i = 0; i < num; ++i) {
+                            daeDocument* doctest = dae->getDatabase()->getDocument(i);
+                            if( doctest->getExtractedFileURI().str() == docuri ) {
+                                // found
+                                if( !!doctest->getDocumentURI() ) {
+                                    _preader->_mapInverseResolvedURIList.insert(make_pair(doc->getDocumentURI()->str(),*doctest->getDocumentURI()));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!doc) {
+                    RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+                    return NULL;
+                }
+            }
+            daeElement* elt = dae->getDatabase()->idLookup(uri.id(), doc);
+            if (!elt) {
+                RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
+            }
+            return elt;
+        }
+        virtual daeString getName() {
+            return "OpenRAVEResolver";
+        }
+
+        std::string _scheme;
+        ColladaReader *_preader;
+    };
 
     class InterfaceType
     {
@@ -57,6 +125,7 @@ public:
         }
         domNodeRef _node;
         domInstance_kinematics_modelRef _ikmodel;
+        domInstance_physics_modelRef _ipmodel;
     };
 
     /// \brief bindings for joints between different specs
@@ -71,17 +140,9 @@ public:
                 if (!!visualnode) {
                     break;
                 }
-                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pae);
-                if( !!inode ) {
-                    visualnode = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
-                    if (!!visualnode) {
-                        // have to clone since the parents are different
-                        std::string idSuffix = str(boost::format(".%s")%pae->getParent()->getID());
-                        visualnode = daeSafeCast<domNode>(visualnode->clone(idSuffix.c_str()));
-                        pae->getParentElement()->add(visualnode);
-                        BOOST_ASSERT(pae->getParentElement() == visualnode->getParentElement());
-                        break;
-                    }
+                visualnode = _InstantiateNode(pae);
+                if( !!visualnode ) {
+                    break;
                 }
                 pae = pae->getParentElement();
             }
@@ -107,10 +168,12 @@ public:
 public:
         KinBody::LinkPtr _link;
         domNodeRef _node;
+        boost::shared_ptr<daeURI> _nodeurifromphysics; ///< node URL from instance_rigid_body
         domLinkRef _domlink;
         domInstance_rigid_bodyRef _irigidbody;
         domRigid_bodyRef _rigidbody;
-        domNodeRef _nodephysicsoffset; // the physics rigid body is in this coordinate system
+        domNodeRef _nodephysicsoffset; ///< the physics rigid body is in this coordinate system
+        domInstance_physics_modelRef _ipmodel; ///< parent to _irigidbody
     };
 
     /// \brief inter-collada bindings for a kinematics scene
@@ -167,59 +230,68 @@ public:
     virtual ~ColladaReader() {
     }
 
-    bool InitFromFile(const string& filename, const AttributesList& atts)
+    bool InitFromURI(const string& uristr, const AttributesList& atts)
     {
-        RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s, filename: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE%filename));
-        _dae.reset(new DAE);
-        _bOpeningZAE = filename.find(".zae") == filename.size()-4;
-        if( !!_dae->getIOPlugin() ) {
-            FOREACHC(itatt,atts) {
-                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+        _InitPreOpen(atts);
+        _bOpeningZAE = uristr.find(".zae") == uristr.size()-4;
+        daeURI urioriginal(*_dae, uristr);
+        std::string uriresolved;
+
+        if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
+            if( urioriginal.path().size() == 0 ) {
+                return NULL;
+            }
+            // remove first slash because we need relative file
+            uriresolved="file:";
+            if( urioriginal.path().at(0) == '/' ) {
+                uriresolved += RaveFindLocalFile(urioriginal.path().substr(1), "/");
+            }
+            else {
+                uriresolved += RaveFindLocalFile(urioriginal.path(), "/");
+            }
+            if( uriresolved.size() == 5 ) {
+                return false;
             }
         }
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : uristr));
+        if( !!_dom && uriresolved.size() > 0 ) {
+            _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
+        }
+        return _InitPostOpen(atts);
+    }
+
+    bool InitFromFile(const string& filename, const AttributesList& atts)
+    {
+        _InitPreOpen(atts);
+        _bOpeningZAE = filename.find(".zae") == filename.size()-4;
         _dom = daeSafeCast<domCOLLADA>(_dae->open(filename));
         _bOpeningZAE = false;
         if (!_dom) {
             return false;
         }
         _filename=filename;
-        return _Init(atts);
+        return _InitPostOpen(atts);
     }
 
     bool InitFromData(const string& pdata,const AttributesList& atts)
     {
-        RAVELOG_DEBUG(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
-        _dae.reset(new DAE);
-        if( !!_dae->getIOPlugin() ) {
-            FOREACHC(itatt,atts) {
-                _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
-            }
-        }
+        _InitPreOpen(atts);
         _dom = daeSafeCast<domCOLLADA>(_dae->openFromMemory(".",pdata.c_str()));
         if (!_dom) {
             return false;
         }
-        return _Init(atts);
+        return _InitPostOpen(atts);
     }
 
-    bool _Init(const AttributesList& atts)
+    bool _InitPreOpen(const AttributesList& atts)
     {
-        _fGlobalScale = 1;
-        if( !!_dom->getAsset() ) {
-            if( !!_dom->getAsset()->getUnit() ) {
-                _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
-            }
-        }
+        RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
+        _dae.reset(new DAE);
         _bSkipGeometry = false;
+        _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
-            }
-            else if( itatt->first == "scalegeometry" ) {
-                stringstream ss(itatt->second);
-                Vector v(1,1,1);
-                ss >> v.x;
-                _fGlobalScale *= v.x;
             }
             else if( itatt->first == "prefix" ) {
                 _prefix = itatt->second;
@@ -227,8 +299,53 @@ public:
             else if( itatt->first == "name" ) {
                 RAVELOG_VERBOSE(str(boost::format("collada reader robot name=%s is processed from xmlreaders side")%itatt->second));
             }
+            else if( itatt->first == "openravescheme" ) {
+                _dae->getURIResolvers().list().clear();
+                stringstream ss(itatt->second);
+                _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+            }
+            else if( itatt->first == "uripassword" ) {
+                size_t passwordindex = itatt->second.find_last_of(' ');
+                if( passwordindex != std::string::npos ) {
+                    string name = itatt->second.substr(0,passwordindex);
+                    boost::trim(name);
+                    string password = itatt->second.substr(passwordindex+1);
+                    boost::trim(password);
+                }
+            }
+            else if( itatt->first == "scalegeometry" ) {
+            }
             else {
-                RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
+                //RAVELOG_WARN(str(boost::format("collada reader unprocessed attribute pair: %s:%s")%itatt->first%itatt->second));
+                if( !!_dae->getIOPlugin() ) {
+                    _dae->getIOPlugin()->setOption(itatt->first.c_str(),itatt->second.c_str());
+                }
+            }
+        }
+
+        if( _vOpenRAVESchemeAliases.size() == 0 ) {
+            _vOpenRAVESchemeAliases.push_back("openrave");
+        }
+        FOREACHC(itname,_vOpenRAVESchemeAliases) {
+            _dae->getURIResolvers().list().prepend(new daeOpenRAVEURIResolver(*_dae,*itname,this));
+        }
+        return true;
+    }
+
+    bool _InitPostOpen(const AttributesList& atts)
+    {
+        _fGlobalScale = 1;
+        if( !!_dom->getAsset() ) {
+            if( !!_dom->getAsset()->getUnit() ) {
+                _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+            }
+        }
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                Vector v(1,1,1);
+                ss >> v.x;
+                _fGlobalScale *= v.x;
             }
         }
         return true;
@@ -253,7 +370,6 @@ public:
                 continue;
             }
 
-            daeElementRef kscenelib = _dom->getLibrary_kinematics_scenes_array()[0]->getKinematics_scene_array()[0];
             KinematicsSceneBindings& bindings = allbindings[iscene];
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
@@ -605,6 +721,7 @@ public:
             return false;
         }
         RAVELOG_DEBUG(str(boost::format("instance articulated system sid %s\n")%getSid(ias)));
+
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
         if( !articulated_system ) {
             return false;
@@ -678,6 +795,50 @@ public:
             if( !ExtractArticulatedSystem(pbody,ias_new,bindings) ) {
                 return false;
             }
+
+            // write the axis parameters
+            ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
+            if( !!pcolladainfo ) {
+                pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias); // updated with a articulated_system up the hierarchy
+                pcolladainfo->_bindingAxesSIDs.resize(pbody->GetDOF());
+                // go through each parameter and see what axis it resolves to
+                for(size_t iparam = 0; iparam < ias->getNewparam_array().getCount(); ++iparam) {
+                    domKinematics_newparamRef param = ias->getNewparam_array()[iparam];
+                    // find the axis index
+                    if( !!param->getSIDREF() ) {
+                        daeElement* pelt = daeSidRef(param->getSIDREF()->getValue(),ias).resolve().elt;
+                        if( !!pelt ) {
+                            domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
+                            if( !!pjointaxis ) {
+                                FOREACH(itaxis, bindings.listAxisBindings) {
+                                    if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody && itaxis->_pjoint->GetDOFIndex() >= 0 ) {
+                                        if( itaxis->pkinematicaxis == pjointaxis ) {
+                                            std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
+                                            BOOST_ASSERT(itmodel != bindings.listModelBindings.end());
+                                            pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                domInstance_kinematics_modelRef ikmodel = daeSafeCast<domInstance_kinematics_model>(pelt);
+                                if( !!ikmodel ) {
+                                    // found a newparam to ikmodel, so have to store
+                                    string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
+                                    FOREACH(itmodel,pcolladainfo->_bindingModelURLs) {
+                                        if( itmodel->kmodel == kmodeluri ) {
+                                            itmodel->ikmodelsidref = param->getSIDREF()->getValue();
+                                        }
+                                    }
+                                }
+                                else {
+                                    // expected since newparam can point to custom elements
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         else {
             if( !articulated_system->getKinematics() ) {
@@ -700,9 +861,45 @@ public:
                 _mapJointUnits.clear();
                 _mapJointIds.clear();
             }
+
+            ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
+            pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias);
+            std::map<domInstance_physics_modelRef,int> mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
-                ExtractKinematicsModel(pbody,articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik],bindings);
+                domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
+                ExtractKinematicsModel(pbody,ikmodel,bindings);
+                FOREACH(it, bindings.listModelBindings) {
+                    if( it->_ikmodel == ikmodel ) {
+                        if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
+                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURLs.size();
+                            ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
+                            pcolladainfo->_bindingModelURLs.push_back(mbinding);
+                        }
+                        break;
+                    }
+                }
             }
+
+            pcolladainfo->_bindingLinkSIDs.resize(pbody->GetLinks().size());
+            FOREACH(itlink, bindings.listLinkBindings) {
+                const LinkBinding& lb = *itlink;
+                if( !!lb._link && lb._link->GetParent() == pbody ) {
+                    if( !!lb._domlink && !!lb._rigidbody && !!lb._node ) {
+                        if( !!lb._domlink->getSid() && !!lb._rigidbody->getSid() && !!lb._node->getSid() ) {
+                            // find out the model that this link binding belongs to
+                            ColladaXMLReadable::Binding binding(lb._domlink->getSid(), lb._rigidbody->getSid(), _MakeFullURIFromId(lb._node->getId(),lb._node)); //lb._node->getSid());
+                            if( mapModelIndices.find(lb._ipmodel) != mapModelIndices.end() ) {
+                                binding.index = mapModelIndices[lb._ipmodel];
+                            }
+                            pcolladainfo->_bindingLinkSIDs.at(lb._link->GetIndex()) = binding;
+                        }
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("link %s doesn't have all bindings")%lb._link->GetName()));
+                    }
+                }
+            }
+            pbody->SetReadableInterface(pcolladainfo->GetXMLId(),pcolladainfo);
         }
 
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
@@ -835,8 +1032,8 @@ public:
         if(( pkinbody->GetName().size() == 0) && !!kmodel->getName() ) {
             pkinbody->SetName(kmodel->getName());
         }
-        if(( pkinbody->GetName().size() == 0) && !!kmodel->getID() ) {
-            pkinbody->SetName(kmodel->getID());
+        if(( pkinbody->GetName().size() == 0) && !!kmodel->getId() ) {
+            pkinbody->SetName(kmodel->getId());
         }
         RAVELOG_DEBUG(str(boost::format("kinematics model: %s\n")%pkinbody->GetName()));
         if( !!pnode ) {
@@ -865,7 +1062,7 @@ public:
             }
         }
 
-        RAVELOG_VERBOSE(str(boost::format("Number of root links in the kmodel %d\n")%ktec->getLink_array().getCount()));
+        RAVELOG_VERBOSE(str(boost::format("Number of root links in kmodel %s: %d\n")%kmodel->getId()%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
             Transform tnode;
             if( ilink == 0 ) {
@@ -1049,19 +1246,35 @@ public:
         domRigid_bodyRef rigidbody;
         Transform trigidoffset = pkinbody->GetLinks().at(0)->GetTransform();
         if( !!pdomnode ) {
+            // convert any instance_node child elements to real nodes
+            daeTArray<domInstance_nodeRef> vinstance_nodes = pdomnode->getChildrenByType<domInstance_node>();
+            for(size_t inode = 0; inode < vinstance_nodes.getCount(); ++inode) {
+                _InstantiateNode(vinstance_nodes[inode]);
+            }
+
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
 
             bool bFoundBinding = false;
             FOREACH(itlinkbinding, bindings.listLinkBindings) {
-                if( !!pdomnode->getID() && !!itlinkbinding->_node->getID() && strcmp(pdomnode->getID(),itlinkbinding->_node->getID()) == 0 ) {
+                // visual scenes can have weird hierarchy which makes physics assignment difficult
+                LinkBinding& lb = *itlinkbinding;
+                if( !lb._node ) {
+                    // have to resolve _node
+                    lb._node = daeSafeCast<domNode>(lb._nodeurifromphysics->getElement().cast());
+                    if( !lb._node ) {
+                        continue;
+                    }
+                }
+                if( _CompareElementURI(pdomnode,lb._node) > 0 ) {
                     bFoundBinding = true;
-                    irigidbody = itlinkbinding->_irigidbody;
-                    rigidbody = itlinkbinding->_rigidbody;
-                    itlinkbinding->_domlink = pdomlink;
-                    itlinkbinding->_link = plink;
-                    if( !!itlinkbinding->_nodephysicsoffset ) {
+                    irigidbody = lb._irigidbody;
+                    rigidbody = lb._rigidbody;
+                    lb._domlink = pdomlink;
+                    lb._link = plink;
+                    lb._node = pdomnode;
+                    if( !!lb._nodephysicsoffset ) {
                         // set the rigid offset to the transform of the instance physics model parent
-                        trigidoffset = _ExtractFullTransform(itlinkbinding->_nodephysicsoffset);
+                        trigidoffset = getNodeParentTransform(lb._nodephysicsoffset) * _ExtractFullTransform(lb._nodephysicsoffset);
                     }
                     break;
                 }
@@ -1093,12 +1306,15 @@ public:
                 plink->_bStatic = !rigiddata->getDynamic()->getValue();
             }
         }
+        else {
+            RAVELOG_WARN(str(boost::format("failed to find rigid_body info for link %s")%plink->_name));
+        }
 
         if (!pdomlink) {
             ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>());
         }
         else {
-            RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
+            RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d")%pdomlink->getAttachment_full_array().getCount()));
 
             {
                 stringstream ss; ss << plink->GetName() << ": " << plink->_t << endl;
@@ -1409,7 +1625,7 @@ public:
                     //  Rotate axis from the parent offset
                     vAxes[ic] = tatt.rotate(vAxes[ic]);
                 }
-                RAVELOG_DEBUG(str(boost::format("joint dof: %d, link %s\n")%pjoint->dofindex%plink->GetName()));
+                RAVELOG_DEBUG(str(boost::format("joint dof: %d, links %s->%s\n")%pjoint->dofindex%plink->GetName()%pchildlink->GetName()));
                 pjoint->_ComputeInternalInformation(plink,pchildlink,tatt.trans,vAxes,std::vector<dReal>());
             }
             if( pdomlink->getAttachment_start_array().getCount() > 0 ) {
@@ -2344,7 +2560,7 @@ public:
 
         std::string instance_id = instance_sensor->getAttribute("id");
         std::string instance_url = instance_sensor->getAttribute("url");
-        daeElementRef domsensor = _getElementFromUrl(daeURI(*instance_sensor,instance_url));
+        daeElementRef domsensor = daeURI(*instance_sensor,instance_url).getElement();
         if( !domsensor ) {
             RAVELOG_WARN(str(boost::format("failed to find senor id %s url=%s\n")%instance_id%instance_url));
             return false;
@@ -2404,11 +2620,6 @@ public:
         return false;
     }
 
-    inline daeElementRef _getElementFromUrl(const daeURI &uri)
-    {
-        return daeStandardURIResolver(*_dae).resolveElement(uri);
-    }
-
     static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent)
     {
         if( !!paddr->getSIDREF() ) {
@@ -2420,10 +2631,15 @@ public:
         return NULL;
     }
 
+    static daeElement* searchBindingFromSIDREF(domSidref value, daeElementRef parent)
+    {
+        return daeSidRef(value,parent).resolve().elt;
+    }
+
     /// Search a given parameter reference and stores the new reference to search.
     /// \param ref the reference name to search
     /// \param parent The array of parameter where the method searchs.
-    static daeElement* searchBinding(daeString ref, daeElementRef parent)
+    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning=true)
     {
         if( !parent ) {
             return NULL;
@@ -2492,29 +2708,33 @@ public:
                 }
             }
         }
-        RAVELOG_WARN(str(boost::format("failed to get binding '%s' for element: %s\n")%ref%parent->getElementName()));
+        if( bLogWarning ) {
+            RAVELOG_WARN(str(boost::format("failed to get binding '%s' for element: %s\n")%ref%parent->getElementName()));
+        }
         return NULL;
     }
 
     static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast());
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
             if( !!pelt ) {
                 return pelt;
             }
         }
+        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
         return NULL;
     }
 
     static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast());
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
             if( !!pelt ) {
                 return pelt;
             }
         }
+        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
         return NULL;
     }
 
@@ -2753,6 +2973,70 @@ public:
 
 private:
 
+    /// \brief if inode points to a valid node, inserts it in the scene and removes the instance_node
+    static domNodeRef _InstantiateNode(daeElementRef pelt)
+    {
+        domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pelt);
+        if( !inode ) {
+            return domNodeRef();
+        }
+        domNodeRef node = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
+        if( !node ) {
+            RAVELOG_WARN(str(boost::format("failed to resolve node %s\n")%inode->getUrl().str()));
+            return domNodeRef();
+        }
+        // extra elements can contain the suffix of all the ids
+        std::string idsuffix;
+        for(size_t ie = 0; ie < inode->getExtra_array().getCount(); ++ie) {
+            domExtraRef pextra = inode->getExtra_array()[ie];
+            std::string extra_type = pextra->getType();
+            if( extra_type == "idsuffix" ) {
+                if( !!pextra->getName() ) {
+                    idsuffix = pextra->getName();
+                }
+            }
+        }
+
+        // have to clone since the parents are different
+        daeElementRef parentelt = pelt->getParent();
+        daeElementRef newnode = daeSafeCast<domNode>(node->clone(idsuffix.size() > 0 ? idsuffix.c_str() : NULL));
+        if( !!node->getDocumentURI() ) {
+            if( !parentelt->getDocumentURI() || !(*node->getDocumentURI() == *parentelt->getDocumentURI()) ) {
+                _ResolveURLs(newnode,*node->getDocumentURI());
+            }
+        }
+        parentelt->add(newnode);
+        BOOST_ASSERT(parentelt == newnode->getParentElement());
+        parentelt->removeChildElement(pelt); // have to remove the instance_node
+        return daeSafeCast<domNode>(newnode);
+    }
+
+    static void _ResolveURLs(daeElementRef elt, const daeURI& srcuri)
+    {
+        // resolve all xsAnyURIs
+        for(size_t iattr = 0; iattr < elt->getAttributeCount(); ++iattr) {
+            daeMetaAttribute* pattr = elt->getAttributeObject(iattr);
+            if( !!pattr ) {
+                daeAtomicType* ptype = pattr->getType();
+                if( !!ptype ) {
+                    //xsAnyURI
+                    if( ptype->getTypeEnum() == daeAtomicType::ResolverType ) {
+                        std::ostringstream buffer; buffer << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        pattr->memoryToString(elt,buffer);
+                        daeURI newuri(srcuri,buffer.str());
+                        pattr->stringToMemory(elt, newuri.str().c_str());
+                    }
+                }
+            }
+        }
+
+        daeTArray<daeElementRef> children;
+        elt->getChildren(children);
+        for(size_t i = 0; i < children.getCount(); ++i) {
+            _ResolveURLs(children[i],srcuri);
+        }
+    }
+
     /// \brief go through all kinematics binds to get a kinematics/visual pair
     ///
     /// \param kiscene instance of one kinematics scene, binds the kinematic and visual models
@@ -2775,17 +3059,7 @@ private:
             daeElement* pnodeelt = daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt;
             domNodeRef node = daeSafeCast<domNode>(pnodeelt);
             if (!node) {
-                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnodeelt);
-                if( !!inode ) {
-                    node = daeSafeCast<domNode> (inode->getUrl().getElement().cast());
-                    if( !!node ) {
-                        // have to clone since the parents are different
-                        std::string idSuffix = str(boost::format(".%s")%pnodeelt->getParent()->getID());
-                        node = daeSafeCast<domNode>(node->clone(idSuffix.c_str()));
-                        pnodeelt->getParentElement()->add(node);
-                        BOOST_ASSERT(pnodeelt->getParentElement() == node->getParentElement());
-                    }
-                }
+                node = _InstantiateNode(pnodeelt);
                 if( !node ) {
                     RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
                     continue;
@@ -2844,13 +3118,26 @@ private:
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
                 domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());
                 domNodeRef nodephysicsoffset = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
+                std::list<ModelBinding>::iterator itmodelbindings = _FindParentModel(nodephysicsoffset,bindings.listModelBindings);
+                if( itmodelbindings == bindings.listModelBindings.end() ) {
+                    itmodelbindings = _FindChildModel(nodephysicsoffset,bindings.listModelBindings);
+                }
+                if( itmodelbindings == bindings.listModelBindings.end() ) {
+                    RAVELOG_WARN(str(boost::format("instance_physics_model %s did not find visual binding to %s")%ipmodel->getSid()%ipmodel->getParent().getOriginalURI()));
+                }
+                else {
+                    itmodelbindings->_ipmodel = ipmodel;
+                }
                 for(size_t ibody = 0; ibody < ipmodel->getInstance_rigid_body_array().getCount(); ++ibody) {
                     LinkBinding lb;
+                    lb._ipmodel = ipmodel;
                     lb._irigidbody = ipmodel->getInstance_rigid_body_array()[ibody];
-                    lb._node = daeSafeCast<domNode>(lb._irigidbody->getTarget().getElement().cast());
+                    // don't resolve the node here since it could be pointing to a node inside <instance_node>
+                    lb._nodeurifromphysics.reset(new daeURI(lb._irigidbody->getTarget()));
+                    //lb._node = daeSafeCast<domNode>(lb._irigidbody->getTarget().getElement().cast());
                     lb._rigidbody = daeSafeCast<domRigid_body>(daeSidRef(lb._irigidbody->getBody(),pmodel).resolve().elt);
                     lb._nodephysicsoffset = nodephysicsoffset;
-                    if( !!lb._rigidbody && !!lb._node ) {
+                    if( !!lb._rigidbody ) { // && !!lb._node ) {
                         bindings.listLinkBindings.push_back(lb);
                     }
                 }
@@ -3037,6 +3324,41 @@ private:
             p = p->getParent();
         }
         return "";
+    }
+
+    /// \brief searches through the node's parents until one matches the node stored in listModelBindings
+    static std::list<ModelBinding>::iterator _FindParentModel(domNodeRef pnode, std::list<ModelBinding>& listModelBindings)
+    {
+        if( !pnode ) {
+            return listModelBindings.end();
+        }
+        while(!!pnode) {
+            FOREACH(itmodel,listModelBindings) {
+                if( _CompareElementURI(pnode,itmodel->_node) > 0 ) {
+                    return itmodel;
+                }
+            }
+            pnode = daeSafeCast<domNode>(pnode->getParentElement());
+        }
+        return listModelBindings.end();
+    }
+
+    /// \brief searches through the node's children until one matches the node stored in listModelBindings
+    static std::list<ModelBinding>::iterator _FindChildModel(domNodeRef pnode, std::list<ModelBinding>& listModelBindings)
+    {
+        if( !pnode ) {
+            return listModelBindings.end();
+        }
+        FOREACH(itmodel,listModelBindings) {
+            domNodeRef pelt = itmodel->_node;
+            while(!!pelt) {
+                if( _CompareElementURI(pnode,pelt) > 0 ) {
+                    return itmodel;
+                }
+                pelt = daeSafeCast<domNode>(pelt->getParentElement());
+            }
+        }
+        return listModelBindings.end();
     }
 
     /// \brief Extracts MathML into fparser equation format
@@ -3299,7 +3621,7 @@ private:
                         // search for the formula in library_formulas
                         string formulaurl = children[0]->getAttribute("definitionURL");
                         if( formulaurl.size() > 0 ) {
-                            daeElementRef pelt = _getElementFromUrl(daeURI(*children[0],formulaurl));
+                            daeElementRef pelt = daeURI(*children[0],formulaurl).getElement();
                             pformula = daeSafeCast<domFormula>(pelt);
                             if( !pformula ) {
                                 RAVELOG_WARN(str(boost::format("could not find csymbol %s formula\n")%children[0]->getAttribute("definitionURL")));
@@ -3402,6 +3724,61 @@ private:
         return eq;
     }
 
+    // -1 don't know
+    // 0 no
+    // 1 same uri
+    template <typename T>
+    static int _CompareElementURI(T elt1, T elt2) {
+        if( !elt1 || !elt2 ) {
+            return -1;
+        }
+        if( elt1->typeID() != elt2->typeID() ) {
+            return 0;
+        }
+        if( !elt1->getDocumentURI() || !elt2->getDocumentURI() ) {
+            if( !elt1->getDocumentURI() && !elt2->getDocumentURI() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( !elt1->getId() || !elt2->getId() ) {
+            if( !elt1->getId() && !elt2->getId() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( string(elt1->getDocumentURI()->getURI()) != elt2->getDocumentURI()->getURI() ) {
+            return 0;
+        }
+        return string(elt1->getId()) == elt2->getId();
+    }
+
+    template <typename T>
+    static int _CompareElementSid(T elt1, T elt2) {
+        if( !elt1 || !elt2 ) {
+            return -1;
+        }
+        if( elt1->typeID() != elt2->typeID() ) {
+            return 0;
+        }
+        if( !elt1->getDocumentURI() || !elt2->getDocumentURI() ) {
+            if( !elt1->getDocumentURI() && !elt2->getDocumentURI() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( !elt1->getSid() || !elt2->getSid() ) {
+            if( !elt1->getSid() && !elt2->getSid() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( string(elt1->getDocumentURI()->getURI()) != elt2->getDocumentURI()->getURI() ) {
+            return 0;
+        }
+        return string(elt1->getSid()) == elt2->getSid();
+    }
+
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
     {
         RAVELOG_ERROR("convex hulls not supported\n");
@@ -3470,6 +3847,45 @@ private:
         return startscale;
     }
 
+    /// \brief do the inverse resolve file:/... -> openrave:/...
+    ///
+    /// if none found, returns the original uri
+    daeURI _ResolveInverse(const daeURI& uri)
+    {
+        std::map<std::string,daeURI>::iterator itindex = _mapInverseResolvedURIList.find(uri.str());
+        if( itindex != _mapInverseResolvedURIList.end() ) {
+            // try to resolve again
+            return _ResolveInverse(itindex->second);
+        }
+        return uri;
+    }
+
+    /// \brief returns a string with the full URI
+    std::string _MakeFullURI(const xsAnyURI& uri, daeElementRef pelt) {
+        daeURI* docuri = pelt->getDocumentURI();
+        if( !docuri ) {
+            RAVELOG_WARN(str(boost::format("failed to get the URI of the document, so cannot resolve %s")%uri.str()));
+            return uri.str();
+        }
+        else {
+            // don't use uri.str() since it resolves to temporary dae files if coming from a zae
+            daeURI newdocuri = _ResolveInverse(*docuri);
+            daeURI newuri(newdocuri,uri.getOriginalURI());
+            return newuri.str();
+        }
+    }
+
+    std::string _MakeFullURIFromId(const std::string& id, daeElementRef pelt) {
+        daeURI* docuri = pelt->getDocumentURI();
+        if( !docuri ) {
+            RAVELOG_WARN(str(boost::format("failed to get the URI of the document, so cannot resolve id %s")%id));
+            return string("#")+id;
+        }
+        daeURI newdocuri = _ResolveInverse(*docuri);
+        daeURI newuri(newdocuri,string("#")+id);
+        return newuri.str();
+    }
+
     boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
@@ -3479,19 +3895,30 @@ private:
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
-    bool _bOpeningZAE;
+    bool _bOpeningZAE; ///< true if currently opening a zae
     bool _bSkipGeometry;
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
     std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
+    std::vector<std::string> _vOpenRAVESchemeAliases;
+    std::map<std::string,daeURI> _mapInverseResolvedURIList; ///< holds a list of inverse resolved relationships file:// -> openrave://
 };
+
+bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
+{
+    ColladaReader reader(penv);
+    if( !reader.InitFromURI(uri,atts) ) {
+        return false;
+    }
+    return reader.Extract();
+}
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract();
@@ -3500,8 +3927,8 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract(pbody);
@@ -3510,8 +3937,8 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     ColladaReader reader(penv);
-    boost::shared_ptr<pair<string,string> > filedata = OpenRAVEXMLParser::FindFile(filename);
-    if (!filedata || !reader.InitFromFile(filedata->second,atts)) {
+    string filedata = RaveFindLocalFile(filename);
+    if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
         return false;
     }
     return reader.Extract(probot);

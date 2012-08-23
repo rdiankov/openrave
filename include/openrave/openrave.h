@@ -147,6 +147,7 @@ enum OpenRAVEErrorCode {
     ORE_InconsistentConstraints=8, ///< returned solutions or trajectories do not follow the constraints of the planner/module. The constraints invalidated here are planning constraints, not programming constraints.
     ORE_NotInitialized=9, ///< when object is used without it getting fully initialized
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
+    ORE_Timeout=11, ///< process timed out
 };
 
 inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
@@ -163,6 +164,7 @@ inline const char* GetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_InconsistentConstraints: return "InconsistentConstraints";
     case ORE_NotInitialized: return "NotInitialized";
     case ORE_InvalidState: return "InvalidState";
+    case ORE_Timeout: return "Timeout";
     }
     // should throw an exception?
     return "";
@@ -705,9 +707,9 @@ private:
 
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+
+/// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
-/// \deprecated (11/02/18)
-typedef AttributesList XMLAttributesList RAVE_DEPRECATED;
 
 /// \brief base class for all xml readers. XMLReaders are used to process data from xml files.
 ///
@@ -2466,9 +2468,10 @@ OPENRAVE_API std::string RaveFindDatabaseFile(const std::string& filename, bool 
 
 /// \brief Explicitly initializes the global OpenRAVE state (optional).
 ///
-/// Optional function to initialize openrave plugins and logging.
+/// Optional function to initialize openrave plugins, logging, and read OPENRAVE_* environment variables.
 /// Although environment creation will automatically make sure this function is called, users might want
 /// explicit control of when this happens.
+/// Will not do anything if OpenRAVE runtime is already initialized. If OPENRAVE_* environment variables must be re-read, first call \ref RaveDestroy.
 /// \param bLoadAllPlugins If true will load all the openrave plugins automatically that can be found in the OPENRAVE_PLUGINS environment path
 /// \return 0 if successful, otherwise an error code
 OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, int level = Level_Info);
@@ -2583,6 +2586,27 @@ OPENRAVE_API void RaveGetEnvironments(std::list<EnvironmentBasePtr>& listenviron
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
 OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts);
 
+/** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
+
+    The OpenRAVE paths consist of a list of directories specified by $OPENRAVE_DATA environment variable and custom added user paths.
+    Requires boost::filesystem to be installed
+    \param filename the filename to look for
+    \param curdir the current directory in case the filename is relative
+    \return an empty string if file isn't found, otherwise path to full filename on local filesystem
+ */
+OPENRAVE_API std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir="");
+
+/// \brief Sets the default data access options for cad resources/robot files
+///
+/// Controls how files are processed in functions like \ref RaveFindLocalFile
+/// \param accessoptions - if 1 will only allow resources inside directories specified from OPERNAVE_DATA environment variable. This allows reject of full paths from unsecure/unauthenticated resources.
+OPENRAVE_API void RaveSetDataAccess(int accessoptions);
+
+/// \brief Returns the acess options set
+///
+/// \see RaveSetDataAccess
+OPENRAVE_API int RaveGetDataAccess();
+
 //@}
 
 /// \deprecated (11/06/03), use \ref SpaceSamplerBase
@@ -2634,11 +2658,11 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 
-/// \deprecated
-typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv);
+/// \deprecated (12/01/01)
+typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) RAVE_DEPRECATED;
 
-/// \deprecated
-typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size);
+/// \deprecated (12/01/01)
+typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;
 
 // define inline functions
 const std::string& IkParameterization::GetName() const

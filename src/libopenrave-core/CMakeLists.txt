@@ -55,7 +55,7 @@ if( IVCON_FOUND )
   set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
 endif()
 
-set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX}
+set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
                                   CLEAN_DIRECT_OUTPUT 1
@@ -76,9 +76,9 @@ if( OPT_STATIC )
 
   if( MSVC )
     # static version needs to have different name
-    set(LIBOPENRAVE_CORE_NAME libopenrave-core${OPENRAVE_LIBRARY_SUFFIX})
+    set(LIBOPENRAVE_CORE_NAME libopenrave${OPENRAVE_LIBRARY_SUFFIX}-core)
   else()
-    set(LIBOPENRAVE_CORE_NAME openrave-core${OPENRAVE_LIBRARY_SUFFIX})
+    set(LIBOPENRAVE_CORE_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core)
   endif()
 
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}

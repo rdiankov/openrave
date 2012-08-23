@@ -99,6 +99,8 @@ class XFileReader;
 namespace OpenRAVE
 {
 
+bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
+
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
@@ -268,17 +270,15 @@ public:
 };
 
 int& GetXMLErrorCount();
-void SetDataDirs(const std::vector<std::string>& vdatadirs, int accessoptions);
+
+/// \param bResetParseDirectory if true, will reset the parse directory to the current working directory
 bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
 bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
 BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
-boost::shared_ptr<std::pair<std::string,std::string> > FindFile(const std::string& filename);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts, bool bAddToEnvironment);
 bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
-
 bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries);
-
 }
 
 #ifdef _WIN32
@@ -301,17 +301,6 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 #include <boost/tuple/tuple.hpp>
 #include <boost/assert.hpp>
 #include <boost/version.hpp>
-
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
-
-void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts);
-void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts);
 
 bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
 bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);

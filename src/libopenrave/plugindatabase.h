@@ -392,19 +392,9 @@ protected:
                 RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
             }
         }
-#if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
-        // TODO, boost 1.40 doesnot take boost::filesystem::native as argument
-        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir, boost::filesystem::native));
-#else
-        boost::filesystem::path pluginsfilename = boost::filesystem::system_complete(boost::filesystem::path(installdir));
-#endif
+        boost::filesystem::path pluginsfilename = boost::filesystem::complete(boost::filesystem::path(installdir));
         FOREACH(itname, vplugindirs) {
-#if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION == 2
-            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname, boost::filesystem::native)))
-#else
-            if( pluginsfilename == boost::filesystem::system_complete(boost::filesystem::path(*itname)) )
-#endif
-            {
+            if( pluginsfilename == boost::filesystem::complete(boost::filesystem::path(*itname)) ) {
                 bExists = true;
                 break;
             }

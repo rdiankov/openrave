@@ -16,7 +16,7 @@
 # OpenRAVE_LIBRARY_DIRS - link directories
 # OpenRAVE_LIBRARIES - libraries to link plugins with
 # OpenRAVE_CORE_LIBRARIES - libraries to link openrave run-time with
-# OpenRAVE_PYTHON_DIR - installed path of the openravepy library, might be necessary for using shared resources
+# OpenRAVE_PYTHON_DIR - the version-specific path where openravepy.__init__ is, necessary for using shared resources like linking with openravepy_int.so or using ikfast.h
 # OpenRAVE_Boost_VERSION - the boost version openrave was compiled with
 
 #==================================================================================
@@ -65,8 +65,13 @@ set( OpenRAVE_LINK_FLAGS "" )
 set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/@OPENRAVE_INCLUDE_INSTALL_DIR@")
 set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib@LIB_SUFFIX@")
 set( OpenRAVE_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX})
-set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave-core${OpenRAVE_LIBRARY_SUFFIX})
-set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVE_PYTHON_INSTALL_DIR@")
+set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave${OpenRAVE_LIBRARY_SUFFIX}-core)
+
+if(@USE_OPENRAVEPY@)
+  set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY_VER_INSTALL_DIR@")
+  mark_as_advanced(OpenRAVE_PYTHON_DIR)
+endif()
+
 set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
 
 if( WIN32 )
@@ -84,7 +89,7 @@ if( WIN32 )
   endif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
 endif( WIN32 )
 
-MARK_AS_ADVANCED(
+mark_as_advanced(
   OpenRAVE_ROOT_DIR
   OpenRAVE_CXXFLAGS
   OpenRAVE_CXX_FLAGS
@@ -92,6 +97,5 @@ MARK_AS_ADVANCED(
   OpenRAVE_INCLUDE_DIRS
   OpenRAVE_LIBRARIES
   OpenRAVE_CORE_LIBRARIES
-  OpenRAVE_PYTHON_DIR
   OpenRAVE_Boost_VERSION
 )
