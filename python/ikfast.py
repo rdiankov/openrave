@@ -4080,6 +4080,8 @@ class IKFastSolver(AutoReloader):
             for group in normgroups:
                 p = Poly(eq,group[0],group[1],group[2])
                 changed = False
+                if len(p.terms()) == 1:
+                    continue
                 for (m0,c0),(m1,c1) in combinations(p.terms(),2):
                     if self.equal(c0,c1):
                         for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:

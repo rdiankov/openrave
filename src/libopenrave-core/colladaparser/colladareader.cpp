@@ -59,7 +59,7 @@ public:
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
                         return NULL;
                     }
-                    domCOLLADAProxy* proxy = dae->open(docurifull);
+                    domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
                     if( !!proxy ) {
                         if( !!_preader ) {
                             _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
