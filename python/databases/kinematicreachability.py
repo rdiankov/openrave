@@ -357,7 +357,11 @@ class ReachabilityModel(DatabaseGenerator):
 
 
     def show(self,showrobot=True,contours=[0.01,0.1,0.2,0.5,0.8,0.9,0.99],opacity=None,figureid=1, xrange=None,options=None):
-        mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
+        try:
+            mlab = __import__('enthought.mayavi.mlab',fromlist=['mlab'])
+        except ImportError:
+            mlab = __import__('mayavi.mlab',fromlist=['mlab'])
+            
         mlab.figure(figureid,fgcolor=(0,0,0), bgcolor=(1,1,1),size=(1024,768))
         mlab.clf()
         log.info('max reachability: %r',numpy.max(self._GetValue(self.reachability3d)))
