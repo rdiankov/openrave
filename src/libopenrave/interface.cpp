@@ -22,7 +22,6 @@ InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __ty
     RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
     RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
                     "display help commands.");
-    __description = "Not documented yet.";
 }
 
 InterfaceBase::~InterfaceBase()

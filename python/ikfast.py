@@ -5462,27 +5462,28 @@ class IKFastSolver(AutoReloader):
                     arr[4] = c
             systemofequations.append(arr)
 
-        singleeqs = None
-        for eqs in combinations(systemofequations,4):
-            M = zeros((4,4))
-            B = zeros((4,1))
-            for i,arr in enumerate(eqs):
-                for j in range(4):
-                    M[i,j] = arr[j]
-                B[i] = -arr[4]
-            det = self.det_bareis(M,*(self.pvars+unknownvars)).subs(allsymbols)
-            if det.evalf() != S.Zero:
-                X = M.adjugate()*B
-                singleeqs = []
-                for i in range(4):
-                    eq = (pairwisesubs[i][0]*det - X[i]).subs(allsymbols)
-                    eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
-                    allsymbols += symbols
-                    singleeqs.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
-                break
-        if singleeqs is not None:
-            neweqns += singleeqs
-            neweqns.sort(lambda x, y: x[0]-y[0])
+        if len(systemofequations) >= 4:
+            singleeqs = None
+            for eqs in combinations(systemofequations,4):
+                M = zeros((4,4))
+                B = zeros((4,1))
+                for i,arr in enumerate(eqs):
+                    for j in range(4):
+                        M[i,j] = arr[j]
+                    B[i] = -arr[4]
+                det = self.det_bareis(M,*(self.pvars+unknownvars)).subs(allsymbols)
+                if det.evalf() != S.Zero:
+                    X = M.adjugate()*B
+                    singleeqs = []
+                    for i in range(4):
+                        eq = (pairwisesubs[i][0]*det - X[i]).subs(allsymbols)
+                        eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
+                        allsymbols += symbols
+                        singleeqs.append([self.codeComplexity(eq),Poly(eqnew,*unknownvars)])
+                    break
+            if singleeqs is not None:
+                neweqns += singleeqs
+                neweqns.sort(lambda x, y: x[0]-y[0])
 
         # check if any equations are at least degree 1 (if not, try to compute some)
         for ivar in range(2):
