@@ -28,9 +28,15 @@ public:
     }
     virtual object __enter__() = 0;
     virtual void __exit__(object type, object value, object traceback) = 0;
+    virtual object GetBody() const = 0;
+    virtual void Restore(object p=object())  = 0;
+    virtual void Release() = 0;
+    virtual std::string __str__() = 0;
+    virtual object __unicode__() = 0;
 };
 
-template <typename T>
+/// \brief simple wrapper around a save state that manages  enter/exit scope
+template <typename T, typename U>
 class PyStateRestoreContext : public PyStateRestoreContextBase
 {
     T _state;
@@ -39,11 +45,36 @@ public:
     }
     virtual ~PyStateRestoreContext() {
     }
-    virtual object __enter__() {
+    object __enter__() {
         return object(_state);
     }
-    virtual void __exit__(object type, object value, object traceback) {
+    void __exit__(object type, object value, object traceback) {
         _state->Restore();
+    }
+
+    object GetBody() const {
+        return _state->GetBody();
+    }
+
+    void Restore(object p=object()) {
+        if( p == object() ) {
+            _state->Restore();
+        }
+        else {
+            U pytarget = boost::python::extract<U>(p);
+            _state->Restore(pytarget);
+        }
+    }
+
+    void Release() {
+        _state->Release();
+    }
+
+    std::string __str__() {
+        return _state->__str__();
+    }
+    object __unicode__() {
+        return _state->__unicode__();
     }
 };
 
@@ -1597,7 +1628,7 @@ public:
         else {
             saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv,options));
         }
-        return new PyStateRestoreContext<PyKinBodyStateSaverPtr>(saver);
+        return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
     }
 
     virtual string __repr__() {
@@ -2720,7 +2751,7 @@ public:
         else {
             saver.reset(new PyRobotStateSaver(_probot,_pyenv,options));
         }
-        return new PyStateRestoreContext<PyRobotStateSaverPtr>(saver);
+        return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
     virtual string __repr__() {
@@ -2939,6 +2970,11 @@ void init_openravepy_kinbody()
     class_<PyStateRestoreContextBase, boost::noncopyable>("StateRestoreContext",no_init)
     .def("__enter__",&PyStateRestoreContextBase::__enter__,"returns the object storing the state")
     .def("__exit__",&PyStateRestoreContextBase::__exit__,"restores the state held in the object")
+    .def("GetBody",&PyStateRestoreContextBase::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
+    .def("Restore",&PyStateRestoreContextBase::Restore,Restore_overloads(args("body"), DOXY_FN(KinBody::KinBodyStateSaver, Restore)))
+    .def("Release",&PyStateRestoreContextBase::Release,DOXY_FN(KinBody::KinBodyStateSaver, Release))
+    .def("__str__",&PyStateRestoreContextBase::__str__)
+    .def("__unicode__",&PyStateRestoreContextBase::__unicode__)
     ;
     {
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
