@@ -799,7 +799,7 @@ public:
             // write the axis parameters
             ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
             if( !!pcolladainfo ) {
-                pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias); // updated with a articulated_system up the hierarchy
+                pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
                 pcolladainfo->_bindingAxesSIDs.resize(pbody->GetDOF());
                 // go through each parameter and see what axis it resolves to
                 for(size_t iparam = 0; iparam < ias->getNewparam_array().getCount(); ++iparam) {
@@ -825,7 +825,7 @@ public:
                                 if( !!ikmodel ) {
                                     // found a newparam to ikmodel, so have to store
                                     string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
-                                    FOREACH(itmodel,pcolladainfo->_bindingModelURLs) {
+                                    FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
                                         if( itmodel->kmodel == kmodeluri ) {
                                             itmodel->ikmodelsidref = param->getSIDREF()->getValue();
                                         }
@@ -863,7 +863,7 @@ public:
             }
 
             ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
-            pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias);
+            pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
             std::map<domInstance_physics_modelRef,int> mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
@@ -871,9 +871,9 @@ public:
                 FOREACH(it, bindings.listModelBindings) {
                     if( it->_ikmodel == ikmodel ) {
                         if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
-                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURLs.size();
+                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURIs.size();
                             ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
-                            pcolladainfo->_bindingModelURLs.push_back(mbinding);
+                            pcolladainfo->_bindingModelURIs.push_back(mbinding);
                         }
                         break;
                     }

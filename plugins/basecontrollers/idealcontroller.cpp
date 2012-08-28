@@ -215,6 +215,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
                     KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    if( !pbody ) {
+                        RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
+                        continue;
+                    }
                     if( bodyid < 0 ) {
                         if( !!_probot->IsGrabbing(pbody) ) {
                             listrelease.push_back(pbody);

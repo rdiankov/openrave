@@ -35,9 +35,17 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#define PLUGIN_EXT ".dll"
 #define MYPOPEN _popen
 #define MYPCLOSE _pclose
 #else
+
+#ifdef __APPLE_CC__
+#define PLUGIN_EXT ".dylib"
+#else
+#define PLUGIN_EXT ".so"
+#endif
+
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -48,6 +56,8 @@
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
 #endif
+
+#include "next_combination.h"
 
 #define LOAD_IKFUNCTION(fnname) { \
         ikfunctions->_ ## fnname = (typename ikfast::IkFastFunctions<T>::fnname ## Fn)SysLoadSym(plib, # fnname); \
@@ -343,10 +353,10 @@ public:
             return false;
         }
         RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
-        IkParameterizationType niktype = IKP_None;
+        IkParameterizationType iktype = IKP_None;
         try {
-            niktype = static_cast<IkParameterizationType>(boost::lexical_cast<int>(striktype));
-            striktype = RaveGetIkParameterizationMap().find(niktype)->second;
+            iktype = static_cast<IkParameterizationType>(boost::lexical_cast<int>(striktype));
+            striktype = RaveGetIkParameterizationMap().find(iktype)->second;
         }
         catch(const boost::bad_lexical_cast&) {
             // striktype is already correct, so check that it exists in RaveGetIkParameterizationMap
@@ -355,33 +365,105 @@ public:
                 string mapiktype = it->second;
                 std::transform(mapiktype.begin(), mapiktype.end(), mapiktype.begin(), ::tolower);
                 if( mapiktype == striktype ) {
-                    niktype = it->first;
+                    iktype = it->first;
+                    striktype = it->second; // get the correct capitalizations
                     break;
                 }
             }
-            if(niktype == IKP_None) {
+            if(iktype == IKP_None) {
                 throw openrave_exception(str(boost::format("could not find iktype %s")%striktype));
             }
         }
 
+        // get ikfast version
+        string ikfastversion, platform;
         {
-            string hasik;
-            string cmdhas = str(boost::format("openrave.py --database inversekinematics --gethas --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
-            FILE* pipe = MYPOPEN(cmdhas.c_str(), "r");
+            string output;
+            FILE* pipe = MYPOPEN("python -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
                 std::istream in(&fpstream);
-                std::getline(in, hasik);
+                std::getline(in, output);
             }
             int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
                 usleep(100000);
                 RAVELOG_DEBUG("failed to close pipe\n");
             }
-            boost::trim(hasik);
-            if( hasik != "1" ) {
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics for manip %s:%s, will take several minutes...\n")%probot->GetName()%pmanip->GetName()));
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
+            boost::trim(output);
+            size_t index = output.find_first_of(' ');
+            if( index == std::string::npos ) {
+                RAVELOG_WARN(str(boost::format("failed to parse string: %s")%output));
+                return false;
+            }
+            ikfastversion = output.substr(0,index);
+            platform = output.substr(index+1);
+        }
+
+        for(int iter = 0; iter < 2; ++iter) {
+            string ikfilenamefound;
+            // check if exists and is loadable, if not, regenerate the IK.
+            std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetKinematicsStructureHash()%ikfastversion%striktype%platform);
+            int ikdof = IkParameterization::GetDOF(iktype);
+            if( ikdof > (int)pmanip->GetArmIndices().size() ) {
+                RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
+            }
+            if( ikdof < (int)pmanip->GetArmIndices().size() ) {
+                std::vector<int> vindices(pmanip->GetArmIndices().size());
+                for(size_t i = 0; i < vindices.size(); ++i) {
+                    vindices[i] = i;
+                }
+                std::vector<int> vsolveindices(ikdof), vfreeindices(vindices.size()-ikdof);
+                while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()])) {
+                    std::copy(vindices.begin(),vindices.begin()+ikdof,vsolveindices.begin());
+                    sort(vsolveindices.begin(),vsolveindices.end());
+                    std::copy(vindices.begin()+ikdof,vindices.end(),vfreeindices.begin());
+                    sort(vfreeindices.begin(),vfreeindices.end());
+                    string ikfilename=ikfilenameprefix;
+                    for(size_t i = 0; i < vsolveindices.size(); ++i) {
+                        ikfilename += boost::lexical_cast<std::string>(vsolveindices[i]);
+                        ikfilename += '_';
+                    }
+                    ikfilename += "f";
+                    for(size_t i = 0; i < vfreeindices.size(); ++i) {
+                        if( i > 0 ) {
+                            ikfilename += '_';
+                        }
+                        ikfilename += boost::lexical_cast<std::string>(vfreeindices[i]);
+                    }
+                    ikfilename += PLUGIN_EXT;
+                    ikfilenamefound = RaveFindDatabaseFile(ikfilename);
+                    if (ikfilenamefound.size() > 0 ) {
+                        break;
+                    }
+                }
+            }
+            else {
+                string ikfilename=ikfilenameprefix;
+                for(size_t i = 0; i < pmanip->GetArmIndices().size(); ++i) {
+                    if( i > 0 ) {
+                        ikfilename += '_';
+                    }
+                    ikfilename += boost::lexical_cast<std::string>(i);
+                }
+                ikfilename += PLUGIN_EXT;
+                ikfilenamefound = RaveFindDatabaseFile(ikfilename);
+            }
+
+            if( ikfilenamefound.size() == 0 ) {
+                if( iter > 0 ) {
+                    return false;
+                }
+
+                // file not found, so create
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()));
+                // create a temporary file and store COLLADA kinematics representation
+                AttributesList atts;
+                atts.push_back(make_pair(string("skipwrite"), string("geometry readable sensors physics")));
+                atts.push_back(make_pair(string("target"), probot->GetName()));
+                string tempfilename = RaveGetHomeDirectory() + string("/testikfastrobot.dae");
+                GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=%s --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
@@ -390,57 +472,46 @@ public:
                     usleep(100000);
                     RAVELOG_DEBUG("failed to close pipe\n");
                 }
+                continue;
             }
-        }
 
-        string cmdfilename = str(boost::format("openrave.py --database inversekinematics --getfilename --robot=\"%s\" --manipname=%s --iktype=%s")%probot->GetURI()%pmanip->GetName()%striktype);
-        RAVELOG_INFO("executing shell command:\n%s\n",cmdfilename.c_str());
-        string ikfilename;
-        FILE* pipe = MYPOPEN(cmdfilename.c_str(), "r");
-        {
-            boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
-            std::istream in(&fpstream);
-            std::getline(in, ikfilename);
-            if( !in ) {
-                RAVELOG_INFO("filed to get line: %s?!\n",ikfilename.c_str());
-                MYPCLOSE(pipe);
+            // check for file
+            if( !ifstream(ikfilenamefound.c_str()) ) {
+                RAVELOG_INFO(str(boost::format("could not find: %s")%ikfilenamefound));
                 return false;
             }
-        }
-        int generateexit = MYPCLOSE(pipe);
-        if( generateexit != 0 ) {
-            usleep(100000);
-            RAVELOG_DEBUG("failed to close pipe\n");
-        }
 
-        boost::trim(ikfilename);
-        string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
-        boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilename);
-        bool bsuccess = true;
-        if( !lib ) {
-            bsuccess = false;
-        }
-        else {
-            if( lib->GetIKType() != (int)niktype ) {
+            string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
+            boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilenamefound);
+            bool bsuccess = true;
+            if( !lib ) {
                 bsuccess = false;
             }
             else {
-                IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
-                if( !iksolver ) {
-                    RAVELOG_WARN(str(boost::format("failed to create ik solver %s!")%ikfastname));
+                if( lib->GetIKType() != (int)iktype ) {
                     bsuccess = false;
                 }
                 else {
-                    bsuccess = pmanip->SetIkSolver(iksolver);
+                    IkSolverBasePtr iksolver = RaveCreateIkSolver(GetEnv(),string("ikfast ")+ikfastname);
+                    if( !iksolver ) {
+                        RAVELOG_WARN(str(boost::format("failed to create ik solver %s!")%ikfastname));
+                        bsuccess = false;
+                    }
+                    else {
+                        bsuccess = pmanip->SetIkSolver(iksolver);
+                    }
                 }
             }
+            // if not forcing the ik, then return true as long as a valid ik solver is set
+            if( bForceIK && !bsuccess ) {
+                return false;
+            }
+            return !!pmanip->GetIkSolver() && pmanip->GetIkSolver()->Supports(iktype);
         }
-        // if not forcing the ik, then return true as long as a valid ik solver is set
-        if( bForceIK && !bsuccess ) {
-            return false;
-        }
-        return !!pmanip->GetIkSolver() && pmanip->GetIkSolver()->Supports(niktype);
+
+        return false;
     }
+
 #endif
 
     bool PerfTiming(ostream& sout, istream& sinput)

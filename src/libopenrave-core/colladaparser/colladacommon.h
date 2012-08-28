@@ -57,7 +57,7 @@ public:
         Binding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel), index(-1) {
         }
         std::string kmodel, pmodel, vmodel;
-        int index; ///< for _bindingLinkSIDs, it is the index inside the _bindingModelURLs vector
+        int index; ///< for _bindingLinkSIDs, it is the index inside the _bindingModelURIs vector
     };
 
     /// \brief sid bindings for kinematics, physics, and visual
@@ -87,8 +87,8 @@ public:
     ColladaXMLReadable() : XMLReadable(GetXMLIdStatic()) {
     }
 
-    std::string _articulated_systemURL; ///< urls of the articulated_system, physics_model, and visual node
-    std::vector<ModelBinding> _bindingModelURLs;
+    std::list<std::string> _articulated_systemURIs; ///< urls of the articulated_system, ordered in the same way as they are read. The first is the top-most level
+    std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs;
     std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node)
 };

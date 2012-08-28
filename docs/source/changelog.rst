@@ -92,6 +92,8 @@ Inverse Kinematics
 
 * ikfast now comes with an `ikfast.h  <../coreapihtml/ikfast_8h.html>`_ header file that can be used to load all the ik solvers. Check out share/openrave-X.Y/ikfast.h. **breaks existing code directly linking ikfast c++ files**.
 
+* Much more robost implementation of :ref:`module-ikfast-loadikfastsolver` that computes its own ikfast files rather than relying on python inversekinematics db calls.
+
 Planning
 --------
 

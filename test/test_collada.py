@@ -257,3 +257,12 @@ class TestCOLLADA(EnvironmentSetup):
         assert(env2.Load('test_externalref_joints.dae',{'openravescheme':'testscheme'}))
         misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
         assert(len(env.GetBodies())==len(env2.GetBodies()))
+
+    def test_writekinematicsonly(self):
+        self.log.info('test writing kinematics only')
+        env=self.env
+        robot = self.LoadRobot('robots/pr2-beta-static.zae')
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'geometry readable sensors physics'})
+        filedata=open('test_writekinematicsonly.dae','r').read()
+        assert(len(filedata)<400000) # should be ~331kb
+        
