@@ -1766,6 +1766,9 @@ public:
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() ) {
                         geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                     }
+                    if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
+                        geom._fTransparency = pphong->getTransparency()->getFloat()->getValue();
+                    }
                 }
             }
         }

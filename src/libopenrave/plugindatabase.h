@@ -392,9 +392,9 @@ protected:
                 RAVELOG_WARN(str(boost::format("%s doesn't exist")%installdir));
             }
         }
-        boost::filesystem::path pluginsfilename = boost::filesystem::complete(boost::filesystem::path(installdir));
+        boost::filesystem::path pluginsfilename = boost::filesystem::absolute(boost::filesystem::path(installdir));
         FOREACH(itname, vplugindirs) {
-            if( pluginsfilename == boost::filesystem::complete(boost::filesystem::path(*itname)) ) {
+            if( pluginsfilename == boost::filesystem::absolute(boost::filesystem::path(*itname)) ) {
                 bExists = true;
                 break;
             }
@@ -840,11 +840,7 @@ protected:
         if( plibrary == NULL ) {
             // try adding from the current plugin libraries
             FOREACH(itdir,_listplugindirs) {
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                 string newlibraryname = boost::filesystem::absolute(libraryname,*itdir).string();
-#else
-                string newlibraryname = boost::filesystem::complete(libraryname,*itdir).string();
-#endif
                 plibrary = _SysLoadLibrary(newlibraryname.c_str(),OPENRAVE_LAZY_LOADING);
                 if( !!plibrary ) {
                     libraryname = newlibraryname;

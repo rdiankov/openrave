@@ -1316,7 +1316,7 @@ private:
         string effid = parentid+string("_eff");
         string matid = parentid+string("_mat");
 
-        domEffectRef pdomeff = WriteEffect(geom->GetAmbientColor(), geom->GetDiffuseColor());
+        domEffectRef pdomeff = WriteEffect(geom);
         pdomeff->setId(effid.c_str());
 
         domMaterialRef pdommat = daeSafeCast<domMaterial>(_materialsLib->add(COLLADA_ELEMENT_MATERIAL));
@@ -1427,7 +1427,7 @@ private:
     /// Write light effect
     /// vambient    Ambient light color
     /// vdiffuse    Diffuse light color
-    virtual domEffectRef WriteEffect(const Vector& vambient, const Vector& vdiffuse)
+    virtual domEffectRef WriteEffect(const KinBody::Link::GeometryConstPtr geom)
     {
         domEffectRef pdomeff = daeSafeCast<domEffect>(_effectsLib->add(COLLADA_ELEMENT_EFFECT));
 
@@ -1438,12 +1438,14 @@ private:
 
         domFx_common_color_or_textureRef pambient = daeSafeCast<domFx_common_color_or_texture>(pphong->add(COLLADA_ELEMENT_AMBIENT));
         domFx_common_color_or_texture::domColorRef pambientcolor = daeSafeCast<domFx_common_color_or_texture::domColor>(pambient->add(COLLADA_ELEMENT_COLOR));
-        _SetVector4(pambientcolor->getValue(), vambient);
+        _SetVector4(pambientcolor->getValue(), geom->GetAmbientColor());
 
         domFx_common_color_or_textureRef pdiffuse = daeSafeCast<domFx_common_color_or_texture>(pphong->add(COLLADA_ELEMENT_DIFFUSE));
         domFx_common_color_or_texture::domColorRef pdiffusecolor = daeSafeCast<domFx_common_color_or_texture::domColor>(pdiffuse->add(COLLADA_ELEMENT_COLOR));
-        _SetVector4(pdiffusecolor->getValue(), vdiffuse);
+        _SetVector4(pdiffusecolor->getValue(), geom->GetDiffuseColor());
 
+        domFx_common_float_or_paramRef ptransparency = daeSafeCast<domFx_common_float_or_param>(pphong->add(COLLADA_ELEMENT_TRANSPARENCY));
+        daeSafeCast<domFx_common_float_or_param::domFloat>(ptransparency->add(COLLADA_ELEMENT_FLOAT))->setValue(geom->GetTransparency());
         return pdomeff;
     }
 
