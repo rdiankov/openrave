@@ -574,8 +574,8 @@ class TestKinematics(EnvironmentSetup):
                         angleerrorfirst = linalg.norm(firstdelta-axisdelta)
                         angleerrorsecond = linalg.norm(seconddelta-axisdelta)
                         #print angleerrorfirst,angleerrorsecond,linalg.norm(axisdelta)
-                        assert(angleerrorfirst <= 1.3*linalg.norm(axisdelta))
-                        assert(angleerrorsecond <= 1.3*linalg.norm(axisdelta))
+                        assert(angleerrorfirst <= 1.35*linalg.norm(axisdelta))
+                        assert(angleerrorsecond <= 1.35*linalg.norm(axisdelta))
                         #assert(angleerrorsecond <= angleerrorfirst+1e-14) # for some reason not valid all the time
                         
                     # errfirst should be increasing linearly
