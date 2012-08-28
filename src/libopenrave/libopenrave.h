@@ -108,6 +108,23 @@
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
+
+#if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION <= 2
+namespace boost {
+  namespace filesystem {
+      inline path absolute(const path& p)
+      {
+	return complete(p, initial_path());
+      }
+
+      inline path absolute(const path& p, const path& base)
+      {
+	return complete(p, base);
+      }
+  }
+}
+#endif
+
 #endif
 
 namespace OpenRAVE {

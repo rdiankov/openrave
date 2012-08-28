@@ -456,7 +456,7 @@ public:
     {
         FOREACH(itdirectory,_vdbdirectories) {
 #ifdef HAVE_BOOST_FILESYSTEM
-            std::string fullfilename = boost::filesystem::complete(boost::filesystem::path(*itdirectory)/filename).string();
+            std::string fullfilename = boost::filesystem::absolute(boost::filesystem::path(*itdirectory)/filename).string();
 #else
             std::string fullfilename = *itdirectory;
             fullfilename += s_filesep;
@@ -625,7 +625,7 @@ protected:
             fullfilename = filename;
         }
         else if( curdir.size() > 0 ) {
-            fullfilename = boost::filesystem::complete(boost::filesystem::path(curdir)) / filename;
+            fullfilename = boost::filesystem::absolute(boost::filesystem::path(curdir)) / filename;
         }
         else {
             fullfilename = boost::filesystem::current_path() / filename;
@@ -658,7 +658,7 @@ protected:
         RAVELOG_WARN("need to compile with boost::filesystem\n");
 #else
         // check if filename is within _vBoostDataDirs
-        boost::filesystem::path fullfilename = boost::filesystem::complete(filename);
+        boost::filesystem::path fullfilename = boost::filesystem::absolute(filename);
         _CustomNormalizePath(fullfilename);
         FOREACHC(itpath,_vBoostDataDirs) {
             std::list<boost::filesystem::path> listfilenameparts;
@@ -738,9 +738,9 @@ protected:
             }
         }
 
-        boost::filesystem::path datafilename = boost::filesystem::complete(boost::filesystem::path(installdir));
+        boost::filesystem::path datafilename = boost::filesystem::absolute(boost::filesystem::path(installdir));
         FOREACH(itname, _vdatadirs) {
-            if( datafilename == boost::filesystem::complete(boost::filesystem::path(*itname)) ) {
+            if( datafilename == boost::filesystem::absolute(boost::filesystem::path(*itname)) ) {
                 bExists = true;
                 break;
             }
@@ -764,7 +764,7 @@ protected:
 #ifdef HAVE_BOOST_FILESYSTEM
         _vBoostDataDirs.resize(0);
         FOREACHC(itfilename,_vdatadirs) {
-            boost::filesystem::path fullfilename = boost::filesystem::complete(boost::filesystem::path(*itfilename));
+            boost::filesystem::path fullfilename = boost::filesystem::absolute(boost::filesystem::path(*itfilename));
             _CustomNormalizePath(fullfilename);
             if( fullfilename.filename() == "." ) {
                 // fullfilename ends in '/', so remove it
@@ -820,7 +820,7 @@ protected:
 
         if( _nDataAccessOptions & 1 ) {
             // check if filename is within _vBoostDataDirs
-            boost::filesystem::path fullfilename = boost::filesystem::complete(filename,curdir.empty() ? boost::filesystem::current_path() : curdir);
+            boost::filesystem::path fullfilename = boost::filesystem::absolute(filename,curdir.empty() ? boost::filesystem::current_path() : curdir);
             _CustomNormalizePath(fullfilename);
             bool bfound = false;
             FOREACHC(itpath,_vBoostDataDirs) {
