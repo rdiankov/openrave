@@ -138,6 +138,8 @@ COLLADA
 
 * COLLADA can write files with external references by passing in **externalref=\*** option.
 
+* COLLADA writer has options to skip writing geometry, physics, and custom data.
+
 Misc
 ----
 

@@ -1125,22 +1125,17 @@ Specifying controller parameters in the collada file falls somewhere in between 
 Custom Data
 ~~~~~~~~~~~
 
-OpenRAVE provides a user to hook up an XML writer and reader to a robot, which can be written as **<extra>** elements under any **<instance_articulated_system>**.
+OpenRAVE provides a user to hook up an XML writer and reader to a robot, which can be written as **<extra>** elements under any **<articulated_system>**.
 
 .. code-block:: xml
-  <library_kinematics_scenes id="kscenes">
-    <kinematics_scene id="kscene" name="OpenRAVE Kinematics Scene">
-      <instance_articulated_system sid="body1_kinematics_inst" url="#body1_kinematics" name="box0">
-        <newparam sid="kscene_kmodel1_inst">
-          <SIDREF>body1_kinematics/body1_kinematics_kmodel1_inst</SIDREF>
-        </newparam>
-      </instance_articulated_system>
-      <extra type="mycustomparams">
-        <technique profile="myprofile">
-          <mylocalparam>1</mylocalparam>
-        </technique>
-      </extra>
-  </kinematics_scene>
+  <articulated_system sid="body1_kinematics_inst" url="#body1_kinematics" name="box0">
+    <motion/>
+    <extra type="mycustomparams">
+      <technique profile="myprofile">
+        <mylocalparam>1</mylocalparam>
+      </technique>
+    </extra>
+  </articulated_system>
 
 .. _collada_openrave_uri:
 

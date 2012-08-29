@@ -729,10 +729,7 @@ public:
             return false;
         }
         if( !pbody ) {
-            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(ias->getExtra_array());
-            if( !pinterface_type ) {
-                pinterface_type = _ExtractInterfaceType(articulated_system->getExtra_array());
-            }
+            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(articulated_system->getExtra_array());
             if( !!pinterface_type ) {
                 if( pinterface_type->type == "kinbody" ) {
                     pbody = RaveCreateKinBody(_penv,pinterface_type->name);
