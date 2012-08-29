@@ -913,7 +913,7 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system);
             ExtractRobotAttachedActuators(probot, articulated_system);
         }
-        _ExtractExtraData(pbody,ias->getExtra_array());
+        _ExtractExtraData(pbody,articulated_system->getExtra_array());
         return true;
     }
 
