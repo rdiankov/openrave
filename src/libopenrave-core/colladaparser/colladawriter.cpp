@@ -325,7 +325,7 @@ private:
             else if( itatt->first == "skipwrite" ) {
                 stringstream ss(itatt->second);
                 std::list<string> newelts((istream_iterator<string>(ss)), istream_iterator<string>());
-                _listSkipWriteOptions.splice(_listSkipWriteOptions.end(),newelts);
+                _setSkipWriteOptions.insert(newelts.begin(),newelts.end());
             }
             else if( itatt->first == "openravescheme" ) {
                 _vForceResolveOpenRAVEScheme = itatt->second;
@@ -382,21 +382,27 @@ private:
             _globalscene = daeSafeCast<domCOLLADA::domScene>( _dom->add( COLLADA_ELEMENT_SCENE ) );
         }
 
-        _visualScenesLib = daeSafeCast<domLibrary_visual_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_VISUAL_SCENES));
-        _visualScenesLib->setId("vscenes");
-        _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
-        _geometriesLib->setId("geometries");
-        _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
-        _effectsLib->setId("effects");
-        _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
-        _materialsLib->setId("materials");
+        if( IsWrite("visual") ) {
+            _visualScenesLib = daeSafeCast<domLibrary_visual_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_VISUAL_SCENES));
+            _visualScenesLib->setId("vscenes");
+
+            if( IsWrite("geometry") ) {
+                _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
+                _geometriesLib->setId("geometries");
+                _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
+                _effectsLib->setId("effects");
+                _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
+                _materialsLib->setId("materials");
+            }
+        }
+
         _kinematicsModelsLib = daeSafeCast<domLibrary_kinematics_models>(_dom->add(COLLADA_ELEMENT_LIBRARY_KINEMATICS_MODELS));
         _kinematicsModelsLib->setId("kmodels");
         _articulatedSystemsLib = daeSafeCast<domLibrary_articulated_systems>(_dom->add(COLLADA_ELEMENT_LIBRARY_ARTICULATED_SYSTEMS));
         _articulatedSystemsLib->setId("asystems");
         _kinematicsScenesLib = daeSafeCast<domLibrary_kinematics_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_KINEMATICS_SCENES));
         _kinematicsScenesLib->setId("kscenes");
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "physics") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("physics") ) {
             _physicsScenesLib = daeSafeCast<domLibrary_physics_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_PHYSICS_SCENES));
             _physicsScenesLib->setId("pscenes");
             _physicsModelsLib = daeSafeCast<domLibrary_physics_models>(_dom->add(COLLADA_ELEMENT_LIBRARY_PHYSICS_MODELS));
@@ -597,49 +603,55 @@ private:
         Transform tnode = pbody->GetTransform();
         int imodel = 0;
         FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
-            //  Create root node for the visual scene
-            domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
-            pnoderoot->setName(pbody->GetName().c_str());
-            string nodeid = _GetNodeId(pbody);
-            pnoderoot->setId(nodeid.c_str());
-            pnoderoot->setSid(nodeid.c_str());
-            // write the body transform
-            _WriteTransformation(pnoderoot, tnode, true);
-            // write instance
-            domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
-            inode->setUrl(_ComputeExternalURI(daeURI(*_dae,itmodel->vmodel)));
-            if( pbody->GetLinks().size() > 0 ) {
-                inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
+            domNodeRef pnoderoot;
+            string nodeid;
+            if( IsWrite("visual") ) {
+                //  Create root node for the visual scene
+                pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
+                pnoderoot->setName(pbody->GetName().c_str());
+                nodeid = _GetNodeId(pbody);
+                pnoderoot->setId(nodeid.c_str());
+                pnoderoot->setSid(nodeid.c_str());
+                // write the body transform
+                _WriteTransformation(pnoderoot, tnode, true);
+                // write instance
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
+                inode->setUrl(_ComputeExternalURI(daeURI(*_dae,itmodel->vmodel)));
+                if( pbody->GetLinks().size() > 0 ) {
+                    inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
+                }
+                domExtraRef pinodeextra = daeSafeCast<domExtra>(inode->add(COLLADA_ELEMENT_EXTRA));
+                pinodeextra->setType("idsuffix");
+                pinodeextra->setName((string(".")+nodeid).c_str());
+
+                // write bindings
+                {
+                    std::string smodelref = str(boost::format("ikmodel%d")%imodel);
+                    domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
+                    param->setSid(smodelref.c_str());
+                    daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
+                    iasout->vkinematicsbindings.push_back(make_pair(smodelref, str(boost::format("%s/%s")%nodeid%inode->getSid())));
+                }
             }
-            domExtraRef pinodeextra = daeSafeCast<domExtra>(inode->add(COLLADA_ELEMENT_EXTRA));
-            pinodeextra->setType("idsuffix");
-            pinodeextra->setName((string(".")+nodeid).c_str());
 
             if( _bForceWriteAll || _listForceWriteOptions.size() > 0 ) {
                 // have to write an articulated_system that contains the extra options
                 RAVELOG_WARN("force writing options not supported yet");
             }
 
-            // write bindings
-            {
-                std::string smodelref = str(boost::format("ikmodel%d")%imodel);
-                domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
-                param->setSid(smodelref.c_str());
-                daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
-                iasout->vkinematicsbindings.push_back(make_pair(smodelref, str(boost::format("%s/%s")%nodeid%inode->getSid())));
-            }
-
-            if( !!_scene.pscene ) {
+            if( IsWrite("physics") ) {
                 boost::shared_ptr<instance_physics_model_output> ipmout(new instance_physics_model_output());
                 ipmout->ipm = daeSafeCast<domInstance_physics_model>(_scene.pscene->add(COLLADA_ELEMENT_INSTANCE_PHYSICS_MODEL));
 
-                // because we're instantiating the node, the full url isn't needed
-                size_t fragmentindex = itmodel->vmodel.find_last_of('#');
-                if( fragmentindex != std::string::npos ) {
-                    ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel.substr(fragmentindex)+string(".")+nodeid)));
-                }
-                else {
-                    ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel)));
+                if( IsWrite("visual") ) {
+                    // because we're instantiating the node, the full url isn't needed
+                    size_t fragmentindex = itmodel->vmodel.find_last_of('#');
+                    if( fragmentindex != std::string::npos ) {
+                        ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel.substr(fragmentindex)+string(".")+nodeid)));
+                    }
+                    else {
+                        ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel)));
+                    }
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
                 ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%pbody->GetEnvironmentId()).c_str());
@@ -651,12 +663,14 @@ private:
                         pirb->setBody(itlink->pmodel.c_str());
                         pirb->setSid(itlink->pmodel.c_str());
 
-                        size_t fragmentindex = itlink->vmodel.find_last_of('#');
-                        if( fragmentindex != std::string::npos ) {
-                            pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid)));
-                        }
-                        else {
-                            pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel)));
+                        if( IsWrite("visual") ) {
+                            size_t fragmentindex = itlink->vmodel.find_last_of('#');
+                            if( fragmentindex != std::string::npos ) {
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid)));
+                            }
+                            else {
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel)));
+                            }
                         }
                     }
                 }
@@ -818,7 +832,7 @@ private:
             iasout->vaxissids.push_back(axis_sids(string(ab->getSid()),valuesid,kas.jointnodesid));
         }
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "physics") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("physics") ) {
             iasout->ipmout = _WriteInstance_physics_model(pbody,_scene.pscene,_scene.pscene->getID());
         }
         _WriteKinBodyType(pbody,articulated_system_kinematics);
@@ -841,7 +855,7 @@ private:
     /// \brief that is independent of the kinematics/visuals so should belong in the instance_* extra fields, preferably instance_articulated_system
     void _WriteKinBodyExtraInfo(KinBodyPtr pbody, daeElementRef eltbody)
     {
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "readable") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("readable") ) {
             BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
             pbody->Serialize(extrawriter,0);
         }
@@ -982,7 +996,7 @@ private:
             iasout->vaxissids.push_back(axis_sids(string(ab->getSid()),valuesid,kas.jointnodesid));
         }
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "physics") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("physics") ) {
             iasout->ipmout = _WriteInstance_physics_model(probot,_scene.pscene,_scene.pscene->getID());
         }
         _WriteKinBodyExtraInfo(probot,ias_motion);
@@ -999,7 +1013,7 @@ private:
             bind_actuator->setAttribute("joint",str(boost::format("%sjoint%d")%kmodelid%(*itjoint)->GetJointIndex()).c_str());
         }
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "manipulators") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("manipulators") ) {
             FOREACHC(itmanip, probot->GetManipulators()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itmanip)->GetName().c_str());
@@ -1044,7 +1058,7 @@ private:
             }
         }
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "sensors") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("sensors") ) {
             //            if (probot->GetAttachedSensors().size() > 0)
             //            {
             //                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->add(COLLADA_ELEMENT_EXTRA));
@@ -1099,11 +1113,13 @@ private:
         ikmout->ikm->setUrl(str(boost::format("#%s")%kmout->kmodel->getID()).c_str());
         ikmout->ikm->setSid(ikmsid.c_str());
 
-        domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
-        kbind->setSid((symscope+ikmsid).c_str());
-        daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
-        // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
-        ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("%s/node0")%_GetNodeId(pbody))));
+        if( IsWrite("visual") ) {
+            domKinematics_newparamRef kbind = daeSafeCast<domKinematics_newparam>(ikmout->ikm->add(COLLADA_ELEMENT_NEWPARAM));
+            kbind->setSid((symscope+ikmsid).c_str());
+            daeSafeCast<domKinematics_newparam::domSIDREF>(kbind->add(COLLADA_ELEMENT_SIDREF))->setValue((refscope+ikmsid).c_str());
+            // needs to be node0 instead of _GetNodeId(pbody) since the kinematics hierarchy origin does not have the current body's transform
+            ikmout->vkinematicsbindings.push_back(make_pair(string(kbind->getSid()), str(boost::format("%s/node0")%_GetNodeId(pbody))));
+        }
 
         ikmout->vaxissids.reserve(kmout->vaxissids.size());
         int i = 0;
@@ -1131,7 +1147,7 @@ private:
 
     virtual boost::shared_ptr<instance_physics_model_output> _WriteInstance_physics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "physics") != _listSkipWriteOptions.end() ) {
+        if( !IsWrite("physics") ) {
             return boost::shared_ptr<instance_physics_model_output>();
         }
         boost::shared_ptr<physics_model_output> pmout = WritePhysics_model(pbody);
@@ -1188,30 +1204,32 @@ private:
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         if( !!kmout ) {
-            // the base model is the same, but the instance information like joint values and visual transform could be different
-            vector<dReal> vjointvalues;
-            pbody->GetDOFValues(vjointvalues);
-            Transform tnode = pbody->GetTransform();
+            if( IsWrite("visual") ) {
+                // the base model is the same, but the instance information like joint values and visual transform could be different
+                vector<dReal> vjointvalues;
+                pbody->GetDOFValues(vjointvalues);
+                Transform tnode = pbody->GetTransform();
 
-            //  Create root node for the visual scene
-            domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
-            string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
-            pnoderoot->setId(bodyid.c_str());
-            pnoderoot->setSid(bodyid.c_str());
-            pnoderoot->setName(pbody->GetName().c_str());
-            // write the body transform
-            _WriteTransformation(pnoderoot, tnode);
+                //  Create root node for the visual scene
+                domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
+                string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
+                pnoderoot->setId(bodyid.c_str());
+                pnoderoot->setSid(bodyid.c_str());
+                pnoderoot->setName(pbody->GetName().c_str());
+                // write the body transform
+                _WriteTransformation(pnoderoot, tnode);
 
-            // create an instance_node pointing to kmout
-            domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
-            domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
-            OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",kmout->noderoot->getName(),ORE_Assert);
-            inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
-            if( pbody->GetLinks().size() > 0 ) {
-                inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
-                domExtraRef pinodeextra = daeSafeCast<domExtra>(inode->add(COLLADA_ELEMENT_EXTRA));
-                pinodeextra->setType("idsuffix");
-                pinodeextra->setName((string(".")+bodyid).c_str());
+                // create an instance_node pointing to kmout
+                domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
+                domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
+                OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",kmout->noderoot->getName(),ORE_Assert);
+                inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
+                if( pbody->GetLinks().size() > 0 ) {
+                    inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
+                    domExtraRef pinodeextra = daeSafeCast<domExtra>(inode->add(COLLADA_ELEMENT_EXTRA));
+                    pinodeextra->setType("idsuffix");
+                    pinodeextra->setName((string(".")+bodyid).c_str());
+                }
             }
             return kmout;
         }
@@ -1231,22 +1249,27 @@ private:
         //kmodel->getAsset();
         domKinematics_model_techniqueRef ktec = daeSafeCast<domKinematics_model_technique>(kmodel->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
+        kmout.reset(new kinematics_model_output());
+
         KinBody::KinBodyStateSaver saver(pbody);
         vector<dReal> vjointvalues, vzero(pbody->GetDOF());
         pbody->GetDOFValues(vjointvalues);
         pbody->SetDOFValues(vzero);
         Transform tnode = pbody->GetTransform();
         pbody->SetTransform(Transform());
-
-        //  Create root node for the visual scene
-        domNodeRef pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
         string bodyid = _GetNodeId(KinBodyConstPtr(pbody));
-        pnoderoot->setId(bodyid.c_str());
-        pnoderoot->setSid(bodyid.c_str());
-        pnoderoot->setName(pbody->GetName().c_str());
-        // write the body transform before the link nodes start to make it possible
-        // to reuse the visual scene for other bodies
-        _WriteTransformation(pnoderoot, tnode);
+        domNodeRef pnoderoot;
+        if( IsWrite("visual") ) {
+            //  Create root node for the visual scene
+            pnoderoot = daeSafeCast<domNode>(_scene.vscene->add(COLLADA_ELEMENT_NODE));
+            pnoderoot->setId(bodyid.c_str());
+            pnoderoot->setSid(bodyid.c_str());
+            pnoderoot->setName(pbody->GetName().c_str());
+            // write the body transform before the link nodes start to make it possible
+            // to reuse the visual scene for other bodies
+            _WriteTransformation(pnoderoot, tnode);
+            kmout->noderoot = pnoderoot;
+        }
 
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
@@ -1260,10 +1283,8 @@ private:
         }
         vector<dReal> lmin, lmax;
         vector<domJointRef> vdomjoints(vjoints.size());
-        kmout.reset(new kinematics_model_output());
         kmout->pbody = pbody;
         kmout->kmodel = kmodel;
-        kmout->noderoot = pnoderoot;
         kmout->vaxissids.resize(0);
         kmout->vlinksids.resize(pbody->GetLinks().size());
 
@@ -1321,7 +1342,9 @@ private:
             LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
             Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
             _WriteTransformation(childinfo.plink, t);
-            _WriteTransformation(childinfo.pnode, t);
+            if( IsWrite("visual") ) {
+                _WriteTransformation(childinfo.pnode, t);
+            }
             FOREACHC(itused, childinfo.listusedlinks) {
                 kmout->vlinksids.at(itused->first) = itused->second;
                 listunusedlinks.remove(itused->first);
@@ -1441,15 +1464,18 @@ private:
             _SetVector3(daeSafeCast<domTargetable_float3>(ptec->add(COLLADA_ELEMENT_INERTIA))->getValue(),(*itlink)->GetPrincipalMomentsOfInertia());
             _WriteTransformation(ptec->add(COLLADA_ELEMENT_MASS_FRAME), tbaseinv*tlink0*(*itlink)->GetLocalMassFrame());
             daeSafeCast<domRigid_body::domTechnique_common::domDynamic>(ptec->add(COLLADA_ELEMENT_DYNAMIC))->setValue(xsBoolean(!(*itlink)->IsStatic()));
-            // create a shape for every geometry
-            int igeom = 0;
-            FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                domRigid_body::domTechnique_common::domShapeRef pdomshape = daeSafeCast<domRigid_body::domTechnique_common::domShape>(ptec->add(COLLADA_ELEMENT_SHAPE));
-                // there is a weird bug here where _WriteTranformation will fail to create rotate/translate elements in instance_geometry is created first... (is this part of the spec?)
-                _WriteTransformation(pdomshape,tbaseinv*tlink0*(*itgeom)->GetTransform());
-                domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pdomshape->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
-                pinstgeom->setUrl(daeURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
-                ++igeom;
+
+            if( IsWrite("geometry") ) {
+                // create a shape for every geometry
+                int igeom = 0;
+                FOREACHC(itgeom, (*itlink)->GetGeometries()) {
+                    domRigid_body::domTechnique_common::domShapeRef pdomshape = daeSafeCast<domRigid_body::domTechnique_common::domShape>(ptec->add(COLLADA_ELEMENT_SHAPE));
+                    // there is a weird bug here where _WriteTranformation will fail to create rotate/translate elements in instance_geometry is created first... (is this part of the spec?)
+                    _WriteTransformation(pdomshape,tbaseinv*tlink0*(*itgeom)->GetTransform());
+                    domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pdomshape->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
+                    pinstgeom->setUrl(daeURI(*pinstgeom,string("#")+_GetGeometryId(*itlink,igeom)));
+                    ++igeom;
+                }
             }
         }
         return pmout;
@@ -1604,17 +1630,27 @@ private:
     /// \brief save all the loaded scene models and their current state.
     virtual void _CreateScene()
     {
-        // Create visual scene
-        _scene.vscene = daeSafeCast<domVisual_scene>(_visualScenesLib->add(COLLADA_ELEMENT_VISUAL_SCENE));
-        _scene.vscene->setId("vscene");
-        _scene.vscene->setName("OpenRAVE Visual Scene");
-
         // Create kinematics scene
         _scene.kscene = daeSafeCast<domKinematics_scene>(_kinematicsScenesLib->add(COLLADA_ELEMENT_KINEMATICS_SCENE));
         _scene.kscene->setId("kscene");
         _scene.kscene->setName("OpenRAVE Kinematics Scene");
+        // Create instance kinematics scene
+        _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
+        _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
+        _scene.kiscene->setSid(str(boost::format("%s_inst")%_scene.kscene->getId()).c_str());
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "physics") == _listSkipWriteOptions.end() ) {
+        if( IsWrite("visual") ) {
+            // Create visual scene
+            _scene.vscene = daeSafeCast<domVisual_scene>(_visualScenesLib->add(COLLADA_ELEMENT_VISUAL_SCENE));
+            _scene.vscene->setId("vscene");
+            _scene.vscene->setName("OpenRAVE Visual Scene");
+
+            // Create instance visual scene
+            _scene.viscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE ));
+            _scene.viscene->setUrl(str(boost::format("#%s")%_scene.vscene->getId()).c_str());
+            _scene.viscene->setSid(str(boost::format("%s_inst")%_scene.vscene->getId()).c_str());
+        }
+        if( IsWrite("physics") ) {
             // Create physic scene
             _scene.pscene = daeSafeCast<domPhysics_scene>(_physicsScenesLib->add(COLLADA_ELEMENT_PHYSICS_SCENE));
             _scene.pscene->setId("pscene");
@@ -1626,15 +1662,6 @@ private:
             _scene.piscene->setSid(str(boost::format("%s_inst")%_scene.pscene->getId()).c_str());
         }
 
-        // Create instance visual scene
-        _scene.viscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE ));
-        _scene.viscene->setUrl(str(boost::format("#%s")%_scene.vscene->getId()).c_str());
-        _scene.viscene->setSid(str(boost::format("%s_inst")%_scene.vscene->getId()).c_str());
-
-        // Create instance kinematics scene
-        _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
-        _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
-        _scene.kiscene->setSid(str(boost::format("%s_inst")%_scene.kscene->getId()).c_str());
     }
 
     /** \brief Write link of a kinematic body
@@ -1654,27 +1681,30 @@ private:
         pdomlink->setName(plink->GetName().c_str());
         pdomlink->setSid(linksid.c_str());
 
-        domNodeRef pnode = daeSafeCast<domNode>(pnodeparent->add(COLLADA_ELEMENT_NODE));
-        std::string nodeid = _GetNodeId(plink);
-        pnode->setId( nodeid.c_str() );
-        string nodesid = _GetNodeSid(plink);
-        pnode->setSid(nodesid.c_str());
-        pnode->setName(plink->GetName().c_str());
+        domNodeRef pnode;
+        if( IsWrite("visual") ) {
+            pnode = daeSafeCast<domNode>(pnodeparent->add(COLLADA_ELEMENT_NODE));
+            std::string nodeid = _GetNodeId(plink);
+            pnode->setId( nodeid.c_str() );
+            string nodesid = _GetNodeSid(plink);
+            pnode->setSid(nodesid.c_str());
+            pnode->setName(plink->GetName().c_str());
 
-        if( find(_listSkipWriteOptions.begin(), _listSkipWriteOptions.end(), "geometry") == _listSkipWriteOptions.end() ) {
-            int igeom = 0;
-            FOREACHC(itgeom, plink->GetGeometries()) {
-                string geomid = _GetGeometryId(plink,igeom);
-                igeom++;
-                domGeometryRef pdomgeom = WriteGeometry(*itgeom, geomid);
-                domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pnode->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
-                pinstgeom->setUrl((string("#")+geomid).c_str());
+            if( IsWrite("geometry") ) {
+                int igeom = 0;
+                FOREACHC(itgeom, plink->GetGeometries()) {
+                    string geomid = _GetGeometryId(plink,igeom);
+                    igeom++;
+                    domGeometryRef pdomgeom = WriteGeometry(*itgeom, geomid);
+                    domInstance_geometryRef pinstgeom = daeSafeCast<domInstance_geometry>(pnode->add(COLLADA_ELEMENT_INSTANCE_GEOMETRY));
+                    pinstgeom->setUrl((string("#")+geomid).c_str());
 
-                domBind_materialRef pmat = daeSafeCast<domBind_material>(pinstgeom->add(COLLADA_ELEMENT_BIND_MATERIAL));
-                domBind_material::domTechnique_commonRef pmattec = daeSafeCast<domBind_material::domTechnique_common>(pmat->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
-                domInstance_materialRef pinstmat = daeSafeCast<domInstance_material>(pmattec->add(COLLADA_ELEMENT_INSTANCE_MATERIAL));
-                pinstmat->setTarget(daeURI(*pinstmat, string("#")+geomid+string("_mat")));
-                pinstmat->setSymbol("mat0");
+                    domBind_materialRef pmat = daeSafeCast<domBind_material>(pinstgeom->add(COLLADA_ELEMENT_BIND_MATERIAL));
+                    domBind_material::domTechnique_commonRef pmattec = daeSafeCast<domBind_material::domTechnique_common>(pmat->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
+                    domInstance_materialRef pinstmat = daeSafeCast<domInstance_material>(pmattec->add(COLLADA_ELEMENT_INSTANCE_MATERIAL));
+                    pinstmat->setTarget(daeURI(*pinstmat, string("#")+geomid+string("_mat")));
+                    pinstmat->setSymbol("mat0");
+                }
             }
         }
 
@@ -1698,33 +1728,36 @@ private:
 
             _WriteTransformation(pattfull, pjoint->GetInternalHierarchyLeftTransform());
             _WriteTransformation(childinfo.plink, pjoint->GetInternalHierarchyRightTransform());
-            _WriteTransformation(childinfo.pnode, pjoint->GetInternalHierarchyRightTransform());
 
-            for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
-                string jointnodesid = _GetJointNodeSid(pjoint,iaxis);
-                if( pjoint->IsRevolute(iaxis) ) {
-                    domRotateRef protate = daeSafeCast<domRotate>(childinfo.pnode->add(COLLADA_ELEMENT_ROTATE,0));
-                    protate->setSid(jointnodesid.c_str());
-                    protate->getValue().setCount(4);
-                    protate->getValue()[0] = pjoint->GetInternalHierarchyAxis(0).x;
-                    protate->getValue()[1] = pjoint->GetInternalHierarchyAxis(0).y;
-                    protate->getValue()[2] = pjoint->GetInternalHierarchyAxis(0).z;
-                    protate->getValue()[3] = 0;
+            if( IsWrite("visual") ) {
+                _WriteTransformation(childinfo.pnode, pjoint->GetInternalHierarchyRightTransform());
+
+                for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {
+                    string jointnodesid = _GetJointNodeSid(pjoint,iaxis);
+                    if( pjoint->IsRevolute(iaxis) ) {
+                        domRotateRef protate = daeSafeCast<domRotate>(childinfo.pnode->add(COLLADA_ELEMENT_ROTATE,0));
+                        protate->setSid(jointnodesid.c_str());
+                        protate->getValue().setCount(4);
+                        protate->getValue()[0] = pjoint->GetInternalHierarchyAxis(0).x;
+                        protate->getValue()[1] = pjoint->GetInternalHierarchyAxis(0).y;
+                        protate->getValue()[2] = pjoint->GetInternalHierarchyAxis(0).z;
+                        protate->getValue()[3] = 0;
+                    }
+                    else if( pjoint->IsPrismatic(iaxis) ) {
+                        domTranslateRef ptrans = daeSafeCast<domTranslate>(childinfo.pnode->add(COLLADA_ELEMENT_TRANSLATE,0));
+                        ptrans->setSid(jointnodesid.c_str());
+                        ptrans->getValue().setCount(3);
+                        ptrans->getValue()[0] = 0;
+                        ptrans->getValue()[1] = 0;
+                        ptrans->getValue()[2] = 0;
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x")%pjoint->GetType()));
+                        continue;
+                    }
                 }
-                else if( pjoint->IsPrismatic(iaxis) ) {
-                    domTranslateRef ptrans = daeSafeCast<domTranslate>(childinfo.pnode->add(COLLADA_ELEMENT_TRANSLATE,0));
-                    ptrans->setSid(jointnodesid.c_str());
-                    ptrans->getValue().setCount(3);
-                    ptrans->getValue()[0] = 0;
-                    ptrans->getValue()[1] = 0;
-                    ptrans->getValue()[2] = 0;
-                }
-                else {
-                    RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x")%pjoint->GetType()));
-                    continue;
-                }
+                _WriteTransformation(childinfo.pnode, pjoint->GetInternalHierarchyLeftTransform());
             }
-            _WriteTransformation(childinfo.pnode, pjoint->GetInternalHierarchyLeftTransform());
         }
 
         out.listusedlinks.push_back(make_pair(plink->GetIndex(),linksid));
@@ -1958,6 +1991,11 @@ private:
         RAVELOG_WARN("COLLADA warning: %s\n", msg);
     }
 
+    virtual bool IsWrite(const std::string& type)
+    {
+        return _setSkipWriteOptions.find(type) == _setSkipWriteOptions.end();
+    }
+
     boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     daeDocument* _doc;
@@ -1980,7 +2018,7 @@ private:
     std::list<std::string> _listExternalRefExports; ///< body names to try to export externally
     std::list<std::string> _listIgnoreExternalURIs; ///< don't use these URIs for external indexing
     std::list<std::string> _listForceWriteOptions;
-    std::list<std::string> _listSkipWriteOptions;
+    std::set<std::string> _setSkipWriteOptions;
 
     bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
     bool _bForceWriteAll; ///< if true, attemps to write all modifiable data to externally saved bodies

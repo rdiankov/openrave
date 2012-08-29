@@ -599,7 +599,7 @@ class SpaceSamplerExtra:
                 pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
         return pts
 
-def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,epsilon=1e-10):
+def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,comparephysics=True,epsilon=1e-10):
     """Compares that two bodies are structurally and positionally equivalent without hashes, used for debug checking.
     """
     def transdist(list0,list1):
@@ -669,17 +669,17 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
             #assert( link0.IsStatic() == link1.IsStatic() )
             assert( len(link0.GetParentLinks()) == len(link1.GetParentLinks()) )
             assert( all([lp0.GetName()==lp1.GetName() for lp0, lp1 in izip(link0.GetParentLinks(),link1.GetParentLinks())]) )
+            if comparephysics:
+                assert(abs(link0.GetMass()-link1.GetMass()) <= epsilon)
+                assert(transdist(link0.GetLocalMassFrame(),link1.GetLocalMassFrame()) <= epsilon)
+                assert(transdist(link0.GetGlobalCOM(),link1.GetGlobalCOM()) <= epsilon) # redundant
+                assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)
             if comparegeometries:
                 assert( len(link0.GetGeometries()) == len(link1.GetGeometries()) )
-            ab0=link0.ComputeAABB()
-            ab1=link1.ComputeAABB()
-            assert(transdist(ab0.pos(),ab1.pos()) <= epsilon*200) # tesselation
-            assert(transdist(ab0.extents(),ab1.extents()) <= epsilon*200) # tesselation
-            assert(abs(link0.GetMass()-link1.GetMass()) <= epsilon)
-            assert(transdist(link0.GetLocalMassFrame(),link1.GetLocalMassFrame()) <= epsilon)
-            assert(transdist(link0.GetGlobalCOM(),link1.GetGlobalCOM()) <= epsilon) # redundant
-            assert(transdist(link0.GetPrincipalMomentsOfInertia(),link1.GetPrincipalMomentsOfInertia()) <= epsilon)
-            if comparegeometries:
+                ab0=link0.ComputeAABB()
+                ab1=link1.ComputeAABB()
+                assert(transdist(ab0.pos(),ab1.pos()) <= epsilon*200) # tesselation
+                assert(transdist(ab0.extents(),ab1.extents()) <= epsilon*200) # tesselation
                 for ig,g0 in enumerate(link0.GetGeometries()):
                     g1=link1.GetGeometries()[ig]
                     assert(g0.GetType()==g1.GetType())
@@ -688,8 +688,9 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
                     assert(transdist(g0.GetDiffuseColor(),g1.GetDiffuseColor()) <= epsilon)
                     assert(transdist(g0.GetAmbientColor(),g1.GetAmbientColor()) <= epsilon)
                     assert(g0.IsVisible()==g1.IsVisible())
-        adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
-        assert(adjacentlinks == set(body1.GetAdjacentLinks()))
+                # the geometry and initial configuration determine adjancent links
+                adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
+                assert(adjacentlinks == set(body1.GetAdjacentLinks()))
         if body0.IsRobot():
             robot0 = body0.GetEnv().GetRobot(body0.GetName())
             robot1 = body1.GetEnv().GetRobot(body1.GetName())

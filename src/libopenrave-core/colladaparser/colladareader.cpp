@@ -134,21 +134,23 @@ public:
 public:
         JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
             BOOST_ASSERT( !!pkinematicaxis );
-            daeElement* pae = pvisualtrans->getParentElement();
-            while (!!pae) {
-                visualnode = daeSafeCast<domNode> (pae);
-                if (!!visualnode) {
-                    break;
+            if( !!pvisualtrans ) {
+                daeElement* pae = pvisualtrans->getParentElement();
+                while (!!pae) {
+                    visualnode = daeSafeCast<domNode> (pae);
+                    if (!!visualnode) {
+                        break;
+                    }
+                    visualnode = _InstantiateNode(pae);
+                    if( !!visualnode ) {
+                        break;
+                    }
+                    pae = pae->getParentElement();
                 }
-                visualnode = _InstantiateNode(pae);
-                if( !!visualnode ) {
-                    break;
-                }
-                pae = pae->getParentElement();
-            }
 
-            if (!visualnode) {
-                RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%getSid(pkinematicaxis)));
+                if (!visualnode) {
+                    RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%getSid(pkinematicaxis)));
+                }
             }
         }
 
@@ -813,9 +815,15 @@ public:
                                 FOREACH(itaxis, bindings.listAxisBindings) {
                                     if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody && itaxis->_pjoint->GetDOFIndex() >= 0 ) {
                                         if( itaxis->pkinematicaxis == pjointaxis ) {
-                                            std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
-                                            BOOST_ASSERT(itmodel != bindings.listModelBindings.end());
-                                            pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                            if( !!itaxis->visualnode ) {
+                                                std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
+                                                if (itmodel != bindings.listModelBindings.end()) {
+                                                    pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                }
+                                                else {
+                                                    RAVELOG_WARN("failed to find model bindings");
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -969,8 +977,7 @@ public:
             }
         }
         if( !pvisualnode ) {
-            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s\n")%getSid(ikm)));
-            return false;
+            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s, creating without any geometry\n")%getSid(ikm)));
         }
 
         if(( pkinbody->GetName().size() == 0) && !!ikm->getName() ) {
@@ -1065,7 +1072,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("Number of root links in kmodel %s: %d\n")%kmodel->getId()%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
             Transform tnode;
-            if( ilink == 0 ) {
+            if( !!pnode && ilink == 0 ) {
                 tnode = getNodeParentTransform(pnode);
             }
             ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), tnode, vdomjoints, bindings);
@@ -3086,11 +3093,15 @@ private:
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
-            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
+            daeElementRef pjtarget;
+            if( !!viscene ) {
+                pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
+            }
             if (!pjtarget) {
                 RAVELOG_WARN(str(boost::format("Target Node '%s' not found\n")%bindjoint->getTarget()));
-                continue;
+//                continue;
             }
+
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {

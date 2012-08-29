@@ -39,11 +39,12 @@ The following attributes can be passed to the :class:`.Environment` Save/Write m
 * **externalref="bodyname1 bodyname2"** - if writing collada, specify the names that should be exported via external references. If **\***, then export the body parts using external references. Because a user could have made local modifications to the robot parameters, what is exported depends on **forcewirte**.
 * **ignoreexternaluri="uri"** - a set of URIs to documents that should never be referenced externally by the current document being saved. Used to mark temporary URIs.
 * **skipwrite="option1 option2"** - Skip writing these properties. Supported options are:
-  * geometry
-  * readable
+  * geometry - Any <geometry> objects
+  * readable - From :ref:`.Interface.GetReadableInterfaces`
   * sensors
   * manipulators
   * physics
+  * visual - The <node> hierarchy
 * **forcewrite="option1 option2"** - force writing these properties even if external references are used. These are properties that can be set during runtime by the user and are more application specific rather than robot specific. If **\***, then force writing all supported options. Options are:
   * manipulators
   * sensors

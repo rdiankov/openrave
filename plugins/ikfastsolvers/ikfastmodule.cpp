@@ -455,13 +455,13 @@ public:
                     return false;
                 }
 
-                // file not found, so create
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()));
                 // create a temporary file and store COLLADA kinematics representation
                 AttributesList atts;
-                atts.push_back(make_pair(string("skipwrite"), string("geometry readable sensors physics")));
+                atts.push_back(make_pair(string("skipwrite"), string("visual readable sensors physics")));
                 atts.push_back(make_pair(string("target"), probot->GetName()));
-                string tempfilename = RaveGetHomeDirectory() + string("/testikfastrobot.dae");
+                string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));;
+                // file not found, so create
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=%s --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler

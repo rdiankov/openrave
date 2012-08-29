@@ -262,7 +262,17 @@ class TestCOLLADA(EnvironmentSetup):
         self.log.info('test writing kinematics only')
         env=self.env
         robot = self.LoadRobot('robots/pr2-beta-static.zae')
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'visual readable sensors physics'})
+        filedata=open('test_writekinematicsonly.dae','r').read()
+        assert(len(filedata)<400000) # should be ~331kb
+        env2=Environment()
+        env2.Load('test_writekinematicsonly.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2,comparegeometries=False,comparesensors=False,comparemanipulators=True,comparegrabbed=False,comparephysics=False,epsilon=1e-10)
+
         env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'geometry readable sensors physics'})
         filedata=open('test_writekinematicsonly.dae','r').read()
         assert(len(filedata)<400000) # should be ~331kb
-        
+        env2.Reset()
+        env2.Load('test_writekinematicsonly.dae')
+        robot2=env2.GetRobots()[0]
