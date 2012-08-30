@@ -968,6 +968,15 @@ class TestKinematics(EnvironmentSetup):
             assert(abs(dh.alpha-gooddh.alpha) <= 1e-6)
             assert(abs(dh.theta-gooddh.theta) <= 1e-6)
 
+    def test_noncollidingpose(self):
+        env=self.env
+        with env:
+            robot=self.LoadRobot('robots/barrettwam.robot.xml')
+            robot.SetDOFValues([3],[3])
+            assert(robot.CheckSelfCollision())
+            robot.SetNonCollidingConfiguration()
+            assert(not robot.CheckSelfCollision())
+            
     def test_closedlinkage(self):
         self.log.info('check a very complex closed linkage model')
         env=self.env

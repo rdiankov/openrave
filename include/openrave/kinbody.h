@@ -1632,6 +1632,9 @@ private:
     /// This is primarily used for calibrating a robot's zero position
     virtual void SetZeroConfiguration();
 
+    /// \brief Treats the current pose as a pose not in collision, which sets the adjacent pairs of links
+    virtual void SetNonCollidingConfiguration();
+
     /// Functions dealing with configuration specifications
     /// @name Configuration Specification API
     //@{

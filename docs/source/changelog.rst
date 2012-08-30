@@ -94,6 +94,8 @@ Inverse Kinematics
 
 * Much more robost implementation of :ref:`module-ikfast-loadikfastsolver` that computes its own ikfast files rather than relying on python inversekinematics db calls.
 
+* Added :ref:`.KinBody.SetNonCollidingConfiguration`
+
 Planning
 --------
 

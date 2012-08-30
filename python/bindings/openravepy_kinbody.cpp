@@ -1531,6 +1531,9 @@ public:
     void SetZeroConfiguration() {
         _pbody->SetZeroConfiguration();
     }
+    void SetNonCollidingConfiguration() {
+        _pbody->SetNonCollidingConfiguration();
+    }
 
     object GetConfigurationSpecification(const std::string& interpolation="") const {
         return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecification(interpolation)));
@@ -3099,6 +3102,7 @@ void init_openravepy_kinbody()
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
+                        .def("SetNonCollidingConfiguration",&PyKinBody::SetNonCollidingConfiguration, DOXY_FN(KinBody,SetNonCollidingConfiguration))
                         .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, GetConfigurationSpecification_overloads(args("interpolation"), DOXY_FN(KinBody,GetConfigurationSpecification)))
                         .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, GetConfigurationSpecificationIndices_overloads(args("indices","interpolation"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices)))
                         .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues))

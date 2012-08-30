@@ -3826,6 +3826,13 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
 }
 
+void KinBody::SetNonCollidingConfiguration()
+{
+    _ResetInternalCollisionCache();
+    vector<int> vdofbranches;
+    GetLinkTransformations(_vInitialLinkTransformations, vdofbranches);
+}
+
 void KinBody::_ResetInternalCollisionCache()
 {
     _nNonAdjacentLinkCache = 0x80000000;
