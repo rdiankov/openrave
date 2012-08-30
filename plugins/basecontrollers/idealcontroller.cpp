@@ -208,6 +208,16 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             vector<dReal> sampledata;
             ptraj->Sample(sampledata,_fCommandTime,_samplespec);
 
+            // already sampled, so change the command times before before setting values
+            // incase the below functions fail
+            if( _fCommandTime > ptraj->GetDuration() ) {
+                _fCommandTime = ptraj->GetDuration();
+                _bIsDone = true;
+            }
+            else {
+                _fCommandTime += _fSpeed * fTimeElapsed;
+            }
+
             // first process all grab info
             list<KinBodyPtr> listrelease;
             list<pair<KinBodyPtr, KinBody::LinkPtr> > listgrab;
@@ -265,14 +275,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             FOREACH(it,listgrab) {
                 _probot->Grab(it->first,it->second);
-            }
-
-            if( _fCommandTime > ptraj->GetDuration() ) {
-                _fCommandTime = ptraj->GetDuration();
-                _bIsDone = true;
-            }
-            else {
-                _fCommandTime += _fSpeed * fTimeElapsed;
             }
         }
 

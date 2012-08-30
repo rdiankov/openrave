@@ -45,7 +45,7 @@ The following attributes can be passed to the :class:`.Environment` Save/Write m
   * manipulators
   * physics
   * visual - The <node> hierarchy
-* **forcewrite="option1 option2"** - force writing these properties even if external references are used. These are properties that can be set during runtime by the user and are more application specific rather than robot specific. If **\***, then force writing all supported options. Options are:
+* **forcewrite="option1 option2"** - force writing these properties if external references are used. These are properties that can be set during runtime by the user and are more application specific rather than robot specific. If **\***, then force writing all supported options. Options are:
   * manipulators
   * sensors
   * jointlimits - position, velocity, accel

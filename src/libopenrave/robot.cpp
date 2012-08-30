@@ -1324,7 +1324,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
 
 bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 {
-    OPENRAVE_ASSERT_FORMAT(!!pbody && !!plink && plink->GetParent() == shared_kinbody(), "robot %s invalid grab arguments. for example, link needs to be part of robot",GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!pbody, "robot %s invalid bod to grab",GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent() == shared_kinbody(), "robot %s grabbing link needs to be part of robot",GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"robot %s cannot grab itself",GetName(), ORE_InvalidArguments);
     if( IsGrabbing(pbody) ) {
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
