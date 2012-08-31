@@ -9,10 +9,10 @@ endif ()
 
 find_package(OpenGL)
 if(NOT OPENGL_FOUND)
-  message(STATUS "WARNING: OpenGL not found")
+  message(STATUS "WARNING: OpenGL not found. This library is not necessary, but it is good to link with")
 endif()
 
-if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND OPENGL_FOUND AND COIN_LIBRARY_FOUND)
+if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND COIN_LIBRARY_FOUND)
   message(STATUS "Detected SoQt/Coin3D GUI, making plugin")
   include_directories(${OPENGL_INCLUDE_DIR} ${SOQT_INCLUDE_DIRS} ${COIN_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS} ${COIN_LINK_DIRS})

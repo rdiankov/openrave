@@ -276,3 +276,31 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Reset()
         env2.Load('test_writekinematicsonly.dae')
         robot2=env2.GetRobots()[0]
+
+    def test_colladamerge(self):
+        self.log.info('test that loading collada with prefixes')
+        xmldata="""<robot>
+ <robot file="robots/schunk-lwa3.zae"></robot>
+ <robot prefix="hand_" file="robots/pumagripper.zae"></robot>
+ <kinbody>
+   <body name="hand_Puma6">
+     <offsetfrom>link7</offsetfrom>
+     <translation>0.03 0 0</translation>
+     <rotationaxis>0 1 0 90</rotationaxis>
+   </body>
+   <joint type="hinge" enable="false" name="dummy">
+     <body>link7</body>
+     <body>hand_Puma6</body>
+     <limits>0 0</limits>
+   </joint>
+ </kinbody>
+ <manipulator name="myarm">
+   <base>base</base>
+   <effector>hand_Puma6</effector>
+   <direction>1 0 0</direction>
+ </manipulator>
+</robot>
+"""
+        robot=self.LoadRobotData(xmldata)
+        assert(robot.GetActiveDOF()==8)
+        

@@ -335,7 +335,7 @@ public:
 
     void serialize(std::ostream& O, int options) const
     {
-        O << "<trajectory>" << endl << _spec << endl;
+        O << "<trajectory>" << endl << _spec;
         O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
         FOREACHC(it,_vtrajdata) {
             O << *it << " ";

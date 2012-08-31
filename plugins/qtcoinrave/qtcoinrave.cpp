@@ -74,4 +74,9 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
+    if( s_InitRefCount > 0 ) {
+        RAVELOG_WARN("SoQt releasing all memory\n");
+        SoQt::done();
+        s_InitRefCount = 0;
+    }
 }
