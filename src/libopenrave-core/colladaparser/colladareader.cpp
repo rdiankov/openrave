@@ -600,6 +600,8 @@ public:
                 FOREACH(itmanip,probot->_vecManipulators) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
+                        (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
                         FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
                             *itgrippername = _prefix + *itgrippername;
                         }
