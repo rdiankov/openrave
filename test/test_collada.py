@@ -277,6 +277,11 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Load('test_writekinematicsonly.dae')
         robot2=env2.GetRobots()[0]
 
+        # check kinematics hashes since IK relies on it
+        for m in robot.GetManipulators():
+            m2 = robot2.GetManipulator(m.GetName())
+            assert(m.GetKinematicsStructureHash()==m2.GetKinematicsStructureHash())
+
     def test_colladamerge(self):
         self.log.info('test that loading collada with prefixes')
         xmldata="""<robot>

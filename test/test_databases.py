@@ -20,11 +20,22 @@ class TestDatabases(EnvironmentSetup):
         robot=env.GetRobots()[0]
         manip=robot.GetActiveManipulator()
         manip.SetIkSolver(None)
+
+        env.Save('test_imodulegeneration.dae',Environment.SelectionOptions.Body, {'target':robot.GetName(), 'skipwrite':'visual readable sensors physics'})
+        env2=Environment()
+        robot2=env2.ReadRobotURI('test_imodulegeneration.dae')
+        env2.Add(robot2)
+        # check that the hashes match
+        for m in robot.GetManipulators():
+            m2 = robot2.GetManipulator(m.GetName())
+            assert(m.GetKinematicsStructureHash()==m2.GetKinematicsStructureHash())
+
+            
         ikmodule = RaveCreateModule(env,'ikfast')
         env.Add(ikmodule)
         out=ikmodule.SendCommand('LoadIKFastSolver %s %d 1'%(robot.GetName(),IkParameterizationType.TranslationDirection5D))
         assert(out is not None)
         assert(manip.GetIkSolver() is not None)
-        
+
 #     def test_database_paths(self):
 #         pass
