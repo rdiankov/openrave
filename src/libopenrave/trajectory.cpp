@@ -27,7 +27,7 @@ TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Traje
 
 void TrajectoryBase::serialize(std::ostream& O, int options) const
 {
-    O << "<trajectory type=\"" << GetXMLId() << "\">" << endl << GetConfigurationSpecification() << endl;
+    O << "<trajectory type=\"" << GetXMLId() << "\">" << endl << GetConfigurationSpecification();
     O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
     std::vector<dReal> data;
     GetWaypoints(0,GetNumWaypoints(),data);
@@ -35,7 +35,9 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         O << *it << " ";
     }
     O << "</data>" << endl;
-    O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    if( GetDescription().size() > 0 ) {
+        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    }
     O << "</trajectory>" << endl;
 }
 

@@ -179,6 +179,80 @@ class RunPhysics(EnvironmentSetup):
                 values = robot.GetActiveDOFValues()
                 assert(sum(abs(values-orgvalues))<1)
 
+    def test_odenoslip(self):
+        log.info("test that an ode option can prevent a body from slipping")
+        xmldata = '''<Environment>
+  <camtrans>-0.032706 -22.004591 -0.003697</camtrans>
+  <camrotationaxis>-0.999781 -0.008689 -0.019015 89.161379</camrotationaxis>
+  <camfocal>22.008177</camfocal>
+  <Robot name="fallbot">
+    <Translation>0 0 .2</Translation>
+    <RotationAxis>0 1 0 20</RotationAxis>
+    <KinBody name="fallbox" makejoinedlinksadjacent="true">
+      <Body name="box" type="dynamic">
+        <Geom type="box">
+          <extents>.5 .5 .1</extents>
+          <diffuseColor>.9 .9 .4</diffuseColor>
+          <ambientColor>0.7 0.7 0.4</ambientColor>
+        </Geom>
+        <mass type="box">
+          <extents>.5 .5 .1</extents>
+          <density>1</density>
+        </mass>
+      </Body>
+      <Body name="box2" type="dynamic">
+        <offsetfrom>box</offsetfrom>
+        <Translation>0 0 .2</Translation>
+        <Geom type="box">
+          <extents>.5 .5 .1</extents>
+          <diffuseColor>.9 .9 .4</diffuseColor>
+          <ambientColor>0.7 0.7 0.4</ambientColor>
+        </Geom>
+        <mass type="box">
+          <extents>.5 .5 .1</extents>
+          <density>1</density>
+        </mass>
+      </Body>
+      <Joint name="boxjoint" type="hinge" enabled="false">
+        <Body>box</Body>
+        <Body>box2</Body>
+        <limits>0 0</limits>
+      </Joint>
+    </KinBody>
+  </Robot>
+  <KinBody name="floor">
+    <RotationAxis>0 1 0 20</RotationAxis>
+    <Body type="static">
+      <Translation>0 0 -.1</Translation>
+      <Geom type="box">
+        <extents>10 10 .1</extents>
+        <diffuseColor>.41 .4 .4</diffuseColor>
+        <ambientColor>0.4 0.5 0.6</ambientColor>
+      </Geom>
+    </Body>
+  </KinBody>
+  <physicsengine type="ode">
+    <odeproperties>
+      <friction>.37</friction>
+      <gravity>0 0 -9.8</gravity>
+      <selfcollision>1</selfcollision>
+      <erp>.5</erp>
+      <cfm>.000001</cfm>
+      <dcontactapprox>1</dcontactapprox>
+    </odeproperties>
+  </physicsengine>
+</Environment>
+'''
+        with self.env:
+            self.env.LoadData(xmldata) 
+            nonmovingbody = self.env.GetKinBody('fallbot')
+            T0 = nonmovingbody.GetTransform()
+            for i in range(1000):
+                self.env.StepSimulation(0.01)
+            T1 = nonmovingbody.GetTransform()
+            assert(transdist(T0,T1)<=0.5)
+
+
 #generate_classes(RunPhysics, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunPhysics):

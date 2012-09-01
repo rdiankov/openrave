@@ -49,7 +49,13 @@ public:
     {
         RobotBase::SimulationStep(fElapsedTime);
         if( !!_pController ) {
-            _pController->SimulationStep(fElapsedTime);
+            try {
+                _pController->SimulationStep(fElapsedTime);
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_ERROR(str(boost::format("robot %s controller %s failed with exception, so resetting: %s")%GetName()%_pController->GetXMLId()%ex.what()));
+                _pController->Reset(0);
+            }
         }
     }
 

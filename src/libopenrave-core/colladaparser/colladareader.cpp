@@ -134,21 +134,23 @@ public:
 public:
         JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
             BOOST_ASSERT( !!pkinematicaxis );
-            daeElement* pae = pvisualtrans->getParentElement();
-            while (!!pae) {
-                visualnode = daeSafeCast<domNode> (pae);
-                if (!!visualnode) {
-                    break;
+            if( !!pvisualtrans ) {
+                daeElement* pae = pvisualtrans->getParentElement();
+                while (!!pae) {
+                    visualnode = daeSafeCast<domNode> (pae);
+                    if (!!visualnode) {
+                        break;
+                    }
+                    visualnode = _InstantiateNode(pae);
+                    if( !!visualnode ) {
+                        break;
+                    }
+                    pae = pae->getParentElement();
                 }
-                visualnode = _InstantiateNode(pae);
-                if( !!visualnode ) {
-                    break;
-                }
-                pae = pae->getParentElement();
-            }
 
-            if (!visualnode) {
-                RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%getSid(pkinematicaxis)));
+                if (!visualnode) {
+                    RAVELOG_WARN(str(boost::format("couldn't find parent node of element id %s, sid %s\n")%pkinematicaxis->getID()%getSid(pkinematicaxis)));
+                }
             }
         }
 
@@ -598,6 +600,8 @@ public:
                 FOREACH(itmanip,probot->_vecManipulators) {
                     if( _setInitialManipulators.find(*itmanip) == _setInitialManipulators.end()) {
                         (*itmanip)->_info._name = _prefix + (*itmanip)->_info._name;
+                        (*itmanip)->_info._sBaseLinkName = _prefix + (*itmanip)->_info._sBaseLinkName;
+                        (*itmanip)->_info._sEffectorLinkName = _prefix + (*itmanip)->_info._sEffectorLinkName;
                         FOREACH(itgrippername,(*itmanip)->_info._vGripperJointNames) {
                             *itgrippername = _prefix + *itgrippername;
                         }
@@ -727,10 +731,7 @@ public:
             return false;
         }
         if( !pbody ) {
-            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(ias->getExtra_array());
-            if( !pinterface_type ) {
-                pinterface_type = _ExtractInterfaceType(articulated_system->getExtra_array());
-            }
+            InterfaceTypePtr pinterface_type = _ExtractInterfaceType(articulated_system->getExtra_array());
             if( !!pinterface_type ) {
                 if( pinterface_type->type == "kinbody" ) {
                     pbody = RaveCreateKinBody(_penv,pinterface_type->name);
@@ -799,7 +800,7 @@ public:
             // write the axis parameters
             ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
             if( !!pcolladainfo ) {
-                pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias); // updated with a articulated_system up the hierarchy
+                pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
                 pcolladainfo->_bindingAxesSIDs.resize(pbody->GetDOF());
                 // go through each parameter and see what axis it resolves to
                 for(size_t iparam = 0; iparam < ias->getNewparam_array().getCount(); ++iparam) {
@@ -813,9 +814,15 @@ public:
                                 FOREACH(itaxis, bindings.listAxisBindings) {
                                     if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody && itaxis->_pjoint->GetDOFIndex() >= 0 ) {
                                         if( itaxis->pkinematicaxis == pjointaxis ) {
-                                            std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
-                                            BOOST_ASSERT(itmodel != bindings.listModelBindings.end());
-                                            pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                            if( !!itaxis->visualnode ) {
+                                                std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
+                                                if (itmodel != bindings.listModelBindings.end()) {
+                                                    pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                }
+                                                else {
+                                                    RAVELOG_WARN("failed to find model bindings");
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -825,7 +832,7 @@ public:
                                 if( !!ikmodel ) {
                                     // found a newparam to ikmodel, so have to store
                                     string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
-                                    FOREACH(itmodel,pcolladainfo->_bindingModelURLs) {
+                                    FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
                                         if( itmodel->kmodel == kmodeluri ) {
                                             itmodel->ikmodelsidref = param->getSIDREF()->getValue();
                                         }
@@ -863,7 +870,7 @@ public:
             }
 
             ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
-            pcolladainfo->_articulated_systemURL = _MakeFullURI(ias->getUrl(),ias);
+            pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
             std::map<domInstance_physics_modelRef,int> mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
@@ -871,9 +878,9 @@ public:
                 FOREACH(it, bindings.listModelBindings) {
                     if( it->_ikmodel == ikmodel ) {
                         if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
-                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURLs.size();
+                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURIs.size();
                             ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
-                            pcolladainfo->_bindingModelURLs.push_back(mbinding);
+                            pcolladainfo->_bindingModelURIs.push_back(mbinding);
                         }
                         break;
                     }
@@ -908,7 +915,7 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system);
             ExtractRobotAttachedActuators(probot, articulated_system);
         }
-        _ExtractExtraData(pbody,ias->getExtra_array());
+        _ExtractExtraData(pbody,articulated_system->getExtra_array());
         return true;
     }
 
@@ -969,8 +976,7 @@ public:
             }
         }
         if( !pvisualnode ) {
-            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s\n")%getSid(ikm)));
-            return false;
+            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s, creating without any geometry\n")%getSid(ikm)));
         }
 
         if(( pkinbody->GetName().size() == 0) && !!ikm->getName() ) {
@@ -1065,7 +1071,7 @@ public:
         RAVELOG_VERBOSE(str(boost::format("Number of root links in kmodel %s: %d\n")%kmodel->getId()%ktec->getLink_array().getCount()));
         for (size_t ilink = 0; ilink < ktec->getLink_array().getCount(); ++ilink) {
             Transform tnode;
-            if( ilink == 0 ) {
+            if( !!pnode && ilink == 0 ) {
                 tnode = getNodeParentTransform(pnode);
             }
             ExtractLink(pkinbody, ktec->getLink_array()[ilink], ilink == 0 ? pnode : domNodeRef(), tnode, vdomjoints, bindings);
@@ -3086,11 +3092,15 @@ private:
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
             domBind_joint_axisRef bindjoint = kiscene->getBind_joint_axis_array()[ijoint];
-            daeElementRef pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
+            daeElementRef pjtarget;
+            if( !!viscene ) {
+                pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
+            }
             if (!pjtarget) {
                 RAVELOG_WARN(str(boost::format("Target Node '%s' not found\n")%bindjoint->getTarget()));
-                continue;
+//                continue;
             }
+
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {

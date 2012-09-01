@@ -111,17 +111,17 @@
 
 #if !defined(BOOST_FILESYSTEM_VERSION) || BOOST_FILESYSTEM_VERSION <= 2
 namespace boost {
-  namespace filesystem {
-      inline path absolute(const path& p)
-      {
-	return complete(p, initial_path());
-      }
+namespace filesystem {
+inline path absolute(const path& p)
+{
+    return complete(p, initial_path());
+}
 
-      inline path absolute(const path& p, const path& base)
-      {
-	return complete(p, base);
-      }
-  }
+inline path absolute(const path& p, const path& base)
+{
+    return complete(p, base);
+}
+}
 }
 #endif
 
@@ -185,7 +185,18 @@ inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 {
-    SerializeRound(o,t.rot);
+    // because we're serializing a quaternion, have to fix what side of the hypershpere it is on
+    Vector v = t.rot;
+    for(int i = 0; i < 4; ++i) {
+        if( v[i] < g_fEpsilon ) {
+            v = -v;
+            break;
+        }
+        else if( v[i] > g_fEpsilon ) {
+            break;
+        }
+    }
+    SerializeRound(o,v);
     SerializeRound(o,t.trans);
 }
 

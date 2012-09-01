@@ -335,13 +335,15 @@ public:
 
     void serialize(std::ostream& O, int options) const
     {
-        O << "<trajectory>" << endl << _spec << endl;
+        O << "<trajectory>" << endl << _spec;
         O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
         FOREACHC(it,_vtrajdata) {
             O << *it << " ";
         }
         O << "</data>" << endl;
-        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        if( GetDescription().size() > 0 ) {
+            O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        }
         O << "</trajectory>" << endl;
     }
 

@@ -392,9 +392,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         index = -1
         allfreeindices = None
         while True:
-            basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in solveindices)
+            basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
             if len(freeindices)>0:
-                basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+                basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
             filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
             if not read or len(filename) > 0 or self.freeindices is not None:
                 break
@@ -418,9 +418,9 @@ class InverseKinematicsModel(DatabaseGenerator):
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
         basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
-        basename += '_'.join(str(ind) for ind in solveindices)
+        basename += '_'.join(str(ind) for ind in sorted(solveindices))
         if len(freeindices)>0:
-            basename += '_f'+'_'.join(str(ind) for ind in freeindices)
+            basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
         basename += '.' + outputlang
         return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
 
@@ -438,13 +438,13 @@ class InverseKinematicsModel(DatabaseGenerator):
             freeindicesstrings = []
             if len(freeindices)>0:
                 for _freeindices in self.ikfast.permutations(freeindices):
-                    freeindicesstrings.append(['_f'+'_'.join(str(ind) for ind in _freeindices),_freeindices])
+                    freeindicesstrings.append(['_f'+'_'.join(str(ind) for ind in sorted(_freeindices)),_freeindices])
             else:
                 freeindicesstrings.append(['',[]])
 
             for freeindicesstring, fi in freeindicesstrings:
                 basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
-                basename += '_'.join(str(ind) for ind in solveindices)
+                basename += '_'.join(str(ind) for ind in sorted(solveindices))
                 basename += freeindicesstring
                 basename += '.pp'
                 filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)

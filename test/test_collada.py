@@ -257,3 +257,55 @@ class TestCOLLADA(EnvironmentSetup):
         assert(env2.Load('test_externalref_joints.dae',{'openravescheme':'testscheme'}))
         misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
         assert(len(env.GetBodies())==len(env2.GetBodies()))
+
+    def test_writekinematicsonly(self):
+        self.log.info('test writing kinematics only')
+        env=self.env
+        robot = self.LoadRobot('robots/pr2-beta-static.zae')
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'visual readable sensors physics'})
+        filedata=open('test_writekinematicsonly.dae','r').read()
+        assert(len(filedata)<400000) # should be ~331kb
+        env2=Environment()
+        env2.Load('test_writekinematicsonly.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2,comparegeometries=False,comparesensors=False,comparemanipulators=True,comparegrabbed=False,comparephysics=False,epsilon=1e-10)
+
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'geometry readable sensors physics'})
+        filedata=open('test_writekinematicsonly.dae','r').read()
+        assert(len(filedata)<400000) # should be ~331kb
+        env2.Reset()
+        env2.Load('test_writekinematicsonly.dae')
+        robot2=env2.GetRobots()[0]
+
+        # check kinematics hashes since IK relies on it
+        for m in robot.GetManipulators():
+            m2 = robot2.GetManipulator(m.GetName())
+            assert(m.GetKinematicsStructureHash()==m2.GetKinematicsStructureHash())
+
+    def test_colladamerge(self):
+        self.log.info('test that loading collada with prefixes')
+        xmldata="""<robot>
+ <robot file="robots/schunk-lwa3.zae"></robot>
+ <robot prefix="hand_" file="robots/pumagripper.zae"></robot>
+ <kinbody>
+   <body name="hand_Puma6">
+     <offsetfrom>link7</offsetfrom>
+     <translation>0.03 0 0</translation>
+     <rotationaxis>0 1 0 90</rotationaxis>
+   </body>
+   <joint type="hinge" enable="false" name="dummy">
+     <body>link7</body>
+     <body>hand_Puma6</body>
+     <limits>0 0</limits>
+   </joint>
+ </kinbody>
+ <manipulator name="myarm">
+   <base>base</base>
+   <effector>hand_Puma6</effector>
+   <direction>1 0 0</direction>
+ </manipulator>
+</robot>
+"""
+        robot=self.LoadRobotData(xmldata)
+        assert(robot.GetActiveDOF()==8)
+        

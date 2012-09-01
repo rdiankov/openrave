@@ -117,6 +117,19 @@ public:
             else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
 
             }
+            else if( name == "dcontactapprox") {
+                // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
+                int temp=0;
+                _ss >> temp;
+                //Set or unset dContactApprox flag using internal enum
+                if (temp != 0) {
+                    _physics->_surface_mode |= dContactApprox1; //Set
+                }
+                else {
+                    _physics->_surface_mode &= (!dContactApprox1);        //Unset
+                }
+                RAVELOG_DEBUG("surface mode flags: %x\n",_physics->_surface_mode);
+            }
             else {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
             }
@@ -139,8 +152,8 @@ public:
             }
         }
 
-        static const boost::array<string, 8>& GetTags() {
-            static const boost::array<string, 8> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing" }};
+        static const boost::array<string, 9>& GetTags() {
+            static const boost::array<string, 9> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox" }};
             return tags;
         }
 
@@ -177,6 +190,9 @@ The possible properties that can be set are: ";
         _globalfriction = 0.4;
         _globalerp = 0.01;
         _globalcfm = 1e-5;
+        //Default to openrave 0.6.6 behavior, but this really should default to
+        //enable the friction pyramid model.
+        _surface_mode = 0;
         _options = OpenRAVE::PEO_SelfCollisions;
 
         memset(_jointadd, 0, sizeof(_jointadd));
@@ -262,6 +278,7 @@ The possible properties that can be set are: ";
         _globalfriction = r->_globalfriction;
         _globalcfm = r->_globalcfm;
         _globalerp = r->_globalerp;
+        _surface_mode = r->_surface_mode;
         if( !!_odespace && _odespace->IsInitialized() ) {
             dWorldSetERP(_odespace->GetWorld(),_globalerp);
             dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
@@ -584,9 +601,9 @@ private:
 
         // process collisions
         for (int i=0; i<n; i++) {
-            contact[i].surface.mode = 0;
+            contact[i].surface.mode = _surface_mode;
             contact[i].surface.mu = (dReal)_globalfriction;
-            contact[i].surface.mu2 = _globalfriction;
+            contact[i].surface.mu2 = (dReal)_globalfriction;
             //        contact[i].surface.slip1 = 0.7;
             //        contact[i].surface.slip2 = 0.7;
             //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
@@ -640,6 +657,10 @@ private:
     Vector _gravity;
     int _options;
     dReal _globalfriction, _globalcfm, _globalerp;
+    // _surface_mode stores global surface settings used in the
+    // dSurfaceParameters structure in ODE.
+    // See http://ode-wiki.org/wiki/index.php?title=Manual:_Joint_Types_and_Functions
+    int _surface_mode;
 
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);

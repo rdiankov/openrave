@@ -191,6 +191,7 @@ inline void SetSoTransform(SoTransform* ptrans, const RaveTransform<float>& t)
 
 class QtCoinViewer;
 typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
+typedef boost::weak_ptr<QtCoinViewer> QtCoinViewerWeakPtr;
 typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)

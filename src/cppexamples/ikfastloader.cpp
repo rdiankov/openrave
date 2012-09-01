@@ -8,7 +8,7 @@
 
     Example:
     \verbatim
-    ikloader robots/barrettwam.robot.xml Transform6D
+    ikfastloader robots/barrettwam.robot.xml Transform6D
     \endverbatim
 
     Show how to load an ikfast solver from C++ by specifying the robot and iktype.
