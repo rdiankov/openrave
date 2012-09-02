@@ -409,10 +409,7 @@ public:
                 RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
             }
             if( ikdof < (int)pmanip->GetArmIndices().size() ) {
-                std::vector<int> vindices(pmanip->GetArmIndices().size());
-                for(size_t i = 0; i < vindices.size(); ++i) {
-                    vindices[i] = i;
-                }
+                std::vector<int> vindices = pmanip->GetArmIndices();
                 std::vector<int> vsolveindices(ikdof), vfreeindices(vindices.size()-ikdof);
                 while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()])) {
                     std::copy(vindices.begin(),vindices.begin()+ikdof,vsolveindices.begin());
@@ -459,9 +456,9 @@ public:
                 AttributesList atts;
                 atts.push_back(make_pair(string("skipwrite"), string("visual readable sensors physics")));
                 atts.push_back(make_pair(string("target"), probot->GetName()));
-                string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));;
+                string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));
                 // file not found, so create
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%tempfilename));
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=%s --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler

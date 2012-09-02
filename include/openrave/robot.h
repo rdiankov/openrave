@@ -606,7 +606,7 @@ private:
     ///
     /// \param manipname manipulator name
     /// \throw openrave_exception if manipulator not present, will throw an exception
-    virtual void SetActiveManipulator(const std::string& manipname);
+    virtual ManipulatorPtr SetActiveManipulator(const std::string& manipname);
     virtual void SetActiveManipulator(ManipulatorConstPtr pmanip);
     virtual ManipulatorPtr GetActiveManipulator();
     virtual ManipulatorConstPtr GetActiveManipulator() const;
