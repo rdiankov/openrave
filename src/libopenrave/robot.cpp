@@ -1467,18 +1467,19 @@ void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
     }
 }
 
-void RobotBase::SetActiveManipulator(const std::string& manipname)
+RobotBase::ManipulatorPtr RobotBase::SetActiveManipulator(const std::string& manipname)
 {
     if( manipname.size() > 0 ) {
         FOREACH(itmanip,_vecManipulators) {
             if( (*itmanip)->GetName() == manipname ) {
                 _pManipActive = *itmanip;
-                return;
+                return _pManipActive;
             }
         }
         throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
     }
     _pManipActive.reset();
+    return _pManipActive;
 }
 
 RobotBase::ManipulatorPtr RobotBase::GetActiveManipulator()

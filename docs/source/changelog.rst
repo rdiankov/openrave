@@ -3,12 +3,19 @@
 ChangeLog
 #########
 
-Version 0.7.0 Development
+Version 0.8.1 Development
 =========================
 
 Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
+
+Version 0.8.0
+=============
+
+Subversion Revision: r3619
+
+Initial Release: 2012/09/02
 
 Core
 ----
@@ -149,7 +156,7 @@ Misc
 
 * Added :meth:`.misc.OpenRAVEGlobalArguments.parseAndCreateThreadedUser` and :meth:`.misc.SetViewerUserThread` to allow viewer to be run in main thread while user functions are run in a different thread. All examples use this now.
 
-* Added :mod:`.examples.pr2turnlever` example
+* Added :mod:`.examples.pr2turnlever` python example and **orpr2turnlever** C++ example.
 
 * Clang compiler support
 
