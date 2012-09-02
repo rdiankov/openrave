@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 Version 0.8.0
 =============
 
-Subversion Revision: r3619
+Subversion Revision: r3622
 
 Initial Release: 2012/09/02
 

@@ -129,7 +129,7 @@ class TestKinematics(EnvironmentSetup):
                                     deltatrans = Tlinknew[0:3,3] - worldtrans
                                     assert(linalg.norm(deltatrans) < thresh+1e-9) # should always be true
                                     jacobiandeltatrans = dot(Jtrans,deltavalues)
-                                    if dot(jacobiandeltatrans,deltatrans) < 0.8*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
+                                    if dot(jacobiandeltatrans,deltatrans) < 0.75*linalg.norm(jacobiandeltatrans)*linalg.norm(deltatrans):
                                         raise ValueError('jacobian dot failed name=%s,link=%s,dofvalues=%r, deltavalues=%r, jacobiandeltatrans=%r, deltatrans=%r'%(body.GetName(), link.GetName(), dofvaluesnew, deltavalues, jacobiandeltatrans, deltatrans))
                                     
                                     if linalg.norm(jacobiandeltatrans-deltatrans) > thresh*0.1:
