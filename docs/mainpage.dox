@@ -304,14 +304,16 @@ make
 - \ref orconveyormovement.cpp
 - \ref orikfilter.cpp
 - \ref orloadviewer.cpp
-- \ref orshowsensors.cpp
 - \ref ormulticontrol.cpp
-- \ref orpr2turnlever.cpp
+- \ref ormultithreadedplanning.cpp
 - \ref orplanning_door.cpp
 - \ref orplanning_ik.cpp
-- \ref orplanning_planner.cpp
 - \ref orplanning_module.cpp
+- \ref orplanning_multirobot.cpp
+- \ref orplanning_planner.cpp
+- \ref orpr2turnlever.cpp
 - \ref orpythonbinding.cpp
+- \ref orshowsensors.cpp
 - \ref ortrajectory.cpp
 
 \section cpp_examples_otherlib Linking with Other Libraries

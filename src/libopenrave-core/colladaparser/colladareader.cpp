@@ -755,7 +755,7 @@ public:
             _mapJointIds.clear();
         }
         if( pbody->__struri.size() == 0 ) {
-            pbody->__struri = _filename;
+            pbody->__struri = ias->getUrl().str();
         }
 
         // set the name
@@ -955,7 +955,7 @@ public:
             _mapJointIds.clear();
         }
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = _filename;
+            pkinbody->__struri = ikm->getUrl().str();
         }
 
         // check if kmodel has asset/subject, if yes, then set it to the description
@@ -1003,7 +1003,7 @@ public:
         _mapJointIds.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = _filename;
+            pkinbody->__struri = daeURI(*_dae).str();
         }
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {
@@ -1234,6 +1234,7 @@ public:
             plink.reset(new KinBody::Link(pkinbody));
             plink->_name = linkname;
             plink->_mass = 1e-10;
+            plink->_vinertiamoments = Vector(1e-7,1e-7,1e-7);
             plink->_bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);

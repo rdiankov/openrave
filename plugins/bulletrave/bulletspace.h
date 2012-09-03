@@ -59,6 +59,7 @@ public:
             virtual void setWorldTransform(const btTransform& centerOfMassWorldTrans)
             {
                 //m_graphicsWorldTrans = centerOfMassWorldTrans * m_centerOfMassOffset;
+                RAVELOG_INFO(plink->GetName());
                 plink->SetTransform(GetTransform(centerOfMassWorldTrans)*tlocal.inverse());
             }
 
@@ -236,7 +237,9 @@ private:
                 if( mass <= 0 ) {
                     RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass));
                     mass = 1e-7;
-                    localInertia = btVector3(1,1,1);
+                }
+                else if( (*itlink)->GetPrincipalMomentsOfInertia().lengthsqr3() <= 0 ) {
+                    localInertia = btVector3(1e-7,1e-7,1e-7);
                 }
                 btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,link.get(),pshapeparent,localInertia);
                 rbInfo.m_startWorldTransform = GetBtTransform((*itlink)->GetTransform()*link->tlocal);
@@ -402,6 +405,7 @@ private:
 
     static inline btTransform GetBtTransform(const Transform &t)
     {
+        OPENRAVE_ASSERT_OP(RaveFabs(t.rot.lengthsqr4()-1),<=,0.01);
         return btTransform(btQuaternion(t.rot.y,t.rot.z,t.rot.w,t.rot.x),GetBtVector(t.trans));
     }
 
