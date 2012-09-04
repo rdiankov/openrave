@@ -10,6 +10,11 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Misc
+----
+
+* fixed ipython drop-in console with "openrave.py -i" for recent ipython versions (tested up to 0.13)
+
 Version 0.8.0
 =============
 
