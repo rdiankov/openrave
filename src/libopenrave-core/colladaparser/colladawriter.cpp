@@ -577,7 +577,7 @@ private:
         iasout->ias = ias;
 
         if( (int)pcolladainfo->_bindingAxesSIDs.size() != pbody->GetDOF() ) {
-            RAVELOG_WARN("_bindingAxesSIDs.size() != pbody->GetDOF()");
+            RAVELOG_WARN(str(boost::format("_bindingAxesSIDs.size()=%d != pbody->GetDOF()=%d\n")%pcolladainfo->_bindingAxesSIDs.size()%pbody->GetDOF()));
         }
         else {
             std::vector<dReal> vjointvalues;
@@ -592,6 +592,19 @@ private:
                 iasout->vaxissids.at(idof).jointnodesid = str(boost::format("%s/%s")%_GetNodeId(pbody)%pcolladainfo->_bindingAxesSIDs[idof].nodesid);
                 iasout->vaxissids.at(idof).axissid = sparamref;
                 iasout->vaxissids.at(idof).value = vjointvalues.at(idof);
+            }
+            size_t index = pcolladainfo->_bindingAxesSIDs.size();
+            FOREACH(itpassive,pcolladainfo->_bindingPassiveAxesSIDs) {
+                std::string sparamref = str(boost::format("ias_param%d")%index);
+                domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
+                param->setSid(sparamref.c_str());
+                daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itpassive->kmodelaxissidref.c_str());
+                axis_sids axissids;
+                axissids.jointnodesid = str(boost::format("%s/%s")%_GetNodeId(pbody)%itpassive->nodesid);
+                axissids.axissid = sparamref;
+                axissids.value = 0; // should be automatically computed from formulas
+                iasout->vaxissids.push_back(axissids);
+                index += 1;
             }
         }
 

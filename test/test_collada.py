@@ -251,6 +251,7 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Reset()
         
         assert(env.Load('robots/schunk-lwa3.zae'))
+        robot=env.GetRobots()[0]
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme'})
         filedata=open('test_externalref_joints.dae','r').read()
         assert(filedata.find('testscheme:/')>=0)
@@ -258,6 +259,15 @@ class TestCOLLADA(EnvironmentSetup):
         misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
         assert(len(env.GetBodies())==len(env2.GetBodies()))
 
+        env.Reset()
+        env.Load('robots/barrett-hand.dae')
+        robot=env.GetRobots()[0]
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env2.Reset()
+        assert(env2.Load('test_externalref_joints.dae'))
+        misc.CompareBodies(robot,env2.GetRobots()[0])
+        assert(len(env.GetBodies())==len(env2.GetBodies()))
+        
     def test_writekinematicsonly(self):
         self.log.info('test writing kinematics only')
         env=self.env

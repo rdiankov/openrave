@@ -197,7 +197,8 @@ public:
                     // look for the correct placement
                     bool bfound = false;
                     FOREACH(itbinding,listAxisBindings) {
-                        if( itbinding->pkinematicaxis.cast() == pelt ) {
+                        if( ColladaReader::CompareElementsSidToId(itbinding->pkinematicaxis,pelt) > 0 ) {
+                            RAVELOG_DEBUG(str(boost::format("find binding for axis: %s\n")%kinematics_axis_info->getAxis()));
                             itbinding->kinematics_axis_info = kinematics_axis_info;
                             if( !!motion_axis_info ) {
                                 itbinding->motion_axis_info = motion_axis_info;
@@ -812,12 +813,19 @@ public:
                             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
                             if( !!pjointaxis ) {
                                 FOREACH(itaxis, bindings.listAxisBindings) {
-                                    if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody && itaxis->_pjoint->GetDOFIndex() >= 0 ) {
+                                    if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody ) {
                                         if( itaxis->pkinematicaxis == pjointaxis ) {
                                             if( !!itaxis->visualnode ) {
                                                 std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
                                                 if (itmodel != bindings.listModelBindings.end()) {
-                                                    pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                    int dofindex = itaxis->_pjoint->GetDOFIndex();
+                                                    ColladaXMLReadable::AxisBinding axisbinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                    if( dofindex >= 0 ) {
+                                                        pcolladainfo->_bindingAxesSIDs.at(dofindex+itaxis->_iaxis) = axisbinding;
+                                                    }
+                                                    else {
+                                                        pcolladainfo->_bindingPassiveAxesSIDs.push_back(axisbinding);
+                                                    }
                                                 }
                                                 else {
                                                     RAVELOG_WARN("failed to find model bindings");
@@ -1488,7 +1496,7 @@ public:
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
                     FOREACHC(itaxisbinding,bindings.listAxisBindings) {
-                        if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
+                        if (CompareElementsSidToId(vdomaxes[ic], itaxisbinding->pkinematicaxis) > 0) {
                             kinematics_axis_info = itaxisbinding->kinematics_axis_info;
                             motion_axis_info = itaxisbinding->motion_axis_info;
                             break;
@@ -2758,7 +2766,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
+            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
                 if( !!pnewparam->getBool() ) {
                     return pnewparam->getBool()->getValue();
                 }
@@ -2785,7 +2793,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
+            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
                 if( !!pnewparam->getFloat() ) {
                     return pnewparam->getFloat()->getValue();
                 }
@@ -2970,7 +2978,7 @@ public:
 
     virtual void handleError( daeString msg )
     {
-        if( _bOpeningZAE && (( msg == string("Document is empty\n")) ||( msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")) ) ) {
+        if( _bOpeningZAE && (msg == string("Document is empty\n") || msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")  ) ) {
             return;     // collada-dom prints these messages even if no error
         }
         RAVELOG_ERROR(str(boost::format("COLLADA error: %s")%msg));
@@ -3174,7 +3182,7 @@ private:
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
-            if(( children[i]->getElementName() == string("technique")) && children[i]->hasAttribute("profile") &&( children[i]->getAttribute("profile") == string("OpenRAVE")) ) {
+            if( children[i]->getElementName() == string("technique") && children[i]->hasAttribute("profile") && children[i]->getAttribute("profile") == string("OpenRAVE") ) {
                 return children[i];
             }
         }
@@ -3791,6 +3799,55 @@ private:
             return 0;
         }
         return string(elt1->getSid()) == elt2->getSid();
+    }
+
+    static int _CompareElementAttribute(daeElementRef elt1, daeElementRef elt2, const std::string& attr) {
+        if( !elt1 || !elt2 ) {
+            return -1;
+        }
+        if( elt1->typeID() != elt2->typeID() ) {
+            return 0;
+        }
+        if( !elt1->getDocumentURI() || !elt2->getDocumentURI() ) {
+            if( !elt1->getDocumentURI() && !elt2->getDocumentURI() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        daeBool bhas1 = elt1->hasAttribute(attr.c_str());
+        daeBool bhas2 = elt2->hasAttribute(attr.c_str());
+        if( !bhas1 || !bhas2 ) {
+            if( !bhas1 && !bhas1 && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( string(elt1->getDocumentURI()->getURI()) != elt2->getDocumentURI()->getURI() ) {
+            return 0;
+        }
+        return elt1->getAttribute(attr.c_str()) == elt2->getAttribute(attr.c_str());
+    }
+
+    static int CompareElementsSidToId(daeElementRef elt1, daeElementRef elt2) {
+        if( elt1 == elt2 ) {
+            return 1;
+        }
+        if( elt1->hasAttribute("sid") ) {
+            int res = _CompareElementAttribute(elt1, elt2, "sid");
+            if( res == 0 ) {
+                return res;
+            }
+            if( res < 0 ) {
+                // most probably encountered an element like technique_common
+            }
+        }
+        else {
+            // check if the elements have ids
+            if( elt1->hasAttribute("id") ) {
+                return _CompareElementAttribute(elt1, elt2, "id");
+            }
+        }
+        return CompareElementsSidToId(elt1->getParentElement(),elt2->getParentElement());
     }
 
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)

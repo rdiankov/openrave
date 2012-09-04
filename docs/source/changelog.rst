@@ -10,6 +10,11 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+COLLADA
+-------
+
+* fixed bug in binding axes for when reading external robots
+
 Misc
 ----
 
