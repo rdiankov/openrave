@@ -121,18 +121,21 @@ public:
     class ModelBinding
     {
 public:
-        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel) : _node(node), _ikmodel(ikmodel) {
+        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : _node(node), _ikmodel(ikmodel) {
+            _listInstanceScopeKModel = listInstanceScope;
         }
         domNodeRef _node;
         domInstance_kinematics_modelRef _ikmodel;
         domInstance_physics_modelRef _ipmodel;
+        std::list<daeElementRef> _listInstanceScopeKModel;
     };
 
     /// \brief bindings for joints between different specs
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+            _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
                 daeElement* pae = pvisualtrans->getParentElement();
@@ -161,6 +164,7 @@ public:
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
         KinBody::JointPtr _pjoint;
+        std::list<daeElementRef> _listInstanceScopeAxis; // <joint>
         int _iaxis;
     };
 
@@ -383,7 +387,8 @@ public:
             }
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 KinBodyPtr pbody;
-                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings, listInstanceScope) && !!pbody ) {
                     RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%pbody->GetName()));
                     _penv->Add(pbody,true);
                     _SetDOFValues(pbody,bindings);
@@ -391,7 +396,8 @@ public:
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 KinBodyPtr pbody;
-                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings, listInstanceScope) && !!pbody ) {
                     RAVELOG_VERBOSE(str(boost::format("Kinbody %s added to the environment\n")%pbody->GetName()));
                     _penv->Add(pbody,true);
                     _SetDOFValues(pbody,bindings);
@@ -409,7 +415,8 @@ public:
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
+                std::list<daeElementRef> listInstanceScope;
+                KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes, listInstanceScope);
                 if( !!pbody ) {
                     _penv->Add(pbody, true);
                 }
@@ -573,7 +580,8 @@ public:
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 KinBodyPtr pbody=probot;
-                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings, listInstanceScope) && !!pbody ) {
                     probot = RaveInterfaceCast<RobotBase>(pbody);
                     bSuccess = true;
                     break;
@@ -589,7 +597,8 @@ public:
 
         KinBodyPtr pbody = probot;
         FOREACH(it, listPossibleBodies) {
-            if( ExtractKinematicsModel(pbody, it->first, *it->second) && !!pbody ) {
+            std::list<daeElementRef> listInstanceScope;
+            if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
                 bSuccess = true;
                 break;
             }
@@ -648,8 +657,19 @@ public:
             KinematicsSceneBindings bindings;
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
+            for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings, listInstanceScope) && !!pbody ) {
+                    bSuccess = true;
+                    break;
+                }
+            }
+            if( bSuccess ) {
+                break;
+            }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings, listInstanceScope) && !!pbody ) {
                     bSuccess = true;
                     break;
                 }
@@ -667,7 +687,8 @@ public:
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
+                std::list<daeElementRef> listInstanceScope;
+                pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes, listInstanceScope);
                 if( !!pbody ) {
                     bSuccess = true;
                     break;
@@ -720,7 +741,7 @@ public:
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
     /// \param probot the robot to be created from the system
-    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings)
+    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         if( !ias ) {
             return false;
@@ -794,7 +815,10 @@ public:
                     }
                 }
             }
-            if( !ExtractArticulatedSystem(pbody,ias_new,bindings) ) {
+            listInstanceScope.push_back(ias);
+            bool bsuccess = ExtractArticulatedSystem(pbody,ias_new,bindings, listInstanceScope);
+            listInstanceScope.pop_back();
+            if( !bsuccess ) {
                 return false;
             }
 
@@ -882,9 +906,14 @@ public:
             std::map<domInstance_physics_modelRef,int> mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
-                ExtractKinematicsModel(pbody,ikmodel,bindings);
+                listInstanceScope.push_back(ias);
+                bool bsuccess = ExtractKinematicsModel(pbody,ikmodel,bindings,listInstanceScope);
+
+                if( !bsuccess ) {
+                    RAVELOG_WARN("failed to extract kinematics model\n");
+                }
                 FOREACH(it, bindings.listModelBindings) {
-                    if( it->_ikmodel == ikmodel ) {
+                    if( it->_ikmodel == ikmodel && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
                         if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
                             mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURIs.size();
                             ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
@@ -893,6 +922,7 @@ public:
                         break;
                     }
                 }
+                listInstanceScope.pop_back();
             }
 
             pcolladainfo->_bindingLinkSIDs.resize(pbody->GetLinks().size());
@@ -927,7 +957,7 @@ public:
         return true;
     }
 
-    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings)
+    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         if( !ikm ) {
             return false;
@@ -978,7 +1008,8 @@ public:
         // find matching visual node
         domNodeRef pvisualnode;
         FOREACH(it, bindings.listModelBindings) {
-            if( it->_ikmodel == ikm ) {
+            // have to use listInstanceScope
+            if( it->_ikmodel == ikm && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0 ) {
                 pvisualnode = it->_node;
                 break;
             }
@@ -994,7 +1025,7 @@ public:
             pkinbody->SetName(ikm->getID());
         }
 
-        if (!_ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, bindings)) {
+        if (!_ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, bindings, listInstanceScope)) {
             RAVELOG_WARN(str(boost::format("failed to load kinbody from kinematics model %s\n")%kmodel->getID()));
             return false;
         }
@@ -1002,7 +1033,7 @@ public:
     }
 
     /// \brief extract one rigid link composed of the node hierarchy
-    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
+    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return KinBodyPtr();
@@ -1035,7 +1066,7 @@ public:
     }
 
     /// \brief append the kinematics model to the openrave kinbody
-    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings)
+    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
@@ -1326,7 +1357,9 @@ public:
         }
 
         if (!pdomlink) {
-            ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>());
+            if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
+            }
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d")%pdomlink->getAttachment_full_array().getCount()));
@@ -1338,7 +1371,7 @@ public:
 
             // Get the geometry
             if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
-                RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
+                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
             }
 
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
@@ -1721,7 +1754,6 @@ public:
         }
 
         if( !bhasgeometry ) {
-            RAVELOG_DEBUG(str(boost::format("node %s has no geometry\n")%pdomnode->getName()));
             return false;
         }
 
@@ -2638,13 +2670,13 @@ public:
         return false;
     }
 
-    static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent)
+    static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!paddr->getSIDREF() ) {
             return daeSidRef(paddr->getSIDREF()->getValue(),parent).resolve().elt;
         }
         if (!!paddr->getParam()) {
-            return searchBinding(paddr->getParam()->getValue(),parent);
+            return searchBinding(paddr->getParam()->getValue(),parent, true, listInstanceScope);
         }
         return NULL;
     }
@@ -2657,7 +2689,7 @@ public:
     /// Search a given parameter reference and stores the new reference to search.
     /// \param ref the reference name to search
     /// \param parent The array of parameter where the method searchs.
-    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning=true)
+    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         if( !parent ) {
             return NULL;
@@ -2665,22 +2697,22 @@ public:
         daeElement* pelt = NULL;
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene>(parent.cast());
         if( !!kscene ) {
-            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array());
+            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
-            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array());
+            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array(), listInstanceScope);
         }
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system>(parent.cast());
         if( !!articulated_system ) {
             if( !!articulated_system->getKinematics() ) {
-                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array());
+                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array(), listInstanceScope);
                 if( !!pelt ) {
                     return pelt;
                 }
             }
             if( !!articulated_system->getMotion() ) {
-                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system());
+                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system(), true, listInstanceScope);
             }
             return NULL;
         }
@@ -2688,18 +2720,21 @@ public:
         daeElementRef pbindelt;
         const domKinematics_bind_Array* pbindarray = NULL;
         const domKinematics_newparam_Array* pnewparamarray = NULL;
-        domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(parent.cast());
+        domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(parent);
+        daeElementRef instelt;
         if( !!ias ) {
             pbindarray = &ias->getBind_array();
             pbindelt = ias->getUrl().getElement();
             pnewparamarray = &ias->getNewparam_array();
+            instelt = ias;
         }
         if( !pbindarray || !pbindelt ) {
-            domInstance_kinematics_modelRef ikm = daeSafeCast<domInstance_kinematics_model>(parent.cast());
+            domInstance_kinematics_modelRef ikm = daeSafeCast<domInstance_kinematics_model>(parent);
             if( !!ikm ) {
                 pbindarray = &ikm->getBind_array();
                 pbindelt = ikm->getUrl().getElement();
                 pnewparamarray = &ikm->getNewparam_array();
+                instelt = ikm;
             }
         }
         if( !!pbindarray && !!pbindelt ) {
@@ -2708,10 +2743,16 @@ public:
                 if( !!pbind->getSymbol() &&( strcmp(pbind->getSymbol(), ref) == 0) ) {
                     // found a match
                     if( !!pbind->getParam() ) {
-                        //return searchBinding(pbind->getParam()->getRef(), pbindelt);
+                        //return searchBinding(pbind->getParam()->getRef(), pbindelt, true, listInstanceScope);
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(pbind->getParam()->getRef(), pbindelt).resolve().elt;
                     }
                     else if( !!pbind->getSIDREF() ) {
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(pbind->getSIDREF()->getValue(), pbindelt).resolve().elt;
                     }
                 }
@@ -2720,6 +2761,9 @@ public:
                 domKinematics_newparamRef newparam = (*pnewparamarray)[inewparam];
                 if( !!newparam->getSid() &&( strcmp(newparam->getSid(), ref) == 0) ) {
                     if( !!newparam->getSIDREF() ) {     // can only bind with SIDREF
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
                     }
                     RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%getSid(newparam)));
@@ -2732,10 +2776,10 @@ public:
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
@@ -2744,10 +2788,10 @@ public:
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
@@ -3085,7 +3129,8 @@ private:
             }
 
             //  kinematics information
-            daeElement* pelt = searchBinding(kbindmodel,kscene);
+            std::list<daeElementRef> listInstanceScope;
+            daeElement* pelt = searchBinding(kbindmodel,kscene, listInstanceScope);
             domInstance_kinematics_modelRef ikmodel = daeSafeCast<domInstance_kinematics_model>(pelt);
             if (!ikmodel) {
                 if( !pelt ) {
@@ -3096,7 +3141,7 @@ private:
                 }
                 continue;
             }
-            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel));
+            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel, listInstanceScope));
         }
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
@@ -3110,7 +3155,8 @@ private:
 //                continue;
             }
 
-            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
+            std::list<daeElementRef> listInstanceScope;
+            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene, listInstanceScope);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {
                 RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
@@ -3120,7 +3166,8 @@ private:
             domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
-                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene);
+                    std::list<daeElementRef> listInstanceScope;
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScope);
                 }
                 else {
                     pelt = bindjoint->getValue();
@@ -3128,7 +3175,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene,jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL));
+            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -3955,6 +4002,25 @@ private:
         daeURI newdocuri = _ResolveInverse(*docuri);
         daeURI newuri(newdocuri,string("#")+id);
         return newuri.str();
+    }
+
+    // top-level resolved has to match
+    int _CompareScopeElements(const list<daeElementRef>& listScopeResolved, const list<daeElementRef>& listScopeCurrent)
+    {
+        if( listScopeResolved.size() > listScopeCurrent.size() ) {
+            return 0;
+        }
+        list<daeElementRef>::const_iterator it0 = listScopeResolved.begin();
+        list<daeElementRef>::const_iterator it1 = listScopeCurrent.begin();
+        while(it0 != listScopeResolved.end()) {
+            int res = _CompareElementAttribute(*it0,*it1,"sid");
+            if( res <= 0 ) {
+                return res;
+            }
+            ++it0;
+            ++it1;
+        }
+        return 1;
     }
 
     boost::shared_ptr<DAE> _dae;

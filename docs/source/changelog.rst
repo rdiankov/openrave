@@ -13,7 +13,7 @@ Initial Release: **Unreleased**
 COLLADA
 -------
 
-* fixed bug in binding axes for when reading external robots
+* fixed bug in binding models and axes when reading external files
 
 Misc
 ----

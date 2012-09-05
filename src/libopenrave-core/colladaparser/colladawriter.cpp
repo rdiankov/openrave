@@ -561,6 +561,7 @@ private:
     /// \brief try to write kinbody as an external reference
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
     {
+        RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
         ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
 
         // save
@@ -634,7 +635,7 @@ private:
 
                 // write bindings
                 {
-                    std::string smodelref = str(boost::format("ikmodel%d")%imodel);
+                    std::string smodelref = str(boost::format("ikmodel%d_%d")%pbody->GetEnvironmentId()%imodel);
                     domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
                     param->setSid(smodelref.c_str());
                     daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
@@ -729,19 +730,19 @@ private:
         iasout->pbody = pbody;
         iasout->ias = ias;
 
-        // motion info
+        // kinematics info, create first
+        domArticulated_systemRef articulated_system_kinematics = daeSafeCast<domArticulated_system>(_articulatedSystemsLib->add(COLLADA_ELEMENT_ARTICULATED_SYSTEM));
+        articulated_system_kinematics->setId(askid.c_str());
+        domKinematicsRef kinematics = daeSafeCast<domKinematics>(articulated_system_kinematics->add(COLLADA_ELEMENT_KINEMATICS));
+        domKinematics_techniqueRef kt = daeSafeCast<domKinematics_technique>(kinematics->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
+
+        // motion info, create second
         domArticulated_systemRef articulated_system_motion = daeSafeCast<domArticulated_system>(_articulatedSystemsLib->add(COLLADA_ELEMENT_ARTICULATED_SYSTEM));
         articulated_system_motion->setId(asmid.c_str());
         domMotionRef motion = daeSafeCast<domMotion>(articulated_system_motion->add(COLLADA_ELEMENT_MOTION));
         domMotion_techniqueRef mt = daeSafeCast<domMotion_technique>(motion->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
         domInstance_articulated_systemRef ias_motion = daeSafeCast<domInstance_articulated_system>(motion->add(COLLADA_ELEMENT_INSTANCE_ARTICULATED_SYSTEM));
         ias_motion->setUrl(str(boost::format("#%s")%askid).c_str());
-
-        // kinematics info
-        domArticulated_systemRef articulated_system_kinematics = daeSafeCast<domArticulated_system>(_articulatedSystemsLib->add(COLLADA_ELEMENT_ARTICULATED_SYSTEM));
-        articulated_system_kinematics->setId(askid.c_str());
-        domKinematicsRef kinematics = daeSafeCast<domKinematics>(articulated_system_kinematics->add(COLLADA_ELEMENT_KINEMATICS));
-        domKinematics_techniqueRef kt = daeSafeCast<domKinematics_technique>(kinematics->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(pbody,kinematics,askid);
 
@@ -1534,6 +1535,9 @@ private:
         LINKOUTPUT out;
         string linksid = _GetLinkSid(plink);
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
+        if( plink->GetName().size() == 0 ) {
+            RAVELOG_WARN(str(boost::format("body %s link %d has empty name!")%plink->GetParent()->GetName()%plink->GetIndex()));
+        }
         pdomlink->setName(plink->GetName().c_str());
         pdomlink->setSid(linksid.c_str());
 
