@@ -13,7 +13,11 @@ Initial Release: **Unreleased**
 COLLADA
 -------
 
-* fixed bug in binding models and axes when reading external files
+* fixed bug in collada reader when binding models and axes when reading external files
+
+* allow reading and writing of collision information for each link via **<link_collision_state>**
+
+* allow writing of extra data like manipualtors, enabled links for external files.
 
 Misc
 ----

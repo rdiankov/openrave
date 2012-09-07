@@ -232,7 +232,7 @@ class TestCOLLADA(EnvironmentSetup):
         misc.CompareBodies(env.GetKinBody('mug1'),env2.GetKinBody('mug1'))
 
     def test_externalref_joints(self):
-        self.log.info('test collada loading with external references')
+        self.log.info('test basic collada saving/loading with external references')
         env=self.env
         reffile = 'openrave:/robots/schunk-lwa3.zae'
         env2=Environment()
