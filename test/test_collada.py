@@ -454,3 +454,40 @@ class TestCOLLADA(EnvironmentSetup):
         robot=self.LoadRobotData(xmldata)
         assert(robot.GetActiveDOF()==8)
         
+    def test_external_extrainfo(self):
+        self.log.info('test saving extra info along with external references')
+        env=self.env
+        robot=self.LoadRobot('robots/schunk-lwa3.zae')
+        enabled = [False]*len(robot.GetLinks())
+        for ilink,link in enumerate(robot.GetLinks()):
+            enabled[ilink] = ilink%2
+            link.Enable(enabled[ilink])
+        env.Save('test_external_extrainfo.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'link_collision_state'})
+
+        env2=Environment()
+        env2.Load('test_external_extrainfo.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2)
+
+        with env:
+            # change limits, add manipulators, etc
+            minfo=Robot.ManipulatorInfo()
+            minfo._name = 'mynewmanip'
+            minfo._sBaseLinkName = robot.GetLinks()[0].GetName()
+            minfo._sEffectorLinkName = robot.GetLinks()[4].GetName()
+            minfo._tLocalTool = matrixFromAxisAngle([1,1,1])
+            minfo._tLocalTool[0:3,3] = [0.1,0.2,0.3]
+            minfo._vdirection = [-1,0,0]
+            minfo._vGripperJointNames = ['j6']
+            minfo._vClosingDirection = [-1.0]
+            robot.AddManipulator(minfo)
+            #robot.SetDOFLimits(-linspace(0.4,0.8,robot.GetDOF()),linspace(1.4,1.8,robot.GetDOF()))
+            #robot.SetDOFVelocityLimits(linspace(1,10,robot.GetDOF()))
+            #robot.SetDOFAccelerationLimits(linspace(10,100,robot.GetDOF()))
+            #robot.SetDOFWeights(linspace(0.1,0.5,robot.GetDOF()))
+            env.Save('test_external_extrainfo2.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'*'})
+        
+        env2=Environment()
+        env2.Load('test_external_extrainfo2.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2)
