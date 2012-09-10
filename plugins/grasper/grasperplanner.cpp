@@ -125,7 +125,7 @@ public:
         }
 
         if( (int)_parameters->vinitialconfig.size() == _robot->GetActiveDOF() ) {
-            _robot->SetActiveDOFValues(_parameters->vinitialconfig,true);
+            _robot->SetActiveDOFValues(_parameters->vinitialconfig,KinBody::CLA_CheckLimitsSilent);
         }
 
         Transform tbase = pbase->GetTransform(), trobot = _robot->GetTransform();
@@ -402,7 +402,7 @@ public:
             if( num_iters <= 1 ) {
                 num_iters = 2; // need at least 2 iterations because of coarse/fine step tuning
             }
-            _robot->SetActiveDOFValues(dofvals,true);
+            _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
             _robot->GetActiveDOFValues(dofvals);
             int ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
             if( ct&CT_CollisionMask ) {
@@ -472,7 +472,7 @@ public:
         }
 
         bool bAddLastPoint = true;
-        _robot->SetActiveDOFValues(dofvals,true);
+        _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
         _robot->GetActiveDOFValues(dofvals);
         for(int q = 0; q < (int)_vlinks.size(); q++) {
             int ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
