@@ -19,6 +19,8 @@ COLLADA
 
 * allow writing of extra data like manipualtors, enabled links for external files.
 
+* fixed transparency writing/reading. In COLLADA transparency=1 is opaque.
+
 Misc
 ----
 

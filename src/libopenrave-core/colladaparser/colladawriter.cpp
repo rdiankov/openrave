@@ -1494,7 +1494,7 @@ private:
         _SetVector4(pdiffusecolor->getValue(), geom->GetDiffuseColor());
 
         domFx_common_float_or_paramRef ptransparency = daeSafeCast<domFx_common_float_or_param>(pphong->add(COLLADA_ELEMENT_TRANSPARENCY));
-        daeSafeCast<domFx_common_float_or_param::domFloat>(ptransparency->add(COLLADA_ELEMENT_FLOAT))->setValue(geom->GetTransparency());
+        daeSafeCast<domFx_common_float_or_param::domFloat>(ptransparency->add(COLLADA_ELEMENT_FLOAT))->setValue(1-geom->GetTransparency());
         return pdomeff;
     }
 

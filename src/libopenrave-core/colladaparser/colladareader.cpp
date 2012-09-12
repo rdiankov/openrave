@@ -1366,7 +1366,10 @@ public:
             //  Process all atached links
             for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
                 domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
-
+                if( !pattfull->getJoint() ) {
+                    RAVELOG_WARN(str(boost::format("no joint defined for attachment_full in link %s node %s")%plink->GetName()%pdomnode->getName()));
+                    continue;
+                }
                 // get link kinematics transformation
                 TransformMatrix tatt = _ExtractFullTransform(pattfull);
 
@@ -1806,7 +1809,11 @@ public:
                         geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
-                        geom._fTransparency = pphong->getTransparency()->getFloat()->getValue();
+                        geom._fTransparency = 1-pphong->getTransparency()->getFloat()->getValue();
+                        if( geom._fTransparency >= 1 ) {
+                            RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
+                            geom._fTransparency = 0;
+                        }
                     }
                 }
             }
