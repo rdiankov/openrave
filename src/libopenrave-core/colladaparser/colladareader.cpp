@@ -2720,22 +2720,22 @@ public:
         daeElement* pelt = NULL;
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene>(parent.cast());
         if( !!kscene ) {
-            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), listInstanceScope);
+            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), bLogWarning, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
-            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array(), listInstanceScope);
+            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array(), bLogWarning, listInstanceScope);
         }
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system>(parent.cast());
         if( !!articulated_system ) {
             if( !!articulated_system->getKinematics() ) {
-                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array(), listInstanceScope);
+                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array(), bLogWarning, listInstanceScope);
                 if( !!pelt ) {
                     return pelt;
                 }
             }
             if( !!articulated_system->getMotion() ) {
-                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system(), true, listInstanceScope);
+                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system(), bLogWarning, listInstanceScope);
             }
             return NULL;
         }
@@ -2797,7 +2797,7 @@ public:
             // resolve the articulated_system, is this necessary?
             domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
             if( !!articulated_system ) {
-                return searchBinding(ref, articulated_system, true, listInstanceScope);
+                return searchBinding(ref, articulated_system, bLogWarning, listInstanceScope);
             }
         }
         if( bLogWarning ) {
@@ -2806,7 +2806,7 @@ public:
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray, std::list<daeElementRef>& listInstanceScope)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
             daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
@@ -2814,11 +2814,13 @@ public:
                 return pelt;
             }
         }
-        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        if( bLogWarning ) {
+            RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        }
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray, std::list<daeElementRef>& listInstanceScope)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
             daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
@@ -2826,7 +2828,9 @@ public:
                 return pelt;
             }
         }
-        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        if( bLogWarning ) {
+            RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        }
         return NULL;
     }
 
@@ -3408,7 +3412,7 @@ private:
                                 plink = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link"));
                             }
                             if( !plink ) {
-                                RAVELOG_WARN(str(boost::format("failed to resolve link %s %s\n")%pelt->getAttribute("link")));
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
                                 continue;
                             }
                             resolveCommon_bool_or_param(pelt, referenceElt, plink->_bIsEnabled);
