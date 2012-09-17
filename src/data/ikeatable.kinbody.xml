@@ -6,7 +6,7 @@
 <!-- x Axis = Width , y Axis = Length , Z Axis = Height -->
 
 <KinBody name="IkeaTable">
-    <Body type="dynamic">
+    <Body name="base" type="dynamic">
         <!-- Mass(kg)=10.6 -->
         <Mass type="mimicgeom">
             <total>10.6</total>
