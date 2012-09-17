@@ -98,3 +98,8 @@ Directly Launching Planners
 ---------------------------
 
 .. literalinclude:: openravepy_examples/directly_launch_planners.py
+
+Sampling Trajectory
+-------------------
+
+.. literalinclude:: openravepy_examples/sampling_trajectory.py

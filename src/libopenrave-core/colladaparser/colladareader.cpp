@@ -28,6 +28,14 @@ class ColladaReader : public daeErrorHandler
         }
         return t->getSid();
     }
+    template <typename T>
+    inline static std::string getElementId(T t)
+    {
+        if( !t->getId() ) {
+            return "(None)";
+        }
+        return t->getId();
+    }
 
     class daeOpenRAVEURIResolver : public daeURIResolver
     {
@@ -121,18 +129,22 @@ public:
     class ModelBinding
     {
 public:
-        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel) : _node(node), _ikmodel(ikmodel) {
+        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : _node(node), _ikmodel(ikmodel) {
+            _listInstanceScopeKModel = listInstanceScope;
         }
         domNodeRef _node;
         domInstance_kinematics_modelRef _ikmodel;
         domInstance_physics_modelRef _ipmodel;
+        std::list<daeElementRef> _listInstanceScopeKModel;
+        domKinematics_modelRef _kmodel; // the resolved model from _ikmodel
     };
 
     /// \brief bindings for joints between different specs
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+            _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
                 daeElement* pae = pvisualtrans->getParentElement();
@@ -161,6 +173,7 @@ public:
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
         KinBody::JointPtr _pjoint;
+        std::list<daeElementRef> _listInstanceScopeAxis; // <joint>
         int _iaxis;
     };
 
@@ -197,7 +210,8 @@ public:
                     // look for the correct placement
                     bool bfound = false;
                     FOREACH(itbinding,listAxisBindings) {
-                        if( itbinding->pkinematicaxis.cast() == pelt ) {
+                        if( ColladaReader::CompareElementsSidToId(itbinding->pkinematicaxis,pelt) > 0 ) {
+                            RAVELOG_DEBUG(str(boost::format("find binding for axis: %s\n")%kinematics_axis_info->getAxis()));
                             itbinding->kinematics_axis_info = kinematics_axis_info;
                             if( !!motion_axis_info ) {
                                 itbinding->motion_axis_info = motion_axis_info;
@@ -382,7 +396,8 @@ public:
             }
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 KinBodyPtr pbody;
-                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], bindings, listInstanceScope) && !!pbody ) {
                     RAVELOG_DEBUG(str(boost::format("Robot %s added to the environment ...\n")%pbody->GetName()));
                     _penv->Add(pbody,true);
                     _SetDOFValues(pbody,bindings);
@@ -390,7 +405,8 @@ public:
             }
             for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
                 KinBodyPtr pbody;
-                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings, listInstanceScope) && !!pbody ) {
                     RAVELOG_VERBOSE(str(boost::format("Kinbody %s added to the environment\n")%pbody->GetName()));
                     _penv->Add(pbody,true);
                     _SetDOFValues(pbody,bindings);
@@ -408,7 +424,8 @@ public:
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
+                std::list<daeElementRef> listInstanceScope;
+                KinBodyPtr pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes, listInstanceScope);
                 if( !!pbody ) {
                     _penv->Add(pbody, true);
                 }
@@ -572,7 +589,8 @@ public:
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
                 KinBodyPtr pbody=probot;
-                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings, listInstanceScope) && !!pbody ) {
                     probot = RaveInterfaceCast<RobotBase>(pbody);
                     bSuccess = true;
                     break;
@@ -588,7 +606,8 @@ public:
 
         KinBodyPtr pbody = probot;
         FOREACH(it, listPossibleBodies) {
-            if( ExtractKinematicsModel(pbody, it->first, *it->second) && !!pbody ) {
+            std::list<daeElementRef> listInstanceScope;
+            if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
                 bSuccess = true;
                 break;
             }
@@ -649,7 +668,8 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!pbody ) {
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings, listInstanceScope) && !!pbody ) {
                     bSuccess = true;
                     break;
                 }
@@ -662,7 +682,8 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
-            if( ExtractKinematicsModel(pbody, it->first, *it->second) && !!pbody ) {
+            std::list<daeElementRef> listInstanceScope;
+            if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
                 bSuccess = true;
                 break;
             }
@@ -676,7 +697,8 @@ public:
         if (!!allscene->getInstance_visual_scene()) {
             domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
             for (size_t node = 0; node < visual_scene->getNode_array().getCount(); node++) {
-                pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes);
+                std::list<daeElementRef> listInstanceScope;
+                pbody = _ExtractKinematicsModel(visual_scene->getNode_array()[node], KinematicsSceneBindings(),vprocessednodes, listInstanceScope);
                 if( !!pbody ) {
                     bSuccess = true;
                     break;
@@ -729,7 +751,7 @@ public:
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
     /// \param probot the robot to be created from the system
-    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings)
+    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         if( !ias ) {
             return false;
@@ -762,10 +784,10 @@ public:
                 }
             }
             _mapJointUnits.clear();
-            _mapJointIds.clear();
+            _mapJointSids.clear();
         }
         if( pbody->__struri.size() == 0 ) {
-            pbody->__struri = _filename;
+            pbody->__struri = ias->getUrl().str();
         }
 
         // set the name
@@ -803,7 +825,10 @@ public:
                     }
                 }
             }
-            if( !ExtractArticulatedSystem(pbody,ias_new,bindings) ) {
+            listInstanceScope.push_back(ias);
+            bool bsuccess = ExtractArticulatedSystem(pbody,ias_new,bindings, listInstanceScope);
+            listInstanceScope.pop_back();
+            if( !bsuccess ) {
                 return false;
             }
 
@@ -822,15 +847,22 @@ public:
                             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
                             if( !!pjointaxis ) {
                                 FOREACH(itaxis, bindings.listAxisBindings) {
-                                    if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody && itaxis->_pjoint->GetDOFIndex() >= 0 ) {
+                                    if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody ) {
                                         if( itaxis->pkinematicaxis == pjointaxis ) {
                                             if( !!itaxis->visualnode ) {
                                                 std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
                                                 if (itmodel != bindings.listModelBindings.end()) {
-                                                    pcolladainfo->_bindingAxesSIDs.at(itaxis->_pjoint->GetDOFIndex()+itaxis->_iaxis) = ColladaXMLReadable::AxisBinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                    int dofindex = itaxis->_pjoint->GetDOFIndex();
+                                                    ColladaXMLReadable::AxisBinding axisbinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                    if( dofindex >= 0 ) {
+                                                        pcolladainfo->_bindingAxesSIDs.at(dofindex+itaxis->_iaxis) = axisbinding;
+                                                    }
+                                                    else {
+                                                        pcolladainfo->_bindingPassiveAxesSIDs.push_back(axisbinding);
+                                                    }
                                                 }
                                                 else {
-                                                    RAVELOG_WARN("failed to find model bindings");
+                                                    RAVELOG_WARN(str(boost::format("failed to find model bindings for node id=%s")%getElementId(itaxis->visualnode)));
                                                 }
                                             }
                                         }
@@ -876,7 +908,7 @@ public:
                     pbody = RaveCreateRobot(_penv, "");
                 }
                 _mapJointUnits.clear();
-                _mapJointIds.clear();
+                _mapJointSids.clear();
             }
 
             ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
@@ -884,9 +916,14 @@ public:
             std::map<domInstance_physics_modelRef,int> mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
-                ExtractKinematicsModel(pbody,ikmodel,bindings);
+                listInstanceScope.push_back(ias);
+                bool bsuccess = ExtractKinematicsModel(pbody,ikmodel,bindings,listInstanceScope);
+
+                if( !bsuccess ) {
+                    RAVELOG_WARN("failed to extract kinematics model\n");
+                }
                 FOREACH(it, bindings.listModelBindings) {
-                    if( it->_ikmodel == ikmodel ) {
+                    if( it->_ikmodel == ikmodel && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
                         if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
                             mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURIs.size();
                             ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
@@ -895,6 +932,7 @@ public:
                         break;
                     }
                 }
+                listInstanceScope.pop_back();
             }
 
             pcolladainfo->_bindingLinkSIDs.resize(pbody->GetLinks().size());
@@ -921,15 +959,16 @@ public:
 
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
         if( !!probot ) {
-            ExtractRobotManipulators(probot, articulated_system);
-            ExtractRobotAttachedSensors(probot, articulated_system);
-            ExtractRobotAttachedActuators(probot, articulated_system);
+            ExtractRobotManipulators(probot, articulated_system, bindings);
+            ExtractRobotAttachedSensors(probot, articulated_system, bindings);
+            ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
+        _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
         return true;
     }
 
-    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings)
+    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         if( !ikm ) {
             return false;
@@ -939,6 +978,12 @@ public:
         if (!kmodel) {
             RAVELOG_WARN(str(boost::format("%s does not reference valid kinematics\n")%getSid(ikm)));
             return false;
+        }
+        FOREACH(it, bindings.listModelBindings) {
+            if( it->_ikmodel == ikm && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
+                it->_kmodel = kmodel;
+                break;
+            }
         }
 
         if( !pkinbody ) {
@@ -962,10 +1007,10 @@ public:
                 pkinbody = RaveCreateKinBody(_penv,"");
             }
             _mapJointUnits.clear();
-            _mapJointIds.clear();
+            _mapJointSids.clear();
         }
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = _filename;
+            pkinbody->__struri = ikm->getUrl().str();
         }
 
         // check if kmodel has asset/subject, if yes, then set it to the description
@@ -980,7 +1025,8 @@ public:
         // find matching visual node
         domNodeRef pvisualnode;
         FOREACH(it, bindings.listModelBindings) {
-            if( it->_ikmodel == ikm ) {
+            // have to use listInstanceScope
+            if( it->_ikmodel == ikm && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0 ) {
                 pvisualnode = it->_node;
                 break;
             }
@@ -996,7 +1042,7 @@ public:
             pkinbody->SetName(ikm->getID());
         }
 
-        if (!_ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, bindings)) {
+        if (!_ExtractKinematicsModel(pkinbody, kmodel, pvisualnode, bindings, listInstanceScope)) {
             RAVELOG_WARN(str(boost::format("failed to load kinbody from kinematics model %s\n")%kmodel->getID()));
             return false;
         }
@@ -1004,16 +1050,16 @@ public:
     }
 
     /// \brief extract one rigid link composed of the node hierarchy
-    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
+    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return KinBodyPtr();
         }
         _mapJointUnits.clear();
-        _mapJointIds.clear();
+        _mapJointSids.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = _filename;
+            pkinbody->__struri = daeURI(*_dae).str();
         }
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {
@@ -1037,13 +1083,13 @@ public:
     }
 
     /// \brief append the kinematics model to the openrave kinbody
-    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings)
+    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
             pkinbody = RaveCreateKinBody(_penv);
             _mapJointUnits.clear();
-            _mapJointIds.clear();
+            _mapJointSids.clear();
         }
         if(( pkinbody->GetName().size() == 0) && !!kmodel->getName() ) {
             pkinbody->SetName(kmodel->getName());
@@ -1095,7 +1141,7 @@ public:
             }
 
             // find the target joint
-            KinBody::JointPtr pjoint = _getJointFromRef(pf->getTarget()->getParam()->getValue(),pf,pkinbody).first;
+            KinBody::JointPtr pjoint = _getJointFromRef(pf->getTarget()->getParam()->getValue(),pf,pkinbody, bindings).first;
             if (!pjoint) {
                 continue;
             }
@@ -1130,10 +1176,10 @@ public:
                         std::string equationtype = pequation->getAttribute("type");
                         KinBody::JointPtr pjointtarget;
                         if( pequation->hasAttribute("target") ) {
-                            pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody).first;
+                            pjointtarget = _getJointFromRef(pequation->getAttribute("target").c_str(),pf,pkinbody, bindings).first;
                         }
                         try {
-                            std::string eq = _ExtractMathML(pf,pkinbody,children[0]);
+                            std::string eq = _ExtractMathML(pf,pkinbody,children[0],bindings);
                             if( ftargetunit != 1 ) {
                                 eq = str(boost::format("%f*(%s)")%ftargetunit%eq);
                             }
@@ -1168,7 +1214,7 @@ public:
                 try {
                     pf->getTechnique_common()->getChildren(children);
                     for(size_t ic = 0; ic < children.getCount(); ++ic) {
-                        string eq = _ExtractMathML(pf,pkinbody,children[ic]);
+                        string eq = _ExtractMathML(pf,pkinbody,children[ic],bindings);
                         if( ftargetunit != 1 ) {
                             eq = str(boost::format("%f*(%s)")%ftargetunit%eq);
                         }
@@ -1184,36 +1230,7 @@ public:
             }
         }
 
-        // read the collision data
-        for(size_t ie = 0; ie < kmodel->getExtra_array().getCount(); ++ie) {
-            domExtraRef pextra = kmodel->getExtra_array()[ie];
-            if( strcmp(pextra->getType(), "collision") == 0 ) {
-                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
-                if( !!tec ) {
-                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
-                        daeElementRef pelt = tec->getContents()[ic];
-                        if( pelt->getElementName() == string("ignore_link_pair") ) {
-                            domLinkRef pdomlink0 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link0"), kmodel).resolve().elt);
-                            domLinkRef pdomlink1 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link1"), kmodel).resolve().elt);
-                            if( !pdomlink0 || !pdomlink1 ) {
-                                RAVELOG_WARN(str(boost::format("failed to reference <ignore_link_pair> links: %s %s\n")%pelt->getAttribute("link0")%pelt->getAttribute("link1")));
-                                continue;
-                            }
-                            KinBody::LinkPtr plink0 = pkinbody->GetLink(_ExtractLinkName(pdomlink0));
-                            KinBody::LinkPtr plink1 = pkinbody->GetLink(_ExtractLinkName(pdomlink1));
-                            if( !plink0 && !plink1 ) {
-                                RAVELOG_WARN("failed to find openrave links from <ignore_link_pair>\n");
-                                continue;
-                            }
-                            pkinbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
-                        }
-                        else if( pelt->getElementName() == string("bind_instance_geometry") ) {
-                            RAVELOG_WARN("currently do not support bind_instance_geometry\n");
-                        }
-                    }
-                }
-            }
-        }
+        _ExtractCollisionData(pkinbody,kmodel,kmodel->getExtra_array(),bindings.listLinkBindings);
         return true;
     }
 
@@ -1244,6 +1261,7 @@ public:
             plink.reset(new KinBody::Link(pkinbody));
             plink->_name = linkname;
             plink->_mass = 1e-10;
+            plink->_vinertiamoments = Vector(1e-7,1e-7,1e-7);
             plink->_bStatic = false;
             plink->_index = (int) pkinbody->_veclinks.size();
             pkinbody->_veclinks.push_back(plink);
@@ -1327,7 +1345,9 @@ public:
         }
 
         if (!pdomlink) {
-            ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>());
+            if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
+            }
         }
         else {
             RAVELOG_DEBUG(str(boost::format("Attachment link elements: %d")%pdomlink->getAttachment_full_array().getCount()));
@@ -1339,7 +1359,7 @@ public:
 
             // Get the geometry
             if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
-                RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
+                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
             }
 
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
@@ -1347,7 +1367,10 @@ public:
             //  Process all atached links
             for (size_t iatt = 0; iatt < pdomlink->getAttachment_full_array().getCount(); ++iatt) {
                 domLink::domAttachment_fullRef pattfull = pdomlink->getAttachment_full_array()[iatt];
-
+                if( !pattfull->getJoint() ) {
+                    RAVELOG_WARN(str(boost::format("no joint defined for attachment_full in link %s node %s")%plink->GetName()%pdomnode->getName()));
+                    continue;
+                }
                 // get link kinematics transformation
                 TransformMatrix tatt = _ExtractFullTransform(pattfull);
 
@@ -1357,12 +1380,12 @@ public:
                     RAVELOG_WARN(str(boost::format("could not find attached joint %s!\n")%pattfull->getJoint()));
                     continue;
                 }
-                string jointid;
+                string jointsid;
                 if( string(pattfull->getJoint()).find("./") == 0 ) {
-                    jointid = str(boost::format("%s/%s")%_ExtractParentId(pattfull)%&pattfull->getJoint()[1]);
+                    jointsid = str(boost::format("%s/%s")%_ExtractParentId(pattfull)%&pattfull->getJoint()[1]);
                 }
                 else {
-                    jointid = pattfull->getJoint();
+                    jointsid = pattfull->getJoint();
                 }
 
                 domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
@@ -1379,7 +1402,7 @@ public:
 
                 // get direct child link
                 if (!pattfull->getLink()) {
-                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%jointid));
+                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%jointsid));
                     continue;
                 }
 
@@ -1401,7 +1424,7 @@ public:
                     }
                 }
                 if (!pchildnode) {
-                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointid));
+                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointsid));
                 }
 
                 // create the joints before creating the child links
@@ -1471,10 +1494,15 @@ public:
                     pkinbody->_vPassiveJoints.push_back(pjoint);
                 }
 
-                if( _mapJointIds.find(jointid) != _mapJointIds.end() ) {
-                    RAVELOG_WARN(str(boost::format("jointid '%s' is duplicated!")%jointid));
+                if( _mapJointSids.find(jointsid) != _mapJointSids.end() ) {
+                    RAVELOG_WARN(str(boost::format("jointid '%s' is duplicated!")%jointsid));
                 }
-                _mapJointIds[jointid] = pjoint;
+                _mapJointSids[jointsid] = pjoint;
+                size_t lastJointSidIndex = jointsid.find_last_of('/');
+                if( lastJointSidIndex != string::npos ) {
+                    _mapJointSids[jointsid.substr(lastJointSidIndex+1)] = pjoint;
+                }
+
                 RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_name%pjoint->jointindex%pjoint->dofindex));
 
                 KinBody::LinkPtr pchildlink = ExtractLink(pkinbody, pattfull->getLink(), pchildnode, plink->_t * tatt, vdomjoints, bindings);
@@ -1497,7 +1525,7 @@ public:
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
                     FOREACHC(itaxisbinding,bindings.listAxisBindings) {
-                        if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
+                        if (CompareElementsSidToId(vdomaxes[ic], itaxisbinding->pkinematicaxis) > 0) {
                             kinematics_axis_info = itaxisbinding->kinematics_axis_info;
                             motion_axis_info = itaxisbinding->motion_axis_info;
                             break;
@@ -1722,7 +1750,6 @@ public:
         }
 
         if( !bhasgeometry ) {
-            RAVELOG_DEBUG(str(boost::format("node %s has no geometry\n")%pdomnode->getName()));
             return false;
         }
 
@@ -1783,7 +1810,11 @@ public:
                         geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
-                        geom._fTransparency = pphong->getTransparency()->getFloat()->getValue();
+                        geom._fTransparency = 1-pphong->getTransparency()->getFloat()->getValue();
+                        if( geom._fTransparency >= 1 ) {
+                            RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
+                            geom._fTransparency = 0;
+                        }
                     }
                 }
             }
@@ -2366,7 +2397,7 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotManipulators(RobotBasePtr probot, const domArticulated_systemRef as)
+    void ExtractRobotManipulators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
         for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = as->getExtra_array()[ie];
@@ -2386,6 +2417,12 @@ public:
                         if( !!pdomlink ) {
                             manipinfo._sBaseLinkName = _ExtractLinkName(pdomlink);
                         }
+                        else {
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listLinkBindings, pframe_origin->getAttribute("link"));
+                            if( !!plink ) {
+                                manipinfo._sBaseLinkName = plink->GetName();
+                            }
+                        }
                         if( !probot->GetLink(manipinfo._sBaseLinkName) ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
                             continue;
@@ -2395,6 +2432,12 @@ public:
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_tip->getAttribute("link"), as).resolve().elt);
                         if( !!pdomlink ) {
                             manipinfo._sEffectorLinkName = _ExtractLinkName(pdomlink);
+                        }
+                        else {
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listLinkBindings, pframe_tip->getAttribute("link"));
+                            if( !!plink ) {
+                                manipinfo._sEffectorLinkName = plink->GetName();
+                            }
                         }
                         if( !probot->GetLink(manipinfo._sEffectorLinkName) ) {
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame tip %s\n")%name%pframe_tip->getAttribute("link")));
@@ -2414,7 +2457,7 @@ public:
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                         daeElementRef pmanipchild = tec->getContents()[ic];
                         if( pmanipchild->getElementName() == string("gripper_joint") ) {
-                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pmanipchild->getAttribute("joint").c_str(),as,probot);
+                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pmanipchild->getAttribute("joint").c_str(),as,probot, bindings);
                             KinBody::JointPtr pjoint = result.first;
                             domJointRef pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
@@ -2456,7 +2499,19 @@ public:
                         }
                     }
 
-                    probot->GetManipulators().push_back(RobotBase::ManipulatorPtr(new RobotBase::Manipulator(probot,manipinfo)));
+                    // check if a previous manipulator exists with the same name
+                    RobotBase::ManipulatorPtr pnewmanip(new RobotBase::Manipulator(probot,manipinfo));
+                    FOREACH(itmanip,probot->GetManipulators()) {
+                        if( (*itmanip)->GetName() == manipinfo._name ) {
+                            *itmanip = pnewmanip;
+                            pnewmanip.reset();
+                            break;
+                        }
+                    }
+                    if( !!pnewmanip ) {
+                        // not found so append
+                        probot->GetManipulators().push_back(pnewmanip);
+                    }
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s manipulator %s\n")%probot->GetName()%name));
@@ -2466,7 +2521,7 @@ public:
     }
 
     /// \brief Extract Sensors attached to a Robot
-    void ExtractRobotAttachedSensors(RobotBasePtr probot, const domArticulated_systemRef as)
+    void ExtractRobotAttachedSensors(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
@@ -2507,7 +2562,7 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as)
+    void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
         list<KinBody::JointPtr> listOrderedJoints;
         for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
@@ -2519,7 +2574,7 @@ public:
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                         daeElementRef pchild = tec->getContents()[ic];
                         if( pchild->getElementName() == string("bind_actuator") ) {
-                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pchild->getAttribute("joint").c_str(),as,probot);
+                            std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pchild->getAttribute("joint").c_str(),as,probot, bindings);
                             KinBody::JointPtr pjoint = result.first;
                             domJointRef pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
@@ -2639,13 +2694,13 @@ public:
         return false;
     }
 
-    static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent)
+    static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!paddr->getSIDREF() ) {
             return daeSidRef(paddr->getSIDREF()->getValue(),parent).resolve().elt;
         }
         if (!!paddr->getParam()) {
-            return searchBinding(paddr->getParam()->getValue(),parent);
+            return searchBinding(paddr->getParam()->getValue(),parent, true, listInstanceScope);
         }
         return NULL;
     }
@@ -2658,7 +2713,7 @@ public:
     /// Search a given parameter reference and stores the new reference to search.
     /// \param ref the reference name to search
     /// \param parent The array of parameter where the method searchs.
-    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning=true)
+    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         if( !parent ) {
             return NULL;
@@ -2666,22 +2721,22 @@ public:
         daeElement* pelt = NULL;
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene>(parent.cast());
         if( !!kscene ) {
-            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array());
+            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), bLogWarning, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
-            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array());
+            return searchBindingArray(ref,kscene->getInstance_kinematics_model_array(), bLogWarning, listInstanceScope);
         }
         domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system>(parent.cast());
         if( !!articulated_system ) {
             if( !!articulated_system->getKinematics() ) {
-                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array());
+                pelt = searchBindingArray(ref,articulated_system->getKinematics()->getInstance_kinematics_model_array(), bLogWarning, listInstanceScope);
                 if( !!pelt ) {
                     return pelt;
                 }
             }
             if( !!articulated_system->getMotion() ) {
-                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system());
+                return searchBinding(ref,articulated_system->getMotion()->getInstance_articulated_system(), bLogWarning, listInstanceScope);
             }
             return NULL;
         }
@@ -2689,18 +2744,21 @@ public:
         daeElementRef pbindelt;
         const domKinematics_bind_Array* pbindarray = NULL;
         const domKinematics_newparam_Array* pnewparamarray = NULL;
-        domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(parent.cast());
+        domInstance_articulated_systemRef ias = daeSafeCast<domInstance_articulated_system>(parent);
+        daeElementRef instelt;
         if( !!ias ) {
             pbindarray = &ias->getBind_array();
             pbindelt = ias->getUrl().getElement();
             pnewparamarray = &ias->getNewparam_array();
+            instelt = ias;
         }
         if( !pbindarray || !pbindelt ) {
-            domInstance_kinematics_modelRef ikm = daeSafeCast<domInstance_kinematics_model>(parent.cast());
+            domInstance_kinematics_modelRef ikm = daeSafeCast<domInstance_kinematics_model>(parent);
             if( !!ikm ) {
                 pbindarray = &ikm->getBind_array();
                 pbindelt = ikm->getUrl().getElement();
                 pnewparamarray = &ikm->getNewparam_array();
+                instelt = ikm;
             }
         }
         if( !!pbindarray && !!pbindelt ) {
@@ -2709,10 +2767,16 @@ public:
                 if( !!pbind->getSymbol() &&( strcmp(pbind->getSymbol(), ref) == 0) ) {
                     // found a match
                     if( !!pbind->getParam() ) {
-                        //return searchBinding(pbind->getParam()->getRef(), pbindelt);
+                        //return searchBinding(pbind->getParam()->getRef(), pbindelt, true, listInstanceScope);
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(pbind->getParam()->getRef(), pbindelt).resolve().elt;
                     }
                     else if( !!pbind->getSIDREF() ) {
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(pbind->getSIDREF()->getValue(), pbindelt).resolve().elt;
                     }
                 }
@@ -2721,10 +2785,20 @@ public:
                 domKinematics_newparamRef newparam = (*pnewparamarray)[inewparam];
                 if( !!newparam->getSid() &&( strcmp(newparam->getSid(), ref) == 0) ) {
                     if( !!newparam->getSIDREF() ) {     // can only bind with SIDREF
+                        if( !!instelt ) {
+                            listInstanceScope.push_back(instelt);
+                        }
                         return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
                     }
                     RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%getSid(newparam)));
                 }
+            }
+        }
+        if( !!ias ) {
+            // resolve the articulated_system, is this necessary?
+            domArticulated_systemRef articulated_system = daeSafeCast<domArticulated_system> (ias->getUrl().getElement().cast());
+            if( !!articulated_system ) {
+                return searchBinding(ref, articulated_system, bLogWarning, listInstanceScope);
             }
         }
         if( bLogWarning ) {
@@ -2733,27 +2807,31 @@ public:
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_articulated_system_Array& paramArray, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
         }
-        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        if( bLogWarning ) {
+            RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        }
         return NULL;
     }
 
-    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray)
+    static daeElement* searchBindingArray(daeString ref, const domInstance_kinematics_model_Array& paramArray, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         for(size_t iikm = 0; iikm < paramArray.getCount(); ++iikm) {
-            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false);
+            daeElement* pelt = searchBinding(ref,paramArray[iikm].cast(),false, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }
         }
-        RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        if( bLogWarning ) {
+            RAVELOG_WARN(str(boost::format("failed to get binding '%s'")%ref));
+        }
         return NULL;
     }
 
@@ -2767,7 +2845,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
+            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
                 if( !!pnewparam->getBool() ) {
                     return pnewparam->getBool()->getValue();
                 }
@@ -2794,7 +2872,7 @@ public:
         }
         for(size_t iparam = 0; iparam < parent->getNewparam_array().getCount(); ++iparam) {
             domKinematics_newparamRef pnewparam = parent->getNewparam_array()[iparam];
-            if( !!pnewparam->getSid() &&( strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0) ) {
+            if( !!pnewparam->getSid() && strcmp(pnewparam->getSid(), paddr->getParam()->getValue()) == 0 ) {
                 if( !!pnewparam->getFloat() ) {
                     return pnewparam->getFloat()->getValue();
                 }
@@ -2979,7 +3057,7 @@ public:
 
     virtual void handleError( daeString msg )
     {
-        if( _bOpeningZAE && (( msg == string("Document is empty\n")) ||( msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")) ) ) {
+        if( _bOpeningZAE && (msg == string("Document is empty\n") || msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")  ) ) {
             return;     // collada-dom prints these messages even if no error
         }
         RAVELOG_ERROR(str(boost::format("COLLADA error: %s")%msg));
@@ -3086,7 +3164,8 @@ private:
             }
 
             //  kinematics information
-            daeElement* pelt = searchBinding(kbindmodel,kscene);
+            std::list<daeElementRef> listInstanceScope;
+            daeElement* pelt = searchBinding(kbindmodel,kscene, listInstanceScope);
             domInstance_kinematics_modelRef ikmodel = daeSafeCast<domInstance_kinematics_model>(pelt);
             if (!ikmodel) {
                 if( !pelt ) {
@@ -3097,7 +3176,7 @@ private:
                 }
                 continue;
             }
-            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel));
+            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel, listInstanceScope));
         }
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
@@ -3106,12 +3185,13 @@ private:
             if( !!viscene ) {
                 pjtarget = daeSidRef(bindjoint->getTarget(), viscene->getUrl().getElement()).resolve().elt;
             }
-            if (!pjtarget) {
+            if( !pjtarget) {
                 RAVELOG_WARN(str(boost::format("Target Node '%s' not found\n")%bindjoint->getTarget()));
 //                continue;
             }
 
-            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene);
+            std::list<daeElementRef> listInstanceScope;
+            daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene, listInstanceScope);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {
                 RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
@@ -3121,7 +3201,8 @@ private:
             domFloat jointvalue=0;
             if( !!bindjoint->getValue() ) {
                 if (!!bindjoint->getValue()->getParam()) {
-                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene);
+                    std::list<daeElementRef> listInstanceScope;
+                    pelt = searchBinding(bindjoint->getValue()->getParam()->getValue(),kscene, true, listInstanceScope);
                 }
                 else {
                     pelt = bindjoint->getValue();
@@ -3129,7 +3210,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene,jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL));
+            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -3183,7 +3264,7 @@ private:
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
-            if(( children[i]->getElementName() == string("technique")) && children[i]->hasAttribute("profile") &&( children[i]->getAttribute("profile") == string("OpenRAVE")) ) {
+            if( children[i]->getElementName() == string("technique") && children[i]->hasAttribute("profile") && children[i]->getAttribute("profile") == string("OpenRAVE") ) {
                 return children[i];
             }
         }
@@ -3272,6 +3353,78 @@ private:
         return InterfaceTypePtr();
     }
 
+    KinBody::LinkPtr _ResolveLinkBinding(const std::list<LinkBinding>& listLinkBindings, const std::string& linksid) {
+        FOREACHC(itbinding,listLinkBindings) {
+            if( !!itbinding->_domlink && !!itbinding->_domlink->getSid() ) {
+                if( strcmp(itbinding->_domlink->getSid(), linksid.c_str()) == 0 ) {
+                    return itbinding->_link;
+                }
+            }
+        }
+        return KinBody::LinkPtr();
+    }
+
+    /// \brief extracts collision-specific data info
+    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<LinkBinding>& listLinkBindings) {
+        for(size_t i = 0; i < arr.getCount(); ++i) {
+            if( strcmp(arr[i]->getType(),"collision") == 0 ) {
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
+                if( !!tec ) {
+                    for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                        daeElementRef pelt = tec->getContents()[ic];
+                        if( pelt->getElementName() == string("ignore_link_pair") ) {
+                            domLinkRef pdomlink0 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link0"), referenceElt).resolve().elt);
+                            KinBody::LinkPtr plink0;
+                            if( !!pdomlink0 ) {
+                                plink0 = pbody->GetLink(_ExtractLinkName(pdomlink0));
+                            }
+                            else {
+                                plink0 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link0"));
+                            }
+                            if( !plink0 ) {
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s %s\n")%pelt->getAttribute("link0")));
+                                continue;
+                            }
+
+                            domLinkRef pdomlink1 = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link1"), referenceElt).resolve().elt);
+                            KinBody::LinkPtr plink1;
+                            if( !!pdomlink1 ) {
+                                plink1 = pbody->GetLink(_ExtractLinkName(pdomlink1));
+                            }
+                            else {
+                                plink1 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link1"));
+                            }
+                            if( !plink1 ) {
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s %s\n")%pelt->getAttribute("link1")));
+                                continue;
+                            }
+                            pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
+                        }
+                        else if( pelt->getElementName() == string("bind_instance_geometry") ) {
+                            RAVELOG_WARN("currently do not support bind_instance_geometry\n");
+                        }
+                        else if( pelt->getElementName() == string("link_collision_state") ) {
+                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+                            KinBody::LinkPtr plink;
+                            if( !!pdomlink ) {
+                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+                            }
+                            else {
+                                plink = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link"));
+                            }
+                            if( !plink ) {
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+                                continue;
+                            }
+                            resolveCommon_bool_or_param(pelt, referenceElt, plink->_bIsEnabled);
+                        }
+                    }
+                }
+            }
+        }
+        return InterfaceTypePtr();
+    }
+
     std::string _ExtractLinkName(domLinkRef pdomlink) {
         std::string linkname;
         if( !!pdomlink ) {
@@ -3299,13 +3452,47 @@ private:
         return name.substr(pos+1)==type;
     }
 
-    std::pair<KinBody::JointPtr,domJointRef> _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody) {
+    std::pair<KinBody::JointPtr,domJointRef> _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody, const KinematicsSceneBindings& bindings) {
         daeElement* peltjoint = daeSidRef(targetref, peltref).resolve().elt;
-        domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
-        if (!pdomjoint) {
-            domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
-            if (!!pdomijoint) {
-                pdomjoint = daeSafeCast<domJoint> (pdomijoint->getUrl().getElement().cast());
+        domJointRef pdomjoint;
+        if( !!peltjoint ) {
+            pdomjoint = daeSafeCast<domJoint> (peltjoint);
+            if (!pdomjoint) {
+                domInstance_jointRef pdomijoint = daeSafeCast<domInstance_joint> (peltjoint);
+                if (!!pdomijoint) {
+                    pdomjoint = daeSafeCast<domJoint> (pdomijoint->getUrl().getElement().cast());
+                }
+            }
+        }
+        else {
+            // perhaps targetref doesn't have kmodel id prefix to it. so search for the sid in each kinematics_model
+            FOREACH(itmodel, bindings.listModelBindings) {
+                if( !!itmodel->_kmodel && !!itmodel->_kmodel->getTechnique_common()) {
+                    daeTArray<domJointRef> joints;
+                    itmodel->_kmodel->getTechnique_common()->getChildrenByType(joints);
+                    for(size_t i = 0; i < joints.getCount(); ++i) {
+                        if( getSid(joints[i]) == targetref ) {
+                            pdomjoint = joints[i];
+                            break;
+                        }
+                    }
+                    if( !!pdomjoint ) {
+                        break;
+                    }
+                    daeTArray<domInstance_jointRef> ijoints;
+                    itmodel->_kmodel->getTechnique_common()->getChildrenByType(ijoints);
+                    for(size_t i = 0; i < joints.getCount(); ++i) {
+                        if( getSid(ijoints[i]) == targetref ) {
+                            pdomjoint = daeSafeCast<domJoint> (ijoints[i]->getUrl().getElement().cast());
+                            if( !!pdomjoint ) {
+                                break;
+                            }
+                        }
+                    }
+                    if( !!pdomjoint ) {
+                        break;
+                    }
+                }
             }
         }
 
@@ -3315,11 +3502,11 @@ private:
         }
 
         if( string(targetref).find("./") != 0 ) {
-            std::map<std::string,KinBody::JointPtr>::iterator itjoint = _mapJointIds.find(targetref);
-            if( itjoint != _mapJointIds.end() ) {
+            std::map<std::string,KinBody::JointPtr>::iterator itjoint = _mapJointSids.find(targetref);
+            if( itjoint != _mapJointSids.end() ) {
                 return std::make_pair(itjoint->second,pdomjoint);
             }
-            RAVELOG_WARN(str(boost::format("failed to find joint target '%s' in _mapJointIds")%targetref));
+            RAVELOG_WARN(str(boost::format("failed to find joint target '%s' in _mapJointSids")%targetref));
         }
 
         KinBody::JointPtr pjoint = pkinbody->GetJoint(pdomjoint->getName());
@@ -3385,7 +3572,7 @@ private:
     }
 
     /// \brief Extracts MathML into fparser equation format
-    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt)
+    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt, const KinematicsSceneBindings& bindings)
     {
         std::string name = _getElementName(pelt);
         std::string eq;
@@ -3395,7 +3582,7 @@ private:
             for(std::size_t ic = 0; ic < children.getCount(); ++ic) {
                 std::string childname = _getElementName(children[ic]);
                 if(( childname == "apply") ||( childname == "csymbol") ||( childname == "cn") ||( childname == "ci") ) {
-                    eq = _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq = _ExtractMathML(proot, pkinbody, children[ic],bindings);
                 }
                 else {
                     throw openrave_exception(str(boost::format("_ExtractMathML: do not support element %s in mathml")%childname),ORE_CommandNotSupported);
@@ -3410,7 +3597,7 @@ private:
             if( childname == "plus" ) {
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq += _ExtractMathML(proot, pkinbody, children[ic],bindings);
                     if( ic+1 < children.getCount() ) {
                         eq += '+';
                     }
@@ -3419,25 +3606,25 @@ private:
             }
             else if( childname == "quotient" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("floor(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("floor(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "divide" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s/%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "minus" ) {
                 BOOST_ASSERT(children.getCount()>1 && children.getCount()<=3);
                 if( children.getCount() == 2 ) {
-                    eq += str(boost::format("(-%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                    eq += str(boost::format("(-%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
                 }
                 else {
-                    eq += str(boost::format("(%s-%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                    eq += str(boost::format("(%s-%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
                 }
             }
             else if( childname == "power" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                std::string sbase = _ExtractMathML(proot,pkinbody,children[1]);
-                std::string sexp = _ExtractMathML(proot,pkinbody,children[2]);
+                std::string sbase = _ExtractMathML(proot,pkinbody,children[1],bindings);
+                std::string sexp = _ExtractMathML(proot,pkinbody,children[2],bindings);
                 //                try {
                 //                    int degree = boost::lexical_cast<int>(sexp);
                 //                    if( degree == 1 ) {
@@ -3456,12 +3643,12 @@ private:
             }
             else if( childname == "rem" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s%%%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s%%%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "times" ) {
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq += _ExtractMathML(proot, pkinbody, children[ic],bindings);
                     if( ic+1 < children.getCount() ) {
                         eq += '*';
                     }
@@ -3473,10 +3660,10 @@ private:
                 string sdegree, snum;
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
                     if( _getElementName(children[ic]) == string("degree") ) {
-                        sdegree = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
+                        sdegree = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0],bindings);
                     }
                     else {
-                        snum = _ExtractMathML(proot,pkinbody,children[ic]);
+                        snum = _ExtractMathML(proot,pkinbody,children[ic],bindings);
                     }
                 }
                 try {
@@ -3501,7 +3688,7 @@ private:
             else if( childname == "and" ) {
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq += _ExtractMathML(proot, pkinbody, children[ic],bindings);
                     if( ic+1 < children.getCount() ) {
                         eq += '&';
                     }
@@ -3511,7 +3698,7 @@ private:
             else if( childname == "or" ) {
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq += _ExtractMathML(proot, pkinbody, children[ic],bindings);
                     if( ic+1 < children.getCount() ) {
                         eq += '|';
                     }
@@ -3520,53 +3707,53 @@ private:
             }
             else if( childname == "not" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("(!%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("(!%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "floor" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("floor(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("floor(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "ceiling" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("ceil(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("ceil(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "eq" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s=%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "neq" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s!=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s!=%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "gt" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s>%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s>%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "lt" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s<%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s<%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "geq" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s>=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s>=%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "leq" ) {
                 BOOST_ASSERT(children.getCount()==3);
-                eq += str(boost::format("(%s<=%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                eq += str(boost::format("(%s<=%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
             }
             else if( childname == "ln" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("log(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("log(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "log" ) {
                 BOOST_ASSERT(children.getCount()==2 || children.getCount()==3);
                 string sbase="10", snum;
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
                     if( _getElementName(children[ic]) == string("logbase") ) {
-                        sbase = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0]);
+                        sbase = _ExtractMathML(proot,pkinbody,children[ic]->getChildren()[0],bindings);
                     }
                     else {
-                        snum = _ExtractMathML(proot,pkinbody,children[ic]);
+                        snum = _ExtractMathML(proot,pkinbody,children[ic],bindings);
                     }
                 }
                 try {
@@ -3587,51 +3774,51 @@ private:
             }
             else if( childname == "arcsin" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("asin(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("asin(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccos" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acos(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acos(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arctan" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("atan(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("atan(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccosh" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acosh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acosh(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccot" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acot(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acot(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccoth" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acoth(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acoth(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccsc" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acsc(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acsc(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arccsch" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("acsch(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("acsch(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arcsec" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("asec(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("asec(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arcsech" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("asech(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("asech(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arcsinh" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("asinh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("asinh(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if( childname == "arctanh" ) {
                 BOOST_ASSERT(children.getCount()==2);
-                eq += str(boost::format("atanh(%s)")%_ExtractMathML(proot,pkinbody,children[1]));
+                eq += str(boost::format("atanh(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if((childname == "implies")||(childname == "forall")||(childname == "exists")||(childname == "conjugate")||(childname == "arg")||(childname == "real")||(childname == "imaginary")||(childname == "lcm")||(childname == "factorial")||(childname == "xor")) {
                 throw openrave_exception(str(boost::format("_ExtractMathML: %s function in <apply> tag not supported")%childname),ORE_CommandNotSupported);
@@ -3672,16 +3859,16 @@ private:
 
                     if( functionname == "INRANGE" ) {
                         BOOST_ASSERT(children.getCount()==4);
-                        string a = _ExtractMathML(proot,pkinbody,children[1]), b = _ExtractMathML(proot,pkinbody,children[2]), c = _ExtractMathML(proot,pkinbody,children[3]);
+                        string a = _ExtractMathML(proot,pkinbody,children[1],bindings), b = _ExtractMathML(proot,pkinbody,children[2],bindings), c = _ExtractMathML(proot,pkinbody,children[3],bindings);
                         eq += str(boost::format("((%s>=%s)&(%s<=%s))")%a%b%a%c);
                     }
                     else if((functionname == "SSSA")||(functionname == "SASA")||(functionname == "SASS")) {
                         BOOST_ASSERT(children.getCount()==4);
-                        eq += str(boost::format("%s(%s,%s,%s)")%functionname%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2])%_ExtractMathML(proot,pkinbody,children[3]));
+                        eq += str(boost::format("%s(%s,%s,%s)")%functionname%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings)%_ExtractMathML(proot,pkinbody,children[3],bindings));
                     }
                     else if( functionname == "atan2") {
                         BOOST_ASSERT(children.getCount()==3);
-                        eq += str(boost::format("atan2(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1])%_ExtractMathML(proot,pkinbody,children[2]));
+                        eq += str(boost::format("atan2(%s,%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings)%_ExtractMathML(proot,pkinbody,children[2],bindings));
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("csymbol %s not implemented\n")%functionname));
@@ -3692,7 +3879,7 @@ private:
                     RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%children[0]->getCharData()%children[0]->getAttribute("encoding")));
                 }
                 else {
-                    eq += _ExtractMathML(proot,pkinbody,children[0]);
+                    eq += _ExtractMathML(proot,pkinbody,children[0],bindings);
                 }
             }
             else {
@@ -3700,7 +3887,7 @@ private:
                 eq += childname;
                 eq += '(';
                 for(size_t ic = 1; ic < children.getCount(); ++ic) {
-                    eq += _ExtractMathML(proot, pkinbody, children[ic]);
+                    eq += _ExtractMathML(proot, pkinbody, children[ic],bindings);
                     if( ic+1 < children.getCount() ) {
                         eq += ',';
                     }
@@ -3715,7 +3902,7 @@ private:
             else if( pelt->getAttribute("encoding")!=string("COLLADA") ) {
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: csymbol '%s' has unknown encoding '%s'")%pelt->getCharData()%pelt->getAttribute("encoding")));
             }
-            KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody).first;
+            KinBody::JointPtr pjoint = _getJointFromRef(pelt->getCharData().c_str(),proot,pkinbody,bindings).first;
             if( !pjoint ) {
                 RAVELOG_WARN(str(boost::format("_ExtractMathML: failed to find csymbol: %s")%pelt->getCharData()));
                 eq = pelt->getCharData();
@@ -3800,6 +3987,55 @@ private:
             return 0;
         }
         return string(elt1->getSid()) == elt2->getSid();
+    }
+
+    static int _CompareElementAttribute(daeElementRef elt1, daeElementRef elt2, const std::string& attr) {
+        if( !elt1 || !elt2 ) {
+            return -1;
+        }
+        if( elt1->typeID() != elt2->typeID() ) {
+            return 0;
+        }
+        if( !elt1->getDocumentURI() || !elt2->getDocumentURI() ) {
+            if( !elt1->getDocumentURI() && !elt2->getDocumentURI() && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        daeBool bhas1 = elt1->hasAttribute(attr.c_str());
+        daeBool bhas2 = elt2->hasAttribute(attr.c_str());
+        if( !bhas1 || !bhas2 ) {
+            if( !bhas1 && !bhas1 && elt1 == elt2 ) {
+                return 1;
+            }
+            return -1;
+        }
+        if( string(elt1->getDocumentURI()->getURI()) != elt2->getDocumentURI()->getURI() ) {
+            return 0;
+        }
+        return elt1->getAttribute(attr.c_str()) == elt2->getAttribute(attr.c_str());
+    }
+
+    static int CompareElementsSidToId(daeElementRef elt1, daeElementRef elt2) {
+        if( elt1 == elt2 ) {
+            return 1;
+        }
+        if( elt1->hasAttribute("sid") ) {
+            int res = _CompareElementAttribute(elt1, elt2, "sid");
+            if( res == 0 ) {
+                return res;
+            }
+            if( res < 0 ) {
+                // most probably encountered an element like technique_common
+            }
+        }
+        else {
+            // check if the elements have ids
+            if( elt1->hasAttribute("id") ) {
+                return _CompareElementAttribute(elt1, elt2, "id");
+            }
+        }
+        return CompareElementsSidToId(elt1->getParentElement(),elt2->getParentElement());
     }
 
     bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
@@ -3909,12 +4145,31 @@ private:
         return newuri.str();
     }
 
+    // top-level resolved has to match
+    int _CompareScopeElements(const list<daeElementRef>& listScopeResolved, const list<daeElementRef>& listScopeCurrent)
+    {
+        if( listScopeResolved.size() > listScopeCurrent.size() ) {
+            return 0;
+        }
+        list<daeElementRef>::const_iterator it0 = listScopeResolved.begin();
+        list<daeElementRef>::const_iterator it1 = listScopeCurrent.begin();
+        while(it0 != listScopeResolved.end()) {
+            int res = _CompareElementAttribute(*it0,*it1,"sid");
+            if( res <= 0 ) {
+                return res;
+            }
+            ++it0;
+            ++it1;
+        }
+        return 1;
+    }
+
     boost::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;
     std::map<KinBody::JointPtr, std::vector<dReal> > _mapJointUnits;
-    std::map<std::string,KinBody::JointPtr> _mapJointIds;
+    std::map<std::string,KinBody::JointPtr> _mapJointSids;
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;

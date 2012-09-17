@@ -232,7 +232,7 @@ class TestCOLLADA(EnvironmentSetup):
         misc.CompareBodies(env.GetKinBody('mug1'),env2.GetKinBody('mug1'))
 
     def test_externalref_joints(self):
-        self.log.info('test collada loading with external references')
+        self.log.info('test basic collada saving/loading with external references')
         env=self.env
         reffile = 'openrave:/robots/schunk-lwa3.zae'
         env2=Environment()
@@ -251,12 +251,157 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Reset()
         
         assert(env.Load('robots/schunk-lwa3.zae'))
+        robot=env.GetRobots()[0]
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme'})
         filedata=open('test_externalref_joints.dae','r').read()
         assert(filedata.find('testscheme:/')>=0)
         assert(env2.Load('test_externalref_joints.dae',{'openravescheme':'testscheme'}))
         misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
         assert(len(env.GetBodies())==len(env2.GetBodies()))
+
+        env.Reset()
+        env.Load('robots/barrett-hand.dae')
+        robot=env.GetRobots()[0]
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env2.Reset()
+        assert(env2.Load('test_externalref_joints.dae'))
+        misc.CompareBodies(robot,env2.GetRobots()[0])
+        assert(len(env.GetBodies())==len(env2.GetBodies()))
+
+    def test_externalref_scene(self):
+        xmldata = '''<Environment>
+  <Robot file="robots/barrett-wamhand.dae" name="BarrettWAM">
+    <translation>-0.8 0.14 1</translation>
+  </Robot>
+
+  <KinBody name="floorwalls">
+    <Body name="basefloor" type="static">
+      <Translation>0 0 0</Translation>
+      <Geom type="box">
+        <extents>2.5 2.5 0.005</extents>
+        <translation>0 0 -0.005</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 -2.5 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>2.5 0.01 0.2</extents>
+        <translation>0 2.5 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>2.5 0 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+      <Geom type="box">
+        <extents>0.01 2.5 0.2</extents>
+        <translation>-2.5 0 0.2</translation>
+        <diffuseColor>.6 .6 .6</diffuseColor>
+      	<ambientColor>0.6 0.6 0.6</ambientColor>
+      </Geom>
+    </Body>
+  </KinBody>
+  <KinBody name="pole">
+    <translation>-0.312 0.416 1</translation>
+    <Body name="basepole" type="static">
+      <Geom type="box">
+        <extents>0.05 0.05 1</extents>
+        <diffuseColor>1 .2 .2</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+  <KinBody name="pole2">
+    <translation>1.3 0.6 1</translation>
+    <Body name="basepole" type="static">
+      <Geom type="box">
+        <extents>0.05 0.05 1</extents>
+        <diffuseColor>1 .2 .2</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+  <KinBody name="pole3">
+    <translation>0.8 -0.9 1</translation>
+    <Body name="basepole" type="static">
+      <Geom type="box">
+        <extents>0.05 0.05 1</extents>
+        <diffuseColor>1 .2 .2</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+
+  <KinBody name="wall1">
+    <Translation>-0.173 -0.247 0</Translation>
+    <Body name="basewall" type="static">
+      <Geom type="box">
+        <Translation>-0.735 -0.80 0.675</Translation>
+        <extents>0.07 0.71 0.73</extents>
+        <diffuseColor>.64 .64 .64</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <Translation>-1.235 -0.46 0.7</Translation>
+        <extents>0.54 0.35 0.06</extents>
+        <diffuseColor>.64 .64 .64</diffuseColor>
+      </Geom>
+      <Geom type="box">
+        <Translation>-1.235 -0.76 0.675</Translation>
+        <extents>0.54 0.06 0.71</extents>
+        <diffuseColor>.64 .64 .64</diffuseColor>
+      </Geom>
+    </Body>
+  </KinBody>
+  
+  <KinBody name="mug1" file="data/mug1.dae">
+    <Translation> -0.0568 -0.2406 0.7550</Translation>
+  </KinBody>
+  <KinBody name="mug2" file="data/mug1.dae">
+    <Translation>-0.02   0.15    0.7550</Translation>
+  </KinBody>
+  <KinBody name="mug3" file="data/mug1.dae">
+    <Translation>0.0854  -0.0769    0.7550</Translation>
+  </KinBody>
+  <KinBody name="mug4" file="data/mug1.dae">
+    <Translation>-0.23   -0.1446    0.7550</Translation>
+  </KinBody>
+  <KinBody name="mug5" file="data/mug1.dae">
+    <Translation>-0.1   -0.0151    0.7550</Translation>
+  </KinBody>
+  <KinBody name="mug6" file="data/mug1.dae">
+    <Translation>-0.2   0.11    0.7550</Translation>
+  </KinBody>
+
+  <KinBody name="table">
+    <Translation>-0.4966 1.0164 0.9</Translation>
+    <body name="basetable">
+      <geom type="box">
+        <translation>0 0.2 0</translation>
+        <extents>0.2 0.01 0.01</extents>
+      </geom>
+      <geom type="box">
+        <translation>0 -0.2 0</translation>
+        <extents>0.2 0.01 0.01</extents>
+      </geom>
+    </body>
+  </KinBody>
+</Environment>
+'''
+        env=self.env
+        self.LoadDataEnv(xmldata)
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env2 = Environment()
+        env2.Load('test_writekinematicsonly.dae')
+        assert(len(env.GetBodies())==len(env2.GetBodies()))
+        for body in env.GetBodies():
+            self.log.info(body.GetName())
+            body2 = env2.GetKinBody(body.GetName())
+            misc.CompareBodies(body,body2,epsilon=g_epsilon)
 
     def test_writekinematicsonly(self):
         self.log.info('test writing kinematics only')
@@ -309,3 +454,40 @@ class TestCOLLADA(EnvironmentSetup):
         robot=self.LoadRobotData(xmldata)
         assert(robot.GetActiveDOF()==8)
         
+    def test_external_extrainfo(self):
+        self.log.info('test saving extra info along with external references')
+        env=self.env
+        robot=self.LoadRobot('robots/schunk-lwa3.zae')
+        enabled = [False]*len(robot.GetLinks())
+        for ilink,link in enumerate(robot.GetLinks()):
+            enabled[ilink] = ilink%2
+            link.Enable(enabled[ilink])
+        env.Save('test_external_extrainfo.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'link_collision_state'})
+
+        env2=Environment()
+        env2.Load('test_external_extrainfo.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2)
+
+        with env:
+            # change limits, add manipulators, etc
+            minfo=Robot.ManipulatorInfo()
+            minfo._name = 'mynewmanip'
+            minfo._sBaseLinkName = robot.GetLinks()[0].GetName()
+            minfo._sEffectorLinkName = robot.GetLinks()[4].GetName()
+            minfo._tLocalTool = matrixFromAxisAngle([1,1,1])
+            minfo._tLocalTool[0:3,3] = [0.1,0.2,0.3]
+            minfo._vdirection = [-1,0,0]
+            minfo._vGripperJointNames = ['j6']
+            minfo._vClosingDirection = [-1.0]
+            robot.AddManipulator(minfo)
+            #robot.SetDOFLimits(-linspace(0.4,0.8,robot.GetDOF()),linspace(1.4,1.8,robot.GetDOF()))
+            #robot.SetDOFVelocityLimits(linspace(1,10,robot.GetDOF()))
+            #robot.SetDOFAccelerationLimits(linspace(10,100,robot.GetDOF()))
+            #robot.SetDOFWeights(linspace(0.1,0.5,robot.GetDOF()))
+            env.Save('test_external_extrainfo2.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'*'})
+        
+        env2=Environment()
+        env2.Load('test_external_extrainfo2.dae')
+        robot2=env2.GetRobots()[0]
+        misc.CompareBodies(robot,robot2)

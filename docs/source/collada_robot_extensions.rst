@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.3.0)
+COLLADA Robot Extensions (Version 0.3.1)
 ----------------------------------------
 
 OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
@@ -331,6 +331,8 @@ Describes robot whose physics model SID is **pmodel1_inst** grabbing with its **
   </instance_physics_scene>
 
 
+.. _collada_collision:
+
 collision
 =========
 
@@ -359,7 +361,7 @@ Related Elements
   :class: collada
   :delim: |
   
-  Parent elements | <kinematics_model>
+  Parent elements | <kinematics_model>, <articulated_system>
 
 Child Elements
 ~~~~~~~~~~~~~~
@@ -372,6 +374,7 @@ Child Elements
 
   <bind_instance_geometry> | The geometry used for a particular link | 0 or more
   <ignore_link_pair> | Specifies two links pairs whose self-collision should not be checked | 0 or more
+  <link_collision_state> | Contains a **common_bool_or_param_type** that specifies if a link should be used for collision or not. Can enable or disable it. | 0 or more
 
 Attributes for <bind_instance_geometry>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -396,12 +399,24 @@ Attributes for <ignore_link_pair>
   link0 | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
   link1 | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
 
+Attributes for <link_collision_state>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 15, 15, 70
+
+  link | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
+
 Details
 ~~~~~~~
 
 Convex decompositions can be defined by using one geometry per convex hull and attaching multiple geometries to the same link.
 
 <ignore_link_pair> tags help self-collision detection to help prune possibilities. The adjacency information is not just the neighboring links. It is also meant to prune any collisions between two links that *cannot* possibly happen if the robot maintains its joint limits. This information depends not only on the kinematics of the robot, but also on the geometry of every link. Also for triplets of joints j1, j2, j3 that intersect at a common axis, you would want to add (j1,j2),(j2,j3),(j1,j3).
+
+By default, all links are colliding unless turned off via **<link_collision_state>**.
 
 Example
 ~~~~~~~
@@ -431,6 +446,7 @@ Example
           <bind_instance_geometry type="self" link="linka" url="#linka_self"/>
           <bind_instance_geometry type="environment" link="linkb" url="#linkb_env0"/>
           <ignore_link_pair link0="linka" link1="linkb"/>
+          <link_collision_state link="linka"><bool>true</bool></link_collision_state>
         </technique>
       </extra>
   </library_kinematics_models>
@@ -1079,7 +1095,6 @@ COLLADA Format Notes
 ~~~~~~~~~~~~~~~~~~~~
 
 * **articulated_system** tag is used for saving both Robot and KinBody objects
-
   *  if child is a **motion** tag, get accelerations and velocity limits from it
 * If **<visual_scene>** tag present, but no kinematics, then add each root node tree as a rigid link.
 * In order to set a static link in physics, use the **<instance_rigid_body>/<dynamic>** tag.
@@ -1093,34 +1108,10 @@ In many scenarios, the controllers on the robots use joints limits which are sma
 
 * **soft limits** - specified inside the <articulated_system>/<kinematics>/<technique_common>/<axis_info> tag using the <limits> tag.
 
-Composition
-~~~~~~~~~~~
-
-Robots usually have grippers, robot arms, and robot bases in separate files, then we have one file that references all of them and specifies the links to merge together (ie, we do not complicate things by creating dummy joints). This can be done with articulated systems since <kinematics> tag supports multiple <instance_kinematics_model> tags.
-
 Storing Convex Decompositions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each link is composed of a set of convex hulls. Need to create one geometry per convex hull (<convex_mesh>?) and specify multiple geometries per <node>.
-
-Calibration vs Static Data
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-One thing that separates a base description of the robot from the real
-robot that will be used in labs is calibration:
-
-* where each sensor is with respect to the robot (6D pose)
-* intrinsic parameters for each sensor
-* joint offsets for encoder calibration
-* controller parameters like PID gains for dynamic properties of motors
-* possibly even link lengths depending on how much you trust the manufacturer
-
-All these parameters will change per robot, and it won't be a good idea asking every person to go and modify their one robot file. Instead we should have a different calibration file that the main collada file always references. It should be setup in such a way that the calibration file becomes optional.
-
-Controllers
-~~~~~~~~~~~
-
-Specifying controller parameters in the collada file falls somewhere in between calibration parameters and parameters that will never change and should be in the main robot file. In my opinion it is very hard to find static parameters especially when considering controllers in simulation along with real world controllers. Also, there's as many control algorithms out there as planners, and I wouldn't feel comfortable specifying planning algorithms and parameters inside a robot file.
 
 Custom Data
 ~~~~~~~~~~~
@@ -1215,9 +1206,40 @@ The Ids fo the child nodes in #somenode will clash, therefore add a **<extra>** 
     </instance_node>
   </node>
 
+Composing Robots from Multiple Parts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Composing Robots
-~~~~~~~~~~~~~~~~
+Robots usually have grippers, robot arms, and robot bases in separate files, then we have one file that references all of them and specifies the links to merge together (ie, we do not complicate things by creating dummy joints). This can be done with articulated systems since **<kinematics>** tag supports multiple **<instance_kinematics_model>** tags.
+
+Visibility/Collision Flags
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bodies can be initially invisible, but can still act as collision obstacles. Furthermore, there can exist nodes like plots and markers that should not act as kinbody elements or pertake in collision detection. 
+
+* **visibility** is handled by :ref:`collada_geometry_info` and is per-geometry.
+
+* **colliding** is handled by the :ref:`collada_collision`/**<link_collision_state>**
+
+TODO
+++++
+
+Calibration vs Static Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One thing that separates a base description of the robot from the real robot that will be used in labs is calibration:
+
+* where each sensor is with respect to the robot (6D pose)
+* intrinsic parameters for each sensor
+* joint offsets for encoder calibration
+* controller parameters like PID gains for dynamic properties of motors
+* possibly even link lengths depending on how much you trust the manufacturer
+
+All these parameters will change per robot, and it won't be a good idea asking every person to go and modify their one robot file. Instead there should have a different calibration file that the main collada file always references. It should be setup in such a way that the calibration file becomes optional.
+
+Controllers
+~~~~~~~~~~~
+
+There is a **<animation>** element for containing trajectories and their targets. OpenRAVE will have to output animation data in this formation.
 
 Contributors
 ============

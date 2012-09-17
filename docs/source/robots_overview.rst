@@ -41,16 +41,18 @@ The following attributes can be passed to the :class:`.Environment` Save/Write m
 * **skipwrite="option1 option2"** - Skip writing these properties. Supported options are:
   * geometry - Any <geometry> objects
   * readable - From :ref:`.Interface.GetReadableInterfaces`
-  * sensors
-  * manipulators
+  * sensor
+  * manipulator
   * physics
   * visual - The <node> hierarchy
-* **forcewrite="option1 option2"** - force writing these properties if external references are used. These are properties that can be set during runtime by the user and are more application specific rather than robot specific. If **\***, then force writing all supported options. Options are:
-  * manipulators
-  * sensors
-  * jointlimits - position, velocity, accel
-  * jointweights - weights, resolution
+  * link_collision_state - skips writing the link collision states
+* **forcewrite="option1 option2"** - force writing these properties if external references are used. These are properties that can be set during runtime by the user and are more application specific rather than robot specific. If **\***, then force writing all supported options. By default, thse values will be assumed to be contained within the external reference. Options are:
+  * manipulator
+  * sensor
+  * jointlimit - position, velocity, accel
+  * jointweight - weights, resolution
   * readable - parameters through readable interfaces
+  * link_collision_state - writes the link collision states
 * **openravescheme="customscheme"** - scheme for writing external references. writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme.
 * **unit="1.0"**  - how many real-world meters in one distance unit. For example unit="0.001" represents millimeters.
 

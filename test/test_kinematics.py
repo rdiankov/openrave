@@ -560,7 +560,7 @@ class TestKinematics(EnvironmentSetup):
                         errsecond.append(linalg.norm(dot(Jt,newdeltavalues) + 0.5*dot(newdeltavalues,dot(Ht,newdeltavalues)) - realoffset))
                         errmult = 1.0
                         if errfirst[-1] > deltastep*1e-5:
-                            errmult = 3.0
+                            errmult = 2.5
                         #print 'trans',errsecond[-1],errfirst[-1],linalg.norm(realoffset)
                         assert(errsecond[-1]*errmult<=errfirst[-1]) # should be way better
                         if len(errfirst) > 2:

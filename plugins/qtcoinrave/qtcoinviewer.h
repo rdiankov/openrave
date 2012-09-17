@@ -442,7 +442,7 @@ public:
     bool _bAutoSetCamera;
     bool _bRenderFiguresInCamera;
     // ode thread related
-    bool _bQuitMainLoop;
+    int _nQuitMainLoop;
     bool _bUpdateEnvironment;
     ViewGeometry _viewGeometryMode;
 

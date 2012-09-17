@@ -10,6 +10,22 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+COLLADA
+-------
+
+* fixed bug in collada reader when binding models and axes when reading external files
+
+* allow reading and writing of collision information for each link via **<link_collision_state>**
+
+* allow writing of extra data like manipualtors, enabled links for external files.
+
+* fixed transparency writing/reading. In COLLADA transparency=1 is opaque.
+
+Misc
+----
+
+* fixed ipython drop-in console with "openrave.py -i" for recent ipython versions (tested up to 0.13)
+
 Version 0.8.0
 =============
 

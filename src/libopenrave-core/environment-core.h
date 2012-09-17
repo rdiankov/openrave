@@ -215,10 +215,10 @@ public:
         }
         listModules.clear();
 
-        RAVELOG_DEBUG("resetting raveviewer\n");
         FOREACH(itviewer, listViewers) {
             // don't reset the viewer since it can already be dead
             // todo: this call could lead into a deadlock if a SIGINT got called from the viewer thread
+            RAVELOG_DEBUG(str(boost::format("quitting viewer %s")%(*itviewer)->GetXMLId()));
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();

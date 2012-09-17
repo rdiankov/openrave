@@ -675,6 +675,7 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
             link1 = link1s[0]
             indexmap.append(link1.GetIndex())
             assert( transdist(link0.GetTransform(),link1.GetTransform()) <= epsilon )
+            assert( link0.IsEnabled() == link1.IsEnabled() )
             #assert( link0.IsStatic() == link1.IsStatic() )
             assert( len(link0.GetParentLinks()) == len(link1.GetParentLinks()) )
             assert( all([lp0.GetName()==lp1.GetName() for lp0, lp1 in izip(link0.GetParentLinks(),link1.GetParentLinks())]) )

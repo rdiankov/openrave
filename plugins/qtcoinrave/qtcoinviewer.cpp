@@ -145,6 +145,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #endif
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
+    _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
         _name += " (Development Version)";
@@ -2205,23 +2206,32 @@ void QtCoinViewer::customEvent(QEvent * e)
 
 int QtCoinViewer::main(bool bShow)
 {
+    _nQuitMainLoop = -1;
     _StartPlaybackTimer();
+
+    // need the _nQuitMainLoop in case _pviewer->show() exits after a quitmainloop is called
     if( bShow ) {
-        _pviewer->show();
-        SoQt::show(this);
+        if( _nQuitMainLoop < 0 ) {
+            _pviewer->show();
+        }
+        //SoQt::show(this);
     }
-    SoQt::mainLoop();
+    if( _nQuitMainLoop < 0 ) {
+        SoQt::mainLoop();
+    }
     SetEnvironmentSync(false);
     return 0;
 }
 
 void QtCoinViewer::quitmainloop()
 {
+    _nQuitMainLoop = 1;
     bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
     if( !bGuiThread ) {
         SetEnvironmentSync(false);
     }
     SoQt::exitMainLoop();
+    _nQuitMainLoop = 2;
 }
 
 void QtCoinViewer::InitOffscreenRenderer()
