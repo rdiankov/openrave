@@ -636,6 +636,7 @@ public:
             }
         }
 
+        std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         bool bSuccess = false;
         //  parse each instance kinematics scene for the first available model
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
@@ -644,16 +645,25 @@ public:
             if (!kscene) {
                 continue;
             }
-            KinematicsSceneBindings bindings;
-            _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
-            _ExtractPhysicsBindings(allscene,bindings);
-            for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
-                if( ExtractKinematicsModel(pbody, kscene->getInstance_kinematics_model_array()[ikmodel], bindings) && !!pbody ) {
+            boost::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
+            _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
+            _ExtractPhysicsBindings(allscene,*bindings);
+            for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
+                if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings) && !!pbody ) {
                     bSuccess = true;
                     break;
                 }
             }
             if( bSuccess ) {
+                break;
+            }
+            for(size_t ikmodel = 0; ikmodel < kscene->getInstance_kinematics_model_array().getCount(); ++ikmodel) {
+                listPossibleBodies.push_back(make_pair(kscene->getInstance_kinematics_model_array()[ikmodel], bindings));
+            }
+        }
+        FOREACH(it, listPossibleBodies) {
+            if( ExtractKinematicsModel(pbody, it->first, *it->second) && !!pbody ) {
+                bSuccess = true;
                 break;
             }
         }
