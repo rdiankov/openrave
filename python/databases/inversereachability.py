@@ -253,7 +253,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 basetrans = basetrans[flatnonzero(foundindices==False),:]
                 log.info('new equivalence class outliers: %d/%d, left over trans: %d',self.testEquivalenceClass(equivalenceclass)*len(zangles),len(zangles),len(basetrans))
         finally:
-            statesaver.close()
+            statesaver.Release()
             for b,enable in bodies:
                 b.Enable(enable)
         self.preprocess()
