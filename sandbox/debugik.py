@@ -1105,6 +1105,7 @@ def test_ik():
         psubs.append((s,v.subs(psubs)))
     if len(self.globalsymbols) > 0:
         psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]
+
     if len(raghavansolutiontree) > 0:
         psubs += [(s,v.subs(psubs)) for s,v in raghavansolutiontree[0].subs]
     dummyvaluesubs = [(dvar,self.convertRealToRational(var.subs(valsubs).evalf())) for dvar,var in dummyvars]

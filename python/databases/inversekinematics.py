@@ -698,14 +698,18 @@ class InverseKinematicsModel(DatabaseGenerator):
             if ipython:
                 # requires ipython v0.11+
                 IPython = __import__('IPython')
-                m=__import__('IPython.config.loader',fromlist=['Config'])
-                Config = getattr(m,'Config')
-                cfg = Config()
-                cfg.InteractiveShellEmbed.local_ns = locals()
-                cfg.InteractiveShellEmbed.global_ns = globals()
-                IPython.embed(config=cfg, banner2 = 'inversekinematics dropping into ipython')
-                from IPython.frontend.terminal.embed import InteractiveShellEmbed
-                ipshell = InteractiveShellEmbed(config=cfg)
+                if IPython.__version__.startswith("0.10"):
+                    ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'inversekinematics dropping into ipython',exit_msg = 'Leaving Interpreter and continuing solver.')
+                    ipshell(local_ns=locals())
+                else:
+                    m=__import__('IPython.config.loader',fromlist=['Config'])
+                    Config = getattr(m,'Config')
+                    cfg = Config()
+                    cfg.InteractiveShellEmbed.local_ns = locals()
+                    cfg.InteractiveShellEmbed.global_ns = globals()
+                    IPython.embed(config=cfg, banner2 = 'inversekinematics dropping into ipython')
+                    from IPython.frontend.terminal.embed import InteractiveShellEmbed
+                    ipshell = InteractiveShellEmbed(config=cfg)
                 reload(self.ikfast) # in case changes occurred
                 
             try:

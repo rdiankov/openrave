@@ -2690,8 +2690,8 @@ class IKFastSolver(AutoReloader):
         if removesmallnumbers:
             for i in range(len(Positions)):
                 for j in range(3):
-                    Positions[i][j] = self.RoundEquationTerms(Positions[i][j])
-                    Positionsee[i][j] = self.RoundEquationTerms(Positionsee[i][j])
+                    Positions[i][j] = self.RoundEquationTerms(Positions[i][j].expand())
+                    Positionsee[i][j] = self.RoundEquationTerms(Positionsee[i][j].expand())
         return self.buildEquationsFromTwoSides(Positions,Positionsee,transvars+othersolvedvars,uselength=uselength)
 
     def buildEquationsFromRotation(self,T0links,Ree,rotvars,othersolvedvars):
