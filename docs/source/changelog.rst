@@ -21,6 +21,11 @@ COLLADA
 
 * fixed transparency writing/reading. In COLLADA transparency=1 is opaque.
 
+Inverse Kinematics
+------------------
+
+* Fixed major bug in inverse kinematics rounding.
+
 Misc
 ----
 
