@@ -275,10 +275,14 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
         triindices = newindices
     return radius*numpy.array(vertices),triindices
 
-def DrawAxes(env,target,dist=1.0,linewidth=1):
+def DrawAxes(env,target,dist=1.0,linewidth=1,coloradd=None):
     """draws xyz coordinate system around target.
 
+    :param env: Environment
     :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
+    :param dist: how far the lines extend from the origin
+    :param linewidth: how thick the line is rendered in pixels
+    :param coloradd: an optional 3-element vector for 
     """
     if isinstance(target,basestring):
         T = self.env.GetKinBody(target).GetTransform()
@@ -286,27 +290,37 @@ def DrawAxes(env,target,dist=1.0,linewidth=1):
         T = openravepy_int.matrixFromPose(target)
     else:
         T = numpy.array(target)
-    return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]]))
+    colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]])
+    if coloradd is not None:
+        colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
+    return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
 
-def DrawIkparam(env,ikparam,dist=1.0,linewidth=1):
+def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
 
     """
     if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
-        return DrawAxes(env,ikparam.GetTransform6D(),dist,linewidth)
+        return DrawAxes(env,ikparam.GetTransform6D(),dist,linewidth,coloradd)
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationDirection5D:
         ray = ikparam.GetTranslationDirection5D()
-        return env.drawlinelist(numpy.array([ray.pos(),ray.pos()+ray.dir()*dist]),linewidth,colors=numpy.array([[0,0,0],[1,0,0]]))
+        colors=numpy.array([[0,0,0],[1,0,0]])
+        if coloradd is not None:
+            colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
+        return env.drawlinelist(numpy.array([ray.pos(),ray.pos()+ray.dir()*dist]),linewidth,colors=colors)
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.Translation3D:
-        return env.plot3(ikparam.GetTranslation3D(),linewidth,colors=numpy.array([[0,0,0]]))
+        if coloradd is not None:
+            colors = numpy.array([coloradd])
+        else:
+            colors=numpy.array([[0,0,0]])
+        return env.plot3(ikparam.GetTranslation3D(),linewidth,colors=colors)
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
         pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
         T[0:3,3] = pos
-        return DrawAxes(env,T,dist,linewidth)
+        return DrawAxes(env,T,dist,linewidth,coloradd)
     
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
