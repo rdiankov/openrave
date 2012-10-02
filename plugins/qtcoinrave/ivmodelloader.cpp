@@ -19,6 +19,13 @@
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoMaterial.h>
+#include <Inventor/VRMLnodes/SoVRMLMaterial.h>
+#include <Inventor/VRMLnodes/SoVRMLAppearance.h>
+#include <Inventor/VRMLnodes/SoVRMLGeometry.h>
+#include <Inventor/VRMLnodes/SoVRMLShape.h>
+#include <Inventor/VRMLnodes/SoVRMLVertexShape.h>
+#include <Inventor/VRMLnodes/SoVRMLVertexLine.h>
+#include <Inventor/VRMLnodes/SoVRMLVertexPoint.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/SbMatrix.h>
@@ -69,12 +76,16 @@ public:
         if( !!psep ) {
             // try to extract a material
             SoSearchAction search;
+            search.setFind(SoSearchAction::TYPE);
             search.setInterest(SoSearchAction::ALL);
             search.setType(SoMaterial::getClassTypeId());
             psep->ref();
             search.apply(psep);
             for(int i = 0; i < search.getPaths().getLength(); ++i) {
                 SoPath* path = search.getPaths()[i];
+                if( !path || path->getTail()->getTypeId() != SoMaterial::getClassTypeId() ) {
+                    continue;
+                }
                 SoMaterial* pmtrl = (SoMaterial*)path->getTail();
                 if( !pmtrl ) {
                     continue;
@@ -84,6 +95,11 @@ public:
                     diffuseColor.y = pmtrl->diffuseColor.getValues(0)->getValue()[1];
                     diffuseColor.z = pmtrl->diffuseColor.getValues(0)->getValue()[2];
                 }
+                else if( !!pmtrl->emissiveColor.getValues(0) ) {
+                    diffuseColor.x = pmtrl->emissiveColor.getValues(0)->getValue()[0];
+                    diffuseColor.y = pmtrl->emissiveColor.getValues(0)->getValue()[1];
+                    diffuseColor.z = pmtrl->emissiveColor.getValues(0)->getValue()[2];
+                }
                 if( !!pmtrl->ambientColor.getValues(0) ) {
                     ambientColor.x = pmtrl->ambientColor.getValues(0)->getValue()[0];
                     ambientColor.y = pmtrl->ambientColor.getValues(0)->getValue()[1];
@@ -92,6 +108,73 @@ public:
                 }
                 if( !!pmtrl->transparency.getValues(0) ) {
                     ftransparency = pmtrl->transparency.getValues(0)[0];
+                }
+            }
+            {
+
+//                SoCallbackAction materialaction;
+//                materialaction.apply(psep);
+//                SbColor ambient, diffuse, specular, emission;
+//                float shininess, transparency;
+//                materialaction.getMaterial(ambient,diffuse,specular,emission,shininess,transparency);
+
+
+//                // add the callbacks for all nodes
+//                triAction.addTriangleCallback(SoVRMLMaterial::getClassTypeId(), _Coin3dDiffuseColor, &diffuseColor);
+//                pnode->ref();
+//                triAction.apply(pnode);
+//
+//
+                // have to look for vrml materials, which is a different type
+                SoSearchAction search;
+                //search.setFind(SoSearchAction::TYPE);
+                search.setInterest(SoSearchAction::ALL);
+                search.setType(SoVRMLAppearance::getClassTypeId());
+                search.apply(psep);
+                for(int i = 0; i < search.getPaths().getLength(); ++i) {
+                    SoPath* path = search.getPaths()[i];
+                    if( !path || !path->getTail() ) {
+                        RAVELOG_INFO("no path");
+                        continue;
+                    }
+                    SoVRMLAppearance* pappearance = NULL;
+                    SoVRMLMaterial* pmtrl = NULL;
+                    SoVRMLShape* pshape = NULL;
+                    if( path->getTail()->getTypeId() == SoVRMLShape::getClassTypeId() ) {
+                        pshape = (SoVRMLShape*)path->getTail();
+                    }
+                    else if( path->getTail()->getTypeId() == SoVRMLAppearance::getClassTypeId() ) {
+                        pappearance = (SoVRMLAppearance*)path->getTail();
+                    }
+                    else if( path->getTail()->getTypeId() == SoVRMLMaterial::getClassTypeId() ) {
+                        pmtrl = (SoVRMLMaterial*)path->getTail();
+                    }
+                    else {
+                        RAVELOG_INFO("unknown vrml type: %s\n",path->getTail()->getTypeId().getName().getString());
+                        continue;
+                    }
+
+                    if( !!pshape ) {
+                        // check if the shape geometry has faces or not.
+                        if( !pshape->geometry.getValue() || pshape->geometry.getValue()->isOfType(SoVRMLVertexLine::getClassTypeId()) || pshape->geometry.getValue()->isOfType(SoVRMLVertexPoint::getClassTypeId()) ) {
+                            continue;
+                        }
+                        pappearance = (SoVRMLAppearance*)pshape->appearance.getValue();
+                    }
+                    if( !!pappearance ) {
+                        pmtrl = (SoVRMLMaterial*)pappearance->material.getValue();
+                    }
+                    if( !pmtrl ) {
+                        continue;
+                    }
+
+                    diffuseColor.x = pmtrl->diffuseColor.getValue()[0];
+                    diffuseColor.y = pmtrl->diffuseColor.getValue()[1];
+                    diffuseColor.z = pmtrl->diffuseColor.getValue()[2];
+                    ambientColor.x = pmtrl->ambientIntensity.getValue();
+                    ambientColor.y = pmtrl->ambientIntensity.getValue();
+                    ambientColor.z = pmtrl->ambientIntensity.getValue();
+                    ftransparency = pmtrl->transparency.getValue();
                 }
             }
             _Coin3dCreateTriMeshData(psep, trimesh);
