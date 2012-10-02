@@ -575,7 +575,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
-        return CheckEndEffectorCollision(ikparam.GetTransform6D());
+        return CheckEndEffectorCollision(ikparam.GetTransform6D(),report);
     }
     RobotBasePtr probot = GetRobot();
     IkSolverBasePtr pIkSolver = GetIkSolver();
