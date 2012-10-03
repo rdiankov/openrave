@@ -31,8 +31,7 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            // have to lock the environment?
-            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+            boost::mutex::scoped_lock lock(GetInterfaceMutex(pbody));
             pbody->_listRegisteredCallbacks.erase(_iterator);
         }
     }
@@ -3685,7 +3684,11 @@ void KinBody::_ComputeInternalInformation()
 
     // notify any callbacks of the changes
     if( _nParametersChanged ) {
-        std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+        std::list<UserDataWeakPtr> listRegisteredCallbacks;
+        {
+            boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
+            listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+        }
         FOREACH(it,listRegisteredCallbacks) {
             ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
             if( !!pdata && (pdata->_properties & _nParametersChanged) ) {
@@ -4045,7 +4048,11 @@ void KinBody::_ParametersChanged(int parameters)
         }
     }
 
-    std::list<UserDataWeakPtr> listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    std::list<UserDataWeakPtr> listRegisteredCallbacks;
+    {
+        boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
+        listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
+    }
     FOREACH(it,listRegisteredCallbacks) {
         ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
         if( !!pdata && (pdata->_properties & parameters) ) {
@@ -4152,6 +4159,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
 UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback)
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody()));
+    boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
     pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
     return pdata;
 }
