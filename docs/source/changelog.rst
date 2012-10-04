@@ -40,6 +40,8 @@ Misc
 
 * can retrieve colors from VRML/IV
 
+* added support for **grabbody** configuration group to IdealController
+
 Version 0.8.0
 =============
 

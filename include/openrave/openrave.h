@@ -968,7 +968,8 @@ public:
             - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b ikparam_velocities - velocity of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
-            - \b grab - Used to grab bodies given a robot's links. The name of the robot name along with the link indices to grab can follow.
+            - \b grab - \b deprecated Used to grab bodies given a robot's links. The name of the robot link along with the link indices to grab can follow. This is not portable when loading the enviroment from scratch since body IDs can change, so don't use it.
+            - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex. Only 1 DOF is accepted.
          */
         std::string name;
         /** \brief Describes how the data should be interpolated. Common methods are:
