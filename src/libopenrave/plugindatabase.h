@@ -756,6 +756,10 @@ protected:
         return pint->GetHash();
     }
 
+    boost::mutex& GetInterfaceMutex(InterfaceBasePtr pinterface) {
+        return pinterface->_mutexInterface;
+    }
+
 protected:
     void _CleanupUnusedLibraries()
     {

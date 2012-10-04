@@ -3129,7 +3129,7 @@ bool QtCoinViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int 
     GetCamera()->aspectRatio = (intrinsics.fy/(float)height) / (intrinsics.fx/(float)width);
     GetCamera()->heightAngle = 2.0f*atanf(0.5f*height/intrinsics.fy);
     GetCamera()->nearDistance = intrinsics.focal_length;
-    GetCamera()->farDistance = intrinsics.focal_length*10000; // control the precision
+    GetCamera()->farDistance = intrinsics.focal_length*50000; // control the precision
     GetCamera()->viewportMapping = SoCamera::LEAVE_ALONE;
 
     _pFigureRoot->ref();

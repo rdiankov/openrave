@@ -10,6 +10,11 @@ Subversion Revision: **Unreleased**
 
 Initial Release: **Unreleased**
 
+Core
+----
+
+* fixed deadlock condition with KinBody change callbacks
+
 COLLADA
 -------
 
@@ -21,10 +26,19 @@ COLLADA
 
 * fixed transparency writing/reading. In COLLADA transparency=1 is opaque.
 
+* fixed writing bug in lower/upper limits
+
+Inverse Kinematics
+------------------
+
+* Fixed major bug in inverse kinematics rounding.
+
 Misc
 ----
 
 * fixed ipython drop-in console with "openrave.py -i" for recent ipython versions (tested up to 0.13)
+
+* can retrieve colors from VRML/IV
 
 Version 0.8.0
 =============

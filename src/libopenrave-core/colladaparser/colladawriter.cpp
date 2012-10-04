@@ -847,7 +847,7 @@ private:
                 daeSafeCast<domKinematics_newparam::domFloat>(param_positionmin->add(COLLADA_ELEMENT_FLOAT))->setValue(jointaxislimit.first*fmult);
                 domKinematics_newparamRef param_positionmax = daeSafeCast<domKinematics_newparam>(kai->add(COLLADA_ELEMENT_NEWPARAM));
                 param_positionmax->setSid("positionmax");
-                daeSafeCast<domKinematics_newparam::domFloat>(param_positionmax->add(COLLADA_ELEMENT_FLOAT))->setValue(jointaxislimit.first*fmult);
+                daeSafeCast<domKinematics_newparam::domFloat>(param_positionmax->add(COLLADA_ELEMENT_FLOAT))->setValue(jointaxislimit.second*fmult);
 
                 domKinematics_limitsRef plimits = daeSafeCast<domKinematics_limits>(kai->add(COLLADA_ELEMENT_LIMITS));
                 daeSafeCast<domCommon_param>(plimits->add(COLLADA_ELEMENT_MIN)->add(COLLADA_ELEMENT_PARAM))->setValue("positionmin");
@@ -1506,35 +1506,37 @@ private:
         // Create kinematics scene
         _scene.kscene = daeSafeCast<domKinematics_scene>(_kinematicsScenesLib->add(COLLADA_ELEMENT_KINEMATICS_SCENE));
         _scene.kscene->setId("kscene");
-        _scene.kscene->setName("OpenRAVE Kinematics Scene");
+        _scene.kscene->setName("Kinematics Scene");
         // Create instance kinematics scene
         _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
         _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
         _scene.kiscene->setSid(str(boost::format("%s_inst")%_scene.kscene->getId()).c_str());
+        _scene.kiscene->setName("Kinematics Scene");
 
         if( IsWrite("visual") ) {
             // Create visual scene
             _scene.vscene = daeSafeCast<domVisual_scene>(_visualScenesLib->add(COLLADA_ELEMENT_VISUAL_SCENE));
             _scene.vscene->setId("vscene");
-            _scene.vscene->setName("OpenRAVE Visual Scene");
+            _scene.vscene->setName("Visual Scene");
 
             // Create instance visual scene
             _scene.viscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE ));
             _scene.viscene->setUrl(str(boost::format("#%s")%_scene.vscene->getId()).c_str());
             _scene.viscene->setSid(str(boost::format("%s_inst")%_scene.vscene->getId()).c_str());
+            _scene.viscene->setName("Visual Scene");
         }
         if( IsWrite("physics") ) {
             // Create physic scene
             _scene.pscene = daeSafeCast<domPhysics_scene>(_physicsScenesLib->add(COLLADA_ELEMENT_PHYSICS_SCENE));
             _scene.pscene->setId("pscene");
-            _scene.pscene->setName("OpenRAVE Physics Scene");
+            _scene.pscene->setName("Physics Scene");
 
             // Create instance physics scene
             _scene.piscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_PHYSICS_SCENE ));
             _scene.piscene->setUrl(str(boost::format("#%s")%_scene.pscene->getId()).c_str());
             _scene.piscene->setSid(str(boost::format("%s_inst")%_scene.pscene->getId()).c_str());
+            _scene.piscene->setName("Physics Scene");
         }
-
     }
 
     /** \brief Write link of a kinematic body
