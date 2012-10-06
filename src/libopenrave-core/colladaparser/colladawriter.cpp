@@ -396,6 +396,9 @@ private:
             }
         }
 
+        _nodesLib = daeSafeCast<domLibrary_nodes>(_dom->add(COLLADA_ELEMENT_LIBRARY_NODES));
+        _nodesLib->setId("nodes");
+
         _kinematicsModelsLib = daeSafeCast<domLibrary_kinematics_models>(_dom->add(COLLADA_ELEMENT_LIBRARY_KINEMATICS_MODELS));
         _kinematicsModelsLib->setId("kmodels");
         _articulatedSystemsLib = daeSafeCast<domLibrary_articulated_systems>(_dom->add(COLLADA_ELEMENT_LIBRARY_ARTICULATED_SYSTEMS));
@@ -1105,7 +1108,10 @@ private:
 
                 // create an instance_node pointing to kmout
                 domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
-                domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
+                domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("instance_node"));
+                if( !refnodelink ) {
+                    refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
+                }
                 OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",kmout->noderoot->getName(),ORE_Assert);
                 inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
                 if( pbody->GetLinks().size() > 0 ) {
@@ -1216,26 +1222,40 @@ private:
             vdomjoints.at(itjoint->first) = pdomjoint;
         }
 
-        list<int> listunusedlinks;
-        FOREACHC(itlink,pbody->GetLinks()) {
-            listunusedlinks.push_back((*itlink)->GetIndex());
-        }
+        if( !!pnoderoot ) {
+            list<int> listunusedlinks;
+            FOREACHC(itlink,pbody->GetLinks()) {
+                listunusedlinks.push_back((*itlink)->GetIndex());
+            }
 
-        domNodeRef nodehead = pnoderoot;
-        while(listunusedlinks.size()>0) {
-            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
-            Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
-            _WriteTransformation(childinfo.plink, t);
-            if( IsWrite("visual") ) {
-                _WriteTransformation(childinfo.pnode, t);
+            daeElementRef nodehead = _nodesLib;
+            bool bHasAddedInstance = false;
+            while(listunusedlinks.size()>0) {
+                LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
+                Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
+                _WriteTransformation(childinfo.plink, t);
+                if( IsWrite("visual") ) {
+                    _WriteTransformation(childinfo.pnode, t);
+                }
+                FOREACHC(itused, childinfo.listusedlinks) {
+                    kmout->vlinksids.at(itused->first) = itused->second;
+                    listunusedlinks.remove(itused->first);
+                }
+                // update the root so that newer nodes go inside the hierarchy of the first link
+                // this is necessary for instance_node to work correctly and to get the relative transform of the link right
+                nodehead = childinfo.pnode;
+                if( !bHasAddedInstance ) {
+                    domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
+                    if( !!childinfo.pnode->getSid() ) {
+                        inode->setSid(childinfo.pnode->getSid());
+                    }
+                    if( !!childinfo.pnode->getName() ) {
+                        inode->setName(childinfo.pnode->getName());
+                    }
+                    inode->setUrl(str(boost::format("#%s")%childinfo.pnode->getId()).c_str());
+                    bHasAddedInstance = true;
+                }
             }
-            FOREACHC(itused, childinfo.listusedlinks) {
-                kmout->vlinksids.at(itused->first) = itused->second;
-                listunusedlinks.remove(itused->first);
-            }
-            // update the root so that newer nodes go inside the hierarchy of the first link
-            // this is necessary for instance_node to work correctly and to get the relative transform of the link right
-            nodehead = childinfo.pnode;
         }
 
         _WriteKinBodyType(pbody,kmout->kmodel);
@@ -1547,9 +1567,9 @@ private:
         \param strModelUri
         \param vjoints Vector of joints
      */
-    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, domNodeRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
+    virtual LINKOUTPUT _WriteLink(KinBody::LinkConstPtr plink, daeElementRef pkinparent, daeElementRef pnodeparent, const string& strModelUri, const vector<pair<int, KinBody::JointConstPtr> >& vjoints)
     {
-        RAVELOG_VERBOSE(str(boost::format("writing link %s, node parent id=%s")%plink->GetName()%pnodeparent->getId()));
+        RAVELOG_VERBOSE(str(boost::format("writing link %s, node parent id=%s")%plink->GetName()%pnodeparent->getID()));
         LINKOUTPUT out;
         string linksid = _GetLinkSid(plink);
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
@@ -1953,6 +1973,7 @@ private:
     domCOLLADA* _dom;
     daeDocument* _doc;
     domCOLLADA::domSceneRef _globalscene;
+    domLibrary_nodesRef _nodesLib;
     domLibrary_visual_scenesRef _visualScenesLib;
     domLibrary_kinematics_scenesRef _kinematicsScenesLib;
     domLibrary_kinematics_modelsRef _kinematicsModelsLib;

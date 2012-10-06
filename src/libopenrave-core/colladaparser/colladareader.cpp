@@ -489,19 +489,25 @@ public:
                                             domInstance_rigid_bodyRef temprigid = ipmodel->getInstance_rigid_body_array()[irigid];
                                             if( temprigid->getBody() == sidfind ) {
                                                 irigidbody = temprigid;
-                                                string nodeid = temprigid->getTarget().getElement()->getID();
-                                                FOREACH(itbinding,allbindings) {
-                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
-                                                        if( nodeid == itlinkbinding->_node->getID() ) {
-                                                            link = itlinkbinding->_link;
+                                                daeElementRef ptarget = temprigid->getTarget().getElement();
+                                                if( !!ptarget ) {
+                                                    string nodeid = ptarget->getID();
+                                                    FOREACH(itbinding,allbindings) {
+                                                        FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                            if( nodeid == itlinkbinding->_node->getID() ) {
+                                                                link = itlinkbinding->_link;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if( !!link ) {
                                                             break;
                                                         }
                                                     }
-                                                    if( !!link ) {
-                                                        break;
-                                                    }
+                                                    break;
                                                 }
-                                                break;
+                                                else {
+                                                    RAVELOG_WARN(str(boost::format("failed to find target to rigid attachment: %s")%temprigid->getTarget().str()));
+                                                }
                                             }
                                         }
 
@@ -3388,7 +3394,7 @@ private:
                                 plink0 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link0"));
                             }
                             if( !plink0 ) {
-                                RAVELOG_WARN(str(boost::format("failed to resolve link %s %s\n")%pelt->getAttribute("link0")));
+                                RAVELOG_WARN(str(boost::format("failed to resolve link0 %s\n")%pelt->getAttribute("link0")));
                                 continue;
                             }
 
@@ -3401,7 +3407,7 @@ private:
                                 plink1 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link1"));
                             }
                             if( !plink1 ) {
-                                RAVELOG_WARN(str(boost::format("failed to resolve link %s %s\n")%pelt->getAttribute("link1")));
+                                RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
                                 continue;
                             }
                             pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
