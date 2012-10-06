@@ -463,19 +463,25 @@ public:
                                             domInstance_rigid_bodyRef temprigid = ref_ipmodel->getInstance_rigid_body_array()[irigid];
                                             if( temprigid->getBody() == sidfind ) {
                                                 ref_irigidbody = temprigid;
-                                                string nodeid = temprigid->getTarget().getElement()->getID();
-                                                FOREACH(itbinding,allbindings) {
-                                                    FOREACH(itlinkbinding, itbinding->listLinkBindings) {
-                                                        if( nodeid == itlinkbinding->_node->getID() ) {
-                                                            ref_link = itlinkbinding->_link;
+                                                daeElementRef ptarget = temprigid->getTarget().getElement();
+                                                if( !!ptarget ) {
+                                                    string nodeid = ptarget->getID();
+                                                    FOREACH(itbinding,allbindings) {
+                                                        FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                            if( nodeid == itlinkbinding->_node->getID() ) {
+                                                                ref_link = itlinkbinding->_link;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if( !!ref_link ) {
                                                             break;
                                                         }
                                                     }
-                                                    if( !!ref_link ) {
-                                                        break;
-                                                    }
+                                                    break;
                                                 }
-                                                break;
+                                                else {
+                                                    RAVELOG_WARN(str(boost::format("failed to find target to rigid attachment: %s")%temprigid->getTarget().str()));
+                                                }
                                             }
                                         }
                                         sidfind = attachment_rigid_body->getAttribute("sid");
