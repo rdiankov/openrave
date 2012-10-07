@@ -33,6 +33,8 @@ Inverse Kinematics
 
 * Fixed major bug in inverse kinematics rounding.
 
+* Fixed degenerate case in ikfast.
+
 Misc
 ----
 

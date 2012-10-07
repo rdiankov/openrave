@@ -180,7 +180,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '60' # also in ikfast.h
+__version__ = '61' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -5114,7 +5114,7 @@ class IKFastSolver(AutoReloader):
                 jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
                     return [AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.isHinge(var.name))]
-                
+            
             numvar = self.countVariables(eqnew,varsym.htvar)
             if Poly(eqnew,varsym.htvar).TC() != S.Zero and numvar >= 1 and numvar <= 2:
                 tempsolutions = solve(eqnew,varsym.htvar)
@@ -5252,7 +5252,7 @@ class IKFastSolver(AutoReloader):
                             solversolution.FeasibleIsZeros = False
                             log.debug('%s solution: atan2 check for joint',var.name)
                         solversolution.jointeval.append(expandedsol)
-
+                        
                         if unknownvars is not None:
                             unsolvedsymbols = []
                             for unknownvar in unknownvars:
@@ -5264,14 +5264,13 @@ class IKFastSolver(AutoReloader):
                                 solversolution.equationsused = eqns
                             if len(solversolution.equationsused) > 0:
                                 log.info('%s solution: equations used for atan2: %s',var.name, str(solversolution.equationsused))
-
                         if len(self.checkForDivideByZero(expandedsol)) == 0:
                             goodsolution += 1
                     if len(solversolution.jointeval) == len(sollist) and len(sollist) > 0:
                         solutions.append(solversolution)
                         if goodsolution > 0:
                             hasgoodsolution = True
-                        if len(sollist) == goodsolution and goodsolution == 1:
+                        if len(sollist) == goodsolution and goodsolution == 1 and len(solutions) >= 2:
                             break
                         if len(solutions) >= maxsolutions:
                             # probably more than enough already?
