@@ -364,6 +364,15 @@ public:
                 _fGlobalScale *= v.x;
             }
         }
+
+        // instantiate all nodes, might not be necessary
+        domCOLLADA::domSceneRef allscene = _dom->getScene();
+        if( !!allscene->getInstance_visual_scene() ) {
+            domVisual_sceneRef visual_scene = daeSafeCast<domVisual_scene>(allscene->getInstance_visual_scene()->getUrl().getElement().cast());
+            if( !!visual_scene ) {
+                _InstantiateVisualSceneNodes(visual_scene->getNode_array());
+            }
+        }
         return true;
     }
 
@@ -853,7 +862,7 @@ public:
                 for(size_t iparam = 0; iparam < ias->getNewparam_array().getCount(); ++iparam) {
                     domKinematics_newparamRef param = ias->getNewparam_array()[iparam];
                     // find the axis index
-                    if( !!param->getSIDREF() ) {
+                    if( !!param->getSIDREF() && !!param->getSIDREF()->getValue() ) {
                         daeElement* pelt = daeSidRef(param->getSIDREF()->getValue(),ias).resolve().elt;
                         if( !!pelt ) {
                             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
@@ -2800,7 +2809,9 @@ public:
                         if( !!instelt ) {
                             listInstanceScope.push_back(instelt);
                         }
-                        return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
+                        if( !!newparam->getSIDREF()->getValue() ) {
+                            return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
+                        }
                     }
                     RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%getSid(newparam)));
                 }
@@ -3117,7 +3128,22 @@ private:
         parentelt->add(newnode);
         BOOST_ASSERT(parentelt == newnode->getParentElement());
         parentelt->removeChildElement(pelt); // have to remove the instance_node
+        newnode->getDAE()->getDatabase()->changeElementID(newnode, newnode->getID());
+        if( idsuffix.size() == 0 ) {
+            // remove the old node's id since it doesn't belong to the visual hierarchy!
+            newnode->getDAE()->getDatabase()->removeElement(node->getDocument(), node);
+        }
         return daeSafeCast<domNode>(newnode);
+    }
+
+    static void _InstantiateVisualSceneNodes(const domNode_Array & nodes)
+    {
+        for(size_t i = 0; i < nodes.getCount(); ++i) {
+            for(size_t j = 0; j < nodes[i]->getInstance_node_array().getCount(); ++j) {
+                _InstantiateNode(nodes[i]->getInstance_node_array()[j]);
+            }
+            _InstantiateVisualSceneNodes(nodes[i]->getNode_array());
+        }
     }
 
     static void _ResolveURLs(daeElementRef elt, const daeURI& srcuri)

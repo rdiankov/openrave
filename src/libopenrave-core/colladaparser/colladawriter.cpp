@@ -1108,12 +1108,20 @@ private:
 
                 // create an instance_node pointing to kmout
                 domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnoderoot->add(COLLADA_ELEMENT_INSTANCE_NODE));
-                domNodeRef refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("instance_node"));
-                if( !refnodelink ) {
-                    refnodelink = daeSafeCast<domNode>(kmout->noderoot->getChild("node"));
+                domNodeRef noderoot = kmout->noderoot;
+                domNodeRef refnodelink = daeSafeCast<domNode>(noderoot->getChild("node"));
+                if( !!refnodelink ) {
+                    inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
                 }
-                OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",kmout->noderoot->getName(),ORE_Assert);
-                inode->setUrl(str(boost::format("#%s")%refnodelink->getId()).c_str());
+                else {
+                    domInstance_nodeRef irefnodelink = daeSafeCast<domInstance_node>(noderoot->getChild("instance_node"));
+                    if( !!irefnodelink ) {
+                        inode->setUrl(irefnodelink->getUrl());
+                    }
+                    else {
+                        OPENRAVE_ASSERT_FORMAT(!!refnodelink,"node root %s should have at least one child",noderoot->getName(),ORE_Assert);
+                    }
+                }
                 if( pbody->GetLinks().size() > 0 ) {
                     inode->setSid(_GetNodeSid(pbody->GetLinks().at(0)).c_str());
                     domExtraRef pinodeextra = daeSafeCast<domExtra>(inode->add(COLLADA_ELEMENT_EXTRA));
