@@ -418,20 +418,28 @@ protected:
 
         // make sure the initial and goal configs are not in collision
         vector<dReal> vonegoal(robot->GetActiveDOF());
+        vector<dReal> voriggoalconfig; voriggoalconfig.reserve(params->vgoalconfig.size());
+        std::vector<uint8_t> vgoalchanged; vgoalchanged.reserve(params->vgoalconfig.size()/robot->GetActiveDOF());
 
         size_t writeindex=0;
         for(size_t i = 0; i < params->vgoalconfig.size(); i += robot->GetActiveDOF()) {
             std::copy(params->vgoalconfig.begin()+i,params->vgoalconfig.begin()+i+robot->GetActiveDOF(),vonegoal.begin());
             robot->SetActiveDOFValues(vonegoal, true);
             robot->GetActiveDOFValues(vonegoal);
+            uint8_t goalchanged = 0;
             switch( planningutils::JitterActiveDOF(robot,nMaxJitterIterations,jitter) ) {
             case 0:
                 RAVELOG_WARN(str(boost::format("jitter failed %d\n")%i));
                 continue;
             case 1:
-                robot->GetActiveDOFValues(vonegoal);
+                goalchanged = 1;
                 break;
             }
+            voriggoalconfig.insert(voriggoalconfig.end(),vonegoal.begin(),vonegoal.end());
+            if( goalchanged ) {
+                robot->GetActiveDOFValues(vonegoal);
+            }
+            vgoalchanged.push_back(goalchanged);
             std::copy(vonegoal.begin(),vonegoal.end(),params->vgoalconfig.begin()+writeindex);
             writeindex += robot->GetActiveDOF();
         }
@@ -488,6 +496,25 @@ protected:
         }
         if( vinsertconfiguration.size() > 0 ) {
             planningutils::InsertActiveDOFWaypointWithRetiming(0,vinsertconfiguration,vector<dReal>(), ptraj, robot, _fMaxVelMult);
+        }
+
+        if( jitter > 0 ) {
+            // could have returned a jittered goal different from the original goals
+            try {
+                stringstream soutput, sinput;
+                sinput << "GetGoalIndex";
+                rrtplanner->SendCommand(soutput,sinput);
+
+                int goalindex = -1;
+                soutput >> goalindex;
+                if( goalindex >= 0 && goalindex < (int)vgoalchanged.size() && vgoalchanged.at(goalindex) ) {
+                    std::copy(voriggoalconfig.begin()+goalindex*robot->GetActiveDOF(),voriggoalconfig.begin()+(goalindex+1)*robot->GetActiveDOF(),vonegoal.begin());
+                    planningutils::InsertActiveDOFWaypointWithRetiming(ptraj->GetNumWaypoints(),vonegoal,vector<dReal>(), ptraj, robot, _fMaxVelMult);
+                }
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN(str(boost::format("planner %s does not support GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
+            }
         }
 
         CM::SetActiveTrajectory(robot, ptraj, bExecute, strtrajfilename, pOutputTrajStream,_fMaxVelMult);
@@ -788,7 +815,7 @@ protected:
                 rrtplanner->SendCommand(soutput,sinput);
             }
             catch(const std::exception& ex) {
-                RAVELOG_WARN(str(boost::format("planner %s does not GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
+                RAVELOG_WARN(str(boost::format("planner %s does not support GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
             }
         }
 

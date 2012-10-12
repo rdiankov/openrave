@@ -160,9 +160,26 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             _samplespec.ResetGroupOffsets();
             _vgrablinks.resize(0);
+            _vgrabbodylinks.resize(0);
             int dof = _samplespec.GetDOF();
             FOREACHC(itgroup,ptraj->GetConfigurationSpecification()._vgroups) {
-                if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
+                if( itgroup->name.size()>=8 && itgroup->name.substr(0,8) == "grabbody") {
+                    stringstream ss(itgroup->name);
+                    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                    if( itgroup->dof == 1 && tokens.size() >= 4 && tokens.at(2) == _probot->GetName() ) {
+                        KinBodyPtr pbody = GetEnv()->GetKinBody(tokens.at(1));
+                        if( !!pbody ) {
+                            _samplespec._vgroups.push_back(*itgroup);
+                            _samplespec._vgroups.back().offset = dof;
+                            _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody));
+                        }
+                        dof += _samplespec._vgroups.back().dof;
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("invalid grabbody tokens: %s")%ss.str()));
+                    }
+                }
+                else if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
                     stringstream ss(itgroup->name);
                     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                     if( tokens.size() >= 2 && tokens[1] == _probot->GetName() ) {
@@ -172,6 +189,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                             _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
                         }
                         dof += _samplespec._vgroups.back().dof;
+                    }
+                    else {
+                        RAVELOG_WARN(str(boost::format("invalid grab tokens: %s")%ss.str()));
                     }
                 }
             }
@@ -245,6 +265,26 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         else {
                             listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
                         }
+                    }
+                }
+            }
+            FOREACH(itgrabinfo,_vgrabbodylinks) {
+                int dograb = int(std::floor(sampledata.at(itgrabinfo->offset)+0.5));
+                if( dograb <= 0 ) {
+                    if( !!_probot->IsGrabbing(itgrabinfo->pbody) ) {
+                        listrelease.push_back(itgrabinfo->pbody);
+                    }
+                }
+                else {
+                    KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(itgrabinfo->pbody);
+                    if( !!pgrabbinglink ) {
+                        if( pgrabbinglink->GetIndex() != itgrabinfo->robotlinkindex ) {
+                            listrelease.push_back(itgrabinfo->pbody);
+                            listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
+                        }
+                    }
+                    else {
+                        listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
                     }
                 }
             }
@@ -431,7 +471,18 @@ private:
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBasePtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;
-    vector< pair<int, int> > _vgrablinks; /// (data offset, link index) pairs
+    std::vector< pair<int, int> > _vgrablinks; /// (data offset, link index) pairs
+    struct GrabBody
+    {
+        GrabBody() : offset(0), robotlinkindex(0) {
+        }
+        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        }
+        int offset;
+        int robotlinkindex;
+        KinBodyPtr pbody;
+    };
+    std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
 
     std::vector<dReal> _vecdesired;         ///< desired values of the joints

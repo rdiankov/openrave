@@ -126,6 +126,7 @@ public:
         _bUseSimulationTime = true;
         _starttime = 0;
         _bContinueThread = true;
+        _frameindex = 0;
 #ifdef _WIN32
         _pfile = NULL;
         _ps = NULL;
@@ -238,17 +239,6 @@ protected:
     bool _StopCommand(ostream& sout, istream& sinput)
     {
         _Reset();
-        return true;
-    }
-
-    bool _GetCodecsCommand(ostream& sout, istream& sinput)
-    {
-        std::list<std::pair<int,string> > listcodecs;
-        _GetCodecs(listcodecs);
-        sout << listcodecs.size() << endl;
-        FOREACH(it,listcodecs) {
-            sout << it->first << " " << it->second << endl;
-        }
         return true;
     }
 
@@ -427,8 +417,9 @@ protected:
     PAVISTREAM _ps, _psCompressed, _psText;
     int _biSizeImage;
 
-    void _GetCodecs(std::list<std::pair<int,std::string> >& lcodecs) {
-        lcodecs.clear();
+    bool _GetCodecsCommand(ostream& sout, istream& sinput)
+    {
+        return false;
     }
 
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
@@ -591,6 +582,7 @@ protected:
     char *_picture_buf, *_outbuf;
     int _picture_size;
     int _outbuf_size;
+    uint64_t _frameindex;
     bool _bWroteURL, _bWroteHeader;
 
     void _ResetLibrary()
@@ -627,21 +619,30 @@ protected:
         _bWroteURL = _bWroteHeader = false;
     }
 
-    void _GetCodecs(std::list<std::pair<int,string> >& lcodecs)
+    bool _GetCodecsCommand(ostream& sout, istream& sinput)
     {
         if( !s_pVideoGlobalState ) {
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
-        lcodecs.clear();
 #if LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
         AVOutputFormat *fmt = first_oformat;
 #endif
         while (fmt != NULL) {
-            lcodecs.push_back(make_pair((int)fmt->video_codec,fmt->long_name));
+            if( fmt->video_codec != CODEC_ID_NONE && !!fmt->name ) {
+                string mime_type;
+                if( !!fmt->mime_type ) {
+                    mime_type = fmt->mime_type;
+                }
+                if( mime_type.size() == 0 ) {
+                    mime_type = "*";
+                }
+                sout << fmt->video_codec << " " << mime_type << " " << fmt->name << endl;
+            }
             fmt = fmt->next;
         }
+        return true;
     }
 
     void _StartVideo(const std::string& filename, double frameRate, int width, int height, int bits, int codecid=-1)
@@ -665,6 +666,7 @@ protected:
         }
         BOOST_ASSERT(!!fmt);
 
+        _frameindex = 0;
         _output = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
         BOOST_ASSERT(!!_output);
 
@@ -821,6 +823,8 @@ protected:
         pkt.data = (uint8_t*)_outbuf;
         pkt.size = size;
         pkt.stream_index = _stream->index;
+        //RAVELOG_INFO("%d\n",index);
+        pkt.pts = _frameindex++;
         if( av_write_frame(_output, &pkt) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
         }

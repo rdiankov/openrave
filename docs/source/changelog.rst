@@ -33,12 +33,16 @@ Inverse Kinematics
 
 * Fixed major bug in inverse kinematics rounding.
 
+* Fixed degenerate case in ikfast.
+
 Misc
 ----
 
 * fixed ipython drop-in console with "openrave.py -i" for recent ipython versions (tested up to 0.13)
 
 * can retrieve colors from VRML/IV
+
+* added support for **grabbody** configuration group to IdealController
 
 Version 0.8.0
 =============
