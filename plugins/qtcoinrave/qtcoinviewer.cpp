@@ -2099,10 +2099,13 @@ void QtCoinViewer::SetupMenus()
                 psubmenu->addAction(pact);
                 pVideoCodecs->addAction(pact);
 
-                int N = 0; scodecs >> N;
-                while(N-- > 0 ) {
-                    int index = -1; string name;
-                    scodecs >> index;
+                string mime_type, name;
+                while(!scodecs.eof()) {
+                    int index = -1;
+                    scodecs >> index >> mime_type;
+                    if( !scodecs ) {
+                        break;
+                    }
                     getline(scodecs,name);
                     boost::trim(name);
                     pact = new QAction(tr(name.c_str()), this);
