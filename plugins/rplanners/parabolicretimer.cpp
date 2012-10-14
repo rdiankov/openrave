@@ -88,6 +88,12 @@ protected:
         }
         _ramps.resize(info->gpos.dof);
         dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
+#ifdef _DEBUG
+        if( mintime < 0 ) {
+            // do again for debugging reproduction
+            mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
+        }
+#endif
         OPENRAVE_ASSERT_OP(mintime,>=,0);
         return mintime;
     }
@@ -153,6 +159,12 @@ protected:
             }
 
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+#ifdef _DEBUG
+            if( !success ) {
+                // for debugging
+                success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+            }
+#endif
             BOOST_ASSERT(success);
 
             vector<dReal> vswitchtimes;
