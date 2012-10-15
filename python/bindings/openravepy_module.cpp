@@ -32,6 +32,10 @@ public:
         return _pmodule;
     }
 
+    void Destroy() {
+        _pmodule->Destroy();
+    }
+
     bool SimulationStep(dReal fElapsedTime) {
         return _pmodule->SimulationStep(fElapsedTime);
     }
@@ -60,6 +64,7 @@ void init_openravepy_module()
 {
     class_<PyModuleBase, boost::shared_ptr<PyModuleBase>, bases<PyInterfaceBase> >("Module", DOXY_CLASS(ModuleBase), no_init)
     .def("SimulationStep",&PyModuleBase::SimulationStep, DOXY_FN(ModuleBase,"SimulationStep"))
+    .def("Destroy",&PyModuleBase::Destroy, DOXY_FN(ModuleBase,"Destroy"))
     ;
 
     def("RaveCreateModule",openravepy::RaveCreateModule,args("env","name"),DOXY_FN1(RaveCreateModule));
