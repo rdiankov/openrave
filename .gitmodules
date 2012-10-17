@@ -1,0 +1,3 @@
+[submodule "src/collada_robots"]
+	path = src/collada_robots
+	url = https://github.com/rdiankov/collada_robots.git
