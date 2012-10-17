@@ -105,7 +105,7 @@ class ViewerRecorder : public ModuleBase
     uint64_t _starttime, _frametime;
     std::string _filename;
     UserDataPtr _callback;
-    bool _bUseSimulationTime;
+    int _nUseSimulationTime; // 0 to record as is, 1 to record with respect to simulation, 2 to control simulation to viewer updates
     list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
     boost::shared_ptr<VideoFrame> _frameLastAdded;
 
@@ -114,7 +114,7 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
         RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
-                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
+                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtime] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
         RegisterCommand("Stop",boost::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
                         "Stops recording and saves the file. Format::\n\n  Stop\n\n");
         RegisterCommand("GetCodecs",boost::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
@@ -123,7 +123,7 @@ public:
                         "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
         _nFrameCount = _nVideoWidth = _nVideoHeight = 0;
         _framerate = 0;
-        _bUseSimulationTime = true;
+        _nUseSimulationTime = 1;
         _starttime = 0;
         _bContinueThread = true;
         _frameindex = 0;
@@ -194,10 +194,13 @@ protected:
                     string type;
                     sinput >> type;
                     if( type == "simtime" ) {
-                        _bUseSimulationTime = true;
+                        _nUseSimulationTime = 1;
+                    }
+                    else if( type == "controlsimtime" ) {
+                        _nUseSimulationTime = 2;
                     }
                     else if( type == "realtime" ) {
-                        _bUseSimulationTime = false;
+                        _nUseSimulationTime = 0;
                     }
                     else {
                         RAVELOG_WARN("unknown cmd");
@@ -263,7 +266,7 @@ protected:
             // recorder already destroyed and this thread is just remaining
             return;
         }
-        uint64_t timestamp = _bUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
+        uint64_t timestamp = _nUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
         boost::shared_ptr<VideoFrame> frame;
 
         if( _listAddFrames.size() > 0 ) {
@@ -295,6 +298,9 @@ protected:
         }
         RAVELOG_VERBOSE(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
         _condnewframe.notify_one();
+        if( _nUseSimulationTime == 2 ) {
+            GetEnv()->StepSimulation(1.0/_framerate);
+        }
     }
 
     void _RecordThread()
@@ -399,7 +405,7 @@ protected:
             _framerate = 30000.0f/1001.0f;
             _starttime = 0;
             _callback.reset();
-            _bUseSimulationTime = true;
+            _nUseSimulationTime = true;
             _listAddFrames.clear();
             _listFinishedFrames.clear();
             _frameLastAdded.reset();
