@@ -800,7 +800,7 @@ if __name__ == "__main__":
     args['openrave_soversion'] = soversion
     args['openrave_commit'] = ''
     if options.commit is not None:
-        args['openrave_version_full'] += '-'+options.revision[0:6]
+        args['openrave_version_full'] += '-'+options.commit[0:6]
         args['openrave_commit'] = options.commit
     args['vcversion'] = os.path.split(options.installdir)[1][2:]
     args['vcredist_url'] = vcredist_urls[args['vcversion']]
