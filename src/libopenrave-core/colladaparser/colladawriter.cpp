@@ -1230,25 +1230,26 @@ private:
             vdomjoints.at(itjoint->first) = pdomjoint;
         }
 
-        if( !!pnoderoot ) {
-            list<int> listunusedlinks;
-            FOREACHC(itlink,pbody->GetLinks()) {
-                listunusedlinks.push_back((*itlink)->GetIndex());
+        list<int> listunusedlinks;
+        FOREACHC(itlink,pbody->GetLinks()) {
+            listunusedlinks.push_back((*itlink)->GetIndex());
+        }
+
+        daeElementRef nodehead = _nodesLib;
+        bool bHasAddedInstance = false;
+        while(listunusedlinks.size()>0) {
+            LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
+            Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
+            _WriteTransformation(childinfo.plink, t);
+            if( IsWrite("visual") ) {
+                _WriteTransformation(childinfo.pnode, t);
+            }
+            FOREACHC(itused, childinfo.listusedlinks) {
+                kmout->vlinksids.at(itused->first) = itused->second;
+                listunusedlinks.remove(itused->first);
             }
 
-            daeElementRef nodehead = _nodesLib;
-            bool bHasAddedInstance = false;
-            while(listunusedlinks.size()>0) {
-                LINKOUTPUT childinfo = _WriteLink(pbody->GetLinks().at(listunusedlinks.front()), ktec, nodehead, kmodel->getID(), vjoints);
-                Transform t = pbody->GetLinks()[listunusedlinks.front()]->GetTransform();
-                _WriteTransformation(childinfo.plink, t);
-                if( IsWrite("visual") ) {
-                    _WriteTransformation(childinfo.pnode, t);
-                }
-                FOREACHC(itused, childinfo.listusedlinks) {
-                    kmout->vlinksids.at(itused->first) = itused->second;
-                    listunusedlinks.remove(itused->first);
-                }
+            if( !!pnoderoot ) {
                 // update the root so that newer nodes go inside the hierarchy of the first link
                 // this is necessary for instance_node to work correctly and to get the relative transform of the link right
                 nodehead = childinfo.pnode;

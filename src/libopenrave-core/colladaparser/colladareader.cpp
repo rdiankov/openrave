@@ -1053,7 +1053,19 @@ public:
             }
         }
         if( !pvisualnode ) {
-            RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s, creating without any geometry\n")%getSid(ikm)));
+            if( listInstanceScope.size() == 0 ) {
+                // if top scope, make an exception to ignore the resolved scope
+                FOREACH(it, bindings.listModelBindings) {
+                    // have to use listInstanceScope
+                    if( it->_ikmodel == ikm ) {
+                        pvisualnode = it->_node;
+                        break;
+                    }
+                }
+            }
+            if( !pvisualnode ) {
+                RAVELOG_WARN(str(boost::format("failed to find visual node for instance kinematics model %s, creating without any geometry\n")%getSid(ikm)));
+            }
         }
 
         if(( pkinbody->GetName().size() == 0) && !!ikm->getName() ) {
@@ -1367,7 +1379,7 @@ public:
 
         if (!pdomlink) {
             if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
-                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
+                RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
             }
         }
         else {
@@ -1380,7 +1392,7 @@ public:
 
             // Get the geometry
             if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
-                RAVELOG_DEBUG(str(boost::format("link %s node %s has no geometry\n")%plink->GetName()%pdomnode->getName()));
+                RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
             }
 
             RAVELOG_DEBUG(str(boost::format("After ExtractGeometry Attachment link elements: %d\n")%pdomlink->getAttachment_full_array().getCount()));
@@ -2742,7 +2754,7 @@ public:
         daeElement* pelt = NULL;
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene>(parent.cast());
         if( !!kscene ) {
-            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), bLogWarning, listInstanceScope);
+            pelt = searchBindingArray(ref,kscene->getInstance_articulated_system_array(), false, listInstanceScope);
             if( !!pelt ) {
                 return pelt;
             }

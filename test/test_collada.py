@@ -260,7 +260,7 @@ class TestCOLLADA(EnvironmentSetup):
         assert(len(env.GetBodies())==len(env2.GetBodies()))
 
         env.Reset()
-        env.Load('robots/barrett-hand.dae')
+        env.Load('robots/barrett-hand.zae')
         robot=env.GetRobots()[0]
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
         env2.Reset()
@@ -394,9 +394,9 @@ class TestCOLLADA(EnvironmentSetup):
 '''
         env=self.env
         self.LoadDataEnv(xmldata)
-        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env.Save('test_externalref_scene.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
         env2 = Environment()
-        env2.Load('test_writekinematicsonly.dae')
+        env2.Load('test_externalref_scene.dae')
         assert(len(env.GetBodies())==len(env2.GetBodies()))
         for body in env.GetBodies():
             self.log.info(body.GetName())
