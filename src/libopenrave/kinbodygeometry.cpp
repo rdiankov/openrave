@@ -27,9 +27,9 @@ namespace OpenRAVE {
 
 // generate a sphere triangulation starting with an icosahedron
 // all triangles are oriented counter clockwise
-void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
+void GenerateSphereTriangulation(TriMesh& tri, int levels)
 {
-    KinBody::Link::TRIMESH temp, temp2;
+    TriMesh temp, temp2;
 
     temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
     temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
@@ -83,8 +83,8 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
     temp.indices.resize(nindices);
     std::copy(&indices[0],&indices[nindices],temp.indices.begin());
 
-    KinBody::Link::TRIMESH* pcur = &temp;
-    KinBody::Link::TRIMESH* pnew = &temp2;
+    TriMesh* pcur = &temp;
+    TriMesh* pnew = &temp2;
     while(levels-- > 0) {
 
         pnew->vertices.resize(0);
@@ -128,137 +128,19 @@ void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
     tri = *pcur;
 }
 
-void KinBody::Link::TRIMESH::ApplyTransform(const Transform& t)
-{
-    FOREACH(it, vertices) {
-        *it = t * *it;
-    }
-}
-
-void KinBody::Link::TRIMESH::ApplyTransform(const TransformMatrix& t)
-{
-    FOREACH(it, vertices) {
-        *it = t * *it;
-    }
-}
-
-void KinBody::Link::TRIMESH::Append(const TRIMESH& mesh)
-{
-    int offset = (int)vertices.size();
-    vertices.insert(vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
-    }
-}
-
-void KinBody::Link::TRIMESH::Append(const TRIMESH& mesh, const Transform& trans)
-{
-    int offset = (int)vertices.size();
-    vertices.resize(vertices.size() + mesh.vertices.size());
-    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
-        vertices[i+offset] = trans * mesh.vertices[i];
-    }
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
-    }
-}
-
-AABB KinBody::Link::TRIMESH::ComputeAABB() const
-{
-    AABB ab;
-    if( vertices.size() == 0 ) {
-        return ab;
-    }
-    Vector vmin, vmax;
-    vmin = vmax = vertices.at(0);
-    FOREACHC(itv, vertices) {
-        Vector v = *itv;
-        if( vmin.x > v.x ) {
-            vmin.x = v.x;
-        }
-        if( vmin.y > v.y ) {
-            vmin.y = v.y;
-        }
-        if( vmin.z > v.z ) {
-            vmin.z = v.z;
-        }
-        if( vmax.x < v.x ) {
-            vmax.x = v.x;
-        }
-        if( vmax.y < v.y ) {
-            vmax.y = v.y;
-        }
-        if( vmax.z < v.z ) {
-            vmax.z = v.z;
-        }
-    }
-
-    ab.extents = (dReal)0.5*(vmax-vmin);
-    ab.pos = (dReal)0.5*(vmax+vmin);
-    return ab;
-}
-
-void KinBody::Link::TRIMESH::serialize(std::ostream& o, int options) const
-{
-    o << vertices.size() << " ";
-    FOREACHC(it,vertices) {
-        o << it->x << " " << it->y << " " << it->z << " ";
-    }
-    o << indices.size() << " ";
-    FOREACHC(it,indices) {
-        o << *it << " ";
-    }
-}
-
-std::ostream& operator<<(std::ostream& O, const KinBody::Link::TRIMESH& trimesh)
-{
-    trimesh.serialize(O,0);
-    return O;
-}
-
-std::istream& operator>>(std::istream& I, KinBody::Link::TRIMESH& trimesh)
-{
-    trimesh.vertices.resize(0);
-    trimesh.indices.resize(0);
-    size_t s=0;
-    I >> s;
-    if( !I ) {
-        return I;
-    }
-    trimesh.vertices.resize(s);
-    FOREACH(it,trimesh.vertices) {
-        I >> it->x >> it->y >> it->z;
-    }
-    I >> s;
-    if( !I ) {
-        return I;
-    }
-    trimesh.indices.resize(s);
-    FOREACH(it,trimesh.indices) {
-        I >> *it;
-    }
-    return I;
-}
-
-KinBody::Link::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
+KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
 {
     _vDiffuseColor = Vector(1,1,1);
-    _type = GeomNone;
+    _type = GT_None;
     _fTransparency = 0;
     _vRenderScale = _vCollisionScale = Vector(1,1,1);
     _bVisible = true;
     _bModifiable = true;
 }
 
-bool KinBody::Link::GeometryInfo::InitCollisionMesh(float fTessellation)
+bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 {
-    if( _type == KinBody::Link::GeomTrimesh ) {
+    if( _type == GT_TriMesh ) {
         return true;
     }
     _meshcollision.indices.clear();
@@ -269,7 +151,7 @@ bool KinBody::Link::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     // start tesselating
     switch(_type) {
-    case KinBody::Link::GeomSphere: {
+    case GT_Sphere: {
         // log_2 (1+ tess)
         GenerateSphereTriangulation(_meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
         dReal fRadius = GetSphereRadius();
@@ -278,7 +160,7 @@ bool KinBody::Link::GeometryInfo::InitCollisionMesh(float fTessellation)
         }
         break;
     }
-    case KinBody::Link::GeomBox: {
+    case GT_Box: {
         // trivial
         Vector ex = GetBoxExtents();
         Vector v[8] = { Vector(ex.x, ex.y, ex.z),
@@ -310,7 +192,7 @@ bool KinBody::Link::GeometryInfo::InitCollisionMesh(float fTessellation)
         std::copy(&indices[0],&indices[nindices],_meshcollision.indices.begin());
         break;
     }
-    case KinBody::Link::GeomCylinder: {
+    case GT_Cylinder: {
         // cylinder is on z axis
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
@@ -350,23 +232,23 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
     TransformMatrix tglobal = t * _info._t;
 
     switch(_info._type) {
-    case Link::GeomBox:
+    case GT_Box:
         ab.extents.x = RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
         ab.extents.y = RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
         ab.extents.z = RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z;
         ab.pos = tglobal.trans;
         break;
-    case Link::GeomSphere:
+    case GT_Sphere:
         ab.extents.x = ab.extents.y = ab.extents.z = _info._vGeomData[0];
         ab.pos = tglobal.trans;
         break;
-    case Link::GeomCylinder:
+    case GT_Cylinder:
         ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[2]*tglobal.m[2])*_info._vGeomData.x;
         ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[6]*tglobal.m[6])*_info._vGeomData.x;
         ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[10]*tglobal.m[10])*_info._vGeomData.x;
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
-    case Link::GeomTrimesh:
+    case GT_TriMesh:
         // just use _info._meshcollision
         if( _info._meshcollision.vertices.size() > 0) {
             Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
@@ -410,7 +292,7 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     SerializeRound(o,_info._t);
     o << _info._type << " ";
     SerializeRound3(o,_info._vRenderScale);
-    if( _info._type == Link::GeomTrimesh ) {
+    if( _info._type == GT_TriMesh ) {
         _info._meshcollision.serialize(o,options);
     }
     else {
@@ -498,7 +380,7 @@ bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vec
     Vector normal = tinv.rotate(_normal);
     const dReal feps=0.00005f;
     switch(_info._type) {
-    case KinBody::Link::GeomBox: {
+    case GT_Box: {
         // transform position in +x+y+z octant
         Vector tposition=position, tnormal=normal;
         if( tposition.x < 0) {
@@ -539,7 +421,7 @@ bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vec
         }
         break;
     }
-    case KinBody::Link::GeomCylinder: { // z-axis
+    case GT_Cylinder: { // z-axis
         dReal fInsideCircle = position.x*position.x+position.y*position.y-_info._vGeomData.x*_info._vGeomData.x;
         dReal fInsideHeight = 2.0f*RaveFabs(position.z)-_info._vGeomData.y;
         if((fInsideCircle < -feps)&&(fInsideHeight > -feps)&&(normal.z*position.z<0)) {
@@ -552,7 +434,7 @@ bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vec
         }
         break;
     }
-    case KinBody::Link::GeomSphere:
+    case GT_Sphere:
         if( normal.dot3(position) < 0 ) {
             _normal = -_normal;
             return true;

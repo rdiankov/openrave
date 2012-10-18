@@ -308,9 +308,9 @@ protected:
 
         FOREACH(it,node->mMeshes) {
             Assimp::XFile::Mesh* pmesh = *it;
-            KinBody::Link::GeometryInfo g;
+            KinBody::GeometryInfo g;
             g._t = plink->_t.inverse() * tflipyz * tnode;
-            g._type = KinBody::Link::GeomTrimesh;
+            g._type = GT_TriMesh;
             g._meshcollision.vertices.resize(pmesh->mPositions.size());
             for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
                 g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);

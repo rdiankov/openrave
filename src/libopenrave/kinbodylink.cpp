@@ -263,7 +263,7 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::list<KinBody::Link::GeometryInfo>& geometries)
+void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
 {
     _vGeometries.resize(geometries.size());
     size_t i = 0;
@@ -317,10 +317,10 @@ bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
 
 void KinBody::Link::_Update()
 {
-    collision.vertices.resize(0);
-    collision.indices.resize(0);
+    _collision.vertices.resize(0);
+    _collision.indices.resize(0);
     FOREACH(itgeom,_vGeometries) {
-        collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
+        _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
     }
     GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }

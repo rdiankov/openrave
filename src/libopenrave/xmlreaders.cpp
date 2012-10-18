@@ -122,7 +122,7 @@ void TrajectoryReader::characters(const std::string& ch)
     }
 }
 
-GeometryInfoReader::GeometryInfoReader(KinBody::Link::GeometryInfoPtr pgeom, const AttributesList& atts) : _pgeom(pgeom)
+GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const AttributesList& atts) : _pgeom(pgeom)
 {
     _bOverwriteDiffuse = _bOverwriteAmbient = _bOverwriteTransparency = false;
     string type;
@@ -145,18 +145,18 @@ GeometryInfoReader::GeometryInfoReader(KinBody::Link::GeometryInfoPtr pgeom, con
         type = "box";
     }
 
-    _pgeom.reset(new KinBody::Link::GeometryInfo());
+    _pgeom.reset(new KinBody::GeometryInfo());
     if( _stricmp(type.c_str(), "box") == 0 ) {
-        _pgeom->_type = KinBody::Link::GeomBox;
+        _pgeom->_type = GT_Box;
     }
     else if( _stricmp(type.c_str(), "sphere") == 0 ) {
-        _pgeom->_type = KinBody::Link::GeomSphere;
+        _pgeom->_type = GT_Sphere;
     }
     else if( _stricmp(type.c_str(), "cylinder") == 0 ) {
-        _pgeom->_type = KinBody::Link::GeomCylinder;
+        _pgeom->_type = GT_Cylinder;
     }
     else if( _stricmp(type.c_str(), "trimesh") == 0 ) {
-        _pgeom->_type = KinBody::Link::GeomTrimesh;
+        _pgeom->_type = GT_TriMesh;
     }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
@@ -213,7 +213,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         return PE_Support;
     }
     switch(_pgeom->_type) {
-    case KinBody::Link::GeomTrimesh:
+    case GT_TriMesh:
         if(xmlname=="collision"|| xmlname=="data" || xmlname=="vertices" ) {
             return PE_Support;
         }
@@ -285,17 +285,17 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else {
         // could be type specific features
         switch(_pgeom->_type) {
-        case KinBody::Link::GeomSphere:
+        case GT_Sphere:
             if( xmlname == "radius" ) {
                 _ss >> _pgeom->_vGeomData.x;
             }
             break;
-        case KinBody::Link::GeomBox:
+        case GT_Box:
             if( xmlname == "extents" ) {
                 _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
             }
             break;
-        case KinBody::Link::GeomCylinder:
+        case GT_Cylinder:
             if( xmlname == "radius") {
                 _ss >> _pgeom->_vGeomData.x;
             }
@@ -303,7 +303,7 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
                 _ss >> _pgeom->_vGeomData.y;
             }
             break;
-        case KinBody::Link::GeomTrimesh:
+        case GT_TriMesh:
             if(( xmlname == "data") ||( xmlname == "collision") ) {
                 if( _pgeom->_filenamecollision.size() == 0 ) {
                     // check the attributes first

@@ -63,12 +63,12 @@ public:
     /// \param env the environment used to create the trajectory
     /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
     /// \param atts attributes passed from <trajectory> tag
-    GeometryInfoReader(KinBody::Link::GeometryInfoPtr geom = KinBody::Link::GeometryInfoPtr(), const AttributesList& atts=AttributesList());
+    GeometryInfoReader(KinBody::GeometryInfoPtr geom = KinBody::GeometryInfoPtr(), const AttributesList& atts=AttributesList());
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
 
-    inline KinBody::Link::GeometryInfoPtr GetGeometryInfo() const {
+    inline KinBody::GeometryInfoPtr GetGeometryInfo() const {
         return _pgeom;
     }
 
@@ -82,7 +82,7 @@ public:
         return _bOverwriteTransparency;
     }
 protected:
-    KinBody::Link::GeometryInfoPtr _pgeom;
+    KinBody::GeometryInfoPtr _pgeom;
     std::stringstream _ss;
     BaseXMLReaderPtr _pcurreader;
 

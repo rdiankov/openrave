@@ -559,7 +559,7 @@ class LinkXMLReader : public StreamXMLReader
 {
 public:
 #ifdef OPENRAVE_ASSIMP
-    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
+    static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
     {
         if( !node ) {
             return false;
@@ -575,9 +575,9 @@ public:
         }
 
         for (size_t i = 0; i < node->mNumMeshes; i++) {
-            listGeometries.push_back(KinBody::Link::GeometryInfo());
-            KinBody::Link::GeometryInfo& g = listGeometries.back();
-            g._type = KinBody::Link::GeomTrimesh;
+            listGeometries.push_back(KinBody::GeometryInfo());
+            KinBody::GeometryInfo& g = listGeometries.back();
+            g._type = GT_TriMesh;
             g._vRenderScale = scale;
             aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
             g._meshcollision.vertices.resize(input_mesh->mNumVertices);
@@ -625,7 +625,7 @@ public:
     }
 #endif
 
-    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
+    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
     {
         string extension;
         if( filename.find_last_of('.') != string::npos ) {
@@ -653,9 +653,9 @@ public:
 #endif
 
         // for other importers, just convert into one big trimesh
-        listGeometries.push_back(KinBody::Link::GeometryInfo());
-        KinBody::Link::GeometryInfo& g = listGeometries.back();
-        g._type = KinBody::Link::GeomTrimesh;
+        listGeometries.push_back(KinBody::GeometryInfo());
+        KinBody::GeometryInfo& g = listGeometries.back();
+        g._type = GT_TriMesh;
         g._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         g._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         g._vRenderScale = vscale;
@@ -789,7 +789,7 @@ public:
             if( _bSkipGeometry ) {
                 return PE_Ignore;
             }
-            _pcurreader.reset(new xmlreaders::GeometryInfoReader(KinBody::Link::GeometryInfoPtr(),atts));
+            _pcurreader.reset(new xmlreaders::GeometryInfoReader(KinBody::GeometryInfoPtr(),atts));
             return PE_Support;
         }
 
@@ -807,13 +807,13 @@ public:
                     FOREACH(itgeom, _plink->_vGeometries) {
                         (*itgeom)->_info._t = tnew * (*itgeom)->_info._t;
                     }
-                    _plink->collision.ApplyTransform(tnew);
+                    _plink->_collision.ApplyTransform(tnew);
                     _plink->SetTransform(tOrigTrans);
                 }
 
                 xmlreaders::GeometryInfoReaderPtr geomreader = boost::dynamic_pointer_cast<xmlreaders::GeometryInfoReader>(_pcurreader);
                 if( !!geomreader ) {
-                    KinBody::Link::GeometryInfoPtr info = geomreader->GetGeometryInfo();
+                    KinBody::GeometryInfoPtr info = geomreader->GetGeometryInfo();
                     TransformMatrix tm(info->_t); tm.trans = Vector();
                     TransformMatrix tminv = tm.inverse();
                     tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;
@@ -833,8 +833,8 @@ public:
                             info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
                         }
                     }
-                    std::list<KinBody::Link::GeometryInfo> listGeometries;
-                    if( info->_type == KinBody::Link::GeomTrimesh ) {
+                    std::list<KinBody::GeometryInfo> listGeometries;
+                    if( info->_type == GT_TriMesh ) {
                         bool bSuccess = false;
                         if( info->_filenamecollision.size() > 0 ) {
                             if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometries) ) {
@@ -879,7 +879,7 @@ public:
                                     itnewgeom->_fTransparency = info->_fTransparency;
                                 }
                                 itnewgeom->_t.trans *= _vScaleGeometry;
-                                _plink->collision.Append(itnewgeom->_meshcollision, itnewgeom->_t);
+                                _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->_t);
                             }
                             listGeometries.front()._vRenderScale = info->_vRenderScale*geomspacescale;
                             listGeometries.front()._filenamerender = info->_filenamerender;
@@ -896,14 +896,14 @@ public:
                                 *it = tmres * *it;
                             }
                             info->_t.trans *= _vScaleGeometry;
-                            _plink->collision.Append(info->_meshcollision, info->_t);
+                            _plink->_collision.Append(info->_meshcollision, info->_t);
                             _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*info)));
                         }
                     }
                     else {
                         info->_vRenderScale = info->_vRenderScale*geomspacescale;
                         info->_filenamerender = info->_filenamerender;
-                        if( info->_type == KinBody::Link::GeomCylinder ) {         // axis has to point on y
+                        if( info->_type == GT_Cylinder ) {         // axis has to point on y
                             // rotate on x axis by pi/2
                             Transform trot;
                             trot.rot = quatFromAxisAngle(Vector(1, 0, 0), PI/2);
@@ -918,7 +918,7 @@ public:
                         }
                         info->_t.trans *= _vScaleGeometry;
                         info->_vGeomData *= geomspacescale;
-                        _plink->collision.Append(geom->GetCollisionMesh(), info->_t);
+                        _plink->_collision.Append(geom->GetCollisionMesh(), info->_t);
                         _plink->_vGeometries.push_back(geom);
                     }
                 }
@@ -980,13 +980,13 @@ public:
                 FOREACHC(itgeom, _plink->GetGeometries()) {
                     MASS mass;
                     switch((*itgeom)->GetType()) {
-                    case KinBody::Link::GeomSphere:
+                    case GT_Sphere:
                         mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),_fMassDensity);
                         break;
-                    case KinBody::Link::GeomBox:
+                    case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
                         break;
-                    case KinBody::Link::GeomCylinder:
+                    case GT_Cylinder:
                         mass = MASS::GetCylinderMassD((*itgeom)->GetCylinderRadius(), (*itgeom)->GetCylinderHeight(), Vector(), _fMassDensity);
                         break;
                     default:
@@ -1117,7 +1117,7 @@ private:
     Vector _vMassExtents;                   ///< used only if mass is a box
 };
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries)
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometries)
 {
     return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometries);
 }

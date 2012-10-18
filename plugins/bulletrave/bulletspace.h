@@ -164,17 +164,17 @@ private:
                 boost::shared_ptr<btCollisionShape> child;
                 KinBody::Link::GeometryPtr geom = *itgeom;
                 switch(geom->GetType()) {
-                case KinBody::Link::GeomBox:
+                case GT_Box:
                     child.reset(new btBoxShape(GetBtVector(geom->GetBoxExtents())));
                     break;
-                case KinBody::Link::GeomSphere:
+                case GT_Sphere:
                     child.reset(new btSphereShape(geom->GetSphereRadius()));
                     break;
-                case KinBody::Link::GeomCylinder:
+                case GT_Cylinder:
                     // cylinder axis aligned to Y
                     child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
                     break;
-                case KinBody::Link::GeomTrimesh: {
+                case GT_TriMesh: {
                     if( geom->GetCollisionMesh().indices.size() >= 3 ) {
                         btTriangleMesh* ptrimesh = new btTriangleMesh();
 

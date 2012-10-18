@@ -1388,7 +1388,7 @@ private:
     /// \param parentid Parent Identifier
     virtual domGeometryRef WriteGeometry(KinBody::Link::GeometryConstPtr geom, const string& parentid)
     {
-        const KinBody::Link::TRIMESH& mesh = geom->GetCollisionMesh();
+        const TriMesh& mesh = geom->GetCollisionMesh();
         Transform t = geom->GetTransform();
 
         string effid = parentid+string("_eff");
@@ -1473,14 +1473,14 @@ private:
             ptec->setProfile("OpenRAVE");
             Transform tlocalgeom = geom->GetTransform();
             switch(geom->GetType()) {
-            case KinBody::Link::GeomBox:
+            case GT_Box:
                 ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
                 ptec->add("box")->add("half_extents")->setCharData(ss.str());
                 break;
-            case KinBody::Link::GeomSphere:
+            case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;
-            case KinBody::Link::GeomCylinder: {
+            case GT_Cylinder: {
                 daeElementRef pcylinder = ptec->add("cylinder");
                 ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
                 pcylinder->add("radius")->setCharData(ss.str());
@@ -1490,8 +1490,8 @@ private:
                 tlocalgeom = tlocalgeom * trot;
                 break;
             }
-            case KinBody::Link::GeomNone:
-            case KinBody::Link::GeomTrimesh:
+            case GT_None:
+            case GT_TriMesh:
                 // don't add anything
                 break;
             }

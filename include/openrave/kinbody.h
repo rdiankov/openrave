@@ -27,6 +27,15 @@ namespace OpenRAVE {
 class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
+/// \brief The type of geometry primitive.
+enum GeometryType {
+    GT_None = 0,
+    GT_Box = 1,
+    GT_Sphere = 2,
+    GT_Cylinder = 3, ///< oriented towards z-axis
+    GT_TriMesh = 4,
+};
+
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
  */
@@ -72,6 +81,84 @@ public:
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
 
+    /// \brief Describes the properties of a geometric primitive.
+    ///
+    /// Contains everything associated with a geometry's appearance and shape
+    class OPENRAVE_API GeometryInfo : public XMLReadable
+    {
+public:
+        GeometryInfo();
+        virtual ~GeometryInfo() {
+        }
+
+        /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
+        /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
+        bool InitCollisionMesh(float fTessellation=1);
+
+        inline dReal GetSphereRadius() const {
+            return _vGeomData.x;
+        }
+        inline dReal GetCylinderRadius() const {
+            return _vGeomData.x;
+        }
+        inline dReal GetCylinderHeight() const {
+            return _vGeomData.y;
+        }
+        inline const Vector& GetBoxExtents() const {
+            return _vGeomData;
+        }
+
+        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+        Vector _vGeomData; ///< for boxes, first 3 values are extents
+        ///< for sphere it is radius
+        ///< for cylinder, first 2 values are radius and height
+        ///< for trimesh, none
+        RaveVector<float> _vDiffuseColor, _vAmbientColor; ///< hints for how to color the meshes
+
+        /// \brief trimesh representation of the collision data of this object in this local coordinate system
+        ///
+        /// Should be transformed by \ref _t before rendering.
+        /// For spheres and cylinders, an appropriate discretization value is chosen.
+        /// If empty, will be automatically computed from the geometry's type and render data
+        TriMesh _meshcollision;
+
+        GeometryType _type; ///< the type of geometry primitive
+
+        /// \brief filename for render model (optional)
+        ///
+        /// Should be transformed by _t before rendering.
+        /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
+        std::string _filenamerender;
+
+        /// \brief filename for collision data (optional)
+        ///
+        /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
+        std::string _filenamecollision;
+
+        Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender
+        Vector _vCollisionScale; ///< render scale of the object (x,y,z) from _filenamecollision
+        float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+        bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
+        bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+    };
+    typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
+
+    /// \brief Describes the properties of a link
+    ///
+    /// Contains everything associated with a link
+    class OPENRAVE_API LinkInfo : public XMLReadable
+    {
+public:
+        std::vector<GeometryInfoPtr> _vgeometryinfos;
+        std::string _name;             ///< link name
+        Transform _t;                   ///< \see the current transformation of the link in the world coordinate system.
+        Transform _tMassFrame; ///< the frame for inertia and center of mass of the link in the link's coordinate system
+        dReal _mass; ///< mass of link
+        Vector _vinertiamoments; ///< inertia along the axes of _tMassFrame
+        bool _bStatic;               ///< \see IsStatic
+        bool _bIsEnabled;         ///< \see IsEnabled
+    };
+
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
     {
@@ -79,108 +166,28 @@ public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
         virtual ~Link();
 
-        /// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
-        class OPENRAVE_API TRIMESH
-        {
-public:
-            std::vector<Vector> vertices;
-            std::vector<int> indices;
 
-            void ApplyTransform(const Transform& t);
-            void ApplyTransform(const TransformMatrix& t);
-
-            /// append another TRIMESH to this tri mesh
-            void Append(const TRIMESH& mesh);
-            void Append(const TRIMESH& mesh, const Transform& trans);
-
-            AABB ComputeAABB() const;
-            void serialize(std::ostream& o, int options=0) const;
-
-            friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TRIMESH &trimesh);
-            friend OPENRAVE_API std::istream& operator>>(std::istream& I, TRIMESH& trimesh);
-        };
-
-        /// \brief The type of geometry primitive.
-        enum GeomType {
-            GeomNone = 0,
-            GeomBox = 1,
-            GeomSphere = 2,
-            GeomCylinder = 3, ///< oriented towards z-axis
-            GeomTrimesh = 4,
-        };
-
-        /// \brief Describes the properties of a geometric primitive.
-        ///
-        /// Contains everything associated with a geometry's appearance and shape
-        class OPENRAVE_API GeometryInfo : public XMLReadable
-        {
-public:
-            GeometryInfo();
-            virtual ~GeometryInfo() {
-            }
-
-            /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
-            /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
-            bool InitCollisionMesh(float fTessellation=1);
-
-            inline dReal GetSphereRadius() const {
-                return _vGeomData.x;
-            }
-            inline dReal GetCylinderRadius() const {
-                return _vGeomData.x;
-            }
-            inline dReal GetCylinderHeight() const {
-                return _vGeomData.y;
-            }
-            inline const Vector& GetBoxExtents() const {
-                return _vGeomData;
-            }
-
-            Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-            Vector _vGeomData; ///< for boxes, first 3 values are extents
-            ///< for sphere it is radius
-            ///< for cylinder, first 2 values are radius and height
-            ///< for trimesh, none
-            RaveVector<float> _vDiffuseColor, _vAmbientColor; ///< hints for how to color the meshes
-
-            /// \brief trimesh representation of the collision data of this object in this local coordinate system
-            ///
-            /// Should be transformed by \ref _t before rendering.
-            /// For spheres and cylinders, an appropriate discretization value is chosen.
-            /// If empty, will be automatically computed from the geometry's type and render data
-            TRIMESH _meshcollision;
-
-            GeomType _type; ///< the type of geometry primitive
-
-            /// \brief filename for render model (optional)
-            ///
-            /// Should be transformed by _t before rendering.
-            /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
-            std::string _filenamerender;
-
-            /// \brief filename for collision data (optional)
-            ///
-            /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
-            std::string _filenamecollision;
-
-            Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender
-            Vector _vCollisionScale; ///< render scale of the object (x,y,z) from _filenamecollision
-            float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
-            bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
-            bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-        };
-        typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
+        /// \deprecated (12/10/18)
+        typedef KinBody::GeometryInfo GeometryInfo RAVE_DEPRECATED;
+        typedef boost::shared_ptr<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
+        typedef TriMesh TRIMESH RAVE_DEPRECATED;
+        typedef GeometryType GeomType RAVE_DEPRECATED;
+        static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
+        static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
+        static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
+        static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
+        static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
         /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
         class OPENRAVE_API Geometry
         {
 public:
             /// \deprecated (12/07/16)
-            static const GeomType GeomNone RAVE_DEPRECATED = KinBody::Link::GeomNone;
-            static const GeomType GeomBox RAVE_DEPRECATED = KinBody::Link::GeomBox;
-            static const GeomType GeomSphere RAVE_DEPRECATED = KinBody::Link::GeomSphere;
-            static const GeomType GeomCylinder RAVE_DEPRECATED = KinBody::Link::GeomCylinder;
-            static const GeomType GeomTrimesh RAVE_DEPRECATED = KinBody::Link::GeomTrimesh;
+            static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
+            static const GeometryType GeomBox RAVE_DEPRECATED = OpenRAVE::GT_Box;
+            static const GeometryType GeomSphere RAVE_DEPRECATED = OpenRAVE::GT_Sphere;
+            static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
+            static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
             Geometry(boost::shared_ptr<Link> parent, const GeometryInfo& info);
             virtual ~Geometry() {
@@ -190,7 +197,7 @@ public:
             inline const Transform& GetTransform() const {
                 return _info._t;
             }
-            inline GeomType GetType() const {
+            inline GeometryType GetType() const {
                 return _info._type;
             }
             inline const Vector& GetRenderScale() const {
@@ -234,11 +241,11 @@ public:
             }
 
             /// \brief returns the local collision mesh
-            inline const TRIMESH& GetCollisionMesh() const {
+            inline const TriMesh& GetCollisionMesh() const {
                 return _info._meshcollision;
             }
 
-            inline const GeometryInfo& GetInfo() const {
+            inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
             }
 
@@ -247,7 +254,7 @@ public:
             virtual void serialize(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
-            virtual void SetCollisionMesh(const TRIMESH& mesh);
+            virtual void SetCollisionMesh(const TriMesh& mesh);
             /// \brief sets visible flag. if changed, notifies every registered callback about it.
             ///
             /// \return true if changed
@@ -275,7 +282,7 @@ public:
 
 protected:
             boost::weak_ptr<Link> _parent;
-            GeometryInfo _info; ///< geometry info
+            KinBody::GeometryInfo _info; ///< geometry info
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
             friend class ColladaReader;
@@ -333,8 +340,8 @@ protected:
         inline int GetIndex() const {
             return _index;
         }
-        inline const TRIMESH& GetCollisionData() const {
-            return collision;
+        inline const TriMesh& GetCollisionData() const {
+            return _collision;
         }
 
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
@@ -454,7 +461,7 @@ protected:
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
-        virtual void InitGeometries(std::list<GeometryInfo>& geometries);
+        virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries);
 
         /// \brief swaps the geometries with the link
         virtual void SwapGeometries(boost::shared_ptr<Link>& link);
@@ -483,8 +490,6 @@ protected:
         Transform _tMassFrame; ///< the frame for inertia and center of mass of the link in the link's coordinate system
         dReal _mass; ///< mass of link
         Vector _vinertiamoments; ///< inertia along the axes of _tMassFrame
-        TRIMESH collision;         ///< triangles for collision checking, triangles are always the triangulation
-                                   ///< of the body when it is at the identity transformation
 
         std::string _name;             ///< optional link name
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
@@ -493,13 +498,15 @@ protected:
         bool _bIsEnabled;         ///< \see IsEnabled
 
 private:
-        /// Sensitive variables that should not be modified.
+        /// Sensitive variables that are auto-generated and should not be modified by the user.
         /// @name Private Link Variables
         //@{
         int _index;                  ///< \see GetIndex
         KinBodyWeakPtr _parent;         ///< \see GetParent
         std::vector<int> _vParentLinks;         ///< \see GetParentLinks, IsParentLink
         std::vector<int> _vRigidlyAttachedLinks;         ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
+        TriMesh _collision; ///< triangles for collision checking, triangles are always the triangulation
+                            ///< of the body when it is at the identity transformation
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -1090,13 +1097,13 @@ private:
     ///
     /// \param trimesh the triangle mesh
     /// \param visible if true, will be rendered in the scene
-    virtual bool InitFromTrimesh(const Link::TRIMESH& trimesh, bool visible);
+    virtual bool InitFromTrimesh(const TriMesh& trimesh, bool visible);
 
     /// \brief Create a kinbody with one link composed of a list of geometries
     ///
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
-    bool InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& geometries);
+    bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
@@ -1795,9 +1802,6 @@ private:
     friend class RaveDatabase;
     friend class ChangeCallbackData;
 };
-
-OPENRAVE_API std::ostream& operator<<(std::ostream& O, const KinBody::Link::TRIMESH& trimesh);
-OPENRAVE_API std::istream& operator>>(std::istream& I, KinBody::Link::TRIMESH& trimesh);
 
 } // end namespace OpenRAVE
 

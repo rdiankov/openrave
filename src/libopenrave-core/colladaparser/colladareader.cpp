@@ -1756,7 +1756,7 @@ public:
             // put everything in a subroutine in order to process pdomnode too!
         }
 
-        std::list<KinBody::Link::GeometryInfo> listGeometryInfos;
+        std::list<KinBody::GeometryInfo> listGeometryInfos;
 
         // get the geometry
         for (size_t igeom = 0; igeom < pdomnode->getInstance_geometry_array().getCount(); ++igeom) {
@@ -1798,17 +1798,17 @@ public:
             Transform toriginal = itgeominfo->_t;
             itgeominfo->_t = tnodegeom * itgeominfo->_t;
             switch (itgeominfo->_type) {
-            case KinBody::Link::GeomBox:
+            case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
                 break;
-            case KinBody::Link::GeomSphere:
+            case GT_Sphere:
                 itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
                 break;
-            case KinBody::Link::GeomCylinder:
+            case GT_Cylinder:
                 itgeominfo->_vGeomData.x *= max(vscale.x, vscale.y);
                 itgeominfo->_vGeomData.y *= vscale.z;
                 break;
-            case KinBody::Link::GeomTrimesh:
+            case GT_TriMesh:
                 itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(itgeominfo->_t).inverse() * tmnodegeom * TransformMatrix(toriginal));
                 break;
             default:
@@ -1819,9 +1819,9 @@ public:
             pgeom->_info.InitCollisionMesh();
             plink->_vGeometries.push_back(pgeom);
             //  Append the collision mesh
-            KinBody::Link::TRIMESH trimesh = pgeom->GetCollisionMesh();
+            TriMesh trimesh = pgeom->GetCollisionMesh();
             trimesh.ApplyTransform(pgeom->_info._t);
-            plink->collision.Append(trimesh);
+            plink->_collision.Append(trimesh);
         }
 
         return bhasgeometry || listGeometryInfos.size() > 0;
@@ -1830,7 +1830,7 @@ public:
     /// Paint the Geometry with the color material
     /// \param  pmat    Material info of the COLLADA's model
     /// \param  geom    Geometry properties in OpenRAVE
-    void FillGeometryColor(const domMaterialRef pmat, KinBody::Link::GeometryInfo& geom)
+    void FillGeometryColor(const domMaterialRef pmat, KinBody::GeometryInfo& geom)
     {
         if( !!pmat && !!pmat->getInstance_effect() ) {
             domEffectRef peffect = daeSafeCast<domEffect>(pmat->getInstance_effect()->getUrl().getElement().cast());
@@ -1861,14 +1861,14 @@ public:
     /// \param mapmaterials    Materials applied to the geometry
     /// \param geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
 
-        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
-        geom._type = KinBody::Link::GeomTrimesh;
+        TriMesh& trimesh = geom._meshcollision;
+        geom._type = GT_TriMesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -1943,13 +1943,13 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
-        geom._type = KinBody::Link::GeomTrimesh;
+        TriMesh& trimesh = geom._meshcollision;
+        geom._type = GT_TriMesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -2033,13 +2033,13 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
-        geom._type = KinBody::Link::GeomTrimesh;
+        TriMesh& trimesh = geom._meshcollision;
+        geom._type = GT_TriMesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -2126,13 +2126,13 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::Link::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
         }
-        KinBody::Link::TRIMESH& trimesh = geom._meshcollision;
-        geom._type = KinBody::Link::GeomTrimesh;
+        TriMesh& trimesh = geom._meshcollision;
+        geom._type = GT_TriMesh;
 
         // resolve the material and assign correct colors to the geometry
         if( !!triRef->getMaterial() ) {
@@ -2255,7 +2255,7 @@ public:
     /// \param  domgeom    Geometry to extract of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  listGeometryInfos the geometry infos to output
-    bool ExtractGeometry(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials, std::list<KinBody::Link::GeometryInfo>& listGeometryInfos)
+    bool ExtractGeometry(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials, std::list<KinBody::GeometryInfo>& listGeometryInfos)
     {
         if( !domgeom ) {
             return false;
@@ -2271,7 +2271,7 @@ public:
                 if( !!ptec ) {
                     bool bfoundgeom = false;
                     tlocalgeom = _ExtractFullTransformFromChildren(ptec);
-                    KinBody::Link::GeometryInfo geominfo;
+                    KinBody::GeometryInfo geominfo;
                     daeTArray<daeElementRef> children;
                     ptec->getChildren(children);
                     for(size_t i = 0; i < children.getCount(); ++i) {
@@ -2283,7 +2283,7 @@ public:
                                 Vector vextents;
                                 ss >> vextents.x >> vextents.y >> vextents.z;
                                 if( ss.eof() || !!ss ) {
-                                    geominfo._type = KinBody::Link::GeomBox;
+                                    geominfo._type = GT_Box;
                                     geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
@@ -2297,7 +2297,7 @@ public:
                                 stringstream ss(pradius->getCharData());
                                 ss >> fradius;
                                 if( ss.eof() || !!ss ) {
-                                    geominfo._type = KinBody::Link::GeomSphere;
+                                    geominfo._type = GT_Sphere;
                                     geominfo._vGeomData.x = fradius;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
@@ -2316,7 +2316,7 @@ public:
                                 if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
                                     Transform trot(quatRotateDirection(Vector(0,0,1),Vector(0,1,0)),Vector());
                                     tlocalgeom = tlocalgeom * trot;
-                                    geominfo._type = KinBody::Link::GeomCylinder;
+                                    geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
@@ -2346,22 +2346,22 @@ public:
         if (!!domgeom->getMesh()) {
             const domMeshRef meshRef = domgeom->getMesh();
             for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
-                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
-                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
-                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
-                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
+                listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
             }
@@ -2381,7 +2381,7 @@ public:
                     return false;
                 }
 
-                std::list<KinBody::Link::GeometryInfo> listNewGeometryInfos;
+                std::list<KinBody::GeometryInfo> listNewGeometryInfos;
                 ExtractGeometry(linkedGeom, mapmaterials, listNewGeometryInfos);
                 // need to get the convex hull of listNewGeometryInfos, quickest way is to use Geometry to compute the geometry vertices
                 FOREACH(itgeominfo,listNewGeometryInfos) {
@@ -2420,8 +2420,8 @@ public:
             }
 
             if( vconvexhull.size()> 0 ) {
-                listGeometryInfos.push_back(KinBody::Link::GeometryInfo());
-                listGeometryInfos.back()._type = KinBody::Link::GeomTrimesh;
+                listGeometryInfos.push_back(KinBody::GeometryInfo());
+                listGeometryInfos.back()._type = GT_TriMesh;
                 listGeometryInfos.back()._t = tlocalgeom;
                 _computeConvexHull(vconvexhull,listGeometryInfos.back()._meshcollision);
             }
@@ -4089,7 +4089,7 @@ private:
         return CompareElementsSidToId(elt1->getParentElement(),elt2->getParentElement());
     }
 
-    bool _computeConvexHull(const vector<Vector>& verts, KinBody::Link::TRIMESH& trimesh)
+    bool _computeConvexHull(const vector<Vector>& verts, TriMesh& trimesh)
     {
         RAVELOG_ERROR("convex hulls not supported\n");
         // since there is no easy way of getting geometry boxes, check if convex hull is a box

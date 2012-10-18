@@ -751,13 +751,14 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     vTargetLocalCenter = _target->ComputeAABB().pos;
                 }
 
-                KinBody::Link::TRIMESH spheremesh;
+                TriMesh spheremesh;
                 int spherelevel = 3, numdists = 0;
                 sinput >> spherelevel >> numdists;
                 CM::GenerateSphereTriangulation(spheremesh,spherelevel);
                 vector<dReal> vdists(numdists);
-                FOREACH(it,vdists)
-                sinput >> *it;
+                FOREACH(it,vdists) {
+                    sinput >> *it;
+                }
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();

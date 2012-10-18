@@ -290,16 +290,16 @@ private:
                 KinBody::Link::GeometryPtr geom = *itgeom;
                 dGeomID odegeom = NULL;
                 switch(geom->GetType()) {
-                case KinBody::Link::GeomBox:
+                case OpenRAVE::GT_Box:
                     odegeom = dCreateBox(0,geom->GetBoxExtents().x*2.0f,geom->GetBoxExtents().y*2.0f,geom->GetBoxExtents().z*2.0f);
                     break;
-                case KinBody::Link::GeomSphere:
+                case OpenRAVE::GT_Sphere:
                     odegeom = dCreateSphere(0,geom->GetSphereRadius());
                     break;
-                case KinBody::Link::GeomCylinder:
+                case OpenRAVE::GT_Cylinder:
                     odegeom = dCreateCylinder(0,geom->GetCylinderRadius(),geom->GetCylinderHeight());
                     break;
-                case KinBody::Link::GeomTrimesh:
+                case OpenRAVE::GT_TriMesh:
                     if( geom->GetCollisionMesh().indices.size() > 0 ) {
                         dTriIndex* pindices = new dTriIndex[geom->GetCollisionMesh().indices.size()];
                         for(size_t i = 0; i < geom->GetCollisionMesh().indices.size(); ++i) {

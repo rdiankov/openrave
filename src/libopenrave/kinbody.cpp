@@ -181,8 +181,8 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
     plink->_bStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
-        Link::GeometryInfo info;
-        info._type = Link::GeomBox;
+        GeometryInfo info;
+        info._type = GT_Box;
         info._t.trans = itab->pos;
         info._bVisible = visible;
         info._vGeomData = itab->extents;
@@ -195,13 +195,13 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
         plink->_vGeometries.push_back(geom);
     }
 
-    plink->collision.vertices.reserve(numvertices);
-    plink->collision.indices.reserve(numindices);
-    Link::TRIMESH trimesh;
+    plink->_collision.vertices.reserve(numvertices);
+    plink->_collision.indices.reserve(numindices);
+    TriMesh trimesh;
     FOREACH(itgeom,plink->_vGeometries) {
         trimesh = (*itgeom)->GetCollisionMesh();
         trimesh.ApplyTransform((*itgeom)->GetTransform());
-        plink->collision.Append(trimesh);
+        plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
     return true;
@@ -222,8 +222,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
         tm.m[0] = itobb->right.x; tm.m[1] = itobb->up.x; tm.m[2] = itobb->dir.x;
         tm.m[4] = itobb->right.y; tm.m[5] = itobb->up.y; tm.m[6] = itobb->dir.y;
         tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
-        Link::GeometryInfo info;
-        info._type = Link::GeomBox;
+        GeometryInfo info;
+        info._type = GT_Box;
         info._t = tm;
         info._bVisible = visible;
         info._vGeomData = itobb->extents;
@@ -236,13 +236,13 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
         plink->_vGeometries.push_back(geom);
     }
 
-    plink->collision.vertices.reserve(numvertices);
-    plink->collision.indices.reserve(numindices);
-    Link::TRIMESH trimesh;
+    plink->_collision.vertices.reserve(numvertices);
+    plink->_collision.indices.reserve(numindices);
+    TriMesh trimesh;
     FOREACH(itgeom,plink->_vGeometries) {
         trimesh = (*itgeom)->GetCollisionMesh();
         trimesh.ApplyTransform((*itgeom)->GetTransform());
-        plink->collision.Append(trimesh);
+        plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
     return true;
@@ -256,10 +256,10 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    Link::TRIMESH trimesh;
+    TriMesh trimesh;
     FOREACHC(itv, vspheres) {
-        Link::GeometryInfo info;
-        info._type = Link::GeomSphere;
+        GeometryInfo info;
+        info._type = GT_Sphere;
         info._t.trans.x = itv->x; info._t.trans.y = itv->y; info._t.trans.z = itv->z;
         info._bVisible = visible;
         info._vGeomData.x = itv->w;
@@ -270,13 +270,13 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
         plink->_vGeometries.push_back(geom);
         trimesh = geom->GetCollisionMesh();
         trimesh.ApplyTransform(geom->GetTransform());
-        plink->collision.Append(trimesh);
+        plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
     return true;
 }
 
-bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool visible)
+bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
@@ -284,9 +284,9 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool visibl
     plink->_index = 0;
     plink->_name = "base";
     plink->_bStatic = true;
-    plink->collision = trimesh;
-    Link::GeometryInfo info;
-    info._type = Link::GeomTrimesh;
+    plink->_collision = trimesh;
+    GeometryInfo info;
+    info._type = GT_TriMesh;
     info._bVisible = visible;
     info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
     info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
@@ -297,7 +297,7 @@ bool KinBody::InitFromTrimesh(const KinBody::Link::TRIMESH& trimesh, bool visibl
     return true;
 }
 
-bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& listGeometries)
+bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& listGeometries)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(listGeometries.size(),>,0);
@@ -310,7 +310,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::Link::GeometryInfo>& l
         Link::GeometryPtr geom(new Link::Geometry(plink,*itinfo));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
-        plink->collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
+        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
     _veclinks.push_back(plink);
     return true;

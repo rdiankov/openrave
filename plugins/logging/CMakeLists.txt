@@ -1,7 +1,7 @@
 ###########################################
 # logging openrave plugin
 ###########################################
-set(logging_SOURCES logging.cpp loggingmodule.h plugindefs.h)
+set(logging_SOURCES logging.cpp plugindefs.h)
 set(ENABLE_VIDEORECORDING)
 
 if( OPT_VIDEORECORDING )

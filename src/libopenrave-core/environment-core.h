@@ -979,7 +979,7 @@ public:
         }
     }
 
-    virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody)
+    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
         FOREACHC(it, pbody->GetLinks()) {
@@ -987,7 +987,7 @@ public:
         }
     }
 
-    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options,const std::string& selectname)
+    virtual void TriangulateScene(TriMesh& trimesh, SelectionOptions options,const std::string& selectname)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         FOREACH(itbody, _vecbodies) {
@@ -1028,7 +1028,7 @@ public:
         }
     }
 
-    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, TriangulateOptions options)
+    virtual void TriangulateScene(TriMesh& trimesh, TriangulateOptions options)
     {
         TriangulateScene(trimesh,options,"");
     }
@@ -1063,7 +1063,7 @@ public:
                 robot = RaveCreateRobot(shared_from_this(),"");
             }
             if( !!robot ) {
-                std::list<KinBody::Link::GeometryInfo> listGeometries;
+                std::list<KinBody::GeometryInfo> listGeometries;
                 if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
@@ -1180,7 +1180,7 @@ public:
                 body = RaveCreateKinBody(shared_from_this(),"");
             }
             if( !!body ) {
-                std::list<KinBody::Link::GeometryInfo> listGeometries;
+                std::list<KinBody::GeometryInfo> listGeometries;
                 if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
@@ -1379,18 +1379,18 @@ public:
         return pinterface;
     }
 
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts)
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts)
     {
         RaveVector<float> diffuseColor, ambientColor;
         return _ReadTrimeshURI(ptrimesh,filename,diffuseColor, ambientColor, atts);
     }
 
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> _ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    virtual boost::shared_ptr<TriMesh> _ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
-            return boost::shared_ptr<KinBody::Link::TRIMESH>();
+            return boost::shared_ptr<TriMesh>();
         }
         Vector vScaleGeometry(1,1,1);
         float ftransparency;
@@ -1404,7 +1404,7 @@ public:
             }
         }
         if( !ptrimesh ) {
-            ptrimesh.reset(new KinBody::Link::TRIMESH());
+            ptrimesh.reset(new TriMesh());
         }
         if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
@@ -1412,12 +1412,12 @@ public:
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesFile(std::list<KinBody::Link::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    virtual bool _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
-            return boost::shared_ptr<KinBody::Link::TRIMESH>();
+            return boost::shared_ptr<TriMesh>();
         }
         Vector vScaleGeometry(1,1,1);
         FOREACHC(itatt,atts) {

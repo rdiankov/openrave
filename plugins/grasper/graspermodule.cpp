@@ -1112,7 +1112,7 @@ public:
 protected:
     void _ComputeJointMaxLengths(vector<dReal>& vjointlengths)
     {
-        KinBody::Link::TRIMESH collisiondata;
+        TriMesh collisiondata;
         vector<Vector> vworldvertices; vworldvertices.reserve(10000);
         vjointlengths.resize(_robot->GetJoints().size(),0);
         FOREACHC(itjoint, _robot->GetJoints()) {
@@ -1180,7 +1180,7 @@ protected:
     void DeterministicallySample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int levels, Vector graspcenter)
     {
         RAY r;
-        KinBody::Link::TRIMESH tri;
+        TriMesh tri;
         Vector com = graspcenter;
         GenerateSphereTriangulation(tri,levels);
 
@@ -1208,9 +1208,9 @@ protected:
 
     // generate a sphere triangulation starting with an icosahedron
     // all triangles are oriented counter clockwise
-    void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
+    void GenerateSphereTriangulation(TriMesh& tri, int levels)
     {
-        KinBody::Link::TRIMESH temp, temp2;
+        TriMesh temp, temp2;
 
         temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
         temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
@@ -1263,8 +1263,8 @@ protected:
         temp.indices.resize(nindices);
         std::copy(&indices[0],&indices[nindices],temp.indices.begin());
 
-        KinBody::Link::TRIMESH* pcur = &temp;
-        KinBody::Link::TRIMESH* pnew = &temp2;
+        TriMesh* pcur = &temp;
+        TriMesh* pnew = &temp2;
         while(levels-- > 0) {
 
             pnew->vertices.resize(0);
@@ -1311,7 +1311,7 @@ protected:
     void BoxSample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int num_samples, Vector center)
     {
         RAY r;
-        KinBody::Link::TRIMESH tri;
+        TriMesh tri;
         CollisionReport::CONTACT p;
         dReal ffar = 1.0f;
 

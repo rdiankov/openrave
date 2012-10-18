@@ -335,8 +335,8 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param options Options to control the parsing process.
      */
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual boost::shared_ptr<KinBody::Link::TRIMESH> ReadTrimeshFile(boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshFile(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
 

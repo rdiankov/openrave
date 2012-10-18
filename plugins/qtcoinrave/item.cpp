@@ -230,13 +230,13 @@ void KinBodyItem::Load()
                 psep->addChild(phints);
 
                 switch(geom->GetType()) {
-                case KinBody::Link::GeomSphere: {
+                case GT_Sphere: {
                     SoSphere* s = new SoSphere();
                     s->radius = geom->GetSphereRadius();
                     psep->addChild(s);
                     break;
                 }
-                case KinBody::Link::GeomBox: {
+                case GT_Box: {
                     Vector v;
                     SoCube* c = new SoCube();
                     c->width = geom->GetBoxExtents().x*2.0f;
@@ -245,7 +245,7 @@ void KinBodyItem::Load()
                     psep->addChild(c);
                     break;
                 }
-                case KinBody::Link::GeomCylinder: {
+                case GT_Cylinder: {
                     // make SoCylinder point towards z, not y
                     SbMatrix m;
                     SbRotation(SbVec3f(1,0,0),M_PI/2).getValue(m);
@@ -257,7 +257,7 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
-                case KinBody::Link::GeomTrimesh: {
+                case GT_TriMesh: {
                     // set to render for both faces
                     phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
 
@@ -271,7 +271,7 @@ void KinBodyItem::Load()
                         psep->addChild(ptype);
                     }
 
-                    const KinBody::Link::TRIMESH& mesh = geom->GetCollisionMesh();
+                    const TriMesh& mesh = geom->GetCollisionMesh();
                     SoCoordinate3* vprop = new SoCoordinate3();
                     // this makes it crash!
                     //vprop->point.set1Value(mesh.indices.size()-1,SbVec3f(0,0,0)); // resize

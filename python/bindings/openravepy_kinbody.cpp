@@ -99,15 +99,15 @@ public:
                 _vGeomData = toPyVector4(Vector());
                 _vDiffuseColor = toPyVector3(Vector(1,1,1));
                 _vAmbientColor = toPyVector3(Vector(0,0,0));
-                _type = KinBody::Link::GeomNone;
+                _type = GT_None;
                 _fTransparency = 0;
                 _vRenderScale = toPyVector3(Vector(1,1,1));
                 _vCollisionScale = toPyVector3(Vector(1,1,1));
                 _bVisible = true;
                 _bModifiable = true;
             }
-            KinBody::Link::GeometryInfo GetGeometryInfo() {
-                KinBody::Link::GeometryInfo info;
+            KinBody::GeometryInfo GetGeometryInfo() {
+                KinBody::GeometryInfo info;
                 info._t = ExtractTransform(_t);
                 info._vGeomData = ExtractVector<dReal>(_vGeomData);
                 info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
@@ -127,7 +127,7 @@ public:
             }
 
             object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
-            KinBody::Link::GeomType _type;
+            GeometryType _type;
             std::string _filenamerender, _filenamecollision;
             object _vRenderScale, _vCollisionScale;
             float _fTransparency;
@@ -143,7 +143,7 @@ public:
             }
 
             virtual void SetCollisionMesh(object pytrimesh) {
-                KinBody::Link::TRIMESH mesh;
+                TriMesh mesh;
                 if( ExtractTriMesh(pytrimesh,mesh) ) {
                     _pgeometry->SetCollisionMesh(mesh);
                 }
@@ -186,7 +186,7 @@ public:
             bool IsModifiable() {
                 return _pgeometry->IsModifiable();
             }
-            KinBody::Link::GeomType GetType() {
+            GeometryType GetType() {
                 return _pgeometry->GetType();
             }
             object GetTransform() {
@@ -759,7 +759,7 @@ public:
     }
 
     bool InitFromTrimesh(object pytrimesh, bool bDraw) {
-        KinBody::Link::TRIMESH mesh;
+        TriMesh mesh;
         if( ExtractTriMesh(pytrimesh,mesh) ) {
             return _pbody->InitFromTrimesh(mesh,bDraw);
         }
@@ -769,7 +769,7 @@ public:
     }
 
     bool InitFromGeometries(object ogeometries) {
-        std::list<KinBody::Link::GeometryInfo> geometries;
+        std::list<KinBody::GeometryInfo> geometries;
         for(int i = 0; i < len(ogeometries); ++i) {
             PyLink::PyGeometryInfoPtr pygeom = boost::python::extract<PyLink::PyGeometryInfoPtr>(ogeometries[i]);
             if( !pygeom ) {
@@ -3149,7 +3149,13 @@ void init_openravepy_kinbody()
         .value("Enabled",KinBody::AO_Enabled)
         .value("ActiveDOFs",KinBody::AO_ActiveDOFs)
         ;
-
+        object geometrytype = enum_<GeometryType>("GeometryType" DOXY_ENUM(GeometryType))
+                              .value("None",GT_None)
+                              .value("Box",GT_Box)
+                              .value("Sphere",GT_Sphere)
+                              .value("Cylinder",GT_Cylinder)
+                              .value("Trimesh",GT_TriMesh)
+        ;
         {
             scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyKinBody::PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
@@ -3191,15 +3197,10 @@ void init_openravepy_kinbody()
                          .def("__eq__",&PyKinBody::PyLink::__eq__)
                          .def("__ne__",&PyKinBody::PyLink::__ne__)
             ;
-            object geomtype = enum_<KinBody::Link::GeomType>("GeomType" DOXY_ENUM(GeomType))
-                              .value("None",KinBody::Link::GeomNone)
-                              .value("Box",KinBody::Link::GeomBox)
-                              .value("Sphere",KinBody::Link::GeomSphere)
-                              .value("Cylinder",KinBody::Link::GeomCylinder)
-                              .value("Trimesh",KinBody::Link::GeomTrimesh)
-            ;
+            // \deprecated (12/10/18)
+            link.attr("GeomType") = geometrytype;
             {
-                scope geometryinfo = class_<PyKinBody::PyLink::PyGeometryInfo, boost::shared_ptr<PyKinBody::PyLink::PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::Link::GeometryInfo))
+                scope geometryinfo = class_<PyKinBody::PyLink::PyGeometryInfo, boost::shared_ptr<PyKinBody::PyLink::PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                                      .def_readwrite("_t",&PyKinBody::PyLink::PyGeometryInfo::_t)
                                      .def_readwrite("_vGeomData",&PyKinBody::PyLink::PyGeometryInfo::_vGeomData)
                                      .def_readwrite("_vDiffuseColor",&PyKinBody::PyLink::PyGeometryInfo::_vDiffuseColor)
@@ -3246,7 +3247,7 @@ void init_openravepy_kinbody()
                                  .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
                 ;
                 // \deprecated (12/07/16)
-                geometry.attr("Type") = geomtype;
+                geometry.attr("Type") = geometrytype;
             }
             // \deprecated (12/07/16)
             link.attr("GeomProperties") = link.attr("Geometry");

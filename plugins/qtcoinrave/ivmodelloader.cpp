@@ -69,7 +69,7 @@ public:
 
         Vector diffuseColor(1,1,1,1), ambientColor;
         dReal ftransparency=0;
-        KinBody::Link::TRIMESH trimesh;
+        TriMesh trimesh;
         bool bSuccess = false;
         // SoDB::readAll memory leaks!
         SoSeparator* psep = SoDB::readAll(&mySceneInput);
@@ -194,7 +194,7 @@ public:
     }
     static void _Coin3dTriangulateCB(void *data, SoCallbackAction *action, const SoPrimitiveVertex *vertex1, const SoPrimitiveVertex *vertex2, const SoPrimitiveVertex *vertex3)
     {
-        KinBody::Link::TRIMESH* ptri = (KinBody::Link::TRIMESH*)data;
+        TriMesh* ptri = (TriMesh*)data;
         GetModelMatrix() = action->getModelMatrix();
 
         // set the vertices (SCALED)
@@ -212,7 +212,7 @@ public:
         ptri->vertices.push_back(Vector(&v[0]));
     }
 
-    static void _Coin3dCreateTriMeshData(SoNode* pnode, KinBody::Link::TRIMESH& tri)
+    static void _Coin3dCreateTriMeshData(SoNode* pnode, TriMesh& tri)
     {
         tri.vertices.resize(0);
         tri.vertices.reserve(256);

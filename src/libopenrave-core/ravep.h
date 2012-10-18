@@ -278,7 +278,7 @@ BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const Attribut
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts, bool bAddToEnvironment);
 bool CreateTriMeshData(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::Link::GeometryInfo>& listGeometries);
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries);
 }
 
 #ifdef _WIN32

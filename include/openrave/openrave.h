@@ -2306,6 +2306,30 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam);
 OPENRAVE_API std::istream& operator>>(std::istream& I, IkParameterization& ikparam);
 
+/// \brief User data for trimesh geometries. Vertices are defined in counter-clockwise order for outward pointing faces.
+class OPENRAVE_API TriMesh
+{
+public:
+    std::vector<Vector> vertices;
+    std::vector<int> indices;
+
+    void ApplyTransform(const Transform& t);
+    void ApplyTransform(const TransformMatrix& t);
+
+    /// append another TRIMESH to this tri mesh
+    void Append(const TriMesh& mesh);
+    void Append(const TriMesh& mesh, const Transform& trans);
+
+    AABB ComputeAABB() const;
+    void serialize(std::ostream& o, int options=0) const;
+
+    friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
+    friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
+};
+
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh);
+OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
+
 /// \brief Selects which DOFs of the affine transformation to include in the active configuration.
 enum DOFAffine
 {
@@ -2726,7 +2750,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Joint)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Joint::MIMIC)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::GEOMPROPERTIES)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::Link::TRIMESH)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::TriMesh)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::KinBodyStateSaver)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::BodyState)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::KinBody::ManageData)

@@ -756,7 +756,7 @@ public:
     }
     object ReadTrimeshURI(const std::string& filename)
     {
-        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename);
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<TriMesh>(),filename);
         if( !ptrimesh ) {
             return object();
         }
@@ -764,7 +764,7 @@ public:
     }
     object ReadTrimeshURI(const std::string& filename, object odictatts)
     {
-        boost::shared_ptr<KinBody::Link::TRIMESH> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<KinBody::Link::TRIMESH>(),filename,toAttributesList(odictatts));
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(boost::shared_ptr<TriMesh>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
             return object();
         }
@@ -1196,14 +1196,14 @@ public:
     object Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
-        KinBody::Link::TRIMESH mesh;
+        TriMesh mesh;
         _penv->Triangulate(mesh,openravepy::GetKinBody(pbody));
         return toPyTriMesh(mesh);
     }
 
     object TriangulateScene(EnvironmentBase::SelectionOptions options, const string &name)
     {
-        KinBody::Link::TRIMESH mesh;
+        TriMesh mesh;
         _penv->TriangulateScene(mesh,options,name);
         return toPyTriMesh(mesh);
     }

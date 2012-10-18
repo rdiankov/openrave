@@ -409,9 +409,9 @@ protected:
 
     // generate a sphere triangulation starting with an icosahedron
     // all triangles are oriented counter clockwise
-    static void GenerateSphereTriangulation(KinBody::Link::TRIMESH& tri, int levels)
+    static void GenerateSphereTriangulation(TriMesh& tri, int levels)
     {
-        KinBody::Link::TRIMESH temp, temp2;
+        TriMesh temp, temp2;
 
         temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_Z, +GTS_M_ICOSAHEDRON_X, -GTS_M_ICOSAHEDRON_Y));
         temp.vertices.push_back(Vector(+GTS_M_ICOSAHEDRON_X, +GTS_M_ICOSAHEDRON_Y, +GTS_M_ICOSAHEDRON_Z));
@@ -465,8 +465,8 @@ protected:
         temp.indices.resize(nindices);
         std::copy(&indices[0],&indices[nindices],temp.indices.begin());
 
-        KinBody::Link::TRIMESH* pcur = &temp;
-        KinBody::Link::TRIMESH* pnew = &temp2;
+        TriMesh* pcur = &temp;
+        TriMesh* pnew = &temp2;
         while(levels-- > 0) {
 
             pnew->vertices.resize(0);
