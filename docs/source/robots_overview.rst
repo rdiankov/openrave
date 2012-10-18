@@ -10,9 +10,9 @@ Robots Overview
 Robot Repositories
 ------------------
 
-* Subversion: https://openrave.svn.sourceforge.net/svnroot/openrave/trunk/src/robots
+* Git: https://github.com/rdiankov/openrave/tree/master/src/robots
 
-* Subversion: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
+* Git: https://github.com/rdiankov/collada_robots
 
 File Formats
 ------------
