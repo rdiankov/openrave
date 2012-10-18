@@ -3,6 +3,19 @@
 ChangeLog
 #########
 
+
+Version 0.9.0 Development
+=========================
+
+Git Commit: **Unreleased**
+
+Initial Release: **Unreleased**
+
+Core
+----
+
+* Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots
+
 Version 0.8.2
 =============
 

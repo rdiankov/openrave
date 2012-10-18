@@ -143,9 +143,7 @@ public:
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
 
-    /// \brief Describes the properties of a link
-    ///
-    /// Contains everything associated with a link
+    /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public XMLReadable
     {
 public:
@@ -546,65 +544,98 @@ private:
     typedef boost::shared_ptr<KinBody::Link const> LinkConstPtr;
     typedef boost::weak_ptr<KinBody::Link> LinkWeakPtr;
 
+    /** \brief The type of joint movement.
+
+        Non-special joints that are combinations of revolution and prismatic joints.
+        The first 4 bits specify the joint DOF, the next bits specify whether the joint is revolute (0) or prismatic (1).
+        There can be also special joint types that are valid if the JointSpecialBit is set.
+
+        For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
+     */
+    enum JointType {
+        JointNone = 0,
+        JointHinge = 0x01,
+        JointRevolute = 0x01,
+        JointSlider = 0x11,
+        JointPrismatic = 0x11,
+        JointRR = 0x02,
+        JointRP = 0x12,
+        JointPR = 0x22,
+        JointPP = 0x32,
+        JointSpecialBit = 0x80000000,
+        JointUniversal = 0x80000001,
+        JointHinge2 = 0x80000002,
+        JointSpherical = 0x80000003,
+        JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
+    };
+
+    /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
+    ///
+    /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
+    struct OPENRAVE_API MIMIC
+    {
+        struct DOFFormat
+        {
+            int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
+            int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
+            uint8_t axis : 2;         ///< the axis of the joint index
+            bool operator <(const DOFFormat& r) const;
+            bool operator ==(const DOFFormat& r) const;
+            boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
+            boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
+        };
+        std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
+        struct DOFHierarchy
+        {
+            int16_t dofindex;         ///< >=0 dof index
+            uint16_t dofformatindex;         ///< index into _vdofformat to follow the computation
+            bool operator ==(const DOFHierarchy& r) const {
+                return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
+            }
+        };
+        std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
+        OpenRAVEFunctionParserRealPtr _posfn;
+        std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
+        boost::array< std::string, 3>  _equations;         ///< the original equations
+    };
+
+    /// \brief Describes the properties of a link used to initialize it
+    class OPENRAVE_API JointInfo : public XMLReadable
+    {
+public:
+        JointInfo();
+        virtual ~JointInfo() {
+        }
+
+        JointType _type;
+        std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system
+        Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
+        boost::array<Vector,3> _vaxes;                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
+        std::vector<dReal> _vcurrentvalues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
+
+        dReal _fResolution;              ///< interpolation resolution
+        boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
+        boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
+        boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
+        boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
+        boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
+        boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
+        TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
+
+        boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
+
+        std::string _name;         ///< \see GetName
+        boost::array<uint8_t,3> _bIsCircular;            ///< \see IsCircular
+        boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
+    };
+    typedef boost::shared_ptr<JointInfo> JointInfoPtr;
+
     /// \brief Information about a joint that controls the relationship between two links.
     class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
 public:
-        /** \brief The type of joint movement.
-
-            Non-special joints that are combinations of revolution and prismatic joints.
-            The first 4 bits specify the joint DOF, the next bits specify whether the joint is revolute (0) or prismatic (1).
-            There can be also special joint types that are valid if the JointSpecialBit is set.
-
-            For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
-         */
-        enum JointType {
-            JointNone = 0,
-            JointHinge = 0x01,
-            JointRevolute = 0x01,
-            JointSlider = 0x11,
-            JointPrismatic = 0x11,
-            JointRR = 0x02,
-            JointRP = 0x12,
-            JointPR = 0x22,
-            JointPP = 0x32,
-            JointSpecialBit = 0x80000000,
-            JointUniversal = 0x80000001,
-            JointHinge2 = 0x80000002,
-            JointSpherical = 0x80000003,
-            JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
-        };
-
-        /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
-        ///
-        /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-        struct OPENRAVE_API MIMIC
-        {
-            struct DOFFormat
-            {
-                int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
-                int16_t dofindex : 14;         ///< if >= 0, then points to a DOF of the robot that is NOT mimiced
-                uint8_t axis : 2;         ///< the axis of the joint index
-                bool operator <(const DOFFormat& r) const;
-                bool operator ==(const DOFFormat& r) const;
-                boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
-                boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
-            };
-            std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
-            struct DOFHierarchy
-            {
-                int16_t dofindex;         ///< >=0 dof index
-                uint16_t dofformatindex;         ///< index into _vdofformat to follow the computation
-                bool operator ==(const DOFHierarchy& r) const {
-                    return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
-                }
-            };
-            std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
-            OpenRAVEFunctionParserRealPtr _posfn;
-            std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
-            boost::array< std::string, 3>  _equations;         ///< the original equations
-        };
-
         Joint(KinBodyPtr parent, JointType type = JointNone);
         virtual ~Joint();
 
