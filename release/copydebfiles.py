@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
 """copies necessary files for deb source package building to a destination directory. The destination directory must not exist
 """
 import os, sys

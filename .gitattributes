@@ -1,0 +1,6 @@
+msvc_boost.tgz export-ignore
+msvc_include/ export-ignore
+msvc_ode.tgz export-ignore
+msvc_collada.tgz export-ignore
+msvc_libxml2.tgz export-ignore
+msvc_soqt.tgz export-ignore
