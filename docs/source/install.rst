@@ -41,6 +41,6 @@ Get latest stable source code (constantly updated):
 
 .. code-block:: bash
 
-  svn co https://openrave.svn.sourceforge.net/svnroot/openrave/tags/latest_stable openrave
+  git clone --branch latest_stable https://github.com/rdiankov/openrave.git
 
 `Compile/Install From Sources <../coreapihtml/installation.html>`_
