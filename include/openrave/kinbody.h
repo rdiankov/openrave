@@ -149,15 +149,31 @@ public:
     class OPENRAVE_API LinkInfo : public XMLReadable
     {
 public:
+        LinkInfo();
+        virtual ~LinkInfo() {
+        }
         std::vector<GeometryInfoPtr> _vgeometryinfos;
-        std::string _name;             ///< link name
-        Transform _t;                   ///< \see the current transformation of the link in the world coordinate system.
-        Transform _tMassFrame; ///< the frame for inertia and center of mass of the link in the link's coordinate system
-        dReal _mass; ///< mass of link
-        Vector _vinertiamoments; ///< inertia along the axes of _tMassFrame
-        bool _bStatic;               ///< \see IsStatic
-        bool _bIsEnabled;         ///< \see IsEnabled
+        /// unique link name
+        std::string _name;
+        ///< the current transformation of the link in the world coordinate system.
+        Transform _t;
+        /// the frame for inertia and center of mass of the link in the link's coordinate system
+        Transform _tMassFrame;
+        /// mass of link
+        dReal _mass;
+        /// inertia along the axes of _tMassFrame
+        Vector _vinertiamoments;
+
+        /// \brief Indicates a static body that does not move with respect to the root link.
+        ///
+        //// Static should be used when an object has infinite mass and
+        ///< shouldn't be affected by physics (including gravity). Collision still works.
+        bool _bStatic;
+
+        /// \true false if the link is disabled. disabled links do not participate in collision detection
+        bool _bIsEnabled;
     };
+    typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
 
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
