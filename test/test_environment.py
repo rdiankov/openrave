@@ -48,7 +48,7 @@ class TestEnvironment(EnvironmentSetup):
     def test_uri(self):
         env=self.env
         xml="""<environment>
-  <kinbody file="data/jsk-plate.zae"/>
+  <kinbody file="data/mug1.dae"/>
 </environment>"""
         self.LoadDataEnv(xml)
         assert(env.GetBodies()[0].GetURI().find('data/jsk-plate.zae') >= 0)
