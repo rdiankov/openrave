@@ -383,7 +383,7 @@ InstallDirRegKey HKLM "Software\\OpenRAVE" "InstallRoot"
 
 RequestExecutionLevel admin
 
-!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nGit Committ %(openrave_committ)s$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
+!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nGit Commit %(openrave_commit)s$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
 
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
@@ -778,7 +778,7 @@ if __name__ == "__main__":
                       help='Language folder.')
     parser.add_option('--installdir',action="store",type='string',dest='installdir',default=None,
                       help='Directory of the cmake installation')
-    parser.add_option('--committ',action="store",type='string',dest='committ',default=None,
+    parser.add_option('--commit',action="store",type='string',dest='commit',default=None,
                       help='Git commit hash.')
     (options,args) = parser.parse_args()
 
@@ -798,10 +798,10 @@ if __name__ == "__main__":
     args['openrave_version'] = openravepy.__version__
     args['openrave_version_full'] = openravepy.__version__
     args['openrave_soversion'] = soversion
-    args['openrave_committ'] = ''
-    if options.committ is not None:
+    args['openrave_commit'] = ''
+    if options.commit is not None:
         args['openrave_version_full'] += '-'+options.revision[0:6]
-        args['openrave_committ'] = options.committ
+        args['openrave_commit'] = options.commit
     args['vcversion'] = os.path.split(options.installdir)[1][2:]
     args['vcredist_url'] = vcredist_urls[args['vcversion']]
     args['qt_version'] = qt_version
