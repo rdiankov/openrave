@@ -19,8 +19,12 @@ scp latest_stable.tgz openravetesting,openrave@frs.sourceforge.net:/home/frs/pro
 ssh openravetesting,openrave@shell.sourceforge.net "cd /home/frs/project/o/op/openrave; tar xf latest_stable.tgz; chmod -R g+w latest_stable; rm -f latest_stable.tgz; find latest_stable -mtime +30 -type f -exec rm -rf {} \;"
 rm -f latest_stable.tgz
 
-#git tag -a "Latest Stable Tag (Tagged by Jenkins)." latest_stable
-#git push origin latest_stable
+# update the latest_stable branch
+cd $trunk
+git checkout latest_stable
+git merge master
+git push origin latest_stable
+
 
 #fi
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"
