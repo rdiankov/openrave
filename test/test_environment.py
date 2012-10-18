@@ -51,7 +51,7 @@ class TestEnvironment(EnvironmentSetup):
   <kinbody file="data/mug1.dae"/>
 </environment>"""
         self.LoadDataEnv(xml)
-        assert(env.GetBodies()[0].GetURI().find('data/jsk-plate.zae') >= 0)
+        assert(env.GetBodies()[0].GetURI().find('data/mug1.dae') >= 0)
 
     def test_scalegeometry(self):
         env=self.env

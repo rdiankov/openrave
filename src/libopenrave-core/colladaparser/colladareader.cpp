@@ -20,6 +20,7 @@ using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
 {
+public:
     template <typename T>
     inline static std::string getSid(T t)
     {
@@ -1843,7 +1844,7 @@ public:
                         geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
-                        geom._fTransparency = 1-pphong->getTransparency()->getFloat()->getValue();
+                        geom._fTransparency = 1-static_cast<dReal>(pphong->getTransparency()->getFloat()->getValue());
                         if( geom._fTransparency >= 1 ) {
                             RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
                             geom._fTransparency = 0;
@@ -3516,7 +3517,7 @@ private:
         }
         else {
             // perhaps targetref doesn't have kmodel id prefix to it. so search for the sid in each kinematics_model
-            FOREACH(itmodel, bindings.listModelBindings) {
+            FOREACHC(itmodel, bindings.listModelBindings) {
                 if( !!itmodel->_kmodel && !!itmodel->_kmodel->getTechnique_common()) {
                     daeTArray<domJointRef> joints;
                     itmodel->_kmodel->getTechnique_common()->getChildrenByType(joints);
@@ -4297,3 +4298,13 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
     }
     return reader.Extract(probot);
 }
+
+// register for typeof (MSVC only)
+#ifdef RAVE_REGISTER_BOOST
+#include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::ModelBinding)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::InterfaceType)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::JointAxisBinding)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::LinkBinding)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::KinematicsSceneBindings)
+#endif

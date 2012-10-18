@@ -383,7 +383,7 @@ InstallDirRegKey HKLM "Software\\OpenRAVE" "InstallRoot"
 
 RequestExecutionLevel admin
 
-!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nSubversion Revision %(openrave_revision)s$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
+!define MUI_WELCOMEPAGE_TEXT "http://www.openrave.org$\\n$\\nGit Committ %(openrave_committ)s$\\n$\\nC++ Developers: All DLLs are compiled with Multithreaded DLL Runtime Library.$\\n$\\nMost examples are written in Python and can be directly executed from the Start Menu."
 
 !define MUI_ABORTWARNING
 !insertmacro MUI_PAGE_WELCOME
@@ -778,8 +778,8 @@ if __name__ == "__main__":
                       help='Language folder.')
     parser.add_option('--installdir',action="store",type='string',dest='installdir',default=None,
                       help='Directory of the cmake installation')
-    parser.add_option('--revision',action="store",type='string',dest='revision',default=None,
-                      help='Subversion revision to append to the output filename.')
+    parser.add_option('--committ',action="store",type='string',dest='committ',default=None,
+                      help='Git commit hash.')
     (options,args) = parser.parse_args()
 
     python_installdir = 'lib\\site-packages\\'
@@ -798,10 +798,10 @@ if __name__ == "__main__":
     args['openrave_version'] = openravepy.__version__
     args['openrave_version_full'] = openravepy.__version__
     args['openrave_soversion'] = soversion
-    args['openrave_revision'] = ''
-    if options.revision is not None:
-        args['openrave_version_full'] += '-r%s'%options.revision
-        args['openrave_revision'] = options.revision
+    args['openrave_committ'] = ''
+    if options.committ is not None:
+        args['openrave_version_full'] += '-'+options.revision[0:6]
+        args['openrave_committ'] = options.committ
     args['vcversion'] = os.path.split(options.installdir)[1][2:]
     args['vcredist_url'] = vcredist_urls[args['vcversion']]
     args['qt_version'] = qt_version
