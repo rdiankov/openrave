@@ -6,9 +6,9 @@ ChangeLog
 Version 0.8.2
 =============
 
-Git Commit: 65e840362111304ac1ae1d8fb9e0334e07bf77a4
+Git Commit: edc7721cb84cb97d96bfd2d5afda1b0f7b9026ff
 
-Initial Release: **Unreleased**
+Initial Release: 2012/10/18
 
 Core
 ----
