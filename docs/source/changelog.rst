@@ -3,12 +3,12 @@
 ChangeLog
 #########
 
-Version 0.8.1 Development
-=========================
+Version 0.8.2
+=============
 
-Subversion Revision: **Unreleased**
+Git Commit: edc7721cb84cb97d96bfd2d5afda1b0f7b9026ff
 
-Initial Release: **Unreleased**
+Initial Release: 2012/10/18
 
 Core
 ----
