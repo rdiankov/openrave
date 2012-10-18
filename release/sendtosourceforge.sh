@@ -2,6 +2,7 @@
 # Puts the newest files into latest_stable, and deletes any files that are more than 7 days old.
 trunk=$1
 
+
 basename="openrave-r$revision"
 cp $trunk "$basename-linux-src"
 rm -rf "$basename-linux-src"/msvc_* # too big to include into openrave
