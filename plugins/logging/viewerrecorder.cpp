@@ -102,6 +102,7 @@ class ViewerRecorder : public ModuleBase
     boost::multi_array<uint32_t,2> _vwatermarkimage;
     int _nFrameCount, _nVideoWidth, _nVideoHeight;
     float _framerate;
+    uint64_t _frameindex;
     uint64_t _starttime, _frametime;
     std::string _filename;
     UserDataPtr _callback;
@@ -588,7 +589,6 @@ protected:
     char *_picture_buf, *_outbuf;
     int _picture_size;
     int _outbuf_size;
-    uint64_t _frameindex;
     bool _bWroteURL, _bWroteHeader;
 
     void _ResetLibrary()
