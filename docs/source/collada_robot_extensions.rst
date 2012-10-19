@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.3.1)
+COLLADA Robot Extensions (Version 0.3.2)
 ----------------------------------------
 
 OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
@@ -523,6 +523,136 @@ Translation box center to (0,0,0.5) and rotate 45 degrees around z axis.
       </technique>
     </extra>
   </geometry>
+
+link_info
+=========
+
+Introduction
+~~~~~~~~~~~~
+
+Defines extra link parameters not part of the COLLADA 1.5 specification.
+
+Concepts
+~~~~~~~~
+
+The parameters are key/value-array pairs.
+
+Attributes
+~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 15, 15, 70
+
+  name | **xs:token** | Required. References the SID of a <link> defined in <kinematics_model>. One of the links defining the pair to be ignored.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 80
+  
+  Parent elements | <kinematics_model>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+  
+  <float_array> | An array of floating-point values | 0 or more
+  <int_array> | An array of floating-point values | 0 or more
+
+Example
+~~~~~~~
+
+Sets **myparam** to **link0** and **newparam** to **link1**.
+
+.. code-block:: xml
+
+  <kinematics_model>
+    <extra type="link_info" name="link0">
+      <technique profile="OpenRAVE">
+        <float_array link="link0" name="myparam">1.0 2.0 3.0</float_array>
+      </technique>
+    </extra>
+    <extra type="link_info" name="link1">
+      <technique profile="OpenRAVE">
+        <int_array link="link1" name="newparam">-10</int_array>
+      </technique>
+    </extra>
+  </kinematics_model>
+
+joint_info
+==========
+
+Introduction
+~~~~~~~~~~~~
+
+Defines extra joint parameters not part of the COLLADA 1.5 specification.
+
+Concepts
+~~~~~~~~
+
+The parameters are key/value-array pairs.
+
+Attributes
+~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 15, 15, 70
+
+  name | **xs:token** | Required. References the SID of a <joint> defined in <kinematics_model>. One of the joints defining the pair to be ignored.
+
+Related Elements
+~~~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 80
+  
+  Parent elements | <kinematics_model>
+
+Child Elements
+~~~~~~~~~~~~~~
+
+.. csv-table::
+  :class: collada
+  :delim: |
+  :widths: 20, 70, 10
+  :header: Element, Description, Occurances
+  
+  <float_array> | An array of floating-point values | 0 or more
+  <int_array> | An array of floating-point values | 0 or more
+
+Example
+~~~~~~~
+
+Sets **myparam** to **joint0** and **newparam** to **joint1**.
+
+.. code-block:: xml
+
+  <kinematics_model>
+    <extra type="joint_info" name="joint0">
+      <technique profile="OpenRAVE">
+        <float_array joint="joint0" name="myparam">1.0 2.0 3.0</float_array>
+      </technique>
+    </extra>
+    <extra type="joint_info" name="joint0">
+      <technique profile="OpenRAVE">
+        <int_array joint="joint1" name="newparam">-10</int_array>
+      </technique>
+    </extra>
+  </kinematics_model>
 
 library_sensors
 ===============

@@ -502,6 +502,16 @@ protected:
 
         virtual void serialize(std::ostream& o, int options) const;
 
+        /// \brief return a map of custom float parameters
+        inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
+            return _info._mapFloatParameters;
+        }
+
+        /// \brief return a map of custom integer parameters
+        inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
+            return _info._mapIntParameters;
+        }
+
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
         virtual void _Update();
@@ -915,14 +925,14 @@ public:
         //@{
 
         /// \deprecated (11/1/1)
-        int GetMimicJointIndex() const RAVE_DEPRECATED;
+        virtual int GetMimicJointIndex() const RAVE_DEPRECATED;
         /// \deprecated (11/1/1)
-        const std::vector<dReal> GetMimicCoeffs() const RAVE_DEPRECATED;
+        virtual const std::vector<dReal> GetMimicCoeffs() const RAVE_DEPRECATED;
 
         /// \brief Returns true if a particular axis of the joint is mimiced.
         ///
         /// \param axis the axis to query. When -1 returns true if any of the axes have mimic joints
-        bool IsMimic(int axis=-1) const;
+        virtual bool IsMimic(int axis=-1) const;
 
         /** \brief If the joint is mimic, returns the equation to compute its value
 
@@ -934,7 +944,7 @@ public:
 
             Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref Mimic::_vdofformat
          */
-        std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
+        virtual std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
 
         /** \brief Returns the set of DOF indices that the computation of a joint axis depends on. Order is arbitrary.
 
@@ -942,7 +952,7 @@ public:
             copied over. Therefore, the dof indices returned can be more than the actual variables used in the equation.
             \throw openrave_exception Throws an exception if the axis is not mimic.
          */
-        void GetMimicDOFIndices(std::vector<int>& vmimicdofs, int axis=0) const;
+        virtual void GetMimicDOFIndices(std::vector<int>& vmimicdofs, int axis=0) const;
 
         /** \brief Sets the mimic properties of the joint.
 
@@ -963,8 +973,18 @@ public:
             \param[in] acceleq Second-order partial derivatives of poseq with respect to all used DOFs. Only the variables used in poseq are allowed to be used. Optional.
             \throw openrave_exception Throws an exception if the mimic equation is invalid in any way.
          */
-        void SetMimicEquations(int axis, const std::string& poseq, const std::string& veleq, const std::string& acceleq="");
+        virtual void SetMimicEquations(int axis, const std::string& poseq, const std::string& veleq, const std::string& acceleq="");
         //@}
+
+        /// \brief return a map of custom float parameters
+        inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
+            return _info._mapFloatParameters;
+        }
+
+        /// \brief return a map of custom integer parameters
+        inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
+            return _info._mapIntParameters;
+        }
 
 protected:
         JointInfo _info;

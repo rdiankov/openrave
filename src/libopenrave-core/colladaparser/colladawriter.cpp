@@ -1275,6 +1275,86 @@ private:
         }
         _WriteCollisionData(pbody, kmout->kmodel, vlinksids);
 
+        if( IsWrite("link_info") ) {
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
+
+            // write the float/int parameters for all links
+            for(size_t ilink = 0; ilink < vlinksids.size(); ++ilink) {
+                KinBody::LinkPtr plink = pbody->GetLinks().at(ilink);
+                if( plink->GetFloatParameters().size() == 0 && plink->GetIntParameters().size() == 0 ) {
+                    continue;
+                }
+                domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setType("link_info");
+                pextra->setName(vlinksids.at(ilink).c_str());
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+
+                FOREACHC(itparam, plink->GetFloatParameters()) {
+                    daeElementRef float_array = ptec->add("float_array");
+                    float_array->setAttribute("digits",digits.c_str());
+                    float_array->setAttribute("name",itparam->first.c_str());
+                    float_array->setAttribute("count",boost::lexical_cast<std::string>(itparam->second.size()).c_str());
+                    ss.str(""); ss.clear();
+                    FOREACHC(itvalue,itparam->second) {
+                        ss << *itvalue << " ";
+                    }
+                    float_array->setCharData(ss.str());
+                }
+                FOREACHC(itparam, plink->GetIntParameters()) {
+                    daeElementRef int_array = ptec->add("int_array");
+                    int_array->setAttribute("digits",digits.c_str());
+                    int_array->setAttribute("name",itparam->first.c_str());
+                    int_array->setAttribute("count",boost::lexical_cast<std::string>(itparam->second.size()).c_str());
+                    ss.str(""); ss.clear();
+                    FOREACHC(itvalue,itparam->second) {
+                        ss << *itvalue << " ";
+                    }
+                    int_array->setCharData(ss.str());
+                }
+            }
+        }
+        if( IsWrite("joint_info") ) {
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
+
+            // write the float/int parameters for all joints
+            FOREACH(itjoint, vjoints) {
+                KinBody::JointConstPtr pjoint = itjoint->second;
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 ) {
+                    continue;
+                }
+                string jointsid = str(boost::format("joint%d")%itjoint->first);
+                domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setType("joint_info");
+                pextra->setName(jointsid.c_str());
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+                FOREACHC(itparam, pjoint->GetFloatParameters()) {
+                    daeElementRef float_array = ptec->add("float_array");
+                    float_array->setAttribute("digits",digits.c_str());
+                    float_array->setAttribute("name",itparam->first.c_str());
+                    float_array->setAttribute("count",boost::lexical_cast<std::string>(itparam->second.size()).c_str());
+                    ss.str(""); ss.clear();
+                    FOREACHC(itvalue,itparam->second) {
+                        ss << *itvalue << " ";
+                    }
+                    float_array->setCharData(ss.str());
+                }
+                FOREACHC(itparam, pjoint->GetIntParameters()) {
+                    daeElementRef int_array = ptec->add("int_array");
+                    int_array->setAttribute("digits",digits.c_str());
+                    int_array->setAttribute("name",itparam->first.c_str());
+                    int_array->setAttribute("count",boost::lexical_cast<std::string>(itparam->second.size()).c_str());
+                    ss.str(""); ss.clear();
+                    FOREACHC(itvalue,itparam->second) {
+                        ss << *itvalue << " ";
+                    }
+                    int_array->setCharData(ss.str());
+                }
+            }
+        }
         // create the formulas for all mimic joints
         std::map<std::string,std::string> mapjointnames;
         FOREACHC(itjoint,vjoints) {

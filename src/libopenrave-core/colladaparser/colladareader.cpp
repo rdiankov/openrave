@@ -1265,6 +1265,74 @@ public:
         }
 
         _ExtractCollisionData(pkinbody,kmodel,kmodel->getExtra_array(),bindings.listLinkBindings);
+
+        {
+            stringstream ss;
+            // extract the custom link info
+            for(size_t i = 0; i < kmodel->getExtra_array().getCount(); ++i) {
+                if( strcmp(kmodel->getExtra_array()[i]->getType(),"link_info") == 0 ) {
+                    string linksid = kmodel->getExtra_array()[i]->getName();
+                    domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(linksid, kmodel).resolve().elt);
+                    KinBody::LinkPtr plink;
+                    if( !!pdomlink ) {
+                        plink = pkinbody->GetLink(_ExtractLinkName(pdomlink));
+                    }
+                    else {
+                        plink = _ResolveLinkBinding(bindings.listLinkBindings, linksid);
+                    }
+                    if( !plink ) {
+                        RAVELOG_WARN(str(boost::format("failed to resolve link_info link %s\n")%linksid));
+                        continue;
+                    }
+                    domTechniqueRef tec = _ExtractOpenRAVEProfile(kmodel->getExtra_array()[i]->getTechnique_array());
+                    if( !!tec ) {
+                        for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                            daeElementRef pelt = tec->getContents()[ic];
+                            bool bfloat_array = pelt->getElementName() == string("float_array");
+                            bool bint_array = pelt->getElementName() == string("int_array");
+                            if( bfloat_array || bint_array ) {
+                                std::string name = pelt->getAttribute("name");
+                                ss.clear(); ss.str(pelt->getCharData());
+                                if( bfloat_array ) {
+                                    plink->_info._mapFloatParameters[name] = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                                }
+                                else if( bint_array ) {
+                                    plink->_info._mapIntParameters[name] = std::vector<int>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                }
+                            }
+                        }
+                    }
+                }
+                if( strcmp(kmodel->getExtra_array()[i]->getType(),"joint_info") == 0 ) {
+                    string jointsid = kmodel->getExtra_array()[i]->getName();
+                    std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(jointsid.c_str(),kmodel,pkinbody, bindings);
+                    KinBody::JointPtr pjoint = result.first;
+                    domJointRef pdomjoint = result.second;
+                    if( !!pjoint && !!pdomjoint ) {
+                        domTechniqueRef tec = _ExtractOpenRAVEProfile(kmodel->getExtra_array()[i]->getTechnique_array());
+                        if( !!tec ) {
+                            for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                                daeElementRef pelt = tec->getContents()[ic];
+                                bool bfloat_array = pelt->getElementName() == string("float_array");
+                                bool bint_array = pelt->getElementName() == string("int_array");
+                                if( bfloat_array || bint_array ) {
+                                    std::string name = pelt->getAttribute("name");
+                                    ss.clear(); ss.str(pelt->getCharData());
+                                    if( bfloat_array ) {
+                                        pjoint->_info._mapFloatParameters[name] = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                                    }
+                                    else if( bint_array ) {
+                                        pjoint->_info._mapIntParameters[name] = std::vector<int>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
         return true;
     }
 

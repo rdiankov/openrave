@@ -546,6 +546,21 @@ public:
             return toPyArray<dReal,6>(v);
         }
 
+        boost::python::dict GetFloatParameters() const {
+            boost::python::dict parameters;
+            FOREACHC(it, _plink->GetFloatParameters()) {
+                parameters[it->first] = toPyArray(it->second);
+            }
+            return parameters;
+        }
+        boost::python::dict GetIntParameters() const {
+            boost::python::dict parameters;
+            FOREACHC(it, _plink->GetIntParameters()) {
+                parameters[it->first] = toPyArray(it->second);
+            }
+            return parameters;
+        }
+
         std::string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
         }
@@ -775,6 +790,21 @@ public:
         void AddTorque(object otorques) {
             vector<dReal> vtorques = ExtractArray<dReal>(otorques);
             return _pjoint->AddTorque(vtorques);
+        }
+
+        boost::python::dict GetFloatParameters() const {
+            boost::python::dict parameters;
+            FOREACHC(it, _pjoint->GetFloatParameters()) {
+                parameters[it->first] = toPyArray(it->second);
+            }
+            return parameters;
+        }
+        boost::python::dict GetIntParameters() const {
+            boost::python::dict parameters;
+            FOREACHC(it, _pjoint->GetIntParameters()) {
+                parameters[it->first] = toPyArray(it->second);
+            }
+            return parameters;
         }
 
         string __repr__() {
@@ -3520,6 +3550,8 @@ void init_openravepy_kinbody()
                          .def("IsRigidlyAttached",&PyKinBody::PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                          .def("GetVelocity",&PyKinBody::PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))
                          .def("SetVelocity",&PyKinBody::PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
+                         .def("GetFloatParameters",&PyKinBody::PyLink::GetFloatParameters,DOXY_FN(KinBody::Link,GetFloatParameters))
+                         .def("GetIntParameters",&PyKinBody::PyLink::GetIntParameters,DOXY_FN(KinBody::Link,GetIntParameters))
                          .def("__repr__", &PyKinBody::PyLink::__repr__)
                          .def("__str__", &PyKinBody::PyLink::__str__)
                          .def("__unicode__", &PyKinBody::PyLink::__unicode__)
@@ -3612,6 +3644,8 @@ void init_openravepy_kinbody()
                           .def("SubtractValue",&PyKinBody::PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))
 
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
+                          .def("GetFloatParameters",&PyKinBody::PyJoint::GetFloatParameters,DOXY_FN(KinBody::Joint,GetFloatParameters))
+                          .def("GetIntParameters",&PyKinBody::PyJoint::GetIntParameters,DOXY_FN(KinBody::Joint,GetIntParameters))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
                           .def("__str__", &PyKinBody::PyJoint::__str__)
                           .def("__unicode__", &PyKinBody::PyJoint::__unicode__)
