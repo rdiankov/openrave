@@ -1130,7 +1130,7 @@ public:
         _bNegateJoint = false;
         _pparent = pparent;
         _pjoint.reset(new KinBody::Joint(pparent));
-        _pjoint->_type = KinBody::Joint::JointHinge;
+        _pjoint->_type = KinBody::JointHinge;
         _vScaleGeometry = Vector(1,1,1);
 
         FOREACHC(itatt,atts) {
@@ -1139,23 +1139,23 @@ public:
             }
             else if( itatt->first == "type" ) {
                 if( _stricmp(itatt->second.c_str(), "hinge") == 0 ) {
-                    _pjoint->_type = KinBody::Joint::JointHinge;
+                    _pjoint->_type = KinBody::JointHinge;
                 }
                 else if( _stricmp(itatt->second.c_str(), "slider") == 0 ) {
-                    _pjoint->_type = KinBody::Joint::JointSlider;
+                    _pjoint->_type = KinBody::JointSlider;
                 }
                 else if( _stricmp(itatt->second.c_str(), "universal") == 0 ) {
-                    _pjoint->_type = KinBody::Joint::JointUniversal;
+                    _pjoint->_type = KinBody::JointUniversal;
                 }
                 else if( _stricmp(itatt->second.c_str(), "hinge2") == 0 ) {
-                    _pjoint->_type = KinBody::Joint::JointHinge2;
+                    _pjoint->_type = KinBody::JointHinge2;
                 }
                 else if( _stricmp(itatt->second.c_str(), "spherical") == 0 ) {
-                    _pjoint->_type = KinBody::Joint::JointSpherical;
+                    _pjoint->_type = KinBody::JointSpherical;
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("unrecognized joint type: %s, setting to hinge\n")%itatt->second));
-                    _pjoint->_type = KinBody::Joint::JointHinge;
+                    _pjoint->_type = KinBody::JointHinge;
                 }
             }
             else if( itatt->first == "enable" ) {
@@ -1170,26 +1170,26 @@ public:
                 if( !ss ) {
                     RAVELOG_WARN(str(boost::format("failed to set mimic properties correctly from: %s\n")%itatt->second));
                 }
-                _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                _pjoint->_vmimic[0].reset(new KinBody::Mimic());
                 _pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f+%f")%strmimicjoint%a%b);
                 _pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%strmimicjoint%a);
                 _pjoint->_vmimic[0]->_equations[2] = str(boost::format("|%s %f")%strmimicjoint%a);
             }
             else if( itatt->first.size() >= 9&&itatt->first.substr(0,9) == "mimic_pos") {
                 if( !_pjoint->_vmimic[0] ) {
-                    _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    _pjoint->_vmimic[0].reset(new KinBody::Mimic());
                 }
                 _pjoint->_vmimic[0]->_equations[0] = itatt->second;
             }
             else if( itatt->first.size() >= 9 && itatt->first.substr(0,9) == "mimic_vel") {
                 if( !_pjoint->_vmimic[0] ) {
-                    _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    _pjoint->_vmimic[0].reset(new KinBody::Mimic());
                 }
                 _pjoint->_vmimic[0]->_equations[1] = itatt->second;
             }
             else if( itatt->first.size() >= 11 && itatt->first.substr(0,11) == "mimic_accel") {
                 if( !_pjoint->_vmimic[0] ) {
-                    _pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    _pjoint->_vmimic[0].reset(new KinBody::Mimic());
                 }
                 _pjoint->_vmimic[0]->_equations[2] = itatt->second;
             }
@@ -1211,13 +1211,13 @@ public:
         }
 
         _vAxes.resize(_pjoint->GetDOF());
-        if( _pjoint->GetType() == KinBody::Joint::JointSlider ) {
+        if( _pjoint->GetType() == KinBody::JointSlider ) {
             for(int i = 0; i < _pjoint->GetDOF(); ++i) {
                 _pjoint->_vlowerlimit.at(i) = -10;
                 _pjoint->_vupperlimit.at(i) = 10;
             }
         }
-        else if( _pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+        else if( _pjoint->GetType() == KinBody::JointSpherical ) {
             _vAxes.at(0) = Vector(1,0,0);
             _vAxes.at(1) = Vector(0,1,0);
             _vAxes.at(2) = Vector(0,0,1);
@@ -1256,7 +1256,7 @@ public:
     virtual bool endElement(const std::string& xmlname)
     {
         int numindices = _pjoint->GetDOF();
-        dReal fRatio = _pjoint->_type == KinBody::Joint::JointSlider ? (dReal)1 : (dReal)PI / 180.0f;         // most, but not all, joint take degrees
+        dReal fRatio = _pjoint->_type == KinBody::JointSlider ? (dReal)1 : (dReal)PI / 180.0f;         // most, but not all, joint take degrees
 
         if( !!_pcurreader ) {
             if( _pcurreader->endElement(xmlname) ) {
@@ -1277,7 +1277,7 @@ public:
 
             string defaultname = "J_";
             // check if joint needs an artificial offset, only for revolute joints that have identifying points!
-            if(( _pjoint->_type == KinBody::Joint::JointUniversal) ||( _pjoint->_type == KinBody::Joint::JointHinge2) ||( _pjoint->_type == KinBody::Joint::JointHinge) ) {
+            if(( _pjoint->_type == KinBody::JointUniversal) ||( _pjoint->_type == KinBody::JointHinge2) ||( _pjoint->_type == KinBody::JointHinge) ) {
                 for(int i = 0; i < numindices; ++i) {
                     if(( _pjoint->_vlowerlimit[i] < -PI) ||( _pjoint->_vupperlimit[i] > PI) ) {
                         // TODO, necessary?
@@ -1376,7 +1376,7 @@ public:
         }
         else if( xmlname == "hardmaxvel" ) {
             for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
-                _ss >> _pjoint->fHardMaxVel[idof];
+                _ss >> _pjoint->_vhardmaxvel[idof];
             }
         }
         else if( xmlname == "maxaccel" ) {
@@ -1396,8 +1396,12 @@ public:
             }
         }
         else if( xmlname == "resolution" ) {
-            _ss >> _pjoint->fResolution;
-            _pjoint->fResolution *= fRatio;
+            dReal fResolution = 0.02;
+            _ss >> fResolution;
+            fResolution *= fRatio;
+            FOREACH(itvalue, _pjoint->_vresolution) {
+                *itvalue = fResolution;
+            }
         }
         else if( xmlname == "offsetfrom" ) {
             // figure out which body
@@ -1412,7 +1416,7 @@ public:
         else {
             // could be type specific
             switch(_pjoint->_type) {
-            case KinBody::Joint::JointHinge:
+            case KinBody::JointHinge:
                 if( xmlname == "anchor" ) {
                     _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     _vanchor *= _vScaleGeometry;
@@ -1422,13 +1426,13 @@ public:
                     _vAxes.at(0).normalize3();
                 }
                 break;
-            case KinBody::Joint::JointSlider:
+            case KinBody::JointSlider:
                 if( xmlname == "axis" ) {
                     _ss >> _vAxes.at(0).x >> _vAxes.at(0).y >> _vAxes.at(0).z;
                     _vAxes.at(0).normalize3();
                 }
                 break;
-            case KinBody::Joint::JointUniversal:
+            case KinBody::JointUniversal:
                 if( xmlname == "anchor" ) {
                     _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     _vanchor *= _vScaleGeometry;
@@ -1442,7 +1446,7 @@ public:
                     _vAxes.at(0).normalize3();
                 }
                 break;
-            case KinBody::Joint::JointHinge2:
+            case KinBody::JointHinge2:
                 if( xmlname == "anchor" ) {
                     _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     _vanchor *= _vScaleGeometry;
@@ -1456,7 +1460,7 @@ public:
                     _vAxes.at(0).normalize3();
                 }
                 break;
-            case KinBody::Joint::JointSpherical:
+            case KinBody::JointSpherical:
                 if( xmlname == "anchor" ) {
                     _ss >> _vanchor.x >> _vanchor.y >> _vanchor.z;
                     _vanchor *= _vScaleGeometry;

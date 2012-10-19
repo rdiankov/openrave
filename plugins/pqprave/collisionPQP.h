@@ -94,7 +94,7 @@ public:
         PQP_REAL p1[3], p2[3], p3[3];
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
-            const KinBody::Link::TRIMESH& trimesh = (*itlink)->GetCollisionData();
+            const TriMesh& trimesh = (*itlink)->GetCollisionData();
             boost::shared_ptr<PQP_Model> pm;
             if( trimesh.indices.size() > 0 ) {
                 pm.reset(new PQP_Model());

@@ -36,7 +36,7 @@ public:
     class ConveyorJoint : public Joint
     {
 public:
-        ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, boost::shared_ptr<KinBody::Joint::MIMIC> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, JointTrajectory) {
+        ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, boost::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, KinBody::JointTrajectory) {
             _name = name;
             _vlowerlimit[0] = 0;
             _vupperlimit[0] = trajfollow->GetDuration();
@@ -57,7 +57,7 @@ public:
 public:
         ConveyorInfo() : XMLReadable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
         }
-        boost::shared_ptr<KinBody::Joint::MIMIC> _mimic; // always has to mimic
+        boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
         KinBody::LinkPtr _linkParent; ///< base link attached
         TrajectoryBasePtr _trajfollow; ///< trajectory to following in base link's coordinate system
         int _fLinkDensity; ///< number of links to create per unit of time in the trajectory
@@ -78,7 +78,7 @@ public:
             if( !_cmdata ) {
                 _cmdata.reset(new ConveyorInfo());
             }
-            _cmdata->_mimic.reset(new KinBody::Joint::MIMIC());
+            _cmdata->_mimic.reset(new KinBody::Mimic());
             FOREACHC(itatt,atts) {
                 if( itatt->first == "name" ) {
                     _cmdata->_namebase = itatt->second;
@@ -238,7 +238,7 @@ protected:
                 pchildlink->InitGeometries(cmdata->_listGeometries);
                 _veclinks.push_back(pchildlink);
 
-                boost::shared_ptr<KinBody::Joint::MIMIC> mimic(new KinBody::Joint::MIMIC());
+                boost::shared_ptr<KinBody::Mimic> mimic(new KinBody::Mimic());
                 *mimic = *cmdata->_mimic;
                 mimic->_equations[0] += str(boost::format(" +%.15e")%curtime); // have to add the offset inside the equations
                 boost::shared_ptr<ConveyorJoint> pchildjoint(new ConveyorJoint(pchildlink->GetName(), cmdata->_trajfollow, mimic, cmdata->_bIsCircular, shared_kinbody()));

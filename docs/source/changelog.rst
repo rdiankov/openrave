@@ -14,7 +14,7 @@ Initial Release: **Unreleased**
 Core
 ----
 
-* Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots
+* Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots by calling :meth:`.KinBody.Init`.
 
 Version 0.8.2
 =============

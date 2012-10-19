@@ -490,7 +490,7 @@ void IvJointDragger::UpdateSkeleton()
             vector<dReal> vlower,vupper;
             pjoint->GetLimits(vlower, vupper);
 
-            if( pjoint->GetType() == KinBody::Joint::JointSlider ) {
+            if( pjoint->GetType() == KinBody::JointSlider ) {
                 fang = fang*(vupper.at(0)-vlower.at(0))+vlower.at(0);
             }
 
@@ -498,7 +498,7 @@ void IvJointDragger::UpdateSkeleton()
             vector<dReal> vjoints;
             pbody->GetBody()->GetDOFValues(vjoints);
             int d = pjoint->GetDOFIndex();
-            if( pjoint->GetType() == KinBody::Joint::JointSpherical ) {
+            if( pjoint->GetType() == KinBody::JointSpherical ) {
                 SbVec3f axis; float angle;
                 _trackball->rotation.getValue(axis,angle);
                 vjoints.at(d+0) = axis[0]*angle;
@@ -570,14 +570,14 @@ void IvJointDragger::UpdateDragger()
     vector<dReal> vjoints;
     pbody->GetDOFValues(vjoints);
 
-    if( _jointtype == KinBody::Joint::JointSpherical ) {
+    if( _jointtype == KinBody::JointSpherical ) {
         Vector vaxis(vjoints[_dofindex+0],vjoints[_dofindex+1],vjoints[_dofindex+2]);
         dReal fang = RaveSqrt(vaxis.lengthsqr3())-_jointoffset;
         _trackball->rotation = SbRotation(fang > 0 ? SbVec3f(vaxis.x/fang,vaxis.y/fang,vaxis.z/fang) : SbVec3f(1,0,0), fang);
     }
     else {
         float fang = vjoints[_dofindex]-_jointoffset;
-        if( _jointtype == KinBody::Joint::JointSlider ) {
+        if( _jointtype == KinBody::JointSlider ) {
             if( _vupper[0] > _vlower[0] ) {
                 fang = (fang-_vlower[0])/(_vupper[0]-_vlower[0]);
             }
@@ -607,7 +607,7 @@ void IvJointDragger::GetMessage(ostream& sout)
          << std::fixed << std::setprecision(3)
          << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];
 
-    if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::Joint::JointSlider ) {
+    if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::JointSlider ) {
         sout << " rad (" << (vjoints[_iJointIndex]/PI*180.0f) << " deg)" << endl;
     }
 }

@@ -74,7 +74,8 @@ source/openravepy/openravepy.rst: openravepy_changed
 
 source/ikfast/index.rst: $(ikfaststats) build_ikdatabase.py
 	rm -f ikfast_installed openravepy # need to remove openravepy link since ikfaststats.pp has object links with the real openravepy dir
-	ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
+	#ln -s -f `openrave-config --python-dir`/openravepy/_openravepy_ openravepy
+	rm -f openravepy
 	python build_ikdatabase.py --ikfaststats=$(ikfaststats) --outdir=source/ikfast
 	touch ikfast_installed
 

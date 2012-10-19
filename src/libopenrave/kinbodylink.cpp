@@ -19,7 +19,7 @@
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo() : _mass(0), _bStatic(false), _bIsEnabled(false) {
+KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(false) {
 }
 
 KinBody::Link::Link(KinBodyPtr parent)

@@ -210,19 +210,19 @@ protected:
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
             // support mimic joints, so have to look at mJointIndex!
             if( node->mFramePivot->mType == 1 ) {
-                pjoint->_type = KinBody::Joint::JointRevolute;
+                pjoint->_type = KinBody::JointRevolute;
                 pjoint->_vlowerlimit[0] = -PI;
                 pjoint->_vupperlimit[0] = PI;
             }
             else if( node->mFramePivot->mType == 2 ) {
-                pjoint->_type = KinBody::Joint::JointPrismatic;
+                pjoint->_type = KinBody::JointPrismatic;
                 pjoint->_vlowerlimit[0] = -10000*_vScaleGeometry.x;
                 pjoint->_vupperlimit[0] = 10000*_vScaleGeometry.x;
             }
             else if( node->mFramePivot->mType == 5 ) {
                 RAVELOG_WARN(str(boost::format("frame %s is some type of geometry scaling joint?\n")%node->mName));
                 pjoint.reset();
-                //pjoint->_type = KinBody::Joint::JointPrismatic;
+                //pjoint->_type = KinBody::JointPrismatic;
                 //pjoint->_vlowerlimit[0] = -10000;
                 //pjoint->_vupperlimit[0] = 10000;
             }
@@ -278,7 +278,7 @@ protected:
                     //KinBody::JointPtr porgjoint = pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1);
                     // joint already exists, so must be mimic?
                     dReal fmult = RaveSqrt(vmotiondirection.lengthsqr3());
-                    pjoint->_vmimic[0].reset(new KinBody::Joint::MIMIC());
+                    pjoint->_vmimic[0].reset(new KinBody::Mimic());
                     pjoint->_vmimic[0]->_equations[0] = str(boost::format("%s*%f")%orgjointname%fmult);
                     pjoint->_vmimic[0]->_equations[1] = str(boost::format("|%s %f")%orgjointname%fmult);
                 }

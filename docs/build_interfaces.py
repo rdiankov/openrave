@@ -105,9 +105,9 @@ Interface Types
         for filename in os.listdir(corepluginsdir):
             fullfilename = os.path.join(corepluginsdir,filename)
             if os.path.isdir(fullfilename):
-                outstat=os.popen('svn stat -v --depth empty %s'%fullfilename,'r').read()
-                revision = outstat.split()[1]
-                coreplugins[filename] = (revision,getsvnurl(fullfilename))
+                #outstat=os.popen('svn stat -v --depth empty %s'%fullfilename,'r').read()
+                #revision = outstat.split()[1]
+                coreplugins[filename] = ('',getsvnurl(fullfilename))
         text = """
 -------
 Plugins

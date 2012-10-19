@@ -113,7 +113,7 @@ protected:
     /// Set the color of the dragger.
     void _SetColor(const SbColor &);
 
-    KinBody::Joint::JointType _jointtype;
+    KinBody::JointType _jointtype;
     int _dofindex;
     vector<dReal> _vlower, _vupper;
     string _jointname;

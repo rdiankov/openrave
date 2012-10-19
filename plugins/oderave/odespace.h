@@ -393,19 +393,19 @@ private:
 
                 dJointID joint = NULL;
                 switch((*itjoint)->GetType()) {
-                case KinBody::Joint::JointHinge:
+                case KinBody::JointHinge:
                     joint = dJointCreateHinge(GetWorld(), pinfo->jointgroup);
                     break;
-                case KinBody::Joint::JointSlider:
+                case KinBody::JointSlider:
                     joint = dJointCreateSlider(GetWorld(), pinfo->jointgroup);
                     break;
-                case KinBody::Joint::JointUniversal:
+                case KinBody::JointUniversal:
                     joint = dJointCreateUniversal(GetWorld(), pinfo->jointgroup);
                     break;
-                case KinBody::Joint::JointHinge2:
+                case KinBody::JointHinge2:
                     joint = dJointCreateHinge2(GetWorld(), pinfo->jointgroup);
                     break;
-                case KinBody::Joint::JointSpherical:
+                case KinBody::JointSpherical:
                     joint = dJointCreateBall(GetWorld(),pinfo->jointgroup);
                     break;
                 default:
@@ -424,24 +424,24 @@ private:
                 }
 
                 switch((*itjoint)->GetType()) {
-                case KinBody::Joint::JointHinge:
+                case KinBody::JointHinge:
                     dJointSetHingeAnchor(joint,anchor.x,anchor.y,anchor.z);
                     dJointSetHingeAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
-                case KinBody::Joint::JointSlider:
+                case KinBody::JointSlider:
                     dJointSetSliderAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
-                case KinBody::Joint::JointUniversal:
+                case KinBody::JointUniversal:
                     dJointSetUniversalAnchor(joint,anchor.x,anchor.y,anchor.z);
                     dJointSetUniversalAxis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetUniversalAxis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
-                case KinBody::Joint::JointHinge2:
+                case KinBody::JointHinge2:
                     dJointSetHinge2Anchor(joint,anchor.x,anchor.y,anchor.z);
                     dJointSetHinge2Axis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetHinge2Axis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
-                case KinBody::Joint::JointSpherical:
+                case KinBody::JointSpherical:
                     dJointSetBallAnchor(joint,anchor.x,anchor.y,anchor.z);
                     break;
                 default:
@@ -455,7 +455,7 @@ private:
                     //                    if( (*itjoint)->GetMimicJointIndex() < 0 && !bPassive )
                     //                        // setting this makes every joint add like a motor, which is not desired
                     //                        _jointset[dJointGetType(joint)](joint,dParamFMax+dParamGroup*i,(*itjoint)->GetMaxTorque());
-                    if( (*itjoint)->GetType() == KinBody::Joint::JointSpherical ) {
+                    if( (*itjoint)->GetType() == KinBody::JointSpherical ) {
                         continue;
                     }
                     if( (*itjoint)->IsCircular(i) ) {

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -86,55 +86,228 @@ protected:
     std::list<boost::shared_ptr<void> > _listStateSavers;
 
 public:
+    class PyGeometryInfo
+    {
+public:
+        PyGeometryInfo() {
+            _t = ReturnTransform(Transform());
+            _vGeomData = toPyVector4(Vector());
+            _vDiffuseColor = toPyVector3(Vector(1,1,1));
+            _vAmbientColor = toPyVector3(Vector(0,0,0));
+            _type = GT_None;
+            _fTransparency = 0;
+            _vRenderScale = toPyVector3(Vector(1,1,1));
+            _vCollisionScale = toPyVector3(Vector(1,1,1));
+            _bVisible = true;
+            _bModifiable = true;
+        }
+        KinBody::GeometryInfoPtr GetGeometryInfo() {
+            KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
+            KinBody::GeometryInfo& info = *pinfo;
+            info._t = ExtractTransform(_t);
+            info._vGeomData = ExtractVector<dReal>(_vGeomData);
+            info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
+            info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
+            if( _meshcollision != object() ) {
+                ExtractTriMesh(_meshcollision,info._meshcollision);
+            }
+            info._type = _type;
+            info._filenamerender = _filenamerender;
+            info._filenamecollision = _filenamecollision;
+            info._vRenderScale = ExtractVector3(_vRenderScale);
+            info._vCollisionScale = ExtractVector3(_vCollisionScale);
+            info._fTransparency = _fTransparency;
+            info._bVisible = _bVisible;
+            info._bModifiable = _bModifiable;
+            return pinfo;
+        }
+
+        object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
+        GeometryType _type;
+        std::string _filenamerender, _filenamecollision;
+        object _vRenderScale, _vCollisionScale;
+        float _fTransparency;
+        bool _bVisible, _bModifiable;
+    };
+    typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
+
+    class PyLinkInfo
+    {
+public:
+        PyLinkInfo() {
+            _t = ReturnTransform(Transform());
+            _tMassFrame = ReturnTransform(Transform());
+            _mass = 0;
+            _vinertiamoments = toPyVector3(Vector(1,1,1));
+            _bStatic = false;
+            _bIsEnabled = true;
+        }
+        KinBody::LinkInfoPtr GetLinkInfo() {
+            KinBody::LinkInfoPtr pinfo(new KinBody::LinkInfo());
+            KinBody::LinkInfo& info = *pinfo;
+            info._vgeometryinfos.resize(len(_vgeometryinfos));
+            for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
+                PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
+                info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
+            }
+            info._name = _name;
+            info._t = ExtractTransform(_t);
+            info._tMassFrame = ExtractTransform(_tMassFrame);
+            info._mass = _mass;
+            info._vinertiamoments = ExtractVector3(_vinertiamoments);
+            size_t num = len(_mapFloatParameters);
+            object okeyvalueiter = _mapFloatParameters.iteritems();
+            info._mapFloatParameters.clear();
+            for(size_t i = 0; i < num; ++i) {
+                object okeyvalue = okeyvalueiter.attr("next") ();
+                std::string name = extract<std::string>(okeyvalue[0]);
+                info._mapFloatParameters[name] = ExtractArray<dReal>(okeyvalue[1]);
+            }
+            okeyvalueiter = _mapIntParameters.iteritems();
+            num = len(_mapIntParameters);
+            info._mapIntParameters.clear();
+            for(size_t i = 0; i < num; ++i) {
+                object okeyvalue = okeyvalueiter.attr("next") ();
+                std::string name = extract<std::string>(okeyvalue[0]);
+                info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
+            }
+            info._bStatic = _bStatic;
+            info._bIsEnabled = _bIsEnabled;
+            return pinfo;
+        }
+
+        boost::python::list _vgeometryinfos;
+        std::string _name;
+        object _t, _tMassFrame;
+        dReal _mass;
+        object _vinertiamoments;
+        boost::python::dict _mapFloatParameters, _mapIntParameters;
+        bool _bStatic;
+        bool _bIsEnabled;
+    };
+    typedef boost::shared_ptr<PyLinkInfo> PyLinkInfoPtr;
+
+
+    class PyJointInfo
+    {
+public:
+        PyJointInfo() {
+            _type = KinBody::JointNone;
+            _vanchor = toPyVector3(Vector());
+            _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
+            _vmaxvel = toPyVector3(Vector(10,10,10));
+            _vhardmaxvel = toPyVector3(Vector(10,10,10));
+            _vmaxaccel = toPyVector3(Vector(50,50,50));
+            _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
+            _vweights = toPyVector3(Vector(1,1,1));
+            _voffsets = toPyVector3(Vector(0,0,0));
+            _vlowerlimit = toPyVector3(Vector(0,0,0));
+            _vupperlimit = toPyVector3(Vector(0,0,0));
+            _bIsCircular = toPyVector3(Vector(0,0,0));
+        }
+        KinBody::JointInfoPtr GetJointInfo() {
+            KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
+            KinBody::JointInfo& info = *pinfo;
+            info._type = _type;
+            info._name = _name;
+            info._linkname0 = _linkname0;
+            info._linkname1 = _linkname1;
+            info._vanchor = ExtractVector3(_vanchor);
+            size_t num = len(_vaxes);
+            for(size_t i = 0; i < num; ++i) {
+                info._vaxes.at(i) = ExtractVector3(_vaxes[i]);
+            }
+            if( _vcurrentvalues != object() ) {
+                info._vcurrentvalues = ExtractArray<dReal>(_vcurrentvalues);
+            }
+            num = len(_vresolution);
+            for(size_t i = 0; i < num; ++i) {
+                info._vresolution.at(i) = boost::python::extract<dReal>(_vresolution[i]);
+            }
+            num = len(_vmaxvel);
+            for(size_t i = 0; i < num; ++i) {
+                info._vmaxvel.at(i) = boost::python::extract<dReal>(_vmaxvel[i]);
+            }
+            num = len(_vhardmaxvel);
+            for(size_t i = 0; i < num; ++i) {
+                info._vhardmaxvel.at(i) = boost::python::extract<dReal>(_vhardmaxvel[i]);
+            }
+            num = len(_vmaxaccel);
+            for(size_t i = 0; i < num; ++i) {
+                info._vmaxaccel.at(i) = boost::python::extract<dReal>(_vmaxaccel[i]);
+            }
+            num = len(_vmaxtorque);
+            for(size_t i = 0; i < num; ++i) {
+                info._vmaxtorque.at(i) = boost::python::extract<dReal>(_vmaxtorque[i]);
+            }
+            num = len(_vweights);
+            for(size_t i = 0; i < num; ++i) {
+                info._vweights.at(i) = boost::python::extract<dReal>(_vweights[i]);
+            }
+            num = len(_voffsets);
+            for(size_t i = 0; i < num; ++i) {
+                info._voffsets.at(i) = boost::python::extract<dReal>(_voffsets[i]);
+            }
+            num = len(_vlowerlimit);
+            for(size_t i = 0; i < num; ++i) {
+                info._vlowerlimit.at(i) = boost::python::extract<dReal>(_vlowerlimit[i]);
+            }
+            num = len(_vupperlimit);
+            for(size_t i = 0; i < num; ++i) {
+                info._vupperlimit.at(i) = boost::python::extract<dReal>(_vupperlimit[i]);
+            }
+            if( _trajfollow != object() ) {
+                info._trajfollow = GetTrajectory(_trajfollow);
+            }
+            if( _vmimic != object() ) {
+                num = len(_vmimic);
+                for(size_t i = 0; i < num; ++i) {
+                    if( _vmimic[i] != object() ) {
+                        OPENRAVE_ASSERT_OP(len(_vmimic[i]),==,3);
+                        info._vmimic[i].reset(new KinBody::MimicInfo());
+                        for(size_t j = 0; j < 3; ++j) {
+                            info._vmimic[i]->_equations.at(j) = boost::python::extract<std::string>(_vmimic[i][j]);
+                        }
+                    }
+                }
+            }
+            num = len(_mapFloatParameters);
+            object okeyvalueiter = _mapFloatParameters.iteritems();
+            info._mapFloatParameters.clear();
+            for(size_t i = 0; i < num; ++i) {
+                object okeyvalue = okeyvalueiter.attr("next") ();
+                std::string name = extract<std::string>(okeyvalue[0]);
+                info._mapFloatParameters[name] = ExtractArray<dReal>(okeyvalue[1]);
+            }
+            okeyvalueiter = _mapIntParameters.iteritems();
+            num = len(_mapIntParameters);
+            info._mapIntParameters.clear();
+            for(size_t i = 0; i < num; ++i) {
+                object okeyvalue = okeyvalueiter.attr("next") ();
+                std::string name = extract<std::string>(okeyvalue[0]);
+                info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
+            }
+            num = len(_bIsCircular);
+            for(size_t i = 0; i < num; ++i) {
+                info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
+            }
+            return pinfo;
+        }
+        KinBody::JointType _type;
+        std::string _name;
+        std::string _linkname0, _linkname1;
+        object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit, _trajfollow;
+        boost::python::list _vmimic;
+        boost::python::dict _mapFloatParameters, _mapIntParameters;
+        object _bIsCircular;
+    };
+    typedef boost::shared_ptr<PyJointInfo> PyJointInfoPtr;
+
     class PyLink
     {
         KinBody::LinkPtr _plink;
         PyEnvironmentBasePtr _pyenv;
 public:
-        class PyGeometryInfo
-        {
-public:
-            PyGeometryInfo() {
-                _t = ReturnTransform(Transform());
-                _vGeomData = toPyVector4(Vector());
-                _vDiffuseColor = toPyVector3(Vector(1,1,1));
-                _vAmbientColor = toPyVector3(Vector(0,0,0));
-                _type = GT_None;
-                _fTransparency = 0;
-                _vRenderScale = toPyVector3(Vector(1,1,1));
-                _vCollisionScale = toPyVector3(Vector(1,1,1));
-                _bVisible = true;
-                _bModifiable = true;
-            }
-            KinBody::GeometryInfo GetGeometryInfo() {
-                KinBody::GeometryInfo info;
-                info._t = ExtractTransform(_t);
-                info._vGeomData = ExtractVector<dReal>(_vGeomData);
-                info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
-                info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
-                if( _meshcollision != object() ) {
-                    ExtractTriMesh(_meshcollision,info._meshcollision);
-                }
-                info._type = _type;
-                info._filenamerender = _filenamerender;
-                info._filenamecollision = _filenamecollision;
-                info._vRenderScale = ExtractVector3(_vRenderScale);
-                info._vCollisionScale = ExtractVector3(_vCollisionScale);
-                info._fTransparency = _fTransparency;
-                info._bVisible = _bVisible;
-                info._bModifiable = _bModifiable;
-                return info;
-            }
-
-            object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
-            GeometryType _type;
-            std::string _filenamerender, _filenamecollision;
-            object _vRenderScale, _vCollisionScale;
-            float _fTransparency;
-            bool _bVisible, _bModifiable;
-        };
-        typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
-
         class PyGeometry
         {
             KinBody::Link::GeometryPtr _pgeometry;
@@ -453,7 +626,7 @@ public:
             return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv));
         }
 
-        KinBody::Joint::JointType GetType() const {
+        KinBody::JointType GetType() const {
             return _pjoint->GetType();
         }
         bool IsCircular(int iaxis) const {
@@ -769,15 +942,35 @@ public:
     }
 
     bool InitFromGeometries(object ogeometries) {
-        std::list<KinBody::GeometryInfo> geometries;
-        for(int i = 0; i < len(ogeometries); ++i) {
-            PyLink::PyGeometryInfoPtr pygeom = boost::python::extract<PyLink::PyGeometryInfoPtr>(ogeometries[i]);
+        std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometries));
+        for(size_t i = 0; i < geometries.size(); ++i) {
+            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometries[i]);
             if( !pygeom ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.Link.GeometryInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
             }
-            geometries.push_back(pygeom->GetGeometryInfo());
+            geometries[i] = pygeom->GetGeometryInfo();
         }
         return _pbody->InitFromGeometries(geometries);
+    }
+
+    bool Init(object olinkinfos, object ojointinfos) {
+        std::vector<KinBody::LinkInfoConstPtr> vlinkinfos(len(olinkinfos));
+        for(size_t i = 0; i < vlinkinfos.size(); ++i) {
+            PyLinkInfoPtr pylink = boost::python::extract<PyLinkInfoPtr>(olinkinfos[i]);
+            if( !pylink ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.LinkInfo",ORE_InvalidArguments);
+            }
+            vlinkinfos[i] = pylink->GetLinkInfo();
+        }
+        std::vector<KinBody::JointInfoConstPtr> vjointinfos(len(ojointinfos));
+        for(size_t i = 0; i < vjointinfos.size(); ++i) {
+            PyJointInfoPtr pyjoint = boost::python::extract<PyJointInfoPtr>(ojointinfos[i]);
+            if( !pyjoint ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.JointInfo",ORE_InvalidArguments);
+            }
+            vjointinfos[i] = pyjoint->GetJointInfo();
+        }
+        return _pbody->Init(vlinkinfos, vjointinfos);
     }
 
     void SetName(const std::string& name) {
@@ -2911,9 +3104,76 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
 class GeometryInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyKinBody::PyLink::PyGeometryInfo& r)
+    static tuple getstate(const PyKinBody::PyGeometryInfo& r)
     {
         return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable);
+    }
+    static void setstate(PyKinBody::PyGeometryInfo r, boost::python::tuple state) {
+        r._t = state[0];
+        r._vGeomData = state[1];
+        r._vDiffuseColor = state[2];
+        r._vAmbientColor = state[3];
+        r._meshcollision = state[4];
+        r._type = boost::python::extract<GeometryType>(state[5]);
+        r._filenamerender = boost::python::extract<std::string>(state[6]);
+        r._filenamecollision = boost::python::extract<std::string>(state[7]);
+        r._vRenderScale = state[8];
+        r._vCollisionScale = state[9];
+        r._fTransparency = boost::python::extract<float>(state[10]);
+        r._bVisible = boost::python::extract<bool>(state[11]);
+        r._bModifiable = boost::python::extract<bool>(state[12]);
+    }
+};
+
+class LinkInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getstate(const PyKinBody::PyLinkInfo& r)
+    {
+        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._bStatic, r._bIsEnabled);
+    }
+    static void setstate(PyKinBody::PyLinkInfo r, boost::python::tuple state) {
+        r._vgeometryinfos = boost::python::list(state[0]);
+        r._name = boost::python::extract<std::string>(state[1]);
+        r._t = state[2];
+        r._tMassFrame = state[3];
+        r._mass = boost::python::extract<dReal>(state[4]);
+        r._mapFloatParameters = dict(state[5]);
+        r._mapIntParameters = dict(state[6]);
+        r._bStatic = boost::python::extract<bool>(state[7]);
+        r._bIsEnabled = boost::python::extract<bool>(state[8]);
+    }
+};
+
+class JointInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getstate(const PyKinBody::PyJointInfo& r)
+    {
+        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular));
+    }
+    static void setstate(PyKinBody::PyJointInfo r, boost::python::tuple state) {
+        r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
+        r._name = boost::python::extract<std::string>(state[0][1]);
+        r._linkname0 = boost::python::extract<std::string>(state[0][2]);
+        r._linkname1 = boost::python::extract<std::string>(state[0][3]);
+        r._vanchor = state[0][4];
+        r._vaxes = state[0][5];
+        r._vcurrentvalues = state[0][6];
+        r._vresolution = state[1][0];
+        r._vmaxvel = state[1][1];
+        r._vhardmaxvel = state[1][2];
+        r._vmaxaccel = state[1][3];
+        r._vmaxtorque = state[1][4];
+        r._vweights = state[1][5];
+        r._voffsets = state[1][6];
+        r._vlowerlimit = state[1][7];
+        r._vupperlimit = state[1][8];
+        r._trajfollow = state[2][0];
+        r._vmimic = boost::python::list(state[2][1]);
+        r._mapFloatParameters = boost::python::dict(state[2][2]);
+        r._mapIntParameters = boost::python::dict(state[2][3]);
+        r._bIsCircular = state[2][4];
     }
 };
 
@@ -2979,6 +3239,13 @@ void init_openravepy_kinbody()
     .def("__str__",&PyStateRestoreContextBase::__str__)
     .def("__unicode__",&PyStateRestoreContextBase::__unicode__)
     ;
+    object geometrytype = enum_<GeometryType>("GeometryType" DOXY_ENUM(GeometryType))
+                          .value("None",GT_None)
+                          .value("Box",GT_Box)
+                          .value("Sphere",GT_Sphere)
+                          .value("Cylinder",GT_Cylinder)
+                          .value("Trimesh",GT_TriMesh)
+    ;
     {
         bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
         bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
@@ -3019,6 +3286,7 @@ void init_openravepy_kinbody()
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,args("spherex","draw"), DOXY_FN(KinBody,InitFromSpheres))
                         .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
                         .def("InitFromGeometries",&PyKinBody::InitFromGeometries,args("geometries"), DOXY_FN(KinBody,InitFromGeometries))
+                        .def("Init",&PyKinBody::Init,args("linkinfos","jointinfos"), DOXY_FN(KinBody,Init))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
@@ -3149,12 +3417,73 @@ void init_openravepy_kinbody()
         .value("Enabled",KinBody::AO_Enabled)
         .value("ActiveDOFs",KinBody::AO_ActiveDOFs)
         ;
-        object geometrytype = enum_<GeometryType>("GeometryType" DOXY_ENUM(GeometryType))
-                              .value("None",GT_None)
-                              .value("Box",GT_Box)
-                              .value("Sphere",GT_Sphere)
-                              .value("Cylinder",GT_Cylinder)
-                              .value("Trimesh",GT_TriMesh)
+        object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
+                           .value("None",KinBody::JointNone)
+                           .value("Hinge",KinBody::JointHinge)
+                           .value("Revolute",KinBody::JointRevolute)
+                           .value("Slider",KinBody::JointSlider)
+                           .value("Prismatic",KinBody::JointPrismatic)
+                           .value("RR",KinBody::JointRR)
+                           .value("RP",KinBody::JointRP)
+                           .value("PR",KinBody::JointPR)
+                           .value("PP",KinBody::JointPP)
+                           .value("Universal",KinBody::JointUniversal)
+                           .value("Hinge2",KinBody::JointHinge2)
+                           .value("Spherical",KinBody::JointSpherical)
+                           .value("Trajectory",KinBody::JointTrajectory)
+        ;
+        object geometryinfo = class_<PyKinBody::PyGeometryInfo, boost::shared_ptr<PyKinBody::PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
+                              .def_readwrite("_t",&PyKinBody::PyGeometryInfo::_t)
+                              .def_readwrite("_vGeomData",&PyKinBody::PyGeometryInfo::_vGeomData)
+                              .def_readwrite("_vDiffuseColor",&PyKinBody::PyGeometryInfo::_vDiffuseColor)
+                              .def_readwrite("_vAmbientColor",&PyKinBody::PyGeometryInfo::_vAmbientColor)
+                              .def_readwrite("_meshcollision",&PyKinBody::PyGeometryInfo::_meshcollision)
+                              .def_readwrite("_type",&PyKinBody::PyGeometryInfo::_type)
+                              .def_readwrite("_filenamerender",&PyKinBody::PyGeometryInfo::_filenamerender)
+                              .def_readwrite("_filenamecollision",&PyKinBody::PyGeometryInfo::_filenamecollision)
+                              .def_readwrite("_vRenderScale",&PyKinBody::PyGeometryInfo::_vRenderScale)
+                              .def_readwrite("_vCollisionScale",&PyKinBody::PyGeometryInfo::_vCollisionScale)
+                              .def_readwrite("_fTransparency",&PyKinBody::PyGeometryInfo::_fTransparency)
+                              .def_readwrite("_bVisible",&PyKinBody::PyGeometryInfo::_bVisible)
+                              .def_readwrite("_bModifiable",&PyKinBody::PyGeometryInfo::_bModifiable)
+                              .def_pickle(GeometryInfo_pickle_suite())
+        ;
+        object linkinfo = class_<PyKinBody::PyLinkInfo, boost::shared_ptr<PyKinBody::PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
+                          .def_readwrite("_vgeometryinfos",&PyKinBody::PyLinkInfo::_vgeometryinfos)
+                          .def_readwrite("_name",&PyKinBody::PyLinkInfo::_name)
+                          .def_readwrite("_t",&PyKinBody::PyLinkInfo::_t)
+                          .def_readwrite("_tMassFrame",&PyKinBody::PyLinkInfo::_tMassFrame)
+                          .def_readwrite("__mass",&PyKinBody::PyLinkInfo::_mass)
+                          .def_readwrite("_vinertiamoments",&PyKinBody::PyLinkInfo::_vinertiamoments)
+                          .def_readwrite("_mapFloatParameters",&PyKinBody::PyLinkInfo::_mapFloatParameters)
+                          .def_readwrite("_mapIntParameters",&PyKinBody::PyLinkInfo::_mapIntParameters)
+                          .def_readwrite("_bStatic",&PyKinBody::PyLinkInfo::_bStatic)
+                          .def_readwrite("_bIsEnabled",&PyKinBody::PyLinkInfo::_bIsEnabled)
+                          .def_pickle(LinkInfo_pickle_suite())
+        ;
+        object jointinfo = class_<PyKinBody::PyJointInfo, boost::shared_ptr<PyKinBody::PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
+                           .def_readwrite("_type",&PyKinBody::PyJointInfo::_type)
+                           .def_readwrite("_name",&PyKinBody::PyJointInfo::_name)
+                           .def_readwrite("_linkname0",&PyKinBody::PyJointInfo::_linkname0)
+                           .def_readwrite("_linkname1",&PyKinBody::PyJointInfo::_linkname1)
+                           .def_readwrite("_vanchor",&PyKinBody::PyJointInfo::_vanchor)
+                           .def_readwrite("_vaxes",&PyKinBody::PyJointInfo::_vaxes)
+                           .def_readwrite("_vcurrentvalues",&PyKinBody::PyJointInfo::_vcurrentvalues)
+                           .def_readwrite("_vresolution",&PyKinBody::PyJointInfo::_vresolution)
+                           .def_readwrite("_vmaxvel",&PyKinBody::PyJointInfo::_vmaxvel)
+                           .def_readwrite("_vhardmaxvel",&PyKinBody::PyJointInfo::_vhardmaxvel)
+                           .def_readwrite("_vmaxaccel",&PyKinBody::PyJointInfo::_vmaxaccel)
+                           .def_readwrite("_vmaxtorque",&PyKinBody::PyJointInfo::_vmaxtorque)
+                           .def_readwrite("_vweights",&PyKinBody::PyJointInfo::_vweights)
+                           .def_readwrite("_voffsets",&PyKinBody::PyJointInfo::_voffsets)
+                           .def_readwrite("_vlowerlimit",&PyKinBody::PyJointInfo::_vlowerlimit)
+                           .def_readwrite("_vupperlimit",&PyKinBody::PyJointInfo::_vupperlimit)
+                           .def_readwrite("_trajfollow",&PyKinBody::PyJointInfo::_trajfollow)
+                           .def_readwrite("_vmimic",&PyKinBody::PyJointInfo::_vmimic)
+                           .def_readwrite("_mapFloatParameters",&PyKinBody::PyJointInfo::_mapFloatParameters)
+                           .def_readwrite("_mapIntParameters",&PyKinBody::PyJointInfo::_mapIntParameters)
+                           .def_readwrite("_bIsCircular",&PyKinBody::PyJointInfo::_bIsCircular)
+                           .def_pickle(JointInfo_pickle_suite())
         ;
         {
             scope link = class_<PyKinBody::PyLink, boost::shared_ptr<PyKinBody::PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
@@ -3199,26 +3528,7 @@ void init_openravepy_kinbody()
             ;
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
-            {
-                scope geometryinfo = class_<PyKinBody::PyLink::PyGeometryInfo, boost::shared_ptr<PyKinBody::PyLink::PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
-                                     .def_readwrite("_t",&PyKinBody::PyLink::PyGeometryInfo::_t)
-                                     .def_readwrite("_vGeomData",&PyKinBody::PyLink::PyGeometryInfo::_vGeomData)
-                                     .def_readwrite("_vDiffuseColor",&PyKinBody::PyLink::PyGeometryInfo::_vDiffuseColor)
-                                     .def_readwrite("_vAmbientColor",&PyKinBody::PyLink::PyGeometryInfo::_vAmbientColor)
-                                     .def_readwrite("_meshcollision",&PyKinBody::PyLink::PyGeometryInfo::_meshcollision)
-                                     .def_readwrite("_type",&PyKinBody::PyLink::PyGeometryInfo::_type)
-                                     .def_readwrite("_filenamerender",&PyKinBody::PyLink::PyGeometryInfo::_filenamerender)
-                                     .def_readwrite("_filenamecollision",&PyKinBody::PyLink::PyGeometryInfo::_filenamecollision)
-                                     .def_readwrite("_vRenderScale",&PyKinBody::PyLink::PyGeometryInfo::_vRenderScale)
-                                     .def_readwrite("_vCollisionScale",&PyKinBody::PyLink::PyGeometryInfo::_vCollisionScale)
-                                     .def_readwrite("_fTransparency",&PyKinBody::PyLink::PyGeometryInfo::_fTransparency)
-                                     .def_readwrite("_bVisible",&PyKinBody::PyLink::PyGeometryInfo::_bVisible)
-                                     .def_readwrite("_bModifiable",&PyKinBody::PyLink::PyGeometryInfo::_bModifiable)
-                                     //.def("__str__",&PyTriMesh::__str__)
-                                     //.def("__unicode__",&PyAABB::__unicode__)
-                                     .def_pickle(GeometryInfo_pickle_suite())
-                ;
-            }
+            link.attr("GeometryInfo") = geometryinfo;
             {
                 scope geometry = class_<PyKinBody::PyLink::PyGeometry, boost::shared_ptr<PyKinBody::PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
                                  .def("SetCollisionMesh",&PyKinBody::PyLink::PyGeometry::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::Geometry,SetCollisionMesh))
@@ -3252,7 +3562,6 @@ void init_openravepy_kinbody()
             // \deprecated (12/07/16)
             link.attr("GeomProperties") = link.attr("Geometry");
         }
-
         {
             scope joint = class_<PyKinBody::PyJoint, boost::shared_ptr<PyKinBody::PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
                           .def("GetName", &PyKinBody::PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
@@ -3309,22 +3618,7 @@ void init_openravepy_kinbody()
                           .def("__eq__",&PyKinBody::PyJoint::__eq__)
                           .def("__ne__",&PyKinBody::PyJoint::__ne__)
             ;
-
-            enum_<KinBody::Joint::JointType>("Type" DOXY_ENUM(JointType))
-            .value("None",KinBody::Joint::JointNone)
-            .value("Hinge",KinBody::Joint::JointHinge)
-            .value("Revolute",KinBody::Joint::JointRevolute)
-            .value("Slider",KinBody::Joint::JointSlider)
-            .value("Prismatic",KinBody::Joint::JointPrismatic)
-            .value("RR",KinBody::Joint::JointRR)
-            .value("RP",KinBody::Joint::JointRP)
-            .value("PR",KinBody::Joint::JointPR)
-            .value("PP",KinBody::Joint::JointPP)
-            .value("Universal",KinBody::Joint::JointUniversal)
-            .value("Hinge2",KinBody::Joint::JointHinge2)
-            .value("Spherical",KinBody::Joint::JointSpherical)
-            .value("Trajectory",KinBody::Joint::JointTrajectory)
-            ;
+            joint.attr("Type") = jointtype;
         }
 
         {

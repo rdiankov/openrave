@@ -1188,7 +1188,7 @@ private:
 
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
-            if(( pjoint->GetType() == KinBody::Joint::JointUniversal) ||( pjoint->GetType() == KinBody::Joint::JointHinge2) ||( pjoint->GetType() == KinBody::Joint::JointSpherical) ) {
+            if( pjoint->GetType() == KinBody::JointUniversal || pjoint->GetType() == KinBody::JointHinge2 || pjoint->GetType() == KinBody::JointSpherical ) {
                 RAVELOG_WARN(str(boost::format("unsupported joint type specified 0x%x\n")%pjoint->GetType()));
                 continue;
             }

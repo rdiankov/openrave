@@ -293,7 +293,7 @@ private:
                 Transform t1inv = GetTransform(body1->getWorldTransform()).inverse();
                 boost::shared_ptr<btTypedConstraint> joint;
                 switch((*itjoint)->GetType()) {
-                case KinBody::Joint::JointHinge: {
+                case KinBody::JointHinge: {
                     btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
                     btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
                     btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
@@ -313,24 +313,24 @@ private:
                     joint = hinge;
                     break;
                 }
-                case KinBody::Joint::JointSlider: {
+                case KinBody::JointSlider: {
                     Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
                     btTransform frameInA = GetBtTransform(t0inv*tslider);
                     btTransform frameInB = GetBtTransform(t1inv*tslider);
                     joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
                     break;
                 }
-                case KinBody::Joint::JointSpherical: {
+                case KinBody::JointSpherical: {
                     btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
                     btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
                     boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
                     joint = spherical;
                     break;
                 }
-                case KinBody::Joint::JointUniversal:
+                case KinBody::JointUniversal:
                     RAVELOG_ERROR("universal joint not supported by bullet\n");
                     break;
-                case KinBody::Joint::JointHinge2:
+                case KinBody::JointHinge2:
                     RAVELOG_ERROR("hinge2 joint not supported by bullet\n");
                     break;
                 default:

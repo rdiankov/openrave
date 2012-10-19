@@ -5,8 +5,8 @@ VERSION=`python $trunk/release/extractversion.py $trunk/CMakeLists.txt`
 
 mkdir -p latest_stable
 cd $trunk
-git archive --format=tar --prefix=openrave-$VERSION/ master | bzip2 -9 > openrave-$VERSION.tar.bz2
-mv "openrave-$VERSION.tar.bz2" ../latest_stable/
+git archive --format=tar --prefix=openrave-$VERSION-src/ master | bzip2 -9 > openrave-$VERSION-src.tar.bz2
+mv "openrave-$VERSION-src.tar.bz2" ../latest_stable/
 cd ..
 cp *.exe latest_stable/ # windows setup files
 cp $trunk/release/README.rst .

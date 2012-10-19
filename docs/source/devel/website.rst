@@ -3,7 +3,7 @@ Managing openrave.org
 
 openrave.org uses Django for managing documentation, news, and blogs. The code is maintained at::
 
-   https://openrave.svn.sourceforge.net/svnroot/openrave/openrave.org
+   https://github.com/rdiankov/openrave.org
 
 Using system similar to `djangoproject.com <https://github.com/django/djangoproject.com>`_
 
@@ -56,7 +56,7 @@ Install
   
     export OPENRAVE_VERSION=0.8.0
     export DOC_LANG=en
-    DJANGO_SETTINGS_MODULE=openrave_website.settings python -c "from openrave_website.docs import models; models.DocumentRelease.objects.create(lang='$DOC_LANG',version='$OPENRAVE_VERSION', scm=models.DocumentRelease.SVN, scm_url='https://openrave.svn.sourceforge.net/svnroot/openrave/tags/$OPENRAVE_VERSION', is_default=False);"
+    DJANGO_SETTINGS_MODULE=openrave_website.settings python -c "from openrave_website.docs import models; models.DocumentRelease.objects.create(lang='$DOC_LANG',version='$OPENRAVE_VERSION', scm=models.DocumentRelease.GIT, scm_url='https://github.com/rdiankov/openrave/tree/v$OPENRAVE_VERSION', is_default=False);"
   
   Re-index the documents:
   

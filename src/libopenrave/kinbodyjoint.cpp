@@ -23,6 +23,22 @@
 
 namespace OpenRAVE {
 
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone) {
+    for(size_t i = 0; i < _vaxes.size(); ++i) {
+        _vaxes[i] = Vector(0,0,1);
+    }
+    std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
+    std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
+    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
+    std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
+    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 1e5);
+    std::fill(_vweights.begin(), _vweights.end(), 1);
+    std::fill(_voffsets.begin(), _voffsets.end(), 0);
+    std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
+    std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
+    std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+}
+
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
     BOOST_ASSERT(rawcoeffs.size()==3);
@@ -87,7 +103,7 @@ OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
     return parser;
 }
 
-KinBody::Joint::Joint(KinBodyPtr parent, JointType type)
+KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
 {
     _parent = parent;
     // fill _vaxes with valid values
@@ -97,7 +113,9 @@ KinBody::Joint::Joint(KinBodyPtr parent, JointType type)
     FOREACH(it,_voffsets) {
         *it = 0;
     }
-    fResolution = dReal(0.02);
+    FOREACH(it, _vresolution) {
+        *it = dReal(0.02);
+    }
     FOREACH(it,_vmaxvel) {
         *it = 10;
     }
@@ -129,12 +147,12 @@ KinBody::Joint::~Joint()
 
 int KinBody::Joint::GetDOF() const
 {
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointHinge2:
-        case JointUniversal: return 2;
-        case JointSpherical: return 3;
-        case JointTrajectory: return 1;
+        case KinBody::JointHinge2:
+        case KinBody::JointUniversal: return 2;
+        case KinBody::JointSpherical: return 3;
+        case KinBody::JointTrajectory: return 1;
         default:
             throw OPENRAVE_EXCEPTION_FORMAT("invalid joint type 0x%x", _type, ORE_Failed);
         }
@@ -149,15 +167,15 @@ bool KinBody::Joint::IsCircular(int iaxis) const
 
 bool KinBody::Joint::IsRevolute(int iaxis) const
 {
-    if( _type & JointSpecialBit ) {
-        return _type == JointHinge2 || _type == JointUniversal;
+    if( _type & KinBody::JointSpecialBit ) {
+        return _type == KinBody::JointHinge2 || _type == KinBody::JointUniversal;
     }
     return !(_type&(1<<(4+iaxis)));
 }
 
 bool KinBody::Joint::IsPrismatic(int iaxis) const
 {
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         return false;
     }
     return !!(_type&(1<<(4+iaxis)));
@@ -208,9 +226,9 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     }
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointHinge2: {
+        case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
             vec1 = (_vaxes[1] - _vaxes[0].dot3(_vaxes[1])*_vaxes[0]).normalize();
@@ -237,7 +255,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             pValues.push_back(_voffsets[1]+f+(_dofbranches[1]*2*PI));
             break;
         }
-        case JointSpherical: {
+        case KinBody::JointSpherical: {
             dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
             if( fsinang2 > 1e-10f ) {
                 dReal fsinang = RaveSqrt(fsinang2);
@@ -299,9 +317,9 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointHinge2: {
+        case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
             if( iaxis == 0 ) {
@@ -332,7 +350,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             }
             break;
         }
-        case JointSpherical: {
+        case KinBody::JointSpherical: {
             dReal fsinang2 = tjoint.rot.y*tjoint.rot.y+tjoint.rot.z*tjoint.rot.z+tjoint.rot.w*tjoint.rot.w;
             if( fsinang2 > 1e-10f ) {
                 dReal fsinang = RaveSqrt(fsinang2);
@@ -354,7 +372,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             }
             break;
         }
-        case JointTrajectory: {
+        case KinBody::JointTrajectory: {
             //uint64_t starttime = utils::GetMicroTime();
             vector<dReal> vsampledata;
             dReal splitpercentage = 0.01;
@@ -394,10 +412,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
         }
     }
     else {
-        if( _type == JointPrismatic ) {
+        if( _type == KinBody::JointPrismatic ) {
             return _voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
         }
-        else if( _type == JointRevolute ) {
+        else if( _type == KinBody::JointRevolute ) {
             f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
             // expect values to be within -PI to PI range
             if( f < -PI ) {
@@ -482,9 +500,9 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
     const Transform& linkchildtransform = _attachedbodies[1]->_t;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointSpherical: {
+        case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             pVelocities.push_back(v.x);
             pVelocities.push_back(v.y);
@@ -517,9 +535,9 @@ dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&link
     const Transform& linkchildtransform = _attachedbodies[1]->_t;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointSpherical: {
+        case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             return v[axis];
         }
@@ -528,10 +546,10 @@ dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&link
         }
     }
     else {
-        if( _type == JointPrismatic ) {
+        if( _type == KinBody::JointPrismatic ) {
             return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-linkparentvelocity.second.cross(linkchildtransform.trans-linkparenttransform.trans)));
         }
-        else if( _type == JointRevolute ) {
+        else if( _type == KinBody::JointRevolute ) {
             return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second));
         }
         else {
@@ -606,26 +624,26 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     _tRight = Transform();
     _tRightNoOffset = Transform();
 
-    if( _type & JointSpecialBit ) {
+    if( _type & KinBody::JointSpecialBit ) {
         switch(_type) {
-        case JointUniversal:
+        case KinBody::JointUniversal:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
             OPENRAVE_ASSERT_OP((int)vaxes.size(),==,2);
             break;
-        case JointHinge2:
+        case KinBody::JointHinge2:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
             OPENRAVE_ASSERT_OP((int)vaxes.size(),==,2);
             break;
-        case JointSpherical:
+        case KinBody::JointSpherical:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
             _tRight = _tRight * trel;
             break;
-        case JointTrajectory:
+        case KinBody::JointTrajectory:
             if( !_trajfollow ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("trajectory joint requires Joint::_trajfollow to be initialized",ORE_InvalidState);
             }
@@ -675,7 +693,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     if( vcurrentvalues.size() > 0 ) {
         // see if any joints have offsets
         Transform toffset;
-        if( _type == JointTrajectory ) {
+        if( _type == KinBody::JointTrajectory ) {
             vector<dReal> vsampledata;
             Transform t0, t1;
             _trajfollow->Sample(vsampledata,0);
@@ -688,7 +706,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             }
             toffset = t0*t1.inverse();
         }
-        else if( !(_type&JointSpecialBit) || _type == JointUniversal || _type == JointHinge2 ) {
+        else if( !(_type&KinBody::JointSpecialBit) || _type == KinBody::JointUniversal || _type == KinBody::JointHinge2 ) {
             if( IsRevolute(0) ) {
                 toffset.rot = quatFromAxisAngle(_vaxes[0], -vcurrentvalues[0]);
             }
@@ -908,13 +926,18 @@ void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppen
         resolutions.resize(GetDOF());
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        resolutions.push_back(fResolution);
+        resolutions.push_back(_vresolution[i]);
     }
+}
+
+dReal KinBody::Joint::GetResolution(int iaxis) const
+{
+    return _vresolution.at(iaxis);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
-    fResolution = resolution;
+    _vresolution.at(iaxis) = resolution;
     GetParent()->_ParametersChanged(Prop_JointProperties);
 }
 
@@ -1068,7 +1091,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     }
     KinBodyPtr parent(_parent);
     std::vector<std::string> resultVars;
-    boost::shared_ptr<MIMIC> mimic(new MIMIC());
+    MimicPtr mimic(new Mimic());
     mimic->_equations.at(0) = poseq;
     mimic->_equations.at(1) = veleq;
     mimic->_equations.at(2) = acceleq;

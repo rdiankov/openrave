@@ -14,11 +14,6 @@ Rotating Body
 
 .. literalinclude:: openravepy_examples/rotating_body.py
 
-Creating/Updating a Body
-------------------------
-
-.. literalinclude:: openravepy_examples/creating_body.py
-
 Using a BiRRT Planner
 ---------------------
 
@@ -103,3 +98,13 @@ Sampling Trajectory
 -------------------
 
 .. literalinclude:: openravepy_examples/sampling_trajectory.py
+
+Creating/Updating a Body
+------------------------
+
+.. literalinclude:: openravepy_examples/creating_body.py
+
+Creating Custom Kinematics Body
+-------------------------------
+
+.. literalinclude:: openravepy_examples/create_custombody.py

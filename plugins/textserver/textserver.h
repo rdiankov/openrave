@@ -734,7 +734,7 @@ protected:
         if( cmd == "quit" ) {
             GetEnv()->Reset();
             // call exit in a different thread
-	    new boost::thread(_CallExit);
+            new boost::thread(_CallExit);
         }
         return true;
     }
@@ -2185,7 +2185,7 @@ protected:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
 
-        KinBody::Link::TRIMESH trimesh;
+        TriMesh trimesh;
         FOREACH(itbody, vbodies) {
             if( (find(vobjids.begin(),vobjids.end(),(*itbody)->GetEnvironmentId()) == vobjids.end()) ^ !inclusive ) {
                 continue;

@@ -1062,7 +1062,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     vparameters.resize(pbody->GetDependencyOrderedJoints().size());
     std::vector<DHParameter>::iterator itdh = vparameters.begin();
     FOREACHC(itjoint,pbody->GetDependencyOrderedJoints()) {
-        OPENRAVE_ASSERT_FORMAT((*itjoint)->GetType() == KinBody::Joint::JointHinge || (*itjoint)->GetType() == KinBody::Joint::JointSlider, "joint type 0x%x not supported for DH parameters", (*itjoint)->GetType(), ORE_Assert);
+        OPENRAVE_ASSERT_FORMAT((*itjoint)->GetType() == KinBody::JointHinge || (*itjoint)->GetType() == KinBody::JointSlider, "joint type 0x%x not supported for DH parameters", (*itjoint)->GetType(), ORE_Assert);
         KinBody::LinkConstPtr plink = (*itjoint)->GetHierarchyParentLink();
         Transform tparent, tparentinv;
         itdh->joint = *itjoint;

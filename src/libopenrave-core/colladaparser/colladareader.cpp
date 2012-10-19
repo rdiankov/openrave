@@ -1185,7 +1185,7 @@ public:
             }
 
             int iaxis = 0;
-            pjoint->_vmimic[iaxis].reset(new KinBody::Joint::MIMIC());
+            pjoint->_vmimic[iaxis].reset(new KinBody::Mimic());
             dReal ftargetunit = 1;
             if(_mapJointUnits.find(pjoint) != _mapJointUnits.end() ) {
                 ftargetunit = _mapJointUnits[pjoint].at(iaxis);
@@ -1493,11 +1493,11 @@ public:
                     }
                     domAxis_constraintRef pdomaxis = vdomaxes[ic];
                     if( strcmp(pdomaxis->getElementName(), "revolute") == 0 ) {
-                        pjoint->_type = KinBody::Joint::JointRevolute;
+                        pjoint->_type = KinBody::JointRevolute;
                         pjoint->_vmaxvel[ic] = 0.5;
                     }
                     else if( strcmp(pdomaxis->getElementName(), "prismatic") == 0 ) {
-                        pjoint->_type = KinBody::Joint::JointPrismatic;
+                        pjoint->_type = KinBody::JointPrismatic;
                         vaxisunits[ic] = _GetUnitScale(pdomaxis,_fGlobalScale);
                         jointtype |= 1<<(4+ic);
                         pjoint->_vmaxvel[ic] = 0.01;
@@ -1507,7 +1507,7 @@ public:
                     }
                 }
 
-                pjoint->_type = (KinBody::Joint::JointType)jointtype;
+                pjoint->_type = (KinBody::JointType)jointtype;
                 _mapJointUnits[pjoint] = vaxisunits;
                 if( pjoint->_bActive ) {
                     pjoint->jointindex = (int) pkinbody->_vecjoints.size();
@@ -1652,7 +1652,7 @@ public:
                                 else if( paramsid == "discretization_resolution" ) {
                                     if( !!axisparam->getFloat() ) {
                                         if( axisparam->getFloat()->getValue() > 0 ) {
-                                            pjoint->fResolution = axisparam->getFloat()->getValue();
+                                            pjoint->_vresolution[ic] = axisparam->getFloat()->getValue();
                                         }
                                         else {
                                             RAVELOG_WARN(str(boost::format("bad joint resolution %f")%axisparam->getFloat()->getValue()));

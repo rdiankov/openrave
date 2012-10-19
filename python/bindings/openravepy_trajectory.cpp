@@ -148,6 +148,15 @@ public:
     }
 };
 
+TrajectoryBasePtr GetTrajectory(object o)
+{
+    extract<PyTrajectoryBasePtr> pytrajectory(o);
+    if( pytrajectory.check() ) {
+        return GetTrajectory((PyTrajectoryBasePtr)pytrajectory);
+    }
+    return TrajectoryBasePtr();
+}
+
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr pytrajectory)
 {
     return !pytrajectory ? TrajectoryBasePtr() : pytrajectory->GetTrajectory();

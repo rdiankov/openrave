@@ -20,15 +20,15 @@ time.sleep(2) # sleep 2 seconds
 
 # create from soup of cylinders
 with env:
-    infocylinder = KinBody.Link.GeometryInfo()
-    infocylinder._type = KinBody.Link.GeomType.Cylinder
+    infocylinder = KinBody.GeometryInfo()
+    infocylinder._type = GeometryType.Cylinder
     infocylinder._t[0,3] = 0.1
     infocylinder._vGeomData = [0.1,0.4]
     infocylinder._bVisible = True
     infocylinder._fTransparency = 0.5
     infocylinder._vDiffuseColor = [1,0,0]
-    infocylinder2 = KinBody.Link.GeometryInfo()
-    infocylinder2._type = KinBody.Link.GeomType.Cylinder
+    infocylinder2 = KinBody.GeometryInfo()
+    infocylinder2._type = GeometryType.Cylinder
     infocylinder2._t[0,3] = -0.1
     infocylinder2._vGeomData = [0.2,0.4]
     infocylinder2._bVisible = True

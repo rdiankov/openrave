@@ -50,9 +50,10 @@ __builtins__['__openravepy_build_doc__'] = True
 import openravepy
 version = unicode(openravepy.__version__)
 # The full version, including alpha/beta/rc tags.
-import pysvn
-entry=pysvn.Client().info('..')
-release = 'r%d'%entry.revision.number
+#import pysvn
+#entry=pysvn.Client().info('..')
+#release = 'r%d'%entry.revision.number
+release = ''
 
 # relative to the source directory?
 locale_dirs = ['../locale']

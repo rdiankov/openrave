@@ -142,6 +142,7 @@ public:
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
+    typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
 
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public XMLReadable
@@ -153,7 +154,7 @@ public:
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// unique link name
         std::string _name;
-        ///< the current transformation of the link in the world coordinate system.
+        ///< the current transformation of the link with respect to the body coordinate system
         Transform _t;
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
@@ -161,6 +162,9 @@ public:
         dReal _mass;
         /// inertia along the axes of _tMassFrame
         Vector _vinertiamoments;
+
+        std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
 
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
@@ -170,8 +174,10 @@ public:
 
         /// \true false if the link is disabled. disabled links do not participate in collision detection
         bool _bIsEnabled;
+        bool __padding0, __padding1; // for 4-byte alignment
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;
+    typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
 
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
@@ -510,6 +516,9 @@ protected:
 
         bool _bStatic;               ///< \see IsStatic
         bool _bIsEnabled;         ///< \see IsEnabled
+        bool __padding0, __padding1; // for 4-byte alignment
+
+        LinkInfo _info; ///< info link was generated with
 
 private:
         /// Sensitive variables that are auto-generated and should not be modified by the user.
@@ -569,11 +578,24 @@ private:
         JointTrajectory = 0x80000004, ///< there is no axis defined, instead the relative transformation is directly output from the trajectory affine_transform structure
     };
 
+    class Joint;
+
     /// \brief Holds mimic information about position, velocity, and acceleration of one axis of the joint.
     ///
     /// In every array, [0] is position, [1] is velocity, [2] is acceleration.
-    struct OPENRAVE_API MIMIC
+    class OPENRAVE_API MimicInfo
     {
+public:
+        boost::array< std::string, 3>  _equations;         ///< the original equations
+    };
+    typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
+    typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
+
+    class OPENRAVE_API Mimic
+    {
+public:
+        boost::array< std::string, 3>  _equations;         ///< the original equations
+
         struct DOFFormat
         {
             int16_t jointindex;         ///< the index into the joints, if >= GetJoints.size(), then points to the passive joints
@@ -584,7 +606,6 @@ private:
             boost::shared_ptr<Joint> GetJoint(KinBodyPtr parent) const;
             boost::shared_ptr<Joint const> GetJoint(KinBodyConstPtr parent) const;
         };
-        std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
         struct DOFHierarchy
         {
             int16_t dofindex;         ///< >=0 dof index
@@ -593,13 +614,19 @@ private:
                 return dofindex==r.dofindex && dofformatindex == r.dofformatindex;
             }
         };
+
+        /// @name automatically set
+        //@{
+        std::vector< DOFFormat > _vdofformat;         ///< the format of the values the equation takes order is important.
         std::vector<DOFHierarchy> _vmimicdofs;         ///< all dof indices that the equations depends on. DOFHierarchy::dofindex can repeat
         OpenRAVEFunctionParserRealPtr _posfn;
         std::vector<OpenRAVEFunctionParserRealPtr > _velfns, _accelfns;         ///< the velocity and acceleration partial derivatives with respect to each of the values in _vdofformat
-        boost::array< std::string, 3>  _equations;         ///< the original equations
+        //@}
     };
+    typedef boost::shared_ptr<Mimic> MimicPtr;
+    typedef boost::shared_ptr<Mimic const> MimicConstPtr;
 
-    /// \brief Describes the properties of a link used to initialize it
+    /// \brief Describes the properties of a joint used to initialize it
     class OPENRAVE_API JointInfo : public XMLReadable
     {
 public:
@@ -607,36 +634,68 @@ public:
         virtual ~JointInfo() {
         }
 
-        JointType _type;
-        std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system
+        JointType _type; /// The joint type
+        std::string _name;         ///< the unique joint name
+        std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
         Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
         boost::array<Vector,3> _vaxes;                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
         std::vector<dReal> _vcurrentvalues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
 
-        dReal _fResolution;              ///< interpolation resolution
+        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
         boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
-        boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
+
+        /// \brief internal offset parameter that determines the branch the angle centers on
+        ///
+        /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
+        /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
+        /// \param iaxis the axis to get the offset from
+        boost::array<dReal,3> _voffsets;
         boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
-        boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
         TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
-        boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
+        boost::array<MimicInfoPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
-        std::string _name;         ///< \see GetName
-        boost::array<uint8_t,3> _bIsCircular;            ///< \see IsCircular
-        boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
+        std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
+
+        /// \brief true if joint axis has an identification at some of its lower and upper limits.
+        ///
+        /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
+        /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
+        /// joint does not stop at limits.
+        /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
+        boost::array<uint8_t,3> _bIsCircular;
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
+    typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
     class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
     {
 public:
-        Joint(KinBodyPtr parent, JointType type = JointNone);
+        /// \deprecated 12/10/19
+        typedef Mimic MIMIC RAVE_DEPRECATED;
+        typedef KinBody::JointType JointType RAVE_DEPRECATED;
+        static const KinBody::JointType JointNone RAVE_DEPRECATED = KinBody::JointNone;
+        static const KinBody::JointType JointHinge RAVE_DEPRECATED = KinBody::JointHinge;
+        static const KinBody::JointType JointRevolute RAVE_DEPRECATED = KinBody::JointRevolute;
+        static const KinBody::JointType JointSlider RAVE_DEPRECATED = KinBody::JointSlider;
+        static const KinBody::JointType JointPrismatic RAVE_DEPRECATED = KinBody::JointPrismatic;
+        static const KinBody::JointType JointRR RAVE_DEPRECATED = KinBody::JointRR;
+        static const KinBody::JointType JointRP RAVE_DEPRECATED = KinBody::JointRP;
+        static const KinBody::JointType JointPR RAVE_DEPRECATED = KinBody::JointPR;
+        static const KinBody::JointType JointPP RAVE_DEPRECATED = KinBody::JointPP;
+        static const KinBody::JointType JointSpecialBit RAVE_DEPRECATED = KinBody::JointSpecialBit;
+        static const KinBody::JointType JointUniversal RAVE_DEPRECATED = KinBody::JointUniversal;
+        static const KinBody::JointType JointHinge2 RAVE_DEPRECATED = KinBody::JointHinge2;
+        static const KinBody::JointType JointSpherical RAVE_DEPRECATED = KinBody::JointSpherical;
+        static const KinBody::JointType JointTrajectory RAVE_DEPRECATED = KinBody::JointTrajectory;
+
+        Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
         virtual ~Joint();
 
         /// \brief The unique name of the joint
@@ -677,7 +736,7 @@ public:
             return _attachedbodies[1];
         }
 
-        inline JointType GetType() const {
+        inline KinBody::JointType GetType() const {
             return _type;
         }
 
@@ -689,9 +748,8 @@ public:
         /// \brief The discretization of the joint used when line-collision checking.
         ///
         /// The resolutions are set as large as possible such that the joint will not go through obstacles of determined size.
-        inline dReal GetResolution(int iaxis=0) const {
-            return fResolution;
-        }
+        virtual dReal GetResolution(int iaxis=0) const;
+
         virtual void SetResolution(dReal resolution, int iaxis=0);
 
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
@@ -874,7 +932,7 @@ public:
 
             MathML:
 
-            Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref MIMIC::_vdofformat
+            Set 'format' to "mathml". The joint variables are specified with <csymbol>. If a targetted joint has more than one degree of freedom, then axis is suffixed with _\%d. If 'type' is 1 or 2, the partial derivatives are outputted as consecutive <math></math> tags in the same order as \ref Mimic::_vdofformat
          */
         std::string GetMimicEquation(int axis=0, int type=0, const std::string& format="") const;
 
@@ -909,29 +967,30 @@ public:
         //@}
 
 protected:
+        JointInfo _info;
+
         boost::array<Vector,3> _vaxes;                ///< axes in body[0]'s or environment coordinate system used to define joint movement
         Vector vanchor;                 ///< anchor of the joint, this is only used to construct the internal left/right matrices
-        dReal fResolution;              ///< interpolation resolution
+        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
-        boost::array<dReal,3> fHardMaxVel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
+        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
         boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
         boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
         boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
-        boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
         TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
-        boost::array< boost::shared_ptr<MIMIC>,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
+        boost::array< MimicPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
-        /** \brief computes the partial velocities with respect to all dependent DOFs specified by MIMIC::_vmimicdofs.
+        /** \brief computes the partial velocities with respect to all dependent DOFs specified by Mimic::_vmimicdofs.
 
             If the joint is not mimic, then just returns its own index
             \param[out] vpartials A list of dofindex/velocity_partial pairs. The final velocity is computed by taking the dot product. The dofindices do not repeat.
             \param[in] iaxis the axis
             \param[in,out] vcachedpartials set of cached partials for each degree of freedom
          */
-        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const;
+        virtual void _ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<Mimic::DOFFormat, int>, dReal >& mapcachedpartials) const;
 
         /** \brief Compute internal transformations and specify the attached links of the joint.
 
@@ -971,8 +1030,8 @@ private:
         //@{
         int dofindex;                   ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;                 ///< the joint index into KinBody::_vecjoints
-        JointType _type;
-        bool _bActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
+        KinBody::JointType _type;
 
         KinBodyWeakPtr _parent;               ///< body that joint belong to
         boost::array<LinkPtr,2> _attachedbodies;         ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.
@@ -980,6 +1039,7 @@ private:
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
+        bool _bActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -1150,7 +1210,14 @@ private:
     ///
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
-    bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
+    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries);
+    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
+
+    /// \brief initializes an complex kinematics body with links and joints
+    ///
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
