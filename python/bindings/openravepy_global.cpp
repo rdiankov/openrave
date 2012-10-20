@@ -172,7 +172,7 @@ public:
     }
     PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
     }
-    PyTriMesh(const KinBody::Link::TRIMESH& mesh) {
+    PyTriMesh(const TriMesh& mesh) {
         npy_intp dims[] = { mesh.vertices.size(),3};
         PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
@@ -192,7 +192,7 @@ public:
         indices = static_cast<numeric::array>(handle<>(pyindices));
     }
 
-    void GetTriMesh(KinBody::Link::TRIMESH& mesh) {
+    void GetTriMesh(TriMesh& mesh) {
         int numverts = len(vertices);
         mesh.vertices.resize(numverts);
         for(int i = 0; i < numverts; ++i) {
@@ -222,7 +222,7 @@ public:
     object vertices,indices;
 };
 
-bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh)
+bool ExtractTriMesh(object o, TriMesh& mesh)
 {
     extract<boost::shared_ptr<PyTriMesh> > pytrimesh(o);
     if( pytrimesh.check() ) {
@@ -232,7 +232,7 @@ bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh)
     return false;
 }
 
-object toPyTriMesh(const KinBody::Link::TRIMESH& mesh)
+object toPyTriMesh(const TriMesh& mesh)
 {
     return object(boost::shared_ptr<PyTriMesh>(new PyTriMesh(mesh)));
 }
@@ -853,6 +853,11 @@ string poseSerialization(object o)
 namespace planningutils
 {
 
+bool pyJitterTransform(PyKinBodyPtr pybody, float fJitter, int nMaxIterations=1000)
+{
+    return OpenRAVE::planningutils::JitterTransform(openravepy::GetKinBody(pybody), fJitter, nMaxIterations);
+}
+
 void pyConvertTrajectorySpecification(PyTrajectoryBasePtr pytraj, PyConfigurationSpecificationPtr pyspec)
 {
     OpenRAVE::planningutils::ConvertTrajectorySpecification(openravepy::GetTrajectory(pytraj),openravepy::GetConfigurationSpecification(pyspec));
@@ -1044,6 +1049,7 @@ typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSampler
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(JitterTransform_overloads, planningutils::pyJitterTransform, 2, 3);
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothAffineTrajectory_overloads, planningutils::pySmoothAffineTrajectory, 3, 5)
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothTrajectory_overloads, planningutils::pySmoothTrajectory, 1, 5)
@@ -1167,7 +1173,7 @@ void init_openravepy_global()
     .def("__repr__",&PyAABB::__repr__)
     .def_pickle(AABB_pickle_suite())
     ;
-    class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(KinBody::Link::TRIMESH))
+    class_<PyTriMesh, boost::shared_ptr<PyTriMesh> >("TriMesh", DOXY_CLASS(TriMesh))
     .def(init<object,object>(args("vertices","indices")))
     .def_readwrite("vertices",&PyTriMesh::vertices)
     .def_readwrite("indices",&PyTriMesh::indices)
@@ -1241,6 +1247,8 @@ void init_openravepy_global()
 
     {
         scope x = class_<object>("planningutils")
+                  .def("JitterTransform",planningutils::pyJitterTransform,JitterTransform_overloads(args("body","jitter","maxiterations"),DOXY_FN1(JitterTransform)))
+                  .staticmethod("JitterTransform")
                   .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))
                   .staticmethod("ConvertTrajectorySpecification")
                   .def("ComputeTrajectoryDerivatives",planningutils::pyComputeTrajectoryDerivatives,args("trajectory","maxderiv"),DOXY_FN1(ComputeTrajectoryDerivatives))

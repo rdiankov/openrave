@@ -456,8 +456,8 @@ object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
 RAY ExtractRay(object o);
 bool ExtractRay(object o, RAY& r);
-object toPyTriMesh(const KinBody::Link::TRIMESH& mesh);
-bool ExtractTriMesh(object o, KinBody::Link::TRIMESH& mesh);
+object toPyTriMesh(const TriMesh& mesh);
+bool ExtractTriMesh(object o, TriMesh& mesh);
 
 class PyInterfaceBase
 {

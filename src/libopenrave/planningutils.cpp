@@ -138,12 +138,16 @@ bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
     int iter = 0;
     while(pbody->GetEnv()->CheckCollision(KinBodyConstPtr(pbody)) ) {
         if( iter > nMaxIterations ) {
+            // have to restore to initial non-perturbed transform!
+            pbody->SetTransform(transorig);
             return false;
         }
         if( iter > 0 && fJitter <= 0 ) {
+            // have to restore to initial non-perturbed transform!
+            pbody->SetTransform(transorig);
             return false;
         }
-        transnew.trans = transorig.trans + fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
+        transnew.trans = transorig.trans + 2.0 * fJitter * Vector(RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f, RaveRandomFloat()-0.5f);
         pbody->SetTransform(transnew);
         ++iter;
     }

@@ -588,7 +588,20 @@ class RunPlanning(EnvironmentSetup):
             assert(traj2.GetDuration() < traj1.GetDuration())
             self.RunTrajectory(robot,traj1)
             self.RunTrajectory(robot,traj2)
-            
+
+    def test_jittertransform(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        with env:
+            collisionbody = env.GetKinBody('mug1')
+            T0 = collisionbody.GetTransform()
+            assert(env.CheckCollision(collisionbody))
+            success = planningutils.JitterTransform(collisionbody,0.005)
+            assert(not success)
+            assert(transdist(T0, collisionbody.GetTransform()) <= 1e-7)
+            success = planningutils.JitterTransform(collisionbody,0.02)
+            assert(success)
+            assert(not env.CheckCollision(collisionbody))
 
 #generate_classes(RunPlanning, globals(), [('ode','ode'),('bullet','bullet')])
 
