@@ -1902,7 +1902,7 @@ public:
         PyManipulatorInfo() {
             _tLocalTool = ReturnTransform(Transform());
             _vClosingDirection = numeric::array(boost::python::list());
-            _vdirection = toPyVector3(Vector(1,1,1));
+            _vdirection = toPyVector3(Vector(0,0,1));
             _vGripperJointNames = boost::python::list();
         }
         RobotBase::ManipulatorInfo GetManipulatorInfo() {
