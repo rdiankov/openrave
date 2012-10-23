@@ -21,6 +21,8 @@ Misc
 
 * Fixed :meth:`.planningutils.JitterTransform` and added openravepy wrapper
 
+* Fixed opening DirectX files as environment files
+
 Version 0.8.2
 =============
 

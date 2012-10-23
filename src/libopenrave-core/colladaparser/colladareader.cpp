@@ -271,9 +271,13 @@ public:
             }
         }
         _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : uristr));
-        if( !!_dom && uriresolved.size() > 0 ) {
+        if( !_dom ) {
+            return false;
+        }
+        if( uriresolved.size() > 0 ) {
             _mapInverseResolvedURIList.insert(make_pair(uriresolved, daeURI(*_dae,urioriginal.str())));
         }
+
         return _InitPostOpen(atts);
     }
 
