@@ -19,6 +19,8 @@
 #include "X11/Xlib.h"
 #endif
 
+#include <QApplication>
+
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
 
 boost::mutex g_mutexsoqt;
@@ -78,5 +80,7 @@ OPENRAVE_PLUGIN_API void DestroyPlugin()
         RAVELOG_WARN("SoQt releasing all memory\n");
         SoQt::done();
         s_InitRefCount = 0;
+        // necessary since QApplication does not destroy all threads when last SoQt viewer is done
+        QApplication::quit();
     }
 }

@@ -437,7 +437,11 @@ public:
         _mapenvironments.clear();
         _pdefaultsampler.reset();
         _mapreaders.clear();
-        _pdatabase.reset();
+        if( !!_pdatabase ) {
+            // force destroy in case some one is holding a pointer to it
+            _pdatabase->Destroy();
+            _pdatabase.reset();
+        }
 #ifdef USE_CRLIBM
 
 #ifdef HAS_FENV_H

@@ -479,7 +479,7 @@ private:
     virtual bool Write(RobotBasePtr probot)
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        _CreateScene();
+        _CreateScene(probot->GetName());
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(probot) ) {
             iasout = _WriteKinBodyExternal(probot,_scene.kiscene);
@@ -501,7 +501,7 @@ private:
             return Write(RaveInterfaceCast<RobotBase>(pbody));
         }
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        _CreateScene();
+        _CreateScene(pbody->GetName());
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(pbody) ) {
             iasout = _WriteKinBodyExternal(pbody,_scene.kiscene);
@@ -1610,41 +1610,71 @@ private:
 private:
 
     /// \brief save all the loaded scene models and their current state.
-    virtual void _CreateScene()
+    virtual void _CreateScene(const std::string& scenename=std::string())
     {
         // Create kinematics scene
         _scene.kscene = daeSafeCast<domKinematics_scene>(_kinematicsScenesLib->add(COLLADA_ELEMENT_KINEMATICS_SCENE));
         _scene.kscene->setId("kscene");
-        _scene.kscene->setName("Kinematics Scene");
+        if( scenename.size() > 0 ) {
+            _scene.kscene->setName(scenename.c_str());
+        }
+        else {
+            _scene.kscene->setName("Kinematics Scene");
+        }
         // Create instance kinematics scene
         _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
         _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
         _scene.kiscene->setSid(str(boost::format("%s_inst")%_scene.kscene->getId()).c_str());
-        _scene.kiscene->setName("Kinematics Scene");
+        if( scenename.size() > 0 ) {
+            _scene.kiscene->setName(scenename.c_str());
+        }
+        else {
+            _scene.kiscene->setName("Kinematics Scene");
+        }
 
         if( IsWrite("visual") ) {
             // Create visual scene
             _scene.vscene = daeSafeCast<domVisual_scene>(_visualScenesLib->add(COLLADA_ELEMENT_VISUAL_SCENE));
             _scene.vscene->setId("vscene");
-            _scene.vscene->setName("Visual Scene");
+            if( scenename.size() > 0 ) {
+                _scene.vscene->setName(scenename.c_str());
+            }
+            else {
+                _scene.vscene->setName("Visual Scene");
+            }
 
             // Create instance visual scene
             _scene.viscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_VISUAL_SCENE ));
             _scene.viscene->setUrl(str(boost::format("#%s")%_scene.vscene->getId()).c_str());
             _scene.viscene->setSid(str(boost::format("%s_inst")%_scene.vscene->getId()).c_str());
-            _scene.viscene->setName("Visual Scene");
+            if( scenename.size() > 0 ) {
+                _scene.viscene->setName(scenename.c_str());
+            }
+            else {
+                _scene.viscene->setName("Visual Scene");
+            }
         }
         if( IsWrite("physics") ) {
             // Create physic scene
             _scene.pscene = daeSafeCast<domPhysics_scene>(_physicsScenesLib->add(COLLADA_ELEMENT_PHYSICS_SCENE));
             _scene.pscene->setId("pscene");
-            _scene.pscene->setName("Physics Scene");
+            if( scenename.size() > 0 ) {
+                _scene.pscene->setName(scenename.c_str());
+            }
+            else {
+                _scene.pscene->setName("Physics Scene");
+            }
 
             // Create instance physics scene
             _scene.piscene = daeSafeCast<domInstance_with_extra>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_PHYSICS_SCENE ));
             _scene.piscene->setUrl(str(boost::format("#%s")%_scene.pscene->getId()).c_str());
             _scene.piscene->setSid(str(boost::format("%s_inst")%_scene.pscene->getId()).c_str());
-            _scene.piscene->setName("Physics Scene");
+            if( scenename.size() > 0 ) {
+                _scene.piscene->setName(scenename.c_str());
+            }
+            else {
+                _scene.piscene->setName("Physics Scene");
+            }
         }
     }
 
