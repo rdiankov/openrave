@@ -307,6 +307,17 @@ protected:
         }
 
         FOREACH(it,node->mMeshes) {
+
+            if( !plink ) {
+                // link is expected and one doesn't exist, so create it
+                plink.reset(new KinBody::Link(pbody));
+                plink->_name = _prefix+node->mName;
+                plink->_bStatic = false;
+                plink->_bIsEnabled = true;
+                plink->_index = pbody->_veclinks.size();
+                pbody->_veclinks.push_back(plink);
+            }
+
             Assimp::XFile::Mesh* pmesh = *it;
             KinBody::GeometryInfo g;
             g._t = plink->_t.inverse() * tflipyz * tnode;
