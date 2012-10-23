@@ -28,9 +28,9 @@ class BaseManipulation:
         self.robot = robot
         self.args = self.robot.GetName()
         if plannername is not None:
-            self.args += ' planner ' + plannername
+            self.args += u' planner ' + plannername
         if maxvelmult is not None:
-            self.args += ' maxvelmult %.15e '%maxvelmult
+            self.args += u' maxvelmult %.15e '%maxvelmult
         env.Add(self.prob,True,self.args)
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
@@ -42,6 +42,12 @@ class BaseManipulation:
         clone.robot = envother.GetRobot(self.robot.GetName())
         envother.Add(clone.prob,True,clone.args)
         return clone
+
+    def SetRobot(self,robot):
+        """See :ref:`module-basemanipulation-setrobot`
+        """
+        return self.prob.SendCommand(u'setrobot %s'%robot.GetName())
+    
     def TrajFromData(self,data,resettrans=False,resettiming=False):
         """See :ref:`module-basemanipulation-traj`
         """

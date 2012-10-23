@@ -81,6 +81,7 @@ OPENRAVE_PLUGIN_API void DestroyPlugin()
         SoQt::done();
         s_InitRefCount = 0;
         // necessary since QApplication does not destroy all threads when last SoQt viewer is done
+        //removePostedEvents - sometimes freezes on this function
         QApplication::quit();
     }
 }

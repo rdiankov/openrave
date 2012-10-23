@@ -56,6 +56,8 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
                         "Sets _minimumgoalpaths for all planner parameters.");
         RegisterCommand("SetPostProcessing",boost::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
                         "Sets post processing parameters.");
+        RegisterCommand("SetRobot",boost::bind(&BaseManipulation::SetRobotCommand,this,_1,_2),
+                        "Sets the robot.");
         _minimumgoalpaths=1;
     }
 
@@ -177,6 +179,14 @@ protected:
         }
         sout << "1";
         return true;
+    }
+
+    bool SetRobotCommand(ostream& sout, istream& sinput)
+    {
+        string strRobotName;
+        sinput >> strRobotName;
+        robot = GetEnv()->GetRobot(strRobotName);
+        return !!robot;
     }
 
     bool MoveHandStraight(ostream& sout, istream& sinput)
