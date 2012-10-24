@@ -31,6 +31,7 @@ public:
     virtual object GetBody() const = 0;
     virtual void Restore(object p=object())  = 0;
     virtual void Release() = 0;
+    virtual void Close() = 0;
     virtual std::string __str__() = 0;
     virtual object __unicode__() = 0;
 };
@@ -68,6 +69,10 @@ public:
 
     void Release() {
         _state->Release();
+    }
+
+    void Close() {
+        _state.reset();
     }
 
     std::string __str__() {
@@ -398,6 +403,9 @@ public:
             bool __ne__(boost::shared_ptr<PyGeometry> p) {
                 return !p || _pgeometry != p->_pgeometry;
             }
+            int __hash__() {
+                return static_cast<int>(uintptr_t(_pgeometry.get()));
+            }
         };
 
         PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {
@@ -575,6 +583,9 @@ public:
         }
         bool __ne__(boost::shared_ptr<PyLink> p) {
             return !p || _plink != p->_plink;
+        }
+        int __hash__() {
+            return static_cast<int>(uintptr_t(_plink.get()));
         }
     };
 
@@ -821,6 +832,9 @@ public:
         }
         bool __ne__(boost::shared_ptr<PyJoint> p) {
             return !p || _pjoint!=p->_pjoint;
+        }
+        int __hash__() {
+            return static_cast<int>(uintptr_t(_pjoint.get()));
         }
     };
     typedef boost::shared_ptr<PyJoint> PyJointPtr;
@@ -2400,6 +2414,9 @@ public:
         bool __ne__(boost::shared_ptr<PyManipulator> p) {
             return !p || _pmanip!=p->_pmanip;
         }
+        int __hash__() {
+            return static_cast<int>(uintptr_t(_pmanip.get()));
+        }
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
@@ -2460,6 +2477,9 @@ public:
         }
         bool __ne__(boost::shared_ptr<PyAttachedSensor> p) {
             return !p || _pattached!=p->_pattached;
+        }
+        int __hash__() {
+            return static_cast<int>(uintptr_t(_pattached.get()));
         }
     };
 
@@ -3266,6 +3286,7 @@ void init_openravepy_kinbody()
     .def("GetBody",&PyStateRestoreContextBase::GetBody,DOXY_FN(KinBody::KinBodyStateSaver, GetBody))
     .def("Restore",&PyStateRestoreContextBase::Restore,Restore_overloads(args("body"), DOXY_FN(KinBody::KinBodyStateSaver, Restore)))
     .def("Release",&PyStateRestoreContextBase::Release,DOXY_FN(KinBody::KinBodyStateSaver, Release))
+    .def("Close",&PyStateRestoreContextBase::Close,DOXY_FN(KinBody::KinBodyStateSaver, Close))
     .def("__str__",&PyStateRestoreContextBase::__str__)
     .def("__unicode__",&PyStateRestoreContextBase::__unicode__)
     ;
@@ -3557,6 +3578,7 @@ void init_openravepy_kinbody()
                          .def("__unicode__", &PyKinBody::PyLink::__unicode__)
                          .def("__eq__",&PyKinBody::PyLink::__eq__)
                          .def("__ne__",&PyKinBody::PyLink::__ne__)
+                         .def("__hash__",&PyKinBody::PyLink::__hash__)
             ;
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
@@ -3587,6 +3609,7 @@ void init_openravepy_kinbody()
                                  .def("GetAmbientColor",&PyKinBody::PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
                                  .def("__eq__",&PyKinBody::PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
+                                 .def("__hash__",&PyKinBody::PyLink::PyGeometry::__hash__)
                 ;
                 // \deprecated (12/07/16)
                 geometry.attr("Type") = geometrytype;
@@ -3651,6 +3674,7 @@ void init_openravepy_kinbody()
                           .def("__unicode__", &PyKinBody::PyJoint::__unicode__)
                           .def("__eq__",&PyKinBody::PyJoint::__eq__)
                           .def("__ne__",&PyKinBody::PyJoint::__ne__)
+                          .def("__hash__",&PyKinBody::PyJoint::__hash__)
             ;
             joint.attr("Type") = jointtype;
         }
@@ -3873,6 +3897,7 @@ void init_openravepy_kinbody()
         .def("__unicode__",&PyRobotBase::PyManipulator::__unicode__)
         .def("__eq__",&PyRobotBase::PyManipulator::__eq__)
         .def("__ne__",&PyRobotBase::PyManipulator::__ne__)
+        .def("__hash__",&PyRobotBase::PyManipulator::__hash__)
         ;
 
         class_<PyRobotBase::PyAttachedSensor, boost::shared_ptr<PyRobotBase::PyAttachedSensor> >("AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor), no_init)
@@ -3890,6 +3915,7 @@ void init_openravepy_kinbody()
         .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)
         .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
+        .def("__hash__",&PyRobotBase::PyAttachedSensor::__hash__)
         ;
 
         class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)

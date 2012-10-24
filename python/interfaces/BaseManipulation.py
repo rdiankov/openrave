@@ -34,7 +34,11 @@ class BaseManipulation:
         env.Add(self.prob,True,self.args)
     def  __del__(self):
         self.prob.GetEnv().Remove(self.prob)
+
     def clone(self,envother):
+        return self.Clone(envother)
+    
+    def Clone(self,envother):
         """Clones the interface into another environment
         """
         clone = shallowcopy(self)
@@ -46,7 +50,12 @@ class BaseManipulation:
     def SetRobot(self,robot):
         """See :ref:`module-basemanipulation-setrobot`
         """
-        return self.prob.SendCommand(u'setrobot %s'%robot.GetName())
+        success = self.prob.SendCommand(u'setrobot '+robot.GetName())
+        if success is not None:
+            self.robot = robot
+            return True
+        
+        return False
     
     def TrajFromData(self,data,resettrans=False,resettiming=False):
         """See :ref:`module-basemanipulation-traj`

@@ -166,17 +166,19 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 if( itgroup->name.size()>=8 && itgroup->name.substr(0,8) == "grabbody") {
                     stringstream ss(itgroup->name);
                     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                    if( itgroup->dof == 1 && tokens.size() >= 4 && tokens.at(2) == _probot->GetName() ) {
-                        KinBodyPtr pbody = GetEnv()->GetKinBody(tokens.at(1));
-                        if( !!pbody ) {
-                            _samplespec._vgroups.push_back(*itgroup);
-                            _samplespec._vgroups.back().offset = dof;
-                            _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody));
+                    if( itgroup->dof == 1 && tokens.size() >= 4 ) {
+                        if( tokens.at(2) == _probot->GetName() ) {
+                            KinBodyPtr pbody = GetEnv()->GetKinBody(tokens.at(1));
+                            if( !!pbody ) {
+                                _samplespec._vgroups.push_back(*itgroup);
+                                _samplespec._vgroups.back().offset = dof;
+                                _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody));
+                            }
+                            dof += _samplespec._vgroups.back().dof;
                         }
-                        dof += _samplespec._vgroups.back().dof;
                     }
                     else {
-                        RAVELOG_WARN(str(boost::format("invalid grabbody tokens: %s")%ss.str()));
+                        RAVELOG_WARN(str(boost::format("robot %s invalid grabbody tokens: %s")%_probot->GetName()%ss.str()));
                     }
                 }
                 else if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
@@ -191,7 +193,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         dof += _samplespec._vgroups.back().dof;
                     }
                     else {
-                        RAVELOG_WARN(str(boost::format("invalid grab tokens: %s")%ss.str()));
+                        RAVELOG_WARN(str(boost::format("robot %s invalid grab tokens: %s")%_probot->GetName()%ss.str()));
                     }
                 }
             }

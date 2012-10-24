@@ -16,6 +16,11 @@ Core
 
 * Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots by calling :meth:`.KinBody.Init`.
 
+Python
+------
+
+* Added __hash__ to most classes like KinBody.Link, Robot.Manipulator, etc so they can be used in dictionaries.
+
 Misc
 ----
 

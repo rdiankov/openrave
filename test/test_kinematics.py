@@ -922,7 +922,7 @@ class TestKinematics(EnvironmentSetup):
         assert(transdist(body.GetLink('box').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         inertia = m/3*array([4+9,1+9,1+4])
         assert(transdist(body.GetLink('box').GetPrincipalMomentsOfInertia(),inertia) <= g_epsilon)
-
+        
         m = body.GetLink('rbox').GetMass()
         assert(abs(m-48*massdensity) <= g_epsilon)
         R = rotationMatrixFromAxisAngle([pi/4,0,0])
@@ -938,7 +938,7 @@ class TestKinematics(EnvironmentSetup):
         assert(abs(m-massdensity*pi*0.2**2*2) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetLocalMassFrame(),eye(4)) <= g_epsilon)
         assert(transdist(body.GetLink('cylinder').GetPrincipalMomentsOfInertia(), m/12*array([3*0.2**2+2**2,6*0.2**2,3*0.2**2+2**2])) <= g_epsilon)
-
+        
     def test_dh(self):
         env=self.env
         robot=self.LoadRobot('robots/barrettwam.robot.xml')
@@ -967,7 +967,7 @@ class TestKinematics(EnvironmentSetup):
             assert(abs(dh.d-gooddh.d) <= 1e-6)
             assert(abs(dh.alpha-gooddh.alpha) <= 1e-6)
             assert(abs(dh.theta-gooddh.theta) <= 1e-6)
-
+            
     def test_noncollidingpose(self):
         env=self.env
         with env:

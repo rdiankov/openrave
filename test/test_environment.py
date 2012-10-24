@@ -44,7 +44,10 @@ class TestEnvironment(EnvironmentSetup):
         s = 'this is a test string'
         env.SetUserData(s)
         assert(env.GetUserData()==s)
-            
+        robot=env.GetRobots()[0]
+        testdict = {robot.GetManipulators()[0]:1}
+        assert(testdict[robot.GetManipulators()[0]] == 1)
+        
     def test_uri(self):
         env=self.env
         xml="""<environment>

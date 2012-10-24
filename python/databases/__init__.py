@@ -47,6 +47,10 @@ class DatabaseGenerator(metaclass.AutoReloader):
     """The base class defining the structure of the openrave database generators.
     """
     def __init__(self,robot):
+        """
+        :param robot: if not None, will use the robot's active manipulator
+        :param manip: if not None, will the manipulator, takes precedence over robot
+        """
         self.robot = robot
         self.env = self.robot.GetEnv()
         self._databasefile = None # necessary if file handle needs to be open
@@ -54,7 +58,7 @@ class DatabaseGenerator(metaclass.AutoReloader):
             self.manip = self.robot.GetActiveManipulator()
         except:
             self.manip = None
-
+            
     def _CloseDatabase(self):
         if self._databasefile is not None:
             try:
