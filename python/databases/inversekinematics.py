@@ -795,6 +795,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik is infeasible')
         
         with self.robot:
+            self.robot.SetActiveManipulator(self.manip)
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
             cmd = 'DebugIK robot %s '%self.robot.GetName()
@@ -919,7 +920,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
                 env.Add(robot)        
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices,manip=robot.GetManipulator(options.manipname))
-                if not ikmodel.load():
+                if not ikmodel.load(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
                 
                 if options.iktests is not None:

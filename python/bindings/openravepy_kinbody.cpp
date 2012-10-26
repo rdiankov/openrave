@@ -1781,7 +1781,7 @@ public:
         return object(openravepy::toPyConfigurationSpecification(_pbody->GetConfigurationSpecificationIndices(vindices,interpolation)));
     }
 
-    void SetConfigurationValues(object ovalues, uint32_t checklimits) {
+    void SetConfigurationValues(object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits) {
         vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
         BOOST_ASSERT((int)vvalues.size()==_pbody->GetDOF()+7);
         _pbody->SetConfigurationValues(vvalues.begin(),checklimits);
@@ -3265,6 +3265,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, Compute
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateRobotStateSaver_overloads, CreateRobotStateSaver, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 
 void init_openravepy_kinbody()
 {
@@ -3424,7 +3425,7 @@ void init_openravepy_kinbody()
                         .def("SetNonCollidingConfiguration",&PyKinBody::SetNonCollidingConfiguration, DOXY_FN(KinBody,SetNonCollidingConfiguration))
                         .def("GetConfigurationSpecification",&PyKinBody::GetConfigurationSpecification, GetConfigurationSpecification_overloads(args("interpolation"), DOXY_FN(KinBody,GetConfigurationSpecification)))
                         .def("GetConfigurationSpecificationIndices",&PyKinBody::GetConfigurationSpecificationIndices, GetConfigurationSpecificationIndices_overloads(args("indices","interpolation"), DOXY_FN(KinBody,GetConfigurationSpecificationIndices)))
-                        .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues))
+                        .def("SetConfigurationValues",&PyKinBody::SetConfigurationValues, SetConfigurationValues_overloads(args("values","checklimits"), DOXY_FN(KinBody,SetConfigurationValues)))
                         .def("GetConfigurationValues",&PyKinBody::GetConfigurationValues, DOXY_FN(KinBody,GetConfigurationValues))
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
