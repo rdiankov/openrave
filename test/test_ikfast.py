@@ -248,7 +248,7 @@ def parseoptions(args=None):
         elif robot == 'pr2':
             options.robotfilenames += ['robots/pr2-beta-static.zae']
         elif robot == '*':
-            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml','ikfastrobots/fail3.robot.xml','robots/kuka-youbot.zae', 'robots/universalrobots-ur6-85-5-a.zae']
+            options.robotfilenames += ['robots/unimation-pumaarm.zae','robots/barrett-wam.zae','robots/pr2-beta-static.zae','robots/neuronics-katana.zae','robots/mitsubishi-pa10.zae','robots/schunk-lwa3.zae','robots/darpa-arm.zae','robots/exactdynamics-manusarmleft.zae','robots/kuka-kr5-r650.zae','robots/kuka-kr5-r850.zae','robots/kuka-kr30l16.zae','robots/tridof.robot.xml','robots/barrett-wam4.zae','robots/kawada-hironx.zae','ikfastrobots/fail1.robot.xml','ikfastrobots/fail3.robot.xml', 'ikfastrobots/fail4.robot.xml','robots/kuka-youbot.zae', 'robots/universalrobots-ur6-85-5-a.zae']
         elif options.robots == 'random':
             options.robotfilenames.append('random')
         else:
@@ -259,8 +259,9 @@ def parseoptions(args=None):
 def test_robot_ikfast():
     global options
     if options is None:
-        return
         #options = parseoptions([])
+        return
+    
     RaveInitialize(load_all_plugins=False)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errosr
     envlocal=Environment()
@@ -279,14 +280,13 @@ def test_robot_ikfast():
                     if armdof >= expecteddof and armdof <= expecteddof+options.maxfreejoints:
                         for freeindices in combinations(manip.GetArmIndices(),armdof-expecteddof):
                             workitems.append((RunRobotStats(), robotfilename, manip.GetName(), str(iktype),freeindices))
+        for work in workitems:
+            yield work
     finally:
         envlocal.Destroy()
         # for some reason the plugindatabase _threadPluginLoader thread is on a different process
         # than the main threading waiting for it to finish, so it is necessary to call RaveDestroy
         RaveDestroy()
-
-    for work in workitems:
-        yield work
     
 if __name__ == "__main__":
     import test_ikfast

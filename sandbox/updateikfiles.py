@@ -63,7 +63,11 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
 #include "plugindefs.h"
 
 """%robotid
-                code += open(ikmodel.getsourcefilename(True),'r').read()
+                sourcefilename = ikmodel.getsourcefilename(True)
+                if len(sourcefilename) == 0:
+                    raise ValueError(u'robot %s manip %s cannot generate ik %s'%(robot.GetName(),manip.GetName(),iktype))
+                
+                code += open(sourcefilename,'r').read()
                 code += """
 #include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {

@@ -445,7 +445,8 @@ protected:
             _listplugins.clear();
         }
         // cannot lock mutex due to __erase_iterator
-        _listRegisteredInterfaces.clear();
+        // cannot clear _listRegisteredInterfaces since there are destructors that will remove items from the list
+        //_listRegisteredInterfaces.clear();
         {
             boost::mutex::scoped_lock lock(_mutex);
             _CleanupUnusedLibraries();

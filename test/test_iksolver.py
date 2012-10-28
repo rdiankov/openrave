@@ -247,3 +247,22 @@ class TestIkSolver(EnvironmentSetup):
             # test pickling
             ikparam3pickled = pickle.loads(pickle.dumps(ikparam3))
             assert(str(ikparam3pickled) == str(ikparam3))
+
+    def test_ikfastrobotsolutions(self):
+        env=self.env
+        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 247)])]
+        for robotfilename, manipname, testsolutions in testrobotfiles:
+            env.Reset()
+            robot=self.LoadRobot(robotfilename)
+            manip=robot.GetManipulator(manipname)
+            ikmodel=databases.inversekinematics.InverseKinematicsModel(manip=manip,iktype=IkParameterization.Type.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            for values, numexpected in testsolutions:
+                robot.SetDOFValues(values,manip.GetArmIndices())
+                solutions=manip.FindIKSolutions(manip.GetIkParameterization(ikmodel.iktype),0)
+                numsolutions = len(solutions)
+                if numsolutions != numexpected:
+                    raise ValueError('%s!=%s, robot=%s, manip=%s, values=%r'%(numsolutions,numexpected,robotfilename,manipname, values))
+                
+                assert(numsolutions==numexpected)

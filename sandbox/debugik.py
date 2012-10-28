@@ -1066,9 +1066,10 @@ def detdialytically():
 
 def test_ik():
     from sympy import *
+    from sympy import S, pi, sin, cos, PolynomialError, Symbol
     import numpy
     import __builtin__
-    from openravepy.ikfast import AST, combinations
+    from openravepy.ikfast import AST, combinations, fmod
     from itertools import izip
     from openravepy import axisAngleFromRotationMatrix
     numpy.set_printoptions(15)
@@ -1086,7 +1087,7 @@ def test_ik():
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
-
+    
     # get values
     possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
     jointvalues = [S.Zero]*len(jointvars)

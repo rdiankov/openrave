@@ -16,6 +16,11 @@ Core
 
 * Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots by calling :meth:`.KinBody.Init`.
 
+Inverse Kinematics
+------------------
+
+* IkFast can detect aligned axes and give infinite solutions.
+
 Python
 ------
 
