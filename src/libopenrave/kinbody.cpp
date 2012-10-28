@@ -350,6 +350,9 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             plink->_vGeometries.push_back(geom);
             plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
         }
+        FOREACHC(itadjacentname, info._vForcedAdjacentLinks) {
+            _vForcedAdjacentLinks.push_back(std::make_pair(info._name, *itadjacentname));
+        }
         _veclinks.push_back(plink);
     }
     _vecjoints.reserve(jointinfos.size());

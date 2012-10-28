@@ -162,10 +162,10 @@ public:
         dReal _mass;
         /// inertia along the axes of _tMassFrame
         Vector _vinertiamoments;
-
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
-
+        /// force the following links to be treated as adjacent to this link
+        std::vector<std::string> _vForcedAdjacentLinks;
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and

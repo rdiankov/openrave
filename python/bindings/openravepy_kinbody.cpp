@@ -146,6 +146,7 @@ public:
             _vinertiamoments = toPyVector3(Vector(1,1,1));
             _bStatic = false;
             _bIsEnabled = true;
+            _vForcedAdjacentLinks = boost::python::list();
         }
         KinBody::LinkInfoPtr GetLinkInfo() {
             KinBody::LinkInfoPtr pinfo(new KinBody::LinkInfo());
@@ -176,6 +177,7 @@ public:
                 std::string name = extract<std::string>(okeyvalue[0]);
                 info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
             }
+            info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
             info._bStatic = _bStatic;
             info._bIsEnabled = _bIsEnabled;
             return pinfo;
@@ -187,6 +189,7 @@ public:
         dReal _mass;
         object _vinertiamoments;
         boost::python::dict _mapFloatParameters, _mapIntParameters;
+        object _vForcedAdjacentLinks;
         bool _bStatic;
         bool _bIsEnabled;
     };
@@ -3158,7 +3161,7 @@ public:
     {
         return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable);
     }
-    static void setstate(PyKinBody::PyGeometryInfo r, boost::python::tuple state) {
+    static void setstate(PyKinBody::PyGeometryInfo& r, boost::python::tuple state) {
         r._t = state[0];
         r._vGeomData = state[1];
         r._vDiffuseColor = state[2];
@@ -3180,9 +3183,9 @@ class LinkInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyKinBody::PyLinkInfo& r)
     {
-        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._bStatic, r._bIsEnabled);
+        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled);
     }
-    static void setstate(PyKinBody::PyLinkInfo r, boost::python::tuple state) {
+    static void setstate(PyKinBody::PyLinkInfo& r, boost::python::tuple state) {
         r._vgeometryinfos = boost::python::list(state[0]);
         r._name = boost::python::extract<std::string>(state[1]);
         r._t = state[2];
@@ -3190,8 +3193,9 @@ public:
         r._mass = boost::python::extract<dReal>(state[4]);
         r._mapFloatParameters = dict(state[5]);
         r._mapIntParameters = dict(state[6]);
-        r._bStatic = boost::python::extract<bool>(state[7]);
-        r._bIsEnabled = boost::python::extract<bool>(state[8]);
+        r._vForcedAdjacentLinks = dict(state[7]);
+        r._bStatic = boost::python::extract<bool>(state[8]);
+        r._bIsEnabled = boost::python::extract<bool>(state[9]);
     }
 };
 
@@ -3202,7 +3206,7 @@ public:
     {
         return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular));
     }
-    static void setstate(PyKinBody::PyJointInfo r, boost::python::tuple state) {
+    static void setstate(PyKinBody::PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
         r._name = boost::python::extract<std::string>(state[0][1]);
         r._linkname0 = boost::python::extract<std::string>(state[0][2]);
@@ -3230,9 +3234,19 @@ public:
 class ManipulatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyRobotBase::PyManipulatorInfo& r)
+    static tuple getstate(const PyRobotBase::PyManipulatorInfo& r)
     {
         return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vClosingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
+    }
+    static void setstate(PyRobotBase::PyManipulatorInfo& r, boost::python::tuple state) {
+        r._name = boost::python::extract<std::string>(state[0]);
+        r._sBaseLinkName = boost::python::extract<std::string>(state[1]);
+        r._sEffectorLinkName = boost::python::extract<std::string>(state[2]);
+        r._tLocalTool = state[4];
+        r._vClosingDirection = state[5];
+        r._vdirection = state[6];
+        r._sIkSolverXMLId = boost::python::extract<std::string>(state[7]);
+        r._vGripperJointNames = state[8];
     }
 };
 
@@ -3509,6 +3523,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vinertiamoments",&PyKinBody::PyLinkInfo::_vinertiamoments)
                           .def_readwrite("_mapFloatParameters",&PyKinBody::PyLinkInfo::_mapFloatParameters)
                           .def_readwrite("_mapIntParameters",&PyKinBody::PyLinkInfo::_mapIntParameters)
+                          .def_readwrite("_vForcedAdjacentLinks",&PyKinBody::PyLinkInfo::_vForcedAdjacentLinks)
                           .def_readwrite("_bStatic",&PyKinBody::PyLinkInfo::_bStatic)
                           .def_readwrite("_bIsEnabled",&PyKinBody::PyLinkInfo::_bIsEnabled)
                           .def_pickle(LinkInfo_pickle_suite())
