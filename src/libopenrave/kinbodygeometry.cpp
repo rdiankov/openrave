@@ -243,9 +243,9 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.pos = tglobal.trans;
         break;
     case GT_Cylinder:
-        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[2]*tglobal.m[2])*_info._vGeomData.x;
-        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[6]*tglobal.m[6])*_info._vGeomData.x;
-        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(1-tglobal.m[10]*tglobal.m[10])*_info._vGeomData.x;
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_info._vGeomData.x;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_info._vGeomData.x;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_info._vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_info._vGeomData.x;
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GT_TriMesh:
