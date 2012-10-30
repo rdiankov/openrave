@@ -140,3 +140,7 @@ Release Process
 
 6. Copy the debian packages from openrave/testing to openrave/release
 
+7. Create a new tag:
+
+  git tag -a vX.Y.Z -m "OpenRAVE Release X.Y.Z"
+  git push --tags

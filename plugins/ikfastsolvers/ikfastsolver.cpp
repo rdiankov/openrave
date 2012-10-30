@@ -34,7 +34,8 @@ public:
     IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc) {
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(IkReal));
         _vfreeparams.resize(ikfunctions->_GetNumFreeParameters());
-        _fFreeSolutionInc = 0.25f; // TODO 0.25 is very arbitrary!
+        _fFreeIncRevolute = PI/8; // arbitrary
+        _fFreeIncPrismaticNum = 10.0; // arbitrary
         for(size_t i = 0; i < _vfreeparams.size(); ++i) {
             _vfreeparams[i] = ikfunctions->_GetFreeParameters()[i];
         }
@@ -45,6 +46,8 @@ public:
         _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
+        RegisterCommand("SetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
+                        "Specify two values. First is the default free increment for revolute joint and second is the number of segment to divide free prismatic joints. ");
         RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IkReal>::_GetSolutionIndicesCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered. if large-range joints wrap around, (index>>16) holds the index. So (index&0xffff) is unique to robot link pose, while (index>>16) describes the repetition.");
         RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IkReal>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
@@ -66,6 +69,12 @@ public:
     bool _SetIkThresholdCommand(ostream& sout, istream& sinput)
     {
         sinput >> _ikthreshold;
+        return !!sinput;
+    }
+
+    bool _SetFreeIncrementsCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
         return !!sinput;
     }
 
@@ -745,7 +754,7 @@ private:
             if( iksol.GetFree().size() > 0 ) {
                 // have to search over all the free parameters of the solution!
                 vsolfree.resize(iksol.GetFree().size());
-                std::vector<dReal> vFreeInc(iksol.GetFree().size(),_fFreeSolutionInc);
+                std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
                 res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck)), vFreeInc);
             }
             else {
@@ -965,7 +974,7 @@ private:
                 if( iksol.GetFree().size() > 0 ) {
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(iksol.GetFree().size());
-                    std::vector<dReal> vFreeInc(iksol.GetFree().size(),_fFreeSolutionInc);
+                    std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
                     IkReturnAction retaction = ComposeSolution(iksol.GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(iksol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vikreturns), boost::ref(stateCheck)), vFreeInc);
                     if( retaction & IKRA_Quit) {
                         return retaction;
@@ -1223,6 +1232,22 @@ private:
         }
     }
 
+    /// \brief return incremental values for indices in the chain
+    std::vector<dReal> _GetFreeIncFromIndices(const std::vector<int>& vindices)
+    {
+        std::vector<dReal> vFreeInc(vindices.size());
+        for(size_t i = 0; i < vindices.size(); ++i) {
+            if( _vjointrevolute.at(i) ) {
+                vFreeInc[i] = _fFreeIncRevolute;
+            }
+            else {
+                // get the range of the axis and divide by 16..?
+                vFreeInc[i] = (_qupper.at(i)-_qlower.at(i))/_fFreeIncPrismaticNum;
+            }
+        }
+        return vFreeInc;
+    }
+
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
@@ -1231,7 +1256,8 @@ private:
     std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
     boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
     std::vector<dReal> _vFreeInc;
-    dReal _fFreeSolutionInc; ///< increment for solution free variables
+    dReal _fFreeIncRevolute; ///< default increment for revolute joints
+    dReal _fFreeIncPrismaticNum; ///< default number of segments to divide a free slider axis
     int _nTotalDOF;
     std::vector<dReal> _qlower, _qupper, _qmid;
     std::vector<int> _qbigrangeindices; ///< indices into _qlower/_qupper of joints that are revolute, not circular, and have ranges > 360

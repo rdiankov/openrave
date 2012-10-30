@@ -81,6 +81,7 @@ public:
 
     /// \brief Gets the indices of the configuration space that have to be preset before a full solution can be returned
     ///
+    /// 0 always points to the first value accepted by the ik function.
     /// \return vector of indices indicating the free parameters
     virtual const std::vector<int>& GetFree() const = 0;
 
@@ -99,7 +100,7 @@ public:
     /// \brief add one solution and return its index for later retrieval
     ///
     /// \param vinfos Solution data for each degree of freedom of the manipulator
-    /// \param vfree If the solution represents an infinite space, holds free parameters of the solution that users can freely set.
+    /// \param vfree If the solution represents an infinite space, holds free parameters of the solution that users can freely set. The indices are of the configuration that the IK solver accepts rather than the entire robot, ie 0 points to the first value accepted.
     virtual size_t AddSolution(const std::vector<IkSingleDOFSolutionBase<T> >& vinfos, const std::vector<int>& vfree) = 0;
 
     /// \brief returns the solution pointer
