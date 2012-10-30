@@ -359,7 +359,9 @@ The possible properties that can be set are: ";
         force = Vector(0,0,0);
         torque = Vector(0,0,0);
         if( body ) {
+            //Loop over all joints in the parent body
             FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
+                //if this joint's parent or child body is the current body
                 if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
                     dJointID joint = _odespace->GetJoint(*itjoint);
                     dJointFeedback* feedback = dJointGetFeedback( joint );
