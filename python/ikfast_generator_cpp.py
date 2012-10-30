@@ -1792,38 +1792,43 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 # http://www.springerlink.com/content/t72g1635574u10q3/
                 # the following poly has 2 double roots and requires 105-110 steps to get accurate roots (-2.48003364697210,  -0.266182031226875, -0.399192786087098, 5.23118700753098, 1.42932474708659, -3.56915690046190, 1.51649127129379, -0.100045756315578, -1.36239190484780)
                 # on universalrobots-ur6-85-5-a.zae (deg 8), 110 steps is 87.5%, 150 steps is 88.8%, performance difference is 200ms
-                fcode = """static inline void %s(IkReal rawcoeffs[%d+1], IkReal rawroots[%d], int& numroots)
+                fcode = """static inline void %(name)s(IkReal rawcoeffs[%(deg)d+1], IkReal rawroots[%(deg)d], int& numroots)
 {
     using std::complex;
+    if( rawcoeffs[0] == 0 ) {
+        // solve with one reduced degree
+        %(reducedpolyroots)s(&rawcoeffs[1], &rawroots[0], numroots);
+        return;
+    }
     IKFAST_ASSERT(rawcoeffs[0] != 0);
     const IkReal tol = 128.0*std::numeric_limits<IkReal>::epsilon();
     const IkReal tolsqrt = sqrt(std::numeric_limits<IkReal>::epsilon());
-    complex<IkReal> coeffs[%d];
+    complex<IkReal> coeffs[%(deg)d];
     const int maxsteps = 110;
-    for(int i = 0; i < %d; ++i) {
+    for(int i = 0; i < %(deg)d; ++i) {
         coeffs[i] = complex<IkReal>(rawcoeffs[i+1]/rawcoeffs[0]);
     }
-    complex<IkReal> roots[%d];
-    IkReal err[%d];
+    complex<IkReal> roots[%(deg)d];
+    IkReal err[%(deg)d];
     roots[0] = complex<IkReal>(1,0);
     roots[1] = complex<IkReal>(0.4,0.9); // any complex number not a root of unity works
     err[0] = 1.0;
     err[1] = 1.0;
-    for(int i = 2; i < %d; ++i) {
+    for(int i = 2; i < %(deg)d; ++i) {
         roots[i] = roots[i-1]*roots[1];
         err[i] = 1.0;
     }
     for(int step = 0; step < maxsteps; ++step) {
         bool changed = false;
-        for(int i = 0; i < %d; ++i) {
+        for(int i = 0; i < %(deg)d; ++i) {
             if ( err[i] >= tol ) {
                 changed = true;
                 // evaluate
                 complex<IkReal> x = roots[i] + coeffs[0];
-                for(int j = 1; j < %d; ++j) {
+                for(int j = 1; j < %(deg)d; ++j) {
                     x = roots[i] * x + coeffs[j];
                 }
-                for(int j = 0; j < %d; ++j) {
+                for(int j = 0; j < %(deg)d; ++j) {
                     if( i != j ) {
                         if( roots[i] != roots[j] ) {
                             x /= (roots[i] - roots[j]);
@@ -1840,14 +1845,14 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     }
 
     numroots = 0;
-    bool visited[%d] = {false};
-    for(int i = 0; i < %d; ++i) {
+    bool visited[%(deg)d] = {false};
+    for(int i = 0; i < %(deg)d; ++i) {
         if( !visited[i] ) {
             // might be a multiple root, in which case it will have more error than the other roots
             // find any neighboring roots, and take the average
             complex<IkReal> newroot=roots[i];
             int n = 1;
-            for(int j = i+1; j < %d; ++j) {
+            for(int j = i+1; j < %(deg)d; ++j) {
                 if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
                     newroot += roots[j];
                     n += 1;
@@ -1864,7 +1869,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         }
     }
 }
-"""%(name,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg,deg)
+"""%{'name':name, 'deg':deg, 'reducedpolyroots':self.using_polyroots(deg-1) }
             self.functions[name] = fcode
         return name
 
