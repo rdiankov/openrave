@@ -935,6 +935,9 @@ public:
                 else if( _masstype == MT_SphereMass) {
                     _masstype = MT_Sphere;
                 }
+                else if( _masstype == MT_MimicGeomMass) {
+                    _masstype = MT_MimicGeom;
+                }
                 _ss >> _fMassDensity;
             }
             else if( xmlname == "total" ) {
@@ -943,6 +946,9 @@ public:
                 }
                 else if( _masstype == MT_Sphere) {
                     _masstype = MT_SphereMass;
+                }
+                else if( _masstype == MT_MimicGeom) {
+                    _masstype = MT_MimicGeomMass;
                 }
                 _ss >> _fTotalMass;
                 _massCustom.fTotalMass = _fTotalMass;
@@ -995,6 +1001,38 @@ public:
 
                     totalmass += mass.ChangeCoordinateSystem((*itgeom)->GetTransform());
                 }
+            }
+            else if( _masstype == MT_MimicGeomMass ) {
+                std::vector<MASS> masses;
+                dReal dummytotal=0;
+                FOREACHC(itgeom, _plink->GetGeometries()) {
+                    MASS mass;
+                    switch((*itgeom)->GetType()) {
+                    case GT_Sphere:
+                        mass = MASS::GetSphericalMassD((*itgeom)->GetSphereRadius(), Vector(),1000);
+                        break;
+                    case GT_Box:
+                        mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), 1000);
+                        break;
+                    case GT_Cylinder:
+                        mass = MASS::GetCylinderMassD((*itgeom)->GetCylinderRadius(), (*itgeom)->GetCylinderHeight(), Vector(), 1000);
+                        break;
+                    default:
+                        break;
+                    }
+                    masses.push_back(mass.ChangeCoordinateSystem((*itgeom)->GetTransform()));
+                    //Lazily find the effective volume by finding a dummy total mass
+                    dummytotal+=mass.fTotalMass;
+                }
+                RAVELOG_DEBUG("Total dummy mass is %f\n",dummytotal);
+                dReal ratio=_fTotalMass/dummytotal;
+                //Store new masses based on the percentage of the total geometry volume in each piece
+                FOREACH(itmass,masses){
+                    itmass->fTotalMass=itmass->fTotalMass*ratio;
+                    RAVELOG_DEBUG("Assigning mass  %f\n",itmass->fTotalMass);
+                    totalmass += *itmass;
+                }
+
             }
             else if( _masstype == MT_Box ) {
                 totalmass = MASS::GetBoxMassD(_vMassExtents, Vector(), _fMassDensity);

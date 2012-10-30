@@ -110,6 +110,7 @@ enum MassType
 {
     MT_None = 0,
     MT_MimicGeom,
+    MT_MimicGeomMass,
     MT_Box,
     MT_BoxMass,         // use total mass instead of density
     MT_Sphere,
