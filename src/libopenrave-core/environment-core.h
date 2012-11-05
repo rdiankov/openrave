@@ -2129,19 +2129,19 @@ protected:
                     //Hardcoded tolerance for now
                     const int tol=2;
                     if( _bRealTime ) {
-                        if(( sleeptime > deltasimtime/tol) &&( sleeptime > 2000) ) {
+                        if(( sleeptime > deltasimtime/tol) &&( sleeptime > 1000) ) {
                             lockenv.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                            int actual_sleep=max((int)sleeptime,1000);
+                            int actual_sleep=max((int)sleeptime*6/8,1000);
                             boost::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
-                            RAVELOG_INFO("sleeptime ideal %d, actually slept: %d\n",(int)sleeptime,(int)actual_sleep);
+                            //RAVELOG_INFO("sleeptime ideal %d, actually slept: %d\n",(int)sleeptime,(int)actual_sleep);
                             nLastSleptTime = utils::GetMicroTime();
                             //Since already slept this cycle, wait till next time to sleep.
                             bNeedSleep = false;
                         }
-                        else if( sleeptime < -deltasimtime/tol ) {
+                        else if( sleeptime < -deltasimtime/tol && ( sleeptime < -1000) ) {
                             // simulation is getting late, so catch up (doesn't happen often in light loads)
-                            RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
+                            //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
                             _nSimStartTime += -sleeptime;     //deltasimtime;
                         }
                     }
@@ -2149,7 +2149,7 @@ protected:
                         nLastSleptTime = utils::GetMicroTime();
                     }
 
-                    RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
+                    //RAVELOG_INFOA("sim: %f, real: %f\n",_nCurSimTime*1e-6f,(utils::GetMicroTime()-_nSimStartTime)*1e-6f);
                 }
             }
 
@@ -2176,6 +2176,7 @@ protected:
                 }
             }
 
+            //TODO: Verify if this always has to happen even if thread slept in RT if statement above
             lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));
