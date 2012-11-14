@@ -686,7 +686,7 @@ public:
                         if( !!ss ) {
                             bTransformOffset = true;
                             toffset.trans *= vscale;
-                            toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz)), quatMultiply(quatFromAxisAngle(Vector(rotx,0,0)), quatFromAxisAngle(Vector(0,roty,0))));
+                            toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz*PI/180)), quatMultiply(quatFromAxisAngle(Vector(rotx*PI/180,0,0)), quatFromAxisAngle(Vector(0,roty*PI/180,0))));
                         }
                         else {
                             RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
@@ -725,7 +725,6 @@ public:
                             itgeom->_vDiffuseColor = vcolor;
                             if( bTransformOffset ) {
                                 itgeom->_meshcollision.ApplyTransform(toffset.inverse());
-                                itgeom->_t = toffset * itgeom->_t;
                             }
                         }
                         return true;
