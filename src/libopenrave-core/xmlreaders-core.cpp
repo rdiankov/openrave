@@ -663,6 +663,78 @@ public:
         }
         return true;
     }
+
+    static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+    {
+        // some formats (screen) has # in the beginning until the STL solid definition.
+        ifstream f(filename.c_str());
+        string strline;
+        if( !!f ) {
+            bool bTransformOffset = false;
+            Transform toffset;
+            Vector vcolor(0.8,0.8,0.8);
+            bool bFound = false;
+            stringstream::streampos pos = f.tellg();
+            while( !!getline(f, strline) ) {
+                boost::trim(strline);
+                if( strline.size() > 0 && strline[0] == '#' ) {
+                    size_t indCURRENT_LOCATION = strline.find("<CURRENT_LOCATION>");
+                    if( indCURRENT_LOCATION != string::npos ) {
+                        stringstream ss(strline.substr(indCURRENT_LOCATION+18));
+                        dReal rotx, roty, rotz;
+                        ss >> toffset.trans.x >> toffset.trans.y >> toffset.trans.z >> rotx >> roty >> rotz;
+                        if( !!ss ) {
+                            bTransformOffset = true;
+                            toffset.trans *= vscale;
+                            toffset.rot = quatMultiply(quatFromAxisAngle(Vector(0,0,rotz)), quatMultiply(quatFromAxisAngle(Vector(rotx,0,0)), quatFromAxisAngle(Vector(0,roty,0))));
+                        }
+                        else {
+                            RAVELOG_WARN("<CURRENT_LOCATION> bad format\n");
+                            toffset = Transform();
+                        }
+                    }
+                    size_t indCOLOR_INFORMATION = strline.find("<COLOR_INFORMATION>");
+                    if( indCOLOR_INFORMATION != string::npos ) {
+                        stringstream ss(strline.substr(indCOLOR_INFORMATION+19));
+                        ss >> vcolor.x >> vcolor.y >> vcolor.z;
+                        if( !!ss ) {
+                        }
+                        else {
+                            RAVELOG_WARN("<COLOR_INFORMATION> bad format\n");
+                        }
+                    }
+                    continue;
+                }
+                if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
+                    bFound = true;
+                    break;
+                }
+                pos = f.tellg();
+            }
+            if( bFound ) {
+                RAVELOG_INFO(str(boost::format("STL file %s has screen metadata")%filename));
+                stringbuf buf;
+                f.seekg(pos);
+                f.get(buf, 0);
+
+                string newdata = buf.str();
+                aiSceneManaged scene(newdata, false);
+                if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                        FOREACH(itgeom, listGeometries) {
+                            itgeom->_vDiffuseColor = vcolor;
+                            if( bTransformOffset ) {
+                                itgeom->_meshcollision.ApplyTransform(toffset.inverse());
+                                itgeom->_t = toffset * itgeom->_t;
+                            }
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 #endif
 
     static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
@@ -687,36 +759,8 @@ public:
             }
             if( extension == "stl" || extension == "x") {
                 if( extension == "stl" ) {
-                    // some formats (screen) has # in the beginning until the STL solid definition.
-                    ifstream f(filename.c_str());
-                    string strline;
-                    if( !!f ) {
-                        bool bFound = false;
-                        stringstream::streampos pos = f.tellg();
-                        while( !!getline(f, strline) ) {
-                            boost::trim(strline);
-                            if( strline.size() > 0 && strline[0] == '#' ) {
-                                continue;
-                            }
-                            if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
-                                bFound = true;
-                                break;
-                            }
-                            pos = f.tellg();
-                        }
-                        if( bFound ) {
-                            stringbuf buf;
-                            f.seekg(pos);
-                            f.get(buf, 0);
-
-                            string newdata = buf.str();
-                            aiSceneManaged scene(newdata, false);
-                            if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-                                if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
-                                    return true;
-                                }
-                            }
-                        }
+                    if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
+                        return true;
                     }
                     RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
                 }
