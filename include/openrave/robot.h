@@ -732,6 +732,14 @@ private:
         \param[out] vbodies filled with the grabbed bodies
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
+
+        \param[in] body the grabbed body
+        \param[out] list of the ignored links
+     */
+    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+
     //@}
 
     /** \brief Simulate the robot and update the grabbed bodies and attached sensors

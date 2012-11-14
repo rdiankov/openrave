@@ -471,15 +471,16 @@ public:
                                         domInstance_physics_modelRef ipmodel = daeSafeCast<domInstance_physics_model>(daeSidRef(attachment_sid.substr(0,attachment_sid.rfind('/')), piscene).resolve().elt);
                                         // get the instance_rigid_body
                                         domInstance_rigid_bodyRef ref_irigidbody, irigidbody;
+                                        daeElementRef ref_target;
                                         string sidfind = ref_attachment_rigid_body->getAttribute("sid");
                                         KinBody::LinkPtr ref_link, link;
                                         for(size_t irigid = 0; irigid < ref_ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
                                             domInstance_rigid_bodyRef temprigid = ref_ipmodel->getInstance_rigid_body_array()[irigid];
                                             if( temprigid->getBody() == sidfind ) {
                                                 ref_irigidbody = temprigid;
-                                                daeElementRef ptarget = temprigid->getTarget().getElement();
-                                                if( !!ptarget ) {
-                                                    string nodeid = ptarget->getID();
+                                                ref_target = temprigid->getTarget().getElement();
+                                                if( !!ref_target ) {
+                                                    string nodeid = ref_target->getID();
                                                     FOREACH(itbinding,allbindings) {
                                                         FOREACH(itlinkbinding, itbinding->listLinkBindings) {
                                                             if( nodeid == itlinkbinding->_node->getID() ) {
@@ -528,7 +529,48 @@ public:
                                         if( !!ref_link && !!link ) {
                                             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
                                             if( !!probot ) {
-                                                probot->Grab(link->GetParent(),ref_link);
+                                                // see if there are any ignore links
+                                                std::set<int> setRobotLinksToIgnore;
+                                                daeElementRef pchildtec = pchild->getChild("technique");
+                                                if( !!pchildtec ) {
+                                                    daeTArray<daeElementRef> children;
+                                                    pchildtec->getChildren(children);
+                                                    for(size_t ic = 0; ic < children.getCount(); ++ic) {
+                                                        daeElementRef pchildchild = children[ic];
+                                                        if( std::string(pchildchild->getElementName()) == "ignore_link" ) {
+                                                            KinBody::LinkPtr pignore_link;
+                                                            string ignore_link_sid = pchildchild->getAttribute("link");
+                                                            for(size_t irigid = 0; irigid < ref_ipmodel->getInstance_rigid_body_array().getCount(); ++irigid) {
+                                                                domInstance_rigid_bodyRef temprigid = ref_ipmodel->getInstance_rigid_body_array()[irigid];
+                                                                if( temprigid->getBody() == ignore_link_sid ) {
+                                                                    daeElementRef ptarget = temprigid->getTarget().getElement();
+                                                                    if( !!ptarget ) {
+                                                                        string nodeid = ptarget->getID();
+                                                                        FOREACH(itbinding,allbindings) {
+                                                                            FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                                                if( nodeid == itlinkbinding->_node->getID() ) {
+                                                                                    pignore_link = itlinkbinding->_link;
+                                                                                    break;
+                                                                                }
+                                                                            }
+                                                                            if( !!pignore_link ) {
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                        break;
+                                                                    }
+                                                                    else {
+                                                                        RAVELOG_WARN(str(boost::format("failed to find target to rigid attachment: %s")%temprigid->getTarget().str()));
+                                                                    }
+                                                                }
+                                                            }
+                                                            if( !!pignore_link ) {
+                                                                setRobotLinksToIgnore.insert(pignore_link->GetIndex());
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                probot->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));

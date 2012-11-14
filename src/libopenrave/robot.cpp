@@ -1336,7 +1336,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     Transform t = plink->GetTransform();
     Transform tbody = pbody->GetTransform();
     pgrabbed->_troot = t.inverse() * tbody;
-    pgrabbed->_ProcessCollidingLinks();
+    pgrabbed->_ProcessCollidingLinks(std::set<int>());
     // set velocity
     std::pair<Vector, Vector> velocity = plink->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
@@ -1359,7 +1359,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     Transform t = pRobotLinkToGrabWith->GetTransform();
     Transform tbody = pbody->GetTransform();
     pgrabbed->_troot = t.inverse() * tbody;
-    pgrabbed->_ProcessCollidingLinks();
+    pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
     // set velocity
     std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
@@ -1405,7 +1405,7 @@ void RobotBase::RegrabAll()
         if( !!pbody ) {
             _RemoveAttachedBody(pbody);
             CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
-            pgrabbed->_ProcessCollidingLinks();
+            pgrabbed->_ProcessCollidingLinks(pgrabbed->_setRobotLinksToIgnore);
         }
     }
 }
@@ -1419,7 +1419,7 @@ void RobotBase::_Regrab(UserDataPtr _pgrabbed)
         CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
         _RemoveAttachedBody(pgrabbedbody);
         CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
-        pgrabbed->_ProcessCollidingLinks();
+        pgrabbed->_ProcessCollidingLinks(pgrabbed->_setRobotLinksToIgnore);
     }
 }
 
@@ -1444,6 +1444,24 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
             vbodies.push_back(pbody);
         }
     }
+}
+
+void RobotBase::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const
+{
+    ignorelinks.clear();
+    FOREACHC(itgrabbed, _vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+        KinBodyPtr grabbedbody = pgrabbed->_pgrabbedbody.lock();
+        if( grabbedbody == body ) {
+            FOREACHC(itrobotlink, _veclinks) {
+                if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itrobotlink) == pgrabbed->_listNonCollidingLinks.end() ) {
+                    ignorelinks.push_back(*itrobotlink);
+                }
+            }
+            return;
+        }
+    }
+    RAVELOG_WARN(str(boost::format("body %s is not currently grabbed")%body->GetName()));
 }
 
 void RobotBase::SetActiveManipulator(int index)

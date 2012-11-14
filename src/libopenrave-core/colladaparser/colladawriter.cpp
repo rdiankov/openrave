@@ -1879,6 +1879,17 @@ private:
                     pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
                     rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
                     pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
+
+                    std::list<KinBody::LinkConstPtr> listIgnoreLinks;
+                    probot->GetIgnoredLinksOfGrabbed(*itgrabbed, listIgnoreLinks);
+                    if( listIgnoreLinks.size() > 0 ) {
+                        daeElementRef pconstrainttec = pconstraint->add("technique");
+                        pconstrainttec->setAttribute("profile","OpenRAVE");
+                        FOREACHC(itignorelink, listIgnoreLinks) {
+                            string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
+                            pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
+                        }
+                    }
                 }
             }
         }

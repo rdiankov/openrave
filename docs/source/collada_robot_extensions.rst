@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.3.2)
+COLLADA Robot Extensions (Version 0.3.3)
 ----------------------------------------
 
 OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
@@ -308,6 +308,7 @@ Child Elements
   :header: Element, Description, Occurances
   
   <rigid_constraint> | A list of rigid constraints | 0 or more
+  <rigid_constraint>/<technique>/<ignore_link> | The sid of a link whose collision is ignored with the attached body. The link belongs to the ref_attachment physics model. | 0 or more
 
 Details
 ~~~~~~~
@@ -325,6 +326,10 @@ Describes robot whose physics model SID is **pmodel1_inst** grabbing with its **
         <rigid_constraint>
           <ref_attachment rigid_body="pmodel1_inst/rigid_hand"/>
           <attachment rigid_body="pmodel2_inst/rigid0"/>
+          <technique profile="OpenRAVE">
+            <ignore_link link="pmodel1_inst/rigid_dummy"/>
+            <ignore_link link="pmodel1_inst/rigid2"/>
+          </technique>
         </rigid_constraint>
       </technique>
     </extra>
