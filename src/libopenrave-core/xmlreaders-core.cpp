@@ -141,10 +141,15 @@ int& GetXMLErrorCount()
 class aiSceneManaged
 {
 public:
-    aiSceneManaged(const std::string& filename, unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
+    aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
         boost::call_once(__SetAssimpLog,__onceSetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
-        _scene = _importer.ReadFile(filename.c_str(),flags);
+        if( bIsFilename ) {
+            _scene = _importer.ReadFile(dataorfilename.c_str(),flags);
+        }
+        else {
+            _scene = _importer.ReadFileFromMemory(dataorfilename.c_str(),dataorfilename.size(), flags);
+        }
         if( _scene == NULL ) {
             RAVELOG_VERBOSE("assimp error: %s\n",_importer.GetErrorString());
         }
@@ -234,11 +239,46 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
 
 #ifdef OPENRAVE_ASSIMP
     // assimp doesn't support vrml/iv, so don't waste time
-    if((extension != "iv")&&(extension != "wrl")&&(extension != "vrml")) {
-        aiSceneManaged scene(filename);
-        if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-            if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
-                return true;
+    if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
+        {
+            aiSceneManaged scene(filename);
+            if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
+                    return true;
+                }
+            }
+        }
+        if( extension == "stl" ) {
+            // some formats (screen) has # in the beginning until the STL solid definition.
+            ifstream f(filename.c_str());
+            string strline;
+            if( !!f ) {
+                bool bFound = false;
+                stringstream::streampos pos = f.tellg();
+                while( !!getline(f, strline) ) {
+                    boost::trim(strline);
+                    if( strline.size() > 0 && strline[0] == '#' ) {
+                        continue;
+                    }
+                    if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
+                        bFound = true;
+                        break;
+                    }
+                    pos = f.tellg();
+                }
+                if( bFound ) {
+                    stringbuf buf;
+                    f.seekg(pos);
+                    f.get(buf, 0);
+
+                    string newdata = buf.str();
+                    aiSceneManaged scene(newdata, false);
+                    if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                        if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
+                            return true;
+                        }
+                    }
+                }
             }
         }
         if( extension == "stl" || extension == "x") {
@@ -637,14 +677,47 @@ public:
         // assimp doesn't support vrml/iv, so don't waste time
         if( extension != "iv" && extension != "wrl" && extension != "vrml" ) {
             //Assimp::DefaultLogger::get()->setLogSeverity(Assimp::Logger::Debugging);
-            aiSceneManaged scene(filename);
-            if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-                if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
-                    return true;
+            {
+                aiSceneManaged scene(filename);
+                if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                        return true;
+                    }
                 }
             }
             if( extension == "stl" || extension == "x") {
                 if( extension == "stl" ) {
+                    // some formats (screen) has # in the beginning until the STL solid definition.
+                    ifstream f(filename.c_str());
+                    string strline;
+                    if( !!f ) {
+                        bool bFound = false;
+                        stringstream::streampos pos = f.tellg();
+                        while( !!getline(f, strline) ) {
+                            boost::trim(strline);
+                            if( strline.size() > 0 && strline[0] == '#' ) {
+                                continue;
+                            }
+                            if( strline.size() >= 5 && strline.substr(0,5) == string("solid") ) {
+                                bFound = true;
+                                break;
+                            }
+                            pos = f.tellg();
+                        }
+                        if( bFound ) {
+                            stringbuf buf;
+                            f.seekg(pos);
+                            f.get(buf, 0);
+
+                            string newdata = buf.str();
+                            aiSceneManaged scene(newdata, false);
+                            if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+                                if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
                     RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
                 }
                 return false;
