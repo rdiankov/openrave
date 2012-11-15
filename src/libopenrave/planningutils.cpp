@@ -1315,6 +1315,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
         if( !_CheckState() ) {
+            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
@@ -1346,6 +1347,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if (start == 0 ) {
         params->_setstatefn(pQ0);
         if( !_CheckState() ) {
+            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         start = 1;
@@ -1365,12 +1367,14 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if( start > 0 ) {
         params->_setstatefn(_vtempconfig);
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
         if( !_CheckState() ) {
+            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         if( !!params->_getstatefn ) {
@@ -1380,6 +1384,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
             pvCheckedConfigurations->push_back(_vtempconfig);
         }
         if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
@@ -1637,7 +1642,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
     return IkReturnPtr();
 }
 
-bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples)
+bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples, int maxsamples)
 {
     // currently this is a very slow implementation...
     samples.clear();
@@ -1647,6 +1652,10 @@ bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples)
             break;
         }
         samples.push_back(ikreturn);
+        if( maxsamples > 0 && samples.size() >= maxsamples ) {
+            return true;
+        }
+        RAVELOG_VERBOSE(str(boost::format("computed %d samples")%samples.size()));
     }
     return samples.size()>0;
 }

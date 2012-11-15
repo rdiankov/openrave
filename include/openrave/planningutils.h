@@ -224,6 +224,10 @@ public:
     /// \brief checks line collision. Uses the constructor's self-collisions
     virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
 
+    CollisionReportPtr GetReport() const {
+        return _report;
+    }
+
 protected:
     virtual bool _CheckState();
 
@@ -277,8 +281,9 @@ public:
     /// \brief samples the rests of the samples until cannot be sampled anymore.
     ///
     /// \param vsamples vector is rest with samples
+    /// \param maxsamples number of max samples to gather before returning. If 0, will gather all.
     /// \return true if a sample was inserted into vsamples
-    bool SampleAll(std::list<IkReturnPtr>& samples);
+    bool SampleAll(std::list<IkReturnPtr>& samples, int maxsamples=0);
 
     //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
 
