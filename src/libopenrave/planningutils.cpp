@@ -1642,10 +1642,11 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
     return IkReturnPtr();
 }
 
-bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples, int maxsamples)
+bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples, int maxsamples, int maxchecksamples)
 {
     // currently this is a very slow implementation...
     samples.clear();
+    int numchecked=0;
     while(true) {
         IkReturnPtr ikreturn = Sample();
         if( !ikreturn ) {
@@ -1656,6 +1657,10 @@ bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples, int ma
             return true;
         }
         RAVELOG_VERBOSE(str(boost::format("computed %d samples")%samples.size()));
+        numchecked += 1;
+        if( maxchecksamples > 0 && numchecked >= maxchecksamples ) {
+            break;
+        }
     }
     return samples.size()>0;
 }

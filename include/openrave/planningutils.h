@@ -281,9 +281,10 @@ public:
     /// \brief samples the rests of the samples until cannot be sampled anymore.
     ///
     /// \param vsamples vector is rest with samples
-    /// \param maxsamples number of max samples to gather before returning. If 0, will gather all.
+    /// \param maxsamples max successful samples to gather before returning. If 0, will gather all.
+    /// \param maxchecksamples max samples to check before returning. If 0, will check all.
     /// \return true if a sample was inserted into vsamples
-    bool SampleAll(std::list<IkReturnPtr>& samples, int maxsamples=0);
+    bool SampleAll(std::list<IkReturnPtr>& samples, int maxsamples=0, int maxchecksamples=0);
 
     //void SetCheckPathConstraintsFn(const PlannerBase::PlannerParameters::CheckPathConstraintFn& checkfn)
 
