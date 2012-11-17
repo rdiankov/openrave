@@ -131,9 +131,9 @@ public:
             return __vgripperdofindices;
         }
 
-        /// \brief Return the indices of the DOFs of the arm (used for IK, etc).
+        /// \brief Return the indices of the DOFs of the manipulator, which are used for inverse kinematics.
         ///
-        /// Usually the DOF indices from pBase to pEndEffector
+        /// Usually the DOF indices of the chain from pBase to pEndEffector
         virtual const std::vector<int>& GetArmIndices() const {
             return __varmdofindices;
         }

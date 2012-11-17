@@ -167,11 +167,6 @@ protected:
 };
 typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
 
-inline boost::python::object ConvertStringToUnicode(const std::string& s)
-{
-    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
-}
-
 inline RaveVector<float> ExtractFloat3(const object& o)
 {
     return RaveVector<float>(extract<float>(o[0]), extract<float>(o[1]), extract<float>(o[2]));

@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
+// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -64,6 +64,11 @@
 namespace openravepy {
 
 using namespace boost::python;
+
+inline boost::python::object ConvertStringToUnicode(const std::string& s)
+{
+    return boost::python::object(boost::python::handle<>(PyUnicode_Decode(s.c_str(),s.size(), "utf-8", NULL)));
+}
 
 class PyVoidHandle
 {
@@ -140,6 +145,58 @@ inline std::set<T> ExtractSet(const object& o)
 //
 // import custom_module
 // custom_module._custom_exception_.py_err_class = custom_exception
+
+//template <typename ExceptionType>
+//struct ExceptionTranslator
+//{
+//   typedef ExceptionTranslator<ExceptionType> type;
+//
+//   static PyObject *pyException;
+//
+//   static void RegisterExceptionTranslator(scope & scope, const char*
+//moduleName, const char* name)
+//   {
+//     // Add the exception to the module scope
+//     std::strstream exName;
+//     exName << moduleName << "." << name << '\0';
+//     pyException = PyErr_NewException(exName.str(), NULL, NULL);
+//     handle<> instanceException(pyException);
+//     scope.attr(name) = object(instanceException);
+//
+//     // Register a translator for the type
+//     register_exception_translator< ExceptionType >
+//       (
+//        &ExceptionTranslator<ExceptionType>::translateException
+//        );
+//   }
+//
+//   static void translateException(const ExceptionType& ex)
+//   {
+//     PyErr_SetString(pyException, ex.getMessage().ptr());
+//   }
+//};
+//
+//template<typename ExceptionType>
+//PyObject* ExceptionTranslator<ExceptionType>::pyException;
+//
+//// Convenience macro
+//#define REGISTER_EXCEPTION(scopeRef, moduleName, className) \
+// //ExceptionTranslator<className>::RegisterExceptionTranslator(scopeRef,
+//moduleName, #className)
+//
+//
+//// Module
+//======================================================================
+//BOOST_PYTHON_MODULE(my_module)
+//{
+//
+//   scope moduleScope;
+//
+//   REGISTER_EXCEPTION(moduleScope, "my_module", InstanceException);
+//
+//.....
+//}
+
 template <typename T>
 struct exception_translator
 {
