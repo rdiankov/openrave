@@ -3646,7 +3646,7 @@ private:
                     }
                     daeTArray<domInstance_jointRef> ijoints;
                     itmodel->_kmodel->getTechnique_common()->getChildrenByType(ijoints);
-                    for(size_t i = 0; i < joints.getCount(); ++i) {
+                    for(size_t i = 0; i < ijoints.getCount(); ++i) {
                         if( getSid(ijoints[i]) == targetref ) {
                             pdomjoint = daeSafeCast<domJoint> (ijoints[i]->getUrl().getElement().cast());
                             if( !!pdomjoint ) {
