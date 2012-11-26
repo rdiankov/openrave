@@ -16,6 +16,8 @@ Core
 
 * Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots by calling :meth:`.KinBody.Init`.
 
+* Fixed bug in RobotBase::CalculateActiveJacobian (thanks to John Schulman)
+
 Inverse Kinematics
 ------------------
 

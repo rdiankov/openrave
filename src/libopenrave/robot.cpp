@@ -958,7 +958,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         std::vector<dReal> vjacobianjoints;
         ComputeJacobianTranslation(index, offset, vjacobianjoints, _vActiveDOFIndices);
         for(size_t i = 0; i < 3; ++i) {
-            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobian.begin()+i*dofstride);
         }
     }
 
