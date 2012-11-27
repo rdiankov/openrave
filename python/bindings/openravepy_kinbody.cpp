@@ -2781,11 +2781,11 @@ public:
         return _probot->GetAffineRotationQuatWeights();
     }
 
-    void SetActiveDOFValues(object values) const
+    void SetActiveDOFValues(object values, uint32_t checklimits=1) const
     {
         vector<dReal> vvalues = ExtractArray<dReal>(values);
         if( vvalues.size() > 0 ) {
-            _probot->SetActiveDOFValues(vvalues,true);
+            _probot->SetActiveDOFValues(vvalues,checklimits);
         }
     }
     object GetActiveDOFValues() const
@@ -3280,6 +3280,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateRobotStateSaver_overloads, CreateRobotStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDOFValues, 1,2)
 
 void init_openravepy_kinbody()
 {
@@ -3803,7 +3804,7 @@ void init_openravepy_kinbody()
                       .def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights, DOXY_FN(RobotBase,GetAffineRotationAxisWeights))
                       .def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights, DOXY_FN(RobotBase,GetAffineRotation3DWeights))
                       .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights))
-                      .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,args("values"), DOXY_FN(RobotBase,SetActiveDOFValues))
+                      .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,SetActiveDOFValues_overloads(args("values","checklimits"), DOXY_FN(RobotBase,SetActiveDOFValues)))
                       .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues))
                       .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFWeights, DOXY_FN(RobotBase,GetActiveDOFWeights))
                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, DOXY_FN(RobotBase,SetActiveDOFVelocities))
