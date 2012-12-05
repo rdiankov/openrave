@@ -18,6 +18,7 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
+#include <boost/version.hpp>
 
 #ifdef _WIN32
 
@@ -300,8 +301,37 @@ protected:
         RAVELOG_VERBOSE(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
         _condnewframe.notify_one();
         if( _nUseSimulationTime == 2 ) {
-            GetEnv()->StepSimulation(1.0/_framerate);
+            // calls the environment lock, which might be taken if the environment is destroying the problem
+            // therefore need to take it first
+            while(_bContinueThread) {
+                boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
+                if( !!lockenv ) {
+                    GetEnv()->StepSimulation(1.0/_framerate);
+                    break;
+                }
+            }
         }
+    }
+
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
+    {
+        // try to acquire the lock
+#if BOOST_VERSION >= 103500
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+#else
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+#endif
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<timeout ) {
+            lockenv->try_lock();
+            if( !!*lockenv ) {
+                break;
+            }
+        }
+        if( !*lockenv ) {
+            lockenv.reset();
+        }
+        return lockenv;
     }
 
     void _RecordThread()
