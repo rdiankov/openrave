@@ -3,13 +3,13 @@
 ###########################################
 pkg_check_modules(bullet bullet)
 
-if(bullet_FOUND)
+if(false AND bullet_FOUND)
   include_directories(${bullet_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${bullet_LIBRARY_DIRS})
 
   add_library(bulletrave SHARED bulletrave.cpp bulletcollision.cpp bulletphysics.cpp  bulletspace.h  plugindefs.h)
 
-  #message(STATUS "Bullet found ${bullet_INCLUDE_DIRS}, libs: ${bullet_LIBRARIES}, cflags=${bullet_CFLAGS_OTHER}, lflags=${bullet_LDFLAGS_OTHER}, building bulletrave plugin")
+  message(STATUS "Bullet found ${bullet_INCLUDE_DIRS}, libs: ${bullet_LIBRARIES}, cflags=${bullet_CFLAGS_OTHER}, lflags=${bullet_LDFLAGS_OTHER}, building bulletrave plugin")
 
   target_link_libraries(bulletrave libopenrave ${bullet_LIBRARIES})
 
