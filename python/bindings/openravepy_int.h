@@ -498,7 +498,9 @@ public:
     void SetUserData(const std::string& key, object o) {
         _pbase->SetUserData(key, boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
-
+    bool RemoveUserData(const std::string& key) {
+        return _pbase->RemoveUserData(key);
+    }
     object GetUserData(const std::string& key=std::string()) const;
 
     object SendCommand(const string& in, bool releasegil=false) {
