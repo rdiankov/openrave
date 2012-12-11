@@ -1271,8 +1271,11 @@ object GetUserData(UserDataPtr pdata)
         if( !!pserializable ) {
             return object(PySerializableData(pserializable));
         }
-        else {
+        else if( !!pdata ) {
             return object(PyUserData(pdata));
+        }
+        else {
+            return object();
         }
     }
 }
