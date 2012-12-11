@@ -68,6 +68,9 @@ public:
         return PT_Viewer;
     }
 
+    /// \brief notified when a body has been removed from the environment
+    virtual void RemoveKinBody(KinBodyPtr pbody) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \brief goes into the main loop
     ///
     /// \param bShow if true will show the window
@@ -181,8 +184,9 @@ public:
     }
 
 protected:
-    virtual void SetViewerData(KinBodyPtr body, UserDataPtr data) {
-        body->SetViewerData(data);
+    /// \deprecated (12/12/11)
+    virtual void SetViewerData(KinBodyPtr body, UserDataPtr data) RAVE_DEPRECATED {
+        body->SetUserData(GetXMLId(), data);
     }
 
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0) OPENRAVE_DUMMY_IMPLEMENTATION;

@@ -30,10 +30,6 @@
 
 #define CHECK_COLLISION_BODY(body) { \
         CHECK_INTERFACE(body); \
-        if( !(body)->GetCollisionData() ) { \
-            RAVELOG_WARN("body %s not added to enviornment!\n", (body)->GetName().c_str()); \
-            return false; \
-        } \
 }
 
 class Environment : public EnvironmentBase
@@ -637,8 +633,12 @@ public:
                     _vecrobots.erase(itrobot);
                 }
             }
-            (*it)->SetPhysicsData(UserDataPtr());
-            (*it)->SetCollisionData(UserDataPtr());
+            if( !!_pCurrentChecker ) {
+                _pCurrentChecker->RemoveKinBody(*it);
+            }
+            if( !!_pPhysicsEngine ) {
+                _pPhysicsEngine->RemoveKinBody(*it);
+            }
             RemoveEnvironmentId(pbody);
             _vecbodies.erase(it);
             _nBodiesModifiedStamp++;
@@ -1038,8 +1038,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(robot);
+            }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
@@ -1116,8 +1118,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(robot);
+            }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
@@ -1158,8 +1162,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(body);
+            }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
@@ -1233,8 +1239,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(body);
+            }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
@@ -1680,7 +1688,6 @@ public:
             (*itbody)->GetLinkTransformations(itstate->vectrans, vdofbranches);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
-            itstate->pviewerdata = (*itbody)->GetViewerData();
             itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }

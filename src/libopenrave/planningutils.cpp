@@ -1653,7 +1653,7 @@ bool ManipulatorIKGoalSampler::SampleAll(std::list<IkReturnPtr>& samples, int ma
             break;
         }
         samples.push_back(ikreturn);
-        if( maxsamples > 0 && samples.size() >= maxsamples ) {
+        if( maxsamples > 0 && (int)samples.size() >= maxsamples ) {
             return true;
         }
         RAVELOG_VERBOSE(str(boost::format("computed %d samples")%samples.size()));

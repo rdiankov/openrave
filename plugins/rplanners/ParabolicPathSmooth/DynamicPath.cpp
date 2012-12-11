@@ -432,8 +432,8 @@ struct RampSection
 
 bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters)
 {
-    if(!feas->ConfigFeasible(ramp.x0)) return false;
-    if(!feas->ConfigFeasible(ramp.x1)) return false;
+    if(!feas->ConfigFeasible(ramp.x0, ramp.dx0)) return false;
+    if(!feas->ConfigFeasible(ramp.x1, ramp.dx1)) return false;
     PARABOLIC_RAMP_ASSERT(distance->ObstacleDistanceNorm()==Inf);
     RampSection section;
     section.ta = 0;
@@ -461,9 +461,15 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
                 continue;
         }
         Real tc = (section.ta+section.tb)*0.5;
-        Vector xc;
+        Vector xc, dxc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                 //infeasible config
+        if( feas->NeedDerivativeForFeasibility() ) {
+            ramp.Derivative(tc,dxc);
+        }
+        //infeasible config
+        if(!feas->ConfigFeasible(xc, dxc)) {
+            return false;
+        }
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -492,8 +498,8 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
     for(size_t i = 0; i < tol.size(); ++i) {
         PARABOLIC_RAMP_ASSERT(tol[i] > 0);
     }
-    if(!space->ConfigFeasible(ramp.x0)) return false;
-    if(!space->ConfigFeasible(ramp.x1)) return false;
+    if(!space->ConfigFeasible(ramp.x0, ramp.dx0)) return false;
+    if(!space->ConfigFeasible(ramp.x1, ramp.dx1)) return false;
     //PARABOLIC_RAMP_ASSERT(space->ConfigFeasible(ramp.x0));
     //PARABOLIC_RAMP_ASSERT(space->ConfigFeasible(ramp.x1));
 
@@ -547,7 +553,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
     //do a bisection thingie
     list<pair<int,int> > segs;
     segs.push_back(pair<int,int>(0,divs.size()-1));
-    Vector q1,q2;
+    Vector q1,q2, dq1, dq2;
     while(!segs.empty()) {
         int i=segs.front().first;
         int j=segs.front().second;
@@ -555,13 +561,22 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
         if(j == i+1) {
             //check path from t to tnext
             ramp.Evaluate(divs[i],q1);
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[i],dq1);
+            }
             ramp.Evaluate(divs[j],q2);
-            if(!space->SegmentFeasible(q1,q2)) return false;
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[j],dq2);
+            }
+            if(!space->SegmentFeasible(q1,q2, dq1, dq2)) return false;
         }
         else {
             int k=(i+j)/2;
             ramp.Evaluate(divs[k],q1);
-            if(!space->ConfigFeasible(q1)) return false;
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[k],dq1);
+            }
+            if(!space->ConfigFeasible(q1, dq1)) return false;
             segs.push_back(pair<int,int>(i,k));
             segs.push_back(pair<int,int>(k,j));
         }
@@ -784,7 +799,10 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         if(t1 > t2) Swap(t1,t2);
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                                                                                                                  //same ramp
+        if(i1 == i2) {
+            //same ramp
+            continue;
+        }
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_RAMP_ASSERT(u1 >= 0);

@@ -293,7 +293,7 @@ public:
     };
 
     static BulletSpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetCollisionData());
+        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletcollision"));
     }
 
     bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
@@ -416,7 +416,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetCollisionData(*itbody, UserDataPtr());
+            (*itbody)->RemoveUserData("bulletcollision");
         }
         bulletspace->DestroyEnvironment();
         if( !!_world && _world->getNumCollisionObjects() )
@@ -431,8 +431,15 @@ public:
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         UserDataPtr pinfo = bulletspace->InitKinBody(pbody);
-        SetCollisionData(pbody, pinfo);
+        pbody->SetUserData("bulletcollision", pinfo);
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("bulletcollision");
+        }
     }
 
     virtual bool SetCollisionOptions(int options)

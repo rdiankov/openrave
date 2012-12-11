@@ -124,6 +124,13 @@ public:
     virtual void Reset();
     virtual boost::shared_ptr<void> LockGUI();
 
+    /// \brief notified when a body has been removed from the environment
+    virtual void RemoveKinBody(KinBodyPtr pbody) {
+        if( !!pbody ) {
+            pbody->RemoveUserData("qtcoinviewer");
+        }
+    }
+
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
 
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);

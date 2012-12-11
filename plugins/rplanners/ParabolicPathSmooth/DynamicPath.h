@@ -42,8 +42,11 @@ class FeasibilityCheckerBase
 public:
     virtual ~FeasibilityCheckerBase() {
     }
-    virtual bool ConfigFeasible(const Vector& x)=0;
-    virtual bool SegmentFeasible(const Vector& a,const Vector& b)=0;
+    virtual bool ConfigFeasible(const Vector& q1, const Vector& dq1)=0;
+    virtual bool SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2)=0;
+    virtual bool NeedDerivativeForFeasibility() {
+        return false;
+    }
 };
 
 /** @brief A base class for a distance checker.

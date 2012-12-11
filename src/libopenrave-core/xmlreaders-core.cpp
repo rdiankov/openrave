@@ -1966,7 +1966,6 @@ public:
             // reisze _vTransforms to be the same size as the initial number of links
             std::vector<int> dofbranches;
             _pchain->GetLinkTransformations(_vTransforms,dofbranches);
-            _pchain->SetViewerData(UserDataPtr());
         }
     }
 

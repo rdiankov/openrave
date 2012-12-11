@@ -106,7 +106,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetPhysicsData(*itbody,UserDataPtr());
+            (*itbody)->RemoveUserData("bulletphysics");
         }
         RAVELOG_VERBOSE("destroy bullet physics environment\n");
         _space->DestroyEnvironment();
@@ -126,7 +126,7 @@ public:
             return false;
         }
         BulletSpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
-        SetPhysicsData(pbody, pinfo);
+        pbody->SetUserData("bulletphysics", pinfo);
         if( !!pinfo ) {
             FOREACH(itlink,pinfo->vlinks) {
                 (*itlink)->_rigidbody->setDamping(0.05, 0.85);
@@ -137,6 +137,13 @@ public:
             }
         }
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("bulletphysics");
+        }
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
@@ -352,7 +359,7 @@ public:
 private:
     static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
     {
-        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetPhysicsData());
+        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletphysics"));
     }
 
     void _SyncCallback(BulletSpace::KinBodyInfoConstPtr pinfo)

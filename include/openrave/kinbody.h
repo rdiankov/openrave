@@ -1095,7 +1095,6 @@ public:
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;
         std::vector<dReal> jointvalues;
-        UserDataPtr pviewerdata, puserdata;
         std::string strname;         ///< name of the body
         int environmentid;
     };
@@ -1701,13 +1700,9 @@ private:
      */
     virtual int8_t DoesAffect(int jointindex, int linkindex) const;
 
-    /// \see SetViewerData
-    virtual UserDataPtr GetViewerData() const {
-        return _pViewerData;
-    }
-    /// \deprecated (11/09/21)
-    virtual UserDataPtr GetGuiData() const RAVE_DEPRECATED {
-        return GetViewerData();
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetViewerData() const RAVE_DEPRECATED {
+        return GetUserData("_viewer_");
     }
 
     /// \brief specifies the type of adjacent link information to receive
@@ -1724,13 +1719,13 @@ private:
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
 
-    /// \see SetPhysicsData
-    virtual UserDataPtr GetPhysicsData() const {
-        return _pPhysicsData;
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
+        return GetUserData("_physics_");
     }
-    /// \brief SetCollisionData
-    virtual UserDataPtr GetCollisionData() const {
-        return _pCollisionData;
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetCollisionData() const RAVE_DEPRECATED {
+        return GetUserData("_collision_");
     }
     virtual ManageDataPtr GetManageData() const {
         return _pManageData;
@@ -1814,17 +1809,18 @@ protected:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
-    /// \brief custom data managed by the current active physics engine, should be set only by PhysicsEngineBase
-    virtual void SetPhysicsData(UserDataPtr pdata) {
-        _pPhysicsData = pdata;
+    /// \deprecated (12/12/11)
+    virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_physics_", pdata);
     }
-    /// \brief custom data managed by the current active collision checker, should be set only by CollisionCheckerBase
-    virtual void SetCollisionData(UserDataPtr pdata) {
-        _pCollisionData = pdata;
+    /// \deprecated (12/12/11)
+    virtual void SetCollisionData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_collision_", pdata);
     }
-    /// \brief custom data managed by the current active viewer, should be set only by ViewerBase
-    virtual void SetViewerData(UserDataPtr pdata) {
-        _pViewerData = pdata;
+
+    /// \deprecated (12/12/11)
+    virtual void SetViewerData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_viewer_",pdata);
     }
     virtual void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
@@ -1898,9 +1894,6 @@ protected:
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks
-    UserDataPtr _pViewerData; ///< \see SetViewerData
-    UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
-    UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;

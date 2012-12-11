@@ -162,7 +162,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetCollisionData(*itbody, OpenRAVE::UserDataPtr());
+            (*itbody)->RemoveUserData("odecollision");
         }
         odespace->DestroyEnvironment();
     }
@@ -170,8 +170,15 @@ public:
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         ODESpace::KinBodyInfoPtr pinfo = odespace->InitKinBody(pbody);
-        SetCollisionData(pbody, pinfo);
+        pbody->SetUserData("odecollision", pinfo);
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("odecollision");
+        }
     }
 
     virtual bool SetCollisionOptions(int collisionoptions)
@@ -697,7 +704,7 @@ public:
 
 private:
     static ODESpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetCollisionData());
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
     }
 
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)

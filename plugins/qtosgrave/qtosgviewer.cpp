@@ -230,12 +230,12 @@ void QtOSGViewer::_Reset()
 
     FOREACH(itbody, _mapbodies)
     {
-        BOOST_ASSERT( itbody->first->GetViewerData() == itbody->second );
+        BOOST_ASSERT( itbody->first->GetUserData("qtosg") == itbody->second );
 
         //  Clear Gui Data
 
         //  Modified for OpenRAVE 0.5v
-        SetViewerData(itbody->first,UserDataPtr());
+        itbody->first->RemoveUserData("qtosg");
     }
 
     GetEnv()->UpdatePublishedBodies();
@@ -1090,7 +1090,7 @@ void QtOSGViewer::UpdateFromModel()
     {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pviewerdata);
+        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtosg"));
 
         //  if pitem is FALSE
         if( !pitem )
@@ -1100,7 +1100,7 @@ void QtOSGViewer::UpdateFromModel()
             if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
-                if( !pbody->GetViewerData() )
+                if( !pbody->GetUserData("qtosg") )
                 {
                     if( _mapbodies.find(pbody) != _mapbodies.end() )
                     {
@@ -1120,12 +1120,12 @@ void QtOSGViewer::UpdateFromModel()
                     pitem->Load();
 
                     //  Modified for OpenRAVE 0.5v
-                    SetViewerData(pbody,pitem);
+                    pbody->SetUserData("qtosg",pitem);
 
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetViewerData());
+                    pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetUserData("qtosg"));
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -1166,7 +1166,7 @@ void QtOSGViewer::UpdateFromModel()
         if(!it->second->GetUserData())
         {
             //  Modified for OpenRAVE 0.5v
-            SetViewerData(it->first,UserDataPtr());
+            it->first->RemoveUserData("qtosg");
             _mapbodies.erase(it++);
         }
         else

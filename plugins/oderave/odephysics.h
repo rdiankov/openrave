@@ -241,15 +241,22 @@ The possible properties that can be set are: ";
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetPhysicsData(*itbody,OpenRAVE::UserDataPtr());
+            (*itbody)->RemoveUserData("odephysics");
         }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         ODESpace::KinBodyInfoPtr pinfo = _odespace->InitKinBody(pbody);
-        SetPhysicsData(pbody, pinfo);
+        pbody->SetUserData("odephysics", pinfo);
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("odephysics");
+        }
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
@@ -519,7 +526,7 @@ The possible properties that can be set are: ";
 
 private:
     static ODESpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetPhysicsData());
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
     }
 
     static void nearCallback(void *data, dGeomID o1, dGeomID o2)

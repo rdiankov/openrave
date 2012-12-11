@@ -163,9 +163,6 @@ void KinBody::Destroy()
     _vForcedAdjacentLinks.clear();
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
-    _pViewerData.reset();
-    _pPhysicsData.reset();
-    _pCollisionData.reset();
     _pManageData.reset();
 
     _ResetInternalCollisionCache();

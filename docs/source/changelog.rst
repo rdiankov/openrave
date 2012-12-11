@@ -18,6 +18,8 @@ Core
 
 * Fixed bugs in RobotBase::CalculateActiveJacobian (thanks to John Schulman)
 
+* SetUserData now supports a key to allow different modules to store their own uninterrupted user data. KinBody.SetCollisionData, KinBody.SetPhysicsData, KinBody.SetViewerData are deprecated
+
 Inverse Kinematics
 ------------------
 

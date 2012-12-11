@@ -33,10 +33,9 @@ public:
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody) {
-        SetCollisionData(pbody, UserDataPtr()); return true;
+        return true;
     }
-    virtual bool DestroyKinBody(KinBodyPtr pbody) {
-        SetCollisionData(pbody, UserDataPtr()); return true;
+    virtual void RemoveKinBody(KinBodyPtr pbody) {
     }
     virtual bool Enable(KinBodyConstPtr pbody, bool bEnable) {
         return true;

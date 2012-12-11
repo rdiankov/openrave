@@ -113,8 +113,11 @@ public:
 
     virtual void SetTolerance(dReal tolerance) = 0;
 
-    /// notified when a new body has been initialized in the environment
+    /// \brief notified when a new body has been initialized in the environment
     virtual bool InitKinBody(KinBodyPtr pbody) = 0;
+
+    /// \brief notified when a body has been removed from the environment
+    virtual void RemoveKinBody(KinBodyPtr pbody) = 0;
 
     /// Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs.
     /// \name Collision specific functions.
@@ -177,8 +180,9 @@ protected:
     /// Links that are joined together are ignored.
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-    virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) {
-        pbody->SetCollisionData(data);
+    /// \deprecated (12/12/11)
+    virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) RAVE_DEPRECATED {
+        pbody->SetUserData(GetXMLId(), data);
     }
 
     inline CollisionCheckerBasePtr shared_collisionchecker() {

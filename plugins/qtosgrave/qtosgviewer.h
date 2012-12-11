@@ -100,6 +100,13 @@ public:
     virtual void Move(int x, int y);
     virtual void SetName(const string& name);
 
+    /// \brief notified when a body has been removed from the environment
+    virtual void RemoveKinBody(KinBodyPtr pbody) {
+        if( !!pbody ) {
+            pbody->RemoveUserData("qtosg");
+        }
+    }
+
     //
     //
     //    /// updates all render objects from the internal openrave classes

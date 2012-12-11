@@ -112,8 +112,8 @@ PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr py
     CHECK_POINTER(_pyenv);
 }
 
-object PyInterfaceBase::GetUserData() const {
-    return openravepy::GetUserData(_pbase->GetUserData());
+object PyInterfaceBase::GetUserData(const std::string& key) const {
+    return openravepy::GetUserData(_pbase->GetUserData(key));
 }
 
 object PyInterfaceBase::GetReadableInterfaces()
@@ -1339,6 +1339,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1387,6 +1388,8 @@ BOOST_PYTHON_MODULE(openravepy_int)
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
+        void (PyInterfaceBase::*setuserdata3)(const std::string&, PyUserData) = &PyInterfaceBase::SetUserData;
+        void (PyInterfaceBase::*setuserdata4)(const std::string&, object) = &PyInterfaceBase::SetUserData;
         std::string sSendCommandDoc = std::string(DOXY_FN(InterfaceBase,SendCommand)) + std::string("The calling conventions between C++ and Python differ a little.\n\n\
 In C++ the syntax is::\n\n  success = SendCommand(OUT, IN)\n\n\
 In python, the syntax is::\n\n\
@@ -1403,7 +1406,9 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"), DOXY_FN(InterfaceBase,Clone))
         .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
-        .def("GetUserData",&PyInterfaceBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
+        .def("SetUserData",setuserdata3,args("key","data"), DOXY_FN(InterfaceBase,SetUserData))
+        .def("SetUserData",setuserdata4,args("key", "data"), DOXY_FN(InterfaceBase,SetUserData))
+        .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))

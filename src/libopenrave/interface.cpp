@@ -28,7 +28,7 @@ InterfaceBase::~InterfaceBase()
 {
     boost::mutex::scoped_lock lock(_mutexInterface);
     __mapCommands.clear();
-    __pUserData.reset();
+    __mapUserData.clear();
     __mapReadableInterfaces.clear();
     __penv.reset();
 }
@@ -38,7 +38,7 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     if( !preference ) {
         throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
     }
-    __pUserData = preference->__pUserData;
+    __mapUserData = preference->__mapUserData;
     __struri = preference->__struri;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
     __description = preference->__description;

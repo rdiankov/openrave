@@ -80,7 +80,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetCollisionData(*itbody, UserDataPtr());
+            (*itbody)->RemoveUserData("pqpcollision");
         }
     }
 
@@ -89,7 +89,7 @@ public:
         KinBodyInfoPtr pinfo(new KinBodyInfo());
 
         pinfo->pbody = pbody;
-        SetCollisionData(pbody, pinfo);
+        pbody->SetUserData("pqpcollision", pinfo);
 
         PQP_REAL p1[3], p2[3], p3[3];
         pinfo->vlinks.reserve(pbody->GetLinks().size());
@@ -111,6 +111,13 @@ public:
         }
 
         return true;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("pqpcollision");
+        }
     }
 
     void GetPQPTransformFromTransform(Transform T, PQP_REAL PQP_R[3][3], PQP_REAL PQP_T[3])
@@ -351,7 +358,7 @@ public:
 
     boost::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetCollisionData());
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData("pqpcollision"));
         BOOST_ASSERT( pinfo->pbody == plink->GetParent());
         return pinfo->vlinks.at(plink->GetIndex());
     }

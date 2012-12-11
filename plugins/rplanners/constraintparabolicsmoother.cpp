@@ -22,10 +22,10 @@
 
 namespace ParabolicRamp = ParabolicRampInternal;
 
-class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
+class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
 public:
-    ParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
     }
@@ -258,6 +258,41 @@ public:
         return true;
     }
 
+    /*
+       def ComputeDistanceToEnvironment(const std::vector<dReal>& vdofvalues):
+        """robot state is not saved and environment is not locked
+        """
+        env=self.robot.GetEnv()
+        pqpchecker = RaveCreateCollisionChecker(env,'pqp')
+        if pqpchecker is not None:
+            oldchecker = env.GetCollisionChecker()
+            try:
+                env.SetCollisionChecker(pqpchecker)
+                with CollisionOptionsStateSaver(pqpchecker, CollisionOptions.Distance|CollisionOptions.Contacts):
+                    self.robot.GetGrabbed()
+                    checklinks = set()
+                    for manip in self.robot.GetManipulators():
+                        for childlink in  manip.GetChildLinks():
+                            checklinks.add(childlink)
+                    for link in self.robot.GetLinks():
+                        if not link in checklinks:
+                            link.Enable(False)
+                    report=CollisionReport()
+                    distancevalues=[]
+                    for dofvalues in dofvaluess:
+                        self.robot.SetDOFValues(dofvalues)
+                        check = env.CheckCollision(self.robot, report=report)
+                        distancevalues.append([report.minDistance,report.contacts[0]])
+                    return distancevalues
+
+            finally:
+                env.SetCollisionChecker(oldchecker)
+     */
+
+    virtual bool NeedDerivativeForFeasibility() {
+        return true;
+    }
+
     virtual ParabolicRamp::Real Rand()
     {
         std::vector<dReal> vsamples;
@@ -272,9 +307,9 @@ protected:
 };
 
 
-PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PlannerBasePtr(new ParabolicSmoother(penv,sinput));
+    return PlannerBasePtr(new ConstraintParabolicSmoother(penv,sinput));
 }
 
 #ifdef RAVE_REGISTER_BOOST

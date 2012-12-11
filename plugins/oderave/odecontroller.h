@@ -83,7 +83,7 @@ public:
     }
 
     virtual ODESpace::KinBodyInfoPtr GetODESpace() {
-        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetPhysicsData());
+        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(_probot->GetUserData("odephysics"));
     }
 
     bool SendCommand(std::ostream& os, std::istream& is)

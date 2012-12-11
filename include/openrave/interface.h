@@ -88,17 +88,28 @@ public:
         __description = description;
     }
 
-    /// \brief set user data
-    virtual void SetUserData(UserDataPtr data) {
-        __pUserData = data;
-    }
-    /// \deprecated
-    virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED {
-        __pUserData = boost::static_pointer_cast<UserData>(data);
+    /// \brief set user data for a specific key
+    virtual void SetUserData(const std::string& key, UserDataPtr data) {
+        __mapUserData[key] = data;
     }
     /// \brief return the user custom data
-    virtual UserDataPtr GetUserData() const {
-        return __pUserData;
+    virtual UserDataPtr GetUserData(const std::string& key=std::string()) const
+    {
+        std::map<std::string, UserDataPtr>::const_iterator it = __mapUserData.find(key);
+        if( it == __mapUserData.end() ) {
+            return UserDataPtr();
+        }
+        return it->second;
+    }
+
+    /// \brief removes a user data pointer. if user data pointer does not exist, then return 0, otherwise 1.
+    virtual bool RemoveUserData(const std::string& key) {
+        return __mapUserData.erase(key);
+    }
+
+    /// \deprecated (12/12/11)
+    virtual void SetUserData(UserDataPtr data) RAVE_DEPRECATED {
+        __mapUserData[std::string()] = data;
     }
 
     /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
@@ -194,7 +205,7 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    UserDataPtr __pUserData; ///< \see GetUserData
+    std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;

@@ -487,12 +487,19 @@ public:
     }
 
     void SetUserData(PyUserData pdata) {
-        _pbase->SetUserData(pdata._handle);
+        _pbase->SetUserData(std::string(), pdata._handle);
+    }
+    void SetUserData(const std::string& key, PyUserData pdata) {
+        _pbase->SetUserData(key, pdata._handle);
     }
     void SetUserData(object o) {
-        _pbase->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
+        _pbase->SetUserData(std::string(), boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
-    object GetUserData() const;
+    void SetUserData(const std::string& key, object o) {
+        _pbase->SetUserData(key, boost::shared_ptr<UserData>(new PyUserObject(o)));
+    }
+
+    object GetUserData(const std::string& key=std::string()) const;
 
     object SendCommand(const string& in, bool releasegil=false) {
         stringstream sin(in), sout;
