@@ -64,6 +64,7 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/version.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -2709,6 +2710,14 @@ inline void assertion_failed(char const * expr, char const * function, char cons
 {
     throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
 }
+
+#if BOOST_VERSION>104600
+inline void boost::assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
+{
+    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg),OpenRAVE::ORE_Assert);
+}
+#endif
+
 }
 #endif
 
