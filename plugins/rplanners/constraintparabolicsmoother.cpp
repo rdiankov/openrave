@@ -33,7 +33,7 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new TrajectoryTimingParameters());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
         _probot = pbase;
         return _InitPlan();
@@ -42,7 +42,7 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new TrajectoryTimingParameters());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _probot = pbase;
         return _InitPlan();
@@ -74,7 +74,7 @@ public:
         }
 
         uint32_t basetime = utils::GetMilliTime();
-        TrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
+        ConstraintTrajectoryTimingParametersConstPtr parameters = boost::dynamic_pointer_cast<ConstraintTrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());
@@ -301,7 +301,7 @@ public:
     }
 
 protected:
-    TrajectoryTimingParametersPtr _parameters;
+    ConstraintTrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
     RobotBasePtr _probot;
 };

@@ -504,6 +504,73 @@ protected:
 typedef boost::shared_ptr<TrajectoryTimingParameters> TrajectoryTimingParametersPtr;
 typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingParametersConstPtr;
 
+class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
+{
+public:
+    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), mingripperdistance(0), velocitydistancethresh(0), _bCProcessing(false) {
+        _vXMLParameters.push_back("maxlinkspeed");
+        _vXMLParameters.push_back("mingripperdistance");
+        _vXMLParameters.push_back("velocitydistancethresh");
+    }
+
+    dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
+    dReal mingripperdistance; ///< minimum distance of the hand (manipulator grippers) to any object. 0 means disabled.
+    dReal velocitydistancethresh; /// threshold for dot(Direction,Velocity)/MinDistance where Direction is between the closest contact points. 0 if disabled.
+
+protected:
+    bool _bCProcessing;
+    virtual bool serialize(std::ostream& O) const
+    {
+        if( !TrajectoryTimingParameters::serialize(O) ) {
+            return false;
+        }
+        O << "<maxlinkspeed>" << maxlinkspeed << "</maxlinkspeed>" << std::endl;
+        O << "<mingripperdistance>" << mingripperdistance << "</mingripperdistance>" << std::endl;
+        O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
+        return !!O;
+    }
+
+    ProcessElement startElement(const std::string& name, const AttributesList& atts)
+    {
+        if( _bCProcessing ) {
+            return PE_Ignore;
+        }
+        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        case PE_Pass: break;
+        case PE_Support: return PE_Support;
+        case PE_Ignore: return PE_Ignore;
+        }
+        _bCProcessing = name=="maxlinkspeed" || name=="mingripperdistance" || name=="velocitydistancethresh";
+        return _bCProcessing ? PE_Support : PE_Pass;
+    }
+
+    virtual bool endElement(const std::string& name)
+    {
+        if( _bCProcessing ) {
+            if( name == "maxlinkspeed") {
+                _ss >> maxlinkspeed;
+            }
+            else if( name == "mingripperdistance" ) {
+                _ss >> mingripperdistance;
+            }
+            else if( name == "velocitydistancethresh" ) {
+                _ss >> velocitydistancethresh;
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
+            }
+            _bCProcessing = false;
+            return false;
+        }
+
+        // give a chance for the default parameters to get processed
+        return PlannerParameters::endElement(name);
+    }
+};
+
+typedef boost::shared_ptr<ConstraintTrajectoryTimingParameters> ConstraintTrajectoryTimingParametersPtr;
+typedef boost::shared_ptr<ConstraintTrajectoryTimingParameters const> ConstraintTrajectoryTimingParametersConstPtr;
+
 class OPENRAVE_API WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
