@@ -104,7 +104,7 @@ public:
 
     /// \brief removes a user data pointer. if user data pointer does not exist, then return 0, otherwise 1.
     virtual bool RemoveUserData(const std::string& key) {
-        return __mapUserData.erase(key);
+        return __mapUserData.erase(key)>0;
     }
 
     /// \deprecated (12/12/11)

@@ -240,7 +240,7 @@ public:
             if( _bDisabled ) {
                 _InitSavers();
                 for(size_t i = 0; i < _vchildlinks.size(); ++i) {
-                    _vchildlinks[i]->Enable(_vlinkenabled[i]);
+                    _vchildlinks[i]->Enable(!!_vlinkenabled[i]);
                 }
                 FOREACH(it, _listGrabbedSavedStates) {
                     it->Restore();
