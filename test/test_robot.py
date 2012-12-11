@@ -436,7 +436,7 @@ class RunRobot(EnvironmentSetup):
         self.log.info('test jacobiaquaternions')
         env=self.env        
         with env:
-            affine = DOFAffine.DOF_Transform
+            affine = DOFAffine.Transform
             ABS_TOL = 1e-5
             EPSILON = 1e-6
             self.LoadEnv('robots/pr2-beta-static.zae')

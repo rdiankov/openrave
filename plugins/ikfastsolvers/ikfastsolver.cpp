@@ -763,7 +763,8 @@ private:
             }
             allres |= res;
             if( res & IKRA_Quit ) {
-                return res;
+                // return the accumulated errors
+                return static_cast<IkReturnAction>(allres);
             }
             // stop if there is no solution we are attempting to get close to
             if( res == IKRA_Success && q0.size() != pmanip->GetArmIndices().size() ) {
