@@ -437,16 +437,16 @@ class RunRobot(EnvironmentSetup):
         env=self.env        
         with env:
             affine = DOFAffine.Transform
-            ABS_TOL = 1e-5
-            EPSILON = 1e-6
             self.LoadEnv('robots/pr2-beta-static.zae')
             robot=env.GetRobots()[0]
             robot.SetActiveDOFs(range(robot.GetDOF()), affine, [0,0,1])
+            lowerlimit, upperlimit = robot.GetActiveDOFLimits()
+            deltastep = 0.0001
             for itry in range(20):
                 # set dofs to random values
                 offset_local = random.rand(3)-0.5
-                dofvalues = randlimits(numpy.minimum(lowerlimit+5*EPSILON,upperlimit), numpy.maximum(upperlimit-5*EPSILON,lowerlimit))
-                robot.SetDOFValues(dofvalues)
+                dofvalues = randlimits(numpy.minimum(lowerlimit+5*deltastep,upperlimit), numpy.maximum(upperlimit-5*deltastep,lowerlimit))
+                robot.SetActiveDOFValues(dofvalues)
                 for link in robot.GetLinks():
                     link_trans = link.GetTransform()
                     offset = dot(link_trans[0:3,0:3], offset_local) + link_trans[0:3,3]
@@ -456,15 +456,14 @@ class RunRobot(EnvironmentSetup):
                         pert_dofvals = array(dofvals)                        
                         numerical_jac = zeros((3,robot.GetActiveDOF()))
                         for idof in range(robot.GetActiveDOF()):
-                            pert_dofvals[idof] = dofvals[idof] + epsilon
+                            pert_dofvals[idof] = dofvals[idof] + deltastep
                             robot.SetActiveDOFValues(pert_dofvals,0)
                             pert_link_trans = link.GetTransform()
                             pert_offset = dot(pert_link_trans[0:3,0:3],offset_local) + pert_link_trans[0:3,3]
                             for j in range(3):
-                                numerical_jac[j,idof] = (pert_offset[j]-offset[j])/epsilon
+                                numerical_jac[j,idof] = (pert_offset[j]-offset[j])/deltastep
                             pert_dofvals[idof] = dofvals[idof]
-                            
-                    assert(all(abs(numerical_jac - jac) <= g_epsilon))
+                    assert(all(abs(numerical_jac - J) <= 5*deltastep))
                 
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
