@@ -2712,7 +2712,7 @@ inline void assertion_failed(char const * expr, char const * function, char cons
 }
 
 #if BOOST_VERSION>104600
-inline void boost::assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
+inline void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
 {
     throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg),OpenRAVE::ORE_Assert);
 }
