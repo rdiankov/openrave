@@ -429,8 +429,6 @@ inline const char *strcasestr(const char *s, const char *find)
 }
 #endif
 
-boost::mutex& GetInterfaceMutex(InterfaceBasePtr pinterface);
-
 } // end OpenRAVE namespace
 
 // need the prototypes in order to keep them free of the OpenRAVE namespace

@@ -190,7 +190,7 @@ protected:
             }
             ++ijoint;
         }
-        pbody->SetUserData(UserDataPtr(jointdata));
+        pbody->SetUserData("xfile", UserDataPtr(jointdata));
     }
 
     void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform &transparent, int level)

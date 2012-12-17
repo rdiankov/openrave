@@ -113,6 +113,12 @@ public:
 
     virtual void SetTolerance(dReal tolerance) = 0;
 
+    /// \brief initialize the checker with the current environment and gather all current bodies in the environment and put them in its collision space
+    virtual bool InitEnvironment() = 0;
+
+    /// \brief clear/deallocate any memory associated with tracking collision data for bodies
+    virtual void DestroyEnvironment() = 0;
+
     /// \brief notified when a new body has been initialized in the environment
     virtual bool InitKinBody(KinBodyPtr pbody) = 0;
 
@@ -167,14 +173,6 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
 protected:
-    /// called when environment sets this collision checker, checker assumes responsibility for KinBody::_pCollisionData
-    /// checker should also gather all current bodies in the environment and put them in its collision space
-    virtual bool InitEnvironment() = 0;
-
-    /// called when environment switches to a different collision checker engine
-    /// has to clear/deallocate any memory associated with KinBody::_pCollisionData
-    virtual void DestroyEnvironment() = 0;
-
     /// \brief Checks self collision only with the links of the passed in body.
     ///
     /// Links that are joined together are ignored.

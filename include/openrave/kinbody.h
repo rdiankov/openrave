@@ -1749,7 +1749,7 @@ private:
     /// block the thread that made the parameter change.
     /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
-    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback);
+    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback) const;
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
@@ -1883,7 +1883,7 @@ protected:
                                      ///< i|(j<<16) will be in the set where i<j.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-    std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    mutable std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. the registration/deregistration of the list can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable
 
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].

@@ -106,7 +106,7 @@ private:
     }
 
 public:
-    ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv), odespace(new ODESpace(penv,GetCollisionInfo,false)) {
+    ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv), odespace(new ODESpace(penv,"odecollision",false)) {
         _options = 0;
         geomray = NULL;
         _nMaxStartContacts = 32;
@@ -120,11 +120,16 @@ public:
             _bnotifiedmessage = false;
         }
 #endif
+
+        odespace->InitEnvironment();
+        geomray = dCreateRay(0, 1000.0f);     // 1000m (is this used?)
     }
     ~ODECollisionChecker() {
         if( geomray != NULL ) {
             dGeomDestroy(geomray);
+            geomray = NULL;
         }
+        odespace->DestroyEnvironment();
     }
 
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
@@ -138,39 +143,36 @@ public:
 
     virtual bool InitEnvironment()
     {
-        if( !odespace->InitEnvironment() ) {
-            return false;
-        }
+//        if( !odespace->InitEnvironment() ) {
+//            return false;
+//        }
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             InitKinBody(*itbody);
         }
-        geomray = dCreateRay(0, 1000.0f);     // 1000m (is this used?)
+        //geomray = dCreateRay(0, 1000.0f);     // 1000m (is this used?)
         //dGeomRaySetParams(geomray,0,0);
         return true;
     }
 
     virtual void DestroyEnvironment()
     {
-        if( geomray != NULL ) {
-            dGeomDestroy(geomray);
-            geomray = NULL;
-        }
-
         // go through all the KinBodies and destory their collision pointers
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             (*itbody)->RemoveUserData("odecollision");
         }
-        odespace->DestroyEnvironment();
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = odespace->InitKinBody(pbody);
-        pbody->SetUserData("odecollision", pinfo);
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
+        if( !pinfo ) {
+            pinfo = odespace->InitKinBody(pbody);
+            pbody->SetUserData("odecollision", pinfo);
+        }
         return !!pinfo;
     }
 
@@ -703,10 +705,6 @@ public:
     }
 
 private:
-    static ODESpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
-    }
-
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {
         COLLISIONCALLBACK* pcb = (COLLISIONCALLBACK*)data;
@@ -723,15 +721,15 @@ private:
             return;
         }
 
-        KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
-        KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
+        ODESpace::KinBodyInfo* o1data = (ODESpace::KinBodyInfo*)dGeomGetData(o1);
+        ODESpace::KinBodyInfo* o2data = (ODESpace::KinBodyInfo*)dGeomGetData(o2);
         KinBodyConstPtr pbody1,pbody2;
 
         if( dGeomIsSpace(o1) &&( o1data != NULL) ) {
-            pbody1 = KinBodyConstPtr(*o1data);
+            pbody1 = KinBodyConstPtr(o1data->GetBody());
         }
         if( dGeomIsSpace(o2) &&( o2data != NULL) ) {
-            pbody2 = KinBodyConstPtr(*o2data);
+            pbody2 = KinBodyConstPtr(o2data->GetBody());
         }
         if( !!pcb->pvbodyexcluded ) {
             if( (!!pbody1 &&( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody1) != pcb->pvbodyexcluded->end()) ) || (!!pbody2 &&( std::find(pcb->pvbodyexcluded->begin(),pcb->pvbodyexcluded->end(),pbody2) != pcb->pvbodyexcluded->end()) ) ) {
@@ -755,7 +753,7 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
+            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
             if( !!pkb1 ) {
                 if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pkb1->GetParent(),pkb1->GetIndex()) ) {
                     return;
@@ -763,7 +761,7 @@ private:
             }
         }
         if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
             if( !!pkb2 ) {
                 if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pkb2->GetParent(),pkb2->GetIndex()) ) {
                     return;
@@ -855,10 +853,10 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
+            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
         }
         if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
         }
         if( !!pkb1 ) {
             if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pkb1->GetParent(),pkb1->GetIndex()) ) {
@@ -926,26 +924,26 @@ private:
         }
         KinBodyPtr pbody = pcb->_plink->GetParent();
 
-        KinBodyPtr* o1data = (KinBodyPtr*)dGeomGetData(o1);
-        KinBodyPtr* o2data = (KinBodyPtr*)dGeomGetData(o2);
+        ODESpace::KinBodyInfo* o1data = (ODESpace::KinBodyInfo*)dGeomGetData(o1);
+        ODESpace::KinBodyInfo* o2data = (ODESpace::KinBodyInfo*)dGeomGetData(o2);
 
         // ASSUMPTION: every space is attached to a KinBody!
         if( !dGeomIsEnabled(o1) || !dGeomIsEnabled(o2) ) {
             return;
         }
         // only recurse two spaces if one of them is pbody
-        if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(( o1data != NULL) &&( *o1data == pbody) ) && !(( o2data != NULL) &&( *o2data == pbody) ) ) {
+        if( dGeomIsSpace(o1) && dGeomIsSpace(o2) && !(( o1data != NULL) &&( o1data->GetBody() == pbody) ) && !(( o2data != NULL) &&( o2data->GetBody() == pbody) ) ) {
             return;
         }
         if( dGeomIsSpace(o1) ) {
             BOOST_ASSERT(!!o1data);
-            if(( pbody != *o1data) && pbody->IsAttached(KinBodyConstPtr(*o1data)) ) {
+            if(( pbody != o1data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o1data->GetBody())) ) {
                 return;
             }
         }
         if( dGeomIsSpace(o2) ) {
             BOOST_ASSERT(!!o2data);
-            if(( pbody != *o2data) && pbody->IsAttached(KinBodyConstPtr(*o2data)) ) {
+            if(( pbody != o2data->GetBody()) && pbody->IsAttached(KinBodyConstPtr(o2data->GetBody())) ) {
                 return;
             }
         }
@@ -962,13 +960,13 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
+            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
             if( !!pkb1 && !pkb1->IsEnabled() ) {
                 return;
             }
         }
         if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
             if( !!pkb2 && !pkb2->IsEnabled() ) {
                 return;
             }
@@ -1055,7 +1053,7 @@ private:
         BOOST_ASSERT( b != NULL );
         KinBody::LinkPtr plink;
         if( dBodyGetData(b) ) {
-            plink = *(KinBody::LinkPtr*)dBodyGetData(b);
+            plink = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b))->GetLink();
             if( !!plink ) {
                 if( !plink->IsEnabled() || !pcb->IsActiveLink(plink->GetParent(),plink->GetIndex()) ) {
                     return;
@@ -1088,7 +1086,7 @@ private:
                 pcb->_report->numCols = 1;
                 pcb->_report->minDistance = contact[index].geom.depth;
                 if( dBodyGetData(b) ) {
-                    pcb->_report->plink1 = *(KinBody::LinkPtr*)dBodyGetData(b);
+                    pcb->_report->plink1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b))->GetLink();
                 }
                 else {
                     RAVELOG_WARN("ode body does not have a link attached\n");

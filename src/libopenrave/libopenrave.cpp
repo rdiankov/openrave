@@ -1971,9 +1971,4 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 
 }
 
-boost::mutex& GetInterfaceMutex(InterfaceBasePtr pinterface)
-{
-    return RaveGlobal::instance()->GetDatabase()->GetInterfaceMutex(pinterface);
-}
-
 } // end namespace OpenRAVE

@@ -143,41 +143,197 @@ public:
 
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
 /// acceleration, velocity, and x bounds.  Returns true if successful.
-bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1,
-                         Real amax,Real vmax,Real xmin,Real xmax,
-                         ParabolicRamp1D& ramp);
+bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Real xmin,Real xmax, ParabolicRamp1D& ramp);
 
 /// Computes a sequence of up to three ramps connecting (x0,v0) to (x1,v1)
 /// in minimum-acceleration fashion with a fixed end time, under the given
 /// velocity and x bounds.  Returns true if successful.
-bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,
-                          Real endTime,Real vmax,Real xmin,Real xmax,
-                          std::vector<ParabolicRamp1D>& ramps);
+bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
-bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,
-                          Real endTime, Real amax, Real vmax,Real xmin,Real xmax,
-                          std::vector<ParabolicRamp1D>& ramps);
+bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real amax, Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
 /// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
-Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
-                         const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                         std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
+Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
 /// Vector version of above.
 /// Returns true if successful.
-bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
-                          Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                          std::vector<std::vector<ParabolicRamp1D> >& ramps);
+bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
 /// if 0 - SolveAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
-bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
-                       Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                       std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
+bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
-void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
+//void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
+//void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::list<ParabolicRampND>& ndramps);
+
+// T can be std::list<ParabolicRampND> or std::vector<ParabolicRampND>
+template <typename T>
+void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& ndramps)
+{
+    PARABOLIC_RAMP_ASSERT(ndramps.size()==0);
+    ndramps.clear();
+    std::vector<std::vector<ParabolicRamp1D>::const_iterator> indices(ramps.size());
+    for(size_t i=0; i<ramps.size(); i++) {
+        PARABOLIC_RAMP_ASSERT(!ramps[i].empty());
+        indices[i] = ramps[i].begin();
+    }
+    std::vector<Real> timeOffsets(ramps.size(),0);  //start time of current index
+    Real t=0;
+    while(true) {
+        //pick next ramp
+        Real tnext=Inf;
+        for(size_t i=0; i<ramps.size(); i++) {
+            if(indices[i] != ramps[i].end()) {
+                tnext = Min(tnext,timeOffsets[i]+indices[i]->ttotal);
+            }
+        }
+        if(IsInf(tnext)) {
+            // done
+            break;
+        }
+        if(!(tnext > t || t == 0)) {
+            PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
+            PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());
+            for(size_t k=0; k<ramps.size(); k++) {
+                PARABOLIC_RAMP_PLOG("Ramp %d times: ",k);
+                Real ttotal = 0.0;
+                for(size_t j=0; j<ramps[k].size(); j++) {
+                    PARABOLIC_RAMP_PLOG("%g ",ramps[k][j].ttotal);
+                    ttotal += ramps[k][j].ttotal;
+                }
+                PARABOLIC_RAMP_PLOG(", total %g\n",ttotal);
+            }
+        }
+        PARABOLIC_RAMP_ASSERT(tnext > t || t == 0);
+        if(tnext == 0) {
+            for(size_t i=0; i<ramps.size(); i++) {
+                if(ramps[i].size()!=1) {
+                    PARABOLICWARN("Warning, some entry has multiple zeroes?\n");
+                    for(size_t j=0; j<ramps.size(); j++) {
+                        PARABOLICWARN("Ramp %d: ",j);
+                        for(size_t k=0; k<ramps[j].size(); k++) {
+                            PARABOLICWARN("%g ",ramps[j][k].ttotal);
+                        }
+                    }
+                }
+                PARABOLIC_RAMP_ASSERT(ramps[i].size()==1);
+            }
+        }
+
+        typename T::iterator itramp = ndramps.insert(ndramps.end(), ParabolicRampND());
+        itramp->x0.resize(ramps.size());
+        itramp->x1.resize(ramps.size());
+        itramp->dx0.resize(ramps.size());
+        itramp->dx1.resize(ramps.size());
+        itramp->ramps.resize(ramps.size());
+        itramp->endTime = tnext-t;
+        for(size_t i=0; i<ramps.size(); i++) {
+            if(indices[i] != ramps[i].end()) {
+                ParabolicRamp1D iramp = *indices[i];
+                if(indices[i] == --ramps[i].end() && FuzzyEquals(tnext-timeOffsets[i],indices[i]->ttotal,EpsilonT*0.1)) {
+                    //don't trim back
+                }
+                else {
+                    iramp.TrimBack((timeOffsets[i]-tnext)+indices[i]->ttotal);
+                }
+                iramp.TrimFront(t-timeOffsets[i]);
+                Real oldTotal = iramp.ttotal;
+                iramp.ttotal = itramp->endTime;
+                if(iramp.tswitch1 > iramp.ttotal) {
+                    iramp.tswitch1 = iramp.ttotal;
+                }
+                if(iramp.tswitch2 > iramp.ttotal) {
+                    iramp.tswitch2 = iramp.ttotal;
+                }
+                if(!iramp.IsValid()) {
+                    PARABOLIC_RAMP_PLOG("CombineRamps: Trimming caused ramp to become invalid\n");
+                    PARABOLIC_RAMP_PLOG("Old total time %g, new total time %g\n",oldTotal,iramp.ttotal);
+                }
+                PARABOLIC_RAMP_ASSERT(iramp.IsValid());
+                itramp->ramps[i] = iramp;
+                itramp->x0[i] = iramp.x0;
+                itramp->dx0[i] = iramp.dx0;
+                itramp->x1[i] = iramp.x1;
+                itramp->dx1[i] = iramp.dx1;
+                if(FuzzyEquals(tnext,timeOffsets[i]+indices[i]->ttotal,EpsilonT*0.1)) {
+                    timeOffsets[i] = tnext;
+                    indices[i]++;
+                }
+                PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
+            }
+            else {
+                //after the last segment, propagate a constant off the last ramp
+                PARABOLIC_RAMP_ASSERT(!ramps[i].empty());
+                itramp->x0[i] = ramps[i].back().x1;
+                itramp->dx0[i] = ramps[i].back().dx1;
+                //itramp->x1[i] = ramps[i].back().x1+ramps[i].back().dx1*(tnext-t);
+                itramp->x1[i] = ramps[i].back().x1;
+                itramp->dx1[i] = ramps[i].back().dx1;
+                if(!FuzzyEquals(ramps[i].back().dx1*(tnext-t),0.0,EpsilonV)) {
+                    PARABOLIC_RAMP_PLOG("CombineRamps: warning, propagating time %g distance %g off the back, vel %g\n",(tnext-t),ramps[i].back().dx1*(tnext-t),itramp->dx0[i]);
+
+                    for(size_t k=0; k<ramps.size(); k++) {
+                        PARABOLIC_RAMP_PLOG("Ramp %d times: ",k);
+                        Real ttotal = 0.0;
+                        for(size_t j=0; j<ramps[k].size(); j++) {
+                            PARABOLIC_RAMP_PLOG("%g ",ramps[k][j].ttotal);
+                            ttotal += ramps[k][j].ttotal;
+                        }
+                        PARABOLIC_RAMP_PLOG(", total %g\n",ttotal);
+                    }
+                }
+                //set the 1D ramp manually
+                itramp->ramps[i].x0 = itramp->x0[i];
+                itramp->ramps[i].dx0 = itramp->dx0[i];
+                itramp->ramps[i].x1 = itramp->x1[i];
+                itramp->ramps[i].dx1 = itramp->dx1[i];
+                itramp->ramps[i].ttotal = itramp->ramps[i].tswitch2 = (tnext-t);
+                itramp->ramps[i].tswitch1 = 0;
+                itramp->ramps[i].v = itramp->dx1[i];
+                itramp->ramps[i].a1 = itramp->ramps[i].a2 = 0;
+                PARABOLIC_RAMP_ASSERT(itramp->ramps[i].IsValid());
+                PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
+            }
+        }
+        PARABOLIC_RAMP_ASSERT(itramp->IsValid());
+        if(ndramps.size() > 1) { //fix up endpoints
+            typename T::iterator itprevramp = ---- ndramps.end();
+            itramp->x0 = itprevramp->x1;
+            itramp->dx0 = itprevramp->dx1;
+            for(size_t i=0; i<itramp->ramps.size(); i++) {
+                itramp->ramps[i].x0=itramp->x0[i];
+                itramp->ramps[i].dx0=itramp->dx0[i];
+            }
+        }
+        PARABOLIC_RAMP_ASSERT(itramp->IsValid());
+
+        t = tnext;
+        if(tnext == 0) { //all null ramps
+            break;
+        }
+    }
+    for(size_t i=0; i<ramps.size(); i++) {
+        if(!FuzzyEquals(ramps[i].front().x0,ndramps.front().x0[i],EpsilonX)) {
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
+        }
+        if(!FuzzyEquals(ramps[i].front().dx0,ndramps.front().dx0[i],EpsilonV)) {
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
+        }
+        if(!FuzzyEquals(ramps[i].back().x1,ndramps.back().x1[i],EpsilonX)) {
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
+        }
+        if(!FuzzyEquals(ramps[i].back().dx1,ndramps.back().dx1[i],EpsilonV)) {
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
+        }
+        ndramps.front().x0[i] = ndramps.front().ramps[i].x0 = ramps[i].front().x0;
+        ndramps.front().dx0[i] = ndramps.front().ramps[i].dx0 = ramps[i].front().dx0;
+        ndramps.back().x1[i] = ndramps.back().ramps[i].x1 = ramps[i].back().x1;
+        ndramps.back().dx1[i] = ndramps.back().ramps[i].dx1 = ramps[i].back().dx1;
+    }
+}
+
 
 } //namespace ParabolicRamp
 

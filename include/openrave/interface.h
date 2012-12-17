@@ -88,8 +88,10 @@ public:
         __description = description;
     }
 
-    /// \brief set user data for a specific key
-    virtual void SetUserData(const std::string& key, UserDataPtr data) {
+    /// \brief set user data for a specific key.
+    ///
+    /// Because user data can be used for caching objects, it is necessary to allow functions taking const pointers of the interface can reset the pointers.
+    virtual void SetUserData(const std::string& key, UserDataPtr data) const {
         __mapUserData[key] = data;
     }
     /// \brief return the user custom data
@@ -103,7 +105,7 @@ public:
     }
 
     /// \brief removes a user data pointer. if user data pointer does not exist, then return 0, otherwise 1.
-    virtual bool RemoveUserData(const std::string& key) {
+    virtual bool RemoveUserData(const std::string& key) const {
         return __mapUserData.erase(key)>0;
     }
 
@@ -190,6 +192,10 @@ public:
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
 
+    virtual boost::mutex& GetInterfaceMutex() const {
+        return _mutexInterface;
+    }
+
 private:
     /// Write the help commands to an output stream
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
@@ -205,7 +211,7 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
+    mutable std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
