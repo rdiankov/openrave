@@ -236,8 +236,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
         if( curtokens.at(0) == tokens.at(0) ) {
             uint32_t matchscore=1;
             if( curtokens.size() > 1 && tokens.size() > 1 ) {
-                if( curtokens.at(1) == tokens.at(1) ) {
-                    matchscore += 0x80000000;
+                if( curtokens.at(1) != tokens.at(1) ) {
+                    // both names exist and do not match so cannot go any further!
+                    continue;
                 }
                 if( curtokens.size() > 2 && tokens.size() > 2 ) {
                     for(size_t i = 2; i < tokens.size(); ++i) {

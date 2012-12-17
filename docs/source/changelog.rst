@@ -28,6 +28,8 @@ Core
 
 * :meth:`.KinBody.SetDOFVelocities` now accepts indices
 
+* Fixed stale group names in KinBody _spec, Robot _activespec, and IdealController groups; :meth:`.ConfigurationSpecification.FindCompatibleGroup` now more strict.
+
 Inverse Kinematics
 ------------------
 

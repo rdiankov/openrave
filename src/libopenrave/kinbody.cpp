@@ -406,6 +406,15 @@ void KinBody::SetName(const std::string& newname)
 {
     OPENRAVE_ASSERT_OP(newname.size(), >, 0);
     if( _name != newname ) {
+        // have to replace the 2nd word of all the groups with the robot name
+        FOREACH(itgroup, _spec._vgroups) {
+            stringstream ss(itgroup->name);
+            string grouptype, oldname;
+            ss >> grouptype >> oldname;
+            stringbuf buf;
+            ss.get(buf,0);
+            itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
+        }
         _name = newname;
         _ParametersChanged(Prop_Name);
     }

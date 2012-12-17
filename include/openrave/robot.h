@@ -440,6 +440,8 @@ private:
         return _vecSensors;
     }
 
+    virtual void SetName(const std::string& name);
+
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1);
 
@@ -450,7 +452,8 @@ private:
     virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1);
     virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
 
-    /// Transforms the robot and updates the attached sensors and grabbed bodies.
+    /// \see SetTransform
+    /// Also transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
 
     /** Methods using the active degrees of freedoms of the robot. Active DOFs are a way for the

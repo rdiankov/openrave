@@ -393,6 +393,7 @@ public:
     virtual bool _CheckConstraintLinks() const {
         FOREACHC(itinfo, _listCheckLinks) {
         }
+        return true;
     }
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db)

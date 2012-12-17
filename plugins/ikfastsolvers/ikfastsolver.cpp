@@ -847,6 +847,8 @@ private:
 //                    maxsolutions *= m;
 //                }
 //            }
+            // TODO: iterating vravesols would could the filters vravesols.size() times even if a valid solution is found
+            // figure out a way to do short-curcuit the code to check the final solutions
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {

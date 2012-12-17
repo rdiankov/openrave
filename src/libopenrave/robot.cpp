@@ -260,6 +260,22 @@ bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<in
     return false;
 }
 
+void RobotBase::SetName(const std::string& newname)
+{
+    if( _name != newname ) {
+        // have to replace the 2nd word of all the groups with the robot name
+        FOREACH(itgroup, _activespec._vgroups) {
+            stringstream ss(itgroup->name);
+            string grouptype, oldname;
+            ss >> grouptype >> oldname;
+            stringbuf buf;
+            ss.get(buf,0);
+            itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
+        }
+        KinBody::SetName(newname);
+    }
+}
+
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);

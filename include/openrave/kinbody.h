@@ -1246,7 +1246,7 @@ private:
         return _name;
     }
 
-    /// \brief Set the name of the robot, notifies the environment and checks for uniqueness.
+    /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
 
     /// Methods for accessing basic information about joints
