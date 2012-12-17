@@ -309,9 +309,9 @@ void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const 
     // do sensors need to have their velocities updated?
 }
 
-void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits)
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits, const std::vector<int>& dofindices)
 {
-    KinBody::SetDOFVelocities(dofvelocities,checklimits); // RobotBase::SetDOFVelocities should be called internally
+    KinBody::SetDOFVelocities(dofvelocities,checklimits, dofindices); // RobotBase::SetDOFVelocities should be called internally
 }
 
 void RobotBase::_UpdateGrabbedBodies()

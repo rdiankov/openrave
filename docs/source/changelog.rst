@@ -20,6 +20,14 @@ Core
 
 * SetUserData now supports a key to allow different modules to store their own uninterrupted user data. KinBody.SetCollisionData, KinBody.SetPhysicsData, KinBody.SetViewerData are deprecated. It can also be called through const pointers.
 
+* Added :meth:`.KinBody.Link.ComputeLocalAABB` to get local AABB of the link.
+
+* Added :meth:`.RaveGetAffineDOFValuesFromVelocity` and :meth:`.RaveGetVelocityFromAffineDOFVelocity` for velocity conversion of affine values.
+
+* Added :meth:`.ConfigurationSpecification.GetSetFn` and :meth:`.ConfigurationSpecification.GetGetFn` for general setting/getting functions of a configuration.
+
+* :meth:`.KinBody.SetDOFVelocities` now accepts indices
+
 Inverse Kinematics
 ------------------
 

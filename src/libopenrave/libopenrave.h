@@ -228,6 +228,10 @@ inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dRe
     return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
 }
 
+void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v);
+
+void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v);
+
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 /// \brief The information of a currently grabbed body.

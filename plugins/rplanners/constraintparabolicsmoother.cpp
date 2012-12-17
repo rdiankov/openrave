@@ -24,10 +24,20 @@ namespace ParabolicRamp = ParabolicRampInternal;
 
 class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
+    struct LinkConstraintInfo
+    {
+        KinBody::LinkPtr plink;
+        AABB ablocal; // local aabb of the link
+    };
+
 public:
     ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nConstraint-based smoothing with `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
+        _distancechecker = RaveCreateCollisionChecker(penv, "pqp");
+        OPENRAVE_ASSERT_FORMAT0(!!_distancechecker, "need pqp distance checker", ORE_Assert);
+        _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -53,8 +63,10 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
-        _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        return !!_puniformsampler;
+        if( !_distancechecker->InitEnvironment() ) {
+            return false;
+        }
+        return true;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -373,6 +385,16 @@ public:
         return true;
     }
 
+    /** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
+
+       |w x (R x_i) + v| <= thresh
+
+     */
+    virtual bool _CheckConstraintLinks() const {
+        FOREACHC(itinfo, _listCheckLinks) {
+        }
+    }
+
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db)
     {
         // have to also test with tolerances!
@@ -429,14 +451,17 @@ public:
     virtual ParabolicRamp::Real Rand()
     {
         std::vector<dReal> vsamples;
-        _puniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);
+        _uniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);
         return vsamples.at(0);
     }
 
 protected:
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    SpaceSamplerBasePtr _puniformsampler;
+    SpaceSamplerBasePtr _uniformsampler;
     RobotBasePtr _probot;
+    CollisionCheckerBasePtr _distancechecker;
+
+    std::list< LinkConstraintInfo > _listCheckLinks;
 
 private:
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > __tempramps1d;

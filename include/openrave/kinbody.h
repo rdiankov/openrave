@@ -364,6 +364,9 @@ protected:
             return _collision;
         }
 
+        /// \brief Compute the aabb of all the geometries of the link in the link coordinate system
+        virtual AABB ComputeLocalAABB() const;
+
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
@@ -1457,7 +1460,8 @@ private:
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] dofvelocities - velocities of each of the degrees of freeom
     /// \param[in] checklimits if >0, will excplicitly check the joint velocity limits before setting the values and clamp them. If == 1, then will warn if the limits are overboard, if == 2, then will not warn (used for code that knows it's giving bad values)
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits);
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Returns the linear and angular velocities for each link
     ///

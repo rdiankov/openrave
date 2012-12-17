@@ -507,13 +507,15 @@ typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingPara
 class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
 {
 public:
-    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), mingripperdistance(0), velocitydistancethresh(0), _bCProcessing(false) {
+    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), mingripperdistance(0), velocitydistancethresh(0), _bCProcessing(false) {
         _vXMLParameters.push_back("maxlinkspeed");
+        _vXMLParameters.push_back("maxlinkaccel");
         _vXMLParameters.push_back("mingripperdistance");
         _vXMLParameters.push_back("velocitydistancethresh");
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
+    dReal maxlinkaccel; ///< max accel in m/s^2 that any point on the link goes. 0 means no accel limit
     dReal mingripperdistance; ///< minimum distance of the hand (manipulator grippers) to any object. 0 means disabled.
     dReal velocitydistancethresh; /// threshold for dot(Direction,Velocity)/MinDistance where Direction is between the closest contact points. 0 if disabled.
 
@@ -525,6 +527,7 @@ protected:
             return false;
         }
         O << "<maxlinkspeed>" << maxlinkspeed << "</maxlinkspeed>" << std::endl;
+        O << "<maxlinkaccel>" << maxlinkaccel << "</maxlinkaccel>" << std::endl;
         O << "<mingripperdistance>" << mingripperdistance << "</mingripperdistance>" << std::endl;
         O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
         return !!O;
@@ -540,7 +543,7 @@ protected:
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
         }
-        _bCProcessing = name=="maxlinkspeed" || name=="mingripperdistance" || name=="velocitydistancethresh";
+        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="mingripperdistance" || name=="velocitydistancethresh";
         return _bCProcessing ? PE_Support : PE_Pass;
     }
 
@@ -549,6 +552,9 @@ protected:
         if( _bCProcessing ) {
             if( name == "maxlinkspeed") {
                 _ss >> maxlinkspeed;
+            }
+            else if( name == "maxlinkaccel") {
+                _ss >> maxlinkaccel;
             }
             else if( name == "mingripperdistance" ) {
                 _ss >> mingripperdistance;

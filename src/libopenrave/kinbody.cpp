@@ -990,11 +990,44 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     SetLinkVelocities(velocities);
 }
 
-void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits, const std::vector<int>& dofindices)
 {
     Vector linearvel,angularvel;
     _veclinks.at(0)->GetVelocity(linearvel,angularvel);
-    return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+    if( dofindices.size() == 0 ) {
+        return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+    }
+
+    // check if all dofindices are supplied
+    if( (int)dofindices.size() == GetDOF() ) {
+        bool bordereddof = true;
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            if( dofindices[i] != (int)i ) {
+                bordereddof = false;
+                break;
+            }
+        }
+        if( bordereddof ) {
+            return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+        }
+    }
+    OPENRAVE_ASSERT_OP_FORMAT0(vDOFVelocities.size(),==,dofindices.size(),"index sizes do not match", ORE_InvalidArguments);
+    // have to recreate the correct vector
+    std::vector<dReal> vfulldof(GetDOF());
+    std::vector<int>::const_iterator it;
+    for(size_t i = 0; i < dofindices.size(); ++i) {
+        it = find(dofindices.begin(), dofindices.end(), i);
+        if( it != dofindices.end() ) {
+            vfulldof[i] = vDOFVelocities.at(static_cast<size_t>(it-dofindices.begin()));
+        }
+        else {
+            JointPtr pjoint = GetJointFromDOFIndex(i);
+            if( !!pjoint ) {
+                vfulldof[i] = _vecjoints.at(_vDOFIndices.at(i))->GetVelocity(i-_vDOFIndices.at(i));
+            }
+        }
+    }
+    return SetDOFVelocities(vfulldof,linearvel,angularvel,checklimits);
 }
 
 void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const

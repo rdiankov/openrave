@@ -483,7 +483,7 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-void _CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v)
+void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v);
@@ -501,7 +501,7 @@ void _CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameter
     }
 }
 
-void _CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v);
@@ -608,7 +608,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
             sampleneighfns[isavegroup].second = g.dof;
             void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
-            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, true, dofindices);
+            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
             setstatefns[isavegroup].second = g.dof;
             getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
@@ -643,8 +643,8 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _distmetricfn = boost::bind(_CallDistMetricFns,distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
     _samplefn = boost::bind(_CallSampleFns,samplefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _sampleneighfn = boost::bind(_CallSampleNeighFns,sampleneighfns, distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2, _3);
-    _setstatefn = boost::bind(_CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
-    _getstatefn = boost::bind(_CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _setstatefn = boost::bind(CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _getstatefn = boost::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _neighstatefn = boost::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
     boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
     _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), _1, _2, _3, _4);

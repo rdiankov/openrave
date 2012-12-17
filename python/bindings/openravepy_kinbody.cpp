@@ -461,6 +461,10 @@ public:
         object GetCollisionData() {
             return toPyTriMesh(_plink->GetCollisionData());
         }
+        object ComputeLocalAABB(object otransform) const {
+            return toPyAABB(_plink->ComputeLocalAABB());
+        }
+
         object ComputeAABB() const {
             return toPyAABB(_plink->ComputeAABB());
         }
@@ -1436,9 +1440,22 @@ public:
         _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities));
     }
 
-    void SetDOFVelocities(object odofvelocities, uint32_t checklimits)
+    void SetDOFVelocities(object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, object oindices = object())
     {
-        _pbody->SetDOFVelocities(ExtractArray<dReal>(odofvelocities),checklimits);
+        if( _pbody->GetDOF() == 0 ) {
+            return;
+        }
+        vector<dReal> vsetvalues = ExtractArray<dReal>(odofvelocities);
+        if( oindices == object() ) {
+            _pbody->SetDOFVelocities(vsetvalues,checklimits);
+        }
+        else {
+            if( len(oindices) == 0 ) {
+                return;
+            }
+            vector<int> vindices = ExtractArray<int>(oindices);
+            _pbody->SetDOFVelocities(vsetvalues,checklimits, vindices);
+        }
     }
 
     object GetLinkVelocities() const
@@ -1603,19 +1620,7 @@ public:
                 return;
             }
             vector<int> vindices = ExtractArray<int>(indices);
-            if( vsetvalues.size() != vindices.size() ) {
-                throw openrave_exception("sizes do not match");
-            }
-            vector<dReal> values;
-            _pbody->GetDOFValues(values);
-            vector<dReal>::iterator itv = vsetvalues.begin();
-            FOREACH(it, vindices) {
-                if(( *it < 0) ||( *it >= _pbody->GetDOF()) ) {
-                    throw openrave_exception(boost::str(boost::format("bad index passed")%(*it)));
-                }
-                values[*it] = *itv++;
-            }
-            _pbody->SetDOFValues(values,checklimits);
+            _pbody->SetDOFValues(vsetvalues,checklimits, vindices);
         }
     }
 
@@ -3341,7 +3346,7 @@ void init_openravepy_kinbody()
         object (PyKinBody::*getjoints2)(object) const = &PyKinBody::GetJoints;
         void (PyKinBody::*setdofvelocities1)(object) = &PyKinBody::SetDOFVelocities;
         void (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
-        void (PyKinBody::*setdofvelocities3)(object,uint32_t) = &PyKinBody::SetDOFVelocities;
+        void (PyKinBody::*setdofvelocities3)(object,uint32_t,object) = &PyKinBody::SetDOFVelocities;
         void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
@@ -3404,7 +3409,7 @@ void init_openravepy_kinbody()
                         .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))
                         .def("SetDOFVelocities",setdofvelocities1, args("dofvelocities"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t"))
                         .def("SetDOFVelocities",setdofvelocities2, args("dofvelocities","linear","angular"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
-                        .def("SetDOFVelocities",setdofvelocities3, args("dofvelocities","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t"))
+                        .def("SetDOFVelocities",setdofvelocities3, args("dofvelocities","checklimits","indices"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector"))
                         .def("SetDOFVelocities",setdofvelocities4, args("dofvelocities","linear","angular","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
                         .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
                         .def("GetLinkAccelerations",&PyKinBody::GetLinkAccelerations, DOXY_FN(KinBody,GetLinkAccelerations))
@@ -3567,6 +3572,7 @@ void init_openravepy_kinbody()
                          .def("IsParentLink",&PyKinBody::PyLink::IsParentLink, DOXY_FN(KinBody::Link,IsParentLink))
                          .def("GetCollisionData",&PyKinBody::PyLink::GetCollisionData, DOXY_FN(KinBody::Link,GetCollisionData))
                          .def("ComputeAABB",&PyKinBody::PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
+                         .def("ComputeLocalAABB",&PyKinBody::PyLink::ComputeLocalAABB, DOXY_FN(KinBody::Link,ComputeLocalAABB))
                          .def("GetTransform",&PyKinBody::PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
                          .def("GetCOMOffset",&PyKinBody::PyLink::GetCOMOffset, DOXY_FN(KinBody::Link,GetCOMOffset))
                          .def("GetLocalCOM",&PyKinBody::PyLink::GetLocalCOM, DOXY_FN(KinBody::Link,GetLocalCOM))

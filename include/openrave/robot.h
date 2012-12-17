@@ -448,7 +448,7 @@ private:
 
     virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
     virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1);
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1);
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>());
 
     /// Transforms the robot and updates the attached sensors and grabbed bodies.
     virtual void SetTransform(const Transform& trans);
