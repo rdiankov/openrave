@@ -647,15 +647,15 @@ private:
     void _SyncCallback(ODESpace::KinBodyInfoConstPtr pinfo)
     {
         // things very difficult when dynamics are not reset
-        FOREACHC(itlink, pinfo->vlinks) {
-            if( (*itlink)->body != NULL ) {
-                dBodySetAngularVel((*itlink)->body, 0, 0, 0);
-                dBodySetLinearVel((*itlink)->body, 0, 0, 0);
-                // not sure if should reset forces since sync call can happen much later
-                //dBodySetForce((*itlink)->body, 0, 0, 0);
-                //dBodySetTorque((*itlink)->body, 0, 0, 0);
-            }
-        }
+//        FOREACHC(itlink, pinfo->vlinks) {
+//            if( (*itlink)->body != NULL ) {
+//                dBodySetAngularVel((*itlink)->body, 0, 0, 0);
+//                dBodySetLinearVel((*itlink)->body, 0, 0, 0);
+//                // not sure if should reset forces since sync call can happen much later
+//                //dBodySetForce((*itlink)->body, 0, 0, 0);
+//                //dBodySetTorque((*itlink)->body, 0, 0, 0);
+//            }
+//        }
     }
 
     boost::shared_ptr<ODESpace> _odespace;
