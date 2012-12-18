@@ -461,6 +461,8 @@ protected:
     SpaceSamplerBasePtr _uniformsampler;
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
+    boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn;
+    boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
 

@@ -629,7 +629,7 @@ private:
     {
         KinBodyConstPtr pbody(_pbody);
         std::pair<KinBodyInfoPtr, bool> infocreated = GetCreateInfo(pbody);
-        if( infocreated.second ) {
+        if( !infocreated.second ) {
             // only init if the body was not just created
             BOOST_ASSERT(boost::shared_ptr<ODESpace>(infocreated.first->_odespace) == shared_from_this());
             BOOST_ASSERT(infocreated.first->GetBody()==pbody);
