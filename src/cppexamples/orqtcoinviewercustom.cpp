@@ -32,18 +32,13 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
     viewer->main(showgui);
 }
 
-class MyQtCoinViewer : public QMainWindow, public ViewerBase
-{
-public:
-};
-
 int g_counter=0;
 void ViewerCallback(ViewerBasePtr pviewer)
 {
     ++g_counter;
     // this is only true for the current qtcoinviewer implementation
-    MyQtCoinViewer* wnd = (MyQtCoinViewer*)pviewer.get();
-    if( (g_counter/120) & 1 ) {
+    QMainWindow* wnd = dynamic_cast<QMainWindow*>(pviewer.get());
+    if( (g_counter/60) & 1 ) {
         wnd->show();
     }
     else {
