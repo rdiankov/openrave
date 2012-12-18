@@ -542,6 +542,7 @@ private:
     dJointID GetJoint(KinBody::JointConstPtr pjoint)
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
+        OPENRAVE_ASSERT_FORMAT(!!pinfo, "info does not exist for joint %s, key %s", pjoint->GetName()%_userdatakey, OpenRAVE::ORE_Assert);
         BOOST_ASSERT( pinfo->GetBody() == pjoint->GetParent() );
         if( pjoint->GetJointIndex() >= 0 ) {
             BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );

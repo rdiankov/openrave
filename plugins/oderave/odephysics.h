@@ -247,7 +247,7 @@ The possible properties that can be set are: ";
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);

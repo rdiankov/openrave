@@ -30,6 +30,8 @@ Core
 
 * Fixed stale group names in KinBody _spec, Robot _activespec, and IdealController groups; :meth:`.ConfigurationSpecification.FindCompatibleGroup` now more strict.
 
+* Many methods in :class:`.InterfaceBase` have not become multi-thread safe.
+
 Inverse Kinematics
 ------------------
 
@@ -46,6 +48,8 @@ Misc
 * Fixed :meth:`.planningutils.JitterTransform` and added openravepy wrapper
 
 * Fixed opening DirectX files as environment files
+
+* Fixed destruction order bug in qt/coin viewer.
 
 Version 0.8.2
 =============
