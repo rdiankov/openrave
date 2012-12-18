@@ -264,10 +264,13 @@ private:
         return !!_ode;
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
+    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
-        boost::mutex::scoped_lock lockode(_ode->_mutex);
+        boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+        if( blockode ) {
+            lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+        }
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
@@ -500,7 +503,7 @@ private:
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            KinBodyInfoPtr pinfo = GetCreateInfo(*itbody).first;
+            KinBodyInfoPtr pinfo = GetCreateInfo(*itbody, false).first;
             BOOST_ASSERT( pinfo->GetBody() == *itbody );
             _Synchronize(pinfo,false);
         }
@@ -580,11 +583,11 @@ private:
         return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
-    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody) {
+    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody, bool blockode=true) {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         bool bcreated = false;
         if( !pinfo ) {
-            pinfo = InitKinBody(pbody);
+            pinfo = InitKinBody(pbody, KinBodyInfoPtr(), blockode);
             pbody->SetUserData(_userdatakey, pinfo);
             bcreated = true;
         }
