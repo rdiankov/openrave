@@ -1066,7 +1066,8 @@ public:
             }
             if( !!robot ) {
                 std::list<KinBody::GeometryInfo> listGeometries;
-                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1076,7 +1077,7 @@ public:
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = filename;
+                    listGeometries.front()._filenamerender = fullfilename;
                     if( robot->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1187,7 +1188,8 @@ public:
             }
             if( !!body ) {
                 std::list<KinBody::GeometryInfo> listGeometries;
-                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1197,7 +1199,7 @@ public:
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = filename;
+                    listGeometries.front()._filenamerender = fullfilename;
                     if( body->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1420,12 +1422,15 @@ public:
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    /// \brief parses the file into GeometryInfo and returns the full path of the file opened
+    ///
+    /// \param[in] listGeometries geometry list to be filled
+    virtual std::string _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
-            return boost::shared_ptr<TriMesh>();
+            return std::string();
         }
         Vector vScaleGeometry(1,1,1);
         FOREACHC(itatt,atts) {
@@ -1437,7 +1442,11 @@ public:
                 }
             }
         }
-        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries);
+        if( OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries) && listGeometries.size() > 0 ) {
+            return filedata;
+        }
+        listGeometries.clear();
+        return std::string();
     }
 
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
