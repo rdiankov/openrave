@@ -23,17 +23,6 @@
 class CollisionCheckerPQP : public CollisionCheckerBase
 {
 public:
-    struct COL
-    {
-        COL(Tri tri1_in, Tri tri2_in){
-            tri1 = tri1_in; tri2 = tri2_in;
-        }
-        Tri tri1;
-        Tri tri2;
-        KinBodyPtr pbody1;
-        KinBodyPtr pbody2;
-    };
-
     class KinBodyInfo : public OpenRAVE::UserData
     {
 public:
@@ -94,11 +83,13 @@ public:
 
     virtual bool _InitKinBody(KinBodyConstPtr pbody)
     {
-        if( !!pbody->GetUserData("pqpcollision") ) {
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData("pqpcollision"));
+        // need the pbody check since kinbodies can be cloned and could have the wrong pointer
+        if( !!pinfo && pinfo->GetBody() == pbody ) {
             return true;
         }
 
-        KinBodyInfoPtr pinfo(new KinBodyInfo());
+        pinfo.reset(new KinBodyInfo());
 
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         pbody->SetUserData("pqpcollision", pinfo);
@@ -698,7 +689,6 @@ private:
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(CollisionCheckerPQP)
-BOOST_TYPEOF_REGISTER_TYPE(CollisionCheckerPQP::COL)
 BOOST_TYPEOF_REGISTER_TYPE(CollisionCheckerPQP::KinBodyInfo)
 BOOST_TYPEOF_REGISTER_TYPE(PQP_Model)
 #endif

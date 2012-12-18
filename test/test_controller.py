@@ -63,7 +63,7 @@ class RunController(EnvironmentSetup):
 
 class test_ideal(RunController):
     def __init__(self):
-        RunController.__init__(self, 'ode')
+        RunController.__init__(self, 'IdealController')
 
 # class test_bullet(RunController):
 #     def __init__(self):

@@ -169,7 +169,8 @@ public:
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
-        if( !pinfo ) {
+        // need the pbody check since kinbodies can be cloned and could have the wrong pointer
+        if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = odespace->InitKinBody(pbody);
             pbody->SetUserData("odecollision", pinfo);
         }

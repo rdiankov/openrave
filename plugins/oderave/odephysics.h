@@ -247,8 +247,12 @@ The possible properties that can be set are: ";
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = _odespace->InitKinBody(pbody);
-        pbody->SetUserData("odephysics", pinfo);
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
+        // need the pbody check since kinbodies can be cloned and could have the wrong pointer
+        if( !pinfo || pinfo->GetBody() != pbody ) {
+            pinfo = _odespace->InitKinBody(pbody);
+            pbody->SetUserData("odephysics", pinfo);
+        }
         return !!pinfo;
     }
 
@@ -555,10 +559,10 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
+            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
         }
         if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
         }
 
         if( !!pkb1 && !pkb1->IsEnabled() ) {

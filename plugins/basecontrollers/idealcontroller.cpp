@@ -168,7 +168,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( !!_gtransform ) {
                 // have to reset the name since _gtransform can be using an old one
                 _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
-                ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+                _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
                 if( _bTrajHasTransform ) {
                     _samplespec._vgroups.push_back(*_gtransform);
                 }
