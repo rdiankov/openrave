@@ -31,7 +31,7 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            boost::mutex::scoped_lock lock(pbody->GetInterfaceMutex());
+            boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
             pbody->_listRegisteredCallbacks.erase(_iterator);
         }
     }
@@ -3814,7 +3814,7 @@ void KinBody::_ComputeInternalInformation()
     if( _nParametersChanged ) {
         std::list<UserDataWeakPtr> listRegisteredCallbacks;
         {
-            boost::mutex::scoped_lock lock(GetInterfaceMutex());
+            boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
             listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
         }
         FOREACH(it,listRegisteredCallbacks) {
@@ -4178,7 +4178,7 @@ void KinBody::_ParametersChanged(int parameters)
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     {
-        boost::mutex::scoped_lock lock(GetInterfaceMutex());
+        boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
         listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
     }
     FOREACH(it,listRegisteredCallbacks) {
@@ -4287,7 +4287,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
 UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
-    boost::mutex::scoped_lock lock(GetInterfaceMutex());
+    boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
     pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
     return pdata;
 }

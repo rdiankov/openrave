@@ -69,6 +69,7 @@ public:
         dWorldID world;          ///< the dynamics world
         dSpaceID space;          ///< the collision world
         dJointGroupID contactgroup;
+        boost::mutex _mutex;
     };
 
 public:
@@ -140,7 +141,7 @@ public:
         }
 
         virtual ~KinBodyInfo() {
-            EnvironmentMutex::scoped_lock lock(GetBody()->GetEnv()->GetMutex());         // protected ode calls
+            boost::mutex::scoped_lock lock(_ode->_mutex);
             Reset();
             dSpaceClean(space);
             dJointGroupEmpty(jointgroup);
@@ -266,6 +267,7 @@ private:
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+        boost::mutex::scoped_lock lockode(_ode->_mutex);
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
@@ -485,7 +487,7 @@ private:
             pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         }
 
-        _Synchronize(pinfo);
+        _Synchronize(pinfo, false);
         return pinfo;
     }
 
@@ -494,12 +496,13 @@ private:
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
+        boost::mutex::scoped_lock lockode(_ode->_mutex);
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             KinBodyInfoPtr pinfo = GetCreateInfo(*itbody).first;
             BOOST_ASSERT( pinfo->GetBody() == *itbody );
-            _Synchronize(pinfo);
+            _Synchronize(pinfo,false);
         }
     }
 
@@ -589,9 +592,13 @@ private:
     }
 
 private:
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
+            boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+            if( block ) {
+                lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+            }
             vector<Transform> vtrans;
             KinBodyPtr pbody = pinfo->GetBody();
             pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
@@ -616,7 +623,6 @@ private:
 
     void _ResetKinBodyCallback(boost::weak_ptr<KinBody const> _pbody)
     {
-        EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyConstPtr pbody(_pbody);
         std::pair<KinBodyInfoPtr, bool> infocreated = GetCreateInfo(pbody);
         if( infocreated.second ) {

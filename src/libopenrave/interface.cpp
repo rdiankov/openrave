@@ -26,11 +26,55 @@ InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __ty
 
 InterfaceBase::~InterfaceBase()
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     __mapCommands.clear();
     __mapUserData.clear();
     __mapReadableInterfaces.clear();
     __penv.reset();
+}
+
+void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
+{
+    UserDataPtr olduserdata;
+    {
+        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+        std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+        if( it == __mapUserData.end() ) {
+            __mapUserData[key] = data;
+        }
+        else {
+            olduserdata = it->second;
+            it->second = data;
+        }
+    }
+    olduserdata.reset();
+}
+
+UserDataPtr InterfaceBase::GetUserData(const std::string& key) const
+{
+    boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::map<std::string, UserDataPtr>::const_iterator it = __mapUserData.find(key);
+    if( it == __mapUserData.end() ) {
+        return UserDataPtr();
+    }
+    return it->second;
+}
+
+bool InterfaceBase::RemoveUserData(const std::string& key) const
+{
+    // have to destroy the userdata pointer outside the lock, otherwise can get into a deadlock
+    UserDataPtr olduserdata;
+    {
+        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+        std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+        if( it == __mapUserData.end() ) {
+            return false;
+        }
+        olduserdata = it->second;
+        __mapUserData.erase(it);
+    }
+    olduserdata.reset();
+    return true;
 }
 
 void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -53,7 +97,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
     }
     boost::shared_ptr<InterfaceCommand> interfacecmd;
     {
-        boost::mutex::scoped_lock lock(_mutexInterface);
+        boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
         CMDMAP::iterator it = __mapCommands.find(cmd);
         if( it == __mapCommands.end() ) {
             throw openrave_exception(str(boost::format("failed to find command '%s' in interface %s\n")%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
@@ -76,7 +120,7 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     if((cmdname.size() == 0)|| !utils::IsValidName(cmdname) ||(_stricmp(cmdname.c_str(),"commands") == 0)) {
         throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
     }
@@ -88,7 +132,7 @@ void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::I
 
 void InterfaceBase::UnregisterCommand(const std::string& cmdname)
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     CMDMAP::iterator it = __mapCommands.find(cmdname);
     if( it != __mapCommands.end() ) {
         __mapCommands.erase(it);
@@ -97,7 +141,7 @@ void InterfaceBase::UnregisterCommand(const std::string& cmdname)
 
 bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
     string cmd, label;
     CMDMAP::const_iterator it;
     while(!sinput.eof()) {
@@ -153,14 +197,14 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
 
 XMLReadablePtr InterfaceBase::GetReadableInterface(const std::string& xmltag) const
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::const_iterator it = __mapReadableInterfaces.find(xmltag);
     return it != __mapReadableInterfaces.end() ? it->second : XMLReadablePtr();
 }
 
 XMLReadablePtr InterfaceBase::SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable)
 {
-    boost::mutex::scoped_lock lock(_mutexInterface);
+    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(xmltag);
     if( it == __mapReadableInterfaces.end() ) {
         __mapReadableInterfaces[xmltag] = readable;
