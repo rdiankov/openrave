@@ -166,7 +166,6 @@ protected:
         return PyInterfaceBasePtr();
     }
 
-
     void _ViewerThread(const string &strviewer, bool bShowViewer)
     {
         _pviewer.reset();

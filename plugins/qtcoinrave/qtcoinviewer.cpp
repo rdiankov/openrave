@@ -138,12 +138,14 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 }
 
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
+// have to derive from ViewerBase first since __plugin holds a reference to the shared object that loads the qt4 library
+    : ViewerBase(penv),
 #if QT_VERSION >= 0x040000 // check for qt4
-    : QMainWindow(NULL, Qt::Window),
+    QMainWindow(NULL, Qt::Window),
 #else
-    : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
+    QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-    ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+    _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -334,9 +336,9 @@ QtCoinViewer::~QtCoinViewer()
         boost::mutex::scoped_lock lock(_mutexMessages);
 
         list<EnvMessagePtr>::iterator itmsg;
-        FORIT(itmsg, _listMessages)
+        FORIT(itmsg, _listMessages) {
             (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
-
+        }
         _listMessages.clear();
     }
 
