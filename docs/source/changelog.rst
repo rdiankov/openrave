@@ -32,6 +32,8 @@ Core
 
 * Many methods in :class:`.InterfaceBase` have not become multi-thread safe.
 
+* Added :meth:`.SpaceSample.SampleSequenceOneReal` and :meth:`.SpaceSample.SampleSequenceOneUINT32` for easier retrieval of samples.
+
 Inverse Kinematics
 ------------------
 

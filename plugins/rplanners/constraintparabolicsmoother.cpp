@@ -66,6 +66,12 @@ public:
         if( !_distancechecker->InitEnvironment() ) {
             return false;
         }
+        _listCheckLinks.clear();
+        if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
+            // extract links from _parameters->_configurationspecification?
+            //_listCheckLinks
+            //_parameters->_configurationspecification
+        }
         return true;
     }
 
@@ -137,26 +143,21 @@ public:
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
-            PlannerProgress progress; progress._iteration=0;
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
-            }
+            ConfigurationSpecification posspec = _parameters->_configurationspecification;
+            _setstatefn = posspec.GetSetFn(GetEnv());
+            ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
+            _setvelstatefn = velspec.GetSetFn(GetEnv());
 
             int numshortcuts=0;
-            if( !!_parameters->_setstatefn ) {
-                Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
+            numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
+            if( numshortcuts < 0 ) {
+                // interrupted
+                return PS_Interrupted;
             }
 
             BOOST_ASSERT( ramps.size() > 0 );
 
-            progress._iteration=1;
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
-            }
-
-            ConfigurationSpecification oldspec = _parameters->_configurationspecification;
-            ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
-            ConfigurationSpecification newspec = oldspec;
+            ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
             int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
 
@@ -168,7 +169,7 @@ public:
                 else if( velspec.FindCompatibleGroup(*itgroup) != velspec._vgroups.end() ) {
                     itgroup->interpolation = "linear";
                 }
-                else if( oldspec.FindCompatibleGroup(*itgroup) != oldspec._vgroups.end() ) {
+                else if( posspec.FindCompatibleGroup(*itgroup) != posspec._vgroups.end() ) {
                     itgroup->interpolation = "quadratic";
                 }
             }
@@ -181,7 +182,7 @@ public:
 
             // separate all the acceleration switches into individual points
             vtrajpoints.resize(newspec.GetDOF());
-            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,ramps.front().x0.begin(),oldspec,1,GetEnv(),true);
+            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,ramps.front().x0.begin(),posspec,1,GetEnv(),true);
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,ramps.front().dx0.begin(),velspec,1,GetEnv(),false);
             vtrajpoints.at(waypointoffset) = 1;
             vtrajpoints.at(timeoffset) = 0;
@@ -213,7 +214,7 @@ public:
                 dReal prevtime = 0;
                 for(size_t i = 0; i < vswitchtimes.size(); ++i) {
                     itrampnd->Evaluate(vswitchtimes[i],vconfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
+                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),posspec,1,GetEnv(),true);
                     itrampnd->Derivative(vswitchtimes[i],vconfig);
                     ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
                     *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
@@ -295,6 +296,7 @@ public:
         ParabolicRamp::Vector x0,x1,dx0,dx1;
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
+        PlannerProgress progress;
         for(int iters=0; iters<numIters; iters++) {
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
@@ -309,6 +311,12 @@ public:
             if(i1 == i2) {
                 continue;
             }
+
+            progress._iteration=iters;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+
             //same ramp
             dReal u1 = t1-rampStartTime[i1];
             dReal u2 = t2-rampStartTime[i2];
@@ -377,7 +385,7 @@ public:
             for(size_t i = 0; i < a.size(); ++i) {
                 anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
             }
-            _parameters->_setstatefn(anew);
+            (*_setstatefn)(anew);
             if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }
@@ -406,7 +414,7 @@ public:
                 anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
             }
-            _parameters->_setstatefn(anew);
+            (*_setstatefn)(anew);
             if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }
@@ -445,15 +453,14 @@ public:
                 env.SetCollisionChecker(oldchecker)
      */
 
-    virtual bool NeedDerivativeForFeasibility() {
-        return true;
+    virtual bool NeedDerivativeForFeasibility()
+    {
+        return _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel > 0 || _parameters->velocitydistancethresh > 0;
     }
 
     virtual ParabolicRamp::Real Rand()
     {
-        std::vector<dReal> vsamples;
-        _uniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);
-        return vsamples.at(0);
+        return _uniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
 
 protected:
@@ -461,8 +468,8 @@ protected:
     SpaceSamplerBasePtr _uniformsampler;
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
-    boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn;
-    boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn;
+    boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
+    //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
 
