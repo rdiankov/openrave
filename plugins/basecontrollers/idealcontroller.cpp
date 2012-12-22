@@ -147,6 +147,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fCommandTime = 0;
         _bIsDone = true;
         _vecdesired.resize(0);
+        _ptraj.reset();
 
         if( !!ptraj ) {
             _samplespec._vgroups.resize(0);
