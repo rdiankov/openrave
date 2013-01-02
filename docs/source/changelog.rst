@@ -39,6 +39,8 @@ Inverse Kinematics
 
 * IkFast can detect aligned axes and give infinite solutions.
 
+* Fixed bug in ikfastsolver.cpp that prioritizes solutions based on configuration distance.
+
 Python
 ------
 
@@ -52,6 +54,8 @@ Misc
 * Fixed opening DirectX files as environment files
 
 * Fixed destruction order bug in qt/coin viewer.
+
+* Add OPT_IKFAST_FLOAT32 cmake option to control whether 32bit float ikfast shared objects can be loaded.
 
 Version 0.8.2
 =============

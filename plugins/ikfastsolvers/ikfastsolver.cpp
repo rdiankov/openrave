@@ -1135,7 +1135,9 @@ private:
         dReal dist = 0;
         FOREACHC(it, probot->GetActiveDOFIndices()) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
-            dist += *itq**itq * pjoint->GetWeight(*it-pjoint->GetDOFIndex());
+            dReal fweight = pjoint->GetWeight(*it-pjoint->GetDOFIndex());
+            dist += *itq**itq * fweight * fweight;
+            itq++;
         }
         return dist;
     }
@@ -1275,11 +1277,13 @@ private:
     int _nSameStateRepeatCount;
 };
 
+#ifdef OPENRAVE_IKFAST_FLOAT32
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
 
 {
     return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc));
 }
+#endif
 
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
 {

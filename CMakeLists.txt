@@ -46,6 +46,7 @@ option(OPT_BULLET "Use Bullet Collision/Physics If Evalable" ON)
 option(OPT_EXTRA_ROBOTS "Install extra robots" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
+option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")

@@ -66,6 +66,7 @@ The following inverse kinematics types are supported:
 * **TranslationXY2D** - end effector origin reaches desired XY translation position, Z is ignored. The coordinate system with relative to the base link.
 * **TranslationLocalGlobal6D** - local point on end effector origin reaches desired 3D global point. Because both local point and global point can be specified, there are 6 values.
 * **TranslationXAxisAngle4D**, **TranslationYAxisAngle4D**, **TranslationZAxisAngle4D** - end effector origin reaches desired 3D translation, manipulator direction makes a specific angle with x/y/z-axis (defined in the manipulator base link's coordinate system)
+* **TranslationXAxisAngleZNorm4D**, **TranslationYAxisAngleXNorm4D**, **TranslationZAxisAngleYNorm4D** - end effector origin reaches desired 3D translation, manipulator direction needs to be orthogonal to z, x, or y axis and be rotated at a certain angle starting from the x, y, or z axis (defined in the manipulator base link's coordinate system)
 The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 
 Usage

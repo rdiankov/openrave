@@ -87,7 +87,9 @@ public:
         IkLibrary() : plib(NULL) {
         }
         ~IkLibrary() {
+#ifdef OPENRAVE_IKFAST_FLOAT32
             _ikfloat.reset();
+#endif
             _ikdouble.reset();
             if( plib != NULL ) {
                 SysCloseLibrary(plib);
@@ -112,12 +114,15 @@ public:
             }
 
             int realsize = GetIkRealSize();
+#ifdef OPENRAVE_IKFAST_FLOAT32
             if( realsize == 4 ) {
                 boost::shared_ptr<MyFunctions<float> > ikfunctions(new MyFunctions<float>());
                 _InitFunctions(ikfunctions);
                 _ikfloat=ikfunctions;
             }
-            else if( realsize == 8 ) {
+            else
+#endif
+            if( realsize == 8 ) {
                 boost::shared_ptr<MyFunctions<double> > ikfunctions(new MyFunctions<double>());
                 _InitFunctions(ikfunctions);
                 _ikdouble=ikfunctions;
@@ -151,11 +156,13 @@ public:
                 throw OPENRAVE_EXCEPTION_FORMAT("ikfast version %d not supported", ikfastversion, ORE_InvalidArguments);
             }
             std::stringstream ss;
+#ifdef OPENRAVE_IKFAST_FLOAT32
             if( !!_ikfloat ) {
                 boost::shared_ptr<MyFunctions<float> > newfunctions(new MyFunctions<float>(*_ikfloat));
                 newfunctions->_library = shared_from_this();
                 return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
             }
+#endif
             if( !!_ikdouble ) {
                 boost::shared_ptr<MyFunctions<double> > newfunctions(new MyFunctions<double>(*_ikdouble));
                 newfunctions->_library = shared_from_this();
@@ -174,25 +181,31 @@ public:
             return _libraryname;
         }
         int GetIKType() {
+#ifdef OPENRAVE_IKFAST_FLOAT32
             if( !!_ikfloat ) {
                 return _ikfloat->_GetIkType();
             }
+#endif
             if( !!_ikdouble ) {
                 return _ikdouble->_GetIkType();
             }
             throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
         }
         std::string GetIkFastVersion() {
+#ifdef OPENRAVE_IKFAST_FLOAT32
             if( !!_ikfloat ) {
                 return _ikfloat->_GetIkFastVersion();
             }
+#endif
             if( !!_ikdouble ) {
                 return _ikdouble->_GetIkFastVersion();
             }
             throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
         }
 
+#ifdef OPENRAVE_IKFAST_FLOAT32
         boost::shared_ptr<MyFunctions<float> > _ikfloat;
+#endif
         boost::shared_ptr<MyFunctions<double> > _ikdouble;
 private:
         void* SysLoadLibrary(const char* lib)
@@ -549,10 +562,13 @@ public:
             return false;
         }
 
+#ifdef OPENRAVE_IKFAST_FLOAT32
         if( !!lib->_ikfloat ) {
             return _PerfTiming<float>(sout,lib->_ikfloat,num, maxtime);
         }
-        else if( !!lib->_ikdouble ) {
+        else
+#endif
+        if( !!lib->_ikdouble ) {
             return _PerfTiming<double>(sout,lib->_ikdouble,num, maxtime);
         }
         else {
