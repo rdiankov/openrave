@@ -287,9 +287,17 @@ public:
                     dReal mintime = 0;
                     bool bUseEndVelocity = i+1==numpoints;
                     FOREACH(itmin,listmintimefns) {
-                        dReal time = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
-                        if( mintime < time ) {
-                            mintime = time;
+                        dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
+                        if( _parameters->_fStepLength > 0 ) {
+                            if( fgrouptime < _parameters->_fStepLength ) {
+                                fgrouptime = _parameters->_fStepLength;
+                            }
+                            else {
+                                fgrouptime = std::ceil(fgrouptime/_parameters->_fStepLength-g_fEpsilonJointLimit)*_parameters->_fStepLength;
+                            }
+                        }
+                        if( mintime < fgrouptime ) {
+                            mintime = fgrouptime;
                         }
                     }
                     if( _parameters->_hastimestamps ) {
@@ -340,7 +348,7 @@ public:
 
         _WriteTrajectory(ptraj,newspec, data);
         // happens too often for debug message?
-        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es")%GetXMLId()%ptraj->GetDuration()));
+        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return PS_HasSolution;
     }
 

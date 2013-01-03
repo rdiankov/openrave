@@ -671,8 +671,8 @@ void PlannerBase::PlannerParameters::Validate() const
         OPENRAVE_ASSERT_OP(_vConfigAccelerationLimit.size(),==,(size_t)GetDOF());
     }
     OPENRAVE_ASSERT_OP(_vConfigResolution.size(),==,(size_t)GetDOF());
-    OPENRAVE_ASSERT_OP(_fStepLength,>,0);
-    OPENRAVE_ASSERT_OP(_nMaxIterations,>=,0);
+    OPENRAVE_ASSERT_OP(_fStepLength,>=,0); // == 0 is valid for auto-steps
+    OPENRAVE_ASSERT_OP(_nMaxIterations,>=,0); // == 0 is valid for auto-iterations
 
     // check all stateless functions, which means ie anything but configuration samplers
     vector<dReal> vstate;

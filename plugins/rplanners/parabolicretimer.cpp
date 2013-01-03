@@ -692,7 +692,6 @@ protected:
             }
             _vtrajpoints.at(_vtrajpoints.size()-dof+info->waypointindex) = 1;
             info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
-
         }
     }
 

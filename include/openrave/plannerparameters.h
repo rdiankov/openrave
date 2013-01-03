@@ -413,16 +413,20 @@ protected:
 typedef boost::shared_ptr<GraspParameters> GraspParametersPtr;
 typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 
+/** \brief parameters for timing/smoothing trajectories
+
+    PlannerBase::PlannerParameters::_fStepLength is used for the control time of the robot identifying the discretization of the trajectory time. if 0, will ignore discretization of time.
+ **/
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), _fToolAccelerationLimit(0), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), _bProcessing(false) {
+        _fStepLength = 0; // reset to 0 since it is being used
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("hasvelocities");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
-        _vXMLParameters.push_back("toolaccelerationlimit");
         _vXMLParameters.push_back("multidofinterp");
     }
 
@@ -431,7 +435,6 @@ public:
     bool _hastimestamps, _hasvelocities;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
-    dReal _fToolAccelerationLimit; ///< if non-zero then the timer shoulld consdier the max acceleration limit of the tool.
 
 protected:
     bool _bProcessing;
@@ -446,7 +449,6 @@ protected:
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
-        O << "<toolaccelerationlimit>" << _fToolAccelerationLimit << "</toolaccelerationlimit>" << std::endl;
         return !!O;
     }
 
@@ -461,7 +463,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="toolaccelerationlimit" || name=="multidofinterp";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -486,9 +488,6 @@ protected:
             else if( name == "multidofinterp" ) {
                 _ss >> _multidofinterp;
             }
-            else if( name == "toolaccelerationlimit" ) {
-                _ss >> _fToolAccelerationLimit;
-            }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
             }
@@ -507,15 +506,19 @@ typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingPara
 class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
 {
 public:
-    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), mingripperdistance(0), velocitydistancethresh(0), _bCProcessing(false) {
+    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), maxmanipspeed(0), maxmanipaccel(0), mingripperdistance(0), velocitydistancethresh(0), _bCProcessing(false) {
         _vXMLParameters.push_back("maxlinkspeed");
         _vXMLParameters.push_back("maxlinkaccel");
+        _vXMLParameters.push_back("maxmanipspeed");
+        _vXMLParameters.push_back("maxmanipaccel");
         _vXMLParameters.push_back("mingripperdistance");
         _vXMLParameters.push_back("velocitydistancethresh");
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
     dReal maxlinkaccel; ///< max accel in m/s^2 that any point on the link goes. 0 means no accel limit
+    dReal maxmanipspeed; ///< if non-zero then the timer shoulld consdier the max speed limit (m/s) of the active manipulators of the selected robots in the configuration space. 0 means no speed limit
+    dReal maxmanipaccel; ///< if non-zero then the timer shoulld consdier the max acceleration limit (m/s^2) of the active manipulators of the selected robots in the configuration space. 0 means no accel limit
     dReal mingripperdistance; ///< minimum distance of the hand (manipulator grippers) to any object. 0 means disabled.
     dReal velocitydistancethresh; /// threshold for dot(Direction,Velocity)/MinDistance where Direction is between the closest contact points. 0 if disabled.
 
@@ -528,6 +531,8 @@ protected:
         }
         O << "<maxlinkspeed>" << maxlinkspeed << "</maxlinkspeed>" << std::endl;
         O << "<maxlinkaccel>" << maxlinkaccel << "</maxlinkaccel>" << std::endl;
+        O << "<maxmanipspeed>" << maxmanipspeed << "</maxmanipspeed>" << std::endl;
+        O << "<maxmanipaccel>" << maxmanipaccel << "</maxmanipaccel>" << std::endl;
         O << "<mingripperdistance>" << mingripperdistance << "</mingripperdistance>" << std::endl;
         O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
         return !!O;
@@ -543,7 +548,7 @@ protected:
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
         }
-        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="mingripperdistance" || name=="velocitydistancethresh";
+        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="maxmanipspeed" || name =="maxmanipaccel" || name=="mingripperdistance" || name=="velocitydistancethresh";
         return _bCProcessing ? PE_Support : PE_Pass;
     }
 
@@ -555,6 +560,12 @@ protected:
             }
             else if( name == "maxlinkaccel") {
                 _ss >> maxlinkaccel;
+            }
+            else if( name == "maxmanipspeed") {
+                _ss >> maxmanipspeed;
+            }
+            else if( name == "maxmanipaccel") {
+                _ss >> maxmanipaccel;
             }
             else if( name == "mingripperdistance" ) {
                 _ss >> mingripperdistance;

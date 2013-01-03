@@ -41,6 +41,13 @@ Inverse Kinematics
 
 * Fixed bug in ikfastsolver.cpp that prioritizes solutions based on configuration distance.
 
+Planning
+--------
+
+- Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters`
+
+- Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
+
 Python
 ------
 
