@@ -111,9 +111,9 @@ public:
             return _info._tLocalTool;
         }
 
-        /// \brief Sets the local tool transform with respect to the end effector.
+        /// \brief Sets the local tool transform with respect to the end effector link.
         ///
-        /// Because this call will change manipulator hash, it resets the loaded IK and sets the Prop_RobotManipulatorTool message.
+        /// Because this call will change manipulator hash, it resets the loaded IK and sends the Prop_RobotManipulatorTool message.
         virtual void SetLocalToolTransform(const Transform& t);
 
         /// \brief new name for manipulator
@@ -142,6 +142,11 @@ public:
         virtual const std::vector<dReal>& GetClosingDirection() const {
             return _info._vClosingDirection;
         }
+
+        /// \brief Sets the local tool direction with respect to the end effector link.
+        ///
+        /// Because this call will change manipulator hash, it resets the loaded IK and sends the Prop_RobotManipulatorTool message.
+        virtual void SetLocalToolDirection(const Vector& direction);
 
         /// \brief direction of palm/head/manipulator used for approaching. defined inside the manipulator/grasp coordinate system
         virtual Vector GetLocalToolDirection() const {

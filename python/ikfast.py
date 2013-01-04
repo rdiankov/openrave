@@ -441,7 +441,7 @@ class AST:
             self.presetcheckforzeros = []
             self.dictequations = []
             self.equationsused = []
-            assert self.checkValidSolution()
+            assert(self.checkValidSolution())
         def subs(self,solsubs):
             if self.jointeval is not None:
                 self.jointeval = [e.subs(solsubs) for e in self.jointeval]
@@ -458,7 +458,7 @@ class AST:
                 raise IKFastSolver.CannotSolveError('substitution produced invalid results')
             return self
         def generate(self, generator):
-            assert self.checkValidSolution()
+            assert(self.checkValidSolution())
             return generator.generateSolution(self)
         def end(self, generator):
             return generator.endSolution(self)
@@ -528,7 +528,7 @@ class AST:
             self.equationsused = [e.subs(solsubs) for e in self.equationsused]
             if self.poly is not None:
                 self.poly = Poly(self.poly.subs(solsubs),*self.poly.gens)
-            assert self.checkValidSolution()
+            assert(self.checkValidSolution())
             return self
         def generate(self, generator):
             return generator.generatePolynomialRoots(self)
@@ -592,7 +592,7 @@ class AST:
             self.equationsused = [e.subs(solsubs) for e in self.equationsused]
             #if self.poly is not None:
             #    self.poly = Poly(self.poly.subs(solsubs)...)
-            assert self.checkValidSolution()
+            assert(self.checkValidSolution())
             return self
         def generate(self, generator):
             return generator.generateCoeffFunction(self)
@@ -1045,10 +1045,10 @@ class IKFastSolver(AutoReloader):
             for case in newconds:
                 newcases = set(currentcases)
                 newcases.add(case)
-                assert not self.hascases(newcases)
+                assert(not self.hascases(newcases))
                 self.handleddegeneratecases.append(newcases)
         def addcases(self,currentcases):
-            assert not self.hascases(currentcases)
+            assert(not self.hascases(currentcases))
             self.handleddegeneratecases.append(currentcases)
         def gethandledconds(self,currentcases):
             handledconds = []
@@ -2479,6 +2479,7 @@ class IKFastSolver(AutoReloader):
                     AllEquations.append(eq)
 
         # check if planar with respect to normaldir
+        from IPython.Shell import IPShellEmbed; IPShellEmbed(argv='')(local_ns=locals())
         extravar = None
         if normaldir is not None:
             if Tallmult[0:3,0:3]*normaldir == normaldir:
@@ -2494,7 +2495,6 @@ class IKFastSolver(AutoReloader):
                             angles.append(solvejoint)
                         else:
                             angles.append(-solvejoint)
-
                 Tzero = Tallmult.subs([(a,S.Zero) for a in angles])
                 zeroangle = atan2(binormaldir.dot(Tzero[0:3,0:3]*basedir), globaldir.dot(Tzero[0:3,0:3]*basedir))
                 eqangles = self.Tee[0]-zeroangle
@@ -5752,7 +5752,7 @@ class IKFastSolver(AutoReloader):
                             ptotal_sin = Poly(S.Zero,*polysymbols)
                             for m,c in ptotal_cos.terms():
                                 if m[1] > 0:
-                                    assert m[1] == 1
+                                    assert(m[1] == 1)
                                     ptotal_sin = ptotal_sin.sub(Poly.from_dict({(m[0],0):c},*ptotal_sin.gens))
                                     ptotal_cos = ptotal_cos.sub(Poly.from_dict({m:c},*ptotal_cos.gens))
                             finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()

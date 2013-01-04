@@ -59,6 +59,16 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     __hashstructure.resize(0);
 }
 
+void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
+{
+    _info._sIkSolverXMLId.resize(0);
+    __pIkSolver.reset();
+    _info._vdirection = direction;
+    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+    __hashkinematicsstructure.resize(0);
+    __hashstructure.resize(0);
+}
+
 void RobotBase::Manipulator::SetName(const std::string& name)
 {
     RobotBasePtr probot=GetRobot();
