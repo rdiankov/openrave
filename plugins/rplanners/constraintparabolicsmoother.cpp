@@ -338,6 +338,17 @@ public:
             if(!res) {
                 continue;
             }
+            // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
+            dReal newramptime = 0;
+            FOREACH(itramp, intermediate) {
+                newramptime += itramp->endTime;
+            }
+            if( newramptime+_parameters->_fStepLength > t2-t1 ) {
+                // reject since it didn't make significant improvement
+                RAVELOG_VERBOSE("shortcut iter=%d rejected time=%fs\n", iters, endTime-(t2-t1)+newramptime);
+                continue;
+            }
+
             //perform shortcut
             shortcuts++;
             itramp1->TrimBack(itramp1->endTime-u1);

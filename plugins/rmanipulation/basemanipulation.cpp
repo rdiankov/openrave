@@ -404,6 +404,18 @@ protected:
             else if( cmd == "maxtries" ) {
                 sinput >> nMaxTries;
             }
+            else if( cmd == "postprocessingparameters" ) {
+                if( !getline(sinput, params->_sPostProcessingParameters) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingParameters);
+            }
+            else if( cmd == "postprocessingplanner" ) {
+                if( !getline(sinput, params->_sPostProcessingPlanner) ) {
+                    return false;
+                }
+                boost::trim(params->_sPostProcessingPlanner);
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;

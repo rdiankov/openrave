@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -54,6 +54,7 @@ public:
             _parameters->_nMaxIterations = 100;
         }
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        //_puniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
         return !!_puniformsampler;
     }
 
@@ -132,7 +133,8 @@ public:
 
             int numshortcuts=0;
             if( !!_parameters->_setstatefn ) {
-                dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this);
+                // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
+                numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, _parameters->_fStepLength*0.99);
             }
 
             progress._iteration=1;
@@ -170,6 +172,18 @@ public:
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
             FOREACHC(itrampnd,dynamicpath.ramps) {
+                // double-check the current ramps
+                if(!itrampnd->constraintchecked ) {
+                    if( !checker.Check(*itrampnd)) {
+                        RAVELOG_DEBUG("ramp is in collision!\n");
+                        return PS_Failed;
+                    }
+                    progress._iteration=2;
+                    if( _CallCallbacks(progress) == PA_Interrupt ) {
+                        return PS_Interrupted;
+                    }
+                }
+
                 vswitchtimes.resize(0);
                 vswitchtimes.push_back(itrampnd->endTime);
                 if( _parameters->_outputaccelchanges ) {
@@ -260,9 +274,7 @@ public:
 
     virtual ParabolicRamp::Real Rand()
     {
-        std::vector<dReal> vsamples;
-        _puniformsampler->SampleSequence(vsamples,1,IT_OpenEnd);
-        return vsamples.at(0);
+        return _puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
 
 protected:

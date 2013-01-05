@@ -50,7 +50,8 @@ class RunController(EnvironmentSetup):
             traj=RaveCreateTrajectory(env, '')
             traj.Init(robot1.GetActiveConfigurationSpecification('quadratic'))
             traj.Insert(0,r_[initvalues1,waypoint])
-            planningutils.RetimeActiveDOFTrajectory(traj,robot1,False)
+            ret=planningutils.RetimeActiveDOFTrajectory(traj,robot1,False)
+            assert(ret==PlannerStatus.HasSolution)
             assert(traj.GetDuration()>0)
             # shouldn't move
             self.RunTrajectory(robot2,traj)

@@ -15,8 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rplanners.h"
 
-static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
-
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:

@@ -298,7 +298,8 @@ class RunRobot(EnvironmentSetup):
             traj.Insert(0,r_[orgvalues,upper+0.1])
             assert(traj.GetNumWaypoints()==2)
             try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                assert(ret==PlannerStatus.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
@@ -309,7 +310,8 @@ class RunRobot(EnvironmentSetup):
             traj.Insert(0,r_[lower,upper])
             assert(traj.GetNumWaypoints()==2)
             try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                assert(ret==PlannerStatus.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
             

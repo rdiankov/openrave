@@ -48,6 +48,14 @@ Planning
 
 - Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
 
+- Added options parameter to :meth:`.Planner.PlannerParameters.serialize`
+
+- Speed up of smoothing algorithms by early rejecting bad candidates.
+
+- Added much faster linear smoother :ref:`linear smoothing <planner-linearsmoother>` which can also do per-DOF smoothing.
+
+- planningutils smoothing and retiming functions like :meth:`planningutils.SmoothActiveDOFTrajectory` now return planning failure rather than to throw exceptions.
+
 Python
 ------
 

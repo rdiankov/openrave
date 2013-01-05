@@ -20,6 +20,8 @@
 
 namespace OpenRAVE {
 
+static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";
+
 std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
 {
     if( !!I) {
@@ -84,7 +86,7 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
     _params->_setstatefn(_values);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner("shortcut_linear")
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother)
 {
     _diffstatefn = subtractstates;
     _neighstatefn = addstates;
@@ -153,7 +155,7 @@ void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters co
     *this = *r;
 }
 
-bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
+bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
 {
     O << _configurationspecification << endl;
     O << "<_vinitialconfig>";
@@ -195,7 +197,9 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
-    O << _sExtraParameters << endl;
+    if( !(options & 1) ) {
+        O << _sExtraParameters << endl;
+    }
     return !!O;
 }
 
@@ -761,7 +765,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     }
     PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
     if( !planner ) {
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
+        planner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
         if( !planner ) {
             return PS_Failed;
         }
@@ -789,10 +793,10 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
         }
     }
 
-    if( planner->GetXMLId() != "shortcut_linear") {
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
+    if( planner->GetXMLId() != s_linearsmoother) {
+        planner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
         if( !!planner ) {
-            RAVELOG_WARN(str(boost::format("%s post processing failed, trying shortcut_linear")%GetParameters()->_sPostProcessingPlanner));
+            RAVELOG_WARN(str(boost::format("%s post processing failed, trying %s")%GetParameters()->_sPostProcessingPlanner%s_linearsmoother));
             params->_sPostProcessingPlanner = "lineartrajectoryretimer";
             params->_sPostProcessingParameters = "<hastimestamps>0</hastimestamps><interpolation>linear</interpolation>";
             if( planner->InitPlan(probot, params) ) {

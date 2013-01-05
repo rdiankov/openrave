@@ -109,14 +109,14 @@ class BaseManipulation:
             assert(len(goal) == len(self.robot.GetActiveManipulator().GetArmIndices()))
         return self._MoveJoints('MoveManipulator',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter,releasegil=releasegil)
     
-    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False):
+    def MoveActiveJoints(self,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False,postprocessingplanner=None,postprocessingparameters=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         if goal is not None:
             assert(len(goal) == self.robot.GetActiveDOF() and len(goal) > 0)
-        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter,releasegil=releasegil)
+        return self._MoveJoints('MoveActiveJoints',goal=goal,steplength=steplength,maxiter=maxiter,maxtries=maxtries,execute=execute,outputtraj=outputtraj,goals=goals,outputtrajobj=outputtrajobj,jitter=jitter,releasegil=releasegil,postprocessingplanner=postprocessingplanner,postprocessingparameters=postprocessingparameters)
 
-    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False):
+    def _MoveJoints(self,cmd,goal=None,steplength=None,maxiter=None,maxtries=None,execute=None,outputtraj=None,goals=None,outputtrajobj=None,jitter=None,releasegil=False,postprocessingplanner=None,postprocessingparameters=None):
         """See :ref:`module-basemanipulation-moveactivejoints`
         """
         cmd += ' '
@@ -139,6 +139,10 @@ class BaseManipulation:
             cmd += 'maxtries %d '%maxtries
         if jitter is not None:
             cmd += 'jitter %f '%jitter
+        if postprocessingplanner is not None:
+            cmd += 'postprocessingplanner %s\n'%postprocessingplanner
+        if postprocessingparameters is not None:
+            cmd += 'postprocessingparameters %s\n'%postprocessingparameters
         res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise planning_error('MoveActiveJoints')

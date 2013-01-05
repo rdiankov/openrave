@@ -50,6 +50,8 @@ namespace ParabolicRampInternal {
 class ParabolicRamp1D
 {
 public:
+    ParabolicRamp1D() : x0(0), dx0(0), x1(0), dx1(0), tswitch1(0), tswitch2(0), ttotal(0), a1(0), v(0), a2(0) {
+    }
     /// Sets the ramp to a constant function for time t
     void SetConstant(Real x,Real t=0);
     /// Sets the ramp to a linear function from x0 to x1 with time t.
@@ -112,6 +114,8 @@ public:
 class ParabolicRampND
 {
 public:
+    ParabolicRampND() : endTime(0), constraintchecked(0) {
+    }
     void SetConstant(const Vector& x,Real t=0);
     void SetLinear(const Vector& x0,const Vector& x1,Real t);
     bool SolveMinTimeLinear(const Vector& amax,const Vector& vmax);
@@ -139,6 +143,8 @@ public:
     /// Calculated upon SolveX
     Real endTime;
     std::vector<ParabolicRamp1D> ramps;
+
+    mutable int constraintchecked; ///< 0 if collision hasn't been checked yet, otherwise 1
 };
 
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given

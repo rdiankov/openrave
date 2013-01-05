@@ -38,13 +38,16 @@ public:
 protected:
     bool _bProcessingExploration;
     // save the extra data to XML
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O,options&~1) ) { // skip writing extra
             return false;
         }
         O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << std::endl;
         O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
         return !!O;
     }
 
@@ -104,9 +107,9 @@ public:
     int nMaxSampleTries;     ///< max sample tries before giving up on creating a child
 protected:
     bool _bProcessingRA;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O,options&~1) ) {
             return false;
         }
         O << "<radius>" << fRadius << "</radius>" << std::endl;
@@ -114,6 +117,9 @@ protected:
         O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << std::endl;
         O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << std::endl;
         O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
 
         return !!O;
     }
@@ -180,9 +186,9 @@ public:
 protected:
     EnvironmentBasePtr _penv;
     bool _bProcessingGS;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O,options&~1) ) {
             return false;
         }
         O << "<grasps>" << _vgrasps.size() << " ";
@@ -194,6 +200,9 @@ protected:
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
         return !!O;
     }
 
@@ -294,9 +303,9 @@ protected:
     EnvironmentBasePtr _penv;     ///< environment target belongs to
     bool _bProcessingGrasp;
     // save the extra data to XML
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
@@ -319,6 +328,9 @@ protected:
         O << "<ffinestep>" << ffinestep << "</ffinestep>" << std::endl;
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
         O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
         return !!O;
     }
 
@@ -438,9 +450,9 @@ public:
 
 protected:
     bool _bProcessing;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<interpolation>" << _interpolation << "</interpolation>" << std::endl;
@@ -449,6 +461,10 @@ protected:
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
+
         return !!O;
     }
 
@@ -524,9 +540,9 @@ public:
 
 protected:
     bool _bCProcessing;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !TrajectoryTimingParameters::serialize(O) ) {
+        if( !TrajectoryTimingParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<maxlinkspeed>" << maxlinkspeed << "</maxlinkspeed>" << std::endl;
@@ -535,6 +551,10 @@ protected:
         O << "<maxmanipaccel>" << maxmanipaccel << "</maxmanipaccel>" << std::endl;
         O << "<mingripperdistance>" << mingripperdistance << "</mingripperdistance>" << std::endl;
         O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
+
         return !!O;
     }
 
@@ -610,7 +630,7 @@ protected:
     BaseXMLReaderPtr _pcurreader;
     bool _bProcessing;
 
-    virtual bool serialize(std::ostream& O) const;
+    virtual bool serialize(std::ostream& O, int options=0) const;
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
@@ -630,12 +650,15 @@ public:
 
 protected:
     bool _bProcessing;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<minimumgoalpaths>" << _minimumgoalpaths << "</minimumgoalpaths>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
         return !!O;
     }
 
@@ -685,12 +708,16 @@ public:
 
 protected:
     bool _bProcessing;
-    virtual bool serialize(std::ostream& O) const
+    virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O) ) {
+        if( !PlannerParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
+        if( !(options & 1) ) {
+            O << _sExtraParameters << std::endl;
+        }
+
         return !!O;
     }
 

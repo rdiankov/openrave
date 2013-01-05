@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -74,72 +74,118 @@ public:
         PlannerParametersConstPtr parameters = GetParameters();
 
         // subsample trajectory and add to list
-        list< vector<dReal> > path;
-        _SubsampleTrajectory(ptraj,path);
+        list< std::pair< vector<dReal>, dReal> > listpath;
+        _SubsampleTrajectory(ptraj,listpath);
 
-        list< vector<dReal> >::iterator startNode, endNode;
-        ConfigurationListPtr vconfigs(new ConfigurationList());
+        _OptimizePath(listpath);
 
-        int nrejected = 0;
-        int i = parameters->_nMaxIterations;
-        while(i > 0 && nrejected < (int)path.size()+4 && path.size() > 2 ) {
-            --i;
-
-            // pick a random node on the path, and a random jump ahead
-            int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
-            int startIndex = RaveRandomInt()%(endIndex-1);
-
-            startNode = path.begin();
-            advance(startNode, startIndex);
-            endNode = startNode;
-            advance(endNode, endIndex-startIndex);
-            nrejected++;
-
-            // check if the nodes can be connected by a straight line
-            vconfigs->clear();
-            if (!_parameters->_checkpathconstraintsfn(*startNode, *endNode, IT_Open, vconfigs)) {
-                if( nrejected++ > (int)path.size()+8 ) {
-                    break;
-                }
-                continue;
-            }
-
-            ++startNode;
-            FOREACHC(itc, *vconfigs) {
-                path.insert(startNode, *itc);
-            }
-            // splice out in-between nodes in path
-            path.erase(startNode, endNode);
-            nrejected = 0;
-
-            if( path.size() <= 2 ) {
-                break;
-            }
+        ptraj->Init(parameters->_configurationspecification);
+        FOREACH(it, listpath) {
+            ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
-
-        ptraj->Init(_parameters->_configurationspecification);
-        FOREACH(it, path) {
-            ptraj->Insert(ptraj->GetNumWaypoints(),*it);
-        }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         _ProcessPostPlanners(RobotBasePtr(),ptraj);
         return PS_HasSolution;
     }
 
 protected:
-    void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< vector<dReal> >& listpoints) const
+    void _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
-        PlannerParametersConstPtr parameters = _parameters;
+        PlannerParametersConstPtr parameters = GetParameters();
+        std::vector<dReal> vtempdists;
+        list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itendnode;
+        ConfigurationListPtr listNewConfigs(new ConfigurationList());
+
+        int nrejected = 0;
+        int i = parameters->_nMaxIterations;
+        while(i > 0 && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
+            --i;
+
+            // pick a random node on the listpath, and a random jump ahead
+            int endIndex = 2+(RaveRandomInt()%((int)listpath.size()-2));
+            int startIndex = RaveRandomInt()%(endIndex-1);
+
+            itstartnode = listpath.begin();
+            advance(itstartnode, startIndex);
+            itendnode = itstartnode;
+            dReal totaldistance = 0;
+            for(int j = 0; j < endIndex-startIndex; ++j) {
+                ++itendnode;
+                totaldistance += itendnode->second;
+            }
+            nrejected++;
+
+            dReal expectedtotaldistance = parameters->_distmetricfn(itstartnode->first, itendnode->first);
+            if( expectedtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
+                // expected total distance is not that great
+                continue;
+            }
+
+            // check if the nodes can be connected by a straight line
+            listNewConfigs->clear();
+            if (!parameters->_checkpathconstraintsfn(itstartnode->first, itendnode->first, IT_Open, listNewConfigs)) {
+                if( nrejected++ > (int)listpath.size()+8 ) {
+                    break;
+                }
+                continue;
+            }
+
+            // check how long the new path is
+            ConfigurationList::iterator itnewconfig1 = listNewConfigs->begin();
+            ConfigurationList::iterator itnewconfig0 = itnewconfig1++;
+            vtempdists.resize(listNewConfigs->size()+1);
+            std::vector<dReal>::iterator itdist = vtempdists.begin();
+            dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, *itnewconfig0);
+            *itdist++ = newtotaldistance;
+            while(itnewconfig1 != listNewConfigs->end() ) {
+                *itdist = parameters->_distmetricfn(*itnewconfig0, *itnewconfig1);
+                newtotaldistance += *itdist;
+                ++itdist;
+                itnewconfig0 = itnewconfig1;
+                ++itnewconfig1;
+            }
+            *itdist = parameters->_distmetricfn(*itnewconfig0, itendnode->first);
+            newtotaldistance += *itdist;
+            ++itdist;
+            BOOST_ASSERT(itdist==vtempdists.end());
+
+            if( newtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
+                // new path is not that good, so reject
+                continue;
+            }
+
+            // finally add
+            itdist = vtempdists.begin();
+            ++itstartnode;
+            FOREACHC(itc, *listNewConfigs) {
+                listpath.insert(itstartnode, make_pair(*itc,*itdist++));
+            }
+            itendnode->second = *itdist++;
+            BOOST_ASSERT(itdist==vtempdists.end());
+
+            // splice out in-between nodes in path
+            listpath.erase(itstartnode, itendnode);
+            nrejected = 0;
+
+            if( listpath.size() <= 2 ) {
+                break;
+            }
+        }
+    }
+
+    void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< std::pair< vector<dReal>, dReal> >& listpath) const
+    {
+        PlannerParametersConstPtr parameters = GetParameters();
         vector<dReal> q0(parameters->GetDOF()), dq(parameters->GetDOF());
         vector<dReal> vtrajdata;
-        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,_parameters->_configurationspecification);
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,parameters->_configurationspecification);
 
-        std::copy(vtrajdata.begin(),vtrajdata.begin()+_parameters->GetDOF(),q0.begin());
-        listpoints.push_back(q0);
+        std::copy(vtrajdata.begin(),vtrajdata.begin()+parameters->GetDOF(),q0.begin());
+        listpath.push_back(make_pair(q0,dReal(0)));
 
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
-            std::copy(vtrajdata.begin()+(ipoint-1)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),dq.begin());
-            std::copy(vtrajdata.begin()+(ipoint)*_parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*_parameters->GetDOF(),q0.begin());
+            std::copy(vtrajdata.begin()+(ipoint-1)*parameters->GetDOF(),vtrajdata.begin()+(ipoint)*parameters->GetDOF(),dq.begin());
+            std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q0.begin());
             parameters->_diffstatefn(dq,q0);
             int i, numSteps = 1;
             vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
@@ -160,7 +206,8 @@ protected:
                 *it *= fisteps;
             }
             for (int f = 0; f < numSteps; f++) {
-                listpoints.push_back(q0);
+                dReal dist = parameters->_distmetricfn(listpath.back().first,q0);
+                listpath.push_back(make_pair(q0, dist));
                 if( !parameters->_neighstatefn(q0,dq,0) ) {
                     RAVELOG_DEBUG("neighstatefn failed, perhaps non-linear constraints are used?\n");
                     break;
@@ -168,94 +215,14 @@ protected:
             }
         }
 
-        std::copy(vtrajdata.end()-_parameters->GetDOF(),vtrajdata.end(),q0.begin());
-        listpoints.push_back(q0);
+        std::copy(vtrajdata.end()-parameters->GetDOF(),vtrajdata.end(),q0.begin());
+        dReal dist = parameters->_distmetricfn(listpath.back().first,q0);
+        listpath.push_back(make_pair(q0,dist));
     }
 
     TrajectoryTimingParametersPtr _parameters;
     RobotBasePtr _probot;
 };
-
-//    virtual void _OptimizePathSingle(list<Node*>& path, int numiterations)
-//    {
-//        if( path.size() <= 2 )
-//            return;
-//        RAVELOG_DEBUG("optimizing path - path shortcut single dimension\n");
-//        PlannerParametersConstPtr params = GetParameters();
-//
-//        typename list<Node*>::iterator startNode, prevNode, nextNode, endNode;
-//        vector< vector<dReal> > vconfigs;
-//        vector<dReal> qprev, qnext;
-//        vector<dReal> vdists;
-//
-//        int nrejected = 0;
-//        int i = numiterations;
-//        while(i > 0 && nrejected < (int)path.size()+4 ) {
-//            --i;
-//
-//            // pick a random node on the path, and a random jump ahead
-//            int endIndex = 2+(RaveRandomInt()%((int)path.size()-2));
-//            int startIndex = RaveRandomInt()%(endIndex-1);
-//            int dim = RaveRandomInt()%params->GetDOF();
-//
-//            nrejected++;
-//            startNode = path.begin(); advance(startNode, startIndex);
-//            endNode = startNode;
-//            advance(endNode, endIndex-startIndex);
-//
-//            prevNode = startNode;
-//            nextNode = prevNode; ++nextNode;
-//            vdists.resize(0);
-//            vdists.push_back(0);
-//            for(int j = 1; j < endIndex-startIndex; ++j,++nextNode) {
-//                vdists.push_back(vdists.back()+params->_distmetricfn((*prevNode)->q,(*nextNode)->q));
-//                prevNode = nextNode;
-//            }
-//
-//            if( vdists.back() <= 0 ) {
-//                nrejected = 0;
-//                ++startNode;
-//                path.erase(startNode, endNode);
-//                continue;
-//            }
-//
-//            // normalize distances and start checking collision
-//            dReal itotaldist = 1.0f/vdists.back();
-//
-//            // check if the nodes can be connected by a linear interpolation of dim
-//            vconfigs.resize(0);
-//            prevNode = startNode;
-//            nextNode = prevNode; ++nextNode;
-//            qprev = (*prevNode)->q;
-//            bool bCanConnect = true;
-//            for(int j = 1; j < endIndex-startIndex; ++j,++nextNode) {
-//                qnext = (*nextNode)->q;
-//                qnext[dim] = vdists[j]*itotaldist*((*endNode)->q[dim]-(*startNode)->q[dim])+(*startNode)->q[dim];
-//                if (CollisionFunctions::CheckCollision(params,_robot,qprev, qnext, IT_OpenStart, &vconfigs)) {
-//                    bCanConnect = false;
-//                    break;
-//                }
-//                qprev = qnext;
-//                prevNode = nextNode;
-//            }
-//
-//            if( !bCanConnect ) {
-//                if( nrejected++ > (int)path.size()+8 )
-//                    break;
-//                continue;
-//            }
-//
-//            ++startNode;
-//            FOREACHC(itc, vconfigs)
-//                path.insert(startNode, _treeForward._nodes.at(_treeForward.AddNode(-1,*itc)));
-//            // splice out in-between nodes in path
-//            path.erase(startNode, ++endNode);
-//            nrejected = 0;
-//
-//            if( path.size() <= 2 )
-//                return;
-//        }
-//    }
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new ShortcutLinearPlanner(penv, sinput));

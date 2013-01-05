@@ -132,8 +132,9 @@ public:
     void Concat(const DynamicPath& suffix);
     void Split(Real t,DynamicPath& before,DynamicPath& after) const;
     bool TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check);
-    int Shortcut(int numIters,RampFeasibilityChecker& check);
-    int Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
+    /// \param mintimestep the minimum time step for a shortcut
+    int Shortcut(int numIters,RampFeasibilityChecker& check, Real mintimestep=0);
+    int Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng, Real mintimestep=0);
     int ShortCircuit(RampFeasibilityChecker& check);
     /// leadTime: the amount of time before this path should be executable
     /// padTime: an approximate bound on the time it takes to check a shortcut
