@@ -106,14 +106,30 @@ public:
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
-        PlannerStatus status = _linearretimer->PlanPath(ptraj);
-        if( status != PS_HasSolution ) {
-            return status;
+        if( parameters->_sPostProcessingPlanner.size() == 0 ) {
+            // no other planner so at least retime
+            PlannerStatus status = _linearretimer->PlanPath(ptraj);
+            if( status != PS_HasSolution ) {
+                return status;
+            }
+            return PS_HasSolution;
         }
+
+        // leave to post processing to set timing (like parabolicsmoother)
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
 protected:
+    string _DumpTrajectory(TrajectoryBaseConstPtr trajectory)
+    {
+        string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        trajectory->serialize(f);
+        RAVELOG_DEBUG(str(boost::format("trajectory dumped to %s")%filename));
+        return filename;
+    }
+
     dReal _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath, dReal totaldist, int nMaxIterations)
     {
         PlannerParametersConstPtr parameters = GetParameters();
@@ -192,7 +208,7 @@ protected:
             }
 
             // check if the nodes can be connected by a straight line
-            if (!parameters->_checkpathconstraintsfn(vstartvalues, vendvalues, IT_Open, ConfigurationListPtr())) {
+            if (!SegmentFeasible(vstartvalues, vendvalues, IT_Open)) {
                 continue;
             }
 
@@ -329,7 +345,7 @@ protected:
 
             for(size_t i = 0; i+1 < vpathvalues.size(); ++i) {
                 IntervalType interval = i+2==vpathvalues.size() ? IT_Open : IT_OpenStart;
-                if (!parameters->_checkpathconstraintsfn(vpathvalues.at(i).first, vpathvalues.at(i+1).first, interval, ConfigurationListPtr())) {
+                if (!SegmentFeasible(vpathvalues.at(i).first, vpathvalues.at(i+1).first, interval)) {
                     bsuccess = false;
                     break;
                 }
@@ -375,6 +391,26 @@ protected:
         }
         OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
         return totaldist;
+    }
+
+    /// \brief checks if a segment is feasible using pointtolerance
+    inline bool SegmentFeasible(const std::vector<dReal>& a,const std::vector<dReal>& b, IntervalType interval)
+    {
+        PlannerParametersConstPtr parameters = GetParameters();
+        // have to also test with tolerances!
+        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance }}; // note that it is using _parameters in order to avoid casting parameters, which might not work
+        std::vector<dReal> anew(a.size()), bnew(b.size());
+        FOREACH(itperturbation,perturbations) {
+            for(size_t i = 0; i < a.size(); ++i) {
+                anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+                bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
+            }
+            parameters->_setstatefn(anew);
+            if( !parameters->_checkpathconstraintsfn(anew,bnew,interval,PlannerBase::ConfigurationListPtr()) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     TrajectoryTimingParametersPtr _parameters;

@@ -328,6 +328,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         params->_checkpathconstraintsfn.clear();
     }
 
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(probot,params) ) {
@@ -372,6 +373,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         params->_checkpathconstraintsfn.clear();
     }
 
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters += plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {

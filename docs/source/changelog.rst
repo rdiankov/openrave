@@ -56,6 +56,8 @@ Planning
 
 - planningutils smoothing and retiming functions like :meth:`planningutils.SmoothActiveDOFTrajectory` now return planning failure rather than to throw exceptions.
 
+- Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
+
 Python
 ------
 

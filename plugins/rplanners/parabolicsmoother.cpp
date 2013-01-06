@@ -53,6 +53,7 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
+        _bUsePerterbation = true;
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         //_puniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
         return !!_puniformsampler;
@@ -114,6 +115,7 @@ public:
             path.push_back(q);
         }
         try {
+            _bUsePerterbation = true;
             ParabolicRamp::DynamicPath dynamicpath;
             dynamicpath.Init(parameters->_vConfigVelocityLimit,parameters->_vConfigAccelerationLimit);
             dynamicpath._multidofinterp = _parameters->_multidofinterp;
@@ -174,10 +176,13 @@ public:
             FOREACHC(itrampnd,dynamicpath.ramps) {
                 // double-check the current ramps
                 if(!itrampnd->constraintchecked ) {
+                    // part of original trajectory which might not have been processed with perterbations, so ignore them
+                    _bUsePerterbation = false;
                     if( !checker.Check(*itrampnd)) {
                         RAVELOG_DEBUG("ramp is in collision!\n");
                         return PS_Failed;
                     }
+                    _bUsePerterbation = true; // re-enable
                     progress._iteration=2;
                     if( _CallCallbacks(progress) == PA_Interrupt ) {
                         return PS_Interrupted;
@@ -234,19 +239,27 @@ public:
             return PS_Failed;
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
-        return PS_HasSolution;
+        return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
     {
-        // have to also test with tolerances!
-        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-        ParabolicRamp::Vector anew(a.size());
-        FOREACH(itperturbation,perturbations) {
-            for(size_t i = 0; i < a.size(); ++i) {
-                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+        if( _bUsePerterbation ) {
+            // have to also test with tolerances!
+            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
+            ParabolicRamp::Vector anew(a.size());
+            FOREACH(itperturbation,perturbations) {
+                for(size_t i = 0; i < a.size(); ++i) {
+                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                }
+                _parameters->_setstatefn(anew);
+                if( !_parameters->_checkpathconstraintsfn(anew,anew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                    return false;
+                }
             }
-            _parameters->_setstatefn(anew);
+        }
+        else {
+            _parameters->_setstatefn(a);
             if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }
@@ -256,16 +269,24 @@ public:
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db)
     {
-        // have to also test with tolerances!
-        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-        ParabolicRamp::Vector anew(a.size()), bnew(b.size());
-        FOREACH(itperturbation,perturbations) {
-            for(size_t i = 0; i < a.size(); ++i) {
-                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+        if( _bUsePerterbation ) {
+            // test with tolerances!
+            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance }};
+            ParabolicRamp::Vector anew(a.size()), bnew(b.size());
+            FOREACH(itperturbation,perturbations) {
+                for(size_t i = 0; i < a.size(); ++i) {
+                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                    bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                }
+                _parameters->_setstatefn(anew);
+                if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                    return false;
+                }
             }
-            _parameters->_setstatefn(anew);
-            if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+        }
+        else {
+            _parameters->_setstatefn(a);
+            if( !_parameters->_checkpathconstraintsfn(a,b,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }
         }
@@ -281,6 +302,7 @@ protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
     RobotBasePtr _probot;
+    bool _bUsePerterbation;
 };
 
 

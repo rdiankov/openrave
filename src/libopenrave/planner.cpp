@@ -787,26 +787,10 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     if( planner->InitPlan(probot, params) ) {
-        PlannerStatus status = planner->PlanPath(ptraj);
-        if( status != PS_Failed ) {
-            return status;
-        }
+        return planner->PlanPath(ptraj);
     }
 
-    if( planner->GetXMLId() != s_linearsmoother) {
-        planner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
-        if( !!planner ) {
-            RAVELOG_WARN(str(boost::format("%s post processing failed, trying %s")%GetParameters()->_sPostProcessingPlanner%s_linearsmoother));
-            params->_sPostProcessingPlanner = "lineartrajectoryretimer";
-            params->_sPostProcessingParameters = "<hastimestamps>0</hastimestamps><interpolation>linear</interpolation>";
-            if( planner->InitPlan(probot, params) ) {
-                PlannerStatus status = planner->PlanPath(ptraj);
-                if( status != PS_Failed ) {
-                    return status;
-                }
-            }
-        }
-    }
+    // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
     return PS_Failed;
 }
 
