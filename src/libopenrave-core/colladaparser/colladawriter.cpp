@@ -1267,6 +1267,12 @@ private:
             }
         }
 
+        if( !bHasAddedInstance ) {
+            // happens when body has no links, at least add a dummy <node> in order for the references to be complete
+            domNodeRef inode = daeSafeCast<domNode>(pnoderoot->add(COLLADA_ELEMENT_NODE));
+            inode->setSid("node0"); // from _GetNodeSid
+        }
+
         _WriteKinBodyType(pbody,kmout->kmodel);
 
         std::vector<std::string> vlinksids(kmout->vlinksids.size());

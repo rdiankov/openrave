@@ -128,6 +128,11 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
     if( iksolver->GetXMLId().size() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
     }
+    if( iksolver == __pIkSolver && _info._sIkSolverXMLId == iksolver->GetXMLId() ) {
+        return true;
+    }
+
+    // only call the changed message if something changed
     if( iksolver->Init(shared_from_this()) ) {
         __pIkSolver = iksolver;
         _info._sIkSolverXMLId = iksolver->GetXMLId();
