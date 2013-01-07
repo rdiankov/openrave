@@ -58,6 +58,8 @@ Planning
 
 - Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
 
+- Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
+
 Python
 ------
 

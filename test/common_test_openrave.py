@@ -152,6 +152,8 @@ class EnvironmentSetup(object):
 
     def RunTrajectory(self,robot,traj):
         assert(traj is not None)
+        # set the first point of the trajectory manually
+        robot.SetConfigurationValues(traj.GetWaypoint(0,robot.GetConfigurationSpecification()))
         robot.GetController().SetPath(traj)
         while not robot.GetController().IsDone():
             self.env.StepSimulation(0.01)

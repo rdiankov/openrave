@@ -313,8 +313,10 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         return PS_HasSolution;
     }
 
-    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
-    PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
+    EnvironmentBasePtr env = traj->GetEnv();
+    EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
+    CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+    PlannerBasePtr planner = RaveCreatePlanner(env,plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
@@ -343,6 +345,91 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
         planningutils::VerifyTrajectory(params,traj);
     }
     return PS_HasSolution;
+}
+
+ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
+{
+    std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
+    _robot = robot;
+    EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_sExtraParameters += plannerparameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+}
+
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
+{
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need velocities, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return PS_HasSolution;
+    }
+
+    EnvironmentBasePtr env = traj->GetEnv();
+    CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+    PlannerStatus status = _planner->PlanPath(traj);
+    if( status & PS_HasSolution ) {
+        if( RaveGetDebugLevel() & Level_VerifyPlans ) {
+            RobotBase::RobotStateSaver saver(_robot);
+            planningutils::VerifyTrajectory(_planner->GetParameters(),traj);
+        }
+    }
+    return status;
+}
+
+ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
+{
+    std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicretimer";
+    _robot = robot;
+    EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_setstatefn.clear();
+    params->_checkpathconstraintsfn.clear();
+    params->_sExtraParameters = plannerparameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+}
+
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
+{
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need velocities, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return PS_HasSolution;
+    }
+
+    TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+    if( parameters->_hastimestamps != hastimestamps ) {
+        parameters->_hastimestamps = hastimestamps;
+        if( !_planner->InitPlan(_robot,parameters) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+        }
+    }
+
+    return _planner->PlanPath(traj);
 }
 
 PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
@@ -485,16 +572,17 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     if( newspec.GetDOF() != (int)maxvelocities.size() || newspec.GetDOF() != (int)maxaccelerations.size() ) {
         throw OPENRAVE_EXCEPTION_FORMAT("traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)",newspec.GetDOF()%maxvelocities.size()%maxaccelerations.size(), ORE_InvalidArguments);
     }
-    ConvertTrajectorySpecification(traj,newspec);
+    // don't need to convert since the planner does that automatically
+    //ConvertTrajectorySpecification(traj,newspec);
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_vConfigVelocityLimit = maxvelocities;
     params->_vConfigAccelerationLimit = maxaccelerations;
-    params->_configurationspecification = traj->GetConfigurationSpecification();
-    params->_vConfigLowerLimit.resize(traj->GetConfigurationSpecification().GetDOF());
-    params->_vConfigUpperLimit.resize(traj->GetConfigurationSpecification().GetDOF());
-    params->_vConfigResolution.resize(traj->GetConfigurationSpecification().GetDOF());
+    params->_configurationspecification = newspec;
+    params->_vConfigLowerLimit.resize(newspec.GetDOF());
+    params->_vConfigUpperLimit.resize(newspec.GetDOF());
+    params->_vConfigResolution.resize(newspec.GetDOF());
     for(size_t i = 0; i < params->_vConfigLowerLimit.size(); ++i) {
         params->_vConfigLowerLimit[i] = -1e6;
         params->_vConfigUpperLimit[i] = 1e6;
@@ -507,7 +595,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     std::vector<int> vrotaxes;
     // analyze the configuration for identified dimensions
     KinBodyPtr robot;
-    FOREACHC(itgroup,traj->GetConfigurationSpecification()._vgroups) {
+    FOREACHC(itgroup,newspec._vgroups) {
         if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
             string tempname;
             int affinedofs=0;
@@ -555,7 +643,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
             boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
             params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), _1, _2, _3, _4);
-            statesaver.reset(new PlannerStateSaver(traj->GetConfigurationSpecification().GetDOF(), params->_setstatefn, params->_getstatefn));
+            statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatefn, params->_getstatefn));
         }
     }
     else {
@@ -567,8 +655,8 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
 
     params->_hastimestamps = hastimestamps;
-    params->_multidofinterp = 1; // always force max acceleration?
-    params->_sExtraParameters += plannerparameters;
+    params->_multidofinterp = 2; // always force switch points to be the same
+    params->_sExtraParameters = plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         return PS_Failed;
     }
@@ -576,6 +664,160 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         return PS_Failed;
     }
     return PS_HasSolution;
+}
+
+AffineTrajectoryRetimer::AffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters)
+{
+    if( plannername.size() > 0 ) {
+        _plannername = plannername;
+    }
+    else {
+        _plannername = "parabolictrajectoryretimer";
+    }
+    _extraparameters = plannerparameters;
+}
+
+void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const std::string& plannerparameters)
+{
+    if( plannername.size() == 0 ) {
+        if( _plannername != string("parabolictrajectoryretimer") ) {
+            _plannername = "parabolictrajectoryretimer";
+            _planner.reset();
+        }
+    }
+    else if( _plannername != plannername ) {
+        _plannername = plannername;
+        _planner.reset();
+    }
+
+    if( _extraparameters != plannerparameters ) {
+        _extraparameters = plannerparameters;
+        if( !!_parameters ) {
+            _parameters->_sExtraParameters = _extraparameters;
+            if( !!_planner ) {
+                if( !_planner->InitPlan(RobotBasePtr(), _parameters) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s", _plannername, ORE_InvalidArguments);
+                }
+            }
+        }
+    }
+}
+
+PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps)
+{
+    if( traj->GetNumWaypoints() == 1 ) {
+        // don't need retiming, but should at least add a time group
+        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+        spec.AddDeltaTimeGroup();
+        vector<dReal> data;
+        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+        traj->Init(spec);
+        traj->Insert(0,data);
+        return PS_HasSolution;
+    }
+
+    EnvironmentBasePtr env = traj->GetEnv();
+    EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
+    ConfigurationSpecification trajspec = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
+    if( trajspec.GetDOF() != (int)maxvelocities.size() || trajspec.GetDOF() != (int)maxaccelerations.size() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)",trajspec.GetDOF()%maxvelocities.size()%maxaccelerations.size(), ORE_InvalidArguments);
+    }
+    //ConvertTrajectorySpecification(traj,trajspec);
+    TrajectoryTimingParametersPtr parameters;
+    if( !_parameters ) {
+        parameters.reset(new TrajectoryTimingParameters());
+        parameters->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+        parameters->_setstatefn.clear();
+        parameters->_getstatefn.clear();
+        parameters->_checkpathconstraintsfn.clear();
+        parameters->_sExtraParameters += _extraparameters;
+        parameters->_multidofinterp = 2; // always force switch points to be the same
+        _parameters = parameters;
+    }
+    else {
+        parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+    }
+
+
+    bool bInitPlan=false;
+    if( bInitPlan || CompareRealVectors(parameters->_vConfigVelocityLimit, maxvelocities, g_fEpsilonLinear) != 0 ) {
+        parameters->_vConfigVelocityLimit = maxvelocities;
+        bInitPlan = true;
+    }
+    if( bInitPlan || CompareRealVectors(parameters->_vConfigAccelerationLimit, maxaccelerations, g_fEpsilonLinear) != 0 ) {
+        parameters->_vConfigAccelerationLimit = maxaccelerations;
+        bInitPlan = true;
+    }
+    if( bInitPlan || parameters->_configurationspecification != trajspec ) {
+        parameters->_configurationspecification = trajspec;
+        bInitPlan = true;
+    }
+    if( bInitPlan || (int)parameters->_vConfigLowerLimit.size() != trajspec.GetDOF() ) {
+        parameters->_vConfigLowerLimit.resize(trajspec.GetDOF());
+        parameters->_vConfigUpperLimit.resize(trajspec.GetDOF());
+        parameters->_vConfigResolution.resize(trajspec.GetDOF());
+        for(size_t i = 0; i < parameters->_vConfigLowerLimit.size(); ++i) {
+            parameters->_vConfigLowerLimit[i] = -1e6;
+            parameters->_vConfigUpperLimit[i] = 1e6;
+            parameters->_vConfigResolution[i] = 0.01;
+        }
+        bInitPlan = true;
+    }
+
+    std::vector<int> vrotaxes;
+    // analyze the configuration for identified dimensions
+    FOREACHC(itgroup,trajspec._vgroups) {
+        if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+            string tempname;
+            int affinedofs=0;
+            stringstream ss(itgroup->name.substr(16));
+            ss >> tempname >> affinedofs;
+            BOOST_ASSERT( !!ss );
+            KinBodyPtr pbody = env->GetKinBody(tempname);
+            // body doesn't hav eto be set
+            if( !!pbody ) {
+                Vector vaxis(0,0,1);
+                if( affinedofs & DOF_RotationAxis ) {
+                    vrotaxes.push_back(itgroup->offset+RaveGetIndexFromAffineDOF(affinedofs,DOF_RotationAxis));
+                    ss >> vaxis.x >> vaxis.y >> vaxis.z;
+                }
+            }
+        }
+        else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+            int iktypeint = 0;
+            stringstream ss(itgroup->name.substr(14));
+            ss >> iktypeint;
+            if( !!ss ) {
+                IkParameterizationType iktype=static_cast<IkParameterizationType>(iktypeint);
+                switch(iktype) {
+                case IKP_TranslationXYOrientation3D: vrotaxes.push_back(itgroup->offset+2); break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    if( bInitPlan ) {
+        parameters->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
+    }
+    if( parameters->_hastimestamps != hastimestamps ) {
+        parameters->_hastimestamps = hastimestamps;
+        bInitPlan = true;
+    }
+
+    if( !_planner ) {
+        _planner = RaveCreatePlanner(env,_plannername);
+        bInitPlan = true;
+    }
+    if( bInitPlan ) {
+        if( !_planner->InitPlan(RobotBasePtr(),parameters) ) {
+            stringstream ss; ss << trajspec;
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with affine trajectory spec: %s", _plannername%ss.str(), ORE_InvalidArguments);
+        }
+    }
+
+    return _planner->PlanPath(traj);
 }
 
 PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
@@ -1200,6 +1442,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     // set the bounds based on the interval type
     PlannerBase::PlannerParametersPtr params = _params.lock();
     if( !params ) {
+        RAVELOG_WARN("parameters have been destroyed!\n");
         return false;
     }
     int start=0;
@@ -1253,7 +1496,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
             numSteps = steps;
         }
     }
-    if((totalsteps == 0)&&(start > 0)) {
+    if( totalsteps == 0 && start > 0) {
         return true;
     }
 
@@ -1315,6 +1558,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     // set the bounds based on the interval type
     PlannerBase::PlannerParametersPtr params = _params.lock();
     if( !params ) {
+        RAVELOG_WARN("parameters have been destroyed!\n");
         return false;
     }
     BOOST_ASSERT(_listCheckSelfCollisions.size()>0);
@@ -1367,7 +1611,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
             numSteps = steps;
         }
     }
-    if((totalsteps == 0)&&(start > 0)) {
+    if( totalsteps == 0 && start > 0 ) {
         return true;
     }
 

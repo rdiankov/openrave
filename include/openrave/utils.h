@@ -160,21 +160,30 @@ struct index_cmp
     const T arr;
 };
 
+/// \brief allow to add different custom deleter funtions to a shared_ptr without touching its original custom deleter
+///
+/// Can specify pre-delete and post-delete functions
 template<class P>
 struct smart_pointer_deleter
 {
 private:
     P p_;
     boost::function<void(void const*)> _deleterfn;
+    boost::function<void()> _postdeleterfn;
 public:
-    smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn) : p_(p), _deleterfn(deleterfn)
+    smart_pointer_deleter(P const & p, const boost::function<void(void const*)>& deleterfn, const boost::function<void()>& postdeleterfn = boost::function<void()>()) : p_(p), _deleterfn(deleterfn), _postdeleterfn(postdeleterfn)
     {
     }
 
     void operator()(void const * x)
     {
-        _deleterfn(x);
+        if( !!_deleterfn ) {
+            _deleterfn(x);
+        }
         p_.reset();
+        if( !!_postdeleterfn ) {
+            _postdeleterfn();
+        }
     }
 
     P const & get() const

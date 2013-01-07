@@ -134,9 +134,9 @@ public:
             }
 
             int numshortcuts=0;
-            if( !!_parameters->_setstatefn ) {
+            if( !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
-                numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, _parameters->_fStepLength*0.99);
+                numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
             }
 
             progress._iteration=1;
@@ -144,7 +144,7 @@ public:
                 return PS_Interrupted;
             }
 
-            ConfigurationSpecification oldspec = _parameters->_configurationspecification;
+            ConfigurationSpecification oldspec = parameters->_configurationspecification;
             ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
             ConfigurationSpecification newspec = oldspec;
             newspec.AddDerivativeGroups(1,true);
@@ -252,14 +252,14 @@ public:
                 for(size_t i = 0; i < a.size(); ++i) {
                     anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
-                _parameters->_setstatefn(anew);
+                //_parameters->_setstatefn(anew);
                 if( !_parameters->_checkpathconstraintsfn(anew,anew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                     return false;
                 }
             }
         }
         else {
-            _parameters->_setstatefn(a);
+            //_parameters->_setstatefn(a);
             if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }
@@ -278,14 +278,14 @@ public:
                     anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                     bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
-                _parameters->_setstatefn(anew);
+                //_parameters->_setstatefn(anew);
                 if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                     return false;
                 }
             }
         }
         else {
-            _parameters->_setstatefn(a);
+            //_parameters->_setstatefn(a);
             if( !_parameters->_checkpathconstraintsfn(a,b,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }

@@ -405,7 +405,7 @@ protected:
                 anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
             }
-            parameters->_setstatefn(anew);
+            //parameters->_setstatefn(anew);
             if( !parameters->_checkpathconstraintsfn(anew,bnew,interval,PlannerBase::ConfigurationListPtr()) ) {
                 return false;
             }

@@ -138,13 +138,13 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 }
 
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
-// have to derive from ViewerBase first since __plugin holds a reference to the shared object that loads the qt4 library
-    : ViewerBase(penv),
+    :
 #if QT_VERSION >= 0x040000 // check for qt4
     QMainWindow(NULL, Qt::Window),
 #else
     QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
+    ViewerBase(penv),
     _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
     _nQuitMainLoop = 0;

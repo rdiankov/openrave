@@ -121,13 +121,15 @@ public:
     virtual ~PyPlannerBase() {
     }
 
-    bool InitPlan(PyRobotBasePtr pbase, PyPlannerParametersPtr pparams, bool releasegil=false)
+    bool InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr pparams, bool releasegil=false)
     {
         openravepy::PythonThreadSaverPtr statesaver;
+        PlannerBase::PlannerParametersConstPtr parameters = pparams->GetParameters();
+        RobotBasePtr probot = openravepy::GetRobot(pyrobot);
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return _pplanner->InitPlan(openravepy::GetRobot(pbase),pparams->GetParameters());
+        return _pplanner->InitPlan(probot,parameters);
     }
 
     bool InitPlan(PyRobotBasePtr pbase, const string& params)
@@ -139,10 +141,11 @@ public:
     PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj,bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
         if( releasegil ) {
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
-        return _pplanner->PlanPath(openravepy::GetTrajectory(pytraj));
+        return _pplanner->PlanPath(ptraj);
     }
 
     PyPlannerParametersPtr GetParameters() const

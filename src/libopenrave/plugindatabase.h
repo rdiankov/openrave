@@ -44,7 +44,10 @@
 
 #endif
 
-#define INTERFACE_DELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
+//#define INTERFACE_PREDELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
+
+#define INTERFACE_PREDELETER boost::function<void(void const*)>()
+#define INTERFACE_POSTDELETER(name, plugin) boost::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name, plugin)
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
@@ -513,7 +516,7 @@ protected:
                                 pointer.reset();
                             }
                             else {
-                                pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                                pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_PREDELETER));
                                 pointer->__strpluginname = "__internal__";
                                 pointer->__strxmlid = name;
                                 //pointer->__plugin; // need to protect resources?
@@ -541,7 +544,7 @@ protected:
                             pointer.reset();
                         }
                         else {
-                            pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_DELETER));
+                            pointer = InterfaceBasePtr(pointer.get(), utils::smart_pointer_deleter<InterfaceBasePtr>(pointer,INTERFACE_PREDELETER, INTERFACE_POSTDELETER(name, *itplugin)));
                             pointer->__strpluginname = (*itplugin)->ppluginname;
                             pointer->__strxmlid = name;
                             pointer->__plugin = *itplugin;
@@ -972,18 +975,17 @@ protected:
         _listDestroyLibraryQueue.push_back(lib);
     }
 
-    void _InterfaceDestroyCallback(InterfaceBase* pbody)
-    {
-        if( pbody != NULL ) {
-            // post-processing?
-            delete pbody;
-        }
-    }
     void _InterfaceDestroyCallbackShared(void const* pinterface)
     {
         if( pinterface != NULL ) {
-            // post-processing for deleting interfaces
         }
+    }
+
+    /// \brief makes sure plugin is in scope until after pointer is completely deleted
+    void _InterfaceDestroyCallbackSharedPost(std::string name, UserDataPtr plugin)
+    {
+        // post-processing for deleting interfaces
+        plugin.reset();
     }
 
     void _AddToLoader(PluginPtr p)
