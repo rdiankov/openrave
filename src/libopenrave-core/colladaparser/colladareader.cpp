@@ -483,7 +483,7 @@ public:
                                                     string nodeid = ref_target->getID();
                                                     FOREACH(itbinding,allbindings) {
                                                         FOREACH(itlinkbinding, itbinding->listLinkBindings) {
-                                                            if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                 ref_link = itlinkbinding->_link;
                                                                 break;
                                                             }
@@ -509,7 +509,7 @@ public:
                                                     string nodeid = ptarget->getID();
                                                     FOREACH(itbinding,allbindings) {
                                                         FOREACH(itlinkbinding, itbinding->listLinkBindings) {
-                                                            if( nodeid == itlinkbinding->_node->getID() ) {
+                                                            if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                 link = itlinkbinding->_link;
                                                                 break;
                                                             }
@@ -548,7 +548,7 @@ public:
                                                                         string nodeid = ptarget->getID();
                                                                         FOREACH(itbinding,allbindings) {
                                                                             FOREACH(itlinkbinding, itbinding->listLinkBindings) {
-                                                                                if( nodeid == itlinkbinding->_node->getID() ) {
+                                                                                if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                                     pignore_link = itlinkbinding->_link;
                                                                                     break;
                                                                                 }

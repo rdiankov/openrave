@@ -186,6 +186,7 @@ public:
 
     struct physics_model_output
     {
+        KinBodyPtr pbody; ///< the body written for
         domPhysics_modelRef pmodel;
         std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices
     };
@@ -246,6 +247,7 @@ public:
 
     struct kinbody_models
     {
+        KinBodyPtr body;
         std::string uri, kinematicsgeometryhash;
         boost::shared_ptr<kinematics_model_output> kmout;
         boost::shared_ptr<physics_model_output> pmout;
@@ -294,6 +296,7 @@ private:
         _dae.reset(new DAE);
         _bExternalRefAllBodies = false;
         _bForceWriteAll = false;
+        _bReuseSimilar = false;
         _listExternalRefExports.clear();
         _listIgnoreExternalURIs.clear();
         FOREACHC(itatt,atts) {
@@ -332,6 +335,9 @@ private:
             }
             else if( itatt->first == "unit" ) {
                 _globalunit = boost::lexical_cast<dReal>(itatt->second);
+            }
+            else if( itatt->first == "reusesimilar" ) {
+                _bReuseSimilar = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else {
                 if( !!_dae->getIOPlugin() ) {
@@ -722,7 +728,7 @@ private:
                 if( IsWrite("visual") ) {
                     // because we're instantiating the node, the full url isn't needed
                     size_t fragmentindex = itmodel->vmodel.find_last_of('#');
-                    if( fragmentindex != std::string::npos ) {
+                    if( fragmentindex != std::string::npos && fragmentindex != 0 ) {
                         ipmout->ipm->setParent(_ComputeExternalURI(daeURI(*pnoderoot,itmodel->vmodel.substr(fragmentindex)+string(".")+nodeid)));
                     }
                     else {
@@ -1089,7 +1095,10 @@ private:
     virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
+        boost::shared_ptr<kinematics_model_output> kmout;
+        if( _bReuseSimilar ) {
+            kmout = _GetKinematics_model(pbody);
+        }
         if( !!kmout ) {
             if( IsWrite("visual") ) {
                 // the base model is the same, but the instance information like joint values and visual transform could be different
@@ -1267,7 +1276,7 @@ private:
             }
         }
 
-        if( !bHasAddedInstance ) {
+        if( !bHasAddedInstance && !!pnoderoot ) {
             // happens when body has no links, at least add a dummy <node> in order for the references to be complete
             domNodeRef inode = daeSafeCast<domNode>(pnoderoot->add(COLLADA_ELEMENT_NODE));
             inode->setSid("node0"); // from _GetNodeSid
@@ -1434,6 +1443,7 @@ private:
             return pmout;
         }
         pmout.reset(new physics_model_output());
+        pmout->pbody = pbody;
         pmout->pmodel = daeSafeCast<domPhysics_model>(_physicsModelsLib->add(COLLADA_ELEMENT_PHYSICS_MODEL));
         string pmodelid = str(boost::format("pmodel%d")%pbody->GetEnvironmentId());
         pmout->pmodel->setId(pmodelid.c_str());
@@ -1990,13 +2000,21 @@ private:
 
     virtual void _AddKinematics_model(KinBodyPtr pbody, boost::shared_ptr<kinematics_model_output> kmout) {
         FOREACH(it, _listkinbodies) {
-            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
+            if( _bReuseSimilar ) {
+                if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+                    BOOST_ASSERT(!it->kmout);
+                    it->kmout = kmout;
+                    return;
+                }
+            }
+            else if( it->body == pbody ) {
                 BOOST_ASSERT(!it->kmout);
                 it->kmout = kmout;
                 return;
             }
         }
         kinbody_models cache;
+        cache.body = pbody;
         cache.uri = pbody->GetURI();
         cache.kinematicsgeometryhash = pbody->GetKinematicsGeometryHash();
         cache.kmout = kmout;
@@ -2005,7 +2023,12 @@ private:
 
     virtual boost::shared_ptr<kinematics_model_output> _GetKinematics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
+            if( _bReuseSimilar ) {
+                if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+                    return it->kmout;
+                }
+            }
+            else if( it->body == pbody ) {
                 return it->kmout;
             }
         }
@@ -2014,13 +2037,21 @@ private:
 
     virtual void _AddPhysics_model(KinBodyPtr pbody, boost::shared_ptr<physics_model_output> pmout) {
         FOREACH(it, _listkinbodies) {
-            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
+            if( _bReuseSimilar ) {
+                if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+                    BOOST_ASSERT(!it->pmout);
+                    it->pmout = pmout;
+                    return;
+                }
+            }
+            else if( it->body == pbody ) {
                 BOOST_ASSERT(!it->pmout);
                 it->pmout = pmout;
                 return;
             }
         }
         kinbody_models cache;
+        cache.body = pbody;
         cache.uri = pbody->GetURI();
         cache.kinematicsgeometryhash = pbody->GetKinematicsGeometryHash();
         cache.pmout = pmout;
@@ -2029,7 +2060,12 @@ private:
 
     virtual boost::shared_ptr<physics_model_output> _GetPhysics_model(KinBodyPtr pbody) {
         FOREACH(it, _listkinbodies) {
-            if(( it->uri == pbody->GetURI()) &&( it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash()) ) {
+            if( _bReuseSimilar ) {
+                if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
+                    return it->pmout;
+                }
+            }
+            else if( it->body == pbody ) {
                 return it->pmout;
             }
         }
@@ -2132,6 +2168,7 @@ private:
 
     bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
     bool _bForceWriteAll; ///< if true, attemps to write all modifiable data to externally saved bodies
+    bool _bReuseSimilar; ///< if true, attemps to resuse similar looking meshes and structures to reduce size
 };
 
 // register for typeof (MSVC only)

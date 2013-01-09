@@ -74,7 +74,9 @@ Misc
 
 * Fixed destruction order bug in qt/coin viewer.
 
-* Add OPT_IKFAST_FLOAT32 cmake option to control whether 32bit float ikfast shared objects can be loaded.
+* Add ``OPT_IKFAST_FLOAT32`` cmake option to control whether 32bit float ikfast shared objects can be loaded.
+
+* switched collada writing to write all geometries regardless if they are similar (default was to reuse data)
 
 Version 0.8.2
 =============
