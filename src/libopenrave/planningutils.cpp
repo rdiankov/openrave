@@ -477,7 +477,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     return PS_HasSolution;
 }
 
-static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& vrotaxes)
+static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
 {
     BOOST_ASSERT(q1.size()==q2.size());
     for(size_t i = 0; i < q1.size(); ++i) {
@@ -652,7 +652,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         params->_checkpathconstraintsfn.clear();
     }
 
-    params->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
+    params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
     params->_multidofinterp = 2; // always force switch points to be the same
@@ -799,7 +799,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     }
 
     if( bInitPlan ) {
-        parameters->_diffstatefn = boost::bind(diffstatefn,_1,_2,boost::ref(vrotaxes));
+        parameters->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
     }
     if( parameters->_hastimestamps != hastimestamps ) {
         parameters->_hastimestamps = hastimestamps;

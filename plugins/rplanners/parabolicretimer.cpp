@@ -89,12 +89,11 @@ protected:
         _ramps.resize(info->gpos.dof);
         dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
 #ifdef _DEBUG
-        if( mintime < 0 ) {
+        if( mintime < 0 && IS_DEBUGLEVEL(Level_Verbose) ) {
             // do again for debugging reproduction
             mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
         }
 #endif
-        OPENRAVE_ASSERT_OP(mintime,>=,0);
         return mintime;
     }
 
@@ -126,7 +125,7 @@ protected:
         return true;
     }
 
-    void _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
         ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             _v0pos.resize(info->gpos.dof);
@@ -151,7 +150,7 @@ protected:
                     _vtrajpoints.at(info->waypointindex) = 1;
                     info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
                 }
-                return;
+                return true;
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < ParabolicRamp::EpsilonT ) {
@@ -159,13 +158,15 @@ protected:
             }
 
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
-#ifdef _DEBUG
             if( !success ) {
-                // for debugging
-                success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
-            }
+#ifdef _DEBUG
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    // for debugging
+                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+                }
 #endif
-            BOOST_ASSERT(success);
+                return false;
+            }
 
             vector<dReal> vswitchtimes;
             if( info->ptraj->GetNumWaypoints() == 0 ) {
@@ -180,7 +181,8 @@ protected:
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
                     if(RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 || RaveFabs(ramp[j].v) > maxvel+1e-5) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
+                        RAVELOG_WARN(str(boost::format("ramp violates limits: %f>%f || %f>%f || %f>%f")%RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel%RaveFabs(ramp[j].v)%maxvel));
+                        return false;
                     }
 
                     vector<dReal>::iterator it;
@@ -233,6 +235,7 @@ protected:
             _vtrajpoints.at(_vtrajpoints.size()-dof+info->waypointindex) = 1;
             info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
         }
+        return true;
     }
 
     dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
@@ -247,7 +250,7 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesAffine not implemented", ORE_NotImplemented);
     }
 
-    void _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
 
@@ -270,8 +273,10 @@ protected:
             dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetTransform6D().rot))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
-            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
-            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for angles\n");
+                return -1;
+            }
             mintime = ramp.EndTime();
             transdelta = ikparam.GetTransform6D().trans-ikparamprev.GetTransform6D().trans;
             transoffset = 4;
@@ -283,8 +288,10 @@ protected:
             dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
             Vector angularvelocity = quatMultiply(Vector(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2), *(itdata+info->gvel.offset+3)), quatInverse(ikparamprev.GetRotation3D()))*2;
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
-            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
-            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for angles\n");
+                return -1;
+            }
             mintime = ramp.EndTime();
             break;
         }
@@ -298,8 +305,10 @@ protected:
             dReal anglevelprev = RaveSqrt(utils::Sqr(angularvelocityprev.y) + utils::Sqr(angularvelocityprev.z) + utils::Sqr(angularvelocityprev.w));
             Vector angularvelocity(*(itdata+info->gvel.offset+0), *(itdata+info->gvel.offset+1), *(itdata+info->gvel.offset+2));
             dReal anglevel = RaveSqrt(utils::Sqr(angularvelocity.y) + utils::Sqr(angularvelocity.z) + utils::Sqr(angularvelocity.w));
-            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
-            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,anglevelprev,angledelta,anglevel, info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for angles\n");
+                return -1;
+            }
             mintime = ramp.EndTime();
             transdelta = ikparam.GetTranslationDirection5D().pos-ikparamprev.GetTranslationDirection5D().pos;
             transoffset = 3;
@@ -307,8 +316,10 @@ protected:
         }
         case IKP_TranslationXAxisAngleZNorm4D: {
             dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
-            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp);
-            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for angles",ORE_Assert);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for angles\n");
+                return false;
+            }
             mintime = ramp.EndTime();
             transdelta = ikparam.GetTranslationXAxisAngleZNorm4D().first-ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
             transoffset = 1;
@@ -322,12 +333,13 @@ protected:
             dReal xyzdelta = RaveSqrt(transdelta.lengthsqr3());
             dReal xyzvelprev = RaveSqrt(utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdataprev+info->gvel.offset+transoffset+2)));
             dReal xyzvel = RaveSqrt(utils::Sqr(*(itdata+info->gvel.offset+transoffset+0)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+1)) + utils::Sqr(*(itdata+info->gvel.offset+transoffset+2)));
-            bool bSuccess = ParabolicRamp::SolveMinTimeBounded(0,xyzvelprev,xyzdelta,xyzvel, info->_vConfigAccelerationLimit.at(transoffset), info->_vConfigVelocityLimit.at(transoffset), -1000,xyzdelta+1000, ramp);
-            OPENRAVE_ASSERT_FORMAT0(bSuccess,"solving mintime for xyz",ORE_Assert);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,xyzvelprev,xyzdelta,xyzvel, info->_vConfigAccelerationLimit.at(transoffset), info->_vConfigVelocityLimit.at(transoffset), -1000,xyzdelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for xyz\n");
+                return -1;
+            }
             dReal xyzmintime = ramp.EndTime();
             mintime = max(mintime,xyzmintime);
         }
-        OPENRAVE_ASSERT_OP_FORMAT0(mintime,>=,0,"minimum computed time",ORE_Assert);
         return mintime;
     }
 
@@ -424,7 +436,7 @@ protected:
         return true;
     }
 
-    void _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
         ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             dReal deltatime = *(itdata+_timeoffset);
@@ -436,7 +448,7 @@ protected:
                     _vtrajpoints.at(info->waypointindex) = 1;
                     info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
                 }
-                return;
+                return true;
             }
             OPENRAVE_ASSERT_OP(deltatime,>,0);
             if( deltatime < ParabolicRamp::EpsilonT ) {
@@ -548,8 +560,12 @@ protected:
 
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
             if( !success ) {
-                success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
-                BOOST_ASSERT(success);
+#ifdef _DEBUG
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
+                }
+#endif
+                return false;
             }
 
             vector<dReal> vswitchtimes;
@@ -565,8 +581,10 @@ protected:
                 dReal curtime = 0;
                 for(size_t j=0; j < ramp.size(); j++) {
                     if(RaveFabs(ramp[j].v) > maxvel+1e-5) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f",RaveFabs(ramp[j].v)%maxvel, ORE_InconsistentConstraints);
+                        RAVELOG_WARN(str(boost::format("ramp violates limits: %f>%f")%RaveFabs(ramp[j].v)%maxvel));
+                        return false;
                     }
+                    // why is this commented out?
 //                    if( RaveFabs(ramp[j].a1) > maxaccel+1e-5 || RaveFabs(ramp[j].a2) > maxaccel+1e-5 ) {
 //                        throw OPENRAVE_EXCEPTION_FORMAT("ramp violates limits: %f>%f || %f>%f",RaveFabs(ramp[j].a1)%maxaccel%RaveFabs(ramp[j].a2)%maxaccel, ORE_InconsistentConstraints);
 //                    }
@@ -693,6 +711,7 @@ protected:
             _vtrajpoints.at(_vtrajpoints.size()-dof+info->waypointindex) = 1;
             info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
         }
+        return true;
     }
 
     void _WriteTrajectory(TrajectoryBasePtr ptraj, const ConfigurationSpecification& newspec, const std::vector<dReal>& data) {

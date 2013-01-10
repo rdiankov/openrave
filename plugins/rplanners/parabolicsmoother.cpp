@@ -231,7 +231,7 @@ public:
             stringstream sdesc; sdesc << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             sdesc << "robot: " << _probot->GetTransform();
             ptraj->SetDescription(sdesc.str());
-            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10+1);

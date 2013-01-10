@@ -2194,7 +2194,7 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 fclose(f);
                 return false;
             }
-            if(Abs(ramps[i].a1) > amax[i] || Abs(ramps[i].a2) > amax[i] || Abs(ramps[i].v) > vmax[i]) {
+            if(Abs(ramps[i].a1) > EpsilonA+amax[i] || Abs(ramps[i].a2) > EpsilonA+amax[i] || Abs(ramps[i].v) > EpsilonV+vmax[i]) {
                 bool res=ramps[i].SolveMinTime2(amax[i],vmax[i],endTime);
                 if(!res) {
                     PARABOLIC_RAMP_PLOG("Couldn't solve min-time with lower bound!\n");
@@ -3188,6 +3188,17 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
             if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],ramps[i])) {
                 PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
                 return false;
+            }
+            // check acceleration limits
+            for(size_t j = 0; j < ramps[i].size(); ++j) {
+                if( Abs(ramps[i][j].a1) > amax[i]+EpsilonA ) {
+                    PARABOLIC_RAMP_PLOG("min accel for joint %d is %.15e (> %.15e)\n",i, Abs(ramps[i][j].a1), amax[i]);
+                    return false;
+                }
+                if( Abs(ramps[i][j].a2) > amax[i]+EpsilonA ) {
+                    PARABOLIC_RAMP_PLOG("min accel for joint %d is %.15e (> %.15e)\n",i, Abs(ramps[i][j].a2), amax[i]);
+                    return false;
+                }
             }
         }
     }
