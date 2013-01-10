@@ -325,12 +325,13 @@ protected:
 
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
+        std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
             result->resize(0);
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
-        if( !Solve(param,q0,filteroptions,pikreturn) ) {
+        if( !Solve(param,q0local,filteroptions,pikreturn) ) {
             return false;
         }
         if( !!result ) {
@@ -355,12 +356,13 @@ protected:
 
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
+        std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
             result->resize(0);
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
-        if( !Solve(param,q0,vFreeParameters,filteroptions,pikreturn) ) {
+        if( !Solve(param,q0local,vFreeParameters,filteroptions,pikreturn) ) {
             return false;
         }
         if( !!result ) {
