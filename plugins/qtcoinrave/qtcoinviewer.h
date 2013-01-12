@@ -339,6 +339,7 @@ public:
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
     bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
+    bool _CommandResize(ostream& sout, istream& sinput);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);
@@ -459,6 +460,9 @@ public:
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
+
+    unsigned int _width;
+    unsigned int _height;
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;
