@@ -90,6 +90,18 @@ public:
      */
     virtual void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief samples the real next value on the sequence, only valid for 1 DOF sequences.
+    ///
+    /// \throw openrave_exception throw if could not be sampled
+    virtual dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0(GetDOF(),==,1,"sample can only be 1 dof", ORE_InvalidState);
+        std::vector<dReal> samples(1);
+        // by default, use SampleSequence
+        SampleSequence(samples,1,interval);
+        return samples.at(0);
+    }
+
     /** \brief sequentially sampling returning the next 'num' samples
 
         The sampler can fail by returning an array of size 0.
@@ -97,6 +109,18 @@ public:
         \param num number of samples to return
      */
     virtual void SampleSequence(std::vector<uint32_t>& sample, size_t num=1) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief samples the unsigned integer next value on the sequence, only valid for 1 DOF sequences.
+    ///
+    /// \throw openrave_exception throw if could not be sampled
+    virtual uint32_t SampleSequenceOneUInt32()
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0(GetDOF(),==,1,"sample can only be 1 dof", ORE_InvalidState);
+        std::vector<uint32_t> samples(1);
+        // by default, use SampleSequence
+        SampleSequence(samples,1);
+        return samples.at(0);
+    }
 
     /// \brief returns N samples that best approximate the entire sampling space.
     ///

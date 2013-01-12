@@ -18,6 +18,7 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
+#include <boost/version.hpp>
 
 #ifdef _WIN32
 
@@ -96,7 +97,7 @@ class ViewerRecorder : public ModuleBase
     boost::mutex _mutex; // for video data passing
     boost::mutex _mutexlibrary; // for video encoding library resources
     boost::condition _condnewframe;
-    bool _bContinueThread;
+    bool _bContinueThread, _bStopRecord;
     boost::shared_ptr<boost::thread> _threadrecord;
 
     boost::multi_array<uint32_t,2> _vwatermarkimage;
@@ -127,6 +128,7 @@ public:
         _nUseSimulationTime = 1;
         _starttime = 0;
         _bContinueThread = true;
+        _bStopRecord = true;
         _frameindex = 0;
 #ifdef _WIN32
         _pfile = NULL;
@@ -225,12 +227,14 @@ protected:
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }
+            boost::mutex::scoped_lock lock(_mutex);
             RAVELOG_INFO("video filename: %s\n",_filename.c_str());
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
             _frametime = (uint64_t)(1000000.0f/_framerate);
             _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
+            _bStopRecord = false;
             return !!_callback;
         }
         catch(const std::exception& ex) {
@@ -300,8 +304,37 @@ protected:
         RAVELOG_VERBOSE(str(boost::format("new frame %d\n")%(timestamp-_starttime)));
         _condnewframe.notify_one();
         if( _nUseSimulationTime == 2 ) {
-            GetEnv()->StepSimulation(1.0/_framerate);
+            // calls the environment lock, which might be taken if the environment is destroying the problem
+            // therefore need to take it first
+            while(_bContinueThread && !_bStopRecord) {
+                boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
+                if( !!lockenv ) {
+                    GetEnv()->StepSimulation(1.0/_framerate);
+                    break;
+                }
+            }
         }
+    }
+
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
+    {
+        // try to acquire the lock
+#if BOOST_VERSION >= 103500
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+#else
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+#endif
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<timeout ) {
+            lockenv->try_lock();
+            if( !!*lockenv ) {
+                break;
+            }
+        }
+        if( !*lockenv ) {
+            lockenv.reset();
+        }
+        return lockenv;
     }
 
     void _RecordThread()
@@ -319,6 +352,9 @@ protected:
                     if( _listAddFrames.size() == 0 ) {
                         continue;
                     }
+                }
+                if( _bStopRecord ) {
+                    continue;
                 }
 
                 if(( _listAddFrames.front()->_timestamp-_starttime > _frametime) && !!_frameLastAdded ) {
@@ -400,6 +436,7 @@ protected:
     {
         {
             RAVELOG_DEBUG("ViewerRecorder _Reset\n");
+            _bStopRecord = true;
             boost::mutex::scoped_lock lock(_mutex);
             _nFrameCount = 0;
             _nVideoWidth = _nVideoHeight = 0;

@@ -180,9 +180,7 @@ inline std::set<T> ExtractSet(const object& o)
 //PyObject* ExceptionTranslator<ExceptionType>::pyException;
 //
 //// Convenience macro
-//#define REGISTER_EXCEPTION(scopeRef, moduleName, className) \
-// //ExceptionTranslator<className>::RegisterExceptionTranslator(scopeRef,
-//moduleName, #className)
+//#define REGISTER_EXCEPTION(scopeRef, moduleName, className) ExceptionTranslator<className>::RegisterExceptionTranslator(scopeRef, moduleName, #className)
 //
 //
 //// Module

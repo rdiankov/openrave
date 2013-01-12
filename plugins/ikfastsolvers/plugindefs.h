@@ -73,7 +73,9 @@ static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 
 #include "ikfast.h"
 
+#ifdef OPENRAVE_IKFAST_FLOAT32
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const std::vector<dReal>& vfreeinc);
+#endif
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const std::vector<dReal>& vfreeinc);
 
 #ifdef RAVE_REGISTER_BOOST

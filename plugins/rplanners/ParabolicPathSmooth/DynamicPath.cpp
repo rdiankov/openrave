@@ -42,8 +42,9 @@ inline Real LInfDistance(const Vector& a,const Vector& b)
 {
     PARABOLIC_RAMP_ASSERT(a.size()==b.size());
     Real d=0;
-    for(size_t i=0; i<a.size(); i++)
+    for(size_t i=0; i<a.size(); i++) {
         d = Max(d,Abs(a[i]-b[i]));
+    }
     return d;
 }
 
@@ -51,8 +52,11 @@ inline bool InBounds(const Vector& x,const Vector& bmin,const Vector& bmax)
 {
     PARABOLIC_RAMP_ASSERT(x.size()==bmin.size());
     PARABOLIC_RAMP_ASSERT(x.size()==bmax.size());
-    for(size_t i=0; i<x.size(); i++)
-        if(x[i] < bmin[i] || x[i] > bmax[i]) return false;
+    for(size_t i=0; i<x.size(); i++) {
+        if(x[i] < bmin[i] || x[i] > bmax[i]) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -61,13 +65,13 @@ inline Real MaxBBLInfDistance(const Vector& x,const Vector& bmin,const Vector& b
     PARABOLIC_RAMP_ASSERT(x.size()==bmin.size());
     PARABOLIC_RAMP_ASSERT(x.size()==bmax.size());
     Real d=0;
-    for(size_t i=0; i<x.size(); i++)
+    for(size_t i=0; i<x.size(); i++) {
         d = Max(d,Max(Abs(x[i]-bmin[i]),Abs(x[i]-bmax[i])));
+    }
     return d;
 }
 
-inline bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vector& dx1,
-                         const Vector& accMax,const Vector& velMax,const Vector& xMin,const Vector& xMax,DynamicPath& out, int multidofinterp)
+inline bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vector& dx1, const Vector& accMax,const Vector& velMax,const Vector& xMin,const Vector& xMax,DynamicPath& out, int multidofinterp)
 {
     if(xMin.empty()) {
         out.ramps.resize(1);
@@ -77,14 +81,17 @@ inline bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,con
         temp.dx0=dx0;
         temp.dx1=dx1;
         bool res=temp.SolveMinTime(accMax,velMax);
-        if(!res) return false;
+        if(!res) {
+            return false;
+        }
     }
     else {
         vector<std::vector<ParabolicRamp1D> > ramps;
-        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1,
-                                     accMax,velMax,xMin,xMax,
-                                     ramps,multidofinterp);
-        if(res < 0) return false;
+        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);
+        if(res < 0) {
+            return false;
+        }
+        out.ramps.resize(0);
         CombineRamps(ramps,out.ramps);
     }
     out.accMax = accMax;
@@ -103,7 +110,9 @@ void DynamicPath::Init(const Vector& _velMax,const Vector& _accMax)
     velMax = _velMax;
     accMax = _accMax;
     PARABOLIC_RAMP_ASSERT(velMax.size() == accMax.size());
-    if(!velMax.empty() && !xMin.empty()) PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
+    if(!velMax.empty() && !xMin.empty()) {
+        PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
+    }
 }
 
 void DynamicPath::SetJointLimits(const Vector& _xMin,const Vector& _xMax)
@@ -111,13 +120,17 @@ void DynamicPath::SetJointLimits(const Vector& _xMin,const Vector& _xMax)
     xMin = _xMin;
     xMax = _xMax;
     PARABOLIC_RAMP_ASSERT(xMin.size() == xMax.size());
-    if(!velMax.empty() && !xMin.empty()) PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
+    if(!velMax.empty() && !xMin.empty()) {
+        PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
+    }
 }
 
 Real DynamicPath::GetTotalTime() const
 {
     Real t=0;
-    for(size_t i=0; i<ramps.size(); i++) t+=ramps[i].endTime;
+    for(size_t i=0; i<ramps.size(); i++) {
+        t+=ramps[i].endTime;
+    }
     return t;
 }
 
@@ -225,10 +238,9 @@ void DynamicPath::SetMilestones(const vector<Vector>& x,const vector<Vector>& dx
             PARABOLIC_RAMP_ASSERT(InBounds(x[0],xMin,xMax));
             for(size_t i=0; i+1<x.size(); i++) {
                 PARABOLIC_RAMP_ASSERT(InBounds(x[i+1],xMin,xMax));
-                Real res=SolveMinTimeBounded(x[i],dx[i],x[i+1],dx[i+1],
-                                             accMax,velMax,xMin,xMax,
-                                             tempRamps,_multidofinterp);
+                Real res=SolveMinTimeBounded(x[i],dx[i],x[i+1],dx[i+1], accMax,velMax,xMin,xMax, tempRamps,_multidofinterp);
                 PARABOLIC_RAMP_ASSERT(res >= 0);
+                tempRamps2.resize(0);
                 CombineRamps(tempRamps,tempRamps2);
                 for(size_t j = 0; j < tempRamps2.size(); ++j) {
                     PARABOLIC_RAMP_ASSERT(tempRamps2[j].IsValid());
@@ -280,9 +292,9 @@ void DynamicPath::Append(const Vector& x)
             std::vector<std::vector<ParabolicRamp1D> > tempRamps;
             std::vector<ParabolicRampND> tempRamps2;
             Vector zero(x.size(),0.0);
-            Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,zero,
-                                         accMax,velMax,xMin,xMax,tempRamps,_multidofinterp);
+            Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,zero, accMax,velMax,xMin,xMax,tempRamps,_multidofinterp);
             PARABOLIC_RAMP_ASSERT(res>=0);
+            tempRamps2.resize(0);
             CombineRamps(tempRamps,tempRamps2);
             ramps.insert(ramps.end(),tempRamps2.begin(),tempRamps2.end());
         }
@@ -307,9 +319,9 @@ void DynamicPath::Append(const Vector& x,const Vector& dx)
         PARABOLIC_RAMP_ASSERT(InBounds(x,xMin,xMax));
         std::vector<std::vector<ParabolicRamp1D> > tempRamps;
         std::vector<ParabolicRampND> tempRamps2;
-        Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,dx,
-                                     accMax,velMax,xMin,xMax,tempRamps,_multidofinterp);
+        Real res=SolveMinTimeBounded(ramps[p].x1,ramps[p].dx1,x,dx, accMax,velMax,xMin,xMax,tempRamps,_multidofinterp);
         PARABOLIC_RAMP_ASSERT(res>=0);
+        tempRamps2.resize(0);
         CombineRamps(tempRamps,tempRamps2);
         ramps.insert(ramps.end(),tempRamps2.begin(),tempRamps2.end());
     }
@@ -318,7 +330,9 @@ void DynamicPath::Append(const Vector& x,const Vector& dx)
 void DynamicPath::Concat(const DynamicPath& suffix)
 {
     PARABOLIC_RAMP_ASSERT(&suffix != this);
-    if(suffix.ramps.empty()) return;
+    if(suffix.ramps.empty()) {
+        return;
+    }
     if(ramps.empty()) {
         *this=suffix;
         return;
@@ -334,12 +348,13 @@ void DynamicPath::Concat(const DynamicPath& suffix)
         if(Abs(xmax) > EpsilonX || Abs(dxmax) > EpsilonV) {
             PARABOLIC_RAMP_PLOG("Concat endpoint error\n");
             PARABOLIC_RAMP_PLOG("x:\n");
-            for(size_t i=0; i<ramps.back().x1.size(); i++)
+            for(size_t i=0; i<ramps.back().x1.size(); i++) {
                 PARABOLIC_RAMP_PLOG("%g - %g = %g\n",ramps.back().x1[i],suffix.ramps.front().x0[i],ramps.back().x1[i]-suffix.ramps.front().x0[i]);
+            }
             PARABOLIC_RAMP_PLOG("dx:\n");
-            for(size_t i=0; i<ramps.back().x1.size(); i++)
+            for(size_t i=0; i<ramps.back().x1.size(); i++) {
                 PARABOLIC_RAMP_PLOG("%g - %g = %g\n",ramps.back().dx1[i],suffix.ramps.front().dx0[i],ramps.back().dx1[i]-suffix.ramps.front().dx0[i]);
-            //getchar();
+            }
         }
         ramps.back().x1 = ramps.front().x0;
         ramps.back().dx1 = ramps.front().dx0;
@@ -417,8 +432,6 @@ void DynamicPath::Split(Real t,DynamicPath& before,DynamicPath& after) const
 }
 
 
-
-
 struct RampSection
 {
     Real ta,tb;
@@ -427,13 +440,15 @@ struct RampSection
 };
 
 
-
-
-
 bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters)
 {
-    if(!feas->ConfigFeasible(ramp.x0)) return false;
-    if(!feas->ConfigFeasible(ramp.x1)) return false;
+    ramp.constraintchecked = 1;
+    if(!feas->ConfigFeasible(ramp.x0, ramp.dx0)) {
+        return false;
+    }
+    if(!feas->ConfigFeasible(ramp.x1, ramp.dx1)) {
+        return false;
+    }
     PARABOLIC_RAMP_ASSERT(distance->ObstacleDistanceNorm()==Inf);
     RampSection section;
     section.ta = 0;
@@ -442,8 +457,12 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
     section.xb = ramp.x1;
     section.da = distance->ObstacleDistance(ramp.x0);
     section.db = distance->ObstacleDistance(ramp.x1);
-    if(section.da <= 0.0) return false;
-    if(section.db <= 0.0) return false;
+    if(section.da <= 0.0) {
+        return false;
+    }
+    if(section.db <= 0.0) {
+        return false;
+    }
     list<RampSection> queue;
     queue.push_back(section);
     int iters=0;
@@ -455,15 +474,21 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         if(LInfDistance(section.xa,section.xb) <= section.da+section.db) {
             Vector bmin,bmax;
             ramp.Bounds(section.ta,section.tb,bmin,bmax);
-            if(MaxBBLInfDistance(section.xa,bmin,bmax) < section.da &&
-               MaxBBLInfDistance(section.xb,bmin,bmax) < section.db)
+            if(MaxBBLInfDistance(section.xa,bmin,bmax) < section.da && MaxBBLInfDistance(section.xb,bmin,bmax) < section.db) {
                 //can cull out the section
                 continue;
+            }
         }
         Real tc = (section.ta+section.tb)*0.5;
-        Vector xc;
+        Vector xc, dxc;
         ramp.Evaluate(tc,xc);
-        if(!feas->ConfigFeasible(xc)) return false;                                                                                                                                                                 //infeasible config
+        if( feas->NeedDerivativeForFeasibility() ) {
+            ramp.Derivative(tc,dxc);
+        }
+        //infeasible config
+        if(!feas->ConfigFeasible(xc, dxc)) {
+            return false;
+        }
         //subdivide
         Real dc = distance->ObstacleDistance(xc);
         RampSection sa,sb;
@@ -481,7 +506,9 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
         queue.push_back(sa);
         queue.push_back(sb);
 
-        if(iters++ >= maxiters) return false;
+        if(iters++ >= maxiters) {
+            return false;
+        }
     }
     return true;
 }
@@ -492,8 +519,13 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
     for(size_t i = 0; i < tol.size(); ++i) {
         PARABOLIC_RAMP_ASSERT(tol[i] > 0);
     }
-    if(!space->ConfigFeasible(ramp.x0)) return false;
-    if(!space->ConfigFeasible(ramp.x1)) return false;
+    ramp.constraintchecked = 1;
+    if(!space->ConfigFeasible(ramp.x0, ramp.dx0)) {
+        return false;
+    }
+    if(!space->ConfigFeasible(ramp.x1, ramp.dx1)) {
+        return false;
+    }
     //PARABOLIC_RAMP_ASSERT(space->ConfigFeasible(ramp.x0));
     //PARABOLIC_RAMP_ASSERT(space->ConfigFeasible(ramp.x1));
 
@@ -536,9 +568,12 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
                 dtmin = Min(dtmin,2.0*Sqrt(tol[i]/amax));
             }
         }
-        if(t+dtmin > switchNext) tnext = switchNext;
-        else tnext = t+dtmin;
-
+        if(t+dtmin > switchNext) {
+            tnext = switchNext;
+        }
+        else {
+            tnext = t+dtmin;
+        }
         t = tnext;
         divs.push_back(tnext);
     }
@@ -547,7 +582,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
     //do a bisection thingie
     list<pair<int,int> > segs;
     segs.push_back(pair<int,int>(0,divs.size()-1));
-    Vector q1,q2;
+    Vector q1,q2, dq1, dq2;
     while(!segs.empty()) {
         int i=segs.front().first;
         int j=segs.front().second;
@@ -555,13 +590,26 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
         if(j == i+1) {
             //check path from t to tnext
             ramp.Evaluate(divs[i],q1);
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[i],dq1);
+            }
             ramp.Evaluate(divs[j],q2);
-            if(!space->SegmentFeasible(q1,q2)) return false;
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[j],dq2);
+            }
+            if(!space->SegmentFeasible(q1,q2, dq1, dq2)) {
+                return false;
+            }
         }
         else {
             int k=(i+j)/2;
             ramp.Evaluate(divs[k],q1);
-            if(!space->ConfigFeasible(q1)) return false;
+            if( space->NeedDerivativeForFeasibility() ) {
+                ramp.Derivative(divs[k],dq1);
+            }
+            if(!space->ConfigFeasible(q1, dq1)) {
+                return false;
+            }
             segs.push_back(pair<int,int>(i,k));
             segs.push_back(pair<int,int>(k,j));
         }
@@ -581,18 +629,25 @@ RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,Dis
 
 bool RampFeasibilityChecker::Check(const ParabolicRampND& x)
 {
-    if(distance) return CheckRamp(x,feas,distance,maxiters);
-    else return CheckRamp(x,feas,tol);
+    if(distance) {
+        return CheckRamp(x,feas,distance,maxiters);
+    }
+    else {
+        return CheckRamp(x,feas,tol);
+    }
 }
-
 
 bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
 {
-    if(t1 > t2) Swap(t1,t2);
+    if(t1 > t2) {
+        Swap(t1,t2);
+    }
     Real u1,u2;
     int i1 = GetSegment(t1,u1);
     int i2 = GetSegment(t2,u2);
-    if(i1 == i2) return false;
+    if(i1 == i2) {
+        return false;
+    }
     PARABOLIC_RAMP_ASSERT(u1 >= 0);
     PARABOLIC_RAMP_ASSERT(u1 <= ramps[i1].endTime+EpsilonT);
     PARABOLIC_RAMP_ASSERT(u2 >= 0);
@@ -608,7 +663,9 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
         ramps[i1].Derivative(u1,test.dx0);
         ramps[i2].Derivative(u2,test.dx1);
         bool res=test.SolveMinTime(accMax,velMax);
-        if(!res) return false;
+        if(!res) {
+            return false;
+        }
         PARABOLIC_RAMP_ASSERT(test.endTime >= 0);
         PARABOLIC_RAMP_ASSERT(test.IsValid());
     }
@@ -619,17 +676,21 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
         ramps[i1].Derivative(u1,dx0);
         ramps[i2].Derivative(u2,dx1);
         vector<std::vector<ParabolicRamp1D> > intramps;
-        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1,
-                                     accMax,velMax,xMin,xMax,
-                                     intramps,_multidofinterp);
-        if(res < 0) return false;
+        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, intramps,_multidofinterp);
+        if(res < 0) {
+            return false;
+        }
+        intermediate.ramps.resize(0);
         CombineRamps(intramps,intermediate.ramps);
         intermediate.accMax = accMax;
         intermediate.velMax = velMax;
         PARABOLIC_RAMP_ASSERT(intermediate.IsValid());
     }
-    for(size_t i=0; i<intermediate.ramps.size(); i++)
-        if(!check.Check(intermediate.ramps[i])) return false;
+    for(size_t i=0; i<intermediate.ramps.size(); i++) {
+        if(!check.Check(intermediate.ramps[i])) {
+            return false;
+        }
+    }
 
     //perform shortcut
     //crop i1 and i2
@@ -641,8 +702,9 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
     ramps[i2].dx0 = intermediate.ramps.back().dx1;
 
     //replace intermediate ramps with test
-    for(int i=0; i<i2-i1-1; i++)
+    for(int i=0; i<i2-i1-1; i++) {
         ramps.erase(ramps.begin()+i1+1);
+    }
     ramps.insert(ramps.begin()+i1+1,intermediate.ramps.begin(),intermediate.ramps.end());
 
     //check for consistency
@@ -653,13 +715,13 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
     return true;
 }
 
-int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check)
+int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check, Real mintimestep)
 {
     RandomNumberGeneratorBase rng;
-    return Shortcut(numIters,check,&rng);
+    return Shortcut(numIters,check,&rng,mintimestep);
 }
 
-int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng)
+int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng, Real mintimestep)
 {
     int shortcuts = 0;
     vector<Real> rampStartTime(ramps.size());
@@ -676,10 +738,14 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumbe
             t1 = 0;
             t2 = endTime;
         }
-        if(t1 > t2) Swap(t1,t2);
+        if(t1 > t2) {
+            Swap(t1,t2);
+        }
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;
+        if(i1 == i2) {
+            continue;
+        }
         //same ramp
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
@@ -694,14 +760,26 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumbe
         ramps[i1].Derivative(u1,dx0);
         ramps[i2].Derivative(u2,dx1);
         bool res=SolveMinTime(x0,dx0,x1,dx1,accMax,velMax,xMin,xMax,intermediate,_multidofinterp);
-        if(!res) continue;
+        if(!res) {
+            continue;
+        }
+        // check the new ramp time makes significant steps
+        Real newramptime = intermediate.GetTotalTime();
+        if( newramptime+mintimestep > t2-t1 ) {
+            // reject since it didn't make significant improvement
+            PARABOLIC_RAMP_PLOG("shortcut iter=%d rejected time=%fs\n", iters, endTime-(t2-t1)+newramptime);
+            continue;
+        }
+
         bool feas=true;
         for(size_t i=0; i<intermediate.ramps.size(); i++)
             if(!check.Check(intermediate.ramps[i])) {
                 feas=false;
                 break;
             }
-        if(!feas) continue;
+        if(!feas) {
+            continue;
+        }
         //perform shortcut
         shortcuts++;
         ramps[i1].TrimBack(ramps[i1].endTime-u1);
@@ -712,8 +790,9 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumbe
         ramps[i2].dx0 = intermediate.ramps.back().dx1;
 
         //replace intermediate ramps
-        for(int i=0; i<i2-i1-1; i++)
+        for(int i=0; i<i2-i1-1; i++) {
             ramps.erase(ramps.begin()+i1+1);
+        }
         ramps.insert(ramps.begin()+i1+1,intermediate.ramps.begin(),intermediate.ramps.end());
 
         //check for consistency
@@ -729,6 +808,7 @@ int DynamicPath::Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumbe
             rampStartTime[i] = endTime;
             endTime += ramps[i].endTime;
         }
+        PARABOLIC_RAMP_PLOG("shortcut iter=%d endTime=%f\n",iters,endTime);
     }
     return shortcuts;
 }
@@ -739,14 +819,19 @@ int DynamicPath::ShortCircuit(RampFeasibilityChecker& check)
     DynamicPath intermediate;
     for(int i=0; i+1<(int)ramps.size(); i++) {
         bool res=SolveMinTime(ramps[i].x0,ramps[i].dx0,ramps[i].x1,ramps[i].dx1,accMax,velMax,xMin,xMax,intermediate,_multidofinterp);
-        if(!res) continue;
+        if(!res) {
+            continue;
+        }
         bool feas=true;
-        for(size_t j=0; j<intermediate.ramps.size(); j++)
+        for(size_t j=0; j<intermediate.ramps.size(); j++) {
             if(!check.Check(intermediate.ramps[j])) {
                 feas=false;
                 break;
             }
-        if(!feas) continue;
+        }
+        if(!feas) {
+            continue;
+        }
 
         ramps.erase(ramps.begin()+i+1);
         ramps.insert(ramps.begin()+i+1,intermediate.ramps.begin(),intermediate.ramps.end());
@@ -777,14 +862,21 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
     while(1) {
         //can only start from here
         Real starttime = timer.ElapsedTime()-leadTime;
-        if(starttime+padTime >= endTime) break;
+        if(starttime+padTime >= endTime) {
+            break;
+        }
         starttime = Max(0.0,starttime+padTime);
 
         Real t1=starttime+Sqr(rng->Rand())*(endTime-starttime),t2=starttime+rng->Rand()*(endTime-starttime);
-        if(t1 > t2) Swap(t1,t2);
+        if(t1 > t2) {
+            Swap(t1,t2);
+        }
         int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
         int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-        if(i1 == i2) continue;                                                                                                                                  //same ramp
+        if(i1 == i2) {
+            //same ramp
+            continue;
+        }
         Real u1 = t1-rampStartTime[i1];
         Real u2 = t2-rampStartTime[i2];
         PARABOLIC_RAMP_ASSERT(u1 >= 0);
@@ -798,16 +890,23 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         ramps[i1].Derivative(u1,dx0);
         ramps[i2].Derivative(u2,dx1);
         bool res=SolveMinTime(x0,dx0,x1,dx1,accMax,velMax,xMin,xMax,intermediate,_multidofinterp);
-        if(!res) continue;
+        if(!res) {
+            continue;
+        }
         bool feas=true;
-        for(size_t i=0; i<intermediate.ramps.size(); i++)
+        for(size_t i=0; i<intermediate.ramps.size(); i++) {
             if(!check.Check(intermediate.ramps[i])) {
                 feas=false;
                 break;
             }
-        if(!feas) continue;
+        }
+        if(!feas) {
+            continue;
+        }
         //check for time elapse, otherwise can't perform this shortcut
-        if(timer.ElapsedTime()-leadTime > t1) continue;
+        if(timer.ElapsedTime()-leadTime > t1) {
+            continue;
+        }
 
         shortcuts++;
         //crop i1 and i2
@@ -821,8 +920,9 @@ int DynamicPath::OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecke
         PARABOLIC_RAMP_ASSERT(ramps[i2].IsValid());
 
         //replace intermediate ramps
-        for(int i=0; i<i2-i1-1; i++)
+        for(int i=0; i<i2-i1-1; i++) {
             ramps.erase(ramps.begin()+i1+1);
+        }
         ramps.insert(ramps.begin()+i1+1,intermediate.ramps.begin(),intermediate.ramps.end());
 
         //check for consistency
@@ -866,23 +966,26 @@ bool DynamicPath::IsValid() const
     for(size_t i=1; i<ramps.size(); i++) {
         if(ramps[i].x0 != ramps[i-1].x1) {
             PARABOLICWARN("DynamicPath::IsValid: discontinuity at ramp %d\n",i);
-            for(size_t j=0; j<ramps[i].x0.size(); j++)
+            for(size_t j=0; j<ramps[i].x0.size(); j++) {
                 PARABOLICWARN("%g ",ramps[i].x0[j]);
+            }
             PARABOLICWARN("\n");
-            for(size_t j=0; j<ramps[i-1].x1.size(); j++)
+            for(size_t j=0; j<ramps[i-1].x1.size(); j++) {
                 PARABOLICWARN("%g ",ramps[i-1].x1[j]);
+            }
             PARABOLICWARN("\n");
             return false;
         }
         if(ramps[i].dx0 != ramps[i-1].dx1) {
             PARABOLICWARN("DynamicPath::IsValid: derivative discontinuity at ramp %d\n",i);
-            for(size_t j=0; j<ramps[i].dx0.size(); j++)
+            for(size_t j=0; j<ramps[i].dx0.size(); j++) {
                 PARABOLICWARN("%g ",ramps[i].dx0[j]);
+            }
             PARABOLICWARN("\n");
-            for(size_t j=0; j<ramps[i-1].dx1.size(); j++)
+            for(size_t j=0; j<ramps[i-1].dx1.size(); j++) {
                 PARABOLICWARN("%g ",ramps[i-1].dx1[j]);
+            }
             PARABOLICWARN("\n");
-
             return false;
         }
     }

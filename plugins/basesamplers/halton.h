@@ -74,6 +74,14 @@ References:\n\n\
         halton_sequence(num,&samples[0]);
     }
 
+    dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0(GetDOF(),==,1,"sample can only be 1 dof", ORE_InvalidState);
+        dReal f=0;
+        halton_sequence(1,&f);
+        return f;
+    }
+
 protected:
     dReal arc_cosine ( dReal c );
     dReal atan4 ( dReal y, dReal x );

@@ -26,6 +26,8 @@
 #include <Inventor/VRMLnodes/SoVRMLVertexShape.h>
 #include <Inventor/VRMLnodes/SoVRMLVertexLine.h>
 #include <Inventor/VRMLnodes/SoVRMLVertexPoint.h>
+#include <Inventor/VRMLnodes/SoVRMLIndexedLineSet.h>
+#include <Inventor/VRMLnodes/SoVRMLIndexedLine.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/actions/SoSearchAction.h>
 #include <Inventor/SbMatrix.h>
@@ -156,7 +158,7 @@ public:
 
                     if( !!pshape ) {
                         // check if the shape geometry has faces or not.
-                        if( !pshape->geometry.getValue() || pshape->geometry.getValue()->isOfType(SoVRMLVertexLine::getClassTypeId()) || pshape->geometry.getValue()->isOfType(SoVRMLVertexPoint::getClassTypeId()) ) {
+                        if( !pshape->geometry.getValue() || pshape->geometry.getValue()->isOfType(SoVRMLVertexLine::getClassTypeId()) || pshape->geometry.getValue()->isOfType(SoVRMLVertexPoint::getClassTypeId()) || pshape->geometry.getValue()->isOfType(SoVRMLIndexedLineSet::getClassTypeId()) || pshape->geometry.getValue()->isOfType(SoVRMLIndexedLine::getClassTypeId())) {
                             continue;
                         }
                         pappearance = (SoVRMLAppearance*)pshape->appearance.getValue();

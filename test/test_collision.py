@@ -193,6 +193,34 @@ class RunCollision(EnvironmentSetup):
         handle.Close()
         assert(env.CheckCollision(env.GetKinBody('mug1')))
         assert(len(reports)==1)
+
+    def test_activedofdistance(self):
+        self.log.debug('test distance computation with active dofs')
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        with env:
+            pqp = RaveCreateCollisionChecker(env,'pqp')
+            pqp.InitEnvironment()
+            robot=env.GetRobots()[0]
+            manip=robot.GetActiveManipulator()
+            report = CollisionReport()
+            pqp.SetCollisionOptions(CollisionOptions.Contacts|CollisionOptions.Distance)
+            pqp.CheckCollision(manip.GetEndEffector(),report=report)
+            assert(abs(report.minDistance-0.38737) < 0.01 )
+            assert(report.plink1 == manip.GetEndEffector())
+            assert(report.plink2 == env.GetKinBody('pole').GetLinks()[0])
+            
+            pqp.CheckCollision(robot,report=report)
+            assert(abs(report.minDistance-0.0027169) < 0.01 )
+            assert(report.plink1 == robot.GetLink('segway'))
+            assert(report.plink2 == env.GetKinBody('floorwalls').GetLinks()[0])
+            
+            pqp.SetCollisionOptions(CollisionOptions.Contacts|CollisionOptions.Distance|CollisionOptions.ActiveDOFs)
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            pqp.CheckCollision(robot,report=report)
+            assert(abs(report.minDistance-0.29193971893003506) < 0.01 )
+            assert(report.plink1 == robot.GetLink('wam1'))
+            assert(report.plink2 == env.GetKinBody('pole').GetLinks()[0])
         
 #generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])
 

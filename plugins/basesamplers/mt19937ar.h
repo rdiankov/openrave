@@ -101,15 +101,48 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
     void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(_dof*num);
-        for(size_t i = 0; i < samples.size(); ++i) {
-            switch(interval) {
-            case IT_Open: samples[i] = (((dReal)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f); break;
-            case IT_OpenStart: samples[i] = (((dReal)genrand_int32()) + 1.0f)*(1.0f/4294967296.0f); break;
-            case IT_OpenEnd: samples[i] = (dReal)genrand_int32()*(1.0f/4294967296.0f); break;
-            case IT_Closed: samples[i] = (dReal)genrand_int32()*(1.0f/4294967295.0f); break;
-            default: BOOST_ASSERT(0);
+        switch(interval) {
+        case IT_Open:
+            for(size_t i = 0; i < samples.size(); ++i) {
+                samples[i] = (((dReal)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f);
             }
+            break;
+        case IT_OpenStart:
+            for(size_t i = 0; i < samples.size(); ++i) {
+                samples[i] = (((dReal)genrand_int32()) + 1.0f)*(1.0f/4294967296.0f);
+            }
+            break;
+        case IT_OpenEnd:
+            for(size_t i = 0; i < samples.size(); ++i) {
+                samples[i] = (dReal)genrand_int32()*(1.0f/4294967296.0f);
+            }
+            break;
+        case IT_Closed:
+            for(size_t i = 0; i < samples.size(); ++i) {
+                samples[i] = (dReal)genrand_int32()*(1.0f/4294967295.0f);
+            }
+            break;
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT0("invalid interval", ORE_InvalidArguments);
         }
+    }
+
+    dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0(GetDOF(),==,1,"sample can only be 1 dof", ORE_InvalidState);
+        switch(interval) {
+        case IT_Open:
+            return (((dReal)genrand_int32()) + 0.5f)*(1.0f/4294967296.0f);
+        case IT_OpenStart:
+            return (((dReal)genrand_int32()) + 1.0f)*(1.0f/4294967296.0f);
+        case IT_OpenEnd:
+            return (dReal)genrand_int32()*(1.0f/4294967296.0f);
+        case IT_Closed:
+            return (dReal)genrand_int32()*(1.0f/4294967295.0f);
+        default:
+            throw OPENRAVE_EXCEPTION_FORMAT0("invalid interval", ORE_InvalidArguments);
+        }
+        return 0;
     }
 
     void SampleSequence(std::vector<uint32_t>& samples, size_t num)
@@ -118,6 +151,12 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         for(size_t i = 0; i < samples.size(); ++i) {
             samples[i] = genrand_int32();
         }
+    }
+
+    virtual uint32_t SampleSequenceOneUInt32()
+    {
+        OPENRAVE_ASSERT_OP_FORMAT0(GetDOF(),==,1,"sample can only be 1 dof", ORE_InvalidState);
+        return genrand_int32();
     }
 
 private:
@@ -178,8 +217,8 @@ private:
         if (mti >= N) {     /* generate N words at one time */
             int kk;
 
-            if (mti == N+1)                                                                                                                                                                           /* if init_genrand() has not been called, */
-                init_genrand(5489UL);                                                                                                                                                                                                                                          /* a default initial seed is used */
+            if (mti == N+1)                                                                                                                                                                                                                                                                                           /* if init_genrand() has not been called, */
+                init_genrand(5489UL);                                                                                                                                                                                                                                                                                                                                                                                                      /* a default initial seed is used */
 
             for (kk=0; kk<N-M; kk++) {
                 y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);

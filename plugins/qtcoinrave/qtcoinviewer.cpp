@@ -138,12 +138,14 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 }
 
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
+    :
 #if QT_VERSION >= 0x040000 // check for qt4
-    : QMainWindow(NULL, Qt::Window),
+    QMainWindow(NULL, Qt::Window),
 #else
-    : QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
+    QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-    ViewerBase(penv), _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+    ViewerBase(penv),
+    _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
 {
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -334,9 +336,9 @@ QtCoinViewer::~QtCoinViewer()
         boost::mutex::scoped_lock lock(_mutexMessages);
 
         list<EnvMessagePtr>::iterator itmsg;
-        FORIT(itmsg, _listMessages)
+        FORIT(itmsg, _listMessages) {
             (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
-
+        }
         _listMessages.clear();
     }
 
@@ -2754,14 +2756,14 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pviewerdata);
+        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
 
         if( !pitem ) {
             // make sure pbody is actually present
             if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
-                if( !pbody->GetViewerData() ) {
+                if( !pbody->GetUserData("qtcoinviewer") ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
                         RAVELOG_WARN("body %s already registered!\n", pbody->GetName().c_str());
                         continue;
@@ -2799,11 +2801,11 @@ void QtCoinViewer::UpdateFromModel()
                         _deselect();
                     }
                     pitem->Load();
-                    SetViewerData(pbody,pitem);
+                    pbody->SetUserData("qtcoinviewer",pitem);
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetViewerData());
+                    pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -2830,7 +2832,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH_NOINC(it, _mapbodies) {
         if( !it->second->GetUserData() ) {
             // item doesn't exist anymore, remove it
-            SetViewerData(it->first,UserDataPtr());
+            it->first->RemoveUserData("qtcoinviewer");
 
             if( _pSelectedItem == it->second ) {
                 _pdragger.reset();
@@ -2862,8 +2864,8 @@ void QtCoinViewer::_Reset()
     _condUpdateModels.notify_all();
 
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetViewerData() == itbody->second );
-        SetViewerData(itbody->first, UserDataPtr());
+        BOOST_ASSERT( itbody->first->GetUserData("qtcoinviewer") == itbody->second );
+        itbody->first->RemoveUserData("qtcoinviewer");
     }
     _mapbodies.clear();
 
@@ -2973,8 +2975,8 @@ void QtCoinViewer::ViewGeometryChanged(QAction* pact)
 
     UpdateFromModel();
     FOREACH(itbody, _mapbodies) {
-        BOOST_ASSERT( itbody->first->GetViewerData() == itbody->second );
-        SetViewerData(itbody->first,UserDataPtr());
+        BOOST_ASSERT( itbody->first->GetUserData("qtcoinviewer") == itbody->second );
+        itbody->first->RemoveUserData("qtcoinviewer");
     }
     _mapbodies.clear();
 

@@ -20,6 +20,8 @@
 
 namespace OpenRAVE {
 
+static std::string s_linearsmoother = "linearsmoother"; //"shortcut_linear";
+
 std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
 {
     if( !!I) {
@@ -84,7 +86,7 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
     _params->_setstatefn(_values);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner("shortcut_linear")
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother)
 {
     _diffstatefn = subtractstates;
     _neighstatefn = addstates;
@@ -153,7 +155,7 @@ void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters co
     *this = *r;
 }
 
-bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
+bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
 {
     O << _configurationspecification << endl;
     O << "<_vinitialconfig>";
@@ -195,7 +197,9 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O) const
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
     O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
-    O << _sExtraParameters << endl;
+    if( !(options & 1) ) {
+        O << _sExtraParameters << endl;
+    }
     return !!O;
 }
 
@@ -483,7 +487,7 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-void _CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v)
+void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         return vfunctions.at(0).first(v);
@@ -501,7 +505,7 @@ void _CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameter
     }
 }
 
-void _CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
+void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
 {
     if( vfunctions.size() == 1 ) {
         vfunctions.at(0).first(v);
@@ -608,7 +612,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
             sampleneighfns[isavegroup].second = g.dof;
             void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
-            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, true, dofindices);
+            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
             setstatefns[isavegroup].second = g.dof;
             getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
@@ -643,8 +647,8 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _distmetricfn = boost::bind(_CallDistMetricFns,distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
     _samplefn = boost::bind(_CallSampleFns,samplefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _sampleneighfn = boost::bind(_CallSampleNeighFns,sampleneighfns, distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2, _3);
-    _setstatefn = boost::bind(_CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
-    _getstatefn = boost::bind(_CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _setstatefn = boost::bind(CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _getstatefn = boost::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _neighstatefn = boost::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
     boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
     _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), _1, _2, _3, _4);
@@ -671,8 +675,8 @@ void PlannerBase::PlannerParameters::Validate() const
         OPENRAVE_ASSERT_OP(_vConfigAccelerationLimit.size(),==,(size_t)GetDOF());
     }
     OPENRAVE_ASSERT_OP(_vConfigResolution.size(),==,(size_t)GetDOF());
-    OPENRAVE_ASSERT_OP(_fStepLength,>,0);
-    OPENRAVE_ASSERT_OP(_nMaxIterations,>=,0);
+    OPENRAVE_ASSERT_OP(_fStepLength,>=,0); // == 0 is valid for auto-steps
+    OPENRAVE_ASSERT_OP(_nMaxIterations,>=,0); // == 0 is valid for auto-iterations
 
     // check all stateless functions, which means ie anything but configuration samplers
     vector<dReal> vstate;
@@ -761,7 +765,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     }
     PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
     if( !planner ) {
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
+        planner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
         if( !planner ) {
             return PS_Failed;
         }
@@ -783,26 +787,10 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     if( planner->InitPlan(probot, params) ) {
-        PlannerStatus status = planner->PlanPath(ptraj);
-        if( status != PS_Failed ) {
-            return status;
-        }
+        return planner->PlanPath(ptraj);
     }
 
-    if( planner->GetXMLId() != "shortcut_linear") {
-        planner = RaveCreatePlanner(GetEnv(), "shortcut_linear");
-        if( !!planner ) {
-            RAVELOG_WARN(str(boost::format("%s post processing failed, trying shortcut_linear")%GetParameters()->_sPostProcessingPlanner));
-            params->_sPostProcessingPlanner = "lineartrajectoryretimer";
-            params->_sPostProcessingParameters = "<hastimestamps>0</hastimestamps><interpolation>linear</interpolation>";
-            if( planner->InitPlan(probot, params) ) {
-                PlannerStatus status = planner->PlanPath(ptraj);
-                if( status != PS_Failed ) {
-                    return status;
-                }
-            }
-        }
-    }
+    // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
     return PS_Failed;
 }
 

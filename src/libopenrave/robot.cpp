@@ -260,6 +260,22 @@ bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<in
     return false;
 }
 
+void RobotBase::SetName(const std::string& newname)
+{
+    if( _name != newname ) {
+        // have to replace the 2nd word of all the groups with the robot name
+        FOREACH(itgroup, _activespec._vgroups) {
+            stringstream ss(itgroup->name);
+            string grouptype, oldname;
+            ss >> grouptype >> oldname;
+            stringbuf buf;
+            ss.get(buf,0);
+            itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
+        }
+        KinBody::SetName(newname);
+    }
+}
+
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
@@ -309,9 +325,9 @@ void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const 
     // do sensors need to have their velocities updated?
 }
 
-void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits)
+void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits, const std::vector<int>& dofindices)
 {
-    KinBody::SetDOFVelocities(dofvelocities,checklimits); // RobotBase::SetDOFVelocities should be called internally
+    KinBody::SetDOFVelocities(dofvelocities,checklimits, dofindices); // RobotBase::SetDOFVelocities should be called internally
 }
 
 void RobotBase::_UpdateGrabbedBodies()
@@ -958,7 +974,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         std::vector<dReal> vjacobianjoints;
         ComputeJacobianTranslation(index, offset, vjacobianjoints, _vActiveDOFIndices);
         for(size_t i = 0; i < 3; ++i) {
-            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobian.begin()+i*dofstride);
         }
     }
 
@@ -985,7 +1001,7 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         ind++;
     }
     if( _nAffineDOFs & OpenRAVE::DOF_RotationAxis ) {
-        Vector vj = vActvAffineRotationAxis.cross(GetTransform().trans-offset);
+        Vector vj = vActvAffineRotationAxis.cross(offset-GetTransform().trans);
         vjacobian[ind] = vj.x;
         vjacobian[dofstride+ind] = vj.y;
         vjacobian[2*dofstride+ind] = vj.z;
@@ -1034,22 +1050,28 @@ void RobotBase::CalculateActiveJacobian(int index, const Vector& offset, vector<
         ind += 3;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);
+        Transform t; t.identity(); t.rot = quatInverse(_vRotationQuatLimitStart);
         t = t * GetTransform();
-        dReal Qx = t.rot.x, Qy = t.rot.y, Qz = t.rot.z, Qw = t.rot.w;
-        dReal Tx = offset.x-t.trans.x, Ty = offset.y-t.trans.y, Tz = offset.z-t.trans.z;
+        // note: qw, qx, qy, qz here follow the standard quaternion convention, not the openrave one
+        dReal qw = t.rot[0], qx = t.rot[1], qy = t.rot[2], qz = t.rot[3];
+        Vector offset_local = t.inverse() * offset;
+        dReal x = offset_local.x, y = offset_local.y, z = offset_local.z;
 
-        // after some hairy math, the dT/dQ looks like:
-        dReal dRQ[12] = { 2*Qy*Ty+2*Qz*Tz,         -4*Qy*Tx+2*Qx*Ty+2*Qw*Tz,   -4*Qz*Tx-2*Qw*Ty+2*Qx*Tz,   -2*Qz*Ty+2*Qy*Tz,
-                          2*Qy*Tx-4*Qx*Ty-2*Qw*Tz, 2*Qx*Tx+2*Qz*Tz,            2*Qw*Tx-4*Qz*Ty+2*Qy*Tz,    2*Qz*Tx-2*Qx*Tz,
-                          2*Qz*Tx+2*Qw*Ty-4*Qx*Tz, -2*Qw*Tx+2*Qz*Ty-4*Qy*Tz,   2*Qx*Tx+2*Qy*Ty,            -2*Qy*Tx+2*Qx*Ty };
+        dReal dRQ[12] = {-2*qz*y + 2*qw*x + 2*qy*z,2*qx*x + 2*qy*y + 2*qz*z,-2*qy*x + 2*qw*z + 2*qx*y,-2*qw*y - 2*qz*x + 2*qx*z,-2*qx*z + 2*qw*y + 2*qz*x,-2*qw*z - 2*qx*y + 2*qy*x,2*qx*x + 2*qy*y + 2*qz*z,-2*qz*y + 2*qw*x + 2*qy*z,-2*qy*x + 2*qw*z + 2*qx*y,-2*qx*z + 2*qw*y + 2*qz*x,-2*qw*x - 2*qy*z + 2*qz*y,2*qx*x + 2*qy*y + 2*qz*z};
+        for (int i=0; i < 3; ++i) {
+            double qdotrow = dRQ[4*i]*qw + dRQ[4*i+1]*qx + dRQ[4*i+2]*qy + dRQ[4*i+3]*qz;
+            dRQ[4*i] -= qdotrow*qw;
+            dRQ[4*i+1] -= qdotrow*qx;
+            dRQ[4*i+2] -= qdotrow*qy;
+            dRQ[4*i+3] -= qdotrow*qz;
+        }
 
         for(int i = 0; i < 3; ++i) {
             for(int j = 0; j < 4; ++j) {
-                vjacobian[i*dofstride+j] = dRQ[4*i+j];
+                vjacobian[i*dofstride+ind + j] = dRQ[4*i+j];
             }
         }
-        ind += 3;
+        ind += 4;
     }
 }
 

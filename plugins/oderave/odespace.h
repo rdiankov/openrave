@@ -69,6 +69,7 @@ public:
         dWorldID world;          ///< the dynamics world
         dSpaceID space;          ///< the collision world
         dJointGroupID contactgroup;
+        boost::mutex _mutex;
     };
 
 public:
@@ -89,7 +90,7 @@ public:
 
             void Enable(bool bEnable)
             {
-                if( plink->IsStatic() || _bEnabled == bEnable ) {
+                if( GetLink()->IsStatic() || _bEnabled == bEnable ) {
                     return;
                 }
                 _bEnabled = bEnable;
@@ -122,9 +123,13 @@ public:
                 }
             }
 
+            KinBody::LinkPtr GetLink() {
+                return _plink.lock();
+            }
+
             list<dTriIndex*> listtrimeshinds;
             list<dReal*> listvertices;
-            KinBody::LinkPtr plink;
+            KinBody::LinkWeakPtr _plink;
             bool _bEnabled;
         };
 
@@ -136,7 +141,7 @@ public:
         }
 
         virtual ~KinBodyInfo() {
-            EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());         // protected ode calls
+            boost::mutex::scoped_lock lock(_ode->_mutex);
             Reset();
             dSpaceClean(space);
             dJointGroupEmpty(jointgroup);
@@ -192,7 +197,11 @@ public:
             _staticcallback.reset();
         }
 
-        KinBodyPtr pbody;         ///< body associated with this structure
+        KinBodyPtr GetBody() {
+            return _pbody.lock();
+        }
+
+        KinBodyWeakPtr _pbody;         ///< body associated with this structure
         int nLastStamp;
 
         vector<boost::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
@@ -213,10 +222,9 @@ private:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
 
-    ODESpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bUsingPhysics) : _penv(penv), GetInfo(infofn), _bUsingPhysics(bUsingPhysics)
+    ODESpace(EnvironmentBasePtr penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
     {
         static bool s_bIsODEInitialized = false;
         if( !s_bIsODEInitialized ) {
@@ -256,9 +264,13 @@ private:
         return !!_ode;
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
+    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+        boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+        if( blockode ) {
+            lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+        }
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
@@ -268,12 +280,12 @@ private:
             pinfo.reset(new KinBodyInfo(_ode));
         }
         pinfo->Reset();
-        pinfo->pbody = pbody;
+        pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
         pinfo->vjointfeedback.resize(pinfo->vjoints.capacity());
-        dGeomSetData((dGeomID)pinfo->space, &pinfo->pbody);     // so that the kinbody can be retreived from the space
+        dGeomSetData((dGeomID)pinfo->space, pinfo.get());     // so that the kinbody can be retreived from the space
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
@@ -371,13 +383,13 @@ private:
                 dBodySetMass(link->body, &mass);
             }
 
-            link->plink = *itlink;
+            link->_plink = *itlink;
             // set the transformation
             RaveTransform<dReal> t = (*itlink)->GetTransform();
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
-            dBodySetData(link->body, &link->plink);     // so that the link can be retreived from the body
+            dBodySetData(link->body, link.get());     // so that the link can be retreived from the body
         }
 
         if( _bUsingPhysics ) {
@@ -473,12 +485,12 @@ private:
             }
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         if( _bUsingPhysics ) {
-            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),KinBodyWeakPtr(pbody)));
+            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         }
 
-        _Synchronize(pinfo);
+        _Synchronize(pinfo, false);
         return pinfo;
     }
 
@@ -487,33 +499,34 @@ private:
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
+        boost::mutex::scoped_lock lockode(_ode->_mutex);
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            KinBodyInfoPtr pinfo = GetInfo(*itbody);
-            BOOST_ASSERT( pinfo->pbody == *itbody );
-            _Synchronize(pinfo);
+            KinBodyInfoPtr pinfo = GetCreateInfo(*itbody, false).first;
+            BOOST_ASSERT( pinfo->GetBody() == *itbody );
+            _Synchronize(pinfo,false);
         }
     }
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
-        BOOST_ASSERT( pinfo->pbody == pbody );
+        KinBodyInfoPtr pinfo = GetCreateInfo(pbody).first;
+        BOOST_ASSERT( pinfo->GetBody() == pbody );
         _Synchronize(pinfo);
     }
 
     dSpaceID GetBodySpace(KinBodyConstPtr pbody)
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
-        BOOST_ASSERT(pinfo->pbody == pbody );
+        BOOST_ASSERT(pinfo->GetBody() == pbody );
         return pinfo->space;
     }
 
     dBodyID GetLinkBody(KinBody::LinkConstPtr plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
+        BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->body;
     }
@@ -521,7 +534,7 @@ private:
     dGeomID GetLinkGeom(KinBody::LinkConstPtr plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        BOOST_ASSERT( pinfo->pbody == plink->GetParent() );
+        BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
         BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
         return pinfo->vlinks[plink->GetIndex()]->geom;
     }
@@ -529,7 +542,8 @@ private:
     dJointID GetJoint(KinBody::JointConstPtr pjoint)
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
-        BOOST_ASSERT( pinfo->pbody == pjoint->GetParent() );
+        OPENRAVE_ASSERT_FORMAT(!!pinfo, "info does not exist for joint %s, key %s", pjoint->GetName()%_userdatakey, OpenRAVE::ORE_Assert);
+        BOOST_ASSERT( pinfo->GetBody() == pjoint->GetParent() );
         if( pjoint->GetJointIndex() >= 0 ) {
             BOOST_ASSERT( pjoint->GetParent()->GetJointFromDOFIndex(pjoint->GetDOFIndex()) == pjoint );
             BOOST_ASSERT( pjoint->GetJointIndex() >= 0);
@@ -537,8 +551,9 @@ private:
         }
         else {
             // passive joint
-            size_t index = pinfo->pbody->GetJoints().size();
-            FOREACHC(itjoint,pinfo->pbody->GetPassiveJoints()) {
+            KinBodyPtr pbody = pinfo->GetBody();
+            size_t index = pbody->GetJoints().size();
+            FOREACHC(itjoint,pbody->GetPassiveJoints()) {
                 if( *itjoint == pjoint ) {
                     return pinfo->vjoints.at(index);
                 }
@@ -565,13 +580,33 @@ private:
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     JointSetFn _jointset[12];
 
+    KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) {
+        return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+    }
+
+    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody, bool blockode=true) {
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        bool bcreated = false;
+        if( !pinfo ) {
+            pinfo = InitKinBody(pbody, KinBodyInfoPtr(), blockode);
+            pbody->SetUserData(_userdatakey, pinfo);
+            bcreated = true;
+        }
+        return std::make_pair(pinfo,bcreated);
+    }
+
 private:
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
-        if( pinfo->nLastStamp != pinfo->pbody->GetUpdateStamp() ) {
+        if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
+            boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+            if( block ) {
+                lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+            }
             vector<Transform> vtrans;
-            pinfo->pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
-            pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
+            KinBodyPtr pbody = pinfo->GetBody();
+            pbody->GetLinkTransformations(vtrans, pinfo->_vdofbranches);
+            pinfo->nLastStamp = pbody->GetUpdateStamp();
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
                 RaveTransform<dReal> t = vtrans[i];
@@ -582,7 +617,7 @@ private:
 
             // update stamps also reflect enable links
             FOREACH(it, pinfo->vlinks) {
-                (*it)->Enable((*it)->plink->IsEnabled());
+                (*it)->Enable((*it)->GetLink()->IsEnabled());
             }
             if( !!_synccallback ) {
                 _synccallback(pinfo);
@@ -590,24 +625,21 @@ private:
         }
     }
 
-    void _ResetKinBodyCallback(KinBodyWeakPtr _pbody)
+    void _ResetKinBodyCallback(boost::weak_ptr<KinBody const> _pbody)
     {
-        EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
-        KinBodyPtr pbody(_pbody);
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
-        if( !pinfo ) {
-            RAVELOG_WARN(str(boost::format("body %s is not registered")%pbody->GetName()));
-        }
-        else {
-            BOOST_ASSERT(boost::shared_ptr<ODESpace>(pinfo->_odespace) == shared_from_this());
-            BOOST_ASSERT(pinfo->pbody==pbody);
-            InitKinBody(pbody,pinfo);
+        KinBodyConstPtr pbody(_pbody);
+        std::pair<KinBodyInfoPtr, bool> infocreated = GetCreateInfo(pbody);
+        if( !infocreated.second ) {
+            // only init if the body was not just created
+            BOOST_ASSERT(boost::shared_ptr<ODESpace>(infocreated.first->_odespace) == shared_from_this());
+            BOOST_ASSERT(infocreated.first->GetBody()==pbody);
+            InitKinBody(pbody,infocreated.first);
         }
     }
 
     EnvironmentBasePtr _penv;
     boost::shared_ptr<ODEResources> _ode;
-    GetInfoFn GetInfo;
+    std::string _userdatakey;
 
     SynchornizeCallbackFn _synccallback;
     bool _bUsingPhysics;

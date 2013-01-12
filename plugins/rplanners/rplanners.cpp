@@ -26,6 +26,8 @@ PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::is
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -62,8 +64,14 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "workspacetrajectorytracker" ) {
             return CreateWorkspaceTrajectoryTracker(penv,sinput);
         }
+        else if( interfacename == "linearsmoother" ) {
+            return CreateLinearSmoother(penv,sinput);
+        }
         else if( interfacename == "parabolicsmoother" ) {
             return CreateParabolicSmoother(penv,sinput);
+        }
+        else if( interfacename == "constraintparabolicsmoother" ) {
+            return CreateConstraintParabolicSmoother(penv,sinput);
         }
         break;
     default:
@@ -83,7 +91,9 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
+    info.interfacenames[PT_Planner].push_back("LinearSmoother");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
+    info.interfacenames[PT_Planner].push_back("ConstraintParabolicSmoother");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

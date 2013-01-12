@@ -65,7 +65,7 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
-    object SampleSequence(SampleDataType type, size_t num,IntervalType interval)
+    object SampleSequence(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
@@ -95,7 +95,17 @@ public:
         throw OPENRAVE_EXCEPTION_FORMAT("%d sampling type not supported",type,ORE_InvalidArguments);
     }
 
-    object SampleComplete(SampleDataType type, size_t num,IntervalType interval)
+    dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
+    {
+        return _pspacesampler->SampleSequenceOneReal(interval);
+    }
+
+    uint32_t SampleSequenceOneUInt32()
+    {
+        return _pspacesampler->SampleSequenceOneUInt32();
+    }
+
+    object SampleComplete(SampleDataType type, size_t num,IntervalType interval=IT_Closed)
     {
         if( type == SDT_Real ) {
             std::vector<dReal> samples;
@@ -164,6 +174,8 @@ PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const s
     return PySpaceSamplerBasePtr(new PySpaceSamplerBase(p,pyenv));
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleSequenceOneReal_overloads, SampleSequenceOneReal, 0, 1)
+
 void init_openravepy_spacesampler()
 {
     {
@@ -180,6 +192,8 @@ void init_openravepy_spacesampler()
                              .def("GetLimits",&PySpaceSamplerBase::GetLimits, args("seed"), DOXY_FN(SpaceSamplerBase,GetLimits))
                              .def("SampleSequence",SampleSequence1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType"))
                              .def("SampleSequence",SampleSequence2, args("num"), DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t"))
+                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(args("interval"), DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
+                             .def("SampleSequenceOneUInt32", &PySpaceSamplerBase::SampleSequenceOneUInt32, DOXY_FN(SpaceSamplerBase,SampleSequenceOneUInt32))
                              .def("SampleComplete",SampleComplete1, args("num","interval"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType"))
                              .def("SampleComplete",SampleComplete2, args("num"), DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t"))
         ;

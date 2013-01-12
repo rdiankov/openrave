@@ -16,10 +16,49 @@ Core
 
 * Added :class:`KinBody.LinkInfo` and :class:`KinBody.JointInfo` classes in order to programatically build robots by calling :meth:`.KinBody.Init`.
 
+* Fixed bugs in RobotBase::CalculateActiveJacobian (thanks to John Schulman)
+
+* SetUserData now supports a key to allow different modules to store their own uninterrupted user data. KinBody.SetCollisionData, KinBody.SetPhysicsData, KinBody.SetViewerData are deprecated. It can also be called through const pointers.
+
+* Added :meth:`.KinBody.Link.ComputeLocalAABB` to get local AABB of the link.
+
+* Added :meth:`.RaveGetAffineDOFValuesFromVelocity` and :meth:`.RaveGetVelocityFromAffineDOFVelocity` for velocity conversion of affine values.
+
+* Added :meth:`.ConfigurationSpecification.GetSetFn` and :meth:`.ConfigurationSpecification.GetGetFn` for general setting/getting functions of a configuration.
+
+* :meth:`.KinBody.SetDOFVelocities` now accepts indices
+
+* Fixed stale group names in KinBody _spec, Robot _activespec, and IdealController groups; :meth:`.ConfigurationSpecification.FindCompatibleGroup` now more strict.
+
+* Many methods in :class:`.InterfaceBase` have not become multi-thread safe.
+
+* Added :meth:`.SpaceSample.SampleSequenceOneReal` and :meth:`.SpaceSample.SampleSequenceOneUINT32` for easier retrieval of samples.
+
 Inverse Kinematics
 ------------------
 
 * IkFast can detect aligned axes and give infinite solutions.
+
+* Fixed bug in ikfastsolver.cpp that prioritizes solutions based on configuration distance.
+
+Planning
+--------
+
+- Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters`
+
+- Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
+
+- Added options parameter to :meth:`.Planner.PlannerParameters.serialize`
+
+- Speed up of smoothing algorithms by early rejecting bad candidates.
+
+- Added much faster linear smoother :ref:`linear smoothing <planner-linearsmoother>` which can also do per-DOF smoothing.
+
+- planningutils smoothing and retiming functions like :meth:`planningutils.SmoothActiveDOFTrajectory` now return planning failure rather than to throw exceptions.
+
+- Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
+
+- Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
 
 Python
 ------
@@ -32,6 +71,12 @@ Misc
 * Fixed :meth:`.planningutils.JitterTransform` and added openravepy wrapper
 
 * Fixed opening DirectX files as environment files
+
+* Fixed destruction order bug in qt/coin viewer.
+
+* Add ``OPT_IKFAST_FLOAT32`` cmake option to control whether 32bit float ikfast shared objects can be loaded.
+
+* switched collada writing to write all geometries regardless if they are similar (default was to reuse data)
 
 Version 0.8.2
 =============

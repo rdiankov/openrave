@@ -304,8 +304,10 @@ protected:
         }
 
         /// \brief output the planner parameters in a string (in XML format)
+        ///
+        /// \param options if 1 will skip writing the extra parameters
         /// don't use PlannerParameters as a tag!
-        virtual bool serialize(std::ostream& O) const;
+        virtual bool serialize(std::ostream& O, int options=0) const;
 
         //@{ XML parsing functions, parses the default parameters
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);

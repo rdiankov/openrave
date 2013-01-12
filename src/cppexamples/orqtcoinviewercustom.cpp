@@ -1,20 +1,8 @@
-/** \example orloadviewer.cpp
+/** \example orqtcoinviewercustom.cpp
     \author Rosen Diankov
 
-    Shows how to load a robot into the openrave environment and start a viewer in a separate thread.
-
-    Usage:
-    \verbatim
-    orloadviewer [--num n] [--scene filename] viewername
-    \endverbatim
-
-    - \b --num - Number of environments/viewers to create simultaneously
-    - \b --scene - The filename of the scene to load.
-
-    Example:
-    \verbatim
-    ./orloadviewer --scene data/lab1.env.xml qtcoin
-    \endverbatim
+    Shows how to execute commands inside the viewer thread and cast viewer to a QMainWindow. Note that this
+    relies on the qtcoin viewer being derived from qt4's QMainWindow class
 
     <b>Full Example Code:</b>
  */
@@ -25,6 +13,8 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
+
+#include <QMainWindow>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -40,6 +30,20 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
     // finally call the viewer's infinite loop (this is why a separate thread is needed)
     bool showgui = true;
     viewer->main(showgui);
+}
+
+int g_counter=0;
+void ViewerCallback(ViewerBasePtr pviewer)
+{
+    ++g_counter;
+    // this is only true for the current qtcoinviewer implementation
+    QMainWindow* wnd = dynamic_cast<QMainWindow*>(pviewer.get());
+    if( (g_counter/60) & 1 ) {
+        wnd->show();
+    }
+    else {
+        wnd->hide();
+    }
 }
 
 int main(int argc, char ** argv)
@@ -72,7 +76,18 @@ int main(int argc, char ** argv)
 
     boost::thread thviewer(boost::bind(SetViewer,penv,viewername));
     penv->Load(scenefilename); // load the scene
+
+
+    UserDataPtr pregistration;
+    while(!pregistration) {
+        if( !pregistration && !!penv->GetViewer() ) {
+            pregistration = penv->GetViewer()->RegisterViewerThreadCallback(boost::bind(ViewerCallback,penv->GetViewer()));
+        }
+        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+    }
+
     thviewer.join(); // wait for the viewer thread to exit
+    pregistration.reset();
     penv->Destroy(); // destroy
     return 0;
 }

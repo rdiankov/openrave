@@ -30,10 +30,6 @@
 
 #define CHECK_COLLISION_BODY(body) { \
         CHECK_INTERFACE(body); \
-        if( !(body)->GetCollisionData() ) { \
-            RAVELOG_WARN("body %s not added to enviornment!\n", (body)->GetName().c_str()); \
-            return false; \
-        } \
 }
 
 class Environment : public EnvironmentBase
@@ -637,8 +633,12 @@ public:
                     _vecrobots.erase(itrobot);
                 }
             }
-            (*it)->SetPhysicsData(UserDataPtr());
-            (*it)->SetCollisionData(UserDataPtr());
+            if( !!_pCurrentChecker ) {
+                _pCurrentChecker->RemoveKinBody(*it);
+            }
+            if( !!_pPhysicsEngine ) {
+                _pPhysicsEngine->RemoveKinBody(*it);
+            }
             RemoveEnvironmentId(pbody);
             _vecbodies.erase(it);
             _nBodiesModifiedStamp++;
@@ -1038,8 +1038,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(robot);
+            }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
@@ -1064,7 +1066,8 @@ public:
             }
             if( !!robot ) {
                 std::list<KinBody::GeometryInfo> listGeometries;
-                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1074,7 +1077,7 @@ public:
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = filename;
+                    listGeometries.front()._filenamerender = fullfilename;
                     if( robot->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1116,8 +1119,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!robot ) {
-            robot->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(robot);
+            }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
                 throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
             }
@@ -1158,8 +1163,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(body);
+            }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
@@ -1181,7 +1188,8 @@ public:
             }
             if( !!body ) {
                 std::list<KinBody::GeometryInfo> listGeometries;
-                if( _ReadGeometriesFile(listGeometries,filename,atts) && listGeometries.size() > 0 ) {
+                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
@@ -1191,7 +1199,7 @@ public:
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = filename;
+                    listGeometries.front()._filenamerender = fullfilename;
                     if( body->InitFromGeometries(listGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
@@ -1233,8 +1241,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         if( !!body ) {
-            body->SetViewerData(UserDataPtr());
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(body);
+            }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
                 throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
             }
@@ -1412,12 +1422,15 @@ public:
         return ptrimesh;
     }
 
-    virtual bool _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    /// \brief parses the file into GeometryInfo and returns the full path of the file opened
+    ///
+    /// \param[in] listGeometries geometry list to be filled
+    virtual std::string _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
-            return boost::shared_ptr<TriMesh>();
+            return std::string();
         }
         Vector vScaleGeometry(1,1,1);
         FOREACHC(itatt,atts) {
@@ -1429,7 +1442,11 @@ public:
                 }
             }
         }
-        return OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries);
+        if( OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries) && listGeometries.size() > 0 ) {
+            return filedata;
+        }
+        listGeometries.clear();
+        return std::string();
     }
 
     virtual void _AddViewer(ViewerBasePtr pnewviewer)
@@ -1680,7 +1697,6 @@ public:
             (*itbody)->GetLinkTransformations(itstate->vectrans, vdofbranches);
             (*itbody)->GetDOFValues(itstate->jointvalues);
             itstate->strname =(*itbody)->GetName();
-            itstate->pviewerdata = (*itbody)->GetViewerData();
             itstate->environmentid = (*itbody)->GetEnvironmentId();
             ++itstate;
         }
@@ -2100,6 +2116,7 @@ protected:
                 bNeedSleep = false;
                 lockenv = _LockEnvironmentWithTimeout(100000);
                 if( !!lockenv ) {
+                    //Get deltasimtime in microseconds
                     int64_t deltasimtime = (int64_t)(_fDeltaSimTime*1000000.0f);
                     try {
                         StepSimulation(_fDeltaSimTime);
@@ -2109,16 +2126,21 @@ protected:
                     }
                     uint64_t passedtime = utils::GetMicroTime()-_nSimStartTime;
                     int64_t sleeptime = _nCurSimTime-passedtime;
+                    //Hardcoded tolerance for now
+                    const int tol=2;
                     if( _bRealTime ) {
-                        if(( sleeptime > 2*deltasimtime) &&( sleeptime > 2000) ) {
+                        if(( sleeptime > deltasimtime/tol) &&( sleeptime > 1000) ) {
                             lockenv.reset();
                             // sleep for less time since sleep isn't accurate at all and we have a 7ms buffer
-                            boost::this_thread::sleep (boost::posix_time::microseconds(max((int)(deltasimtime + (sleeptime-2*deltasimtime)/2),1000)));
-                            //RAVELOG_INFO("sleeping %d(%d), slept: %d\n",(int)(_nCurSimTime-passedtime),(int)((sleeptime-(deltasimtime/2))/1000));
+                            int actual_sleep=max((int)sleeptime*6/8,1000);
+                            boost::this_thread::sleep (boost::posix_time::microseconds(actual_sleep));
+                            //RAVELOG_INFO("sleeptime ideal %d, actually slept: %d\n",(int)sleeptime,(int)actual_sleep);
                             nLastSleptTime = utils::GetMicroTime();
+                            //Since already slept this cycle, wait till next time to sleep.
+                            bNeedSleep = false;
                         }
-                        else if( sleeptime < -3*deltasimtime ) {
-                            // simulation is getting late, so catch up
+                        else if( sleeptime < -deltasimtime/tol && ( sleeptime < -1000) ) {
+                            // simulation is getting late, so catch up (doesn't happen often in light loads)
                             //RAVELOG_INFO("sim catching up: %d\n",-(int)sleeptime);
                             _nSimStartTime += -sleeptime;     //deltasimtime;
                         }
@@ -2154,6 +2176,7 @@ protected:
                 }
             }
 
+            //TODO: Verify if this always has to happen even if thread slept in RT if statement above
             lockenv.reset(); // always release at the end of loop to give other threads time
             if( bNeedSleep ) {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(1));

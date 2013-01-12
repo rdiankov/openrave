@@ -217,7 +217,7 @@ def parseoptions(args=None):
                       help='increment of revolute free joints (default=%default)')
     parser.add_option('--freeinctrans',action='store',type='float',dest='freeinctrans',default='0.01',
                       help='percentage increment of the free joints, this should be scaled with robot size (default=%default)')
-    parser.add_option('--errorthreshold',action='store',type='float',dest='errorthreshold',default='0.001',
+    parser.add_option('--errorthreshold',action='store',type='float',dest='errorthreshold',default='0.000001',
                       help='The error threshold between ik parameterizations defining boundary of wrong solutions (default=%default)')
     parser.add_option('--minimumsuccess',action='store',type='float',dest='minimumsuccess',default='0.4',
                       help='Minimum success rate required to count test as passing (default=%default)')

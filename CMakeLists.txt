@@ -42,9 +42,11 @@ option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
 option(OPT_COLLADA "Build with COLLADA support" ON)
+option(OPT_BULLET "Use Bullet Collision/Physics If Evalable" ON)
 option(OPT_EXTRA_ROBOTS "Install extra robots" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
+option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
@@ -97,31 +99,30 @@ if( OPT_PYTHON )
   if( PYTHON_EXECUTABLE )
     get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
     # architecture independent
+#    execute_process(
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
+#      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
+#      RESULT_VARIABLE _python_failed0)
+#    # architexture dependent
+#    execute_process(
+#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
+#      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
+#      RESULT_VARIABLE _python_failed1)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
-      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.get_include()"
+      OUTPUT_VARIABLE _python_numpy_include OUTPUT_STRIP_TRAILING_WHITESPACE
       RESULT_VARIABLE _python_failed0)
-    # architexture dependent
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
-      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _python_failed1)
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
       OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       RESULT_VARIABLE _python_failed2)
 
-    if( ${_python_failed0} EQUAL 0 AND ${_python_failed1} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
-      if( NOT IS_DIRECTORY "${_python_distpackage}/numpy/core/include" )
-        if( NOT IS_DIRECTORY "${_python_sitepackage}/numpy/core/include" )
-          message(STATUS "cannot find python numpy dir!")
-          set(PYTHON_EXECUTABLE)
-        else()
-          set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_sitepackage_arch}/numpy/core/include)
-        endif()
+    if( ${_python_failed0} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
+      if( NOT IS_DIRECTORY "${_python_numpy_include}" )
+        set(PYTHON_EXECUTABLE)
       else()
-        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_distpackage}/numpy/core/include)
+        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_numpy_include})
       endif()
 
       # get the major.minor python version

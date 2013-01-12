@@ -364,6 +364,9 @@ protected:
             return _collision;
         }
 
+        /// \brief Compute the aabb of all the geometries of the link in the link coordinate system
+        virtual AABB ComputeLocalAABB() const;
+
         /// \brief Compute the aabb of all the geometries of the link in the world coordinate system
         virtual AABB ComputeAABB() const;
 
@@ -1095,7 +1098,6 @@ public:
         KinBodyPtr pbody;
         std::vector<RaveTransform<dReal> > vectrans;
         std::vector<dReal> jointvalues;
-        UserDataPtr pviewerdata, puserdata;
         std::string strname;         ///< name of the body
         int environmentid;
     };
@@ -1244,7 +1246,7 @@ private:
         return _name;
     }
 
-    /// \brief Set the name of the robot, notifies the environment and checks for uniqueness.
+    /// \brief Set the name of the body, notifies the environment and checks for uniqueness.
     virtual void SetName(const std::string& name);
 
     /// Methods for accessing basic information about joints
@@ -1458,7 +1460,8 @@ private:
     /// Copies the current velocity of the base link and calls SetDOFVelocities(linearvel,angularvel,vDOFVelocities)
     /// \param[in] dofvelocities - velocities of each of the degrees of freeom
     /// \param[in] checklimits if >0, will excplicitly check the joint velocity limits before setting the values and clamp them. If == 1, then will warn if the limits are overboard, if == 2, then will not warn (used for code that knows it's giving bad values)
-    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits);
+    /// \param dofindices the dof indices to return the values for. If empty, will compute for all the dofs
+    virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Returns the linear and angular velocities for each link
     ///
@@ -1701,13 +1704,9 @@ private:
      */
     virtual int8_t DoesAffect(int jointindex, int linkindex) const;
 
-    /// \see SetViewerData
-    virtual UserDataPtr GetViewerData() const {
-        return _pViewerData;
-    }
-    /// \deprecated (11/09/21)
-    virtual UserDataPtr GetGuiData() const RAVE_DEPRECATED {
-        return GetViewerData();
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetViewerData() const RAVE_DEPRECATED {
+        return GetUserData("_viewer_");
     }
 
     /// \brief specifies the type of adjacent link information to receive
@@ -1724,13 +1723,13 @@ private:
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
 
-    /// \see SetPhysicsData
-    virtual UserDataPtr GetPhysicsData() const {
-        return _pPhysicsData;
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
+        return GetUserData("_physics_");
     }
-    /// \brief SetCollisionData
-    virtual UserDataPtr GetCollisionData() const {
-        return _pCollisionData;
+    /// \deprecated (12/12/11)
+    virtual UserDataPtr GetCollisionData() const RAVE_DEPRECATED {
+        return GetUserData("_collision_");
     }
     virtual ManageDataPtr GetManageData() const {
         return _pManageData;
@@ -1754,7 +1753,7 @@ private:
     /// block the thread that made the parameter change.
     /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
-    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback);
+    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback) const;
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
@@ -1814,17 +1813,18 @@ protected:
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
 
-    /// \brief custom data managed by the current active physics engine, should be set only by PhysicsEngineBase
-    virtual void SetPhysicsData(UserDataPtr pdata) {
-        _pPhysicsData = pdata;
+    /// \deprecated (12/12/11)
+    virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_physics_", pdata);
     }
-    /// \brief custom data managed by the current active collision checker, should be set only by CollisionCheckerBase
-    virtual void SetCollisionData(UserDataPtr pdata) {
-        _pCollisionData = pdata;
+    /// \deprecated (12/12/11)
+    virtual void SetCollisionData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_collision_", pdata);
     }
-    /// \brief custom data managed by the current active viewer, should be set only by ViewerBase
-    virtual void SetViewerData(UserDataPtr pdata) {
-        _pViewerData = pdata;
+
+    /// \deprecated (12/12/11)
+    virtual void SetViewerData(UserDataPtr pdata) RAVE_DEPRECATED {
+        SetUserData("_viewer_",pdata);
     }
     virtual void SetManageData(ManageDataPtr pdata) {
         _pManageData = pdata;
@@ -1887,7 +1887,7 @@ protected:
                                      ///< i|(j<<16) will be in the set where i<j.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-    std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    mutable std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. the registration/deregistration of the list can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable
 
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
@@ -1898,9 +1898,6 @@ protected:
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
     int _nParametersChanged; ///< set of parameters that changed and need callbacks
-    UserDataPtr _pViewerData; ///< \see SetViewerData
-    UserDataPtr _pPhysicsData; ///< \see SetPhysicsData
-    UserDataPtr _pCollisionData; ///< \see SetCollisionData
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;

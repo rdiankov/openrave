@@ -60,8 +60,11 @@ public:
     /// has to clear/deallocate any memory associated with KinBody::_pPhysicsData
     virtual void DestroyEnvironment() = 0;
 
-    /// notified when a new body has been initialized in the environment
+    /// \brief notified when a new body has been initialized in the environment. Return
     virtual bool InitKinBody(KinBodyPtr body) = 0;
+
+    /// \brief notified when a body has been removed from the environment.
+    virtual void RemoveKinBody(KinBodyPtr body) = 0;
 
     /// \brief Force the body velocity of a link, velocities correspond to the link's coordinate system origin.
     ///
@@ -147,8 +150,9 @@ public:
     }
 
 protected:
-    virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) {
-        body->SetPhysicsData(data);
+    /// \deprecated (12/12/11)
+    virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) RAVE_DEPRECATED {
+        body->SetUserData(GetXMLId(), data);
     }
 
 private:

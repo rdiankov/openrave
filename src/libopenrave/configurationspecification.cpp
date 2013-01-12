@@ -236,8 +236,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
         if( curtokens.at(0) == tokens.at(0) ) {
             uint32_t matchscore=1;
             if( curtokens.size() > 1 && tokens.size() > 1 ) {
-                if( curtokens.at(1) == tokens.at(1) ) {
-                    matchscore += 0x80000000;
+                if( curtokens.at(1) != tokens.at(1) ) {
+                    // both names exist and do not match so cannot go any further!
+                    continue;
                 }
                 if( curtokens.size() > 2 && tokens.size() > 2 ) {
                     for(size_t i = 2; i < tokens.size(); ++i) {
@@ -835,6 +836,225 @@ bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator it
     }
     return bfound;
 }
+
+/** sets the body transform
+    \param[in] values the affine dof values
+    \param[in] affinedofs the affine dof mask
+    \param[in] vaxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+    \param[in] if true will normalize rotations, should set to false if extracting velocity data
+ */
+void SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+{
+    Transform t;
+    if( affinedofs != DOF_Transform ) {
+        t = pbody->GetTransform();
+    }
+    RaveGetTransformFromAffineDOFValues(t,values.begin(),affinedofs, vaxis, true);
+    pbody->SetTransform(t);
+}
+
+void GetAffineDOFValuesFromBodyTransform(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+{
+    values.resize(RaveGetAffineDOF(affinedofs));
+    RaveGetAffineDOFValuesFromTransform(values.begin(), pbody->GetTransform(), affinedofs, vaxis);
+}
+
+void SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+{
+    Vector linearvel, angularvel;
+    Vector quatrotation;
+    if( affinedofs != DOF_Transform && affinedofs != (DOF_XYZ|DOF_Rotation3D) ) {
+        pbody->GetLinks().at(0)->GetVelocity(linearvel, angularvel);
+    }
+    if( affinedofs & DOF_RotationQuat ) {
+        quatrotation = pbody->GetTransform().rot;
+    }
+    RaveGetVelocityFromAffineDOFVelocities(linearvel, angularvel, values.begin(), affinedofs, vaxis, quatrotation);
+    pbody->SetVelocity(linearvel, angularvel);
+}
+
+void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+{
+    values.resize(RaveGetAffineDOF(affinedofs));
+    Vector linearvel, angularvel;
+    Vector quatrotation;
+    pbody->GetLinks().at(0)->GetVelocity(linearvel, angularvel);
+    if( affinedofs & DOF_RotationQuat ) {
+        quatrotation = pbody->GetTransform().rot;
+    }
+    RaveGetAffineDOFValuesFromVelocity(values.begin(), linearvel, angularvel, quatrotation, affinedofs, vaxis);
+}
+
+boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
+{
+    boost::shared_ptr<SetConfigurationStateFn> fn;
+    Validate();
+    std::vector< std::pair<SetConfigurationStateFn, int> > setstatefns(_vgroups.size());
+    string bodyname;
+    stringstream ss, ssout;
+    // order the groups depending on offset
+    int nMaxDOFForGroup = 0;
+    std::vector< std::pair<int, int> > vgroupoffsets(_vgroups.size());
+    for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
+        vgroupoffsets[igroup].first = _vgroups[igroup].offset;
+        vgroupoffsets[igroup].second = igroup;
+        nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
+    }
+    std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
+    for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
+        const ConfigurationSpecification::Group& g = _vgroups[igroup];
+        int isavegroup = vgroupoffsets[igroup].second;
+        if( g.name.size() >= 12 && g.name.substr(0,12) == "joint_values" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            ss >> bodyname;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            std::vector<int> dofindices((istream_iterator<int>(ss)), istream_iterator<int>());
+            if( dofindices.size() == 0 ) {
+                OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
+            }
+            void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
+            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
+            setstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            ss >> bodyname;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            std::vector<int> dofindices((istream_iterator<int>(ss)), istream_iterator<int>());
+            if( dofindices.size() == 0 ) {
+                OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
+            }
+            void (KinBody::*setdofvelocitiesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFVelocities;
+            setstatefns[isavegroup].first = boost::bind(setdofvelocitiesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
+            setstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            int affinedofs=0;
+            ss >> bodyname >> affinedofs;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
+            }
+            setstatefns[isavegroup].first = boost::bind(SetBodyTransformFromAffineDOFValues, _1, pbody, affinedofs, vaxis);
+            setstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            int affinedofs=0;
+            ss >> bodyname >> affinedofs;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
+            }
+            setstatefns[isavegroup].first = boost::bind(SetBodyVelocityFromAffineDOFVelocities, _1, pbody, affinedofs, vaxis);
+            setstatefns[isavegroup].second = g.dof;
+        }
+//        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
+//        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
+        }
+    }
+    fn.reset(new SetConfigurationStateFn(boost::bind(CallSetStateFns,setstatefns, GetDOF(), nMaxDOFForGroup, _1)));
+    return fn;
+}
+
+boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
+{
+    boost::shared_ptr<GetConfigurationStateFn> fn;
+    Validate();
+    std::vector< std::pair<GetConfigurationStateFn, int> > getstatefns(_vgroups.size());
+    string bodyname;
+    stringstream ss, ssout;
+    // order the groups depending on offset
+    int nMaxDOFForGroup = 0;
+    std::vector< std::pair<int, int> > vgroupoffsets(_vgroups.size());
+    for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
+        vgroupoffsets[igroup].first = _vgroups[igroup].offset;
+        vgroupoffsets[igroup].second = igroup;
+        nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
+    }
+    std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
+    for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
+        const ConfigurationSpecification::Group& g = _vgroups[igroup];
+        int isavegroup = vgroupoffsets[igroup].second;
+        if( g.name.size() >= 12 && g.name.substr(0,12) == "joint_values" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            ss >> bodyname;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            std::vector<int> dofindices((istream_iterator<int>(ss)), istream_iterator<int>());
+            if( dofindices.size() == 0 ) {
+                OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
+            }
+            void (KinBody::*getdofvaluesptr)(std::vector<dReal>&, const std::vector<int>&) const = &KinBody::GetDOFValues;
+            getstatefns[isavegroup].first = boost::bind(getdofvaluesptr, pbody, _1, dofindices);
+            getstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            ss >> bodyname;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            std::vector<int> dofindices((istream_iterator<int>(ss)), istream_iterator<int>());
+            if( dofindices.size() == 0 ) {
+                OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
+            }
+            void (KinBody::*getdofvelocitiesptr)(std::vector<dReal>&, const std::vector<int>&) const = &KinBody::GetDOFVelocities;
+            getstatefns[isavegroup].first = boost::bind(getdofvelocitiesptr, pbody, _1, dofindices);
+            getstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            int affinedofs=0;
+            ss >> bodyname >> affinedofs;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
+            }
+            getstatefns[isavegroup].first = boost::bind(GetAffineDOFValuesFromBodyTransform, _1, pbody, affinedofs, vaxis);
+            getstatefns[isavegroup].second = g.dof;
+        }
+        else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
+            ss.clear(); ss.str(g.name.substr(12));
+            int affinedofs=0;
+            ss >> bodyname >> affinedofs;
+            BOOST_ASSERT(!!ss);
+            KinBodyPtr pbody = penv->GetKinBody(bodyname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody,"body %s not found",bodyname,ORE_InvalidArguments);
+            Vector vaxis(0,0,1);
+            if( affinedofs & DOF_RotationAxis ) {
+                ss >> vaxis.x >> vaxis.y >> vaxis.z;
+            }
+            getstatefns[isavegroup].first = boost::bind(GetAffineDOFVelocitiesFromBodyVelocity, _1, pbody, affinedofs, vaxis);
+            getstatefns[isavegroup].second = g.dof;
+        }
+//        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
+//        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
+        }
+    }
+    fn.reset(new GetConfigurationStateFn(boost::bind(CallGetStateFns,getstatefns, GetDOF(), nMaxDOFForGroup, _1)));
+    return fn;
+}
+
 
 static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
 {

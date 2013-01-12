@@ -22,9 +22,10 @@ rm -f latest_stable.tgz
 # update the latest_stable branch
 cd $trunk
 git checkout latest_stable
+git pull origin latest_stable # just in case
 git merge master
 git push origin latest_stable
-
+git checkout master
 
 #fi
 #ssh-keygen -t dsa -f ~/.ssh/id_dsa.openravetesting.sf -P "" -C "openravetesting@shell.sourceforge.net"

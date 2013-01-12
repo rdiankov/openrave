@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import pickle
+import cPickle as pickle
 
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):

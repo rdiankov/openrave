@@ -59,6 +59,16 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     __hashstructure.resize(0);
 }
 
+void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
+{
+    _info._sIkSolverXMLId.resize(0);
+    __pIkSolver.reset();
+    _info._vdirection = direction;
+    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+    __hashkinematicsstructure.resize(0);
+    __hashstructure.resize(0);
+}
+
 void RobotBase::Manipulator::SetName(const std::string& name)
 {
     RobotBasePtr probot=GetRobot();
@@ -118,6 +128,11 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
     if( iksolver->GetXMLId().size() == 0 ) {
         RAVELOG_WARN(str(boost::format("robot %s manip %s IkSolver XML is not initialized\n")%GetRobot()->GetName()%GetName()));
     }
+    if( iksolver == __pIkSolver && _info._sIkSolverXMLId == iksolver->GetXMLId() ) {
+        return true;
+    }
+
+    // only call the changed message if something changed
     if( iksolver->Init(shared_from_this()) ) {
         __pIkSolver = iksolver;
         _info._sIkSolverXMLId = iksolver->GetXMLId();

@@ -169,7 +169,7 @@ public:
         return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }
 
-    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, GetPhysicsInfo, true)) {
+    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, "odephysics", true)) {
         stringstream ss;
         ss << ":Interface Author: Rosen Diankov\n\nODE physics engine\n\n\
 It is possible to set ODE physics engine and its properties inside the <environment> XML tags by typing:\n\n\
@@ -241,15 +241,26 @@ The possible properties that can be set are: ";
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetPhysicsData(*itbody,OpenRAVE::UserDataPtr());
+            (*itbody)->RemoveUserData("odephysics");
         }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = _odespace->InitKinBody(pbody);
-        SetPhysicsData(pbody, pinfo);
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
+        // need the pbody check since kinbodies can be cloned and could have the wrong pointer
+        if( !pinfo || pinfo->GetBody() != pbody ) {
+            pinfo = _odespace->InitKinBody(pbody);
+            pbody->SetUserData("odephysics", pinfo);
+        }
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("odephysics");
+        }
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
@@ -287,7 +298,7 @@ The possible properties that can be set are: ";
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
     {
-        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(plink->GetParent());
         dBodyID body = _odespace->GetLinkBody(plink);
         if( !body ) {
             return false;
@@ -301,7 +312,7 @@ The possible properties that can be set are: ";
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         bool bsuccess = true;
-        _odespace->Synchronize(KinBodyConstPtr(pbody));
+        _odespace->Synchronize(pbody);
         FOREACHC(itlink, pbody->GetLinks()) {
             dBodyID body = _odespace->GetLinkBody(*itlink);
             if( body ) {
@@ -320,7 +331,7 @@ The possible properties that can be set are: ";
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(plink->GetParent());
         dBodyID body = _odespace->GetLinkBody(plink);
         if( body ) {
             const dReal* p = dBodyGetAngularVel(body);
@@ -354,7 +365,7 @@ The possible properties that can be set are: ";
     }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(plink->GetParent());
         dBodyID body = _odespace->GetLinkBody(plink);
         force = Vector(0,0,0);
         torque = Vector(0,0,0);
@@ -399,7 +410,7 @@ The possible properties that can be set are: ";
     {
         dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
-        _odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
+        _odespace->Synchronize(pjoint->GetParent());
         vector<JointGetFn>::iterator itfn;
         vJointVelocity.resize(pjoint->GetDOF());
         vector<OpenRAVE::dReal>::iterator itvel = vJointVelocity.begin();
@@ -415,7 +426,7 @@ The possible properties that can be set are: ";
         if( body == NULL ) {
             return false;
         }
-        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(plink->GetParent());
         if( !bAdd ) {
             dBodySetForce(body, 0, 0, 0);
         }
@@ -429,7 +440,7 @@ The possible properties that can be set are: ";
         if( body == NULL ) {
             return false;
         }
-        _odespace->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _odespace->Synchronize(plink->GetParent());
 
         if( !bAdd ) {
             dBodySetTorque(body, torque.x, torque.y, torque.z);
@@ -444,7 +455,7 @@ The possible properties that can be set are: ";
     {
         dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
-        _odespace->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
+        _odespace->Synchronize(pjoint->GetParent());
         std::vector<dReal> vtorques(pTorques.size());
         std::copy(pTorques.begin(),pTorques.end(),vtorques.begin());
         _jointadd[dJointGetType(joint)](joint, &vtorques[0]);
@@ -496,7 +507,7 @@ The possible properties that can be set are: ";
         // synchronize all the objects from the ODE world to the OpenRAVE world
         Transform t;
         FOREACHC(itbody, vbodies) {
-            ODESpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
+            ODESpace::KinBodyInfoPtr pinfo = _odespace->GetInfo(*itbody);
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
             vector<Transform> vtrans(pinfo->vlinks.size());
             for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
@@ -518,10 +529,6 @@ The possible properties that can be set are: ";
 
 
 private:
-    static ODESpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetPhysicsData());
-    }
-
     static void nearCallback(void *data, dGeomID o1, dGeomID o2)
     {
         ((ODEPhysicsEngine*)data)->_nearCallback(o1,o2);
@@ -552,10 +559,10 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = *(KinBody::LinkPtr*)dBodyGetData(b1);
+            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
         }
         if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = *(KinBody::LinkPtr*)dBodyGetData(b2);
+            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
         }
 
         if( !!pkb1 && !pkb1->IsEnabled() ) {
@@ -644,15 +651,15 @@ private:
     void _SyncCallback(ODESpace::KinBodyInfoConstPtr pinfo)
     {
         // things very difficult when dynamics are not reset
-        FOREACHC(itlink, pinfo->vlinks) {
-            if( (*itlink)->body != NULL ) {
-                dBodySetAngularVel((*itlink)->body, 0, 0, 0);
-                dBodySetLinearVel((*itlink)->body, 0, 0, 0);
-                // not sure if should reset forces since sync call can happen much later
-                //dBodySetForce((*itlink)->body, 0, 0, 0);
-                //dBodySetTorque((*itlink)->body, 0, 0, 0);
-            }
-        }
+//        FOREACHC(itlink, pinfo->vlinks) {
+//            if( (*itlink)->body != NULL ) {
+//                dBodySetAngularVel((*itlink)->body, 0, 0, 0);
+//                dBodySetLinearVel((*itlink)->body, 0, 0, 0);
+//                // not sure if should reset forces since sync call can happen much later
+//                //dBodySetForce((*itlink)->body, 0, 0, 0);
+//                //dBodySetTorque((*itlink)->body, 0, 0, 0);
+//            }
+//        }
     }
 
     boost::shared_ptr<ODESpace> _odespace;

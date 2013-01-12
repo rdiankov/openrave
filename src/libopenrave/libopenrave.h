@@ -228,6 +228,17 @@ inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dRe
     return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
 }
 
+inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    //dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
+    dReal facos = std::min((t1.rot-t2.rot).lengthsqr4(),(t1.rot+t2.rot).lengthsqr4());
+    return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos; //*facos;
+}
+
+void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v);
+
+void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v);
+
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 /// \brief The information of a currently grabbed body.
@@ -307,6 +318,26 @@ private:
 
 typedef boost::shared_ptr<Grabbed> GrabbedPtr;
 typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
+
+
+/// -1 v1 is smaller than v2
+// 0 two vectors are equivalent
+/// +1 v1 is greater than v2
+inline int CompareRealVectors(const std::vector<dReal> & v1, const std::vector<dReal>& v2, dReal epsilon)
+{
+    if( v1.size() != v2.size() ) {
+        return v1.size() < v2.size() ? -1 : 1;
+    }
+    for(size_t i = 0; i < v1.size(); ++i) {
+        if( v1[i] < v2[i]-epsilon ) {
+            return -1;
+        }
+        else if( v1[i] > v2[i]+epsilon ) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 template <typename IKReal>
 inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
@@ -428,8 +459,6 @@ inline const char *strcasestr(const char *s, const char *find)
     return ((char *) s);
 }
 #endif
-
-boost::mutex& GetInterfaceMutex(InterfaceBasePtr pinterface);
 
 } // end OpenRAVE namespace
 

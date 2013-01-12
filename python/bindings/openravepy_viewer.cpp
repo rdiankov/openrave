@@ -18,7 +18,7 @@
 #include "openravepy_int.h"
 #include <csignal>
 
-#if defined(_WIN32)and !defined(sighandler_t)
+#if defined(_WIN32) && !defined(sighandler_t)
 typedef void (*sighandler_t)(int);
 #endif
 

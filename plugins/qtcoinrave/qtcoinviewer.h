@@ -37,13 +37,16 @@
 #include "qtcoin.h"
 
 /// Render and GUI engine. Can be used to simulate a camera sensor
+///
+/// ViewerBase holds __plugin, which is a reference to the shared object that loads the qt4 library. Ideally we
+/// would have ViewerBase as the first class so we can assure destruction of qt before __plugin goes out of scope; unfortunately qt moc requires QMainWindows to be declared first (http://doc.qt.digia.com/qt/moc.html)
 class QtCoinViewer : public QMainWindow, public ViewerBase
 {
     Q_OBJECT
 
 public:
     QtCoinViewer(EnvironmentBasePtr penv);
-    ~QtCoinViewer();
+    virtual ~QtCoinViewer();
 
     //! the kinds of toggle switches
     enum ToggleEnum { TOGGLE_GRID = 0,   TOGGLE_PATH,     TOGGLE_COLLISION,
@@ -123,6 +126,13 @@ public:
 
     virtual void Reset();
     virtual boost::shared_ptr<void> LockGUI();
+
+    /// \brief notified when a body has been removed from the environment
+    virtual void RemoveKinBody(KinBodyPtr pbody) {
+        if( !!pbody ) {
+            pbody->RemoveUserData("qtcoinviewer");
+        }
+    }
 
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
 

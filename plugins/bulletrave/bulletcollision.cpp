@@ -267,7 +267,7 @@ public:
         virtual btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult,bool normalInWorldSpace) {
             //caller already does the filter on the m_closestHitFraction
             if(rayResult.m_hitFraction <= m_closestHitFraction) {
-                KinBody::LinkPtr plink = GetLinkFromCollision(rayResult.m_collisionObject);
+                KinBody::LinkPtr plink = GetLinkFromCollision(const_cast<btCollisionObject*>(rayResult.m_collisionObject));
                 if( !plink->IsEnabled() || (!!_pbodyonly &&( _pbodyonly != plink->GetParent()) ) ) {
                     return m_closestHitFraction;
                 }
@@ -293,7 +293,7 @@ public:
     };
 
     static BulletSpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetCollisionData());
+        return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletcollision"));
     }
 
     bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
@@ -416,7 +416,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            SetCollisionData(*itbody, UserDataPtr());
+            (*itbody)->RemoveUserData("bulletcollision");
         }
         bulletspace->DestroyEnvironment();
         if( !!_world && _world->getNumCollisionObjects() )
@@ -431,8 +431,15 @@ public:
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         UserDataPtr pinfo = bulletspace->InitKinBody(pbody);
-        SetCollisionData(pbody, pinfo);
+        pbody->SetUserData("bulletcollision", pinfo);
         return !!pinfo;
+    }
+
+    virtual void RemoveKinBody(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            pbody->RemoveUserData("bulletcollision");
+        }
     }
 
     virtual bool SetCollisionOptions(int options)
@@ -602,7 +609,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
+                report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
@@ -671,7 +678,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
+                report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
@@ -735,7 +742,7 @@ public:
             if( !!report ) {
                 report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
-                report->plink1 = GetLinkFromCollision(rayCallback.m_collisionObject);
+                report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);

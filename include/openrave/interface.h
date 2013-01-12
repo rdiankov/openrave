@@ -51,57 +51,62 @@ public:
         return __type;
     }
 
-    /// set internally by RaveDatabase
+    /// set internally by RaveDatabase <b>[multi-thread safe]</b>
     /// \return the unique identifier that describes this class type, case is ignored
     /// should be the same id used to create the object
     inline const std::string& GetXMLId() const {
         return __strxmlid;
     }
 
-    /// set internally by RaveDatabase
+    /// set internally by RaveDatabase <b>[multi-thread safe]</b>
     /// \return the pluginname this interface was loaded from
     inline const std::string& GetPluginName() const {
         return __strpluginname;
     }
 
-    /// \return the environment that this interface is attached to
+    /// \return The environment that this interface is attached to. <b>[multi-thread safe]</b>
     inline EnvironmentBasePtr GetEnv() const {
         return __penv;
     }
 
+    /// \brief Returns the raw map reference, this is \b not multithread safe and the GetInterfaceMutex should be locked before using.
     inline const READERSMAP& GetReadableInterfaces() const {
         return __mapReadableInterfaces;
     }
 
-    /// \brief returns the readable interface
+    /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
     virtual XMLReadablePtr GetReadableInterface(const std::string& xmltag) const;
 
-    /// \brief set a new readable interface and return the previously set interface if it exists
+    /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
     virtual XMLReadablePtr SetReadableInterface(const std::string& xmltag, XMLReadablePtr readable);
 
-    /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc.
+    /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {
         return __description;
     }
 
+    /// \brief sets a description <b>[multi-thread safe]</b>
     virtual void SetDescription(const std::string& description) {
         __description = description;
     }
 
-    /// \brief set user data
-    virtual void SetUserData(UserDataPtr data) {
-        __pUserData = data;
-    }
-    /// \deprecated
-    virtual void SetUserData(boost::shared_ptr<void> data) RAVE_DEPRECATED {
-        __pUserData = boost::static_pointer_cast<UserData>(data);
-    }
-    /// \brief return the user custom data
-    virtual UserDataPtr GetUserData() const {
-        return __pUserData;
+    /// \brief set user data for a specific key. <b>[multi-thread safe]</b>
+    ///
+    /// Because user data can be used for caching objects, it is necessary to allow functions taking const pointers of the interface can reset the pointers.
+    virtual void SetUserData(const std::string& key, UserDataPtr data) const;
+
+    /// \brief return the user custom data <b>[multi-thread safe]</b>
+    virtual UserDataPtr GetUserData(const std::string& key=std::string()) const;
+
+    /// \brief removes a user data pointer. if user data pointer does not exist, then return 0, otherwise 1. <b>[multi-thread safe]</b>
+    virtual bool RemoveUserData(const std::string& key) const;
+
+    /// \deprecated (12/12/11)
+    virtual void SetUserData(UserDataPtr data) RAVE_DEPRECATED {
+        SetUserData(std::string(),data);
     }
 
-    /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file).
+    /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file). <b>[multi-thread safe]</b>
     virtual const std::string& GetURI() const {
         return __struri;
     }
@@ -165,7 +170,7 @@ public:
         std::string help; ///< help string explaining command arguments
     };
 
-    /// \brief Registers a command and its help string.
+    /// \brief Registers a command and its help string. <b>[multi-thread safe]</b>
     ///
     /// \param cmdname - command name, converted to lower case
     /// \param fncmd function to execute for the command
@@ -173,11 +178,15 @@ public:
     /// \exception openrave_exception Throw if there exists a registered command already.
     virtual void RegisterCommand(const std::string& cmdname, InterfaceCommandFn fncmd, const std::string& strhelp);
 
-    /// \brief Unregisters the command.
+    /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterCommand(const std::string& cmdname);
 
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
+
+    virtual boost::shared_mutex& GetInterfaceMutex() const {
+        return _mutexInterface;
+    }
 
 private:
     /// Write the help commands to an output stream
@@ -187,14 +196,14 @@ private:
         throw openrave_exception("InterfaceBase copying not allowed");
     }
 
-    mutable boost::mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
+    mutable boost::shared_mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
     UserDataPtr __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
     std::string __struri; ///< \see GetURI
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    UserDataPtr __pUserData; ///< \see GetUserData
+    mutable std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;

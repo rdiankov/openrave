@@ -83,6 +83,7 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+        // TODO there's a lot of info that is being recomputed which could be cached depending on the configurationspace of the incoming trajectory
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
         std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
@@ -157,7 +158,7 @@ public:
             list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
             list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
             list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listcheckvelocityfns;
-            list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > listwritefns;
+            list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > listwritefns;
             const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
             for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
                 ConfigurationSpecification::Group& gpos = newspec._vgroups[i];
@@ -287,14 +288,28 @@ public:
                     dReal mintime = 0;
                     bool bUseEndVelocity = i+1==numpoints;
                     FOREACH(itmin,listmintimefns) {
-                        dReal time = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
-                        if( mintime < time ) {
-                            mintime = time;
+                        dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
+                        if( fgrouptime < 0 ) {
+                            RAVELOG_DEBUG(str(boost::format("point %d/%d has uncomputable minimum time, possibly due to boundary constraints")%i%numpoints));
+                            return PS_Failed;
+                        }
+
+                        if( _parameters->_fStepLength > 0 ) {
+                            if( fgrouptime < _parameters->_fStepLength ) {
+                                fgrouptime = _parameters->_fStepLength;
+                            }
+                            else {
+                                fgrouptime = std::ceil(fgrouptime/_parameters->_fStepLength-g_fEpsilonJointLimit)*_parameters->_fStepLength;
+                            }
+                        }
+                        if( mintime < fgrouptime ) {
+                            mintime = fgrouptime;
                         }
                     }
                     if( _parameters->_hastimestamps ) {
                         if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
-                            RAVELOG_DEBUG(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
+                            // this is a commonly occuring message in planning
+                            RAVELOG_VERBOSE(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
                             return PS_Failed;
                         }
                     }
@@ -317,13 +332,17 @@ public:
                     }
 
                     FOREACH(itfn,listwritefns) {
-                        (*itfn)(itorgdiff, itdataprev, itdata);
+                        // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
+                        if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
+                            RAVELOG_DEBUG(str(boost::format("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.")%i%numpoints%(*(itdata+_timeoffset))));
+                            return PS_Failed;
+                        }
                     }
                     itdataprev = itdata;
                 }
             }
             catch (const std::exception& ex) {
-                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
                 RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -340,7 +359,7 @@ public:
 
         _WriteTrajectory(ptraj,newspec, data);
         // happens too often for debug message?
-        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es")%GetXMLId()%ptraj->GetDuration()));
+        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return PS_HasSolution;
     }
 
@@ -357,7 +376,8 @@ protected:
     virtual bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual void _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+        return true;
     }
 
     virtual dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
@@ -365,7 +385,8 @@ protected:
     virtual bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual void _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+        return true;
     }
 
     virtual dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
@@ -373,7 +394,8 @@ protected:
     virtual bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual void _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+        return true;
     }
 
     virtual void _WriteTrajectory(TrajectoryBasePtr ptraj, const ConfigurationSpecification& newspec, const std::vector<dReal>& data) {

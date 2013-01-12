@@ -2,7 +2,11 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   if( PYTHONLIBS_FOUND OR PYTHON_LIBRARIES )
     add_definitions(${Boost_CFLAGS})
     set(CMAKE_REQUIRED_INCLUDES ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${REQUIRED_INCLUDES})
-    set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY})
+    # On MacOSX, boost_system also needs to be linked or will output the following errors:
+    # Undefined symbols for architecture x86_64:
+    #   "boost::system::system_category()", referenced from: __GLOBAL__I_a in src.cxx.o
+    #   "boost::system::generic_category()", referenced from: __GLOBAL__I_a in src.cxx.o
+    set(CMAKE_REQUIRED_LIBRARIES ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY})
     set(CMAKE_REQUIRED_FLAGS ${Boost_CFLAGS} "-DCMAKE_BUILD_TYPE:STRING=Release")
 
     # check if all header files can be included

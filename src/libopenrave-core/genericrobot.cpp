@@ -60,7 +60,6 @@ public:
     }
 
 protected:
-    TrajectoryBaseConstPtr _trajcur;
     ControllerBasePtr _pController;
 };
 

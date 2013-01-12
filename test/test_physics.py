@@ -252,6 +252,18 @@ class RunPhysics(EnvironmentSetup):
             T1 = nonmovingbody.GetTransform()
             assert(transdist(T0,T1)<=0.5)
 
+    def test_applytorque(self):
+        log.info('test if torque can be applied')
+        self.LoadEnv('data/lab1.env.xml')
+        env=self.env
+        with env:
+            env.GetPhysicsEngine().SetGravity(numpy.array((0,0,-9.8)))
+            robot = env.GetRobots()[0]
+            robot.GetLinks()[0].SetStatic(True)
+            # test the torque call
+            robot.SetDOFTorques(numpy.ones(robot.GetDOF()),True)
+            for i in range(10):
+                env.StepSimulation(0.01)
 
 #generate_classes(RunPhysics, globals(), [('ode','ode'),('bullet','bullet')])
 

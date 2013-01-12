@@ -26,12 +26,12 @@ namespace OpenRAVE {
 class ChangeCallbackData : public UserData
 {
 public:
-    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
+    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyConstPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
     }
     virtual ~ChangeCallbackData() {
-        KinBodyPtr pbody = _pweakbody.lock();
+        KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            boost::mutex::scoped_lock lock(GetInterfaceMutex(pbody));
+            boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
             pbody->_listRegisteredCallbacks.erase(_iterator);
         }
     }
@@ -40,7 +40,7 @@ public:
     int _properties;
     boost::function<void()> _callback;
 protected:
-    KinBodyWeakPtr _pweakbody;
+    boost::weak_ptr<KinBody const> _pweakbody;
 };
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
@@ -163,9 +163,6 @@ void KinBody::Destroy()
     _vForcedAdjacentLinks.clear();
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
-    _pViewerData.reset();
-    _pPhysicsData.reset();
-    _pCollisionData.reset();
     _pManageData.reset();
 
     _ResetInternalCollisionCache();
@@ -396,7 +393,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
                 }
             }
         }
-        OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "", GetName(), ORE_Failed);
+        OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "cannot find links '%s' and '%s' of body '%s' joint %s ", info._linkname0%info._linkname1%GetName()%info._name, ORE_Failed);
         std::vector<Vector> vaxes(pjoint->GetDOF());
         std::copy(info._vaxes.begin(),info._vaxes.begin()+vaxes.size(), vaxes.begin());
         pjoint->_ComputeInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
@@ -409,6 +406,15 @@ void KinBody::SetName(const std::string& newname)
 {
     OPENRAVE_ASSERT_OP(newname.size(), >, 0);
     if( _name != newname ) {
+        // have to replace the 2nd word of all the groups with the robot name
+        FOREACH(itgroup, _spec._vgroups) {
+            stringstream ss(itgroup->name);
+            string grouptype, oldname;
+            ss >> grouptype >> oldname;
+            stringbuf buf;
+            ss.get(buf,0);
+            itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
+        }
         _name = newname;
         _ParametersChanged(Prop_Name);
     }
@@ -993,11 +999,44 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     SetLinkVelocities(velocities);
 }
 
-void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits)
+void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_t checklimits, const std::vector<int>& dofindices)
 {
     Vector linearvel,angularvel;
     _veclinks.at(0)->GetVelocity(linearvel,angularvel);
-    return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+    if( dofindices.size() == 0 ) {
+        return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+    }
+
+    // check if all dofindices are supplied
+    if( (int)dofindices.size() == GetDOF() ) {
+        bool bordereddof = true;
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            if( dofindices[i] != (int)i ) {
+                bordereddof = false;
+                break;
+            }
+        }
+        if( bordereddof ) {
+            return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
+        }
+    }
+    OPENRAVE_ASSERT_OP_FORMAT0(vDOFVelocities.size(),==,dofindices.size(),"index sizes do not match", ORE_InvalidArguments);
+    // have to recreate the correct vector
+    std::vector<dReal> vfulldof(GetDOF());
+    std::vector<int>::const_iterator it;
+    for(size_t i = 0; i < dofindices.size(); ++i) {
+        it = find(dofindices.begin(), dofindices.end(), i);
+        if( it != dofindices.end() ) {
+            vfulldof[i] = vDOFVelocities.at(static_cast<size_t>(it-dofindices.begin()));
+        }
+        else {
+            JointPtr pjoint = GetJointFromDOFIndex(i);
+            if( !!pjoint ) {
+                vfulldof[i] = _vecjoints.at(_vDOFIndices.at(i))->GetVelocity(i-_vDOFIndices.at(i));
+            }
+        }
+    }
+    return SetDOFVelocities(vfulldof,linearvel,angularvel,checklimits);
 }
 
 void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const
@@ -3775,7 +3814,7 @@ void KinBody::_ComputeInternalInformation()
     if( _nParametersChanged ) {
         std::list<UserDataWeakPtr> listRegisteredCallbacks;
         {
-            boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
+            boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
             listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
         }
         FOREACH(it,listRegisteredCallbacks) {
@@ -4139,7 +4178,7 @@ void KinBody::_ParametersChanged(int parameters)
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     {
-        boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
+        boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
         listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
     }
     FOREACH(it,listRegisteredCallbacks) {
@@ -4245,10 +4284,10 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
     return spec;
 }
 
-UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback)
+UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback) const
 {
-    ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody()));
-    boost::mutex::scoped_lock lock(GetInterfaceMutex(shared_from_this()));
+    ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
+    boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
     pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
     return pdata;
 }

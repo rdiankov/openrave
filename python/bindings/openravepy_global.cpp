@@ -890,34 +890,105 @@ void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal s
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
-void pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+PlannerStatus pySmoothActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+    return OpenRAVE::planningutils::SmoothActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
-void pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, const std::string& plannername="", const std::string& plannerparameters="")
+class PyActiveDOFTrajectorySmoother
 {
-    OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),plannername,plannerparameters);
+public:
+    PyActiveDOFTrajectorySmoother(PyRobotBasePtr pyrobot, const std::string& plannername, const std::string& plannerparameters) : _smoother(openravepy::GetRobot(pyrobot), plannername, plannerparameters) {
+    }
+    virtual ~PyActiveDOFTrajectorySmoother() {
+    }
+
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj, bool releasegil=true)
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
+        return _smoother.PlanPath(ptraj);
+    }
+
+    OpenRAVE::planningutils::ActiveDOFTrajectorySmoother _smoother;
+};
+
+typedef boost::shared_ptr<PyActiveDOFTrajectorySmoother> PyActiveDOFTrajectorySmootherPtr;
+
+PlannerStatus pySmoothAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, const std::string& plannername="", const std::string& plannerparameters="")
+{
+    return OpenRAVE::planningutils::SmoothAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),plannername,plannerparameters);
 }
 
-void pySmoothTrajectory(PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+PlannerStatus pySmoothTrajectory(PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::SmoothTrajectory(openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+    return OpenRAVE::planningutils::SmoothTrajectory(openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
-void pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+PlannerStatus pyRetimeActiveDOFTrajectory(PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+    return OpenRAVE::planningutils::RetimeActiveDOFTrajectory(openravepy::GetTrajectory(pytraj),openravepy::GetRobot(pyrobot),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
-void pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
+class PyActiveDOFTrajectoryRetimer
 {
-    OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
+public:
+    PyActiveDOFTrajectoryRetimer(PyRobotBasePtr pyrobot, const std::string& plannername, const std::string& plannerparameters) : _retimer(openravepy::GetRobot(pyrobot), plannername, plannerparameters) {
+    }
+    virtual ~PyActiveDOFTrajectoryRetimer() {
+    }
+
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj, bool hastimestamps=false, bool releasegil=true)
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
+        return _retimer.PlanPath(ptraj, hastimestamps);
+    }
+
+    OpenRAVE::planningutils::ActiveDOFTrajectoryRetimer _retimer;
+};
+
+typedef boost::shared_ptr<PyActiveDOFTrajectoryRetimer> PyActiveDOFTrajectoryRetimerPtr;
+
+class PyAffineTrajectoryRetimer
+{
+public:
+    PyAffineTrajectoryRetimer(const std::string& plannername, const std::string& plannerparameters) : _retimer(plannername, plannerparameters) {
+    }
+    virtual ~PyAffineTrajectoryRetimer() {
+    }
+
+    PlannerStatus PlanPath(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, bool releasegil=true)
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+        std::vector<dReal> vmaxvelocities = ExtractArray<dReal>(omaxvelocities);
+        std::vector<dReal> vmaxaccelerations = ExtractArray<dReal>(omaxaccelerations);
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
+        return _retimer.PlanPath(ptraj,vmaxvelocities, vmaxaccelerations, hastimestamps);
+    }
+
+    OpenRAVE::planningutils::AffineTrajectoryRetimer _retimer;
+};
+
+typedef boost::shared_ptr<PyAffineTrajectoryRetimer> PyAffineTrajectoryRetimerPtr;
+
+PlannerStatus pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
+{
+    return OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
 }
 
-void pyRetimeTrajectory(PyTrajectoryBasePtr pytraj, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
+PlannerStatus pyRetimeTrajectory(PyTrajectoryBasePtr pytraj, bool hastimestamps=false, dReal fmaxvelmult=1.0, dReal fmaxaccelmult=1.0, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    OpenRAVE::planningutils::RetimeTrajectory(openravepy::GetTrajectory(pytraj),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
+    return OpenRAVE::planningutils::RetimeTrajectory(openravepy::GetTrajectory(pytraj),hastimestamps,fmaxvelmult,fmaxaccelmult,plannername,plannerparameters);
 }
 
 void pyInsertWaypointWithSmoothing(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
@@ -1075,6 +1146,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
 
 void init_openravepy_global()
 {
@@ -1311,6 +1385,21 @@ void init_openravepy_global()
         .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("maxsamples", "maxchecksamples", "releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
+        ;
+
+        class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >("ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother), no_init)
+        .def(init<PyRobotBasePtr, const std::string&, const std::string&>(args("robot", "plannername", "plannerparameters")))
+        .def("PlanPath",&planningutils::PyActiveDOFTrajectorySmoother::PlanPath,PlanPath_overloads(args("traj","releasegil"), DOXY_FN(planningutils::ActiveDOFTrajectorySmoother,PlanPath)))
+        ;
+
+        class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >("ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer), no_init)
+        .def(init<PyRobotBasePtr, const std::string&, const std::string&>(args("robot", "hastimestamps", "plannername", "plannerparameters")))
+        .def("PlanPath",&planningutils::PyActiveDOFTrajectoryRetimer::PlanPath,PlanPath_overloads3(args("traj","hastimestamps", "releasegil"), DOXY_FN(planningutils::ActiveDOFTrajectoryRetimer,PlanPath)))
+        ;
+
+        class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >("AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer), no_init)
+        .def(init<const std::string&, const std::string&>(args("plannername", "plannerparameters")))
+        .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(args("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil"), DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
         ;
     }
 

@@ -1481,6 +1481,34 @@ void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, 
     }
 }
 
+void RaveGetAffineDOFValuesFromVelocity(std::vector<dReal>::iterator itvalues, const Vector& linearvel, const Vector& angularvel, const Vector& quatrotation, int affinedofs, const Vector& axis)
+{
+    if( affinedofs & DOF_X ) {
+        *itvalues++ = linearvel.x;
+    }
+    if( affinedofs & DOF_Y ) {
+        *itvalues++ = linearvel.y;
+    }
+    if( affinedofs & DOF_Z ) {
+        *itvalues++ = linearvel.z;
+    }
+    if( affinedofs & DOF_RotationAxis ) {
+        *itvalues++ = axis.dot3(angularvel);
+    }
+    else if( affinedofs & DOF_Rotation3D ) {
+        *itvalues++ = angularvel.x;
+        *itvalues++ = angularvel.y;
+        *itvalues++ = angularvel.z;
+    }
+    else if( affinedofs & DOF_RotationQuat ) {
+        Vector qdot = 0.5 * quatMultiply(Vector(0,angularvel.x,angularvel.y,angularvel.z), quatrotation);
+        *itvalues++ = qdot.x;
+        *itvalues++ = qdot.y;
+        *itvalues++ = qdot.z;
+        *itvalues++ = qdot.w;
+    }
+}
+
 void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis, bool normalize)
 {
     if( affinedofs & DOF_X ) {
@@ -1539,6 +1567,39 @@ void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const
     }
 }
 
+void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularvel, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& axis, const Vector& quatrotation)
+{
+    if( affinedofs & DOF_X ) {
+        linearvel.x = *itvalues++;
+    }
+    if( affinedofs & DOF_Y ) {
+        linearvel.y = *itvalues++;
+    }
+    if( affinedofs & DOF_Z ) {
+        linearvel.z = *itvalues++;
+    }
+    if( affinedofs & DOF_RotationAxis ) {
+        dReal angle = *itvalues++;
+        angularvel = axis*angle;
+    }
+    else if( affinedofs & DOF_Rotation3D ) {
+        angularvel.x = *itvalues++;
+        angularvel.y = *itvalues++;
+        angularvel.z = *itvalues++;
+    }
+    else if( affinedofs & DOF_RotationQuat ) {
+        // have to normalize since user might not be aware of this particular parameterization of rotations
+        Vector q;
+        q.x = *itvalues++;
+        q.y = *itvalues++;
+        q.z = *itvalues++;
+        q.w = *itvalues++;
+        Vector angularvel2 = quatMultiply(q, quatInverse(quatrotation)); // qdot = 0.5 * angularvel * q
+        angularvel.x = angularvel2.y * 2;
+        angularvel.y = angularvel2.z * 2;
+        angularvel.z = angularvel2.w * 2;
+    }
+}
 
 void CollisionReport::Reset(int coloptions)
 {
@@ -1969,11 +2030,6 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     return ret==0;
 }
 
-}
-
-boost::mutex& GetInterfaceMutex(InterfaceBasePtr pinterface)
-{
-    return RaveGlobal::instance()->GetDatabase()->GetInterfaceMutex(pinterface);
 }
 
 } // end namespace OpenRAVE

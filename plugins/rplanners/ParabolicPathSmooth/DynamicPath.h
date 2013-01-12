@@ -42,8 +42,11 @@ class FeasibilityCheckerBase
 public:
     virtual ~FeasibilityCheckerBase() {
     }
-    virtual bool ConfigFeasible(const Vector& x)=0;
-    virtual bool SegmentFeasible(const Vector& a,const Vector& b)=0;
+    virtual bool ConfigFeasible(const Vector& q1, const Vector& dq1)=0;
+    virtual bool SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2)=0;
+    virtual bool NeedDerivativeForFeasibility() {
+        return false;
+    }
 };
 
 /** @brief A base class for a distance checker.
@@ -129,8 +132,9 @@ public:
     void Concat(const DynamicPath& suffix);
     void Split(Real t,DynamicPath& before,DynamicPath& after) const;
     bool TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check);
-    int Shortcut(int numIters,RampFeasibilityChecker& check);
-    int Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
+    /// \param mintimestep the minimum time step for a shortcut
+    int Shortcut(int numIters,RampFeasibilityChecker& check, Real mintimestep=0);
+    int Shortcut(int numIters,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng, Real mintimestep=0);
     int ShortCircuit(RampFeasibilityChecker& check);
     /// leadTime: the amount of time before this path should be executable
     /// padTime: an approximate bound on the time it takes to check a shortcut

@@ -301,7 +301,6 @@ class InverseKinematicsModel(DatabaseGenerator):
         
         freeinc is a list of the delta increments of the freejoint values that can override the default values.
         """
-        self.iksolver = None
         if freeinc is not None:
             self.freeinc=freeinc
         if self.freeinc is not None:
@@ -534,6 +533,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         return freeindices
 
     def generate(self,iktype=None,freejoints=None,freeinc=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
+        self.iksolver = None
         if iktype is not None:
             self.iktype = iktype
         if self.iktype is None:

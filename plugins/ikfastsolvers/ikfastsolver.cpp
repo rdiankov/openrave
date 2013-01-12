@@ -240,7 +240,7 @@ public:
             if( _bDisabled ) {
                 _InitSavers();
                 for(size_t i = 0; i < _vchildlinks.size(); ++i) {
-                    _vchildlinks[i]->Enable(_vlinkenabled[i]);
+                    _vchildlinks[i]->Enable(!!_vlinkenabled[i]);
                 }
                 FOREACH(it, _listGrabbedSavedStates) {
                     it->Restore();
@@ -325,12 +325,13 @@ protected:
 
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
+        std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
             result->resize(0);
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
-        if( !Solve(param,q0,filteroptions,pikreturn) ) {
+        if( !Solve(param,q0local,filteroptions,pikreturn) ) {
             return false;
         }
         if( !!result ) {
@@ -355,12 +356,13 @@ protected:
 
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
+        std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
             result->resize(0);
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
-        if( !Solve(param,q0,vFreeParameters,filteroptions,pikreturn) ) {
+        if( !Solve(param,q0local,vFreeParameters,filteroptions,pikreturn) ) {
             return false;
         }
         if( !!result ) {
@@ -733,7 +735,7 @@ private:
                 for(int i = 0; i < iksol.GetDOF(); ++i) {
                     vravesol.at(i) = (dReal)sol[i];
                 }
-                vdists.push_back(make_pair(vdists.size(),_configdist2(probot,vravesol,q0)));
+                vdists.push_back(make_pair(vdists.size(),_ComputeGeometricConfigDistSqr(probot,vravesol,q0,true)));
             }
 
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
@@ -763,7 +765,8 @@ private:
             }
             allres |= res;
             if( res & IKRA_Quit ) {
-                return res;
+                // return the accumulated errors
+                return static_cast<IkReturnAction>(allres);
             }
             // stop if there is no solution we are attempting to get close to
             if( res == IKRA_Success && q0.size() != pmanip->GetArmIndices().size() ) {
@@ -814,7 +817,7 @@ private:
                 // if all the solutions are worse than the best, then ignore everything
                 vravesols2.reserve(vravesols.size());
                 FOREACH(itravesol, vravesols) {
-                    d = _configdist2(probot,itravesol->first,boost::get<1>(freeq0check));
+                    d = _ComputeGeometricConfigDistSqr(probot,itravesol->first,boost::get<1>(freeq0check));
                     if( !(bestsolution.dist <= d) ) {
                         vravesols2.push_back(*itravesol);
                     }
@@ -827,7 +830,7 @@ private:
         }
         else {
             if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
-                d = _configdist2(probot,vravesol,boost::get<1>(freeq0check));
+                d = _ComputeGeometricConfigDistSqr(probot,vravesol,boost::get<1>(freeq0check));
                 if( bestsolution.dist <= d ) {
                     return IKRA_Reject;
                 }
@@ -846,6 +849,8 @@ private:
 //                    maxsolutions *= m;
 //                }
 //            }
+            // TODO: iterating vravesols would could the filters vravesols.size() times even if a valid solution is found
+            // figure out a way to do short-curcuit the code to check the final solutions
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
                 FOREACH(it,_vsolutionindices) {
@@ -943,7 +948,7 @@ private:
         size_t index = 0;
         FOREACH(itikreturn, listlocalikreturns) {
             if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
-                d = _configdist2(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
+                d = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
                 if( !(bestsolution.dist <= d) ) {
                     bestsolution.ikreturn = *itikreturn;
                     bestsolution.dist = d;
@@ -1124,15 +1129,26 @@ private:
         return true;
     }
 
-    dReal _configdist2(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2) const
+    /// \brief configuraiton distance
+    ///
+    /// \param bNormalizeRevolute if true, then compute difference mod 2*PI
+    dReal _ComputeGeometricConfigDistSqr(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2, bool bNormalizeRevolute=false) const
     {
         vector<dReal> q = q1;
         probot->SubtractActiveDOFValues(q,q2);
         vector<dReal>::iterator itq = q.begin();
+        std::vector<uint8_t>::const_iterator itrevolute = _vjointrevolute.begin();
         dReal dist = 0;
         FOREACHC(it, probot->GetActiveDOFIndices()) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
-            dist += *itq**itq * pjoint->GetWeight(*it-pjoint->GetDOFIndex());
+            dReal fweight = pjoint->GetWeight(*it-pjoint->GetDOFIndex());
+            // have to do the
+            if( bNormalizeRevolute && *itrevolute ) {
+                *itq = utils::NormalizeCircularAngle(*itq, -PI, PI);
+            }
+            dist += *itq**itq * fweight * fweight;
+            ++itq;
+            ++itrevolute;
         }
         return dist;
     }
@@ -1272,11 +1288,13 @@ private:
     int _nSameStateRepeatCount;
 };
 
+#ifdef OPENRAVE_IKFAST_FLOAT32
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
 
 {
     return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc));
 }
+#endif
 
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
 {

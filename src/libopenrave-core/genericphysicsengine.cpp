@@ -32,7 +32,7 @@ public:
     };
 
     boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<PhysicsData>(pbody->GetPhysicsData());
+        return boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
     }
 
 public:
@@ -62,15 +62,18 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACH(itbody, vbodies) {
-            DestroyKinBody(*itbody);
+            RemoveKinBody(*itbody);
         }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody) {
-        SetPhysicsData(pbody, UserDataPtr(new PhysicsData(pbody))); return true;
+        pbody->SetUserData("_genericphysics_", UserDataPtr(new PhysicsData(pbody)));
+        return true;
     }
-    virtual bool DestroyKinBody(KinBodyPtr pbody) {
-        SetPhysicsData(pbody, UserDataPtr()); return true;
+    virtual void RemoveKinBody(KinBodyPtr pbody) {
+        if( !!pbody ) {
+            pbody->RemoveUserData("_genericphysics_");
+        }
     }
 
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {

@@ -613,7 +613,7 @@ public:
             {
                 foundNode = findNamedNode(searchName, currGroup->getChild(i));
                 if (foundNode)
-                    return foundNode.get();  // found a match!
+                    return foundNode.get();                                               // found a match!
             }
             return NULL; // We have checked each child node - no match found.
         }
@@ -989,7 +989,7 @@ protected:
         {
             BOOST_ASSERT( !!itbody->pbody );
             KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-            KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(itbody->pviewerdata);
+            KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtosg"));
 
             //  Update KinBodyItem
             if (!!pitem)

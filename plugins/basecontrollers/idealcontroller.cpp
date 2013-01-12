@@ -147,16 +147,32 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fCommandTime = 0;
         _bIsDone = true;
         _vecdesired.resize(0);
+        _ptraj.reset();
 
         if( !!ptraj ) {
             _samplespec._vgroups.resize(0);
-            _bTrajHasJoints = !!_gjointvalues && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            if( _bTrajHasJoints ) {
-                _samplespec._vgroups.push_back(*_gjointvalues);
+            _bTrajHasJoints = false;
+            if( !!_gjointvalues ) {
+                // have to reset the name since _gjointvalues can be using an old one
+                stringstream ss;
+                ss << "joint_values " << _probot->GetName();
+                FOREACHC(it, _dofindices) {
+                    ss << " " << *it;
+                }
+                _gjointvalues->name = ss.str();
+                _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+                if( _bTrajHasJoints ) {
+                    _samplespec._vgroups.push_back(*_gjointvalues);
+                }
             }
-            _bTrajHasTransform = !!_gtransform && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            if( _bTrajHasTransform ) {
-                _samplespec._vgroups.push_back(*_gtransform);
+            _bTrajHasTransform = false;
+            if( !!_gtransform ) {
+                // have to reset the name since _gtransform can be using an old one
+                _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+                _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+                if( _bTrajHasTransform ) {
+                    _samplespec._vgroups.push_back(*_gtransform);
+                }
             }
             _samplespec.ResetGroupOffsets();
             _vgrablinks.resize(0);

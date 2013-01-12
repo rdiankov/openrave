@@ -298,7 +298,8 @@ class RunRobot(EnvironmentSetup):
             traj.Insert(0,r_[orgvalues,upper+0.1])
             assert(traj.GetNumWaypoints()==2)
             try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
+                assert(ret==PlannerStatus.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
@@ -309,7 +310,8 @@ class RunRobot(EnvironmentSetup):
             traj.Insert(0,r_[lower,upper])
             assert(traj.GetNumWaypoints()==2)
             try:
-                planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
+                assert(ret==PlannerStatus.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
             
@@ -432,6 +434,39 @@ class RunRobot(EnvironmentSetup):
             assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
             assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
 
+    def test_quaternionjacobian(self):
+        self.log.info('test jacobiaquaternions')
+        env=self.env        
+        with env:
+            affine = DOFAffine.Transform
+            self.LoadEnv('robots/pr2-beta-static.zae')
+            robot=env.GetRobots()[0]
+            robot.SetActiveDOFs(range(robot.GetDOF()), affine, [0,0,1])
+            lowerlimit, upperlimit = robot.GetActiveDOFLimits()
+            deltastep = 0.0001
+            for itry in range(20):
+                # set dofs to random values
+                offset_local = random.rand(3)-0.5
+                dofvalues = randlimits(numpy.minimum(lowerlimit+5*deltastep,upperlimit), numpy.maximum(upperlimit-5*deltastep,lowerlimit))
+                robot.SetActiveDOFValues(dofvalues)
+                for link in robot.GetLinks():
+                    link_trans = link.GetTransform()
+                    offset = dot(link_trans[0:3,0:3], offset_local) + link_trans[0:3,3]
+                    J = robot.CalculateActiveJacobian(link.GetIndex(), offset)
+                    with robot.CreateKinBodyStateSaver():
+                        dofvals = robot.GetActiveDOFValues()
+                        pert_dofvals = array(dofvals)                        
+                        numerical_jac = zeros((3,robot.GetActiveDOF()))
+                        for idof in range(robot.GetActiveDOF()):
+                            pert_dofvals[idof] = dofvals[idof] + deltastep
+                            robot.SetActiveDOFValues(pert_dofvals,0)
+                            pert_link_trans = link.GetTransform()
+                            pert_offset = dot(pert_link_trans[0:3,0:3],offset_local) + pert_link_trans[0:3,3]
+                            for j in range(3):
+                                numerical_jac[j,idof] = (pert_offset[j]-offset[j])/deltastep
+                            pert_dofvals[idof] = dofvals[idof]
+                    assert(all(abs(numerical_jac - J) <= 5*deltastep))
+                
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

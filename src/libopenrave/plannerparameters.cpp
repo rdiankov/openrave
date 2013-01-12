@@ -34,9 +34,9 @@ WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr 
 }
 
 // save the extra data to XML
-bool WorkspaceTrajectoryParameters::serialize(std::ostream& O) const
+bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) const
 {
-    if( !PlannerParameters::serialize(O) ) {
+    if( !PlannerParameters::serialize(O, options&~1) ) {
         return false;
     }
     O << "<maxdeviationangle>" << maxdeviationangle << "</maxdeviationangle>" << std::endl;
@@ -50,6 +50,9 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O) const
         O << "<workspacetrajectory>";
         workspacetraj->serialize(O);
         O << "</workspacetrajectory>" << std::endl;
+    }
+    if( !(options & 1) ) {
+        O << _sExtraParameters << endl;
     }
     return !!O;
 }

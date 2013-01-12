@@ -64,12 +64,14 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/version.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/static_assert.hpp>
@@ -968,7 +970,6 @@ public:
             - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b ikparam_velocities - velocity of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
-            - \b grab - \b deprecated Used to grab bodies given a robot's links. The name of the robot link along with the link indices to grab can follow. This is not portable when loading the enviroment from scratch since body IDs can change, so don't use it.
             - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex. Only 1 DOF is accepted.
          */
         std::string name;
@@ -1198,6 +1199,15 @@ protected:
         This method is not responsible for merging semantic information
      */
     virtual int AddGroup(const Group& g);
+
+    typedef boost::function<void (const std::vector<dReal>&)> SetConfigurationStateFn;
+    typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
+
+    /// \brief return a function to set the states of the configuration in the environment
+    virtual boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr penv) const;
+
+    /// \brief return a function to get the states of the configuration in the environment
+    virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr penv) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -2372,22 +2382,45 @@ OPENRAVE_API int RaveGetAffineDOF(int affinedofs);
 /** \brief Converts the transformation matrix into the specified affine values format.
 
     \param[out] itvalues an iterator to the vector to write the values to. Will write exactly \ref RaveGetAffineDOF(affinedofs) values.
-    \param[in] the affine transformation to convert
+    \param[in] t the affine transformation to convert
     \param[in] affinedofs the affine format to output values in
-    \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+    \param[in] axis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
  */
-OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, const Transform& t, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1));
+OPENRAVE_API void RaveGetAffineDOFValuesFromTransform(std::vector<dReal>::iterator itvalues, const Transform& t, int affinedofs, const Vector& axis=Vector(0,0,1));
+
+/** \brief Converts the linar and angular velocities into the specified affine values format.
+
+    \param[out] itvalues an iterator to the vector to write the values to. Will write exactly \ref RaveGetAffineDOF(affinedofs) values.
+    \param[in] linearvel the linear velocity to convert
+    \param[in] angularvel the angular velocity to convert
+    \param[in] quatrotation the rotation (in quaternion) of the frame that has the linearvel and angularvel. Used if affinedofs specified \ref DOF_RotationAxis.
+    \param[in] affinedofs the affine format to output values in
+    \param[in] axis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
+ */
+OPENRAVE_API void RaveGetAffineDOFValuesFromVelocity(std::vector<dReal>::iterator itvalues, const Vector& linearvel, const Vector& angularvel, const Vector& quatrotation, int affinedofs, const Vector& axis=Vector(0,0,1));
 
 /** \brief Converts affine dof values into a transform.
 
     Note that depending on what the dof values holds, only a part of the transform will be updated.
-    \param[out] t the output transform
+    \param[inout] t the output transform
     \param[in] itvalues the start iterator of the affine dof values
     \param[in] affinedofs the affine dof mask
-    \param[in] vActvAffineRotationAxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
-    \param[in] if true will normalize rotations, should set to false if extracting velocity data
+    \param[in] axis optional rotation axis if affinedofs specified (vActvAffineRotationAxis of RobotBase) \ref DOF_RotationAxis
+    \param[in] normalize if true will normalize rotations, should set to false if extracting velocity data
  */
-OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& vActvAffineRotationAxis=Vector(0,0,1), bool normalize=true);
+OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& axis=Vector(0,0,1), bool normalize=true);
+
+/** \brief Converts affine dof velocities into linear and angular velocity vectors
+
+    Note that depending on what the dof values holds, only a part of the transform will be updated.
+    \param[out] linearvel the output transform
+    \param[in] itvalues the start iterator of the affine dof values
+    \param[in] affinedofs the affine dof mask
+    \param[in] axis optional rotation axis if affinedofs specified (vActvAffineRotationAxis of RobotBase) \ref DOF_RotationAxis
+    \param[in] normalize if true will normalize rotations, should set to false if extracting velocity data
+    \param[in] quatrotation the quaternion of 3d rotation of the frame where the velocity is being measured at.
+ */
+OPENRAVE_API void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularvel, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& axis=Vector(0,0,1), const Vector& quatrotation = Vector(1,0,0,0));
 
 OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
@@ -2709,6 +2742,14 @@ inline void assertion_failed(char const * expr, char const * function, char cons
 {
     throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr),OpenRAVE::ORE_Assert);
 }
+
+#if BOOST_VERSION>104600
+inline void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
+{
+    throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg),OpenRAVE::ORE_Assert);
+}
+#endif
+
 }
 #endif
 
