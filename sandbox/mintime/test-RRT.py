@@ -21,10 +21,8 @@ Test file for RRT_Smooth
 from openravepy import *
 from numpy import *
 from pylab import *
-import scipy
 import time
-import Image
-import MintimeTrajectory
+import MintimeProblemTorque
 import RRT_Smooth
 
 
@@ -107,13 +105,13 @@ tunings.qd_max=4*vel_lim # Velocity limits
 tunings.t_step=0.005 # time step to sample the dynamics
 tunings.dt_integ=tunings.t_step/10 # time step to integrate the limiting curves
 tunings.width=20 # window to test if we can get through a switching point
-tunings.palier=0 #length of the palier around zero inertia points
-tunings.threshold_final=1e-2 # 
+tunings.palier=20 #length of the palier around zero inertia points
+tunings.tolerance_ends=1e-2 # 
 
 
 print 'Reparameterizing the RRT path using optimal-time algorithm...'
 [rave_traj2,traj2]=RRT_Smooth.Retime(robot,rave_traj1,tunings)
-# MintimeTrajectory.Execute(robot,traj2,0.01)
+# MintimeProblemTorque.Execute(robot,traj2,0.01)
 
 
 
@@ -152,9 +150,9 @@ print '\n*****************************************************************\n'
 
 # Run the trajectories
 raw_input('Press Enter to execute the trajectory /before/ shortcutting (duration='+str(traj2.duration)+'s)')
-MintimeTrajectory.Execute(robot,traj2,0.02)
+MintimeProblemTorque.Execute(robot,traj2,0.02)
 raw_input('Press Enter to execute the trajectory /after/ shortcutting (duration='+str(traj3.duration)+'s)')
-MintimeTrajectory.Execute(robot,traj3,0.02)
+MintimeProblemTorque.Execute(robot,traj3,0.02)
 
 
 # Can also do that
@@ -175,22 +173,22 @@ tau_max=tunings.tau_max
 qd_max=tunings.qd_max
 
 
-tau2=MintimeTrajectory.ComputeTorques(robot,traj2,grav)
+tau2=MintimeProblemTorque.ComputeTorques(robot,traj2,grav)
 mpl.axes.set_default_color_cycle(['r','b','g','m'])
 figure(1)
-MintimeTrajectory.PlotVelocities(traj2.t_vect,traj2.qd_vect,qd_max)
+MintimeProblemTorque.PlotVelocities(traj2.t_vect,traj2.qd_vect,qd_max)
 title('Velocity profile before shortcutting')
 figure(2)
-MintimeTrajectory.PlotTorques(traj2.t_vect,tau2,tau_min,tau_max)
+MintimeProblemTorque.PlotTorques(traj2.t_vect,tau2,tau_min,tau_max)
 title('Torques profile before shortcutting')
 
-tau3=MintimeTrajectory.ComputeTorques(robot,traj3,grav)
+tau3=MintimeProblemTorque.ComputeTorques(robot,traj3,grav)
 mpl.axes.set_default_color_cycle(['r','b','g','m'])
 figure(3)
-MintimeTrajectory.PlotVelocities(traj3.t_vect,traj3.qd_vect,qd_max)
+MintimeProblemTorque.PlotVelocities(traj3.t_vect,traj3.qd_vect,qd_max)
 title('Velocity profile after shortcutting')
 figure(4)
-MintimeTrajectory.PlotTorques(traj3.t_vect,tau3,tau_min,tau_max)
+MintimeProblemTorque.PlotTorques(traj3.t_vect,tau3,tau_min,tau_max)
 title('Torques profile after shortcutting')
 
 

@@ -23,11 +23,8 @@ Cf. Pham, Asian-MMS 2012, http://www.normalesup.org/~pham/docs/shortcuts.pdf
 
 
 from openravepy import *
-from numpy import *
 from pylab import *
-import scipy
 import time
-import Image
 import MintimeTrajectory
 import MintimeProfileIntegrator
 import MintimeProblemTorque
@@ -54,6 +51,27 @@ def traj_to_rave_traj(robot,traj):
     rave_traj_res.Insert(0,c_[via_points_res,dt_vect_res].flatten())
 
     return rave_traj_res
+
+
+def linear_smooth_dichotomy(robot,vp_list,coll_check_step):
+    """Recursively smooth a list of via points"""
+    if len(vp_list)==2:
+        return vp_list
+    else:
+        p1=vp_list[0]
+        p2=vp_list[-1]
+        d=linalg.norm(p2-p1)
+        v_unit=(p2-p1)/d
+        for t in linspace(0,d,d/coll_check_step+1):
+            p=p1+t*v_unit
+            with robot:
+                robot.SetDOFValues(p)
+                if robot.GetEnv().CheckCollision(robot):
+                    l1=linear_smooth_dichotomy(robot,vp_list[0:len(vp_list)/2+1],coll_check_step)
+                    l2=linear_smooth_dichotomy(robot,vp_list[len(vp_list)/2:len(vp_list)],coll_check_step)
+                    l1.extend(l2[1:])
+                    return l1
+        return [p1,p2]
 
 
 
@@ -87,7 +105,7 @@ def RRT(robot,goal_config):
 
     # Linear smoothing by dichotomy
 
-    via_points=MintimeTrajectory.linear_smooth_dichotomy(robot,traj_rrt,0.001)
+    via_points=linear_smooth_dichotomy(robot,traj_rrt,0.001)
     dt_vect=array([1]*len(via_points))
     dt_vect[0]=0
 
@@ -133,7 +151,7 @@ def Retime(robot,rave_traj,tunings):
 
         # Run the algorithm
         pb=MintimeProblemTorque.MintimeProblemTorque(robot,traj)
-        pb.set_torque_limits(tau_min,tau_max)
+        pb.set_dynamics_limits([tau_min,tau_max])
         pb.set_velocity_limits(qd_max)
         pb.disc_thr=1
         pb.preprocess()
@@ -141,10 +159,10 @@ def Retime(robot,rave_traj,tunings):
         algo.dt_integ=tunings.dt_integ
         algo.width=tunings.width
         algo.palier=tunings.palier
-        algo.threshold_final=tunings.threshold_final
-        algo.sdot_init=1e-2
-        algo.sdot_final=1e-2
-        algo.compute_limiting_curves()
+        algo.tolerance_ends=tunings.tolerance_ends
+        algo.sdot_init=1e-4
+        algo.sdot_final=1e-4
+        algo.integrate_all_profiles()
         algo.integrate_final()
         algo_list.append(algo)
 
@@ -196,7 +214,7 @@ def RepeatIterateSmooth(robot,traj,tunings):
     while i <n_runs:
         print i
         [traj3,d_list_s,d_list_all,n_collisions,traj_list_one,ends_list]=IterateSmooth(robot,traj,tunings)
-        tau3=MintimeTrajectory.ComputeTorques(robot,traj3,tunings.grav)
+        tau3=MintimeProblemTorque.ComputeTorques(robot,traj3,tunings.grav)
         print [max(abs(tau3[k,:])) for k in range(4)]
         if (True not in [max(tau3[k,:])/coef_tolerance>tau_max[k] for k in range(4)]) and (True not in [min(tau3[k,:])/coef_tolerance<tau_min[k] for k in range(4)]):  
             trajlist.append(traj3)
@@ -351,7 +369,7 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     pwp_traj_shortcut=MintimeTrajectory.Interpolate(q_list,qd_list,T_list)
     sample_traj_shortcut=pwp_traj_shortcut.GetSampleTraj(pwp_traj_shortcut.duration,dt_sample)
 
-    if MintimeTrajectory.CheckCollisionTraj(robot,sample_traj_shortcut)[0]:
+    if MintimeProblemTorque.CheckCollisionTraj(robot,sample_traj_shortcut)[0]:
         print 'Shortcut collides, returning'
         print 'Computation time was: '+str(time.time()-deb)
         return ['collision',traj_orig]
@@ -361,7 +379,7 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     # Run the optimal-time parameterization algorithm
 
     pb=MintimeProblemTorque.MintimeProblemTorque(robot,sample_traj_shortcut)
-    pb.set_torque_limits(tau_min,tau_max)
+    pb.set_dynamics_limits([tau_min,tau_max])
     pb.set_velocity_limits(qd_max)
     pb.disc_thr=1
     pb.preprocess()
@@ -369,11 +387,10 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     algo.dt_integ=dt_integ
     algo.width=tunings.width
     algo.palier=tunings.palier
-    algo.threshold_final=tunings.threshold_final
+    algo.tolerance_ends=tunings.tolerance_ends
     algo.sdot_init=c_sdot
     algo.sdot_final=c_sdot
-    algo.possible=True
-    algo.compute_limiting_curves()
+    algo.integrate_all_profiles()
 
 
 
@@ -420,7 +437,7 @@ def Smooth(robot,traj_orig,t1,t2,tunings):
     # If OK then replace
 
     resampled_traj_u=pwp_traj_shortcut.ResampleTraj(s_res_u,sdot_res_u,t_step)
-    tau_u=MintimeTrajectory.ComputeTorques(robot,resampled_traj_u,tunings.grav)
+    tau_u=MintimeProblemTorque.ComputeTorques(robot,resampled_traj_u,tunings.grav)
     traj2=MintimeTrajectory.Insert(traj_orig,i1,i2,resampled_traj_u)
     traj2.i1=i1
     traj2.i2=i2
