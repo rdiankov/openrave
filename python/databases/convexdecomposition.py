@@ -73,7 +73,7 @@ else:
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh
-from ..openravepy_ext import transformPoints
+from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 from .. import convexdecompositionpy
 
