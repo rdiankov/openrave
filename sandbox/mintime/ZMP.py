@@ -1,10 +1,28 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2011-2012 Quang-Cuong Pham <cuong.pham@normalesup.org>
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. 
+
+
+"""
+Functions to compute the COM and the ZMP
+For now, the base link moves in translation only, no rotation allowed
+"""
+
 from openravepy import *
 from numpy import *
 
 
 
-# Functions to compute the ZMP
-# The base link moves in translation only, no rotation allowed
 
 
 def v2t(v):
@@ -77,14 +95,8 @@ def ComputeCOM(config,params):
 
     res=weighted_com/M
     return res
+
     
-    
-
-
-
-
-##########################################################################
-
 def ComputeZMP(config,params):
 
     base_T=config[0]
@@ -165,8 +177,36 @@ def ComputeZMP(config,params):
     return array([xnum/denum,ynum/denum])
 
 
+def ComputeZMPTraj(traj,params_init):
+    n_steps=traj.n_steps
+    t_vect=traj.t_vect
+    q_vect=traj.q_vect
+    qd_vect=traj.qd_vect
+    qdd_vect=traj.qdd_vect
+    zmp_vect=zeros((2,n_steps))
+    for i in range(n_steps):
+        q=q_vect[:,i]
+        qd=qd_vect[:,i]
+        qdd=qdd_vect[:,i]
+        # Here we assume there is no base link rotation
+        zmp=ComputeZMP([q[0:3],qd[0:3],qdd[0:3],q[6:len(q)],qd[6:len(q)],qdd[6:len(q)]],params_init)
+        zmp_vect[:,i]=zmp
+    return zmp_vect
 
 
+def ComputeCOMTraj(traj,params_init):
+    n_steps=traj.n_steps
+    t_vect=traj.t_vect
+    q_vect=traj.q_vect
+    com_vect=zeros((3,n_steps))
+    for i in range(n_steps):
+        q=q_vect[:,i]
+        # Here we assume there is no base link rotation
+        com_vect[:,i]=ComputeCOM([q[0:3],q[6:len(q)]],params_init)
+
+    return com_vect
+
+    
 
 
 ##########################################################################
