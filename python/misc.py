@@ -409,7 +409,7 @@ class MultiManipIKSolver:
         with self.robot:
             alljointvalues = []
             grabbed = self.robot.GetGrabbed()
-            statesavers = [KinBody.KinBodyStateSaver(body) for body in grabbed]
+            statesavers = [openravepy_int.KinBody.KinBodyStateSaver(body) for body in grabbed]
             try:
                 with openravepy_ext.RobotStateSaver(self.robot): # for storing enabled state
                     for i,manip in enumerate(self.manips):
