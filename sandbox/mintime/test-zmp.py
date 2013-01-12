@@ -22,15 +22,13 @@ Test file for MintimeProblemZMP
 from openravepy import *
 from numpy import *
 from pylab import *
+import scipy
 import time
 import MintimeTrajectory
 import MintimeProblemZMP
 import MintimeProfileIntegrator
 import HRP4
 import ZMP
-
-#import scipy
-#import Image
 
 
 
@@ -72,11 +70,10 @@ params={'robot':robot,'gravity':g,'moment_coef':1,'exclude_list':exclude_list}
 
 
 V=robot.GetEnv().GetViewer()
-M=array([[ 0.05117,  0.09089, -0.99455,  2.74898],
-       [ 0.99847,  0.01639,  0.05287, -0.17906],
-       [ 0.02111, -0.99573, -0.08991,  0.98455],
-       [ 0.     ,  0.     ,  0.     ,  1.     ]])
-V.SetCamera(M)
+V.SetCamera(array([[ 0.40255,  0.35368, -0.84431,  2.02079],
+       [ 0.91488, -0.12442,  0.38408, -0.91926],
+       [ 0.03079, -0.92705, -0.37366,  1.64256],
+       [ 0.     ,  0.     ,  0.     ,  1.     ]]))
 
 
 
@@ -179,7 +176,7 @@ n_discr=200.
 t_step=T/n_discr
 traj_1=pwp_traj.GetSampleTraj(T,t_step)
 
-traj_2=MintimeProblemZMP.DynamicShift(robot,traj_1,7)
+traj_2=MintimeTrajectory.DynamicShift(robot,traj_1,7)
 spline_traj=MintimeTrajectory.SplineInterpolateTrajectory(traj_2.t_vect,traj_2.q_vect,k=3,s=0)
 traj=spline_traj.GetSampleTraj(T,t_step)
 
@@ -212,7 +209,7 @@ print 'Running the time parameterization algorithm...'
 
 
 pb=MintimeProblemZMP.MintimeProblemZMP(robot,traj)
-pb.set_dynamics_limits(bounds)
+pb.set_zmp_limits(bounds)
 pb.disc_thr=100 # Threshold in the discontinuity point search
 pb.zmp_params=params # Parameters for ZMP computations
 pb.preprocess()
@@ -226,15 +223,17 @@ pb.preprocess()
 algo=MintimeProfileIntegrator.MintimeProfileIntegrator(pb)
 algo.dt_integ=t_step/10 # time step to integrate the limiting curves
 algo.width=10 # window to test if we can get through a switch point
-algo.palier=20 # length of the palier around zero inertia points
-algo.tolerance_ends=1e-2 # threshold at the end
+algo.palier=10 # length of the palier around zero inertia points
+algo.threshold_final=1e-2 # threshold at the end
 algo.sdot_init=1 # initial value of sdot
 algo.sdot_final=1 # final value of sdot
 
 algo.possible=True
-algo.integrate_all_profiles()
+algo.compute_limiting_curves()
 if algo.possible:
     algo.integrate_final()
+
+#algo.plot_limiting_curves()
 
 
 # Reparameterize the path using the new velocity profile
@@ -257,26 +256,14 @@ print 'Total execution time: '+str(time.time()-deb)+'s'
 print '\n*****************************************************************\n'
 
 raw_input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
-MintimeProblemZMP.Execute(robot,traj,0.02,drawcom=2)
+MintimeTrajectory.Execute(robot,traj,0.02,drawcom=2)
 raw_input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
-MintimeProblemZMP.Execute(robot,traj2,0.02,drawcom=2)
+MintimeTrajectory.Execute(robot,traj2,0.02,drawcom=2)
 
 
-zmp=ZMP.ComputeZMPTraj(traj,params)
-zmp2=ZMP.ComputeZMPTraj(traj2,params)
-com=ZMP.ComputeCOMTraj(traj,params)
-
-
-
-figure(1)
-clf()
-algo.plot_profiles()
-axis([0,1.4,0,10])
-title('Phase plane')
-xlabel('$s$',fontsize=15)
-ylabel('$\dot s$',fontsize=15)
-#savefig('../../Reda/mintime/fig/zmp-phase.eps')
-
+zmp=MintimeTrajectory.ComputeZMP(traj,params)
+zmp2=MintimeTrajectory.ComputeZMP(traj2,params)
+com=MintimeTrajectory.ComputeCOM(traj,params)
 
 
 figure(2)
@@ -300,15 +287,14 @@ grid('on')
 title('2D position of the ZMP')
 xlabel('X-axis (antero-posterior) (m)',fontsize=15)
 ylabel('Y-axis (medio-lateral) (m)',fontsize=15)
-#savefig('../../Reda/mintime/fig/zmp-2dpos.eps')
 
 
 figure(3)
 clf()
-plot([0,traj.duration],[xminf,xminf],'m--',linewidth=2)
-plot([0,traj.duration],[xmaxf,xmaxf],'m--',linewidth=2)
-plot([0,traj.duration],[yminf,yminf],'c--',linewidth=2)
-plot([0,traj.duration],[ymaxf,ymaxf],'c--',linewidth=2)
+plot([0,traj2.duration],[xminf,xminf],'m--',linewidth=2)
+plot([0,traj2.duration],[xmaxf,xmaxf],'m--',linewidth=2)
+plot([0,traj2.duration],[yminf,yminf],'c--',linewidth=2)
+plot([0,traj2.duration],[ymaxf,ymaxf],'c--',linewidth=2)
 plot(traj.t_vect,zmp[0,:],'m-.',linewidth=2)
 plot(traj.t_vect,zmp[1,:],'c-.',linewidth=2)
 plot(traj2.t_vect,zmp2[0,:],'m',linewidth=2)
@@ -316,35 +302,4 @@ plot(traj2.t_vect,zmp2[1,:],'c',linewidth=2)
 xlabel('Time (s)',fontsize=15)
 ylabel('ZMP coordinates (m)',fontsize=15)
 title('ZMP coordinates as a function of time')
-#savefig('../../Reda/mintime/fig/zmp-intime.eps')
-
-
-
-######################## Images ##################################
-
-
-# n_snaps=20
-# box=[130,0,480,480]
-# cur_traj=traj2
-# color=[0,0,1]
-# name='after'
-# ni=0
-# for i in [int(round(k)) for k in linspace(0,cur_traj.n_steps-1,n_snaps)]:
-#     with robot:
-#         q=cur_traj.q_vect[:,i]
-#         qd=cur_traj.qd_vect[:,i]
-#         qdd=cur_traj.qdd_vect[:,i]
-#         robot.GetLinks()[0].SetTransform(HRP4.v2t(q[0:6]))
-#         robot.SetDOFValues(q[6:cur_traj.dim])
-#         zmp=ZMP.ComputeZMP([q[0:3],qd[0:3],qdd[0:3],q[6:len(q)],qd[6:len(q)],qdd[6:len(q)]],{'robot':robot,'exclude_list':[],'gravity':9.8,'moment_coef':1})
-#         zmp_proj=array([zmp[0],zmp[1],0])
-#         ss=MintimeTrajectory.CreateSphere(env,zmp_proj,0.05,color)
-#         I=V.GetCameraImage(640,480,M,[640,640,320,240])
-#         env.Remove(ss)
-#         scipy.misc.imsave('tmp.jpg',I)
-#         im=Image.open('tmp.jpg')
-#         im2=im.crop(box)
-#         im2.save('../../Reda/mintime/fig/hrp4-'+name+'-'+str(ni)+'.jpg')
-#         ni+=1
-
 

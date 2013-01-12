@@ -23,10 +23,10 @@ manipulator under torque limits
 
 
 from openravepy import *
+import MintimeProblemGeneric
 from numpy import *
 from pylab import *
-import time
-import MintimeProblemGeneric
+import bisect
 
 
 class MintimeProblemTorque(MintimeProblemGeneric.MintimeProblemGeneric):
@@ -39,10 +39,16 @@ class MintimeProblemTorque(MintimeProblemGeneric.MintimeProblemGeneric):
     def __init__(self,robot,traj):        
         MintimeProblemGeneric.MintimeProblemGeneric.__init__(self,robot,traj)
 
-    def set_dynamics_limits(self,limits):
-        self.tau_min=limits[0]
-        self.tau_max=limits[1]
-        self.isset_dynamics_limits=True
+    def set_torque_limits(self,tau_min,tau_max):
+        self.tau_min=tau_min
+        self.tau_max=tau_max
+        self.isset_accel_limits=True
+
+    def set_velocity_limits(self,qd_max):
+        self.qd_max=qd_max
+        self.isset_velocity_limits=True
+
+
 
 
 ################################ Dynamics ################################
@@ -137,11 +143,6 @@ class MintimeProblemTorque(MintimeProblemGeneric.MintimeProblemGeneric):
             else:
                 tau_alpha[i]=tau_max[i]
                 tau_beta[i]=tau_min[i]
-
-        [alpha,beta,ialpha,ibeta]=self.accel_limits(s,0)
-        if alpha>beta:
-            return 0
-
         sdot_min=1e15
         for k in range(self.dim):
             for m in range(k+1,self.dim):
@@ -177,19 +178,11 @@ class MintimeProblemTorque(MintimeProblemGeneric.MintimeProblemGeneric):
                 aj=a[j]
                 ajp=ap[j]
                 if aj*ajp<0:
-                    if (not self.isset_velocity_limits) or (self.maxvel_accel_curve[i]<self.maxvel_velocity_curve[i]):
+                    if(self.isset_velocity_limits and self.maxvel_accel_curve[i]<self.maxvel_velocity_curve[i]):
                         if abs(aj)<abs(ajp):
-                            if not (i in i_list):
-                                i_list.append(i)
-                            if self.maxvel_curve[i-1]< self.maxvel_curve[i]:
-                                if not ((i-1) in i_list):
-                                    i_list.append(i-1)
+                            i_list.append(i)    
                         else:
-                            if not ((i-1) in i_list):
-                                i_list.append(i-1)
-                            if self.maxvel_curve[i]< self.maxvel_curve[i-1]:
-                                if not (i in i_list):
-                                    i_list.append(i)
+                            i_list.append(i-1)
             ap=a
 
         self.sw_zero_inertia=i_list
@@ -220,96 +213,4 @@ class MintimeProblemTorque(MintimeProblemGeneric.MintimeProblemGeneric):
         cp=-(c2-c)/delta
         return ((-bp*sdot*sdot-cp)/(2*b*sdot+ap*sdot))*sdot
         
-
-
-
-
-################## Trajectory utilities ################################
-
-def ComputeTorques(robot,traj,grav):
-
-    robot.GetEnv().GetPhysicsEngine().SetGravity(grav)
-
-    n_steps=traj.n_steps
-    t_vect=traj.t_vect
-    q_vect=traj.q_vect
-    qd_vect=traj.qd_vect
-    qdd_vect=traj.qdd_vect
-    tau_vect=zeros(shape(q_vect))
-
-    for i in range(n_steps):
-        q=q_vect[:,i]
-        qd=qd_vect[:,i]
-        qdd=qdd_vect[:,i]
-        with robot:
-            robot.SetDOFValues(q)
-            robot.SetDOFVelocities(qd)
-            tau = robot.ComputeInverseDynamics(qdd,None,returncomponents=False)
-
-        tau_vect[:,i]=tau
-
-    #Smooth out the first steps
-    if n_steps>2:
-        tau_vect[:,0]=tau_vect[:,2]
-        tau_vect[:,1]=tau_vect[:,2]
-
-    #Smooth out the last two steps
-    if n_steps>2:
-        tau_vect[:,n_steps-1]=tau_vect[:,n_steps-3]
-        tau_vect[:,n_steps-2]=tau_vect[:,n_steps-3]
-
-    return tau_vect
-
-
-def PlotTorques(t_vect,tau,tau_min,tau_max,offset=0,reverse=False):
-    T=t_vect[-1]
-    hold('on')
-    plot([offset,T+offset],array([tau_min,tau_min]),'--',linewidth=2)
-    plot([offset,T+offset],array([tau_max,tau_max]),'--',linewidth=2)
-    if not reverse:
-        plot(t_vect+offset,transpose(tau),linewidth=2)
-    else:
-        plot(t_vect+offset,transpose(reverse_array(tau)),linewidth=2)
-    for k in gca().get_xticklabels():
-        k.set_fontsize(18)
-    for k in gca().get_yticklabels():
-        k.set_fontsize(18)
-    xlabel('Time (s)',fontsize=20)
-    ylabel('Torque (Nm)',fontsize=20)
-    grid('on')
-
-
-def Execute(robot,traj,t_sleep,stepsize=1):
-    for i in range(0,traj.n_steps,stepsize):
-        robot.SetDOFValues(traj.q_vect[:,i])
-        time.sleep(t_sleep)
-
-
-def CheckCollisionTraj(robot,traj):
-    for i in range(traj.n_steps):
-        with robot:
-            robot.SetDOFValues(traj.q_vect[:,i])
-            if robot.GetEnv().CheckCollision(robot):
-                return [True,'env',i]
-            if robot.CheckSelfCollision():
-                return [True,'self',i]
-    return [False,None,None]
-
-
-
-def PlotVelocities(t_vect,qd_vect,qd_max):
-    T=t_vect[-1]
-    clf()
-    hold('on')
-    plot(t_vect,transpose(qd_vect),linewidth=2)
-    plot([0,T],array([-qd_max,-qd_max]),'k--',linewidth=2)
-    plot([0,T],array([qd_max,qd_max]),'k--',linewidth=2)
-    for k in gca().get_xticklabels():
-        k.set_fontsize(18)
-    for k in gca().get_yticklabels():
-        k.set_fontsize(18)
-    xlabel('Time (s)',fontsize=20)
-    ylabel('Velocity (rad.s-1)',fontsize=20)
-    axis([0,T,-max(qd_max)*1.2,max(qd_max)*1.2])
-    grid('on')
 

@@ -24,12 +24,11 @@ Cf. Pham and Nakamura, Humanoids 2012, http://www.normalesup.org/~pham/docs/zmp.
 
 
 from openravepy import *
-from numpy import *
-import copy
-import time
-import HRP4
-import ZMP
 import MintimeProblemGeneric
+import ZMP
+from numpy import *
+from pylab import *
+import bisect
 
 
 class MintimeProblemZMP(MintimeProblemGeneric.MintimeProblemGeneric):
@@ -43,12 +42,14 @@ class MintimeProblemZMP(MintimeProblemGeneric.MintimeProblemGeneric):
         MintimeProblemGeneric.MintimeProblemGeneric.__init__(self,robot,traj)
 
 
-    def set_dynamics_limits(self,limits):
-        self.xmin=limits[0]
-        self.xmax=limits[1]
-        self.ymin=limits[2]
-        self.ymax=limits[3]        
-        self.isset_dynamics_limits=True
+    def set_zmp_limits(self,bounds):
+        self.xmin=bounds[0]
+        self.xmax=bounds[1]
+        self.ymin=bounds[2]
+        self.ymax=bounds[3]        
+        self.isset_accel_limits=True
+
+
 
 
 ################################ Dynamics ################################
@@ -99,7 +100,7 @@ class MintimeProblemZMP(MintimeProblemGeneric.MintimeProblemGeneric):
 
 
     def alpha_beta(self,s):
-        """Compute the lists A and B, cf Pham Asian-MMS"""
+        """"Compute the lists A and B, cf Pham Asian-MMS"""
         xmin=self.xmin
         xmax=self.xmax
         ymin=self.ymin
@@ -241,85 +242,3 @@ class MintimeProblemZMP(MintimeProblemGeneric.MintimeProblemGeneric):
         """
         return 0
 
-
-
-
-
-
-################## Computation of ZMP and COM ##############################
-
-
-def Execute(robot,traj,t_sleep,stepsize=1,drawcom=0):
-    global com_handle
-    n=robot.GetDOF()
-    for i in range(0,traj.n_steps,stepsize):
-        if traj.dim==n+6:
-            robot.GetLinks()[0].SetTransform(HRP4.v2t(traj.q_vect[0:6,i]))
-            robot.SetDOFValues(traj.q_vect[6:traj.dim,i])
-        else:
-            robot.SetDOFValues(traj.q_vect[:,i])
-    
-        if drawcom==1:
-            CoM=ZMP.ComputeCOM([robot.GetLinks()[0].GetTransform()[0:3,3],robot.GetDOFValues()],{'robot':robot,'exclude_list':[]})
-            CoM_proj=zeros(3)
-            CoM_proj[0]=CoM[0]
-            CoM_proj[1]=CoM[1]
-            com_handle=robot.GetEnv().drawlinestrip(array([CoM,CoM_proj]),5)
-        elif drawcom==2:
-            q=traj.q_vect[:,i]
-            qd=traj.qd_vect[:,i]
-            qdd=traj.qdd_vect[:,i]
-            zmp=ZMP.ComputeZMP([q[0:3],qd[0:3],qdd[0:3],q[6:len(q)],qd[6:len(q)],qdd[6:len(q)]],{'robot':robot,'exclude_list':[],'gravity':9.8,'moment_coef':1})
-            zmp_proj=array([zmp[0],zmp[1],0])
-            zmp_high=array([zmp[0],zmp[1],0.5])
-            zmp_handle=robot.GetEnv().drawlinestrip(array([zmp_proj,zmp_high]),5)
-            
-        time.sleep(t_sleep)
-
-
-
-def CheckCollisionTraj(robot,traj):
-    n=robot.GetDOF()
-    for i in range(traj.n_steps):
-        with robot:
-            if traj.dim==n+6:
-                robot.GetLinks()[0].SetTransform(HRP4.v2t(traj.q_vect[0:6,i]))
-                robot.SetDOFValues(traj.q_vect[6:traj.dim,i])
-            else:
-                robot.SetDOFValues(traj.q_vect[:,i])
-            if robot.GetEnv().CheckCollision(robot):
-                return [True,'env',i]
-            if robot.CheckSelfCollision():
-                return [True,'self',i]
-    return [False,None,None]
-
-
-
-
-def ImmobilizeBaselink(traj):
-
-    q_vect2=zeros(traj.q_vect.shape)
-
-    for i in range(traj.n_steps):
-        q_vect2[0:6,i]=[0,0,0.75,0,0,0]
-        q_vect2[22:34,i]=HRP4.halfsitPose[0:12]
-        q_vect2[34:56,i]=traj.q_vect[34:56,i]
-
-    return SampleTrajectory(q_vect2)
-
-
-
-def DynamicShift(robot,traj,fixed_link_i):
-    fixed_link=robot.GetLinks()[fixed_link_i]
-    base_link=robot.GetLinks()[0]
-    traj2=copy.deepcopy(traj)
-    with robot:
-        HRP4.SetConfig(robot,traj.q_vect[:,0])
-        fixed_link_init=fixed_link.GetGlobalCOM()
-    for i in range(traj.n_steps):
-        with robot:
-            HRP4.SetConfig(robot,traj.q_vect[:,i])
-            fixed_link_cur=fixed_link.GetGlobalCOM()
-            shift=fixed_link_init-fixed_link_cur
-        traj2.q_vect[0:3,i]=traj2.q_vect[0:3,i]+shift
-    return traj2

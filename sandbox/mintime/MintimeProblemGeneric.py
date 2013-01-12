@@ -22,6 +22,8 @@ For examples, see MintimeProblemManip.py and MintimeProblemZMP.py
 """
 
 
+
+from openravepy import *
 from numpy import *
 from pylab import *
 import bisect
@@ -41,7 +43,7 @@ class MintimeProblemGeneric():
         self.q_vect=traj.q_vect
         self.qd_vect=traj.qd_vect
         self.qdd_vect=traj.qdd_vect
-        self.isset_dynamics_limits=False
+        self.isset_accel_limits=False
         self.isset_velocity_limits=False
        
 
@@ -52,7 +54,7 @@ class MintimeProblemGeneric():
         self.sample_dynamics()
 
         # Compute the max velocity curve caused by accelerations limits
-        if(self.isset_dynamics_limits):
+        if(self.isset_accel_limits):
             self.compute_maxvel_accel_curve()
             self.maxvel_curve=array(self.maxvel_accel_curve)
         else:
@@ -68,7 +70,7 @@ class MintimeProblemGeneric():
         # Compute the switch points
         self.find_tangent_disc_points()
         self.find_zero_inertia_points()
-        self.merge_switch_points_lists()
+        self.find_switch_points()
         
 
 
@@ -76,10 +78,6 @@ class MintimeProblemGeneric():
 
 
 ############################ Velocity limits ##############################
-
-    def set_velocity_limits(self,limits):
-        self.qd_max=limits
-        self.isset_velocity_limits=True
 
 
     def compute_maxvel_velocity_curve(self):
@@ -129,11 +127,6 @@ class MintimeProblemGeneric():
 
 
 ############################ Prototypes ##############################
-
-
-    def set_dynamics_limits(self,limits):
-        """Set dynamics limits"""
-        raise NameError('Some virtual methods need be implemented')
 
 
     def sample_dynamics(self):
@@ -193,17 +186,17 @@ class MintimeProblemGeneric():
 
     def find_tangent_disc_points(self):
         """Find all tangent and discontinuity points and assign to the list self.sw_tangent_disc"""
-        if self.n_steps<3:
+        if self.n_steps<2:
             self.sw_tangent_disc=[]
             return
         maxvel_curve=self.maxvel_curve
-        i=1
+        i=0
         s=self.t_vect[i]
         sdot=maxvel_curve[i]
         [alpha,beta,k_alpha,k_beta]=self.accel_limits(s,sdot)
         diffp=alpha/sdot-(maxvel_curve[i+1]-maxvel_curve[i])/self.t_step
         i_list=[]
-        for i in range(1,self.n_steps-1):
+        for i in range(self.n_steps-1):
             # Test whether i is a discontinuity points
             if abs(maxvel_curve[i+1]-maxvel_curve[i])>self.disc_thr:
                 if maxvel_curve[i+1]>maxvel_curve[i]:
@@ -216,41 +209,28 @@ class MintimeProblemGeneric():
             [alpha,beta,k_alpha,k_beta]=self.accel_limits(s,sdot)
             diff=alpha/sdot-(maxvel_curve[i+1]-maxvel_curve[i])/self.t_step
             if diff*diffp<0:
-                if i>2 and i<self.n_steps-3:
-                    # A switch point cannot be a local maximum
-                    if maxvel_curve[i-2]>sdot or maxvel_curve[i+2]>sdot:
-                        if maxvel_curve[i]<maxvel_curve[i-1]:
-                            i_list.append(i)
-                        else:
-                            i_list.append(i-1)
+                if abs(diff)<abs(diffp):
+                    i_list.append(i)
                 else:
-                    if maxvel_curve[i]<maxvel_curve[i-1]:
-                        i_list.append(i)
-                    else:
-                        i_list.append(i-1)
+                    i_list.append(i-1)
             diffp=diff
 
         self.sw_tangent_disc=i_list
 
 
-    def merge_switch_points_lists(self):
+    def find_switch_points(self):
         """Find all switch points and assign to the list self.sw_s_list
         by merging the zero-inertia list and tangent-disc list
 
         """
-
-        i_list=self.sw_zero_inertia # Zero-inertia points 'z'
-        i_list2=self.sw_tangent_disc # Tangent or discontinuity points 't'
-
+        i_list=self.sw_tangent_disc # Tangent or discontinuity points 't'
+        i_list2=self.sw_zero_inertia # Zero-inertia points 'z'
         # Merge the lists
-        type_list=['z']*len(i_list)
+        type_list=['t']*len(i_list)
         for x in i_list2:
-            if not (x in i_list):
-                index=bisect.bisect_left(i_list,x)
-                i_list.insert(index,x)
-                type_list.insert(index,'t')
-
-
+            index=bisect.bisect_left(i_list,x)
+            i_list.insert(index,x)
+            type_list.insert(index,'z')
         # Find the corresponding values s and sdot
         s_list=[]
         sdot_list=[]
@@ -270,31 +250,18 @@ class MintimeProblemGeneric():
 ############################ Interpolation ##############################
 
 
-    def linear_interpolate(self,s,value_vect,t_vect=None,elim_out=False):
+    def linear_interpolate(self,s,value_vect,t_vect=None):
         if t_vect==None:
             t_vect=self.t_vect
             n_steps=self.n_steps
         else:
             n_steps=len(t_vect)
-        
-        if n_steps==0:
-            return 1e15
-
-        if s<t_vect[0]: 
-            if elim_out:
-                return 1e15
-            else:
-                s=t_vect[0]+1e-5
-        if s>t_vect[n_steps-1]: 
-            if elim_out:
-                return 1e15
-            else:
-                s=t_vect[n_steps-1]-1e-5
+        if s<t_vect[0]: s=t_vect[0]+1e-5
+        if s>t_vect[n_steps-1]: s=t_vect[n_steps-1]-1e-5
         i=bisect.bisect_left(t_vect,s)
         if i==0: 
             return value_vect[i]
         r=(s-t_vect[i-1])/(t_vect[i]-t_vect[i-1])
-
         return (1-r)*value_vect[i-1]+r*value_vect[i] 
 
 
@@ -316,15 +283,14 @@ class MintimeProblemGeneric():
 
 ########################## Plotting ############################
 
-    def plot_maxvel_curves(self,h_offset=0):
-        plot(self.t_vect+h_offset,self.maxvel_curve,'c',linewidth=3)
-        plot(self.t_vect+h_offset,self.maxvel_accel_curve,'r')
+    def plot_maxvel_curves(self):
+        plot(self.t_vect,self.maxvel_accel_curve,'r')
         if(self.isset_velocity_limits):
-            plot(self.t_vect+h_offset,self.maxvel_velocity_curve,'g')
-        plot([h_offset,h_offset],[0,1e2],'r--')
+            plot(self.t_vect,self.maxvel_velocity_curve,'g')
+        plot(self.t_vect,self.maxvel_curve,'c',linewidth=3)
         for i in range(len(self.sw_s_list)):
             if self.sw_type_list[i]=='t':
-                plot(self.sw_s_list[i]+h_offset,self.sw_sdot_list[i],'ro')
+                plot(self.sw_s_list[i],self.sw_sdot_list[i],'ro')
             if self.sw_type_list[i]=='z':
-                plot(self.sw_s_list[i]+h_offset,self.sw_sdot_list[i],'go')
+                plot(self.sw_s_list[i],self.sw_sdot_list[i],'go')
 

@@ -38,207 +38,117 @@ class MintimeProfileIntegrator():
 ############################## Initialization ################################
 
     def __init__(self,pb):
-        self.pb=pb        
-        self.s_res=[]
+        self.pb=pb
+        
 
-        self.s_traj_list=[]
-        self.sdot_traj_list=[]
+####################### Integrate the limiting curves #########################
 
-        self.cur_s_traj_fw=[]
-        self.cur_sdot_traj_fw=[]
-
-        self.cur_s_traj_bw=[]
-        self.cur_sdot_traj_bw=[]
-
-        self.sws=[]
-        self.swsd=[]
-        self.swt=[]
-
-        self.possible=True
-
-
-
-
-####################### Integrate the profiles #########################
-
-    def integrate_all_profiles(self):
+    def compute_limiting_curves(self):
 
         sdot_init=self.sdot_init
         sdot_final=self.sdot_final
+        dt_integ=self.dt_integ
+        width=self.width
 
-        duration=self.pb.traj.duration        
-
-        #Integrate backward from the end
-        [s_backward,sdot_backward,status]=self.integrate_backward(duration,sdot_final)
-        stop=False
-
-        if len(s_backward)==0:
-            self.main_status="BwTrajVoid"
-            self.possible=False
-            stop=True
-        if status=="TouchedBottom":
-            self.main_status=status
-            self.possible=False
-            stop=True
-        if status=="ReachedBeginning" and sdot_backward[0]<sdot_init:
-            self.main_status="LowerThanSdotInit"
-            self.possible=False
-            stop=True
-
-        if stop:
-            return
-
-        self.s_traj_list.append(s_backward)
-        self.sdot_traj_list.append(sdot_backward)
-        self.cur_s_traj_bw=s_backward
-        self.cur_sdot_traj_bw=sdot_backward
+        s_traj_list=[]
+        sdot_traj_list=[]
+        cat_list=[]
+        duration=self.pb.traj.duration
 
         self.sws=list(self.pb.sw_s_list)
         self.swsd=list(self.pb.sw_sdot_list)
         self.swt=list(self.pb.sw_type_list)
 
+
+        #Integrate backward from the end
+        [s_final_backward,sdot_final_backward]=self.integrate_backward(duration,sdot_final,[],[])
+        s_traj_list.append(s_final_backward)
+        sdot_traj_list.append(sdot_final_backward)
+        cat_list.append('alpha')
+
+
         #Integrate forward from the start
-        [s_forward,sdot_forward,status]=self.integrate_forward(0,sdot_init)
+        [s_forward,sdot_forward]=self.integrate_forward(0,sdot_init,[s_final_backward],[sdot_final_backward])
+        s_traj_list.append(s_forward)
+        sdot_traj_list.append(sdot_forward)
+        cat_list.append('beta')
 
-        if len(s_forward)==0:
-            self.main_status='FwTrajVoid'
+        if len(s_final_backward)==0 or len(s_forward)==0:
             self.possible=False
-            stop=True
-        if status=="TouchedBottom":
-            self.main_status=status
-            self.possible=False
-            stop=True
-
-        self.s_traj_list.append(s_forward)
-        self.sdot_traj_list.append(sdot_forward)
-        self.cur_s_traj_fw=s_forward
-        self.cur_sdot_traj_fw=sdot_forward
-
-        if stop:
             return
 
-        # Integrate backward and forward from the switch points
-        self.compute_limiting_curves()
+        s_target= s_final_backward[0]
+        s_farthest=s_forward[-1]
 
-
-
-########## Integrate the limiting curves from the switch points #############
-
-    def compute_limiting_curves(self):
-
-        main_status="NothingToReport"
-        width=self.width
-        duration=self.pb.traj.duration
-
-        if len(self.sws)==0:
-            self.sws=list(self.pb.sw_s_list)
-            self.swsd=list(self.pb.sw_sdot_list)
-            self.swt=list(self.pb.sw_type_list)
-
-
-       #Integrate backward and forward from switching points
-        while len(self.sws)>0:
-
-
+        #Integrate backward and forward from switching points
+        while True:
+            if s_farthest>s_target: break
+            if s_farthest>duration: break
+            if len(self.sws)==0: break
             si=self.sws.pop(0)
             sdoti=self.swsd.pop(0)
             typei=self.swt.pop(0)
 
+            if si<s_farthest: continue
 
-            if self.is_above(si,sdoti,self.cur_s_traj_fw,self.cur_sdot_traj_fw) or self.is_above(si,sdoti,self.cur_s_traj_bw,self.cur_sdot_traj_bw):
-                continue
-
-            if  typei=='v' or typei=='t':
-                sdoti=self.find_sdot_max(si,sdoti)
-                if sdoti<1e-5:
-                    main_status="CouldnotCrossSwitch/T"
-                    self.possible=False
-                    break
-                [sb,sf]=[si,si]
-                [sdotb,sdotf]=[sdoti,sdoti]
-
-            elif typei=='z':
-                [sb,sdotb,sf,sdotf]=self.find_sdot_max_zi(si,sdoti)
-                if sdotb<0:
-                    main_status="CouldnotCrossSwitch/Z"
-                    self.possible=False
-                    break                   
-
-                self.s_traj_list.append(array([sb,sf]))
-                self.sdot_traj_list.append(array([sdotb,sdotf]))
-
-
-            stop=False
+            if  typei=='z' or  typei=='t' or typei=='v':
+                sdoti=self.find_sdot_min(si,sdoti)
+            if typei=='z':
+                acc_sw=self.pb.correct_accel_zi(si)
+            else:
+                acc_sw=nan
 
             #Backward part
-            [s_backward,sdot_backward,status]=self.integrate_backward(sb,sdotb)
-            if status=="TouchedBottom":
-                main_status=status
-                self.possible=False
-                stop=True
+            [s_backward,sdot_backward]=self.integrate_backward(si,sdoti,s_traj_list,sdot_traj_list,acc=acc_sw)
 
-            if len(s_backward)>0:
-                self.s_traj_list.append(s_backward)
-                self.sdot_traj_list.append(sdot_backward)
+            if s_backward[0]>s_farthest: continue
 
             #Forward part            
-            [s_forward,sdot_forward,status]=self.integrate_forward(sf,sdotf)
-            if status=="TouchedBottom":
-                main_status=status
-                self.possible=False
-                stop=True
+            [s_forward,sdot_forward]=self.integrate_forward(si,sdoti,[s_final_backward],[sdot_final_backward],acc=acc_sw)
+            s_farthest=s_forward[-1]                
 
-            if len(s_forward)>0:
-                self.s_traj_list.append(s_forward)
-                self.sdot_traj_list.append(sdot_forward)
-                self.cur_s_traj_fw=s_forward
-                self.cur_sdot_traj_fw=sdot_forward
+            #Save the trajectories
+            s_traj_list.append(s_backward)
+            sdot_traj_list.append(sdot_backward)
+            cat_list.append('alpha')                
+            s_traj_list.append(s_forward)
+            sdot_traj_list.append(sdot_forward)
+            cat_list.append('beta')
+ 
+        if len(s_traj_list)==0:
+            self.possible=False
+            return
+           
+        self.s_traj_list=s_traj_list
+        self.sdot_traj_list=sdot_traj_list
+        self.cat_list=cat_list
 
-            if stop:
-                break
-
-        return main_status
 
 
 
 ########################### Integrate forward #############################
 
-    def integrate_forward(self,s_start,sdot_start,width=1e15,test_list=False):
+    def integrate_forward(self,s_start,sdot_start,s_traj_list_bw,sdot_traj_list_bw,width=1e15,acc=nan):
 
         dt_integ=self.dt_integ
+
         s_curr=s_start
         sdot_curr=sdot_start
         s_res=[]
         sdot_res=[]
-        start=0
-        status="NothingToReport"
+        n_list=len(s_traj_list_bw)
         cont=True
+        start=0
         while cont:
-            #print [s_curr,sdot_curr]
-            if len(s_res)>width:
-                status="OverpassedPalier"
-                break
-            if s_curr>self.pb.duration: 
-                status="ReachedEnd"
-                break
-            if sdot_curr<0: 
-                [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
-                if alpha>beta: #Double check because of possible discretization errors
-                    status="CrossedMaxvel"
-                else:
-                    status="TouchedBottom"
-                break
-            if isnan(sdot_curr): 
-                status="TouchedBottom"
-                break
-           # If sdot_cur > combined max sdot curve
+            if len(s_res)>width: break
+            if sdot_curr<0: break
+            if s_curr>self.pb.duration: break
+            # If sdot_cur > combined max sdot curve
             if sdot_curr>self.pb.maxvel_interp(s_curr):
                 if(not self.pb.isset_velocity_limits):
-                    status="CrossedMaxvel"
                     break
                 # If sdot_cur < sdot_vel, it means that sdot_cur > sdot_acc
                 if sdot_curr<self.pb.maxvel_velocity_interp(s_curr):
-                    status="CrossedMaxvel"
                     break
                 # Else: sdot_vel < sdot_cur < sdot_acc
                 else:
@@ -288,16 +198,20 @@ class MintimeProfileIntegrator():
                                     #print self.sws
                                     cont2=False
                                     cont=False
-                                    status="Zlajpah"
                                     break
                                 s_curr=s_next
                                 sdot_curr=sdot_next_vel
                             cont2=False
                             cont=False
                             
+                             
+                            
             # Here sdot_cur < combined max sdot curve, so integrate the max acc
             else:                    
-                [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
+                if start<self.palier and not isnan(acc):
+                    beta=acc                
+                else:
+                    [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
                 start+=1
                 s_res.append(s_curr)
                 sdot_res.append(sdot_curr)
@@ -305,50 +219,42 @@ class MintimeProfileIntegrator():
                 s_next=s_curr+sdot_curr*dt_integ
                 s_curr=s_next
                 sdot_curr=sdot_next
-            if self.is_above(s_curr,sdot_curr,self.cur_s_traj_bw,self.cur_sdot_traj_bw) or (test_list and self.is_above_list(s_curr,sdot_curr)):
-                s_res.append(s_curr)
-                sdot_res.append(sdot_curr)
-                status="CrossedBwTraj"
-                break
+            for j in range(n_list-1,-1,-1):
+                s_traj_bw=s_traj_list_bw[j]
+                sdot_traj_bw=sdot_traj_list_bw[j]
+                if self.is_above(s_curr,sdot_curr,s_traj_bw,sdot_traj_bw):
+                    s_res.append(s_curr)
+                    sdot_res.append(sdot_curr)
+                    cont=False  # Stop when crosses a backward trajectory
+                    break
  
-        return(array(s_res),array(sdot_res),status)
+        return(array(s_res),array(sdot_res))
 
 
 
 
 ########################### Integrate backward ############################
 
-    def integrate_backward(self,s_start,sdot_start,width=1e15,test_list=False):
+    def integrate_backward(self,s_start,sdot_start,s_traj_list_fw,sdot_traj_list_fw,width=1e15,acc=nan):
 
         dt_integ=self.dt_integ
+
         s_curr=s_start
         sdot_curr=sdot_start
         s_res=[]
         sdot_res=[]
+        n_list=len(s_traj_list_fw)
         start=0
-        while True:
-            #print [s_curr,sdot_curr]
-            if len(s_res)>width: 
-                status="OverpassedPalier"
-                break
-            if s_curr<0: 
-                status="ReachedBeginning"
-                break
-            if sdot_curr<0: 
+        cont=True
+        while cont:
+            if len(s_res)>width: break
+            if sdot_curr<0: break
+            if s_curr<0: break
+            if sdot_curr>self.pb.maxvel_interp(s_curr): break
+            if start<self.palier and not isnan(acc):
+                alpha=acc
+            else:
                 [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
-                if alpha>beta: #Double check because of possible discretization errors
-                    status="CrossedMaxvel"
-                else:
-                    status="TouchedBottom"
-                break
-            if isnan(sdot_curr): 
-                status="TouchedBottom"
-                break
-            if sdot_curr>self.pb.maxvel_interp(s_curr): 
-                status="CrossedMaxvel"
-                break
-
-            [alpha,beta,ialpha,ibeta]=self.pb.accel_limits(s_curr,sdot_curr)
             start+=1
             s_res.append(s_curr)
             sdot_res.append(sdot_curr)
@@ -356,13 +262,16 @@ class MintimeProfileIntegrator():
             s_next=s_curr-sdot_curr*dt_integ
             s_curr=s_next
             sdot_curr=sdot_next
-            if self.is_above(s_curr,sdot_curr,self.cur_s_traj_fw,self.cur_sdot_traj_fw) or (test_list and self.is_above_list(s_curr,sdot_curr)):
-                s_res.append(s_curr)
-                sdot_res.append(sdot_curr)
-                status='CrossedFwTraj'
-                return(array(s_res)[::-1],array(sdot_res)[::-1],status)
+            for j in range(n_list-1,-1,-1):
+                s_traj_fw=s_traj_list_fw[j]
+                sdot_traj_fw=sdot_traj_list_fw[j]
+                if self.is_above(s_curr,sdot_curr,s_traj_fw,sdot_traj_fw):
+                    s_res.append(s_curr)
+                    sdot_res.append(sdot_curr)
+                    cont=False # Stop when crosses a forward trajectory
+                    break
+        return(array(s_res)[::-1],array(sdot_res)[::-1])
 
-        return(array(s_res)[::-1],array(sdot_res)[::-1],status)
 
 
 
@@ -374,165 +283,115 @@ class MintimeProfileIntegrator():
         s_traj_list=self.s_traj_list
         sdot_traj_list=self.sdot_traj_list
         dt_integ=self.dt_integ
-        
+
         s_curr=0
         s_res=[]
         sdot_res=[]
         while True:
             if s_curr>self.pb.duration: break
             s_res.append(s_curr)
-            [index_min,sdot_min]=self.compute_index(s_curr,s_traj_list,sdot_traj_list)            
+            [index_min,sdot_min]=self.compute_index(s_curr,s_traj_list,sdot_traj_list)
             s_curr=s_curr+sdot_min*dt_integ
             if sdot_min<1e-5: break
             sdot_res.append(sdot_min)
 
         self.s_res=array(s_res)
         self.sdot_res=array(sdot_res)
-        if len(s_res)==0 or s_res[-1]<self.pb.duration-self.tolerance_ends:
+        if len(s_res)==0 or s_res[-1]<self.pb.duration-self.threshold_final:
             self.possible=False
 
 
 
+#################################### Utilities #################################
 
-############################## Dealing with switch points ################################
 
-
-    # Find the highest sdot that allows passing through a tangent/disc point
-    def find_sdot_max(self,s,sdot_top):
+    # Find the highest sdot that allows passing through a switching point
+    def find_sdot_min(self,s,sdot):
 
         dt_integ=self.dt_integ
         width=self.width
 
-        n_search=20
-        
-        for sdot in linspace(sdot_top,0,n_search):
-            [s_forward,sdot_forward,status]=self.integrate_forward(s,sdot,width)
-            [s_backward,sdot_backward,status]=self.integrate_backward(s,sdot,width)
-            if (len(s_forward)>=width or (len(s_forward)>0 and s_forward[-1]>self.pb.duration)) and (len(s_backward)>=width or (len(s_backward)>0 and s_backward[0]<-1)):
-                break
-
-        if sdot==0:
+        bound_top=sdot
+        bound_bottom=0.001
+        min_sep=0.01
+        if bound_top<bound_bottom: return 0
+        sdot=bound_top
+        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+        if (len(s_forward)>=width or (len(s_forward)>0 and s_forward[-1]>self.pb.duration)) and (len(s_backward)>=width or (len(s_backward)>0 and s_backward[0]<-1)):
+            return bound_top
+        sdot=bound_bottom
+        [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+        [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+        if not ((len(s_forward)>=width or (len(s_forward)>0 and s_forward[-1]>self.pb.duration)) and (len(s_backward)>=width or (len(s_backward)>0 and s_backward[0]<-1))):
             return 0
-        if sdot==sdot_top:
-            return sdot_top
-        else:
-            #Here sdot is OK and sdot+sdot_top/(n_search-1) is not OK, we perform a dichotomy search
-            top=sdot+sdot_top/(n_search-1)
-            bot=sdot
-            while n_search>0:
-                st=(top+bot)/2
-                [s_forward,sdot_forward,status]=self.integrate_forward(st,sdot,width)
-                [s_backward,sdot_backward,status]=self.integrate_backward(st,sdot,width)
-                if (len(s_forward)>=width or (len(s_forward)>0 and s_forward[-1]>self.pb.duration)) and (len(s_backward)>=width or (len(s_backward)>0 and s_backward[0]<-1)):
-                    bot=st
-                else:
-                    top=st
-                n_search-=1
-                return bot
-
-
-
-    # Find the highest sdot that allows passing through a zero-inertia point
-    def find_sdot_max_zi(self,s,sdot_top):
-
-        smart_mode=False
-        #if smart_mode=True, we use a smart algorithm to compute the exact slope at the zi point
-        if smart_mode:
-            slope=self.pb.correct_accel_zi(s)/sdot_top
-            tige=self.pb.t_step*4
-            sb=s-tige
-            sdotb=sdot_top-tige*slope
-            sf=s+tige
-            sdotf=sdot_top+tige*slope
-            return [sb,sdotb,sf,sdotf]
-        #if smart_mode=False, we integrate some steps from the zi point and compute the resulting slope
-        else:
-            n_search=20
-            tolerance=20
-            palier=int(self.palier/2)
-
-            for sdot in linspace(sdot_top,0,n_search):
-                s1=s-palier*sdot*self.dt_integ
-                s2=s+palier*sdot*self.dt_integ
-                [s_backward,sdot_backward,status]=self.integrate_backward(s1,sdot,palier)
-                [s_forward,sdot_forward,status]=self.integrate_forward(s2,sdot,palier)
-                if len(s_backward)==0 or len(s_forward)==0:
-                    continue
-                else:
-                    sb=s_backward[0]
-                    sdotb=sdot_backward[0]
-                    sf=s_forward[-1]
-                    sdotf=sdot_forward[-1]
-                    if not self.is_above(s,sdot_top,[sb,sf],[sdotb,sdotf]):
-                        continue
-
-                    slope=(sdotf-sdotb)/(sf-sb)
-                    [alphab,betab,ialpha,ibeta]=self.pb.accel_limits(sb,sdotb)
-                    [alphaf,betaf,ialpha,ibeta]=self.pb.accel_limits(sf,sdotf)
-                    if slope<max(alphab/sdotb,alphaf/sdotf)-tolerance or slope>min(betab/sdotb,betaf/sdotf)+tolerance:
-                        continue
-
-                return [sb,sdotb,sf,sdotf]
-
-            return [s,-1,s,-1]
-
-
-
-
-
-############################## Utilities ################################
+        while bound_top-bound_bottom>min_sep:
+            sdot=(bound_top+bound_bottom)/2
+            [s_forward,sdot_forward]=self.integrate_forward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+            [s_backward,sdot_backward]=self.integrate_backward(s,sdot,[],[],width,acc=self.pb.correct_accel_zi(s))
+            if (len(s_forward)>=width or (len(s_forward)>0 and s_forward[-1]>self.pb.duration)) and (len(s_backward)>=width or (len(s_backward)>0 and s_backward[0]<-1)):
+                bound_bottom=sdot
+            else:
+                bound_top=sdot
+        return bound_bottom
 
 
     # Test whether the point (s,sdot) is above the trajectory (s_traj,sdot_traj)
     def is_above(self,s,sdot,s_traj,sdot_traj):
-        return sdot>=self.pb.linear_interpolate(s,sdot_traj,s_traj,elim_out=True)
+        if len(s_traj)<1:
+            return False
+        if s<=s_traj[0] or s>=s_traj[-1]:
+            return False
+        else:
+            return sdot>self.pb.linear_interpolate(s,sdot_traj,s_traj)
 
 
-    # Test whether the point (s,sdot) is above the list of traj
-    def is_above_list(self,s,sdot):
-        for i in range(len(self.s_traj_list)):
-            s_traj=self.s_traj_list[i]
-            sdot_traj=self.sdot_traj_list[i]
+    # Test whether the point (s,sdot) is above the a list of trajectories
+    def is_underneath_list(self,s,sdot,s_traj_list,sdot_traj_list):
+        for i in range(len(s_traj_list)-1,-1,-1):
+            s_traj=s_traj_list[i]
+            sdot_traj=sdot_traj_list[i]
             if self.is_above(s,sdot,s_traj,sdot_traj):
-                return True
-        return False
+                return False
+        return True
             
 
-    # Compute the index of the curve which is to the bottom and its value at s
+    # Find sdot
+    def find_sdot(self,s,s_traj,sdot_traj):
+        n=len(s_traj)
+        if n==0: return 1e15
+        if s==s_traj[0]: return sdot_traj[0]
+        if s==s_traj[n-1]: return sdot_traj[n-1]
+        if s<s_traj[0] or s>s_traj[n-1]: return 1e15
+        for i in range(1,n):
+            if s_traj[i]>s:
+                r=(s-s_traj[i-1])/(s_traj[i]-s_traj[i-1])
+                return sdot_traj[i-1]+r*(s_traj[i]-s_traj[i-1])
+
+
+    # Compute the index of the curve which is on top
     def compute_index(self,s,s_traj_list,sdot_traj_list):
+
         sdot_min=1e15
         index_min=0
         for j in range(len(s_traj_list)):
-            sdot=self.pb.linear_interpolate(s,sdot_traj_list[j],s_traj_list[j],elim_out=True)
+            sdot=self.find_sdot(s,s_traj_list[j],sdot_traj_list[j])
             if sdot<sdot_min:
                 sdot_min=sdot
                 index_min=j
         return [index_min,sdot_min]
 
 
-
-
-
-#################################### Plotting #################################
-
-
     # Plot the limiting curves and the final velocity profile
-    def plot_profiles(self,h_offset=0):
+    def plot_limiting_curves(self):
+        clf()
+        hold('on')
         T=self.pb.duration
-        self.pb.plot_maxvel_curves(h_offset)
+        self.pb.plot_maxvel_curves()
+
         for i in range(len(self.s_traj_list)):
-            plot(self.s_traj_list[i]+h_offset,self.sdot_traj_list[i],'k',linewidth=2)        
-        if len(self.s_res)>0:
-            plot(self.s_res+h_offset,self.sdot_res,'b--',linewidth=4)
+            plot(self.s_traj_list[i],self.sdot_traj_list[i],'k',linewidth=2)
 
-
-    def plot_fw(self,s,sdot,h_offset=0):
-        [s_res,sdot_res,status]=self.integrate_forward(s,sdot)
-        if len(s_res)>0:
-            plot(s_res+h_offset,sdot_res,'k',linewidth=2)
-
-    def plot_bw(self,s,sdot,h_offset=0):
-        [s_res,sdot_res,status]=self.integrate_backward(s,sdot)
-        if len(s_res)>0:
-            plot(s_res+h_offset,sdot_res,'k',linewidth=2)
-
+        plot(self.s_res,self.sdot_res,'b--',linewidth=4)
+        axis([0,T,0,1.1*max(self.pb.maxvel_curve)])
+        grid('on')

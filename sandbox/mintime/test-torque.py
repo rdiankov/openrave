@@ -22,6 +22,7 @@ Test file for MintimeProblemTorque
 from openravepy import *
 from numpy import *
 from pylab import *
+import scipy
 import time
 import MintimeTrajectory
 import MintimeProblemTorque
@@ -106,9 +107,9 @@ print 'Running the time parameterization algorithm...'
 # Set up a minimum time problem under torque limits
 
 pb=MintimeProblemTorque.MintimeProblemTorque(robot,traj)
-pb.set_dynamics_limits([tau_min,tau_max])
+pb.set_torque_limits(tau_min,tau_max)
 pb.set_velocity_limits(qd_max)
-pb.disc_thr=10 # Threshold in the discontinuity point search
+pb.disc_thr=1 # Threshold in the discontinuity point search
 pb.preprocess()
 #pb.plot_maxvel_curves()
 
@@ -118,13 +119,15 @@ pb.preprocess()
 algo=MintimeProfileIntegrator.MintimeProfileIntegrator(pb)
 algo.dt_integ=t_step/10 # time step to integrate the limiting curves
 algo.width=5 # window to test if we can get through a switching point
-algo.palier=10 # length of the palier around zero inertia points
-algo.tolerance_ends=1e-2 # threshold at the ends
-algo.sdot_init=1e-4 # initial value of sdot
-algo.sdot_final=1e-4 # final value of sdot
+algo.palier=0 # length of the palier around zero inertia points
+algo.threshold_final=1e-2 # threshold at the end
+algo.sdot_init=1 # initial value of sdot
+algo.sdot_final=1 # final value of sdot
 
-algo.integrate_all_profiles()
-algo.integrate_final()
+algo.possible=True
+algo.compute_limiting_curves()
+if algo.possible:
+    algo.integrate_final()
 
 
 
@@ -150,33 +153,32 @@ print 'Total execution time: '+str(time.time()-deb)+'s'
 print '\n*****************************************************************\n'
 
 
-raw_input('Press Enter to execute the trajectory /before/ time-reparameterization (duration='+str(traj.duration)+'s)')
-MintimeProblemTorque.Execute(robot,traj,0.02)
-raw_input('Press Enter to execute the trajectory /after/ time-reparameterization (duration='+str(traj2.duration)+'s)')
-MintimeProblemTorque.Execute(robot,traj2,0.02)
+raw_input('Press Enter to execute the trajectory /before/ shortcutting (duration='+str(traj.duration)+'s)')
+MintimeTrajectory.Execute(robot,traj,0.02)
+raw_input('Press Enter to execute the trajectory /after/ shortcutting  (duration='+str(traj2.duration)+'s)')
+MintimeTrajectory.Execute(robot,traj2,0.02)
 
 
 # Inverse dynamics of the retimed trajectory and plot
-tau=MintimeProblemTorque.ComputeTorques(robot,traj,grav)
-tau2=MintimeProblemTorque.ComputeTorques(robot,traj2,grav)
+tau=MintimeTrajectory.ComputeTorques(robot,traj,grav)
+tau2=MintimeTrajectory.ComputeTorques(robot,traj2,grav)
 
 
 mpl.axes.set_default_color_cycle(['r','b','g','m'])
 figure(1)
-MintimeProblemTorque.PlotVelocities(traj.t_vect,traj.qd_vect,qd_max)
+MintimeTrajectory.PlotVelocities(traj.t_vect,traj.qd_vect,qd_max)
 title('Velocity profiles before reparameterization')
 figure(2)
-MintimeProblemTorque.PlotTorques(traj.t_vect,tau,tau_min,tau_max)
+MintimeTrajectory.PlotTorques(traj.t_vect,tau,tau_min,tau_max)
 title('Torque profiles before reparameterization')
 figure(3)
-algo.plot_profiles()
-axis([0,traj.duration,0,10])
+algo.plot_limiting_curves()
 title('Phase space')
 figure(4)
-MintimeProblemTorque.PlotVelocities(traj2.t_vect,traj2.qd_vect,qd_max)
+MintimeTrajectory.PlotVelocities(traj2.t_vect,traj2.qd_vect,qd_max)
 title('Velocity profiles after reparameterization')
 figure(5)
-MintimeProblemTorque.PlotTorques(traj2.t_vect,tau2,tau_min,tau_max)
+MintimeTrajectory.PlotTorques(traj2.t_vect,tau2,tau_min,tau_max)
 title('Torque profiles after reparameterization')
 
 
