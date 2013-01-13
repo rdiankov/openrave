@@ -3089,7 +3089,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
             }
 
             stringstream sout, sin;
-            sin << "Start " << _width << " " << _height << " " << VIDEO_FRAMERATE << " codec " << _videocodec << " ";
+            sin << "Start " << _nRenderWidth << " " << _nRenderHeight << " " << VIDEO_FRAMERATE << " codec " << _videocodec << " ";
             if( bRealtimeVideo ) {
                 sin << "timing realtime ";
             }
@@ -3265,7 +3265,7 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     // flip R and B
     for(int i = 0; i < _nRenderHeight; ++i) {
         for(int j = 0; j < _nRenderWidth; ++j) {
-            unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * _width + j);
+            unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * _nRenderWidth + j);
             swap(ptr[0], ptr[2]);
         }
     }
