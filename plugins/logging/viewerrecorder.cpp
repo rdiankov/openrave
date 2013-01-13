@@ -224,11 +224,16 @@ protected:
                     break;
                 }
             }
+            boost::mutex::scoped_lock lock(_mutex);
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }
-            boost::mutex::scoped_lock lock(_mutex);
-            RAVELOG_INFO("video filename: %s\n",_filename.c_str());
+            else{
+                stringstream ss;
+                ss << "Resize " << _nVideoWidth << " " << _nVideoHeight << " ";
+                pviewer->SendCommand(sout,ss);
+            }
+            RAVELOG_INFO("video filename: %s, %d x %d @ %f frames/sec\n",_filename.c_str(),_nVideoWidth,_nVideoHeight,_framerate);
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
             _frametime = (uint64_t)(1000000.0f/_framerate);
@@ -294,6 +299,7 @@ protected:
         frame->_width = width;
         frame->_height = height;
         frame->_pixeldepth = pixeldepth;
+        //RAVELOG_VERBOSE("image frame is %d x %d\n",width,height);
         frame->_timestamp = timestamp;
         frame->_vimagememory.resize(width*height*pixeldepth);
         std::copy(memory,memory+width*height*pixeldepth,frame->_vimagememory.begin());
