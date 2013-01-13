@@ -461,8 +461,9 @@ public:
     std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
 
-    unsigned int _width;
-    unsigned int _height;
+    /// width and height of offscreen-rendered image
+    unsigned int _nRenderWidth;
+    unsigned int _nRenderHeight;
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;

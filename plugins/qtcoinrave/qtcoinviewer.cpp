@@ -144,7 +144,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #else
     QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-    ViewerBase(penv), _ivOffscreen(SbViewportRegion(_width, _height))
+    ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
 {
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -189,10 +189,10 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     //vlayout->addWidget(view1, 1);
     setCentralWidget (view1);
 
-    _width=VIDEO_WIDTH;
-    _height=VIDEO_HEIGHT;
+    _nRenderWidth=VIDEO_WIDTH;
+    _nRenderHeight=VIDEO_HEIGHT;
 
-    resize(_width, _height);
+    resize(_nRenderWidth, _nRenderHeight);
 
     _pviewer = new SoQtExaminerViewer(view1);
 
@@ -2718,7 +2718,7 @@ void QtCoinViewer::_VideoFrame()
         ViewerImageCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
         if( !!pdata ) {
             try {
-                pdata->_callback(memory,_width,_height,3);
+                pdata->_callback(memory,_nRenderWidth,_nRenderHeight,3);
             }
             catch(const std::exception& e) {
                 RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
@@ -3253,7 +3253,7 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     if( !_bCanRenderOffscreen ) {
         return NULL;
     }
-    _ivOffscreen.setViewportRegion(SbViewportRegion(_width, _height));
+    _ivOffscreen.setViewportRegion(SbViewportRegion(_nRenderWidth, _nRenderHeight));
     _ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph());
 
     if( _ivOffscreen.getBuffer() == NULL ) {
@@ -3263,8 +3263,8 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     }
 
     // flip R and B
-    for(int i = 0; i < _height; ++i) {
-        for(int j = 0; j < _width; ++j) {
+    for(int i = 0; i < _nRenderHeight; ++i) {
+        for(int j = 0; j < _nRenderWidth; ++j) {
             unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * _width + j);
             swap(ptr[0], ptr[2]);
         }
@@ -3451,8 +3451,8 @@ bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 
 bool QtCoinViewer::_CommandResize(ostream& sout, istream& sinput)
 {
-    sinput >> _width;
-    sinput >> _height;
+    sinput >> _nRenderWidth;
+    sinput >> _nRenderHeight;
     if( !!sinput ) {
         return true;
     }
