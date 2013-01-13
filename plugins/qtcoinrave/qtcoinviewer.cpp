@@ -144,8 +144,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 #else
     QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
 #endif
-    ViewerBase(penv),
-    _ivOffscreen(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT))
+    ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
 {
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -173,6 +172,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("ShowWorldAxes",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("Resize",boost::bind(&QtCoinViewer::_CommandResize,this,_1,_2),
+                    "Accepts width x height to resize internal video frame");
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -188,7 +189,10 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     //vlayout->addWidget(view1, 1);
     setCentralWidget (view1);
 
-    resize(640, 480);
+    _nRenderWidth=VIDEO_WIDTH;
+    _nRenderHeight=VIDEO_HEIGHT;
+
+    resize(_nRenderWidth, _nRenderHeight);
 
     _pviewer = new SoQtExaminerViewer(view1);
 
@@ -2714,7 +2718,7 @@ void QtCoinViewer::_VideoFrame()
         ViewerImageCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
         if( !!pdata ) {
             try {
-                pdata->_callback(memory,VIDEO_WIDTH,VIDEO_HEIGHT,3);
+                pdata->_callback(memory,_nRenderWidth,_nRenderHeight,3);
             }
             catch(const std::exception& e) {
                 RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
@@ -3085,7 +3089,7 @@ void QtCoinViewer::_RecordSetup(bool bOn, bool bRealtimeVideo)
             }
 
             stringstream sout, sin;
-            sin << "Start " << VIDEO_WIDTH << " " << VIDEO_HEIGHT << " " << VIDEO_FRAMERATE << " codec " << _videocodec << " ";
+            sin << "Start " << _nRenderWidth << " " << _nRenderHeight << " " << VIDEO_FRAMERATE << " codec " << _videocodec << " ";
             if( bRealtimeVideo ) {
                 sin << "timing realtime ";
             }
@@ -3249,7 +3253,7 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     if( !_bCanRenderOffscreen ) {
         return NULL;
     }
-    _ivOffscreen.setViewportRegion(SbViewportRegion(VIDEO_WIDTH, VIDEO_HEIGHT));
+    _ivOffscreen.setViewportRegion(SbViewportRegion(_nRenderWidth, _nRenderHeight));
     _ivOffscreen.render(_pviewer->getSceneManager()->getSceneGraph());
 
     if( _ivOffscreen.getBuffer() == NULL ) {
@@ -3259,9 +3263,9 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     }
 
     // flip R and B
-    for(int i = 0; i < VIDEO_HEIGHT; ++i) {
-        for(int j = 0; j < VIDEO_WIDTH; ++j) {
-            unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * VIDEO_WIDTH + j);
+    for(int i = 0; i < _nRenderHeight; ++i) {
+        for(int j = 0; j < _nRenderWidth; ++j) {
+            unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * _nRenderWidth + j);
             swap(ptr[0], ptr[2]);
         }
     }
@@ -3443,6 +3447,16 @@ bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
     return !!sinput;
+}
+
+bool QtCoinViewer::_CommandResize(ostream& sout, istream& sinput)
+{
+    sinput >> _nRenderWidth;
+    sinput >> _nRenderHeight;
+    if( !!sinput ) {
+        return true;
+    }
+    return false;
 }
 
 bool QtCoinViewer::_SetFeedbackVisibility(ostream& sout, istream& sinput)
