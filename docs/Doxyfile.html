@@ -71,7 +71,7 @@ ENABLED_SECTIONS       =
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
 SHOW_DIRECTORIES       = NO
-FILE_VERSION_FILTER = ./svn-version-filter.sh
+FILE_VERSION_FILTER =  "/bin/sh -c 'git log --pretty=\"format:%ci, commit:%h\" -1 \"${1}\" || echo no git'"
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
 #---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ HTML_OUTPUT            = coreapihtml
 HTML_FILE_EXTENSION    = .html
 HTML_HEADER            = doxygen-header.html
 HTML_FOOTER            = 
-HTML_STYLESHEET        = doxygen.css
+HTML_STYLESHEET        = 
 HTML_ALIGN_MEMBERS     = YES
 GENERATE_HTMLHELP      = NO
 CHM_FILE               = 
