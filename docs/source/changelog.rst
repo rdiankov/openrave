@@ -65,6 +65,8 @@ Python
 
 * Added __hash__ to most classes like KinBody.Link, Robot.Manipulator, etc so they can be used in dictionaries.
 
+* Register RaveDestroy function call on sys exit (John Schulman).
+
 Misc
 ----
 
@@ -76,7 +78,11 @@ Misc
 
 * Add ``OPT_IKFAST_FLOAT32`` cmake option to control whether 32bit float ikfast shared objects can be loaded.
 
-* switched collada writing to write all geometries regardless if they are similar (default was to reuse data)
+* Switched collada writing to write all geometries regardless if they are similar (default was to reuse data)
+
+* qtcoin video size recording can be changed with the Resize command. (Robert Ellenberg)
+
+* Simulation thread timing tweaked and more accurate to real time. (Robert Ellenberg)
 
 Version 0.8.2
 =============

@@ -84,6 +84,8 @@ def _registerEnumPicklers():
 
 _registerEnumPicklers()
 
+import atexit
+atexit.register(openravepy_int.RaveDestroy)
 
 class openrave_exception(Exception):
     """wrap up the C++ openrave_exception"""
