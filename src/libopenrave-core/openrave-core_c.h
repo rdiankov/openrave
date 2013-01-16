@@ -14,12 +14,11 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 #ifndef OPENRAVE_CORE_H
 #define OPENRAVE_CORE_H
 
 // public OpenRAVE header
-#include <openrave/openrave.h>
+#include <openrave_c/openrave_c.h>
 
 #if defined(OPENRAVE_CORE_DLL)
   #ifdef OPENRAVE_CORE_DLL_EXPORTS
@@ -33,17 +32,19 @@
   #define OPENRAVE_CORE_LOCAL
 #endif
 
-namespace OpenRAVE
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// \brief Creates an OpenRAVE environment.
-///
 /// \param bLoadAllPlugins passed into \ref RaveInitialize
-OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment();
+OPENRAVE_CORE_API void* ORCEnvironmentCreate();
 
-/// \deprecated (10/09/23) see \ref RaveCreateEnvironment
-OPENRAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;
+/// \brief releases the environment pointer returned from ORCEnvironmentCreate
+OPENRAVE_CORE_API void ORCEnvironmentRelease(void*);
 
-} // end namespace OpenRAVE
+#ifdef __cplusplus
+}
+#endif
 
 #endif

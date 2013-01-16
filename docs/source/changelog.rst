@@ -34,6 +34,11 @@ Core
 
 * Added :meth:`.SpaceSample.SampleSequenceOneReal` and :meth:`.SpaceSample.SampleSequenceOneUINT32` for easier retrieval of samples.
 
+C Bindings
+----------
+
+* Added pure C bindings in the **includeopenrave_c** folder with **libopenrave_c** and **libopenrave-core_c** libraries.
+
 Inverse Kinematics
 ------------------
 

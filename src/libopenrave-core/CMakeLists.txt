@@ -70,6 +70,25 @@ else()
 endif()
 install(FILES openrave-core.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}dev)
 
+if( OPT_CBINDINGS )
+  add_library(libopenrave-core_c SHARED openrave-core_c.cpp)
+  add_dependencies(libopenrave-core_c libopenrave-core)
+  # remove "${LIBOPENRAVE_LINK_FLAGS} until can figure out symbol visibility issue
+  set_target_properties(libopenrave-core_c PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core_c
+    SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
+    VERSION ${OPENRAVE_VERSION}
+    CLEAN_DIRECT_OUTPUT 1
+    COMPILE_FLAGS "-DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
+    LINK_FLAGS "")
+  target_link_libraries (libopenrave-core_c libopenrave-core)
+  if( MSVC )
+    install(TARGETS libopenrave-core_c RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
+  else()
+    install(TARGETS libopenrave-core_c DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
+  endif()
+  install(FILES openrave-core_c.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}cbindings-dev)
+endif()
+
 if( OPT_STATIC )
   # visual studio needs static built
   add_library(libopenrave-core_static STATIC ${openrave_core_SOURCES})

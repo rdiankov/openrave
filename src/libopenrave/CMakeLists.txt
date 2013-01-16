@@ -41,6 +41,25 @@ endif()
 #  install(FILES libopenrave.so DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
 #endif()
 
+if( OPT_CBINDINGS )
+  add_library(libopenrave_c SHARED libopenrave_c.cpp)
+  add_dependencies(libopenrave_c libopenrave)
+  # remove "${LIBOPENRAVE_LINK_FLAGS} until can figure out symbol visibility issue
+  set_target_properties(libopenrave_c PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}_c
+    SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
+    VERSION ${OPENRAVE_VERSION}
+    CLEAN_DIRECT_OUTPUT 1
+    COMPILE_FLAGS " ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
+    LINK_FLAGS "${FPARSER_LINK_FLAGS}")
+  target_link_libraries(libopenrave_c libopenrave)
+  if( MSVC )
+    install(TARGETS libopenrave_c EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
+  else()
+    install(TARGETS libopenrave_c EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
+  endif()
+endif()
+
+
 if( OPT_STATIC )
   # visual studio needs static lib built
   if( MSVC )

@@ -48,6 +48,7 @@ option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and p
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
+option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -809,6 +810,11 @@ endif()
 
 file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
 install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
+if( OPT_CBINDINGS )
+  file(GLOB rave_cheader_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave_c/*.h)
+  install(FILES ${rave_cheader_files} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c COMPONENT ${COMPONENT_PREFIX}cbindings-dev)
+endif()
+
 install(FILES rave/rave.h rave/plugin.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
 install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 
