@@ -882,6 +882,9 @@ public:
     uint64_t GetSimulationTime() {
         return _penv->GetSimulationTime();
     }
+    bool IsSimulationRunning() {
+        return _penv->IsSimulationRunning();
+    }
 
     void Lock()
     {
@@ -1561,6 +1564,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime"), DOXY_FN(EnvironmentBase,StartSimulation)))
                     .def("StopSimulation",&PyEnvironmentBase::StopSimulation, DOXY_FN(EnvironmentBase,StopSimulation))
                     .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
+                    .def("IsSimulationRunning",&PyEnvironmentBase::IsSimulationRunning, DOXY_FN(EnvironmentBase,IsSimulationRunning))
                     .def("Lock",Lock1,"Locks the environment mutex.")
                     //.def("Lock",Lock2,args("timeout"), "Locks the environment mutex with a timeout.")
                     .def("Unlock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
