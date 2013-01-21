@@ -2479,7 +2479,6 @@ class IKFastSolver(AutoReloader):
                     AllEquations.append(eq)
 
         # check if planar with respect to normaldir
-        from IPython.Shell import IPShellEmbed; IPShellEmbed(argv='')(local_ns=locals())
         extravar = None
         if normaldir is not None:
             if Tallmult[0:3,0:3]*normaldir == normaldir:
@@ -4271,8 +4270,6 @@ class IKFastSolver(AutoReloader):
         if any([s[0].numsolutions()==1 for s in solutions]):
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
 
-        #from IPython.Shell import IPShellEmbed; IPShellEmbed(argv='')(local_ns=locals())
-        
         curvarsubssol = []
         for var0,var1 in combinations(curvars,2):
             othervars = unknownvars+[var for var in curvars if var != var0 and var != var1]
