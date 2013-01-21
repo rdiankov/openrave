@@ -60,6 +60,9 @@ public:
         Prop_LinkEnable=0x800,     ///< enable property of link changed
         Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
         Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
+        Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters() and Joint::SetIntParameters() are called
+        Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters() and Link::SetIntParameters() are called
+
         // robot only
         // 0x00010000
         Prop_RobotSensors = 0x00020000,     ///< [robot only] all properties of all sensors
@@ -510,10 +513,20 @@ protected:
             return _info._mapFloatParameters;
         }
 
+        /// \brief set custom float parameters
+        ///
+        /// \param parameters if empty, then removes the parameter
+        virtual void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
+
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
             return _info._mapIntParameters;
         }
+
+        /// \brief set custom int parameters
+        ///
+        /// \param parameters if empty, then removes the parameter
+        virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
@@ -984,10 +997,20 @@ public:
             return _info._mapFloatParameters;
         }
 
+        /// \brief set custom float parameters
+        ///
+        /// \param parameters if empty, then removes the parameter
+        virtual void SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters);
+
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
             return _info._mapIntParameters;
         }
+
+        /// \brief set custom int parameters
+        ///
+        /// \param parameters if empty, then removes the parameter
+        virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
 protected:
         JointInfo _info;

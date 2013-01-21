@@ -76,6 +76,9 @@ def transdist(list0,list1):
 def axisangledist(axis0,axis1):
     return 2*arccos(numpy.minimum(1.0,dot(quatFromAxisAngle(axis0),quatFromAxisAngle(axis1))))
 
+def ComputePoseDistance(pose0,pose1):
+    return sqrt(0.3*2*arccos(numpy.minimum(1.0,dot(pose0[0:4],pose1[0:4])))**2 + sum((pose0[4:7]-pose1[4:7])**2))
+
 def randtrans():
     T = matrixFromAxisAngle(random.rand(3)*6-3)
     T[0:3,3] = random.rand(3)-0.5            

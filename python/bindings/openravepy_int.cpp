@@ -1613,7 +1613,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     {
         scope options = class_<DummyStruct>("options")
-                        .add_property("ReturnTransformQuaternions",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
+                        .add_static_property("returnTransformQuaternion",GetReturnTransformQuaternions,SetReturnTransformQuaternions);
     }
 
     scope().attr("__version__") = OPENRAVE_VERSION_STRING;

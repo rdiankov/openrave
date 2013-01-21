@@ -29,7 +29,7 @@ def RobotStateSaver(body,options=None):
     log.warn('use body.CreateRobotStateSaver instead of RobotStateSaver')
     return body.CreateRobotStateSaver(options)
 
-class CollisionOptionsStateSaver:
+class CollisionOptionsStateSaver(object):
     """Saves/restores the state of the collision checker options
     """
     def __init__(self,checker,options=None,required=True):
@@ -48,7 +48,15 @@ class CollisionOptionsStateSaver:
     def __exit__(self, type, value, traceback):
         if self.oldoptions is not None:
             self.checker.SetCollisionOptions(self.oldoptions)
-    
+
+class TransformQuaternionsSaver(object):
+    """saves/restores the openravepy_int.options.returnTransformQuaternion state
+    """
+    def __enter__(self):
+        self.laststate = openravepy_int.options.returnTransformQuaternion
+    def __exit__(self, type, value, traceback):
+        openravepy_int.options.returnTransformQuaternion = self.laststate
+        
 def with_destroy(fn):
     """a decorator that always calls openravepy_int.RaveDestroy at the function end"""
     def newfn(*args,**kwargs):

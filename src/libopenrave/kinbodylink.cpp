@@ -368,6 +368,28 @@ void KinBody::Link::GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> 
     }
 }
 
+void KinBody::Link::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)
+{
+    if( parameters.size() > 0 ) {
+        _info._mapFloatParameters[key] = parameters;
+    }
+    else {
+        _info._mapFloatParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+}
+
+void KinBody::Link::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
+{
+    if( parameters.size() > 0 ) {
+        _info._mapIntParameters[key] = parameters;
+    }
+    else {
+        _info._mapIntParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+}
+
 bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
 {
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();

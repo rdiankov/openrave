@@ -664,6 +664,14 @@ class TestKinematics(EnvironmentSetup):
             assert(transdist(body.GetDOFAccelerationLimits(),originalaccel) <= g_epsilon)
             assert(transdist(body.GetTransform(),T) <= g_epsilon)
 
+            # test returning quaternions
+            Tmassframe = body.GetLinks()[-1].GetGlobalMassFrame()
+            with TransformQuaternionsSaver():
+                openravepy_int.options.returnTransformQuaternion = True
+                assert(ComputePoseDistance(body.GetTransform(),poseFromMatrix(T)) <= g_epsilon)
+                assert(ComputePoseDistance(body.GetLinks()[-1].GetGlobalMassFrame(), poseFromMatrix(Tmassframe)) <= g_epsilon)
+            assert(transdist(body.GetTransform(),T) <= g_epsilon)
+                
             # try again except without 'with'
             statesaver = KinBody.KinBodyStateSaver(body,KinBody.SaveParameters.JointMaxVelocityAndAcceleration|KinBody.SaveParameters.LinkTransformation)
             body.SetTransform(eye(4))

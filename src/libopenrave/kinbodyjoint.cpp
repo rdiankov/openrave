@@ -1341,6 +1341,28 @@ KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyConstPt
     return jointindex < numjoints ? parent->GetJoints().at(jointindex) : parent->GetPassiveJoints().at(jointindex-numjoints);
 }
 
+void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)
+{
+    if( parameters.size() > 0 ) {
+        _info._mapFloatParameters[key] = parameters;
+    }
+    else {
+        _info._mapFloatParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+}
+
+void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
+{
+    if( parameters.size() > 0 ) {
+        _info._mapIntParameters[key] = parameters;
+    }
+    else {
+        _info._mapIntParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+}
+
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {

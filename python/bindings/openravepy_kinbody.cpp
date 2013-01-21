@@ -21,6 +21,25 @@
 
 namespace openravepy {
 
+template <typename T>
+boost::python::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, boost::python::object oname=boost::python::object())
+{
+    if( oname == object() ) {
+        boost::python::dict oparameters;
+        FOREACHC(it, parameters) {
+            oparameters[it->first] = toPyArray(it->second);
+        }
+        return oparameters;
+    }
+    std::string name = boost::python::extract<std::string>(oname);
+    typename std::map<std::string, std::vector<T> >::const_iterator it = parameters.find(name);
+    if( it != parameters.end() ) {
+        return toPyArray(it->second);
+    }
+    return boost::python::object();
+}
+
+
 class PyStateRestoreContextBase
 {
 public:
@@ -561,19 +580,22 @@ public:
             return toPyArray<dReal,6>(v);
         }
 
-        boost::python::dict GetFloatParameters() const {
-            boost::python::dict parameters;
-            FOREACHC(it, _plink->GetFloatParameters()) {
-                parameters[it->first] = toPyArray(it->second);
-            }
-            return parameters;
+        boost::python::object GetFloatParameters(object oname=boost::python::object()) const {
+            return GetCustomParameters(_plink->GetFloatParameters(), oname);
         }
-        boost::python::dict GetIntParameters() const {
-            boost::python::dict parameters;
-            FOREACHC(it, _plink->GetIntParameters()) {
-                parameters[it->first] = toPyArray(it->second);
-            }
-            return parameters;
+
+        void SetFloatParameters(const std::string& key, object oparameters)
+        {
+            _plink->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
+        }
+
+        boost::python::object GetIntParameters(object oname=boost::python::object()) const {
+            return GetCustomParameters(_plink->GetIntParameters(), oname);
+        }
+
+        void SetIntParameters(const std::string& key, object oparameters)
+        {
+            _plink->SetIntParameters(key,ExtractArray<int>(oparameters));
         }
 
         std::string __repr__() {
@@ -810,19 +832,22 @@ public:
             return _pjoint->AddTorque(vtorques);
         }
 
-        boost::python::dict GetFloatParameters() const {
-            boost::python::dict parameters;
-            FOREACHC(it, _pjoint->GetFloatParameters()) {
-                parameters[it->first] = toPyArray(it->second);
-            }
-            return parameters;
+        boost::python::object GetFloatParameters(object oname=boost::python::object()) const {
+            return GetCustomParameters(_pjoint->GetFloatParameters(), oname);
         }
-        boost::python::dict GetIntParameters() const {
-            boost::python::dict parameters;
-            FOREACHC(it, _pjoint->GetIntParameters()) {
-                parameters[it->first] = toPyArray(it->second);
-            }
-            return parameters;
+
+        void SetFloatParameters(const std::string& key, object oparameters)
+        {
+            _pjoint->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
+        }
+
+        boost::python::object GetIntParameters(object oname=boost::python::object()) const {
+            return GetCustomParameters(_pjoint->GetIntParameters(), oname);
+        }
+
+        void SetIntParameters(const std::string& key, object oparameters)
+        {
+            _pjoint->SetIntParameters(key,ExtractArray<int>(oparameters));
         }
 
         string __repr__() {
@@ -3286,6 +3311,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, Create
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateRobotStateSaver_overloads, CreateRobotStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDOFValues, 1,2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0,1)
 
 void init_openravepy_kinbody()
 {
@@ -3594,8 +3621,10 @@ void init_openravepy_kinbody()
                          .def("IsRigidlyAttached",&PyKinBody::PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                          .def("GetVelocity",&PyKinBody::PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))
                          .def("SetVelocity",&PyKinBody::PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
-                         .def("GetFloatParameters",&PyKinBody::PyLink::GetFloatParameters,DOXY_FN(KinBody::Link,GetFloatParameters))
-                         .def("GetIntParameters",&PyKinBody::PyLink::GetIntParameters,DOXY_FN(KinBody::Link,GetIntParameters))
+                         .def("GetFloatParameters",&PyKinBody::PyLink::GetFloatParameters,GetFloatParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetFloatParameters)))
+                         .def("SetFloatParameters",&PyKinBody::PyLink::SetFloatParameters,DOXY_FN(KinBody::Link,SetFloatParameters))
+                         .def("GetIntParameters",&PyKinBody::PyLink::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetIntParameters)))
+                         .def("SetIntParameters",&PyKinBody::PyLink::SetIntParameters,DOXY_FN(KinBody::Link,SetIntParameters))
                          .def("__repr__", &PyKinBody::PyLink::__repr__)
                          .def("__str__", &PyKinBody::PyLink::__str__)
                          .def("__unicode__", &PyKinBody::PyLink::__unicode__)
@@ -3690,8 +3719,10 @@ void init_openravepy_kinbody()
                           .def("SubtractValue",&PyKinBody::PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))
 
                           .def("AddTorque",&PyKinBody::PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
-                          .def("GetFloatParameters",&PyKinBody::PyJoint::GetFloatParameters,DOXY_FN(KinBody::Joint,GetFloatParameters))
-                          .def("GetIntParameters",&PyKinBody::PyJoint::GetIntParameters,DOXY_FN(KinBody::Joint,GetIntParameters))
+                          .def("GetFloatParameters",&PyKinBody::PyJoint::GetFloatParameters,GetFloatParameters_overloads(args("name"), DOXY_FN(KinBody::Joint,GetFloatParameters)))
+                          .def("SetFloatParameters",&PyKinBody::PyJoint::SetFloatParameters,DOXY_FN(KinBody::Joint,SetFloatParameters))
+                          .def("GetIntParameters",&PyKinBody::PyJoint::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Joint,GetIntParameters)))
+                          .def("SetIntParameters",&PyKinBody::PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
                           .def("__str__", &PyKinBody::PyJoint::__str__)
                           .def("__unicode__", &PyKinBody::PyJoint::__unicode__)

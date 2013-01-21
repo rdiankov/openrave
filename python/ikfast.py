@@ -4269,7 +4269,7 @@ class IKFastSolver(AutoReloader):
         # In the bertold robot case, the next possibility is a pair-wise solution involving two variables
         if any([s[0].numsolutions()==1 for s in solutions]):
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
-
+        
         curvarsubssol = []
         for var0,var1 in combinations(curvars,2):
             othervars = unknownvars+[var for var in curvars if var != var0 and var != var1]
@@ -4284,7 +4284,7 @@ class IKFastSolver(AutoReloader):
             if len(raweqns) > 1:
                 curvarsubssol.append((var0,var1,raweqns,complexity))
         curvarsubssol.sort(lambda x, y: x[3]-y[3])
-
+        
         if len(curvars) == 2 and self.isHinge(curvars[0].name) and self.isHinge(curvars[1].name):
             # there's only two variables left, it might be the case that the axes are aligning and the two variables are dependent on each other
             var0,var1,raweqns,complexity = curvarsubssol[0]
