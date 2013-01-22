@@ -23,7 +23,7 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone) {
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true) {
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -109,9 +109,11 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     FOREACH(it,_dofbranches) {
         *it = 0;
     }
+    for(size_t i = 0; i < _vaxes.size(); ++i) {
+        _vaxes[i] = Vector(0,0,1);
+    }
     jointindex=-1;
     dofindex = -1; // invalid index
-    _bActive = true;
     _bInitialized = false;
     _info._type = type;
 }
@@ -204,11 +206,11 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     if( _info._type & KinBody::JointSpecialBit ) {
         switch(_info._type) {
         case KinBody::JointHinge2: {
-            Vector axis1cur = tjoint.rotate(_info._vaxes[0]), axis2cur = tjoint.rotate(_info._vaxes[1]);
+            Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
-            vec1 = (_info._vaxes[1] - _info._vaxes[0].dot3(_info._vaxes[1])*_info._vaxes[0]).normalize();
-            vec2 = (axis2cur - _info._vaxes[0].dot3(axis2cur)*_info._vaxes[0]).normalize();
-            vec3 = _info._vaxes[0].cross(vec1);
+            vec1 = (_vaxes[1] - _vaxes[0].dot3(_vaxes[1])*_vaxes[0]).normalize();
+            vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
+            vec3 = _vaxes[0].cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
             if( f < -PI ) {
                 f += 2*PI;
@@ -217,7 +219,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 f -= 2*PI;
             }
             pValues.push_back(_info._voffsets[0]+f+(_dofbranches[0]*2*PI));
-            vec1 = (_info._vaxes[0] - axis2cur.dot(_info._vaxes[0])*axis2cur).normalize();
+            vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
@@ -253,7 +255,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     else {
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
-            Vector vaxis = _info._vaxes.at(i);
+            Vector vaxis = _vaxes.at(i);
             if( IsRevolute(i) ) {
                 if( i+1 < GetDOF() ) {
                     std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
@@ -295,12 +297,12 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     if( _info._type & KinBody::JointSpecialBit ) {
         switch(_info._type) {
         case KinBody::JointHinge2: {
-            Vector axis1cur = tjoint.rotate(_info._vaxes[0]), axis2cur = tjoint.rotate(_info._vaxes[1]);
+            Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
             if( iaxis == 0 ) {
-                vec1 = (_info._vaxes[1] - _info._vaxes[0].dot3(_info._vaxes[1])*_info._vaxes[0]).normalize();
-                vec2 = (axis2cur - _info._vaxes[0].dot3(axis2cur)*_info._vaxes[0]).normalize();
-                vec3 = _info._vaxes[0].cross(vec1);
+                vec1 = (_vaxes[1] - _vaxes[0].dot3(_vaxes[1])*_vaxes[0]).normalize();
+                vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
+                vec3 = _vaxes[0].cross(vec1);
                 f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
                 if( f < -PI ) {
                     f += 2*PI;
@@ -311,7 +313,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 return _info._voffsets[0]+f+(_dofbranches[0]*2*PI);
             }
             else if( iaxis == 1 ) {
-                vec1 = (_info._vaxes[0] - axis2cur.dot(_info._vaxes[0])*axis2cur).normalize();
+                vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
                 vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
                 vec3 = axis2cur.cross(vec1);
                 f = 2.0*RaveAtan2(vec3.dot(vec2), vec1.dot(vec2));
@@ -388,10 +390,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
-            return _info._voffsets[0]+(tjoint.trans.x*_info._vaxes[0].x+tjoint.trans.y*_info._vaxes[0].y+tjoint.trans.z*_info._vaxes[0].z);
+            return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
         }
         else if( _info._type == KinBody::JointRevolute ) {
-            f = 2.0f*RaveAtan2(tjoint.rot.y*_info._vaxes[0].x+tjoint.rot.z*_info._vaxes[0].y+tjoint.rot.w*_info._vaxes[0].z, tjoint.rot.x);
+            f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
             // expect values to be within -PI to PI range
             if( f < -PI ) {
                 f += 2*PI;
@@ -404,7 +406,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
 
         // chain of revolute and prismatic joints
         for(int i = 0; i < GetDOF(); ++i) {
-            Vector vaxis = _info._vaxes.at(i);
+            Vector vaxis = _vaxes.at(i);
             if( IsRevolute(i) ) {
                 if( i+1 < GetDOF() ) {
                     std::pair<dReal, Vector > res = normalizeAxisRotation(vaxis,tjoint.rot);
@@ -493,12 +495,12 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         Vector angvelocitycovered, linvelocitycovered;
         for(int i = 0; i < GetDOF(); ++i) {
             if( IsRevolute(i) ) {
-                pVelocities.push_back(_info._vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered)));
-                angvelocitycovered += quatRotate(quatdelta,_info._vaxes[i]*pVelocities.back());
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered)));
+                angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
             }
             else { // prismatic
-                pVelocities.push_back(_info._vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered)));
-                linvelocitycovered += quatRotate(quatdelta,_info._vaxes[i]*pVelocities.back());
+                pVelocities.push_back(_vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkchildtransform.trans-linkparenttransform.trans)-linvelocitycovered)));
+                linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*pVelocities.back());
             }
         }
     }
@@ -522,28 +524,28 @@ dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&link
     }
     else {
         if( _info._type == KinBody::JointPrismatic ) {
-            return _info._vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-linkparentvelocity.second.cross(linkchildtransform.trans-linkparenttransform.trans)));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-linkparentvelocity.second.cross(linkchildtransform.trans-linkparenttransform.trans)));
         }
         else if( _info._type == KinBody::JointRevolute ) {
-            return _info._vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second));
+            return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second));
         }
         else {
             // chain of revolute and prismatic joints
             Vector angvelocitycovered, linvelocitycovered;
             for(int i = 0; i < GetDOF(); ++i) {
                 if( IsRevolute(i) ) {
-                    dReal fvelocity = _info._vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered));
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second-angvelocitycovered));
                     if( i == axis ) {
                         return fvelocity;
                     }
-                    angvelocitycovered += quatRotate(quatdelta,_info._vaxes[i]*fvelocity);
+                    angvelocitycovered += quatRotate(quatdelta,_vaxes[i]*fvelocity);
                 }
                 else { // prismatic
-                    dReal fvelocity = _info._vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkparenttransform.trans-linkchildtransform.trans)-linvelocitycovered));
+                    dReal fvelocity = _vaxes[i].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-(linkparentvelocity.second-angvelocitycovered).cross(linkparenttransform.trans-linkchildtransform.trans)-linvelocitycovered));
                     if( i == axis ) {
                         return fvelocity;
                     }
-                    linvelocitycovered += quatRotate(quatdelta,_info._vaxes[i]*fvelocity);
+                    linvelocitycovered += quatRotate(quatdelta,_vaxes[i]*fvelocity);
                 }
             }
         }
@@ -558,7 +560,7 @@ Vector KinBody::Joint::GetAnchor() const
 
 Vector KinBody::Joint::GetAxis(int iaxis) const
 {
-    return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_info._vaxes.at(iaxis)));
+    return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_vaxes.at(iaxis)));
 }
 
 void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
@@ -577,19 +579,25 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     Transform trel, tbody0, tbody1;
     Vector vanchor=vanchorraw;
     for(size_t i = 0; i < vaxes.size(); ++i) {
-        _info._vaxes[i] = vaxes[i];
+        _vaxes[i] = vaxes[i];
     }
     // make sure first body is always closer to the root, unless the second body is static and the first body is not the root link
     if( _attachedbodies[1]->IsStatic() && _attachedbodies[0]->GetIndex() > 0) {
         if( !_attachedbodies[0]->IsStatic() ) {
             Transform tswap = plink1->GetTransform().inverse() * plink0->GetTransform();
             for(int i = 0; i < GetDOF(); ++i) {
-                _info._vaxes[i] = -tswap.rotate(_info._vaxes[i]);
+                _vaxes[i] = -tswap.rotate(_vaxes[i]);
             }
             vanchor = tswap*vanchor;
             swap(_attachedbodies[0],_attachedbodies[1]);
         }
     }
+
+    // update _info
+    for(size_t i = 0; i < vaxes.size(); ++i) {
+        _info._vaxes[i] = _vaxes[i];
+    }
+    _info._vanchor = vanchor;
 
     tbody0 = _attachedbodies[0]->GetTransform();
     tbody1 = _attachedbodies[1]->GetTransform();
@@ -639,28 +647,28 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             // in the case of one axis, create a new coordinate system such that the axis rotates about (0,0,1)
             // this is necessary in order to simplify the rotation matrices (for future symbolic computation)
             // and suppress any floating-point error. The data structures are only setup for this to work in 1 DOF.
-            Transform trot; trot.rot = quatRotateDirection(_info._vaxes[0],Vector(0,0,1));
+            Transform trot; trot.rot = quatRotateDirection(_vaxes[0],Vector(0,0,1));
             _tLeftNoOffset = _tLeftNoOffset * trot.inverse();
             _tRightNoOffset = trot*_tRightNoOffset;
-            _info._vaxes[0] = Vector(0,0,1);
+            _vaxes[0] = Vector(0,0,1);
         }
 
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(_info._vaxes[0], _info._voffsets[0]);
+            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]);
         }
         else {
-            toffset.trans = _info._vaxes[0]*_info._voffsets[0];
+            toffset.trans = _vaxes[0]*_info._voffsets[0];
         }
         _tLeft = _tLeftNoOffset * toffset;
         _tRight = _tRightNoOffset;
         if( GetDOF() > 1 ) {
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(_info._vaxes[GetDOF()-1], _info._voffsets[GetDOF()-1]) * _tRight;
+                _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], _info._voffsets[GetDOF()-1]) * _tRight;
             }
             else {
-                _tRight.trans += _info._vaxes[GetDOF()-1]*_info._voffsets[GetDOF()-1];
+                _tRight.trans += _vaxes[GetDOF()-1]*_info._voffsets[GetDOF()-1];
             }
         }
     }
@@ -683,20 +691,20 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
         }
         else if( !(_info._type&KinBody::JointSpecialBit) || _info._type == KinBody::JointUniversal || _info._type == KinBody::JointHinge2 ) {
             if( IsRevolute(0) ) {
-                toffset.rot = quatFromAxisAngle(_info._vaxes[0], -vcurrentvalues[0]);
+                toffset.rot = quatFromAxisAngle(_vaxes[0], -vcurrentvalues[0]);
             }
             else {
-                toffset.trans = -_info._vaxes[0]*vcurrentvalues[0];
+                toffset.trans = -_vaxes[0]*vcurrentvalues[0];
             }
         }
         _tLeftNoOffset *= toffset;
         _tLeft *= toffset;
         if( vcurrentvalues.size() > 1 ) {
             if( IsRevolute(GetDOF()-1) ) {
-                toffset.rot = quatFromAxisAngle(_info._vaxes[GetDOF()-1], -vcurrentvalues.at(GetDOF()-1));
+                toffset.rot = quatFromAxisAngle(_vaxes[GetDOF()-1], -vcurrentvalues.at(GetDOF()-1));
             }
             else {
-                toffset.trans = -_info._vaxes[GetDOF()-1]*vcurrentvalues.at(GetDOF()-1);
+                toffset.trans = -_vaxes[GetDOF()-1]*vcurrentvalues.at(GetDOF()-1);
             }
             _tRightNoOffset = toffset * _tRightNoOffset;
             _tRight = toffset * _tRight;
@@ -714,6 +722,21 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _info._vupperlimit.at(i) = 1e4;
         }
     }
+
+    if( !!_attachedbodies[0] ) {
+        _info._linkname0 = _attachedbodies[0]->GetName();
+    }
+    else {
+        _info._linkname0.clear();
+    }
+    if( !!_attachedbodies[1] ) {
+        _info._linkname1 = _attachedbodies[1]->GetName();
+    }
+    else {
+        _info._linkname1.clear();
+    }
+    _info._vcurrentvalues = vcurrentvalues;
+
     _bInitialized = true;
 
     if( _attachedbodies[1]->IsStatic() && !IsStatic() ) {
@@ -733,7 +756,7 @@ KinBody::LinkPtr KinBody::Joint::GetHierarchyChildLink() const
 
 Vector KinBody::Joint::GetInternalHierarchyAxis(int iaxis) const
 {
-    return _info._vaxes.at(iaxis);
+    return _vaxes.at(iaxis);
 }
 
 Transform KinBody::Joint::GetInternalHierarchyLeftTransform() const
@@ -872,10 +895,10 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
         if( iaxis == 0 ) {
             Transform toffset;
             if( IsRevolute(0) ) {
-                toffset.rot = quatFromAxisAngle(_info._vaxes[0], newoffset);
+                toffset.rot = quatFromAxisAngle(_vaxes[0], newoffset);
             }
             else {
-                toffset.trans = _info._vaxes[0]*newoffset;
+                toffset.trans = _vaxes[0]*newoffset;
             }
             _tLeft = _tLeftNoOffset * toffset;
             _tinvLeft = _tLeft.inverse();
@@ -884,10 +907,10 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
             _tRight = _tRightNoOffset;
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(_info._vaxes[GetDOF()-1], newoffset) * _tRight;
+                _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], newoffset) * _tRight;
             }
             else {
-                _tRight.trans += _info._vaxes[GetDOF()-1]*newoffset;
+                _tRight.trans += _vaxes[GetDOF()-1]*newoffset;
             }
             _tinvRight = _tRight.inverse();
         }
@@ -1070,6 +1093,12 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     mimic->_equations.at(0) = poseq;
     mimic->_equations.at(1) = veleq;
     mimic->_equations.at(2) = acceleq;
+
+    // copy equations into the info
+    if( !_info._vmimic.at(iaxis) ) {
+        _info._vmimic.at(iaxis).reset(new MimicInfo());
+    }
+    _info._vmimic.at(iaxis)->_equations = mimic->_equations;
 
     OpenRAVEFunctionParserRealPtr posfn = CreateJointFunctionParser();
     mimic->_posfn = posfn;
@@ -1338,6 +1367,12 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
     GetParent()->_ParametersChanged(Prop_JointCustomParameters);
 }
 
+void KinBody::Joint::UpdateInfo()
+{
+    _info._vcurrentvalues.resize(0);
+    GetValues(_info._vcurrentvalues);
+}
+
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
@@ -1345,7 +1380,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
         SerializeRound(o,_tRightNoOffset);
         SerializeRound(o,_tLeftNoOffset);
         for(int i = 0; i < GetDOF(); ++i) {
-            SerializeRound3(o,_info._vaxes[i]);
+            SerializeRound3(o,_vaxes[i]);
             if( !!_vmimic.at(i) ) {
                 FOREACHC(iteq,_vmimic.at(i)->_equations) {
                     o << *iteq << " ";

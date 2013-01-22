@@ -613,7 +613,7 @@ class SpaceSamplerExtra:
                 pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
         return pts
 
-def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,comparephysics=True,epsilon=1e-10):
+def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,comparephysics=True,computeadjacent=True,epsilon=1e-10):
     """Compares that two bodies are structurally and positionally equivalent without hashes, used for debug checking.
     """
     def transdist(list0,list1):
@@ -646,8 +646,9 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
             # todo, once physics is complete, uncomment
             #assert( j0.GetHierarchyParentLink().GetName() == j1.GetHierarchyParentLink().GetName() )
             #assert( j0.GetHierarchyChildLink().GetName() == j1.GetHierarchyChildLink().GetName() )
-            assert( transdist(j0.GetInternalHierarchyLeftTransform(),j1.GetInternalHierarchyLeftTransform()) <= epsilon )
-            assert( transdist(j0.GetInternalHierarchyRightTransform(),j1.GetInternalHierarchyRightTransform()) <= epsilon )
+            # cannot compare individual j0.GetInternalHierarchyXTransform() since representation is ambiguous
+            # compare product instead
+            assert( transdist(numpy.dot(j0.GetInternalHierarchyLeftTransform(),j0.GetInternalHierarchyRightTransform()), numpy.dot(j1.GetInternalHierarchyLeftTransform(), j1.GetInternalHierarchyRightTransform()) <= epsilon ))
             assert( j0.IsStatic() == j1.IsStatic() )
             assert( transdist(j0.GetLimits(),j1.GetLimits()) <= epsilon )
             assert( transdist(j0.GetWeights(),j1.GetWeights()) <= epsilon )
@@ -712,9 +713,10 @@ def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,compare
                     assert(transdist(g0.GetDiffuseColor(),g1.GetDiffuseColor()) <= epsilon)
                     assert(transdist(g0.GetAmbientColor(),g1.GetAmbientColor()) <= epsilon)
                     assert(g0.IsVisible()==g1.IsVisible())
-                # the geometry and initial configuration determine adjancent links
-                adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
-                assert(adjacentlinks == set(body1.GetAdjacentLinks()))
+                if computeadjacent:
+                    # the geometry and initial configuration determine adjancent links
+                    adjacentlinks = set([tuple(sorted((indexmap[index0],indexmap[index1]))) for index0,index1 in body0.GetAdjacentLinks()])
+                    assert(adjacentlinks == set(body1.GetAdjacentLinks()))
         if body0.IsRobot():
             robot0 = body0.GetEnv().GetRobot(body0.GetName())
             robot1 = body1.GetEnv().GetRobot(body1.GetName())

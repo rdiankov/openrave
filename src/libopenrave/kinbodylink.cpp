@@ -393,6 +393,20 @@ bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
+void KinBody::Link::UpdateInfo()
+{
+    if( _info._vgeometryinfos.size() != _vGeometries.size() ) {
+        // have to recompute the geometries
+        _info._vgeometryinfos.resize(_vGeometries.size());
+        for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
+            if( !_info._vgeometryinfos[i] ) {
+                _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+            }
+            *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
+        }
+    }
+}
+
 void KinBody::Link::_Update()
 {
     _collision.vertices.resize(0);

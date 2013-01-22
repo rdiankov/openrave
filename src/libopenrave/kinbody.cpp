@@ -376,7 +376,12 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         std::vector<Vector> vaxes(pjoint->GetDOF());
         std::copy(info._vaxes.begin(),info._vaxes.begin()+vaxes.size(), vaxes.begin());
         pjoint->_ComputeInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
-        _vecjoints.push_back(pjoint);
+        if( info._bIsActive ) {
+            _vecjoints.push_back(pjoint);
+        }
+        else {
+            _vPassiveJoints.push_back(pjoint);
+        }
     }
     return true;
 }
@@ -2972,7 +2977,7 @@ void KinBody::_ComputeInternalInformation()
                     bmimic = true;
                 }
             }
-            if( !bmimic && (*itjoint)->_bActive ) {
+            if( !bmimic && (*itjoint)->_info._bIsActive ) {
                 _vecjoints.push_back(*itjoint);
                 itjoint = _vPassiveJoints.erase(itjoint);
             }
@@ -2990,7 +2995,7 @@ void KinBody::_ComputeInternalInformation()
                     break;
                 }
             }
-            if( bmimic || !(*itjoint)->_bActive ) {
+            if( bmimic || !(*itjoint)->_info._bIsActive ) {
                 _vPassiveJoints.push_back(*itjoint);
                 itjoint = _vecjoints.erase(itjoint);
             }
@@ -3003,11 +3008,13 @@ void KinBody::_ComputeInternalInformation()
         FOREACH(itjoint,_vecjoints) {
             (*itjoint)->jointindex = jointindex++;
             (*itjoint)->dofindex = dofindex;
+            (*itjoint)->_info._bIsActive = true;
             dofindex += (*itjoint)->GetDOF();
         }
         FOREACH(itjoint,_vPassiveJoints) {
             (*itjoint)->jointindex = -1;
             (*itjoint)->dofindex = -1;
+            (*itjoint)->_info._bIsActive = false;
         }
     }
 

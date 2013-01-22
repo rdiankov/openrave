@@ -188,7 +188,9 @@ public:
             _vForcedAdjacentLinks = boost::python::list();
         }
         PyLinkInfo(const KinBody::LinkInfo& info) {
-            //_vgeometryinfos = info
+            FOREACHC(itgeominfo, info._vgeometryinfos) {
+                _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
+            }
             _name = ConvertStringToUnicode(info._name);
             _t = ReturnTransform(info._t);
             _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -275,6 +277,7 @@ public:
             _vlowerlimit = toPyVector3(Vector(0,0,0));
             _vupperlimit = toPyVector3(Vector(0,0,0));
             _bIsCircular = toPyVector3(Vector(0,0,0));
+            _bIsActive = false;
         }
 
         PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
@@ -322,6 +325,7 @@ public:
                 bIsCircular.append(*it);
             }
             _bIsCircular = bIsCircular;
+            _bIsActive = info._bIsActive;
         }
 
         KinBody::JointInfoPtr GetJointInfo() {
@@ -416,6 +420,7 @@ public:
             for(size_t i = 0; i < num; ++i) {
                 info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
             }
+            info._bIsActive = _bIsActive;
             return pinfo;
         }
         KinBody::JointType _type;
@@ -426,6 +431,7 @@ public:
         boost::python::list _vmimic;
         boost::python::dict _mapFloatParameters, _mapIntParameters;
         object _bIsCircular;
+        bool _bIsActive;
     };
     typedef boost::shared_ptr<PyJointInfo> PyJointInfoPtr;
 
@@ -700,9 +706,16 @@ public:
             _plink->SetIntParameters(key,ExtractArray<int>(oparameters));
         }
 
+        void UpdateInfo() {
+            _plink->UpdateInfo();
+        }
         object GetInfo() {
             return object(PyLinkInfoPtr(new PyLinkInfo(_plink->GetInfo())));
         }
+        object UpdateAndGetInfo() {
+            return object(PyLinkInfoPtr(new PyLinkInfo(_plink->UpdateAndGetInfo())));
+        }
+
 
         std::string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
@@ -956,8 +969,14 @@ public:
             _pjoint->SetIntParameters(key,ExtractArray<int>(oparameters));
         }
 
+        void UpdateInfo() {
+            _pjoint->UpdateInfo();
+        }
         object GetInfo() {
             return object(PyJointInfoPtr(new PyJointInfo(_pjoint->GetInfo(), _pyenv)));
+        }
+        object UpdateAndGetInfo() {
+            return object(PyJointInfoPtr(new PyJointInfo(_pjoint->UpdateAndGetInfo(), _pyenv)));
         }
 
         string __repr__() {
@@ -3344,7 +3363,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyKinBody::PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular));
+        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive));
     }
     static void setstate(PyKinBody::PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
@@ -3368,6 +3387,7 @@ public:
         r._mapFloatParameters = boost::python::dict(state[2][2]);
         r._mapIntParameters = boost::python::dict(state[2][3]);
         r._bIsCircular = state[2][4];
+        r._bIsActive = boost::python::extract<bool>(state[2][5]);
     }
 };
 
@@ -3693,6 +3713,7 @@ void init_openravepy_kinbody()
                            .def_readwrite("_mapFloatParameters",&PyKinBody::PyJointInfo::_mapFloatParameters)
                            .def_readwrite("_mapIntParameters",&PyKinBody::PyJointInfo::_mapIntParameters)
                            .def_readwrite("_bIsCircular",&PyKinBody::PyJointInfo::_bIsCircular)
+                           .def_readwrite("_bIsActive",&PyKinBody::PyJointInfo::_bIsActive)
                            .def_pickle(JointInfo_pickle_suite())
         ;
         {
@@ -3734,6 +3755,9 @@ void init_openravepy_kinbody()
                          .def("GetFloatParameters",&PyKinBody::PyLink::GetFloatParameters,GetFloatParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetFloatParameters)))
                          .def("SetFloatParameters",&PyKinBody::PyLink::SetFloatParameters,DOXY_FN(KinBody::Link,SetFloatParameters))
                          .def("GetIntParameters",&PyKinBody::PyLink::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetIntParameters)))
+                         .def("UpdateInfo",&PyKinBody::PyLink::UpdateInfo,DOXY_FN(KinBody::Link,UpdateInfo))
+                         .def("GetInfo",&PyKinBody::PyLink::GetInfo,DOXY_FN(KinBody::Link,GetInfo))
+                         .def("UpdateAndGetInfo",&PyKinBody::PyLink::UpdateAndGetInfo,DOXY_FN(KinBody::Link,UpdateAndGetInfo))
                          .def("SetIntParameters",&PyKinBody::PyLink::SetIntParameters,DOXY_FN(KinBody::Link,SetIntParameters))
                          .def("__repr__", &PyKinBody::PyLink::__repr__)
                          .def("__str__", &PyKinBody::PyLink::__str__)
@@ -3769,6 +3793,7 @@ void init_openravepy_kinbody()
                                  .def("GetTransparency",&PyKinBody::PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyKinBody::PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyKinBody::PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                 .def("GetInfo",&PyKinBody::PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                  .def("__eq__",&PyKinBody::PyLink::PyGeometry::__eq__)
                                  .def("__ne__",&PyKinBody::PyLink::PyGeometry::__ne__)
                                  .def("__hash__",&PyKinBody::PyLink::PyGeometry::__hash__)
@@ -3833,6 +3858,9 @@ void init_openravepy_kinbody()
                           .def("SetFloatParameters",&PyKinBody::PyJoint::SetFloatParameters,DOXY_FN(KinBody::Joint,SetFloatParameters))
                           .def("GetIntParameters",&PyKinBody::PyJoint::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Joint,GetIntParameters)))
                           .def("SetIntParameters",&PyKinBody::PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
+                          .def("UpdateInfo",&PyKinBody::PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
+                          .def("GetInfo",&PyKinBody::PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))
+                          .def("UpdateAndGetInfo",&PyKinBody::PyJoint::UpdateAndGetInfo,DOXY_FN(KinBody::Joint,UpdateAndGetInfo))
                           .def("__repr__", &PyKinBody::PyJoint::__repr__)
                           .def("__str__", &PyKinBody::PyJoint::__str__)
                           .def("__unicode__", &PyKinBody::PyJoint::__unicode__)

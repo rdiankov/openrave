@@ -527,11 +527,20 @@ protected:
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
+        /// \brief Updates several fields in \ref _info depending on the current state of the link
+        virtual void UpdateInfo();
+
         /// \brief returns the current info structure of the link.
         ///
         /// The LinkInfo::_vgeometryinfos do not reflect geometry changes that happened since the robot was created. User
         /// will need to call Geometry::GetInfo on each individual geometry.
         inline const KinBody::LinkInfo& GetInfo() const {
+            return _info;
+        }
+
+        /// \brief Calls \ref UpdateInfo and returns the link structure
+        inline const KinBody::LinkInfo& UpdateAndGetInfo() {
+            UpdateInfo();
             return _info;
         }
 
@@ -692,6 +701,8 @@ public:
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
         boost::array<uint8_t,3> _bIsCircular;
+
+        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -1009,7 +1020,19 @@ public:
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
+        /// \brief Updates several fields in \ref _info depending on the current state of the joint.
+        virtual void UpdateInfo();
+
+        /// \brief returns the JointInfo structure containing all information.
+        ///
+        /// Some values in this structure like _vcurrentvalues need to be updated, so make sure to call \ref UpdateInfo() right before this function is called.
         inline const KinBody::JointInfo& GetInfo() const {
+            return _info;
+        }
+
+        /// \brief Calls \ref UpdateInfo and returns the joint structure
+        inline const KinBody::JointInfo& UpdateAndGetInfo() {
+            UpdateInfo();
             return _info;
         }
 
@@ -1067,11 +1090,11 @@ private:
 
         KinBodyWeakPtr _parent;               ///< body that joint belong to
         boost::array<LinkPtr,2> _attachedbodies;         ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.
+        boost::array<Vector,3> _vaxes;                ///< normalized axes, this can be different from _info._vaxes and reflects how _tRight and _tLeft are computed
         Transform _tRight, _tLeft;         ///< transforms used to get body[1]'s transformation with respect to body[0]'s: Tbody1 = Tbody0 * tLeft * JointOffsetLeft * JointRotation * JointOffsetRight * tRight
         Transform _tRightNoOffset, _tLeftNoOffset;         ///< same as _tLeft and _tRight except it doesn't not include the offset
         Transform _tinvRight, _tinvLeft;         ///< the inverse transformations of tRight and tLeft
         bool _bInitialized;
-        bool _bActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

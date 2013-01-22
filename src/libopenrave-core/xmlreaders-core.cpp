@@ -1313,7 +1313,7 @@ public:
                 }
             }
             else if( itatt->first == "enable" ) {
-                _pjoint->_bActive = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+                _pjoint->_info._bIsActive = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
             }
             else if( itatt->first == "mimic" ) {
                 RAVELOG_WARN("mimic attribute on <joint> tag is deprecated! Use mimic_pos, mimic_vel, and mimic_accel\n");
@@ -2115,7 +2115,7 @@ public:
                 else if( xmlname == "joint" ) {
                     _pjoint->dofindex = _pchain->GetDOF();
                     boost::shared_ptr<JointXMLReader> pjointreader = boost::dynamic_pointer_cast<JointXMLReader>(_pcurreader);
-                    if( _pjoint->_bActive ) {
+                    if( _pjoint->_info._bIsActive ) {
                         _pjoint->jointindex = (int)_pchain->_vecjoints.size();
                         _pchain->_vecjoints.push_back(_pjoint);
                     }

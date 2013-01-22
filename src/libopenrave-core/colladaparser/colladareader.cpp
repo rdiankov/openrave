@@ -1578,7 +1578,7 @@ public:
                 // create the joints before creating the child links
                 KinBody::JointPtr pjoint(new KinBody::Joint(pkinbody));
                 int jointtype = vdomaxes.getCount();
-                pjoint->_bActive = true;     // if not active, put into the passive list
+                pjoint->_info._bIsActive = true;     // if not active, put into the passive list
                 FOREACH(it,pjoint->_info._vweights) {
                     *it = 1;
                 }
@@ -1599,7 +1599,7 @@ public:
                             if( !!itaxisbinding->kinematics_axis_info ) {
                                 if( !!itaxisbinding->kinematics_axis_info->getActive() ) {
                                     // what if different axes have different active profiles?
-                                    pjoint->_bActive = resolveBool(itaxisbinding->kinematics_axis_info->getActive(),itaxisbinding->kinematics_axis_info);
+                                    pjoint->_info._bIsActive = resolveBool(itaxisbinding->kinematics_axis_info->getActive(),itaxisbinding->kinematics_axis_info);
                                 }
                             }
                             break;
@@ -1623,7 +1623,7 @@ public:
 
                 pjoint->_info._type = (KinBody::JointType)jointtype;
                 _mapJointUnits[pjoint] = vaxisunits;
-                if( pjoint->_bActive ) {
+                if( pjoint->_info._bIsActive ) {
                     pjoint->jointindex = (int) pkinbody->_vecjoints.size();
                     pjoint->dofindex = pkinbody->GetDOF();
                 }
@@ -1634,7 +1634,7 @@ public:
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
                 }
 
-                if( pjoint->_bActive ) {
+                if( pjoint->_info._bIsActive ) {
                     pkinbody->_vecjoints.push_back(pjoint);
                 }
                 else {
