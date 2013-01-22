@@ -25,9 +25,7 @@ KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), 
 KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
-    _bStatic = false;
     _index = -1;
-    _bIsEnabled = true;
 }
 
 KinBody::Link::~Link()
@@ -37,17 +35,17 @@ KinBody::Link::~Link()
 
 void KinBody::Link::Enable(bool bEnable)
 {
-    if( _bIsEnabled != bEnable ) {
+    if( _info._bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
-        _bIsEnabled = bEnable;
+        _info._bIsEnabled = bEnable;
         GetParent()->_ParametersChanged(Prop_LinkEnable);
     }
 }
 
 bool KinBody::Link::IsEnabled() const
 {
-    return _bIsEnabled;
+    return _info._bIsEnabled;
 }
 
 bool KinBody::Link::SetVisible(bool visible)
@@ -121,29 +119,29 @@ static TransformMatrix ComputeInertia(const Transform& tMassFrame, const Vector&
 }
 TransformMatrix KinBody::Link::GetLocalInertia() const
 {
-    return ComputeInertia(_tMassFrame, _vinertiamoments);
+    return ComputeInertia(_info._tMassFrame, _info._vinertiamoments);
 }
 
 TransformMatrix KinBody::Link::GetGlobalInertia() const
 {
-    return ComputeInertia(_t*_tMassFrame, _vinertiamoments);
+    return ComputeInertia(_info._t*_info._tMassFrame, _info._vinertiamoments);
 }
 
 void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
 {
-    _tMassFrame=massframe;
+    _info._tMassFrame=massframe;
     GetParent()->_ParametersChanged(Prop_LinkDynamics);
 }
 
 void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
 {
-    _vinertiamoments = inertiamoments;
+    _info._vinertiamoments = inertiamoments;
     GetParent()->_ParametersChanged(Prop_LinkDynamics);
 }
 
 void KinBody::Link::SetMass(dReal mass)
 {
-    _mass=mass;
+    _info._mass=mass;
     GetParent()->_ParametersChanged(Prop_LinkDynamics);
 }
 
@@ -190,7 +188,7 @@ AABB KinBody::Link::ComputeLocalAABB() const
             }
         }
         if( !binitialized ) {
-            ab.pos = _t.trans;
+            ab.pos = _info._t.trans;
             ab.extents = Vector(0,0,0);
         }
         else {
@@ -205,14 +203,14 @@ AABB KinBody::Link::ComputeLocalAABB() const
 AABB KinBody::Link::ComputeAABB() const
 {
     if( _vGeometries.size() == 1) {
-        return _vGeometries.front()->ComputeAABB(_t);
+        return _vGeometries.front()->ComputeAABB(_info._t);
     }
     else if( _vGeometries.size() > 1 ) {
         Vector vmin, vmax;
         bool binitialized=false;
         AABB ab;
         FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(_t);
+            ab = (*itgeom)->ComputeAABB(_info._t);
             if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
                 continue;
             }
@@ -245,7 +243,7 @@ AABB KinBody::Link::ComputeAABB() const
             }
         }
         if( !binitialized ) {
-            ab.pos = _t.trans;
+            ab.pos = _info._t.trans;
             ab.extents = Vector(0,0,0);
         }
         else {
@@ -255,7 +253,7 @@ AABB KinBody::Link::ComputeAABB() const
         return ab;
     }
     // have to at least return the correct position!
-    return AABB(_t.trans,Vector(0,0,0));
+    return AABB(_info._t.trans,Vector(0,0,0));
 }
 
 void KinBody::Link::serialize(std::ostream& o, int options) const
@@ -268,23 +266,23 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
         }
     }
     if( options & SO_Dynamics ) {
-        SerializeRound(o,_tMassFrame);
-        SerializeRound(o,_mass);
-        SerializeRound3(o,_vinertiamoments);
+        SerializeRound(o,_info._tMassFrame);
+        SerializeRound(o,_info._mass);
+        SerializeRound3(o,_info._vinertiamoments);
     }
 }
 
 void KinBody::Link::SetStatic(bool bStatic)
 {
-    if( _bStatic != bStatic ) {
-        _bStatic = bStatic;
+    if( _info._bStatic != bStatic ) {
+        _info._bStatic = bStatic;
         GetParent()->_ParametersChanged(Prop_LinkStatic);
     }
 }
 
 void KinBody::Link::SetTransform(const Transform& t)
 {
-    _t = t;
+    _info._t = t;
     GetParent()->_nUpdateStampId++;
 }
 
@@ -354,7 +352,7 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
         return _vGeometries.front()->ValidateContactNormal(position,normal);
     }
     else if( _vGeometries.size() > 1 ) {
-        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more than one geometry in link '%s(%d)' (do not know colliding geometry)")%_name%GetIndex()));
+        RAVELOG_VERBOSE(str(boost::format("cannot validate normal when there is more than one geometry in link '%s(%d)' (do not know colliding geometry)")%_info._name%GetIndex()));
     }
     return false;
 }

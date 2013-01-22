@@ -1,5 +1,5 @@
 // -*- coding: utf-8 --*
-// Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -24,12 +24,12 @@ public:
     {
 public:
         ConveyorLink(const std::string& name, Transform tinernal, KinBodyPtr parent) : Link(parent) {
-            _t = tinernal;
-            _mass = 0.01; // just an estimate
-            _vinertiamoments = Vector(1,1,1);
-            _name = name;
-            _bStatic = false;
-            _bIsEnabled = true;
+            _info._t = tinernal;
+            _info._mass = 0.01; // just an estimate
+            _info._vinertiamoments = Vector(1,1,1);
+            _info._name = name;
+            _info._bStatic = false;
+            _info._bIsEnabled = true;
         }
     };
 
@@ -37,12 +37,12 @@ public:
     {
 public:
         ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, boost::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, KinBody::JointTrajectory) {
-            _name = name;
-            _vlowerlimit[0] = 0;
-            _vupperlimit[0] = trajfollow->GetDuration();
+            _info._name = name;
+            _info._vlowerlimit[0] = 0;
+            _info._vupperlimit[0] = trajfollow->GetDuration();
             _vmimic[0] = mimic;
-            _bIsCircular[0] = bIsCircular;
-            _trajfollow = trajfollow;
+            _info._bIsCircular[0] = bIsCircular;
+            _info._trajfollow = trajfollow;
         }
 
         virtual void _ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1, dReal currentvalue)

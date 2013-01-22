@@ -121,7 +121,7 @@ public:
         // add manipulators
         FOREACH(itmanip,_listendeffectors) {
             RobotBase::ManipulatorInfo manipinfo;
-            manipinfo._name = itmanip->first->_name;
+            manipinfo._name = itmanip->first->_info._name;
             manipinfo._sEffectorLinkName = itmanip->first->GetName();
             manipinfo._sBaseLinkName = probot->GetLinks().at(0)->GetName();
             manipinfo._tLocalTool = itmanip->second;
@@ -210,14 +210,14 @@ protected:
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
             // support mimic joints, so have to look at mJointIndex!
             if( node->mFramePivot->mType == 1 ) {
-                pjoint->_type = KinBody::JointRevolute;
-                pjoint->_vlowerlimit[0] = -PI;
-                pjoint->_vupperlimit[0] = PI;
+                pjoint->_info._type = KinBody::JointRevolute;
+                pjoint->_info._vlowerlimit[0] = -PI;
+                pjoint->_info._vupperlimit[0] = PI;
             }
             else if( node->mFramePivot->mType == 2 ) {
-                pjoint->_type = KinBody::JointPrismatic;
-                pjoint->_vlowerlimit[0] = -10000*_vScaleGeometry.x;
-                pjoint->_vupperlimit[0] = 10000*_vScaleGeometry.x;
+                pjoint->_info._type = KinBody::JointPrismatic;
+                pjoint->_info._vlowerlimit[0] = -10000*_vScaleGeometry.x;
+                pjoint->_info._vupperlimit[0] = 10000*_vScaleGeometry.x;
             }
             else if( node->mFramePivot->mType == 5 ) {
                 RAVELOG_WARN(str(boost::format("frame %s is some type of geometry scaling joint?\n")%node->mName));
@@ -236,10 +236,10 @@ protected:
             KinBody::LinkPtr pchildlink;
             if( !!pjoint || !plink || level == 0 ) {
                 pchildlink.reset(new KinBody::Link(pbody));
-                pchildlink->_name = _prefix+node->mName;
-                pchildlink->_t = tflipyz*tpivot*tflipyz.inverse();
-                pchildlink->_bStatic = false;
-                pchildlink->_bIsEnabled = true;
+                pchildlink->_info._name = _prefix+node->mName;
+                pchildlink->_info._t = tflipyz*tpivot*tflipyz.inverse();
+                pchildlink->_info._bStatic = false;
+                pchildlink->_info._bIsEnabled = true;
                 pchildlink->_index = pbody->_veclinks.size();
                 pbody->_veclinks.push_back(pchildlink);
             }
@@ -250,13 +250,13 @@ protected:
                 }
                 if( node->mFramePivot->mAttribute & 4 ) {
                     // end effector?
-                    _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_t.inverse()*tflipyz*tpivot*tflipyz.inverse()));
+                    _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_info._t.inverse()*tflipyz*tpivot*tflipyz.inverse()));
                 }
 
-                pjoint->_name = _prefix+node->mFramePivot->mName;
-                pjoint->_bIsCircular[0] = false;
+                pjoint->_info._name = _prefix+node->mFramePivot->mName;
+                pjoint->_info._bIsCircular[0] = false;
                 std::vector<Vector> vaxes(1);
-                Transform t = plink->_t.inverse()*tflipyz*tpivot;
+                Transform t = plink->_info._t.inverse()*tflipyz*tpivot;
                 Vector vmotiondirection = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
                 vaxes[0] = t.rotate(vmotiondirection);
                 if( _bFlipYZ ) {
@@ -274,7 +274,7 @@ protected:
                 string orgjointname = str(boost::format("%sj%d")%_prefix%node->mFramePivot->mJointIndex);
                 // prioritize joints with orgjointname when putting into _vecjoints. The only reason to do this is to maintain consistency between expected joint values.
 
-                if( orgjointname != pjoint->_name ) {
+                if( orgjointname != pjoint->_info._name ) {
                     //KinBody::JointPtr porgjoint = pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1);
                     // joint already exists, so must be mimic?
                     dReal fmult = RaveSqrt(vmotiondirection.lengthsqr3());
@@ -285,7 +285,7 @@ protected:
                 else {
                     // add the joint (make sure motion direction is unit)
                     if( RaveFabs(vaxes[0].lengthsqr3()-1) > 0.0001 ) {
-                        RAVELOG_WARN(str(boost::format("joint %s motion axis is not unit: %f %f %f\n")%pjoint->_name%vmotiondirection.x%vmotiondirection.y%vmotiondirection.z));
+                        RAVELOG_WARN(str(boost::format("joint %s motion axis is not unit: %f %f %f\n")%pjoint->_info._name%vmotiondirection.x%vmotiondirection.y%vmotiondirection.z));
                     }
                 }
 
@@ -294,7 +294,7 @@ protected:
                 }
                 else {
                     pbody->_vPassiveJoints.push_back(pjoint);
-                    if( orgjointname == pjoint->_name ) {
+                    if( orgjointname == pjoint->_info._name ) {
                         // swap with official joint (can come later in the hierarchy)
                         swap(pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1), pbody->_vPassiveJoints.back());
                     }
@@ -311,16 +311,16 @@ protected:
             if( !plink ) {
                 // link is expected and one doesn't exist, so create it
                 plink.reset(new KinBody::Link(pbody));
-                plink->_name = _prefix+node->mName;
-                plink->_bStatic = false;
-                plink->_bIsEnabled = true;
+                plink->_info._name = _prefix+node->mName;
+                plink->_info._bStatic = false;
+                plink->_info._bIsEnabled = true;
                 plink->_index = pbody->_veclinks.size();
                 pbody->_veclinks.push_back(plink);
             }
 
             Assimp::XFile::Mesh* pmesh = *it;
             KinBody::GeometryInfo g;
-            g._t = plink->_t.inverse() * tflipyz * tnode;
+            g._t = plink->_info._t.inverse() * tflipyz * tnode;
             g._type = GT_TriMesh;
             g._meshcollision.vertices.resize(pmesh->mPositions.size());
             for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {

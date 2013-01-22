@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -125,6 +125,22 @@ public:
             _bVisible = true;
             _bModifiable = true;
         }
+        PyGeometryInfo(const KinBody::GeometryInfo info) {
+            _t = ReturnTransform(info._t);
+            _vGeomData = toPyVector4(info._vGeomData);
+            _vDiffuseColor = toPyVector3(info._vDiffuseColor);
+            _vAmbientColor = toPyVector3(info._vAmbientColor);
+            _meshcollision = toPyTriMesh(info._meshcollision);
+            _type = info._type;
+            _filenamerender = ConvertStringToUnicode(info._filenamerender);
+            _filenamecollision = ConvertStringToUnicode(info._filenamecollision);
+            _vRenderScale = toPyVector3(info._vRenderScale);
+            _vCollisionScale = toPyVector3(info._vCollisionScale);
+            _fTransparency = info._fTransparency;
+            _bVisible = info._bVisible;
+            _bModifiable = info._bModifiable;
+        }
+
         KinBody::GeometryInfoPtr GetGeometryInfo() {
             KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
             KinBody::GeometryInfo& info = *pinfo;
@@ -136,8 +152,12 @@ public:
                 ExtractTriMesh(_meshcollision,info._meshcollision);
             }
             info._type = _type;
-            info._filenamerender = _filenamerender;
-            info._filenamecollision = _filenamecollision;
+            if( _filenamerender != boost::python::object() ) {
+                info._filenamerender = boost::python::extract<std::string>(_filenamerender);
+            }
+            if( _filenamecollision != boost::python::object() ) {
+                info._filenamecollision = boost::python::extract<std::string>(_filenamecollision);
+            }
             info._vRenderScale = ExtractVector3(_vRenderScale);
             info._vCollisionScale = ExtractVector3(_vCollisionScale);
             info._fTransparency = _fTransparency;
@@ -148,7 +168,7 @@ public:
 
         object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
         GeometryType _type;
-        std::string _filenamerender, _filenamecollision;
+        object _filenamerender, _filenamecollision;
         object _vRenderScale, _vCollisionScale;
         float _fTransparency;
         bool _bVisible, _bModifiable;
@@ -167,6 +187,28 @@ public:
             _bIsEnabled = true;
             _vForcedAdjacentLinks = boost::python::list();
         }
+        PyLinkInfo(const KinBody::LinkInfo& info) {
+            //_vgeometryinfos = info
+            _name = ConvertStringToUnicode(info._name);
+            _t = ReturnTransform(info._t);
+            _tMassFrame = ReturnTransform(info._tMassFrame);
+            _mass = info._mass;
+            _vinertiamoments = toPyVector3(info._vinertiamoments);
+            FOREACHC(it, info._mapFloatParameters) {
+                _mapFloatParameters[it->first] = toPyArray(it->second);
+            }
+            FOREACHC(it, info._mapIntParameters) {
+                _mapIntParameters[it->first] = toPyArray(it->second);
+            }
+            boost::python::list vForcedAdjacentLinks;
+            FOREACHC(it, info._vForcedAdjacentLinks) {
+                vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
+            }
+            _vForcedAdjacentLinks = vForcedAdjacentLinks;
+            _bStatic = info._bStatic;
+            _bIsEnabled = info._bIsEnabled;
+        }
+
         KinBody::LinkInfoPtr GetLinkInfo() {
             KinBody::LinkInfoPtr pinfo(new KinBody::LinkInfo());
             KinBody::LinkInfo& info = *pinfo;
@@ -175,7 +217,9 @@ public:
                 PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
                 info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
             }
-            info._name = _name;
+            if( _name != boost::python::object() ) {
+                info._name = boost::python::extract<std::string>(_name);
+            }
             info._t = ExtractTransform(_t);
             info._tMassFrame = ExtractTransform(_tMassFrame);
             info._mass = _mass;
@@ -203,7 +247,7 @@ public:
         }
 
         boost::python::list _vgeometryinfos;
-        std::string _name;
+        object _name;
         object _t, _tMassFrame;
         dReal _mass;
         object _vinertiamoments;
@@ -232,13 +276,67 @@ public:
             _vupperlimit = toPyVector3(Vector(0,0,0));
             _bIsCircular = toPyVector3(Vector(0,0,0));
         }
+
+        PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
+            _type = info._type;
+            _name = ConvertStringToUnicode(info._name);
+            _linkname0 = ConvertStringToUnicode(info._linkname0);
+            _linkname1 = ConvertStringToUnicode(info._linkname1);
+            _vanchor = toPyVector3(info._vanchor);
+            boost::python::list vaxes;
+            for(size_t i = 0; i < info._vaxes.size(); ++i) {
+                vaxes.append(toPyVector3(info._vaxes[i]));
+            }
+            _vaxes = vaxes;
+            _vcurrentvalues = toPyArray(info._vcurrentvalues);
+            _vresolution = toPyArray<dReal,3>(info._vresolution);
+            _vmaxvel = toPyArray<dReal,3>(info._vmaxvel);
+            _vhardmaxvel = toPyArray<dReal,3>(info._vhardmaxvel);
+            _vmaxaccel = toPyArray<dReal,3>(info._vmaxaccel);
+            _vmaxtorque = toPyArray<dReal,3>(info._vmaxtorque);
+            _vweights = toPyArray<dReal,3>(info._vweights);
+            _voffsets = toPyArray<dReal,3>(info._voffsets);
+            _vlowerlimit = toPyArray<dReal,3>(info._vlowerlimit);
+            _vupperlimit = toPyArray<dReal,3>(info._vupperlimit);
+            _trajfollow = object(toPyTrajectory(info._trajfollow, pyenv));
+            FOREACHC(itmimic, info._vmimic) {
+                if( !*itmimic ) {
+                    _vmimic.append(boost::python::object());
+                }
+                else {
+                    boost::python::list oequations;
+                    FOREACHC(itequation, (*itmimic)->_equations) {
+                        oequations.append(*itequation);
+                    }
+                    _vmimic.append(oequations);
+                }
+            }
+            FOREACHC(it, info._mapFloatParameters) {
+                _mapFloatParameters[it->first] = toPyArray(it->second);
+            }
+            FOREACHC(it, info._mapIntParameters) {
+                _mapIntParameters[it->first] = toPyArray(it->second);
+            }
+            boost::python::list bIsCircular;
+            FOREACHC(it, info._bIsCircular) {
+                bIsCircular.append(*it);
+            }
+            _bIsCircular = bIsCircular;
+        }
+
         KinBody::JointInfoPtr GetJointInfo() {
             KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
             KinBody::JointInfo& info = *pinfo;
             info._type = _type;
-            info._name = _name;
-            info._linkname0 = _linkname0;
-            info._linkname1 = _linkname1;
+            if( _name != boost::python::object() ) {
+                info._name = boost::python::extract<std::string>(_name);
+            }
+            if( _linkname0 != boost::python::object() ) {
+                info._linkname0 = boost::python::extract<std::string>(_linkname0);
+            }
+            if( _linkname1 != boost::python::object() ) {
+                info._linkname1 = boost::python::extract<std::string>(_linkname1);
+            }
             info._vanchor = ExtractVector3(_vanchor);
             size_t num = len(_vaxes);
             for(size_t i = 0; i < num; ++i) {
@@ -283,7 +381,7 @@ public:
             for(size_t i = 0; i < num; ++i) {
                 info._vupperlimit.at(i) = boost::python::extract<dReal>(_vupperlimit[i]);
             }
-            if( _trajfollow != object() ) {
+            if( _trajfollow != boost::python::object() ) {
                 info._trajfollow = GetTrajectory(_trajfollow);
             }
             if( _vmimic != object() ) {
@@ -321,9 +419,10 @@ public:
             return pinfo;
         }
         KinBody::JointType _type;
-        std::string _name;
-        std::string _linkname0, _linkname1;
-        object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit, _trajfollow;
+        object _name;
+        object _linkname0, _linkname1;
+        object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
+        object _trajfollow;
         boost::python::list _vmimic;
         boost::python::dict _mapFloatParameters, _mapIntParameters;
         object _bIsCircular;
@@ -418,6 +517,9 @@ public:
             }
             object GetAmbientColor() const {
                 return toPyVector3(_pgeometry->GetAmbientColor());
+            }
+            object GetInfo() {
+                return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
             }
             bool __eq__(boost::shared_ptr<PyGeometry> p) {
                 return !!p && _pgeometry == p->_pgeometry;
@@ -596,6 +698,10 @@ public:
         void SetIntParameters(const std::string& key, object oparameters)
         {
             _plink->SetIntParameters(key,ExtractArray<int>(oparameters));
+        }
+
+        object GetInfo() {
+            return object(PyLinkInfoPtr(new PyLinkInfo(_plink->GetInfo())));
         }
 
         std::string __repr__() {
@@ -848,6 +954,10 @@ public:
         void SetIntParameters(const std::string& key, object oparameters)
         {
             _pjoint->SetIntParameters(key,ExtractArray<int>(oparameters));
+        }
+
+        object GetInfo() {
+            return object(PyJointInfoPtr(new PyJointInfo(_pjoint->GetInfo(), _pyenv)));
         }
 
         string __repr__() {
@@ -3198,8 +3308,8 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = boost::python::extract<GeometryType>(state[5]);
-        r._filenamerender = boost::python::extract<std::string>(state[6]);
-        r._filenamecollision = boost::python::extract<std::string>(state[7]);
+        r._filenamerender = state[6];
+        r._filenamecollision = state[7];
         r._vRenderScale = state[8];
         r._vCollisionScale = state[9];
         r._fTransparency = boost::python::extract<float>(state[10]);
@@ -3217,7 +3327,7 @@ public:
     }
     static void setstate(PyKinBody::PyLinkInfo& r, boost::python::tuple state) {
         r._vgeometryinfos = boost::python::list(state[0]);
-        r._name = boost::python::extract<std::string>(state[1]);
+        r._name = state[1];
         r._t = state[2];
         r._tMassFrame = state[3];
         r._mass = boost::python::extract<dReal>(state[4]);
@@ -3238,9 +3348,9 @@ public:
     }
     static void setstate(PyKinBody::PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
-        r._name = boost::python::extract<std::string>(state[0][1]);
-        r._linkname0 = boost::python::extract<std::string>(state[0][2]);
-        r._linkname1 = boost::python::extract<std::string>(state[0][3]);
+        r._name = state[0][1];
+        r._linkname0 = state[0][2];
+        r._linkname1 = state[0][3];
         r._vanchor = state[0][4];
         r._vaxes = state[0][5];
         r._vcurrentvalues = state[0][6];

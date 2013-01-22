@@ -189,7 +189,6 @@ public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
         virtual ~Link();
 
-
         /// \deprecated (12/10/18)
         typedef KinBody::GeometryInfo GeometryInfo RAVE_DEPRECATED;
         typedef boost::shared_ptr<KinBody::GeometryInfo> GeometryInfoPtr RAVE_DEPRECATED;
@@ -329,7 +328,7 @@ protected:
         typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
         inline const std::string& GetName() const {
-            return _name;
+            return _info._name;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -337,7 +336,7 @@ protected:
         //// Static should be used when an object has infinite mass and
         ///< shouldn't be affected by physics (including gravity). Collision still works.
         inline bool IsStatic() const {
-            return _bStatic;
+            return _info._bStatic;
         }
 
         /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
@@ -375,7 +374,7 @@ protected:
 
         /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const {
-            return _t;
+            return _info._t;
         }
 
         /// \brief Return all the direct parent links in the kinematics hierarchy of this link.
@@ -393,16 +392,16 @@ protected:
 
         /// \brief return center of mass offset in the link's local coordinate frame
         inline Vector GetLocalCOM() const {
-            return _tMassFrame.trans;
+            return _info._tMassFrame.trans;
         }
 
         /// \brief return center of mass of the link in the global coordinate system
         inline Vector GetGlobalCOM() const {
-            return _t*_tMassFrame.trans;
+            return _info._t*_info._tMassFrame.trans;
         }
 
         inline Vector GetCOMOffset() const {
-            return _tMassFrame.trans;
+            return _info._tMassFrame.trans;
         }
 
         /// \brief return inertia in link's local coordinate frame. The translation component is the the COM in the link's frame.
@@ -428,20 +427,20 @@ protected:
 
         /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
         inline const Transform& GetLocalMassFrame() const {
-            return _tMassFrame;
+            return _info._tMassFrame;
         }
 
         /// \brief return the mass frame in the global coordinate system that holds the center of mass and principal axes for inertia.
         inline Transform GetGlobalMassFrame() const {
-            return _t*_tMassFrame;
+            return _info._t*_info._tMassFrame;
         }
 
         /// \brief return the principal moments of inertia inside the mass frame
         inline const Vector& GetPrincipalMomentsOfInertia() const {
-            return _vinertiamoments;
+            return _info._vinertiamoments;
         }
         inline dReal GetMass() const {
-            return _mass;
+            return _info._mass;
         }
 
         /// \brief sets a link to be static.
@@ -528,23 +527,21 @@ protected:
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
+        /// \brief returns the current info structure of the link.
+        ///
+        /// The LinkInfo::_vgeometryinfos do not reflect geometry changes that happened since the robot was created. User
+        /// will need to call Geometry::GetInfo on each individual geometry.
+        inline const KinBody::LinkInfo& GetInfo() const {
+            return _info;
+        }
+
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
         virtual void _Update();
 
-        Transform _t;                   ///< \see GetTransform
-        Transform _tMassFrame; ///< the frame for inertia and center of mass of the link in the link's coordinate system
-        dReal _mass; ///< mass of link
-        Vector _vinertiamoments; ///< inertia along the axes of _tMassFrame
-
-        std::string _name;             ///< optional link name
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
-        bool _bStatic;               ///< \see IsStatic
-        bool _bIsEnabled;         ///< \see IsEnabled
-        bool __padding0, __padding1; // for 4-byte alignment
-
-        LinkInfo _info; ///< info link was generated with
+        LinkInfo _info; ///< parameter information of the link
 
 private:
         /// Sensitive variables that are auto-generated and should not be modified by the user.
@@ -688,7 +685,7 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
 
-        /// \brief true if joint axis has an identification at some of its lower and upper limits.
+        /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
@@ -726,17 +723,17 @@ public:
 
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
-            return _name;
+            return _info._name;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
-            return _vmaxvel[iaxis];
+            return _info._vmaxvel[iaxis];
         }
         inline dReal GetMaxAccel(int iaxis=0) const {
-            return _vmaxaccel[iaxis];
+            return _info._vmaxaccel[iaxis];
         }
         inline dReal GetMaxTorque(int iaxis=0) const {
-            return _vmaxtorque[iaxis];
+            return _info._vmaxtorque[iaxis];
         }
 
         /// \brief Get the degree of freedom index in the body's DOF array.
@@ -763,7 +760,7 @@ public:
         }
 
         inline KinBody::JointType GetType() const {
-            return _type;
+            return _info._type;
         }
 
         /// \brief gets all resolutions for the joint axes
@@ -909,7 +906,7 @@ public:
         /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
         inline dReal GetWrapOffset(int iaxis=0) const {
-            return _voffsets.at(iaxis);
+            return _info._voffsets.at(iaxis);
         }
 
         inline dReal GetOffset(int iaxis=0) const RAVE_DEPRECATED {
@@ -1012,20 +1009,12 @@ public:
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
+        inline const KinBody::JointInfo& GetInfo() const {
+            return _info;
+        }
+
 protected:
         JointInfo _info;
-
-        boost::array<Vector,3> _vaxes;                ///< axes in body[0]'s or environment coordinate system used to define joint movement
-        Vector vanchor;                 ///< anchor of the joint, this is only used to construct the internal left/right matrices
-        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
-        boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
-        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
-        boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
-        boost::array<dReal,3> _voffsets;                   ///< \see GetOffset
-        boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
-        TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
         boost::array< MimicPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
@@ -1066,8 +1055,6 @@ protected:
         /// \brief Return the velocity of the specified joint axis only.
         virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
-        std::string _name;         ///< \see GetName
-        boost::array<uint8_t,3> _bIsCircular;            ///< \see IsCircular
         boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
 
 private:
@@ -1077,7 +1064,6 @@ private:
         int dofindex;                   ///< the degree of freedom index in the body's DOF array, does not index in KinBody::_vecjoints!
         int jointindex;                 ///< the joint index into KinBody::_vecjoints
         boost::array<dReal,3> _vcircularlowerlimit, _vcircularupperlimit;         ///< for circular joints, describes where the identification happens. this is set internally in _ComputeInternalInformation
-        KinBody::JointType _type;
 
         KinBodyWeakPtr _parent;               ///< body that joint belong to
         boost::array<LinkPtr,2> _attachedbodies;         ///< attached bodies. The link in [0] is computed first in the hierarchy before the other body.

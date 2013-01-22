@@ -97,7 +97,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
             if( pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                pbody->GetLinks().at(i)->_bIsEnabled = !!_vEnabledLinks[i];
+                pbody->GetLinks().at(i)->_info._bIsEnabled = !!_vEnabledLinks[i];
                 bchanged = true;
             }
         }
@@ -174,8 +174,8 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_name = "base";
-    plink->_bStatic = true;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
         GeometryInfo info;
@@ -210,8 +210,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_name = "base";
-    plink->_bStatic = true;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itobb, vobbs) {
         TransformMatrix tm;
@@ -251,8 +251,8 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_name = "base";
-    plink->_bStatic = true;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
     TriMesh trimesh;
     FOREACHC(itv, vspheres) {
         GeometryInfo info;
@@ -279,8 +279,8 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible)
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_name = "base";
-    plink->_bStatic = true;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
     plink->_collision = trimesh;
     GeometryInfo info;
     info._type = GT_TriMesh;
@@ -310,8 +310,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_name = "base";
-    plink->_bStatic = true;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
     FOREACHC(itinfo,geometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
         geom->_info.InitCollisionMesh();
@@ -334,13 +334,6 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         plink->_info = *rawinfo;
         LinkInfo& info = plink->_info;
         plink->_index = static_cast<int>(_veclinks.size());
-        plink->_name = info._name;
-        plink->_t = info._t;
-        plink->_tMassFrame = info._tMassFrame;
-        plink->_mass = info._mass;
-        plink->_vinertiamoments = info._vinertiamoments;
-        plink->_bStatic = info._bStatic;
-        plink->_bIsEnabled = info._bIsEnabled;
         FOREACHC(itgeominfo,info._vgeometryinfos) {
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
             geom->_info.InitCollisionMesh();
@@ -358,35 +351,21 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->_type));
         pjoint->_info = *rawinfo;
         JointInfo& info = pjoint->_info;
-        pjoint->_name = info._name;
-        pjoint->_vaxes = info._vaxes;
-        pjoint->_vresolution = info._vresolution;
-        pjoint->_vmaxvel = info._vmaxvel;
-        pjoint->_vhardmaxvel = info._vhardmaxvel;
-        pjoint->_vmaxaccel = info._vmaxaccel;
-        pjoint->_vmaxtorque = info._vmaxtorque;
-        pjoint->_vweights = info._vweights;
-        pjoint->_voffsets = info._voffsets;
-        pjoint->_vlowerlimit = info._vlowerlimit;
-        pjoint->_vupperlimit = info._vupperlimit;
-        pjoint->_trajfollow = info._trajfollow;
         for(size_t i = 0; i < info._vmimic.size(); ++i) {
             if( !!info._vmimic[i] ) {
                 pjoint->_vmimic[i].reset(new Mimic());
                 pjoint->_vmimic[i]->_equations = info._vmimic[i]->_equations;
             }
         }
-        pjoint->_bIsCircular = info._bIsCircular;
-
         LinkPtr plink0, plink1;
         FOREACHC(itlink, _veclinks) {
-            if( (*itlink)->_name == info._linkname0 ) {
+            if( (*itlink)->_info._name == info._linkname0 ) {
                 plink0 = *itlink;
                 if( !!plink1 ) {
                     break;
                 }
             }
-            if( (*itlink)->_name == info._linkname1 ) {
+            if( (*itlink)->_info._name == info._linkname1 ) {
                 plink1 = *itlink;
                 if( !!plink0 ) {
                     break;
@@ -654,7 +633,7 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
         }
         std::vector<dReal>::const_iterator itv = v.begin();
         FOREACHC(it, _vDOFOrderedJoints) {
-            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vweights.begin());
+            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vweights.begin());
             itv += (*it)->GetDOF();
         }
     }
@@ -662,7 +641,7 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            pjoint->_info._vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
     _ParametersChanged(Prop_JointProperties);
@@ -676,15 +655,15 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
     std::vector<dReal>::const_iterator itlower = lower.begin(), itupper = upper.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
-            if( (*it)->_vlowerlimit.at(i) != *(itlower+i) || (*it)->_vupperlimit.at(i) != *(itupper+i) ) {
+            if( (*it)->_info._vlowerlimit.at(i) != *(itlower+i) || (*it)->_info._vupperlimit.at(i) != *(itupper+i) ) {
                 bChanged = true;
-                std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_vlowerlimit.begin());
-                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_vupperlimit.begin());
+                std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
+                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
                 for(int i = 0; i < (*it)->GetDOF(); ++i) {
                     if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
                         // TODO, necessary to set wrap?
-                        if( (*it)->_vlowerlimit.at(i) < -PI || (*it)->_vupperlimit.at(i) > PI) {
-                            (*it)->SetWrapOffset(0.5f * ((*it)->_vlowerlimit.at(i) + (*it)->_vupperlimit.at(i)),i);
+                        if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
+                            (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
                         }
                         else {
                             (*it)->SetWrapOffset(0,i);
@@ -706,7 +685,7 @@ void KinBody::SetDOFVelocityLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vmaxvel.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxvel.begin());
         itv += (*it)->GetDOF();
     }
     _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
@@ -716,7 +695,7 @@ void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vmaxaccel.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxaccel.begin());
         itv += (*it)->GetDOF();
     }
     _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
@@ -726,7 +705,7 @@ void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_vmaxtorque.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxtorque.begin());
         itv += (*it)->GetDOF();
     }
     _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
@@ -961,14 +940,14 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                 if( pjoint->IsCircular(0) ) {
                     fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
                 }
-                pjoint->_trajfollow->Sample(vtempvalues,fvalue);
+                pjoint->_info._trajfollow->Sample(vtempvalues,fvalue);
             }
             else {
                 // calling GetValue() could be extremely slow
-                pjoint->_trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
+                pjoint->_info._trajfollow->Sample(vtempvalues,pjoint->GetValue(0));
             }
-            pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
-            pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
+            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocal, vtempvalues.begin(), KinBodyConstPtr(),0);
+            pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tlocalvelocity, vtempvalues.begin(), KinBodyConstPtr(),1);
             Vector gw = tdelta.rotate(quatMultiply(tlocalvelocity.rot, quatInverse(tlocal.rot))*2*pvalues[0]); // qvel = [0,axisangle] * qrot * 0.5 * vel
             gw = Vector(gw.y,gw.z,gw.w);
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
@@ -1317,17 +1296,17 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             // check if out of limits!
             for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
                 if( !_vPassiveJoints[i]->IsCircular(j) ) {
-                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_vlowerlimit.at(j)-5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_vlowerlimit.at(j)%vPassiveJointValues[i][j]));
+                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j)-5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_info._vlowerlimit.at(j)%vPassiveJointValues[i][j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vlowerlimit.at(j);
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vlowerlimit.at(j);
                     }
-                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_vupperlimit.at(j)+5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_vupperlimit.at(j)%vPassiveJointValues[i][j]));
+                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j)+5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_info._vupperlimit.at(j)%vPassiveJointValues[i][j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_vupperlimit.at(j);
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vupperlimit.at(j);
                     }
                 }
             }
@@ -1369,17 +1348,17 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                             bool removevalue = false;
                             if( pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
                             }
-                            else if( *iteval < pjoint->_vlowerlimit[i] ) {
-                                if(*iteval >= pjoint->_vlowerlimit[i]-g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_vlowerlimit[i];
+                            else if( *iteval < pjoint->_info._vlowerlimit[i] ) {
+                                if(*iteval >= pjoint->_info._vlowerlimit[i]-g_fEpsilonJointLimit ) {
+                                    *iteval = pjoint->_info._vlowerlimit[i];
                                 }
                                 else {
                                     removevalue=true;
                                 }
                             }
-                            else if( *iteval > pjoint->_vupperlimit[i] ) {
-                                if(*iteval <= pjoint->_vupperlimit[i]+g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_vupperlimit[i];
+                            else if( *iteval > pjoint->_info._vupperlimit[i] ) {
+                                if(*iteval <= pjoint->_info._vupperlimit[i]+g_fEpsilonJointLimit ) {
+                                    *iteval = pjoint->_info._vupperlimit[i];
                                 }
                                 else {
                                     removevalue=true;
@@ -1399,22 +1378,22 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                 if( checklimits == CLA_Nothing || pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
                                     veval.push_back(*iteval);
                                 }
-                                else if( *iteval < pjoint->_vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_vlowerlimit[i]);
+                                else if( *iteval < pjoint->_info._vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(pjoint->_info._vlowerlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: lower limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_vlowerlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: lower limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval, ORE_InvalidArguments);
                                     }
                                 }
-                                else if( *iteval > pjoint->_vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_vupperlimit[i]);
+                                else if( *iteval > pjoint->_info._vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(pjoint->_info._vupperlimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: upper limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_vupperlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT("joint %s: upper limit (%e) is not followed: %e", pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval, ORE_InvalidArguments);
                                     }
                                 }
                                 else {
@@ -1489,8 +1468,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     // need to normalize the value
                     fvalue = utils::NormalizeCircularAngle(fvalue,pjoint->_vcircularlowerlimit.at(0), pjoint->_vcircularupperlimit.at(0));
                 }
-                pjoint->_trajfollow->Sample(vdata,fvalue);
-                if( !pjoint->_trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
+                pjoint->_info._trajfollow->Sample(vdata,fvalue);
+                if( !pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
                     RAVELOG_WARN(str(boost::format("trajectory sampling for joint %s failed")%pjoint->GetName()));
                 }
                 pjoint->_dofbranches[0] = 0;
@@ -2433,7 +2412,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     // forward recursion
     std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkCOMMomentOfInertia(_veclinks.size());
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_t.trans;
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
         Vector vangularaccel = vLinkAccelerations.at(i).second;
         Vector vangularvelocity = vLinkVelocities.at(i).second;
         vLinkCOMLinearAccelerations[i] = vLinkAccelerations.at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
@@ -2545,9 +2524,9 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
             vLinkVelocities[2].resize(_veclinks.size());
-            Vector vbasepos = _veclinks.at(0)->_t.trans;
+            Vector vbasepos = _veclinks.at(0)->_info._t.trans;
             for(size_t i = 1; i < vLinkVelocities[0].size(); ++i) {
-                Vector voffset = _veclinks.at(i)->_t.trans - vbasepos;
+                Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
                 vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
                 vLinkVelocities[2][i].second = vbaseangular;
             }
@@ -2601,7 +2580,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 
     for(size_t i = 0; i < _veclinks.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_t.trans;
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
         TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
         for(size_t j = 0; j < 3; ++j) {
             if( vLinkAccelerations[j].size() > 0 ) {
@@ -2724,10 +2703,10 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         return;
     }
     if( !usebaselinkvelocity ) {
-        Vector vbasepos = _veclinks.at(0)->_t.trans;
+        Vector vbasepos = _veclinks.at(0)->_info._t.trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
-            Vector voffset = _veclinks.at(i)->_t.trans - vbasepos;
+            Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
             vLinkVelocities[i].first -= vLinkVelocities[0].first + vLinkVelocities[0].second.cross(voffset);
             vLinkVelocities[i].second -= vLinkVelocities[0].second;
         }
@@ -2901,9 +2880,9 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
 
         const pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
         const pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
-        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_t.trans;
+        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
         if( !!pdofaccelerations || !!pdofvelocities ) {
-            tdelta = _veclinks.at(parentindex)->_t * pjoint->GetInternalHierarchyLeftTransform();
+            tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
             vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
         }
 
@@ -3895,8 +3874,8 @@ void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
     FOREACH(it, _veclinks) {
-        if( (*it)->_bIsEnabled != bEnable ) {
-            (*it)->_bIsEnabled = bEnable;
+        if( (*it)->_info._bIsEnabled != bEnable ) {
+            (*it)->_info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -3982,7 +3961,7 @@ public:
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
-                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_t = vcurtrans.at(i);
+                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4003,7 +3982,7 @@ private:
         TransformsSaver saver(shared_kinbody_const());
         CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
-            boost::static_pointer_cast<Link>(_veclinks[i])->_t = _vInitialLinkTransformations.at(i);
+            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {

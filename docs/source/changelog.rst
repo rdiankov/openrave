@@ -36,6 +36,8 @@ Core
 
 * Added getting and settings custom parameters to links and joints via :meth:`.KinBody.Link.GetFloatParameters`, :meth:`.KinBody.Link.SetFloatParameters`, :meth:`.KinBody.Joint.GetFloatParameters`, :meth:`.KinBody.Joint.SetFloatParameters`.
 
+* Added `.KinBody.Link.GetInfo`, `.KinBody.Joint.GetInfo`, and `.KinBody.Geometry.GetInfo` for getting all properties.
+
 C Bindings
 ----------
 
