@@ -413,6 +413,7 @@ public:
             platform = output.substr(index+1);
         }
 
+        string ikfilename;
         for(int iter = 0; iter < 2; ++iter) {
             string ikfilenamefound;
             // check if exists and is loadable, if not, regenerate the IK.
@@ -429,7 +430,7 @@ public:
                     sort(vsolveindices.begin(),vsolveindices.end());
                     std::copy(vindices.begin()+ikdof,vindices.end(),vfreeindices.begin());
                     sort(vfreeindices.begin(),vfreeindices.end());
-                    string ikfilename=ikfilenameprefix;
+                    ikfilename=ikfilenameprefix;
                     for(size_t i = 0; i < vsolveindices.size(); ++i) {
                         ikfilename += boost::lexical_cast<std::string>(vsolveindices[i]);
                         ikfilename += '_';
@@ -449,12 +450,12 @@ public:
                 }
             }
             else {
-                string ikfilename=ikfilenameprefix;
+                ikfilename=ikfilenameprefix;
                 for(size_t i = 0; i < pmanip->GetArmIndices().size(); ++i) {
                     if( i > 0 ) {
                         ikfilename += '_';
                     }
-                    ikfilename += boost::lexical_cast<std::string>(i);
+                    ikfilename += boost::lexical_cast<std::string>(pmanip->GetArmIndices().at(i));
                 }
                 ikfilename += PLUGIN_EXT;
                 ikfilenamefound = RaveFindDatabaseFile(ikfilename);
@@ -462,6 +463,7 @@ public:
 
             if( ikfilenamefound.size() == 0 ) {
                 if( iter > 0 ) {
+                    RAVELOG_WARN(str(boost::format("failed to find ikfile: %s")%ikfilename));
                     return false;
                 }
 
