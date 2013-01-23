@@ -19,4 +19,5 @@ macro(build_openrave_executable name)
   install(TARGETS ${name} DESTINATION . )
 endmacro(build_openrave_executable)
 
-build_openrave_executable(orcrrtplanning)
+build_openrave_executable(orc_rrtplanning)
+build_openrave_executable(orc_bodyfunctions)
