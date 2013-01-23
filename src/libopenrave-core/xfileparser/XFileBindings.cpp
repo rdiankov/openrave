@@ -27,30 +27,6 @@
 
 class XFileReader
 {
-    class JointData : public SerializableData
-    {
-public:
-        virtual void Serialize(std::ostream& O, int options=0) const {
-            O << _mapjoints.size() << endl;
-            FOREACHC(it,_mapjoints) {
-                O << it->first << " = " << it->second << endl;
-            }
-        }
-
-        virtual void Deserialize(std::istream& I) {
-            _mapjoints.clear();
-            int num = 0;
-            I >> num;
-            for(int i = 0; i < num; ++i) {
-                std::string name,equals,jointindex;
-                I >> name >> equals >> jointindex;
-                _mapjoints[name] = boost::lexical_cast<int>(jointindex);
-            }
-        }
-
-        std::map<std::string,int > _mapjoints; ///< original joint index
-    };
-
 public:
     XFileReader(EnvironmentBasePtr penv) : _penv(penv) {
     }
@@ -178,19 +154,18 @@ protected:
         int ijoint = 0;
         vector<KinBody::JointPtr> vecjoints; vecjoints.reserve(pbody->_vecjoints.size());
         vecjoints.swap(pbody->_vecjoints);
-        boost::shared_ptr<JointData> jointdata(new JointData());
         FOREACH(itjoint,vecjoints) {
             if( !!*itjoint ) {
                 if( !!(*itjoint)->_vmimic[0] ) {
                     RAVELOG_WARN(str(boost::format("joint %s had mimic set!\n")%(*itjoint)->GetName()));
                     (*itjoint)->_vmimic[0].reset();
                 }
-                jointdata->_mapjoints[(*itjoint)->GetName()] = ijoint;
+                std::vector<int> v(1); v[0] = ijoint;
+                (*itjoint)->_info._mapIntParameters["xfile_originalindex"] = v;
                 pbody->_vecjoints.push_back(*itjoint);
             }
             ++ijoint;
         }
-        pbody->SetUserData("xfile", UserDataPtr(jointdata));
     }
 
     void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform &transparent, int level)

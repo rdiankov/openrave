@@ -48,6 +48,7 @@ public:
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
+    typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
@@ -334,6 +335,23 @@ private:
     typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
     typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
+    class OPENRAVE_API AttachedSensorInfo
+    {
+public:
+        AttachedSensorInfo() {
+        }
+        virtual ~AttachedSensorInfo() {
+        }
+
+        std::string _name;
+        std::string _linkname; ///< the robot link that the sensor is attached to
+        Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
+        std::string _sensorname; ///< name of the sensor interface to create
+        SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
+    };
+    typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
+    typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
+
     /// \brief Attaches a sensor to a link on the robot.
     class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
@@ -435,6 +453,14 @@ private:
     }
 
     virtual void Destroy();
+
+    /// \brief initializes a robot with links, joints, manipulators, and sensors
+    ///
+    /// Calls \ref KinBody::Init(linkinfos, jointinfos) and then adds the robot-specific information afterwards
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos);
+
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() {

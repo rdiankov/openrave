@@ -254,6 +254,26 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos)
+{
+    if( !KinBody::Init(linkinfos, jointinfos) ) {
+        return false;
+    }
+    _vecManipulators.resize(0);
+    FOREACHC(itmanipinfo, manipinfos) {
+        ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
+        newmanip->_ComputeInternalInformation();
+        _vecManipulators.push_back(newmanip);
+        __hashrobotstructure.resize(0);
+    }
+    // TODO: sensors
+    _vecSensors.resize(0);
+    if( attachedsensorinfos.size() > 0 ) {
+        RAVELOG_WARN("currently do not support initializing from AttachedSensorInfo\n");
+    }
+    return true;
+}
+
 bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
 {
     RAVELOG_DEBUG("default robot doesn't not support setting controllers (try GenericRobot)\n");

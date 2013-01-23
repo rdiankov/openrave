@@ -2081,20 +2081,36 @@ public:
             _vdirection = toPyVector3(Vector(0,0,1));
             _vGripperJointNames = boost::python::list();
         }
-        RobotBase::ManipulatorInfo GetManipulatorInfo() {
-            RobotBase::ManipulatorInfo info;
-            info._name = _name;
-            info._sBaseLinkName = _sBaseLinkName;
-            info._sEffectorLinkName = _sEffectorLinkName;
-            info._tLocalTool = ExtractTransform(_tLocalTool);
-            info._vClosingDirection = ExtractArray<dReal>(_vClosingDirection);
-            info._vdirection = ExtractVector3(_vdirection);
-            info._sIkSolverXMLId = _sIkSolverXMLId;
-            info._vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
-            return info;
+        PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
+            _name = ConvertStringToUnicode(info._name);
+            _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+            _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
+            _tLocalTool = ReturnTransform(info._tLocalTool);
+            _vClosingDirection = toPyArray(info._vClosingDirection);
+            _vdirection = toPyVector3(info._vdirection);
+            _sIkSolverXMLId = info._sIkSolverXMLId;
+            boost::python::list vGripperJointNames;
+            FOREACHC(itname, info._vGripperJointNames) {
+                vGripperJointNames.append(ConvertStringToUnicode(*itname));
+            }
+            _vGripperJointNames = vGripperJointNames;
         }
 
-        std::string _name, _sBaseLinkName, _sEffectorLinkName;
+        RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
+        {
+            RobotBase::ManipulatorInfoPtr pinfo(new RobotBase::ManipulatorInfo());
+            pinfo->_name = boost::python::extract<std::string>(_name);
+            pinfo->_sBaseLinkName = boost::python::extract<std::string>(_sBaseLinkName);
+            pinfo->_sEffectorLinkName = boost::python::extract<std::string>(_sEffectorLinkName);
+            pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
+            pinfo->_vClosingDirection = ExtractArray<dReal>(_vClosingDirection);
+            pinfo->_vdirection = ExtractVector3(_vdirection);
+            pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
+            pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
+            return pinfo;
+        }
+
+        object _name, _sBaseLinkName, _sEffectorLinkName;
         object _tLocalTool;
         object _vClosingDirection;
         object _vdirection;
@@ -2555,6 +2571,10 @@ public:
             return toPyArray(vjacobian,dims);
         }
 
+        object GetInfo() {
+            return object(PyManipulatorInfoPtr(new PyManipulatorInfo(_pmanip->GetInfo())));
+        }
+
         string GetStructureHash() const {
             return _pmanip->GetStructureHash();
         }
@@ -2584,6 +2604,35 @@ public:
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
         return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
     }
+
+    class PyAttachedSensorInfo
+    {
+public:
+        PyAttachedSensorInfo() {
+        }
+        PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info) {
+            _name = ConvertStringToUnicode(info._name);
+            _linkname = ConvertStringToUnicode(info._linkname);
+            _trelative = ReturnTransform(info._trelative);
+            _sensorname = ConvertStringToUnicode(info._sensorname);
+        }
+
+        RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
+        {
+            RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+            pinfo->_name = boost::python::extract<std::string>(_name);
+            pinfo->_linkname = boost::python::extract<std::string>(_linkname);
+            pinfo->_trelative = ExtractTransform(_trelative);
+            pinfo->_sensorname = boost::python::extract<std::string>(_sensorname);
+            return pinfo;
+        }
+
+        object _name, _linkname;
+        object _trelative;
+        object _sensorname;
+        object _sensorgeometry;
+    };
+    typedef boost::shared_ptr<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 
     class PyAttachedSensor
     {
@@ -2694,6 +2743,42 @@ public:
     virtual ~PyRobotBase() {
     }
 
+    bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos) {
+        std::vector<KinBody::LinkInfoConstPtr> vlinkinfos(len(olinkinfos));
+        for(size_t i = 0; i < vlinkinfos.size(); ++i) {
+            PyLinkInfoPtr pylink = boost::python::extract<PyLinkInfoPtr>(olinkinfos[i]);
+            if( !pylink ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.LinkInfo",ORE_InvalidArguments);
+            }
+            vlinkinfos[i] = pylink->GetLinkInfo();
+        }
+        std::vector<KinBody::JointInfoConstPtr> vjointinfos(len(ojointinfos));
+        for(size_t i = 0; i < vjointinfos.size(); ++i) {
+            PyJointInfoPtr pyjoint = boost::python::extract<PyJointInfoPtr>(ojointinfos[i]);
+            if( !pyjoint ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.JointInfo",ORE_InvalidArguments);
+            }
+            vjointinfos[i] = pyjoint->GetJointInfo();
+        }
+        std::vector<RobotBase::ManipulatorInfoConstPtr> vmanipinfos(len(omanipinfos));
+        for(size_t i = 0; i < vmanipinfos.size(); ++i) {
+            PyManipulatorInfoPtr pymanip = boost::python::extract<PyManipulatorInfoPtr>(omanipinfos[i]);
+            if( !pymanip ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.ManipInfo",ORE_InvalidArguments);
+            }
+            vmanipinfos[i] = pymanip->GetManipulatorInfo();
+        }
+        std::vector<RobotBase::AttachedSensorInfoConstPtr> vattachedsensorinfos(len(oattachedsensorinfos));
+        for(size_t i = 0; i < vattachedsensorinfos.size(); ++i) {
+            PyAttachedSensorInfoPtr pyattachedsensor = boost::python::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[i]);
+            if( !pyattachedsensor ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.AttachedsensorInfo",ORE_InvalidArguments);
+            }
+            vattachedsensorinfos[i] = pyattachedsensor->GetAttachedSensorInfo();
+        }
+        return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos);
+    }
+
     object GetManipulators()
     {
         boost::python::list manips;
@@ -2744,7 +2829,7 @@ public:
         return _probot->GetActiveManipulatorIndex();
     }
     PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo) {
-        return _GetManipulator(_probot->AddManipulator(pmanipinfo->GetManipulatorInfo()));
+        return _GetManipulator(_probot->AddManipulator(*pmanipinfo->GetManipulatorInfo()));
     }
     void RemoveManipulator(PyManipulatorPtr pmanip) {
         _probot->RemoveManipulator(pmanip->GetManipulator());
@@ -3399,9 +3484,9 @@ public:
         return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vClosingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
     }
     static void setstate(PyRobotBase::PyManipulatorInfo& r, boost::python::tuple state) {
-        r._name = boost::python::extract<std::string>(state[0]);
-        r._sBaseLinkName = boost::python::extract<std::string>(state[1]);
-        r._sEffectorLinkName = boost::python::extract<std::string>(state[2]);
+        r._name = state[0];
+        r._sBaseLinkName = state[1];
+        r._sEffectorLinkName = state[2];
         r._tLocalTool = state[4];
         r._vClosingDirection = state[5];
         r._vdirection = state[6];
@@ -3921,7 +4006,9 @@ void init_openravepy_kinbody()
         bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*initrobot)(object, object, object, object) = &PyRobotBase::Init;
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
+                      .def("Init", initrobot, args("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos"), DOXY_FN(RobotBase, Init))
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"), "Return the manipulator whose name matches")
@@ -4084,6 +4171,7 @@ void init_openravepy_kinbody()
         .def("CalculateAngularVelocityJacobian",&PyRobotBase::PyManipulator::CalculateAngularVelocityJacobian,DOXY_FN(RobotBase::Manipulator,CalculateAngularVelocityJacobian))
         .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash, DOXY_FN(RobotBase::Manipulator,GetStructureHash))
         .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash, DOXY_FN(RobotBase::Manipulator,GetKinematicsStructureHash))
+        .def("GetInfo",&PyRobotBase::PyManipulator::GetInfo, DOXY_FN(RobotBase::Manipulator,GetInfo))
         .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
         .def("__str__",&PyRobotBase::PyManipulator::__str__)
         .def("__unicode__",&PyRobotBase::PyManipulator::__unicode__)
