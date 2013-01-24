@@ -11,6 +11,7 @@ Getting Started Tutorials
    tutorials/writing_plugins
    command_line_tools
    environment_variables
+   working_with_ik
 
 .. only:: htmltag or gettext
 

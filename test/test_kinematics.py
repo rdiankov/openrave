@@ -1093,21 +1093,3 @@ class TestKinematics(EnvironmentSetup):
             assert(len(body.GetJoints())==1)
             body.SetDOFValues([0.8])
             assert(transdist(body.GetLinks()[1].GetTransform(), array([[ 0.69670671, -0.71735609,  0.        ,  0.34835335], [ 0.71735609,  0.69670671,  0.        ,  0.35867805], [ 0.        ,  0.        ,  1.        ,  0.        ], [ 0.        ,  0.        ,  0.        ,  1.        ]])) <= 1e-7)
-
-    def test_getlinkjointinfo(self):
-        env=self.env
-        with env:
-            robot=self.LoadRobot('robots/barrettwam.robot.xml')
-            robot.SetTransform(eye(4))
-            Trobot = robot.GetTransform()
-            linkinfos = [link.UpdateAndGetInfo() for link in robot.GetLinks()]
-            jointinfos = [joint.UpdateAndGetInfo() for joint in robot.GetJoints()]
-            jointinfos += [joint.UpdateAndGetInfo() for joint in robot.GetPassiveJoints()]
-            # try to re-create the robot
-            env2=Environment()
-            robot2=RaveCreateRobot(env2,'')
-            robot2.Init(linkinfos,jointinfos)
-            robot2.SetName(robot.GetName())
-            env2.Add(robot2)
-            robot2.SetTransform(Trobot)
-            misc.CompareBodies(robot,robot2,computeadjacent=False,comparemanipulators=False,comparesensors=False)

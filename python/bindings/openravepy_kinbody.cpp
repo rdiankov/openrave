@@ -2694,6 +2694,43 @@ public:
         }
     };
 
+    class PyGrabbedInfo
+    {
+public:
+        PyGrabbedInfo() {
+            _trelative = ReturnTransform(Transform());
+        }
+        PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
+            _grabbedname = ConvertStringToUnicode(info._grabbedname);
+            _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+            _trelative = ReturnTransform(info._trelative);
+            boost::python::list setRobotLinksToIgnore;
+            FOREACHC(itindex, info._setRobotLinksToIgnore) {
+                setRobotLinksToIgnore.append(*itindex);
+            }
+            _setRobotLinksToIgnore = setRobotLinksToIgnore;
+        }
+
+        RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
+        {
+            RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
+            pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
+            pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+            pinfo->_trelative = ExtractTransform(_trelative);
+            std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
+            pinfo->_setRobotLinksToIgnore.clear();
+            FOREACHC(it,v) {
+                pinfo->_setRobotLinksToIgnore.insert(*it);
+            }
+            return pinfo;
+        }
+
+        object _grabbedname, _robotlinkname;
+        object _trelative;
+        object _setRobotLinksToIgnore;
+    };
+    typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
+
     class PyRobotStateSaver
     {
         PyEnvironmentBasePtr _pyenv;
@@ -3199,6 +3236,30 @@ public:
         return bodies;
     }
 
+    object GetGrabbedInfo() const
+    {
+        boost::python::list ograbbed;
+        std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
+        _probot->GetGrabbedInfo(vgrabbedinfo);
+        FOREACH(itgrabbed, vgrabbedinfo) {
+            ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+        }
+        return ograbbed;
+    }
+
+    void ResetGrabbed(object ograbbedinfos)
+    {
+        std::vector<RobotBase::GrabbedInfoConstPtr> vgrabbedinfos(len(ograbbedinfos));
+        for(size_t i = 0; i < vgrabbedinfos.size(); ++i) {
+            PyGrabbedInfoPtr pygrabbed = boost::python::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
+            if( !pygrabbed ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to Robot.GrabbedInfo",ORE_InvalidArguments);
+            }
+            vgrabbedinfos[i] = pygrabbed->GetGrabbedInfo();
+        }
+        _probot->ResetGrabbed(vgrabbedinfos);
+    }
+
     bool WaitForController(float ftimeout)
     {
         ControllerBasePtr pcontroller = _probot->GetController();
@@ -3487,11 +3548,26 @@ public:
         r._name = state[0];
         r._sBaseLinkName = state[1];
         r._sEffectorLinkName = state[2];
-        r._tLocalTool = state[4];
-        r._vClosingDirection = state[5];
-        r._vdirection = state[6];
-        r._sIkSolverXMLId = boost::python::extract<std::string>(state[7]);
-        r._vGripperJointNames = state[8];
+        r._tLocalTool = state[3];
+        r._vClosingDirection = state[4];
+        r._vdirection = state[5];
+        r._sIkSolverXMLId = boost::python::extract<std::string>(state[6]);
+        r._vGripperJointNames = state[7];
+    }
+};
+
+class GrabbedInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getstate(const PyRobotBase::PyGrabbedInfo& r)
+    {
+        return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+    }
+    static void setstate(PyRobotBase::PyGrabbedInfo& r, boost::python::tuple state) {
+        r._grabbedname = state[0];
+        r._robotlinkname = state[1];
+        r._trelative = state[2];
+        r._setRobotLinksToIgnore = state[3];
     }
 };
 
@@ -4091,6 +4167,8 @@ void init_openravepy_kinbody()
                       .def("RegrabAll",&PyRobotBase::RegrabAll, DOXY_FN(RobotBase,RegrabAll))
                       .def("IsGrabbing",&PyRobotBase::IsGrabbing,args("body"), DOXY_FN(RobotBase,IsGrabbing))
                       .def("GetGrabbed",&PyRobotBase::GetGrabbed, DOXY_FN(RobotBase,GetGrabbed))
+                      .def("GetGrabbedInfo",&PyRobotBase::GetGrabbedInfo, DOXY_FN(RobotBase,GetGrabbedInfo))
+                      .def("ResetGrabbed",&PyRobotBase::ResetGrabbed, args("grabbedinfos"), DOXY_FN(RobotBase,ResetGrabbed))
                       .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), "Wait until the robot controller is done")
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
@@ -4196,6 +4274,14 @@ void init_openravepy_kinbody()
         .def("__eq__",&PyRobotBase::PyAttachedSensor::__eq__)
         .def("__ne__",&PyRobotBase::PyAttachedSensor::__ne__)
         .def("__hash__",&PyRobotBase::PyAttachedSensor::__hash__)
+        ;
+
+        class_<PyRobotBase::PyGrabbedInfo, boost::shared_ptr<PyRobotBase::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(RobotBase::GrabbedInfo))
+        .def_readwrite("_grabbedname",&PyRobotBase::PyGrabbedInfo::_grabbedname)
+        .def_readwrite("_robotlinkname",&PyRobotBase::PyGrabbedInfo::_robotlinkname)
+        .def_readwrite("_trelative",&PyRobotBase::PyGrabbedInfo::_trelative)
+        .def_readwrite("_setRobotLinksToIgnore",&PyRobotBase::PyGrabbedInfo::_setRobotLinksToIgnore)
+        .def_pickle(GrabbedInfo_pickle_suite())
         ;
 
         class_<PyRobotBase::PyRobotStateSaver, boost::shared_ptr<PyRobotBase::PyRobotStateSaver> >("RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver), no_init)

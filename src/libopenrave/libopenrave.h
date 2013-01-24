@@ -255,7 +255,7 @@ public:
     KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
     std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
     Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    std::set<int> _setRobotLinksToIgnore; ///< original links to force ignoring
+    std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
 
     /// \brief check collision with all links to see which are valid
     ///

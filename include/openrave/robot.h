@@ -30,7 +30,9 @@ namespace OpenRAVE {
 class OPENRAVE_API RobotBase : public KinBody
 {
 public:
-    /// \brief holds all user-set manipulator information used to initialize the Manipulator class
+    /// \brief holds all user-set manipulator information used to initialize the Manipulator class.
+    ///
+    /// This is serializable and independent of environment.
     class OPENRAVE_API ManipulatorInfo
     {
 public:
@@ -335,6 +337,9 @@ private:
     typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
     typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
     class OPENRAVE_API AttachedSensorInfo
     {
 public:
@@ -413,6 +418,20 @@ private:
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
+
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API GrabbedInfo
+    {
+public:
+        std::string _grabbedname; ///< the name of the body to grab
+        std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
+        std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
+    };
+    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -766,6 +785,19 @@ private:
         \param[out] vbodies filled with the grabbed bodies
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief gets all grabbed bodies of the robot
+
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+
+    /** \brief resets the grabbed bodies of the robot
+
+        Any currently grabbed bodies will be first released.
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
 
     /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
 
