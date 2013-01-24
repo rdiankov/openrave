@@ -489,7 +489,7 @@ class RunRobot(EnvironmentSetup):
             # try to re-create the robot
             env2=Environment()
             robot2=RaveCreateRobot(env2,'')
-            robot2.Init(linkinfos,jointinfos)
+            robot2.Init(linkinfos,jointinfos,manipinfos,[])
             robot2.SetName(robot.GetName())
             env2.Add(robot2)
             robot2.SetTransform(Trobot)
