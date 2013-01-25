@@ -40,7 +40,12 @@ boost::python::object GetCustomParameters(const std::map<std::string, std::vecto
     typename std::map<std::string, std::vector<T> >::const_iterator it = parameters.find(name);
     if( it != parameters.end() ) {
         if( index >= 0 ) {
-            return object(it->second.at(index));
+            if( (size_t)index < it->second.size() ) {
+                return object(it->second.at(index));
+            }
+            else {
+                return boost::python::object();
+            }
         }
         return toPyArray(it->second);
     }
