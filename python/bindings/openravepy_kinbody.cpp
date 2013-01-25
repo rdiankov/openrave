@@ -27,7 +27,7 @@ typedef boost::shared_ptr<PyJoint> PyJointPtr;
 typedef boost::shared_ptr<PyJoint const> PyJointConstPtr;
 
 template <typename T>
-boost::python::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, boost::python::object oname=boost::python::object())
+boost::python::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, boost::python::object oname=boost::python::object(), int index=-1)
 {
     if( oname == object() ) {
         boost::python::dict oparameters;
@@ -39,6 +39,9 @@ boost::python::object GetCustomParameters(const std::map<std::string, std::vecto
     std::string name = boost::python::extract<std::string>(oname);
     typename std::map<std::string, std::vector<T> >::const_iterator it = parameters.find(name);
     if( it != parameters.end() ) {
+        if( index >= 0 ) {
+            return object(it->second.at(index));
+        }
         return toPyArray(it->second);
     }
     return boost::python::object();
@@ -200,6 +203,7 @@ public:
     PyJointInfo() {
         _type = KinBody::JointNone;
         _vanchor = toPyVector3(Vector());
+        _vaxes = boost::python::list();
         _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
         _vmaxvel = toPyVector3(Vector(10,10,10));
         _vhardmaxvel = toPyVector3(Vector(10,10,10));
@@ -209,7 +213,7 @@ public:
         _voffsets = toPyVector3(Vector(0,0,0));
         _vlowerlimit = toPyVector3(Vector(0,0,0));
         _vupperlimit = toPyVector3(Vector(0,0,0));
-        _bIsCircular = toPyVector3(Vector(0,0,0));
+        _bIsCircular = boost::python::list();
         _bIsActive = false;
     }
 
@@ -631,8 +635,8 @@ public:
         return toPyArray<dReal,6>(v);
     }
 
-    boost::python::object GetFloatParameters(object oname=boost::python::object()) const {
-        return GetCustomParameters(_plink->GetFloatParameters(), oname);
+    boost::python::object GetFloatParameters(object oname=boost::python::object(), int index=-1) const {
+        return GetCustomParameters(_plink->GetFloatParameters(), oname, index);
     }
 
     void SetFloatParameters(const std::string& key, object oparameters)
@@ -640,8 +644,8 @@ public:
         _plink->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
     }
 
-    boost::python::object GetIntParameters(object oname=boost::python::object()) const {
-        return GetCustomParameters(_plink->GetIntParameters(), oname);
+    boost::python::object GetIntParameters(object oname=boost::python::object(), int index=-1) const {
+        return GetCustomParameters(_plink->GetIntParameters(), oname, index);
     }
 
     void SetIntParameters(const std::string& key, object oparameters)
@@ -891,8 +895,8 @@ public:
         return _pjoint->AddTorque(vtorques);
     }
 
-    boost::python::object GetFloatParameters(object oname=boost::python::object()) const {
-        return GetCustomParameters(_pjoint->GetFloatParameters(), oname);
+    boost::python::object GetFloatParameters(object oname=boost::python::object(), int index=-1) const {
+        return GetCustomParameters(_pjoint->GetFloatParameters(), oname, index);
     }
 
     void SetFloatParameters(const std::string& key, object oparameters)
@@ -900,8 +904,8 @@ public:
         _pjoint->SetFloatParameters(key,ExtractArray<dReal>(oparameters));
     }
 
-    boost::python::object GetIntParameters(object oname=boost::python::object()) const {
-        return GetCustomParameters(_pjoint->GetIntParameters(), oname);
+    boost::python::object GetIntParameters(object oname=boost::python::object(), int index=-1) const {
+        return GetCustomParameters(_pjoint->GetIntParameters(), oname, index);
     }
 
     void SetIntParameters(const std::string& key, object oparameters)
@@ -2273,8 +2277,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, Compute
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0,1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0, 2)
 
 void init_openravepy_kinbody()
 {
@@ -2572,9 +2576,9 @@ void init_openravepy_kinbody()
                          .def("IsRigidlyAttached",&PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                          .def("GetVelocity",&PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))
                          .def("SetVelocity",&PyLink::SetVelocity,DOXY_FN(KinBody::Link,SetVelocity))
-                         .def("GetFloatParameters",&PyLink::GetFloatParameters,GetFloatParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetFloatParameters)))
+                         .def("GetFloatParameters",&PyLink::GetFloatParameters,GetFloatParameters_overloads(args("name","index"), DOXY_FN(KinBody::Link,GetFloatParameters)))
                          .def("SetFloatParameters",&PyLink::SetFloatParameters,DOXY_FN(KinBody::Link,SetFloatParameters))
-                         .def("GetIntParameters",&PyLink::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetIntParameters)))
+                         .def("GetIntParameters",&PyLink::GetIntParameters,GetIntParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Link,GetIntParameters)))
                          .def("UpdateInfo",&PyLink::UpdateInfo,DOXY_FN(KinBody::Link,UpdateInfo))
                          .def("GetInfo",&PyLink::GetInfo,DOXY_FN(KinBody::Link,GetInfo))
                          .def("UpdateAndGetInfo",&PyLink::UpdateAndGetInfo,DOXY_FN(KinBody::Link,UpdateAndGetInfo))
@@ -2674,9 +2678,9 @@ void init_openravepy_kinbody()
                           .def("SubtractValue",&PyJoint::SubtractValue,args("value0","value1","axis"), DOXY_FN(KinBody::Joint,SubtractValue))
 
                           .def("AddTorque",&PyJoint::AddTorque,args("torques"), DOXY_FN(KinBody::Joint,AddTorque))
-                          .def("GetFloatParameters",&PyJoint::GetFloatParameters,GetFloatParameters_overloads(args("name"), DOXY_FN(KinBody::Joint,GetFloatParameters)))
+                          .def("GetFloatParameters",&PyJoint::GetFloatParameters,GetFloatParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Joint,GetFloatParameters)))
                           .def("SetFloatParameters",&PyJoint::SetFloatParameters,DOXY_FN(KinBody::Joint,SetFloatParameters))
-                          .def("GetIntParameters",&PyJoint::GetIntParameters,GetIntParameters_overloads(args("name"), DOXY_FN(KinBody::Joint,GetIntParameters)))
+                          .def("GetIntParameters",&PyJoint::GetIntParameters,GetIntParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Joint,GetIntParameters)))
                           .def("SetIntParameters",&PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
                           .def("UpdateInfo",&PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
                           .def("GetInfo",&PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))

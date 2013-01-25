@@ -546,6 +546,8 @@ public:
         pbody->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
+        // send all the changed callbacks of the body since anything could have changed
+        pbody->_ParametersChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
     }
 
     virtual void _AddRobot(RobotBasePtr robot, bool bAnonymous)
@@ -579,6 +581,8 @@ public:
         robot->_ComputeInternalInformation();
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
+        // send all the changed callbacks of the body since anything could have changed
+        robot->_ParametersChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
     }
 
     virtual void _AddSensor(SensorBasePtr psensor, bool bAnonymous)
