@@ -50,6 +50,8 @@ Inverse Kinematics
 
 * Fixed bug in ikfastsolver.cpp that prioritizes solutions based on configuration distance.
 
+* :mod:`.database.inversekinematics` does a better job of automatically choosing a free joint for redundant kinematics.
+
 Planning
 --------
 

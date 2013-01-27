@@ -353,7 +353,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     log.warn('cannot set increment for joint type %s'%joint.GetType())
             return freeinc
 
-    def getDefaultIndices(self):
+    def GetDefaultIndices(self):
         """Returns a default set of free indices if the robot has more joints than required by the IK.
         In the futrue, this function will contain heuristics in order to select the best indices candidates.
         """
@@ -365,24 +365,78 @@ class InverseKinematicsModel(DatabaseGenerator):
         remainingindices = list(self.manip.GetArmIndices())
         if len(remainingindices) > dofexpected:
             N = len(remainingindices)
+            # need to choose a free index so that
+            # 1. the IK can be computed
+            # 2. the IK has the most success rate (ie choose joint with least impact on performance)
+            #
+            # the compatiblity of the IK depends a lot on what axes are intersecting, and whether they are orthogonal with each other
+            # In general, take from the top or the bottom depending on the complexity of the arm.
+            robot=self.manip.GetRobot()
+            jointanchors = []
+            jointaxes = []
+            for i,index in enumerate(self.manip.GetArmIndices()):
+                joint=robot.GetJointFromDOFIndex(index)
+                jointanchors.append(joint.GetAnchor())
+                jointaxes.append(joint.GetAxis(index-joint.GetDOFIndex()))
+            intersectingaxes = eye(N)
+            for i in range(N):
+                for j in range(i+1,N):
+                    norm = cross(jointaxes[j], jointaxes[i])
+                    diff = jointanchors[j]-jointanchors[i]
+                    if sum(norm**2) > 1e-7:
+                        # axes are not parallel
+                        if abs(dot(norm, diff)) <= 1e-5:
+                            # axes
+                            intersectingaxes[i,j] = intersectingaxes[j,i] = 1
+                    else:
+                        # axes are parallel
+                        if sum(diff**2) <= 1e-7:
+                            intersectingaxes[i,j] = intersectingaxes[j,i] = 1
+            intersecting3axes = [0]*N
+            num3intersecting = 0
+            for i in range(1,N-1):
+                if intersectingaxes[i-1,i] and intersectingaxes[i,i+1] and intersectingaxes[i-1,i+1]:
+                    intersecting3axes[i-1] |= 1 << num3intersecting
+                    intersecting3axes[i] |= 1 << num3intersecting
+                    intersecting3axes[i+1] |= 1 << num3intersecting
+                    num3intersecting += 1
             for i in range(N - dofexpected):
+                # by default always choose first
+                indextopop = 0
                 if self.iktype == IkParameterizationType.Transform6D or self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
-                    freeindices.append(remainingindices.pop(2))
+
+                    if num3intersecting > 0:
+                        # try to preserve the intersecting axes
+                        if intersecting3axes[2]:
+                            indextopop = len(intersecting3axes)-1
+                        else:
+                            indextopop = 2
+                    else:
+                        # already complicated enough, so take from the bottom in order to avoid variables coming inside the kinematics
+                        indextopop = 0
                 elif self.iktype == IkParameterizationType.Lookat3D:
                     # usually head (rotation joints) are at the end
                     #freeindices = remainingindices[len(remainingindices)-2:]
                     #remainingindices=remainingindices[:-2]
                     #len(remainingindices)
-                    freeindices.append(remainingindices.pop(-1))
+                    indextopop = len(remainingindices)-1
                 elif self.iktype == IkParameterizationType.TranslationDirection5D:
-                    # usually on arms, so remove furthest joints
-                    freeindices.append(remainingindices.pop(-1))
-                    #freeindices = remainingindices[len(remainingindices)-5:]
-                    #remainingindices=remainingindices[:-5]
+                    # check if ray aligns with furthest axis
+                    if abs(dot(jointaxes[-1],dot(self.manip.GetTransform()[0:3,0:3],self.manip.GetLocalToolDirection()))) > 0.99:
+                        indextopop = len(remainingindices)-1
+                    else:
+                        indextopop = 0
                 else:
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
-                    freeindices.append(remainingindices.pop(-1))
+                    indextopop = len(remainingindices)-1
+                freeindices.append(remainingindices.pop(indextopop))
+                jointanchors.pop(indextopop)
+                jointaxes.pop(indextopop)
+                # have to clear any intersecting axes
+                mask = intersecting3axes.pop(indextopop)
+                for j in range(len(intersecting3axes)):
+                    intersecting3axes[j] &= ~mask
         solveindices = [i for i in self.manip.GetArmIndices() if not i in freeindices]
         return solveindices,freeindices
 
@@ -391,7 +445,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik type is not set')
 
         if self.solveindices is None or self.freeindices is None:
-            solveindices, freeindices = self.getDefaultIndices()
+            solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
 
@@ -420,7 +474,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik type is not set')
         
         if self.solveindices is None or self.freeindices is None:
-            solveindices, freeindices = self.getDefaultIndices()
+            solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
         basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
@@ -435,7 +489,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             raise ValueError('ik type is not set')
         
         if self.solveindices is None or self.freeindices is None:
-            solveindices, freeindices = self.getDefaultIndices()
+            solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
             
@@ -673,7 +727,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if freejoints is not None:
                 self.freeindices = self.getIndicesFromJointNames(freejoints)
             else:
-                self.solveindices,self.freeindices = self.getDefaultIndices()
+                self.solveindices,self.freeindices = self.GetDefaultIndices()
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
             raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
