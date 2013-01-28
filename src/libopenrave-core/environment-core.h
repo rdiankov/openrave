@@ -1691,18 +1691,23 @@ public:
 
     virtual void _UpdatePublishedBodies()
     {
-        // updated the published bodies
-        _vPublishedBodies.resize(_vecbodies.size());
+        // updated the published bodies, resize dynamically in case an exception occurs
+        // when creating an item and bad data is left inside _vPublishedBodies
+        _vPublishedBodies.resize(0);
+        if( _vPublishedBodies.capacity() < _vecbodies.size() ) {
+            _vPublishedBodies.reserve(_vecbodies.size());
+        }
 
         std::vector<int> vdofbranches;
-        vector<KinBody::BodyState>::iterator itstate = _vPublishedBodies.begin();
         FOREACH(itbody, _vecbodies) {
-            itstate->pbody = *itbody;
-            (*itbody)->GetLinkTransformations(itstate->vectrans, vdofbranches);
-            (*itbody)->GetDOFValues(itstate->jointvalues);
-            itstate->strname =(*itbody)->GetName();
-            itstate->environmentid = (*itbody)->GetEnvironmentId();
-            ++itstate;
+            _vPublishedBodies.push_back(KinBody::BodyState());
+            KinBody::BodyState& state = _vPublishedBodies.back();
+            state.pbody = *itbody;
+            (*itbody)->GetLinkTransformations(state.vectrans, vdofbranches);
+            (*itbody)->GetDOFValues(state.jointvalues);
+            state.strname =(*itbody)->GetName();
+            state.environmentid = (*itbody)->GetEnvironmentId();
+            _vPublishedBodies.push_back(state);
         }
     }
 

@@ -31,7 +31,7 @@ public:
     XFileReader(EnvironmentBasePtr penv) : _penv(penv) {
     }
 
-    void ReadFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
+    void ReadFile(KinBodyPtr& pbody, const std::string& filename, const AttributesList& atts)
     {
         std::ifstream f(filename.c_str());
         if( !f ) {
@@ -54,7 +54,7 @@ public:
 
     }
 
-    void ReadFile(RobotBasePtr probot, const std::string& filename, const AttributesList& atts)
+    void ReadFile(RobotBasePtr& probot, const std::string& filename, const AttributesList& atts)
     {
         std::ifstream f(filename.c_str());
         if( !f ) {
@@ -76,9 +76,13 @@ public:
 #endif
     }
 
-    void Read(KinBodyPtr pbody, const std::string& data,const AttributesList& atts)
+    void Read(KinBodyPtr& pbody, const std::string& data,const AttributesList& atts)
     {
-        _ProcessAtts(atts, pbody);
+        _ProcessAtts(atts);
+        if( !pbody ) {
+            pbody = RaveCreateKinBody(_penv,_bodytype);
+        }
+        pbody->SetName(_bodyname);
         Assimp::XFileParserOpenRAVE parser(data.c_str());
         _Read(pbody,parser.GetImportedData());
         if( pbody->GetName().size() == 0 ) {
@@ -86,9 +90,13 @@ public:
         }
     }
 
-    void Read(RobotBasePtr probot, const std::string& data,const AttributesList& atts)
+    void Read(RobotBasePtr& probot, const std::string& data,const AttributesList& atts)
     {
-        _ProcessAtts(atts,probot);
+        _ProcessAtts(atts);
+        if( !probot ) {
+            probot = RaveCreateRobot(_penv,_bodytype);
+        }
+        probot->SetName(_bodyname);
         Assimp::XFileParserOpenRAVE parser(data.c_str());
         _Read(probot,parser.GetImportedData());
         if( probot->GetName().size() == 0 ) {
@@ -107,13 +115,15 @@ public:
     }
 
 protected:
-    void _ProcessAtts(const AttributesList& atts, KinBodyPtr pbody)
+    void _ProcessAtts(const AttributesList& atts)
     {
         _listendeffectors.clear();
         _vScaleGeometry = Vector(1,1,1);
         _bFlipYZ = false;
         _bSkipGeometry = false;
         _prefix = "";
+        _bodytype = "";
+        _bodyname = "xdummy";
         FOREACHC(itatt,atts) {
             if( itatt->first == "skipgeometry" ) {
                 _bSkipGeometry = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
@@ -134,7 +144,10 @@ protected:
                 _bFlipYZ = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "name" ) {
-                pbody->SetName(itatt->second);
+                _bodyname = itatt->second;
+            }
+            else if( itatt->first == "type" ) {
+                _bodytype = itatt->second;
             }
         }
     }
@@ -342,7 +355,7 @@ protected:
     }
 
     EnvironmentBasePtr _penv;
-    std::string _prefix;
+    std::string _prefix, _bodytype, _bodyname;
     Vector _vScaleGeometry;
     bool _bFlipYZ;
     std::list< pair<KinBody::LinkPtr, Transform> > _listendeffectors;
@@ -351,9 +364,6 @@ protected:
 
 bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList &atts)
 {
-    if( !ppbody ) {
-        ppbody = RaveCreateKinBody(penv,"");
-    }
     XFileReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if( filedata.size() == 0 ) {
@@ -365,9 +375,6 @@ bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
 
 bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList &atts)
 {
-    if( !pprobot ) {
-        pprobot = RaveCreateRobot(penv,"GenericRobot");
-    }
     XFileReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if( filedata.size() == 0 ) {
@@ -379,9 +386,6 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
 
 bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList &atts)
 {
-    if( !ppbody ) {
-        ppbody = RaveCreateKinBody(penv,"");
-    }
     XFileReader reader(penv);
     reader.Read(ppbody,data,atts);
     return true;
@@ -389,9 +393,6 @@ bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
 
 bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList &atts)
 {
-    if( !pprobot ) {
-        pprobot = RaveCreateRobot(penv,"GenericRobot");
-    }
     XFileReader reader(penv);
     reader.Read(pprobot,data,atts);
     return true;
