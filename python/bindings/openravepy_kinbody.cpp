@@ -219,7 +219,7 @@ public:
         _vlowerlimit = toPyVector3(Vector(0,0,0));
         _vupperlimit = toPyVector3(Vector(0,0,0));
         _bIsCircular = boost::python::list();
-        _bIsActive = false;
+        _bIsActive = true;
     }
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
