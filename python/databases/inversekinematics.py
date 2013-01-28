@@ -390,21 +390,25 @@ class InverseKinematicsModel(DatabaseGenerator):
                             intersectingaxes[i,j] = intersectingaxes[j,i] = 1
                     else:
                         # axes are parallel
-                        if sum(diff**2) <= 1e-7:
+                        if sum(cross(jointaxes[i],diff)**2) <= 1e-10:
                             intersectingaxes[i,j] = intersectingaxes[j,i] = 1
             intersecting3axes = [0]*N
             num3intersecting = 0
             for i in range(1,N-1):
                 if intersectingaxes[i-1,i] and intersectingaxes[i,i+1] and intersectingaxes[i-1,i+1]:
-                    intersecting3axes[i-1] |= 1 << num3intersecting
-                    intersecting3axes[i] |= 1 << num3intersecting
-                    intersecting3axes[i+1] |= 1 << num3intersecting
-                    num3intersecting += 1
+                    # have to check if they intersect at a common point
+                    intersection = jointanchors[i] + jointaxes[i] * dot(jointaxes[i], jointanchors[i-1]-jointanchors[i])
+                    distfromintersection = sum(cross(jointaxes[i+1],intersection - jointanchors[i+1])**2)
+                    if distfromintersection < 1e-10:
+                        intersecting3axes[i-1] |= 1 << num3intersecting
+                        intersecting3axes[i] |= 1 << num3intersecting
+                        intersecting3axes[i+1] |= 1 << num3intersecting
+                        log.info('found 3-intersection centered on index %d', remainingindices[i])
+                        num3intersecting += 1
             for i in range(N - dofexpected):
                 # by default always choose first
                 indextopop = 0
-                if self.iktype == IkParameterizationType.Transform6D or self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D:
-
+                if self.iktype == IkParameterizationType.Transform6D:
                     if num3intersecting > 0:
                         # try to preserve the intersecting axes
                         if intersecting3axes[2]:
@@ -425,11 +429,11 @@ class InverseKinematicsModel(DatabaseGenerator):
                     dirfromanchor = self.manip.GetTransform()[0:3,3]-jointanchors[-1]
                     if abs(dot(jointaxes[-1],dot(self.manip.GetTransform()[0:3,0:3],self.manip.GetLocalToolDirection()))) > 0.99999 and abs(dot(jointaxes[-1],dirfromanchor)) > 0.99999*linalg.norm(dirfromanchor):
                         # have to take the last index since last axis aligns
-                        print 'yooooooooooooo',dirfromanchor,jointaxes[-1]
                         indextopop = len(remainingindices)-1
                     else:
                         indextopop = 0
                 else:
+                    # self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
                     indextopop = len(remainingindices)-1
