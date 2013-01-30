@@ -330,7 +330,7 @@ public:
         return ReadInterfaceData(pinterface,type,data,atts);
     }
 
-    /** \brief reads in the rigid geometry of a resource file into a TRIMESH structure
+    /** \brief reads in the rigid geometry of a resource file into a TriMesh structure
 
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param options Options to control the parsing process.
@@ -443,7 +443,7 @@ public:
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
     /// \throw openrave_exception Throw if failed to add anything
-    virtual void Triangulate(KinBody::Link::TRIMESH& trimesh, KinBodyConstPtr pbody) = 0;
+    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) = 0;
 
     /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///
@@ -451,7 +451,7 @@ public:
     /// \param[in] options - Controlls what to triangulate.
     /// \param[in] selectname - name of the body used in options
     /// \throw openrave_exception Throw if failed to add anything
-    virtual void TriangulateScene(KinBody::Link::TRIMESH& trimesh, SelectionOptions options, const std::string& selectname) = 0;
+    virtual void TriangulateScene(TriMesh& trimesh, SelectionOptions options, const std::string& selectname) = 0;
     //@}
 
     /// \brief Load a new module, need to Lock if calling outside simulation thread

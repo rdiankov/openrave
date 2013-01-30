@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/thread/condition.hpp>
+
 namespace OpenRAVE {
 
 inline EnvironmentBasePtr& GetEnvironment(void* env) {
@@ -53,6 +55,42 @@ void ORCSetDebugLevel(int level)
     RaveSetDebugLevel((DebugLevel)level);
 }
 
+void ORCInitialize(bool bLoadAllPlugins, int level)
+{
+    RaveInitialize(bLoadAllPlugins,level);
+}
+
+void ORCDestroy()
+{
+    RaveDestroy();
+}
+
+// can only support one viewer per environment
+typedef std::map<EnvironmentBasePtr, boost::shared_ptr<boost::thread> > VIEWERMAP;
+static VIEWERMAP s_mapEnvironmentThreadViewers;
+static boost::mutex s_mutexViewer;
+static boost::condition s_conditionViewer;
+
+void ORCEnvironmentDestroy(void* env)
+{
+    EnvironmentBasePtr penv = GetEnvironment(env);
+    VIEWERMAP::iterator it = s_mapEnvironmentThreadViewers.find(penv);
+    if( it != s_mapEnvironmentThreadViewers.end() ) {
+        {
+            // release the viewer
+            ViewerBasePtr pviewer = penv->GetViewer();
+            if( !!pviewer ) {
+                pviewer->quitmainloop();
+            }
+        }
+        if( !!it->second ) {
+            it->second->join();
+        }
+        s_mapEnvironmentThreadViewers.erase(it);
+    }
+    penv->Destroy();
+}
+
 bool ORCEnvironmentLoad(void* env, const char* filename)
 {
     return GetEnvironment(env)->Load(filename);
@@ -86,6 +124,21 @@ int ORCEnvironmentGetRobots(void* env, void** robots)
     return vrobots.size();
 }
 
+void ORCEnvironmentAdd(void* env, void* pinterface)
+{
+    GetEnvironment(env)->Add(GetInterface(pinterface));
+}
+
+int ORCEnvironmentAddModule(void* env, void* module, const char* args)
+{
+    return GetEnvironment(env)->AddModule(GetModule(module), args);
+}
+
+void ORCEnvironmentRemove(void* env, void* pinterface)
+{
+    GetEnvironment(env)->Remove(GetInterface(pinterface));
+}
+
 void ORCEnvironmentLock(void* env)
 {
 #if BOOST_VERSION < 103500
@@ -95,13 +148,52 @@ void ORCEnvironmentLock(void* env)
 #endif
 }
 
-void ORCEnvironmentUnock(void* env)
+void ORCEnvironmentUnlock(void* env)
 {
 #if BOOST_VERSION < 103500
     throw OPENRAVE_EXCEPTION_FORMAT0("unlocking with boost version < 1.35 is not supported", ORE_Failed);
 #else
     GetEnvironment(env)->GetMutex().unlock();
 #endif
+}
+
+void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+{
+    ViewerBasePtr pviewer;
+    {
+        boost::mutex::scoped_lock lock(s_mutexViewer);
+        pviewer = RaveCreateViewer(penv, strviewer);
+        if( !!pviewer ) {
+            penv->AddViewer(pviewer);
+        }
+        s_conditionViewer.notify_one();
+    }
+
+    if( !pviewer ) {
+        return;
+    }
+    pviewer->main(bShowViewer);     // spin until quitfrommainloop is called
+    penv->Remove(pviewer);
+}
+
+bool ORCEnvironmentSetViewer(void* env, const char* viewername)
+{
+    EnvironmentBasePtr penv = GetEnvironment(env);
+    VIEWERMAP::iterator it = s_mapEnvironmentThreadViewers.find(penv);
+    if( it != s_mapEnvironmentThreadViewers.end() ) {
+        if( !!it->second ) {     // wait for the viewer
+            it->second->join();
+        }
+        s_mapEnvironmentThreadViewers.erase(it);
+    }
+
+    if( !!viewername && strlen(viewername) > 0 ) {
+        boost::mutex::scoped_lock lock(s_mutexViewer);
+        boost::shared_ptr<boost::thread> threadviewer(new boost::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
+        s_mapEnvironmentThreadViewers[penv] = threadviewer;
+        s_conditionViewer.wait(lock);
+    }
+    return true;
 }
 
 void ORCInterfaceRelease(void* pinterface)
@@ -128,16 +220,6 @@ void* ORCModuleCreate(void* env, const char* modulename)
         return NULL;
     }
     return new InterfaceBasePtr(module);
-}
-
-int ORCEnvironmentAddModule(void* env, void* module, const char* args)
-{
-    return GetEnvironment(env)->AddModule(GetModule(module), args);
-}
-
-void ORCEnvironmentRemove(void* env, void* pinterface)
-{
-    GetEnvironment(env)->Remove(GetInterface(pinterface));
 }
 
 char* ORCInterfaceSendCommand(void* pinterface, const char* command)

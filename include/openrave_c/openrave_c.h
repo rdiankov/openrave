@@ -34,11 +34,31 @@ typedef float OpenRAVEReal;
 extern "C" {
 #endif
 
+enum DebugLevel {
+    Level_Fatal=0,
+    Level_Error=1,
+    Level_Warn=2,
+    Level_Info=3,
+    Level_Debug=4,
+    Level_Verbose=5,
+    Level_OutputMask=0xf,
+    Level_VerifyPlans=0x80000000, ///< if set, should verify every plan returned. the verification is left up to the planners or the modules calling the planners. See \ref planningutils::ValidateTrajectory
+};
+
 /// \brief Calls \ref RaveSetDebugLevel
 OPENRAVE_API void ORCSetDebugLevel(int level);
 
+/// \brief Calls \ref RaveInitialize
+OPENRAVE_API void ORCInitialize(bool bLoadAllPlugins=true, int level=Level_Info);
+
+/// \brief Calls \ref RaveDestroy
+OPENRAVE_API void ORCDestroy();
+
 /// \name \ref EnvironmentBase methods
 //@{
+
+/// \brief Calls \ref EnvironmentBase::Destroy
+OPENRAVE_API void ORCEnvironmentDestroy(void* env);
 
 OPENRAVE_API bool ORCEnvironmentLoad(void* env, const char* filename);
 
@@ -60,6 +80,11 @@ OPENRAVE_API int ORCEnvironmentGetBodies(void* env, void** bodies);
 /// \return number of robots
 OPENRAVE_API int ORCEnvironmentGetRobots(void* env, void** robots);
 
+/// \brief Calls \ref EnvironmentBase::Add
+///
+/// \param pinterface can be body, robot, sensor, etc (any type derived from InterfaceBase)
+OPENRAVE_API void ORCEnvironmentAdd(void* env, void* pinterface);
+
 /// \brief Calls \ref EnvironmentBase::AddModule
 OPENRAVE_API int ORCEnvironmentAddModule(void* env, void* module, const char* args);
 
@@ -74,18 +99,10 @@ OPENRAVE_API void ORCEnvironmentRemove(void* env, void* pinterface);
 OPENRAVE_API void ORCEnvironmentLock(void* env);
 
 /// \brief unlock an already locked mutex
-OPENRAVE_API void ORCEnvironmentUnock(void* env);
-
-/// \brief Calls \ref EnvironmentBase::Add
-///
-/// \param pinterface can be body, robot, sensor, etc (any type derived from InterfaceBase)
-OPENRAVE_API void ORCEnvironmentAdd(void* env, void* pinterface);
-
-/// \brief Calls \ref EnvironmentBase::Remove
-OPENRAVE_API bool ORCEnvironmentRemove(void* env, void* pinterface);
+OPENRAVE_API void ORCEnvironmentUnlock(void* env);
 
 /// \brief Starts a viewer thread for the current environment
-OPENRAVE_API void SetViewer(void* env, const char* viewername);
+OPENRAVE_API bool ORCEnvironmentSetViewer(void* env, const char* viewername);
 
 //@}
 

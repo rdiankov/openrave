@@ -161,7 +161,7 @@ public:
     const struct aiScene* _scene;
 };
 
-static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vector& scale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vector& scale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
 {
     if( !node ) {
         return false;
@@ -229,7 +229,7 @@ static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vecto
 
 #endif
 
-bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, KinBody::Link::TRIMESH& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
 {
     string extension;
     if( filename.find_last_of('.') != string::npos ) {

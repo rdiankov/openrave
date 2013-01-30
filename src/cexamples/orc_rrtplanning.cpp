@@ -10,6 +10,7 @@
 
 int main(int argc, char ** argv)
 {
+    ORCInitialize();
     void* env = ORCEnvironmentCreate();
     ORCEnvironmentLoad(env, "data/lab1.env.xml");
 
@@ -35,5 +36,7 @@ int main(int argc, char ** argv)
         ORCInterfaceRelease(robots[i]);
     }
     free(robots);
+    ORCEnvironmentDestroy(env);
     ORCEnvironmentRelease(env);
+    ORCDestroy();
 };

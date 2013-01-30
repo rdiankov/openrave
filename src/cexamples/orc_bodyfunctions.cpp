@@ -10,6 +10,7 @@
 
 int main(int argc, char ** argv)
 {
+    ORCInitialize();
     void* env = ORCEnvironmentCreate();
     ORCEnvironmentLoad(env, "data/lab1.env.xml");
 
@@ -21,21 +22,28 @@ int main(int argc, char ** argv)
     ORCEnvironmentGetBodies(env, bodies);
 
     for(int i = 0; i < numbodies; ++i) {
-        const char* bodyname = ORCBodyGetName(bodies[0]);
+        const char* bodyname = ORCBodyGetName(bodies[i]);
         printf("%s\n", bodyname);
     }
+
+    ORCEnvironmentSetViewer(env,"qtcoin");
 
     // lock the environment when doing operations
     ORCEnvironmentLock(env);
 
-    int numlinks = ORCBodyGetLinks(env, NULL);
-    void** links = NULL;
-    links = (void**)malloc(sizeof(void*)*numlinks);
-    ORCBodyGetLinks(env, links);
+    //int numlinks = ORCBodyGetLinks(env, NULL);
+    //void** links = NULL;
+    //links = (void**)malloc(sizeof(void*)*numlinks);
+    //ORCBodyGetLinks(env, links);
 
     // unlock
     ORCEnvironmentUnlock(env);
 
+    printf("press any key to exit\n");
+    getchar();
+
     free(bodies);
+    ORCEnvironmentDestroy(env);
     ORCEnvironmentRelease(env);
+    ORCDestroy();
 };
