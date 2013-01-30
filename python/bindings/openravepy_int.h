@@ -591,7 +591,7 @@ void init_openravepy_planner();
 PlannerBasePtr GetPlanner(PyPlannerBasePtr);
 PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
-//void init_openravepy_robot();
+void init_openravepy_robot();
 RobotBasePtr GetRobot(PyRobotBasePtr);
 PyInterfaceBasePtr toPyRobot(RobotBasePtr, PyEnvironmentBasePtr);
 RobotBase::ManipulatorPtr GetRobotManipulator(object);

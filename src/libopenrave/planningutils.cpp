@@ -1381,19 +1381,40 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         itdh->d = vlocalanchor.z;
         itdh->theta = RaveAtan2(vlocalx.y,vlocalx.x);
         itdh->a = vlocalanchor.dot3(vlocalx);
-        // normalize if theta is closer to PI
-        if( itdh->theta > 0.5*PI-g_fEpsilon ) { // this is a really weird condition but it looks like people prefer theta to be negative
-            itdh->alpha = -itdh->alpha;
-            itdh->theta -= PI;
-            itdh->a = -itdh->a;
+        Vector zquat = quatFromAxisAngle(Vector(0,0,1),itdh->theta);
+        Vector xquat = quatFromAxisAngle(Vector(1,0,0),itdh->alpha);
+        bool bflip = false;
+//        if( itdh->a < -g_fEpsilon ) {
+//            // cannot have -a since a lot of formats specify a as positive
+//            bflip = true;
+//        }
+//        else {
+        Vector worldrotquat = quatMultiply(itdh->transform.rot, quatMultiply(zquat, xquat));
+        // always try to have the x-axis pointed positively towards x
+        // (worldrotquat * (1,0,0))[0] < 0
+        dReal xcomponent = (1-2*worldrotquat.z*worldrotquat.z-2*worldrotquat.w*worldrotquat.w);
+        if( xcomponent < 0 ) {
+            bflip = true;
         }
-        else if( itdh->theta < -0.5*PI ) {
-            itdh->alpha = -itdh->alpha;
-            itdh->theta += PI;
-            itdh->a = -itdh->a;
+        //        }
+
+        if( bflip ) {
+            // normalize if theta is closer to PI
+            if( itdh->theta > g_fEpsilon ) { // this is a really weird condition but it looks like people prefer theta to be negative
+                itdh->alpha = -itdh->alpha;
+                itdh->theta -= PI;
+                itdh->a = -itdh->a;
+            }
+            else {
+                itdh->alpha = -itdh->alpha;
+                itdh->theta += PI;
+                itdh->a = -itdh->a;
+            }
+            zquat = quatFromAxisAngle(Vector(0,0,1),itdh->theta);
+            xquat = quatFromAxisAngle(Vector(1,0,0),itdh->alpha);
         }
-        Transform Z_i(quatFromAxisAngle(Vector(0,0,1),itdh->theta), Vector(0,0,itdh->d));
-        Transform X_i(quatFromAxisAngle(Vector(1,0,0),itdh->alpha), Vector(itdh->a,0,0));
+        Transform Z_i(zquat, Vector(0,0,itdh->d));
+        Transform X_i(xquat, Vector(itdh->a,0,0));
         itdh->transform = tparent*Z_i*X_i;
         ++itdh;
     }

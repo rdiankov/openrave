@@ -2762,6 +2762,13 @@ void QtCoinViewer::UpdateFromModel()
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
         KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
 
+        if( !!pitem ) {
+            if( !pitem->GetBody() ) {
+                // looks like item has been destroyed, so remove from data
+                pbody->RemoveUserData("qtcoinviewer");
+                pitem.reset();
+            }
+        }
         if( !pitem ) {
             // make sure pbody is actually present
             if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {

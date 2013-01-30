@@ -1556,7 +1556,9 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
     while(_vAllPairsShortestPaths[offset+curlink].first>=0) {
         int jointindex = _vAllPairsShortestPaths[offset+curlink].second;
         vjoints.push_back(jointindex < (int)_vecjoints.size() ? _vecjoints.at(jointindex) : _vPassiveJoints.at(jointindex-_vecjoints.size()));
+        int prevlink = curlink;
         curlink = _vAllPairsShortestPaths[offset+curlink].first;
+        OPENRAVE_ASSERT_OP(prevlink,!=,curlink); // avoid loops
     }
     return vjoints.size()>0; // otherwise disconnected
 }

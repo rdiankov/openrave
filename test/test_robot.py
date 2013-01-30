@@ -109,9 +109,18 @@ class RunRobot(EnvironmentSetup):
             assert(robot.CheckSelfCollision())
             assert(not env.CheckCollision(robot))
 
+            grabbedinfos = robot.GetGrabbedInfo()
+            grabbedbodies = robot.GetGrabbed()
+            # try saving the grabbed state
             robot.ReleaseAllGrabbed()
-            assert(env.CheckCollision(leftmug,rightmug))        
 
+            robot.ResetGrabbed(grabbedinfos)
+            grabbedinfo2 = robot.GetGrabbedInfo()
+            assert(set([g._grabbedname for g in grabbedinfo2]) == set([b.GetName() for b in grabbedbodies]))
+            
+            robot.ReleaseAllGrabbed()
+            assert(env.CheckCollision(leftmug,rightmug))
+            
     def test_grabcollision_dynamic(self):
         self.log.info('test if can handle grabbed bodies being enabled/disabled')
         env=self.env
@@ -466,6 +475,25 @@ class RunRobot(EnvironmentSetup):
                                 numerical_jac[j,idof] = (pert_offset[j]-offset[j])/deltastep
                             pert_dofvals[idof] = dofvals[idof]
                     assert(all(abs(numerical_jac - J) <= 5*deltastep))
+
+    def test_getlinkjointinfo(self):
+        env=self.env
+        with env:
+            robot=self.LoadRobot('robots/barrettwam.robot.xml')
+            robot.SetTransform(eye(4))
+            Trobot = robot.GetTransform()
+            linkinfos = [link.UpdateAndGetInfo() for link in robot.GetLinks()]
+            jointinfos = [joint.UpdateAndGetInfo() for joint in robot.GetJoints()]
+            jointinfos += [joint.UpdateAndGetInfo() for joint in robot.GetPassiveJoints()]
+            manipinfos = [manip.GetInfo() for manip in robot.GetManipulators()]
+            # try to re-create the robot
+            env2=Environment()
+            robot2=RaveCreateRobot(env2,'')
+            robot2.Init(linkinfos,jointinfos,manipinfos,[])
+            robot2.SetName(robot.GetName())
+            env2.Add(robot2)
+            robot2.SetTransform(Trobot)
+            misc.CompareBodies(robot,robot2,computeadjacent=False,comparemanipulators=True,comparesensors=False)
                 
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 

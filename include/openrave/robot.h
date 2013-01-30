@@ -30,7 +30,9 @@ namespace OpenRAVE {
 class OPENRAVE_API RobotBase : public KinBody
 {
 public:
-    /// \brief holds all user-set manipulator information used to initialize the Manipulator class
+    /// \brief holds all user-set manipulator information used to initialize the Manipulator class.
+    ///
+    /// This is serializable and independent of environment.
     class OPENRAVE_API ManipulatorInfo
     {
 public:
@@ -48,6 +50,7 @@ public:
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
+    typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
@@ -334,6 +337,26 @@ private:
     typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
     typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API AttachedSensorInfo
+    {
+public:
+        AttachedSensorInfo() {
+        }
+        virtual ~AttachedSensorInfo() {
+        }
+
+        std::string _name;
+        std::string _linkname; ///< the robot link that the sensor is attached to
+        Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
+        std::string _sensorname; ///< name of the sensor interface to create
+        SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
+    };
+    typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
+    typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
+
     /// \brief Attaches a sensor to a link on the robot.
     class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
@@ -396,6 +419,20 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
 
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API GrabbedInfo
+    {
+public:
+        std::string _grabbedname; ///< the name of the body to grab
+        std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
+        std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
+    };
+    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
+
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -435,6 +472,14 @@ private:
     }
 
     virtual void Destroy();
+
+    /// \brief initializes a robot with links, joints, manipulators, and sensors
+    ///
+    /// Calls \ref KinBody::Init(linkinfos, jointinfos) and then adds the robot-specific information afterwards
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos);
+
 
     /// \brief Returns the manipulators of the robot
     virtual std::vector<ManipulatorPtr>& GetManipulators() {
@@ -740,6 +785,19 @@ private:
         \param[out] vbodies filled with the grabbed bodies
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief gets all grabbed bodies of the robot
+
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+
+    /** \brief resets the grabbed bodies of the robot
+
+        Any currently grabbed bodies will be first released.
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
 
     /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
 

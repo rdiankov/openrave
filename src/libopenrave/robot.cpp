@@ -254,6 +254,25 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos)
+{
+    if( !KinBody::Init(linkinfos, jointinfos) ) {
+        return false;
+    }
+    _vecManipulators.resize(0);
+    FOREACHC(itmanipinfo, manipinfos) {
+        ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
+        _vecManipulators.push_back(newmanip);
+        __hashrobotstructure.resize(0);
+    }
+    // TODO: sensors
+    _vecSensors.resize(0);
+    if( attachedsensorinfos.size() > 0 ) {
+        RAVELOG_WARN("currently do not support initializing from AttachedSensorInfo\n");
+    }
+    return true;
+}
+
 bool RobotBase::SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
 {
     RAVELOG_DEBUG("default robot doesn't not support setting controllers (try GenericRobot)\n");
@@ -1465,6 +1484,49 @@ void RobotBase::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
         if( !!pbody && pbody->GetEnvironmentId() ) {
             vbodies.push_back(pbody);
         }
+    }
+}
+
+void RobotBase::GetGrabbedInfo(std::vector<RobotBase::GrabbedInfoPtr>& vgrabbedinfo) const
+{
+    vgrabbedinfo.resize(_vGrabbedBodies.size());
+    for(size_t i = 0; i < vgrabbedinfo.size(); ++i) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies[i]);
+        vgrabbedinfo[i].reset(new GrabbedInfo());
+        vgrabbedinfo[i]->_grabbedname = pgrabbed->_pgrabbedbody.lock()->GetName();
+        vgrabbedinfo[i]->_robotlinkname = pgrabbed->_plinkrobot->GetName();
+        vgrabbedinfo[i]->_trelative = pgrabbed->_troot;
+        vgrabbedinfo[i]->_setRobotLinksToIgnore = pgrabbed->_setRobotLinksToIgnore;
+    }
+}
+
+void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& vgrabbedinfo)
+{
+    ReleaseAllGrabbed();
+    CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+    FOREACHC(itgrabbedinfo, vgrabbedinfo) {
+        GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
+        KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
+        KinBody::LinkPtr pRobotLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
+        OPENRAVE_ASSERT_FORMAT(!!pbody && !!pRobotLinkToGrabWith, "robot %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
+        if( IsGrabbing(pbody) ) {
+            RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
+            continue;
+        }
+
+        GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
+        pgrabbed->_troot = pgrabbedinfo->_trelative;
+        pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
+        Transform tlink = pRobotLinkToGrabWith->GetTransform();
+        Transform tbody = tlink * pgrabbed->_troot;
+        pbody->SetTransform(tbody);
+        // set velocity
+        std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
+        velocity.first += velocity.second.cross(tbody.trans - tlink.trans);
+        pbody->SetVelocity(velocity.first, velocity.second);
+        _vGrabbedBodies.push_back(pgrabbed);
+        _AttachBody(pbody);
     }
 }
 
