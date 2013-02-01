@@ -231,7 +231,9 @@ inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dRe
 inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     //dReal facos = RaveAcos(min(dReal(1),RaveFabs(dot4(t1.rot,t2.rot))));
-    dReal facos = std::min((t1.rot-t2.rot).lengthsqr4(),(t1.rot+t2.rot).lengthsqr4());
+    dReal facos1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal facos2 = (t1.rot+t2.rot).lengthsqr4();
+    dReal facos = facos1 < facos2 ? facos1 : facos2;
     return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos; //*facos;
 }
 
