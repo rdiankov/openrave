@@ -188,7 +188,17 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                             if( !!pbody ) {
                                 _samplespec._vgroups.push_back(*itgroup);
                                 _samplespec._vgroups.back().offset = dof;
-                                _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody));
+                                Transform trelativepose;
+                                if( tokens.size() >= 11 ) {
+                                    trelativepose.rot[0] = boost::lexical_cast<dReal>(tokens[4]);
+                                    trelativepose.rot[1] = boost::lexical_cast<dReal>(tokens[5]);
+                                    trelativepose.rot[2] = boost::lexical_cast<dReal>(tokens[6]);
+                                    trelativepose.rot[3] = boost::lexical_cast<dReal>(tokens[7]);
+                                    trelativepose.trans[0] = boost::lexical_cast<dReal>(tokens[8]);
+                                    trelativepose.trans[1] = boost::lexical_cast<dReal>(tokens[9]);
+                                    trelativepose.trans[2] = boost::lexical_cast<dReal>(tokens[10]);
+                                }
+                                _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody, trelativepose));
                             }
                             dof += _samplespec._vgroups.back().dof;
                         }
@@ -259,6 +269,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // first process all grab info
             list<KinBodyPtr> listrelease;
             list<pair<KinBodyPtr, KinBody::LinkPtr> > listgrab;
+            list<int> listgrabindices;
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
@@ -296,14 +307,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 else {
                     KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(itgrabinfo->pbody);
                     if( !!pgrabbinglink ) {
-                        if( pgrabbinglink->GetIndex() != itgrabinfo->robotlinkindex ) {
-                            listrelease.push_back(itgrabinfo->pbody);
-                            listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
-                        }
+                        listrelease.push_back(itgrabinfo->pbody);
                     }
-                    else {
-                        listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
-                    }
+                    listgrabindices.push_back(static_cast<int>(itgrabinfo-_vgrabbodylinks.begin()));
                 }
             }
 
@@ -330,6 +336,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // always release after setting dof values
             FOREACH(itbody,listrelease) {
                 _probot->Release(*itbody);
+            }
+            FOREACH(itindex,listgrabindices) {
+                const GrabBody& grabinfo = _vgrabbodylinks.at(*itindex);
+                KinBody::LinkPtr plink = _probot->GetLinks().at(grabinfo.robotlinkindex);
+                grabinfo.pbody->SetTransform(plink->GetTransform() * grabinfo.trelativepose);
+                _probot->Grab(grabinfo.pbody, plink);
             }
             FOREACH(it,listgrab) {
                 _probot->Grab(it->first,it->second);
@@ -494,11 +506,12 @@ private:
     {
         GrabBody() : offset(0), robotlinkindex(0) {
         }
-        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody, Transform trelativepose) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody), trelativepose(trelativepose) {
         }
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
+        Transform trelativepose; ///< relative pose of body with link when grabbed
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;

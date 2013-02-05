@@ -61,4 +61,12 @@ using namespace OpenRAVE;
 
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 
+inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
+{
+    dReal e1 = (t1.rot-t2.rot).lengthsqr4();
+    dReal e2 = (t1.rot+t2.rot).lengthsqr4();
+    dReal e = e1 < e2 ? e1 : e2;
+    return RaveSqrt((t1.trans-t2.trans).lengthsqr3() + frotweight*e);
+}
+
 #endif
