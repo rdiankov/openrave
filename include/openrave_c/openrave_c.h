@@ -54,6 +54,19 @@ OPENRAVE_API void ORCInitialize(bool bLoadAllPlugins=true, int level=Level_Info)
 /// \brief Calls \ref RaveDestroy
 OPENRAVE_API void ORCDestroy();
 
+/// \brief Calls \ref RaveCreateKinBody
+OPENRAVE_API void* ORCCreateKinBody(void* env, const char* name);
+
+/// \brief Creates a new \ref OpenRAVE::TriMesh object and copies the vertex/index data.
+///
+/// Have to call ORCTriMeshDestroy afterwards.
+/// \param vertex a numvertices*3 real array
+/// \param index a numtriangles*3 int array for every triangle
+OPENRAVE_API void* ORCCreateTriMesh(OpenRAVEReal* vertices, int numvertices, OpenRAVEReal* indices, int numtriangles);
+
+/// \brief frees the trimesh data returned from \ref ORCTriMeshCreate
+OPENRAVE_API void ORCTriMeshDestroy(void* trimesh);
+
 /// \name \ref EnvironmentBase methods
 //@{
 
@@ -61,6 +74,9 @@ OPENRAVE_API void ORCDestroy();
 OPENRAVE_API void ORCEnvironmentDestroy(void* env);
 
 OPENRAVE_API bool ORCEnvironmentLoad(void* env, const char* filename);
+
+/// \brief Calls \ref EnvironmentBase::GetKinBody
+OPENRAVE_API void* ORCEnvironmentGetKinBody(void* env, const char* name);
 
 /// \brief Calls \ref EnvironmentBase::GetBodies
 ///
@@ -90,6 +106,9 @@ OPENRAVE_API int ORCEnvironmentAddModule(void* env, void* module, const char* ar
 
 /// \brief Calls \ref EnvironmentBase::Remove
 OPENRAVE_API void ORCEnvironmentRemove(void* env, void* pinterface);
+
+/// \brief Calls \ref EnvironmentBase::GetSimulationTime
+OPENRAVE_API unsigned long long ORCEnvironmentGetSimulationTime(void* env);
 
 /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
 ///
@@ -125,6 +144,9 @@ OPENRAVE_API char* ORCInterfaceSendCommand(void* pinterface, const char* command
 
 /// \brief Calls \ref KinBody::GetName
 OPENRAVE_API const char* ORCBodyGetName(void* body);
+
+/// \brief Calls \ref KinBody::SetName
+OPENRAVE_API void ORCBodySetName(void* body, const char* name);
 
 /// \brief Calls \ref KinBody::GetDOF
 OPENRAVE_API int ORCBodyGetDOF(void* body);
@@ -168,6 +190,11 @@ OPENRAVE_API void ORCBodyGetTransform(void* body, OpenRAVEReal* pose);
 /// \param[out] matrix column-order, row-major 3x4 matrix of the body world transform
 OPENRAVE_API void ORCBodyGetTransformMatrix(void* body, OpenRAVEReal* matrix);
 
+/// \brief Calls \ref KinBody::InitFromTrimesh
+///
+/// \param trimesh returned from ORCTriMeshCreate()
+OPENRAVE_API bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible);
+
 //@}
 
 /// \name \ref KinBody::Link methods
@@ -191,7 +218,7 @@ OPENRAVE_API void ORCBodyLinkRelease(void* link);
 //@{
 
 /// \brief Calls \ref KinBody::Link::Geometry::SetDiffuseColor
-OPENRAVE_API void ORCBodyGeometrySetDiffuseColor(void* geometry, OpenRAVEReal red, OpenRAVEReal green, OpenRAVEReal blue);
+OPENRAVE_API void ORCBodyGeometrySetDiffuseColor(void* geometry, float red, float green, float blue);
 
 //@}
 

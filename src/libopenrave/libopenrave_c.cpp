@@ -20,7 +20,8 @@
 
 namespace OpenRAVE {
 
-inline EnvironmentBasePtr& GetEnvironment(void* env) {
+inline EnvironmentBasePtr& GetEnvironment(void* env)
+{
     BOOST_ASSERT(!!env);
     return *static_cast<EnvironmentBasePtr*>(env);
 }
@@ -31,17 +32,32 @@ inline InterfaceBasePtr GetInterface(void* pinterface)
     return *static_cast<InterfaceBasePtr*>(pinterface);
 }
 
-inline KinBodyPtr GetBody(void* body) {
+inline KinBodyPtr GetBody(void* body)
+{
     BOOST_ASSERT(!!body);
     return RaveInterfaceCast<KinBody>(*static_cast<InterfaceBasePtr*>(body));
 }
 
-inline RobotBasePtr GetRobot(void* robot) {
+inline KinBody::LinkPtr GetBodyLink(void* link)
+{
+    BOOST_ASSERT(!!link);
+    return *static_cast<KinBody::LinkPtr*>(link);
+}
+
+inline KinBody::Link::GeometryPtr GetBodyGeometry(void* geometry)
+{
+    BOOST_ASSERT(!!geometry);
+    return *static_cast<KinBody::Link::GeometryPtr*>(geometry);
+}
+
+inline RobotBasePtr GetRobot(void* robot)
+{
     BOOST_ASSERT(!!robot);
     return RaveInterfaceCast<RobotBase>(*static_cast<InterfaceBasePtr*>(robot));
 }
 
-inline ModuleBasePtr GetModule(void* module) {
+inline ModuleBasePtr GetModule(void* module)
+{
     BOOST_ASSERT(!!module);
     return RaveInterfaceCast<ModuleBase>(*static_cast<InterfaceBasePtr*>(module));
 }
@@ -63,6 +79,40 @@ void ORCInitialize(bool bLoadAllPlugins, int level)
 void ORCDestroy()
 {
     RaveDestroy();
+}
+
+void* ORCCreateKinBody(void* env, const char* name)
+{
+    KinBodyPtr pbody = RaveCreateKinBody(GetEnvironment(env), !name ? std::string() : std::string(name));
+    if( !pbody ) {
+        return NULL;
+    }
+    return new KinBodyPtr(pbody);
+}
+
+void* ORCCreateTriMesh(dReal* vertices, int numvertices, dReal* indices, int numtriangles)
+{
+    TriMesh* ptrimesh = new TriMesh();
+    if( !!vertices && numvertices > 0 ) {
+        ptrimesh->vertices.resize(numvertices);
+        for(int i = 0; i < numvertices; ++i) {
+            ptrimesh->vertices[i].x = vertices[3*i+0];
+            ptrimesh->vertices[i].y = vertices[3*i+1];
+            ptrimesh->vertices[i].z = vertices[3*i+2];
+        }
+    }
+    if( !!indices && numtriangles > 0 ) {
+        ptrimesh->indices.resize(numtriangles*3);
+        std::copy(indices,indices+3*numtriangles,ptrimesh->indices.begin());
+    }
+    return ptrimesh;
+}
+
+void ORCTriMeshDestroy(void* trimesh)
+{
+    if( !!trimesh ) {
+        delete static_cast<TriMesh*>(trimesh);
+    }
 }
 
 // can only support one viewer per environment
@@ -94,6 +144,15 @@ void ORCEnvironmentDestroy(void* env)
 bool ORCEnvironmentLoad(void* env, const char* filename)
 {
     return GetEnvironment(env)->Load(filename);
+}
+
+void* ORCEnvironmentGetKinBody(void* env, const char* name)
+{
+    KinBodyPtr pbody = GetEnvironment(env)->GetKinBody(name);
+    if( !pbody ) {
+        return NULL;
+    }
+    return new InterfaceBasePtr(pbody);
 }
 
 int ORCEnvironmentGetBodies(void* env, void** bodies)
@@ -137,6 +196,11 @@ int ORCEnvironmentAddModule(void* env, void* module, const char* args)
 void ORCEnvironmentRemove(void* env, void* pinterface)
 {
     GetEnvironment(env)->Remove(GetInterface(pinterface));
+}
+
+unsigned long long ORCEnvironmentGetSimulationTime(void* env)
+{
+    return static_cast<unsigned long long>(GetEnvironment(env)->GetSimulationTime());
 }
 
 void ORCEnvironmentLock(void* env)
@@ -196,32 +260,6 @@ bool ORCEnvironmentSetViewer(void* env, const char* viewername)
     return true;
 }
 
-void ORCInterfaceRelease(void* pinterface)
-{
-    if( !!pinterface ) {
-        delete static_cast<InterfaceBasePtr*>(pinterface);
-    }
-}
-
-const char* ORCBodyGetName(void* body)
-{
-    return GetBody(body)->GetName().c_str();
-}
-
-const char* ORCRobotGetName(void* robot)
-{
-    return GetRobot(robot)->GetName().c_str();
-}
-
-void* ORCModuleCreate(void* env, const char* modulename)
-{
-    ModuleBasePtr module = RaveCreateModule(GetEnvironment(env), modulename);
-    if( !module ) {
-        return NULL;
-    }
-    return new InterfaceBasePtr(module);
-}
-
 char* ORCInterfaceSendCommand(void* pinterface, const char* command)
 {
     std::stringstream sout, sinput;
@@ -238,6 +276,147 @@ char* ORCInterfaceSendCommand(void* pinterface, const char* command)
     char* poutput = (char*)malloc(posend-posstart+1);
     sout.get(poutput, posend-posstart+1,'\0');
     return poutput;
+}
+
+void ORCInterfaceRelease(void* pinterface)
+{
+    if( !!pinterface ) {
+        delete static_cast<InterfaceBasePtr*>(pinterface);
+    }
+}
+
+const char* ORCBodyGetName(void* body)
+{
+    return GetBody(body)->GetName().c_str();
+}
+
+void ORCBodySetName(void* body, const char* name)
+{
+    return GetBody(body)->SetName(name);
+}
+
+int ORCBodyGetDOF(void* body)
+{
+    return GetBody(body)->GetDOF();
+}
+
+void ORCBodyGetDOFValues(void* body, dReal* values)
+{
+    std::vector<dReal> tempvalues;
+    GetBody(body)->GetDOFValues(tempvalues);
+    if( tempvalues.size() > 0 ) {
+        std::copy(tempvalues.begin(), tempvalues.end(), values);
+    }
+}
+
+void ORCBodySetDOFValues(void* body, const dReal* values)
+{
+    KinBodyPtr pbody = GetBody(body);
+    std::vector<dReal> tempvalues;
+    tempvalues.resize(pbody->GetDOF());
+    std::copy(values,values+tempvalues.size(), tempvalues.begin());
+    pbody->SetDOFValues(tempvalues);
+}
+
+int ORCBodyGetLinks(void* body, void** links)
+{
+    KinBodyPtr pbody = GetBody(body);
+    if( !!links ) {
+        for(size_t i = 0; i < pbody->GetLinks().size(); ++i) {
+            links[i] = new KinBody::LinkPtr(pbody->GetLinks()[i]);
+        }
+    }
+    return static_cast<int>(pbody->GetLinks().size());
+}
+
+void ORCBodySetTransform(void* body, const dReal* pose)
+{
+    Transform t;
+    for(int i = 0; i < 4; ++i) {
+        t.rot[i] = pose[i];
+    }
+    for(int i = 0; i < 3; ++i) {
+        t.trans[i] = pose[4+i];
+    }
+    t.rot.normalize4();
+    GetBody(body)->SetTransform(t);
+}
+
+void ORCBodySetTransformMatrix(void* body, const dReal* matrix)
+{
+    TransformMatrix t;
+    for(int i = 0; i < 3; ++i) {
+        t.m[4*i+0] = matrix[4*i+0];
+        t.m[4*i+1] = matrix[4*i+1];
+        t.m[4*i+2] = matrix[4*i+2];
+        t.trans[i] = matrix[4*i+3];
+    }
+    GetBody(body)->SetTransform(t);
+}
+
+void ORCBodyGetTransform(void* body, dReal* pose)
+{
+    Transform t = GetBody(body)->GetTransform();
+    for(int i = 0; i < 4; ++i) {
+        pose[i] = t.rot[i];
+    }
+    for(int i = 0; i < 3; ++i) {
+        pose[4+i] = t.trans[i];
+    }
+}
+
+void ORCBodyGetTransformMatrix(void* body, dReal* matrix)
+{
+    TransformMatrix t(GetBody(body)->GetTransform());
+    for(int i = 0; i < 3; ++i) {
+        matrix[4*i+0] = t.m[4*i+0];
+        matrix[4*i+1] = t.m[4*i+1];
+        matrix[4*i+2] = t.m[4*i+2];
+        matrix[4*i+3] = t.trans[i];
+    }
+}
+
+bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible)
+{
+    TriMesh* ptrimesh = static_cast<TriMesh*>(trimesh);
+    return GetBody(body)->InitFromTrimesh(*ptrimesh,visible);
+}
+
+int ORCBodyLinkGetGeometries(void* link, void** geometries)
+{
+    KinBody::LinkPtr plink = GetBodyLink(link);
+    if( !!geometries ) {
+        for(size_t i = 0; i < plink->GetGeometries().size(); ++i) {
+            geometries[i] = new KinBody::Link::GeometryPtr(plink->GetGeometry(i));
+        }
+    }
+    return static_cast<int>(plink->GetGeometries().size());
+}
+
+void ORCBodyLinkRelease(void* link)
+{
+    if( !!link ) {
+        delete static_cast<KinBody::LinkPtr*>(link);
+    }
+}
+
+void ORCBodyGeometrySetDiffuseColor(void* geometry, float red, float green, float blue)
+{
+    GetBodyGeometry(geometry)->SetDiffuseColor(RaveVector<float>(red,green,blue));
+}
+
+const char* ORCRobotGetName(void* robot)
+{
+    return GetRobot(robot)->GetName().c_str();
+}
+
+void* ORCModuleCreate(void* env, const char* modulename)
+{
+    ModuleBasePtr module = RaveCreateModule(GetEnvironment(env), modulename);
+    if( !module ) {
+        return NULL;
+    }
+    return new InterfaceBasePtr(module);
 }
 
 }
