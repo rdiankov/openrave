@@ -970,7 +970,7 @@ public:
             - \b ikparam_values - The values of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b ikparam_velocities - velocity of an IkParmeterization. The ikparam type is stored as the second value in name
             - \b iswaypoint - non-zero if the point represents a major knot point of the trajectory
-            - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex. Only 1 DOF is accepted.
+            - \b grabbody - Grabs the body. The configuration values are 1 for grab and 0 for release. The group name format is: bodyname robotname robotlinkindex [relative_grab_pose]. relative_grab_pose is a 7 value (quaterion + translation) pose of the relative location of the body with respect to the grabbed link. Only 1 DOF is accepted.
          */
         std::string name;
         /** \brief Describes how the data should be interpolated. Common methods are:
