@@ -363,6 +363,17 @@ The possible properties that can be set are: ";
         }
         return true;
     }
+    
+    virtual bool GetJointTorque(KinBody::JointConstPtr pjoint, Vector& torque){
+        dJointID joint = _odespace->GetJoint(pjoint);
+        dJointFeedback* feedback = dJointGetFeedback( joint );
+        Vector axis = pjoint->GetAxis();
+        torque = Vector(0,0,0);
+        torque = axis * axis.dot((Vector)feedback->t1);
+        RAVELOG_DEBUG("T1 = [ %f %f %f ], Ta= [%f %f %f]\n",feedback->t1[0],feedback->t1[1],feedback->t1[2],torque[0],torque[1],torque[2]);
+
+        return true;
+    }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
         _odespace->Synchronize(plink->GetParent());

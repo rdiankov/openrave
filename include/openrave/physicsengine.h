@@ -110,6 +110,10 @@ public:
     /// \param[out] torque current torque on the COM of the link
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \param[in] link a constant pointer to a joint
+    /// \param[out] torque current torque perpendicular to joint axis
+    virtual bool GetJointTorque(KinBody::JointConstPtr joint, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \param[in] joint
     /// \param[out] force current accumulated force on the COM of the link
     /// \param[out] torque current accumulated torque on the COM of the link
