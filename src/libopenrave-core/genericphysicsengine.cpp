@@ -120,6 +120,12 @@ public:
         torque = Vector(0,0,0);
         return true;
     }
+    
+    //Crude hinge-only torque measurement
+    virtual bool GetJointTorque(KinBody::LinkConstPtr plink, Vector& torque) {
+        torque = Vector(0,0,0);
+        return true;
+    }
 
     virtual void SimulateStep(dReal fTimeElapsed) {
     }
