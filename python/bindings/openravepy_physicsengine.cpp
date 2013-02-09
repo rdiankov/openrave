@@ -135,14 +135,14 @@ public:
         return boost::python::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
 
-    object GetJointTorque(object pyjoint)
+    object GetJointForceTorque(object pyjoint)
     {
         CHECK_POINTER(pyjoint);
-        Vector torque;
-        if( !_pPhysicsEngine->GetJointTorque(openravepy::GetKinBodyJoint(pyjoint),torque) ) {
+        Vector force, torque;
+        if( !_pPhysicsEngine->GetJointForceTorque(openravepy::GetKinBodyJoint(pyjoint),force,torque) ) {
             return object();
         }
-        return boost::python::make_tuple(toPyVector3(torque));
+        return boost::python::make_tuple(toPyVector3(force),toPyVector3(torque));
     }
 
     void SetGravity(object gravity) {
@@ -192,7 +192,7 @@ void init_openravepy_physicsengine()
     .def("SetBodyTorque",&PyPhysicsEngineBase::SetBodyTorque, DOXY_FN(PhysicsEngineBase,SetBodyTorque))
     .def("AddJointTorque",&PyPhysicsEngineBase::AddJointTorque, DOXY_FN(PhysicsEngineBase,AddJointTorque))
     .def("GetLinkForceTorque",&PyPhysicsEngineBase::GetLinkForceTorque, DOXY_FN(PhysicsEngineBase,GetLinkForceTorque))
-    .def("GetJointTorque",&PyPhysicsEngineBase::GetJointTorque, DOXY_FN(PhysicsEngineBase,GetJointTorque))
+    .def("GetJointForceTorque",&PyPhysicsEngineBase::GetJointForceTorque, DOXY_FN(PhysicsEngineBase,GetJointForceTorque))
     .def("SetGravity",&PyPhysicsEngineBase::SetGravity, DOXY_FN(PhysicsEngineBase,SetGravity))
     .def("GetGravity",&PyPhysicsEngineBase::GetGravity, DOXY_FN(PhysicsEngineBase,GetGravity))
     .def("SimulateStep",&PyPhysicsEngineBase::SimulateStep, DOXY_FN(PhysicsEngineBase,SimulateStep))
