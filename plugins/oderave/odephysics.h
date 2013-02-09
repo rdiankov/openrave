@@ -401,12 +401,12 @@ The possible properties that can be set are: ";
                     dJointFeedback* feedback = dJointGetFeedback( joint );
                     BOOST_ASSERT(feedback != NULL);
                     if( dJointGetBody( joint,0 ) == body ) {
-                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
-                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                        force += (Vector)feedback->f1;
+                        torque += (Vector)feedback->t1;
                     }
                     else if( dJointGetBody( joint,1 ) == body ) {
-                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
-                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                        force += (Vector)feedback->f2;
+                        torque += (Vector)feedback->t2; 
                     }
                 }
             }
@@ -416,12 +416,12 @@ The possible properties that can be set are: ";
                     dJointFeedback* feedback = dJointGetFeedback( joint );
                     BOOST_ASSERT(feedback != NULL);
                     if( dJointGetBody( joint,0 ) == body ) {
-                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
-                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                        force += (Vector)feedback->f1;
+                        torque += (Vector)feedback->t1;
                     }
                     else if( dJointGetBody( joint,1 ) == body ) {
-                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
-                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                        force += (Vector)feedback->f2;
+                        torque += (Vector)feedback->t2;
                     }
                 }
             }
