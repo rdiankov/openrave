@@ -364,13 +364,25 @@ The possible properties that can be set are: ";
         return true;
     }
     
-    virtual bool GetJointTorque(KinBody::JointConstPtr pjoint, Vector& torque){
+    bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
         dJointID joint = _odespace->GetJoint(pjoint);
         dJointFeedback* feedback = dJointGetFeedback( joint );
-        Vector axis = pjoint->GetAxis();
-        torque = Vector(0,0,0);
-        torque = axis * axis.dot((Vector)feedback->t1);
-        RAVELOG_DEBUG("T1 = [ %f %f %f ], Ta= [%f %f %f]\n",feedback->t1[0],feedback->t1[1],feedback->t1[2],torque[0],torque[1],torque[2]);
+
+        KinBody::LinkConstPtr link1 = pjoint->GetFirstAttached();
+        KinBody::LinkConstPtr link2 = pjoint->GetSecondAttached();
+        Vector force1 = (Vector)feedback->f1;
+        Vector torque1 = (Vector)feedback->t1;
+        
+        //Find displacement from link1 COM to joint anchor
+        Vector r1 = pjoint->GetAnchor()-link1->GetGlobalCOM();
+    
+        // Returned value is for link1, F/T for link2 are equal and opposite 
+        // Note that the joint force and torque is at the joint anchor point, as applied to link1
+        force=force1;
+        torque=torque1-r1.cross(force1);
+
+        //RAVELOG_VERBOSE("F1 = [%f %f %f], F2 = [%f %f %f]\n",feedback->f1[0],feedback->f1[1],feedback->f1[2],feedback->f2[0],feedback->f2[1],feedback->f2[2]);
+        //RAVELOG_VERBOSE("T1 = [%f %f %f], T2 = [%f %f %f]\n",feedback->t1[0],feedback->t1[1],feedback->t1[2],feedback->t2[0],feedback->t2[1],feedback->t2[2]);
 
         return true;
     }

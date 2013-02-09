@@ -120,9 +120,9 @@ public:
         torque = Vector(0,0,0);
         return true;
     }
-    
-    //Crude hinge-only torque measurement
-    virtual bool GetJointTorque(KinBody::LinkConstPtr plink, Vector& torque) {
+
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque) {
+        force = Vector(0,0,0);
         torque = Vector(0,0,0);
         return true;
     }
