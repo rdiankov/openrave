@@ -484,7 +484,7 @@ private:
 void QtCoinViewer::SetSize(int w, int h)
 {
     EnvMessagePtr pmsg(new ViewerSetSizeMessage(shared_viewer(), (void**)NULL, w, h));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 void QtCoinViewer::_SetSize(int w, int h)
@@ -511,7 +511,7 @@ private:
 void QtCoinViewer::Move(int x, int y)
 {
     EnvMessagePtr pmsg(new ViewerMoveMessage(shared_viewer(), (void**)NULL, x, y));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 void QtCoinViewer::_Move(int x, int y)
@@ -539,7 +539,7 @@ void QtCoinViewer::SetName(const string& ptitle)
 {
     _name = ptitle;
     EnvMessagePtr pmsg(new ViewerSetNameMessage(shared_viewer(), (void**)NULL, ptitle));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 void QtCoinViewer::_SetName(const string& ptitle)
@@ -605,7 +605,7 @@ bool QtCoinViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int h
             return false;
         }
         EnvMessagePtr pmsg(new GetCameraImageMessage(shared_viewer(), &ret, memory, width, height, t, KK));
-        pmsg->callerexecute();
+        pmsg->callerexecute(false);
     }
     else {
         RAVELOG_VERBOSE("failed to GetCameraImage: viewer is not updating\n");
@@ -645,7 +645,7 @@ bool QtCoinViewer::WriteCameraImage(int width, int height, const RaveTransform<f
             return false;
         }
         EnvMessagePtr pmsg(new WriteCameraImageMessage(shared_viewer(), &ret, width, height, t, KK, fileName, extension));
-        pmsg->callerexecute();
+        pmsg->callerexecute(false);
     }
     else {
         RAVELOG_WARN("failed to WriteCameraImage: viewer is not updating\n");
@@ -673,7 +673,7 @@ private:
 void QtCoinViewer::SetCamera(const RaveTransform<float>& trans,float focalDistance)
 {
     EnvMessagePtr pmsg(new SetCameraMessage(shared_viewer(), (void**)NULL, trans,focalDistance));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 class DrawMessage : public QtCoinViewer::EnvMessage
@@ -792,7 +792,7 @@ GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stri
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -800,7 +800,7 @@ GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stri
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -808,7 +808,7 @@ GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, 
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -816,7 +816,7 @@ GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, 
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -824,7 +824,7 @@ GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, i
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -832,7 +832,7 @@ GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, i
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -864,7 +864,7 @@ GraphHandlePtr QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVe
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawArrowMessage(shared_viewer(), handle, p1, p2, fwidth, color));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -895,7 +895,7 @@ GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), handle, vpos, vextents));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -928,7 +928,7 @@ GraphHandlePtr QtCoinViewer::drawplane(const RaveTransform<float>& tplane, const
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), handle, tplane,vextents,vtexture));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1019,7 +1019,7 @@ GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, color));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1027,7 +1027,7 @@ GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const
 {
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, colors));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1054,7 +1054,7 @@ private:
 void QtCoinViewer::closegraph(SoSwitch* handle)
 {
     EnvMessagePtr pmsg(new CloseGraphMessage(shared_viewer(), (void**)NULL, handle));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 class SetGraphTransformMessage : public QtCoinViewer::EnvMessage
@@ -1081,7 +1081,7 @@ private:
 void QtCoinViewer::SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t)
 {
     EnvMessagePtr pmsg(new SetGraphTransformMessage(shared_viewer(), (void**)NULL, handle, t));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 class SetGraphShowMessage : public QtCoinViewer::EnvMessage
@@ -1108,7 +1108,7 @@ private:
 void QtCoinViewer::SetGraphShow(SoSwitch* handle, bool bshow)
 {
     EnvMessagePtr pmsg(new SetGraphShowMessage(shared_viewer(), (void**)NULL, handle, bshow));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 class DeselectMessage : public QtCoinViewer::EnvMessage
@@ -1131,7 +1131,7 @@ public:
 void QtCoinViewer::deselect()
 {
     EnvMessagePtr pmsg(new DeselectMessage(shared_viewer(), (void**)NULL));
-    pmsg->callerexecute();
+    pmsg->callerexecute(false);
 }
 
 class ResetMessage : public QtCoinViewer::EnvMessage
@@ -1155,7 +1155,7 @@ void QtCoinViewer::Reset()
 {
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         EnvMessagePtr pmsg(new ResetMessage(shared_viewer(), (void**)NULL));
-        pmsg->callerexecute();
+        pmsg->callerexecute(false);
     }
 }
 
@@ -1192,7 +1192,7 @@ void QtCoinViewer::SetBkgndColor(const RaveVector<float>& color)
 {
     if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
         EnvMessagePtr pmsg(new SetBkgndColorMessage(shared_viewer(), (void**)NULL, color));
-        pmsg->callerexecute();
+        pmsg->callerexecute(false);
     }
 }
 
@@ -3420,13 +3420,13 @@ QtCoinViewer::EnvMessage::~EnvMessage()
 }
 
 /// execute the command in the caller
-void QtCoinViewer::EnvMessage::callerexecute()
+void QtCoinViewer::EnvMessage::callerexecute(bool bGuiThread)
 {
     bool bWaitForMutex = !!_plock;
 
-    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    // QThread::currentThread is buggy and gets into an infinite loop if the Gui thread is calling QEventLoop::processEvents
+    //bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
     if( bGuiThread ) {
-        // calling from gui thread, so execute directly
         viewerexecute();
     }
     else {

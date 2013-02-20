@@ -213,7 +213,8 @@ public:
         virtual ~EnvMessage();
 
         /// execute the command in the caller
-        virtual void callerexecute();
+        /// \param bGuiThread if true, then calling from gui thread, so execute directly
+        virtual void callerexecute(bool bGuiThread);
         /// execute the command in the viewer
         virtual void viewerexecute();
 
