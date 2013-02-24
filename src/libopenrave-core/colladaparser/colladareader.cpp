@@ -16,6 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
+
+namespace OpenRAVE
+{
+
 using namespace ColladaDOM150;
 
 class ColladaReader : public daeErrorHandler
@@ -307,7 +311,7 @@ public:
     bool _InitPreOpen(const AttributesList& atts)
     {
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
-        _dae.reset(new DAE);
+        _dae = GetGlobalDAE();
         _bSkipGeometry = false;
         _vOpenRAVESchemeAliases.resize(0);
         FOREACHC(itatt,atts) {
@@ -4350,6 +4354,7 @@ private:
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if( !reader.InitFromURI(uri,atts) ) {
         return false;
@@ -4359,6 +4364,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const A
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -4369,6 +4375,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const 
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -4379,6 +4386,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
     if (filedata.size() == 0 || !reader.InitFromFile(filedata,atts)) {
@@ -4387,7 +4395,9 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
     return reader.Extract(probot);
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts) {
+bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
@@ -4397,6 +4407,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const Att
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
@@ -4406,6 +4417,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
     if (!reader.InitFromData(pdata,atts)) {
         return false;
@@ -4422,3 +4434,5 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::JointAxisBinding)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::LinkBinding)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::KinematicsSceneBindings)
 #endif
+
+} // end OpenRAVE namespace

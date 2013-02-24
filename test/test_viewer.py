@@ -62,7 +62,7 @@ class TestViewer(EnvironmentSetup):
     def setup(self):
         EnvironmentSetup.setup(self)
         # select collision engine here
-        self.env.SetViewer('qtcoin',False)
+        #self.env.SetViewer('qtcoin',False)
 
 #     def test_memory(self):
 #         env=self.env
@@ -76,3 +76,16 @@ class TestViewer(EnvironmentSetup):
 #         # check if memory is growing
 #         assert(memusage[-1] < memusage[1]*2)
 #         
+
+    def test_crash(self):
+        env=self.env
+        filename = 'data/mug1.dae'
+        env.Load(filename)
+        env.SetViewer('qtcoin')
+        #env.Reset()
+        print 'env2 '
+        env.Load(filename)
+        print 'done'
+        time.sleep(4)
+        print 'quitting'
+        

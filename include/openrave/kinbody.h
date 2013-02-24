@@ -307,17 +307,16 @@ protected:
             KinBody::GeometryInfo _info; ///< geometry info
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-            friend class ColladaReader;
             friend class OpenRAVEXMLParser::LinkXMLReader;
             friend class OpenRAVEXMLParser::KinBodyXMLReader;
             friend class XFileReader;
 #else
-            friend class ::ColladaReader;
             friend class ::OpenRAVEXMLParser::LinkXMLReader;
             friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
             friend class ::XFileReader;
 #endif
 #endif
+            friend class ColladaReader;
             friend class RobotBase;
             friend class KinBody;
             friend class KinBody::Link;
@@ -565,19 +564,18 @@ private:
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class ColladaReader;
         friend class OpenRAVEXMLParser::LinkXMLReader;
         friend class OpenRAVEXMLParser::KinBodyXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
         friend class XFileReader;
 #else
-        friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::LinkXMLReader;
         friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
         friend class ::XFileReader;
 #endif
 #endif
+        friend class ColladaReader;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -1098,21 +1096,19 @@ private:
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class ColladaReader;
-        friend class ColladaWriter;
         friend class OpenRAVEXMLParser::JointXMLReader;
         friend class OpenRAVEXMLParser::KinBodyXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
         friend class XFileReader;
 #else
-        friend class ::ColladaReader;
-        friend class ::ColladaWriter;
         friend class ::OpenRAVEXMLParser::JointXMLReader;
         friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
         friend class ::XFileReader;
 #endif
 #endif
+        friend class ColladaReader;
+        friend class ColladaWriter;
         friend class KinBody;
     };
     typedef boost::shared_ptr<KinBody::Joint> JointPtr;
@@ -1943,21 +1939,19 @@ private:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;
-    friend class ColladaReader;
-    friend class ColladaWriter;
     friend class OpenRAVEXMLParser::KinBodyXMLReader;
     friend class OpenRAVEXMLParser::JointXMLReader;
     friend class XFileReader;
 #else
     friend class ::Environment;
-    friend class ::ColladaReader;
-    friend class ::ColladaWriter;
     friend class ::OpenRAVEXMLParser::KinBodyXMLReader;
     friend class ::OpenRAVEXMLParser::JointXMLReader;
     friend class ::XFileReader;
 #endif
 #endif
 
+    friend class ColladaReader;
+    friend class ColladaWriter;
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;
     friend class ViewerBase;

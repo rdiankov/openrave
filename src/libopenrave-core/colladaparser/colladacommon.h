@@ -38,6 +38,9 @@ namespace ColladaDOM150 {} // declare in case earlier versions are used
 #include <1.5/dom/domElements.h>
 #include <boost/lexical_cast.hpp>
 
+namespace OpenRAVE
+{
+
 class ColladaReader;
 class ColladaWriter;
 
@@ -96,6 +99,21 @@ public:
 
 typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
 
+/** Have to maintain a global DAE pointer that is only destroyed on OpenRAVE destruction. The reasons are:
+
+   1. destroying DAE unconditionally calls xmlCleanupParser (libxml2)
+   2. libxml2 versions before 2.9.0 have a bug that fail to be re-initialiezd after xmlCleanupParser is called
+
+ */
+/// \brief get the global DAE.
+///
+/// \param clear is true, will attempt to reset any resolvers to defaults
+boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults=true);
+/// \brief reset the global DAE
+void SetGlobalDAE(boost::shared_ptr<DAE>);
+boost::mutex& GetGlobalDAEMutex();
+
+
 // register for typeof (MSVC only)
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
@@ -115,7 +133,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,c
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts);
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts);
 
-#else
+#else // OPENRAVE_COLLADA_SUPPORT
 
 inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
@@ -175,6 +193,8 @@ inline void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const 
     RAVELOG_ERROR("collada files not supported\n");
 }
 
-#endif
+#endif // OPENRAVE_COLLADA_SUPPORT
+
+} // end OpenRAVE namespace
 
 #endif

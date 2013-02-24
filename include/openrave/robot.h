@@ -320,17 +320,16 @@ private:
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class ColladaReader;
         friend class OpenRAVEXMLParser::ManipulatorXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
         friend class XFileReader;
 #else
-        friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
         friend class ::XFileReader;
 #endif
 #endif
+        friend class ColladaReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
@@ -403,17 +402,16 @@ private:
         mutable std::string __hashstructure;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
-        friend class ColladaReader;
         friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
         friend class OpenRAVEXMLParser::RobotXMLReader;
         friend class XFileReader;
 #else
-        friend class ::ColladaReader;
         friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
         friend class ::OpenRAVEXMLParser::RobotXMLReader;
         friend class ::XFileReader;
 #endif
 #endif
+        friend class ColladaReader;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
@@ -910,7 +908,6 @@ private:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;
-    friend class ColladaReader;
     friend class ColladaWriter;
     friend class OpenRAVEXMLParser::RobotXMLReader;
     friend class OpenRAVEXMLParser::ManipulatorXMLReader;
@@ -918,7 +915,6 @@ private:
     friend class XFileReader;
 #else
     friend class ::Environment;
-    friend class ::ColladaReader;
     friend class ::ColladaWriter;
     friend class ::OpenRAVEXMLParser::RobotXMLReader;
     friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
@@ -926,6 +922,7 @@ private:
     friend class ::XFileReader;
 #endif
 #endif
+    friend class ColladaReader;
     friend class RaveDatabase;
     friend class Grabbed;
 };

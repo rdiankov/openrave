@@ -30,6 +30,9 @@ using namespace ColladaDOM150;
 #include <libxml/tree.h>
 #include <libxml/xmlmemory.h>
 
+namespace OpenRAVE
+{
+
 /// \brief converts raw XML data to DAE using libxml2
 namespace XMLtoDAE
 {
@@ -290,10 +293,11 @@ private:
 
     ColladaWriter(EnvironmentBaseConstPtr penv, const AttributesList& atts) : _dom(NULL), _penv(penv)
     {
+        _doc = NULL;
         _globalunit = 1.0;
         daeErrorHandler::setErrorHandler(this);
         RAVELOG_VERBOSE("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
-        _dae.reset(new DAE);
+        _dae = GetGlobalDAE();
         _bExternalRefAllBodies = false;
         _bForceWriteAll = false;
         _bReuseSimilar = false;
@@ -347,7 +351,12 @@ private:
             }
         }
     }
-    virtual ~ColladaWriter() {
+    virtual ~ColladaWriter()
+    {
+        if( !!_dae && !!_doc ) {
+            _dae->getDatabase()->removeDocument(_doc);
+            _doc = NULL;
+        }
     }
 
     /// \param docname the top level document?
@@ -1180,12 +1189,12 @@ private:
 
         //  Declare all the joints
         vector< pair<int,KinBody::JointConstPtr> > vjoints;
-        vjoints.reserve(pbody->GetJoints().size()+pbody->_vPassiveJoints.size());
+        vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
         FOREACHC(itj, pbody->GetJoints() ) {
             vjoints.push_back(make_pair((*itj)->GetJointIndex(),*itj));
         }
         int index=pbody->GetJoints().size();
-        FOREACHC(itj, pbody->_vPassiveJoints) {
+        FOREACHC(itj, pbody->GetPassiveJoints()) {
             vjoints.push_back(make_pair(index++,*itj));
         }
         vector<dReal> lmin, lmax;
@@ -2182,6 +2191,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     writer.Init("openrave_snapshot");
     if( !writer.Write() ) {
@@ -2192,6 +2202,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
 void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     writer.Init("openrave_snapshot");
     if( !writer.Write(pbody) ) {
@@ -2202,6 +2213,7 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
 {
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
         writer.Init("openrave_snapshot");
@@ -2211,3 +2223,5 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
         writer.Save(filename);
     }
 }
+
+} // end OpenRAVE namespace
