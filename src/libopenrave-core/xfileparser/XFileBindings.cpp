@@ -38,7 +38,7 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("failed to read %s filename",filename,ORE_InvalidArguments);
         }
         f.seekg(0,ios::end);
-        string filedata; filedata.resize(f.tellg());
+        std::vector<char> filedata(static_cast<size_t>(f.tellg())+1, 0); // need a null-terminator
         f.seekg(0,ios::beg);
         f.read(&filedata[0], filedata.size());
         Read(pbody,filedata,atts);
@@ -61,7 +61,7 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("failed to read %s filename",filename,ORE_InvalidArguments);
         }
         f.seekg(0,ios::end);
-        string filedata; filedata.resize(f.tellg());
+        std::vector<char> filedata(static_cast<size_t>(f.tellg())+1, 0); // need a null-terminator
         f.seekg(0,ios::beg);
         f.read(&filedata[0], filedata.size());
         Read(probot,filedata,atts);
@@ -69,35 +69,35 @@ public:
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
         boost::filesystem::path bfpath(filename);
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-        probot->SetName(bfpath.stem().string());
+        probot->SetName(utils::ConvertToOpenRAVEName(bfpath.stem().string()));
 #else
-        probot->SetName(bfpath.stem());
+        probot->SetName(utils::ConvertToOpenRAVEName(bfpath.stem()));
 #endif
 #endif
     }
 
-    void Read(KinBodyPtr& pbody, const std::string& data,const AttributesList& atts)
+    void Read(KinBodyPtr& pbody, const std::vector<char>& data,const AttributesList& atts)
     {
         _ProcessAtts(atts);
         if( !pbody ) {
             pbody = RaveCreateKinBody(_penv,_bodytype);
         }
         pbody->SetName(_bodyname);
-        Assimp::XFileParserOpenRAVE parser(data.c_str());
+        Assimp::XFileParserOpenRAVE parser(data);
         _Read(pbody,parser.GetImportedData());
         if( pbody->GetName().size() == 0 ) {
             pbody->SetName("body");
         }
     }
 
-    void Read(RobotBasePtr& probot, const std::string& data,const AttributesList& atts)
+    void Read(RobotBasePtr& probot, const std::vector<char>& data,const AttributesList& atts)
     {
         _ProcessAtts(atts);
         if( !probot ) {
             probot = RaveCreateRobot(_penv,_bodytype);
         }
         probot->SetName(_bodyname);
-        Assimp::XFileParserOpenRAVE parser(data.c_str());
+        Assimp::XFileParserOpenRAVE parser(data);
         _Read(probot,parser.GetImportedData());
         if( probot->GetName().size() == 0 ) {
             probot->SetName("robot");
@@ -144,7 +144,7 @@ protected:
                 _bFlipYZ = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
             else if( itatt->first == "name" ) {
-                _bodyname = itatt->second;
+                _bodyname = utils::ConvertToOpenRAVEName(itatt->second);
             }
             else if( itatt->first == "type" ) {
                 _bodytype = itatt->second;
@@ -161,23 +161,30 @@ protected:
             parent = pbody->GetLinks()[0];
             t = parent->GetTransform();
         }
-        _Read(pbody, parent, scene->mRootNode, t, 0);
-
-        // remove any NULL joints or mimic properties from the main joints...?
-        int ijoint = 0;
-        vector<KinBody::JointPtr> vecjoints; vecjoints.reserve(pbody->_vecjoints.size());
-        vecjoints.swap(pbody->_vecjoints);
-        FOREACH(itjoint,vecjoints) {
-            if( !!*itjoint ) {
-                if( !!(*itjoint)->_vmimic[0] ) {
-                    RAVELOG_WARN(str(boost::format("joint %s had mimic set!\n")%(*itjoint)->GetName()));
-                    (*itjoint)->_vmimic[0].reset();
+        if( !!scene->mRootNode ) {
+            _Read(pbody, parent, scene->mRootNode, t, 0);
+            // remove any NULL joints or mimic properties from the main joints...?
+            int ijoint = 0;
+            vector<KinBody::JointPtr> vecjoints; vecjoints.reserve(pbody->_vecjoints.size());
+            vecjoints.swap(pbody->_vecjoints);
+            FOREACH(itjoint,vecjoints) {
+                if( !!*itjoint ) {
+                    if( !!(*itjoint)->_vmimic[0] ) {
+                        RAVELOG_WARN(str(boost::format("joint %s had mimic set!\n")%(*itjoint)->GetName()));
+                        (*itjoint)->_vmimic[0].reset();
+                    }
+                    std::vector<int> v(1); v[0] = ijoint;
+                    (*itjoint)->_info._mapIntParameters["xfile_originalindex"] = v;
+                    pbody->_vecjoints.push_back(*itjoint);
                 }
-                std::vector<int> v(1); v[0] = ijoint;
-                (*itjoint)->_info._mapIntParameters["xfile_originalindex"] = v;
-                pbody->_vecjoints.push_back(*itjoint);
+                ++ijoint;
             }
-            ++ijoint;
+        }
+        else if( scene->mGlobalMeshes.size() > 0 ) {
+            _InitFromMeshes(pbody, scene->mGlobalMeshes);
+        }
+        else {
+            RAVELOG_WARN("xfile has no geometry\n");
         }
     }
 
@@ -295,7 +302,6 @@ protected:
         }
 
         FOREACH(it,node->mMeshes) {
-
             if( !plink ) {
                 // link is expected and one doesn't exist, so create it
                 plink.reset(new KinBody::Link(pbody));
@@ -306,42 +312,57 @@ protected:
                 pbody->_veclinks.push_back(plink);
             }
 
-            Assimp::XFile::Mesh* pmesh = *it;
             KinBody::GeometryInfo g;
+            _ExtractGeometry(*it, g);
             g._t = plink->_info._t.inverse() * tflipyz * tnode;
-            g._type = GT_TriMesh;
-            g._meshcollision.vertices.resize(pmesh->mPositions.size());
-            for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
-                g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);
-            }
-            size_t numindices = 0;
-            for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
-                numindices += 3*(pmesh->mPosFaces[iface].mIndices.size()-2);
-            }
-            g._meshcollision.indices.resize(numindices);
-            std::vector<int>::iterator itindex = g._meshcollision.indices.begin();
-            for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
-                for(size_t i = 2; i < pmesh->mPosFaces[iface].mIndices.size(); ++i) {
-                    *itindex++ = pmesh->mPosFaces[iface].mIndices.at(0);
-                    *itindex++ = pmesh->mPosFaces[iface].mIndices.at(1);
-                    *itindex++ = pmesh->mPosFaces[iface].mIndices.at(i);
-                }
-            }
-
-            size_t matindex = 0;
-            if( pmesh->mFaceMaterials.size() > 0 ) {
-                matindex = pmesh->mFaceMaterials.at(0);
-            }
-            if( matindex < pmesh->mMaterials.size() ) {
-                const Assimp::XFile::Material& mtrl = pmesh->mMaterials.at(matindex);
-                g._vDiffuseColor = Vector(mtrl.mDiffuse.r, mtrl.mDiffuse.g, mtrl.mDiffuse.b, mtrl.mDiffuse.a);
-                g._vAmbientColor = Vector(mtrl.mEmissive.r, mtrl.mEmissive.g, mtrl.mEmissive.b, 1);
-            }
             plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(plink,g)));
         }
 
         FOREACH(it,node->mChildren) {
             _Read(pbody, plink, *it,tnode,level+1);
+        }
+    }
+
+    void _InitFromMeshes(KinBodyPtr pbody, const std::vector<Assimp::XFile::Mesh*>& meshes)
+    {
+        std::vector<KinBody::GeometryInfoConstPtr> vgeometries(meshes.size());
+        for(size_t i = 0; i < meshes.size(); ++i) {
+            KinBody::GeometryInfoPtr geominfo(new KinBody::GeometryInfo());
+            _ExtractGeometry(meshes[i],*geominfo);
+            vgeometries[i] = geominfo;
+        }
+        pbody->InitFromGeometries(vgeometries);
+    }
+
+    void _ExtractGeometry(const Assimp::XFile::Mesh* pmesh, KinBody::GeometryInfo& g)
+    {
+        g._type = GT_TriMesh;
+        g._meshcollision.vertices.resize(pmesh->mPositions.size());
+        for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
+            g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);
+        }
+        size_t numindices = 0;
+        for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
+            numindices += 3*(pmesh->mPosFaces[iface].mIndices.size()-2);
+        }
+        g._meshcollision.indices.resize(numindices);
+        std::vector<int>::iterator itindex = g._meshcollision.indices.begin();
+        for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
+            for(size_t i = 2; i < pmesh->mPosFaces[iface].mIndices.size(); ++i) {
+                *itindex++ = pmesh->mPosFaces[iface].mIndices.at(0);
+                *itindex++ = pmesh->mPosFaces[iface].mIndices.at(1);
+                *itindex++ = pmesh->mPosFaces[iface].mIndices.at(i);
+            }
+        }
+
+        size_t matindex = 0;
+        if( pmesh->mFaceMaterials.size() > 0 ) {
+            matindex = pmesh->mFaceMaterials.at(0);
+        }
+        if( matindex < pmesh->mMaterials.size() ) {
+            const Assimp::XFile::Material& mtrl = pmesh->mMaterials.at(matindex);
+            g._vDiffuseColor = Vector(mtrl.mDiffuse.r, mtrl.mDiffuse.g, mtrl.mDiffuse.b, mtrl.mDiffuse.a);
+            g._vAmbientColor = Vector(mtrl.mEmissive.r, mtrl.mEmissive.g, mtrl.mEmissive.b, 1);
         }
     }
 
@@ -384,14 +405,14 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList &atts)
+bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList &atts)
 {
     XFileReader reader(penv);
     reader.Read(ppbody,data,atts);
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList &atts)
+bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList &atts)
 {
     XFileReader reader(penv);
     reader.Read(pprobot,data,atts);

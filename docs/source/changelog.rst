@@ -95,6 +95,10 @@ Misc
 
 * Simulation thread timing tweaked and more accurate to real time. (Robert Ellenberg)
 
+* collada-dom DAE is now globally managed so that it doesn't release its resources everytime a collada object is loaded. This also solves many random crashes.
+
+* Can open binary DirectX files
+
 Version 0.8.2
 =============
 

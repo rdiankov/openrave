@@ -1,48 +1,47 @@
 // -*- coding: utf-8 -*-
 /*
-     ---------------------------------------------------------------------------
-     Open Asset Import Library (ASSIMP)
-     ---------------------------------------------------------------------------
+   ---------------------------------------------------------------------------
+   Open Asset Import Library (assimp)
+   ---------------------------------------------------------------------------
 
-     Copyright (c) 2006-2010, ASSIMP Development Team
+   Copyright (c) 2006-2012, assimp team
 
-     All rights reserved.
+   All rights reserved.
 
-     Redistribution and use of this software in source and binary forms,
-     with or without modification, are permitted provided that the following
-     conditions are met:
+   Redistribution and use of this software in source and binary forms,
+   with or without modification, are permitted provided that the following
+   conditions are met:
 
  * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the
-     following disclaimer.
+   copyright notice, this list of conditions and the
+   following disclaimer.
 
  * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the
-     following disclaimer in the documentation and/or other
-     materials provided with the distribution.
+   copyright notice, this list of conditions and the
+   following disclaimer in the documentation and/or other
+   materials provided with the distribution.
 
- * Neither the name of the ASSIMP team, nor the names of its
-     contributors may be used to endorse or promote products
-     derived from this software without specific prior
-     written permission of the ASSIMP Development Team.
+ * Neither the name of the assimp team, nor the names of its
+   contributors may be used to endorse or promote products
+   derived from this software without specific prior
+   written permission of the assimp team.
 
-     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-     "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-     LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-     A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-     OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-     SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-     LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-     DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-     THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-     ---------------------------------------------------------------------------
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   ---------------------------------------------------------------------------
  */
 
 /** @file Implementation of the XFile parser helper class */
 
-//#include "AssimpPCH.h"
 #include "../ravep.h"
 
 // Boost headers
@@ -91,11 +90,11 @@ using namespace Assimp::XFile;
 
 // ------------------------------------------------------------------------------------------------
 // Dummy memory wrappers for use with zlib
-static void* dummy_alloc (void* /*opaque*/, unsigned int items, unsigned int size)  {
+static void* dummy_alloc (void* /*opaque*/, unsigned int items, unsigned int size) {
     return ::operator new(items*size);
 }
 
-static void  dummy_free  (void* /*opaque*/, void* address)  {
+static void dummy_free (void* /*opaque*/, void* address) {
     return ::operator delete(address);
 }
 
@@ -103,7 +102,7 @@ static void  dummy_free  (void* /*opaque*/, void* address)  {
 
 // ------------------------------------------------------------------------------------------------
 // Constructor. Creates a data structure out of the XFile given in the memory block.
-XFileParserOpenRAVE::XFileParserOpenRAVE( const std::string& pBuffer)
+XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
 {
     mMajorVersion = mMinorVersion = 0;
     mIsBinaryFormat = false;
@@ -116,7 +115,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::string& pBuffer)
     std::vector<char> uncompressed;
 
     // set up memory pointers
-    P = &pBuffer[0]; //.front();
+    P = &pBuffer.front();
     End = P + pBuffer.size() - 1;
 
     // check header
@@ -167,7 +166,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::string& pBuffer)
     // If this is a compressed X file, apply the inflate algorithm to it
     if (compressed)
     {
-#ifndef OPENRAVE_HAS_ZLIB
+#ifdef ASSIMP_BUILD_NO_COMPRESSED_X
         throw DeadlyImportError("Assimp was built without compressed X support");
 #else
         /* ///////////////////////////////////////////////////////////////////////
@@ -417,10 +416,12 @@ void XFileParserOpenRAVE::ParseDataObjectFrame( Node* pParent)
             ThrowException( "Unexpected end of file reached while parsing frame");
 
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                      // frame finished
+            // frame finished
+            break;
         else
         if( objectName == "Frame")
-            ParseDataObjectFrame( node);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            // child frame
+            // child frame
+            ParseDataObjectFrame( node);
         else
         if( objectName == "FrameTransformMatrix")
             ParseDataObjectTransformationMatrix( node->mTrafoMatrix);
@@ -511,7 +512,7 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
         Face& face = pMesh->mPosFaces[a];
         for( unsigned int b = 0; b < numIndices; b++)
             face.mIndices.push_back( ReadInt());
-        CheckForSeparator();
+        TestForSeparator();
     }
 
     // here, other data objects may follow
@@ -520,11 +521,13 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
     {
         std::string objectName = GetNextToken();
 
-        if( objectName.size() == 0)
+        if( objectName.size() == 0) {
             ThrowException( "Unexpected end of file while parsing mesh structure");
+        }
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // mesh finished
+            // mesh finished
+            break;
         else
         if( objectName == "MeshNormals")
             ParseDataObjectMeshNormals( pMesh);
@@ -539,7 +542,8 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
             ParseDataObjectMeshMaterialList( pMesh);
         else
         if( objectName == "VertexDuplicationIndices")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // we'll ignore vertex duplication indices
+            // we'll ignore vertex duplication indices
+            ParseUnknownDataObject();
         else
         if( objectName == "XSkinMeshHeader")
             ParseDataObjectSkinMeshHeader( pMesh);
@@ -634,7 +638,7 @@ void XFileParserOpenRAVE::ParseDataObjectMeshNormals( Mesh* pMesh)
         for( unsigned int b = 0; b < numIndices; b++)
             face.mIndices.push_back( ReadInt());
 
-        CheckForSeparator();
+        TestForSeparator();
     }
 
     CheckForClosingBrace();
@@ -733,7 +737,8 @@ void XFileParserOpenRAVE::ParseDataObjectMeshMaterialList( Mesh* pMesh)
             ThrowException( "Unexpected end of file while parsing mesh material list.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material list finished
+            // material list finished
+            break;
         else
         if( objectName == "{")
         {
@@ -787,7 +792,8 @@ void XFileParserOpenRAVE::ParseDataObjectMaterial( Material* pMaterial)
             ThrowException( "Unexpected end of file while parsing mesh material");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // material finished
+            // material finished
+            break;
         else
         if( objectName == "TextureFilename" || objectName == "TextureFileName")
         {
@@ -836,7 +842,8 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationSet()
             ThrowException( "Unexpected end of file while parsing animation set.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation set finished
+            // animation set finished
+            break;
         else
         if( objectName == "Animation")
             ParseDataObjectAnimation( anim);
@@ -864,13 +871,15 @@ void XFileParserOpenRAVE::ParseDataObjectAnimation( Animation* pAnim)
             ThrowException( "Unexpected end of file while parsing animation.");
         else
         if( objectName == "}")
-            break;                                                                                                                                                                                                                                                                                                                                                                                                                  // animation finished
+            // animation finished
+            break;
         else
         if( objectName == "AnimationKey")
             ParseDataObjectAnimationKey( banim);
         else
         if( objectName == "AnimationOptions")
-            ParseUnknownDataObject();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // not interested
+            // not interested
+            ParseUnknownDataObject();
         else
         if( objectName == "{")
         {
@@ -1291,7 +1300,7 @@ void XFileParserOpenRAVE::ReadUntilEndOfLine()
 // ------------------------------------------------------------------------------------------------
 unsigned short XFileParserOpenRAVE::ReadBinWord()
 {
-    assert(End - P >= 2);
+    ai_assert(End - P >= 2);
     const unsigned char* q = (const unsigned char*) P;
     unsigned short tmp = q[0] | (q[1] << 8);
     P += 2;
@@ -1301,7 +1310,7 @@ unsigned short XFileParserOpenRAVE::ReadBinWord()
 // ------------------------------------------------------------------------------------------------
 unsigned int XFileParserOpenRAVE::ReadBinDWord()
 {
-    assert(End - P >= 4);
+    ai_assert(End - P >= 4);
     const unsigned char* q = (const unsigned char*) P;
     unsigned int tmp = q[0] | (q[1] << 8) | (q[2] << 16) | (q[3] << 24);
     P += 4;
@@ -1419,7 +1428,7 @@ float XFileParserOpenRAVE::ReadFloat()
     }
 
     float result = 0.0f;
-    P = fast_atof_move( P, result);
+    P = fast_atoreal_move<float>( P, result);
 
     CheckForSeparator();
 

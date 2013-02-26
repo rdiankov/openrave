@@ -468,6 +468,7 @@ if( NOT ASSIMP_FOUND )
 endif()
 
 if( ASSIMP_FOUND )
+  message(STATUS "assimp version ${ASSIMP_VERSION}, ${ASSIMP_PACKAGE_VERSION}, ${ASSIMP_INCLUDE_DIRS}")
   # For older versions of libassimp2, 
   # like the one in Ubuntu 12.04 
   set(CMAKE_REQUIRED_LIBRARIES assimp) 

@@ -1138,7 +1138,10 @@ public:
             }
         }
         else if( _IsXData(data) ) {
-            if( !RaveParseXData(shared_from_this(), robot, data, atts) ) {
+            // have to copy since it takes vector<char>
+            std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
+            std::copy(data.begin(),data.end(),newdata.begin());
+            if( !RaveParseXData(shared_from_this(), robot, newdata, atts) ) {
                 return RobotBasePtr();
             }
         }
@@ -1260,7 +1263,10 @@ public:
             }
         }
         else if( _IsXData(data) ) {
-            if( !RaveParseXData(shared_from_this(), body, data, atts) ) {
+            // have to copy since it takes vector<char>
+            std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
+            std::copy(data.begin(),data.end(),newdata.begin());
+            if( !RaveParseXData(shared_from_this(), body, newdata, atts) ) {
                 return RobotBasePtr();
             }
         }

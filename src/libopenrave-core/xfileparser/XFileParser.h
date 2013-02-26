@@ -1,9 +1,9 @@
 // -*- coding: utf-8 -*-
 /*
-   Open Asset Import Library (ASSIMP)
+   Open Asset Import Library (assimp)
    ----------------------------------------------------------------------
 
-   Copyright (c) 2006-2010, ASSIMP Development Team
+   Copyright (c) 2006-2012, assimp team
    All rights reserved.
 
    Redistribution and use of this software in source and binary forms,
@@ -19,10 +19,10 @@
    following disclaimer in the documentation and/or other
    materials provided with the distribution.
 
- * Neither the name of the ASSIMP team, nor the names of its
+ * Neither the name of the assimp team, nor the names of its
    contributors may be used to endorse or promote products
    derived from this software without specific prior
-   written permission of the ASSIMP Development Team.
+   written permission of the assimp team.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -64,7 +64,7 @@ struct AnimBone;
 struct FramePivot;
 }
 
-/** The XFileParserOpenRAVE reads a XFile either in text or binary form and builds a temporary
+/** The XFileParser reads a XFile either in text or binary form and builds a temporary
  * data structure out of it.
  */
 class XFileParserOpenRAVE
@@ -73,13 +73,13 @@ public:
     /** Constructor. Creates a data structure out of the XFile given in the memory block.
      * @param pBuffer Null-terminated memory buffer containing the XFile
      */
-    XFileParserOpenRAVE( const std::string& pBuffer);
+    XFileParserOpenRAVE( const std::vector<char>& pBuffer);
 
     /** Destructor. Destroys all imported data along with it */
     ~XFileParserOpenRAVE();
 
     /** Returns the temporary representation of the imported data */
-    const XFile::Scene* GetImportedData() const {
+    XFile::Scene* GetImportedData() const {
         return mScene;
     }
 
