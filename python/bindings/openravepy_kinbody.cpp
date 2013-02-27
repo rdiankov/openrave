@@ -609,9 +609,23 @@ public:
     object GetGeometries() {
         boost::python::list geoms;
         size_t N = _plink->GetGeometries().size();
-        for(size_t i = 0; i < N; ++i)
+        for(size_t i = 0; i < N; ++i) {
             geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
+        }
         return geoms;
+    }
+
+    void InitGeometries(object ogeometryinfos)
+    {
+        std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometryinfos));
+        for(size_t i = 0; i < geometries.size(); ++i) {
+            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
+            if( !pygeom ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
+            }
+            geometries[i] = pygeom->GetGeometryInfo();
+        }
+        return _plink->InitGeometries(geometries);
     }
 
     object GetRigidlyAttachedLinks() const {
@@ -2577,6 +2591,7 @@ void init_openravepy_kinbody()
                          .def("SetForce",&PyLink::SetForce,args("force","pos","add"), DOXY_FN(KinBody::Link,SetForce))
                          .def("SetTorque",&PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
                          .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
+                         .def("InitGeometries",&PyLink::InitGeometries, args("geometries"), DOXY_FN(KinBody::Link,InitGeometries))
                          .def("GetRigidlyAttachedLinks",&PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
                          .def("IsRigidlyAttached",&PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                          .def("GetVelocity",&PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))

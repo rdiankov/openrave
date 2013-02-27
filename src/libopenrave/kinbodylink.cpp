@@ -319,6 +319,16 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries)
+{
+    _vGeometries.resize(geometries.size());
+    for(size_t i = 0; i < geometries.size(); ++i) {
+        _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
+    }
+    _Update();
+    GetParent()->_ParametersChanged(Prop_LinkGeometry);
+}
+
 void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
 {
     _vGeometries.resize(geometries.size());

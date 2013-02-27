@@ -145,7 +145,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 for ig,geom in enumerate(link.GetGeometries()):
                     if geom.GetType() == KinBody.Link.GeomType.Trimesh:
                         trimesh = geom.GetCollisionMesh()
-                        orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+                        if len(trimesh.indices) > 0:
+                            orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+                        else:
+                            orghulls = []
                         if len(orghulls) > 0:
                             # add in the padding
                             if padding != 0:
@@ -266,6 +269,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             allindices = r_[allindices,hull[1]+len(allvertices)]
             allvertices = r_[allvertices,hull[0]]
         return TriMesh(allvertices,allindices)
+    
     @staticmethod
     def transformHull(T,hull):
         """hull can be (vertices,indices) or (vertices,indices,planes)
@@ -274,6 +278,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         if len(hull) == 2:
             return vertices,hull[1]
         return vertices,hull[1],dot(hull[2],linalg.inv(T))
+    
     def show(self,options=None):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
@@ -308,6 +313,30 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 colorindex+=len(hulls)
         raw_input('Press any key to exit: ')
 
+    def ShowLink(self,ilink):
+        if self.env.GetViewer() is None:
+            self.env.SetViewer('qtcoin')
+            time.sleep(0.4) # give time for viewer to initialize
+        self.env.UpdatePublishedBodies()
+        volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))
+        link = self.robot.GetLinks()[ilink]
+        hulls = []
+        for ig,geom in enumerate(link.GetGeometries()):
+            cdhulls = [cdhull for ig2,cdhull in self.linkgeometry[ilink] if ig2==ig]
+            if len(cdhulls) > 0:
+                hulls += [self.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
+            elif geom.GetType() == KinBody.Link.GeomType.Box:
+                hulls.append(self.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents())))
+            elif geom.GetType() == KinBody.Link.GeomType.Sphere:
+                hulls.append(self.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1)))
+            elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
+                hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
+        try:
+            handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
+            raw_input('Press any key to exit: ')
+        finally:
+            handles = None
+            
     @staticmethod
     def CreateOptionParser():
         parser = DatabaseGenerator.CreateOptionParser(useManipulator=False)
