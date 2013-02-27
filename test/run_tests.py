@@ -29,7 +29,7 @@ except ImportError:
 if __name__ == "__main__":
     import test_kinematics
     parser = OptionParser(description='OpenRAVE unit tests')
-    parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default='600',
+    parser.add_option('--timeout','-t', action='store', type='float', dest='timeout',default=1000,
                       help='Timeout for each ikfast run, this includes time for generation and performance measurement. (default=%default)')
     parser.add_option('-j', action='store', type='int', dest='numprocesses',default=None,
                       help='Number of processors to run this in (default=%default).')

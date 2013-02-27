@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>, Stefan Ulbrich, Gustavo Rodriguez
+// Copyright (C) 2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@ boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
 {
     if( !s_dae ) {
         s_dae.reset(new DAE());
+        RaveAddCallbackForDestroy(boost::bind(SetGlobalDAE,boost::shared_ptr<DAE>()));
     }
     if( resetdefaults ) {
         // load the normal resolvers
@@ -43,6 +44,7 @@ boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
 
 void SetGlobalDAE(boost::shared_ptr<DAE> newdae)
 {
+    RAVELOG_VERBOSE("resetting global collada DAE\n");
     s_dae = newdae;
 }
 

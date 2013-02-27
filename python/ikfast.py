@@ -98,6 +98,7 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
 
 .. code-block:: python
 
+  env = Environment()
   kinbody = env.ReadRobotXMLFile('robots/barrettwam.robot.xml')
   env.Add(kinbody)
   solver = ikfast.IKFastSolver(kinbody=kinbody)

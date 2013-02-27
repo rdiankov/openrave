@@ -425,7 +425,7 @@ public:
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;
         {
-            boost::mutex::scoped_lock lock(_mutexXML);
+            boost::mutex::scoped_lock lock(_mutexinternal);
             mapenvironments = _mapenvironments;
         }
         FOREACH(itenv,mapenvironments) {
@@ -437,6 +437,18 @@ public:
         _mapenvironments.clear();
         _pdefaultsampler.reset();
         _mapreaders.clear();
+
+        // process the callbacks
+        std::list<boost::function<void()> > listDestroyCallbacks;
+        {
+            boost::mutex::scoped_lock lock(_mutexinternal);
+            listDestroyCallbacks.swap(_listDestroyCallbacks);
+        }
+        FOREACH(itcallback, listDestroyCallbacks) {
+            (*itcallback)();
+        }
+        listDestroyCallbacks.clear();
+        
         if( !!_pdatabase ) {
             // force destroy in case some one is holding a pointer to it
             _pdatabase->Destroy();
@@ -449,6 +461,12 @@ public:
 #endif
         crlibm_exit(_crlibm_fpu_state);
 #endif
+    }
+
+    void AddCallbackForDestroy(const boost::function<void()>& fn)
+    {
+        boost::mutex::scoped_lock lock(_mutexinternal);
+        _listDestroyCallbacks.push_back(fn);
     }
 
     std::string GetHomeDirectory()
@@ -493,7 +511,7 @@ public:
 public:
         XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
-            boost::mutex::scoped_lock lock(global->_mutexXML);
+            boost::mutex::scoped_lock lock(global->_mutexinternal);
             _oldfn = global->_mapreaders[_type][_xmltag];
             global->_mapreaders[_type][_xmltag] = fn;
         }
@@ -501,7 +519,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                boost::mutex::scoped_lock lock(global->_mutexXML);
+                boost::mutex::scoped_lock lock(global->_mutexinternal);
                 global->_mapreaders[_type][_xmltag] = _oldfn;
             }
         }
@@ -553,14 +571,14 @@ protected:
     int RegisterEnvironment(EnvironmentBase* penv)
     {
         BOOST_ASSERT(!!_pdatabase);
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         _mapenvironments[++_nGlobalEnvironmentId] = penv;
         return _nGlobalEnvironmentId;
     }
 
     void UnregisterEnvironment(EnvironmentBase* penv)
     {
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         FOREACH(it, _mapenvironments) {
             if( it->second == penv ) {
                 _mapenvironments.erase(it);
@@ -571,7 +589,7 @@ protected:
 
     int GetEnvironmentId(EnvironmentBasePtr penv)
     {
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         FOREACH(it,_mapenvironments) {
             if( it->second == penv.get() ) {
                 return it->first;
@@ -582,7 +600,7 @@ protected:
 
     EnvironmentBasePtr GetEnvironment(int id)
     {
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         std::map<int, EnvironmentBase*>::iterator it = _mapenvironments.find(id);
         if( it == _mapenvironments.end() ) {
             return EnvironmentBasePtr();
@@ -593,7 +611,7 @@ protected:
     void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
     {
         listenvironments.clear();
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         FOREACH(it,_mapenvironments) {
             EnvironmentBasePtr penv = it->second->shared_from_this();
             if( !!penv ) {
@@ -605,7 +623,7 @@ protected:
     SpaceSamplerBasePtr GetDefaultSampler()
     {
         if( !_pdefaultsampler ) {
-            boost::mutex::scoped_lock lock(_mutexXML);
+            boost::mutex::scoped_lock lock(_mutexinternal);
             BOOST_ASSERT( _mapenvironments.size() > 0 );
             _pdefaultsampler = GetDatabase()->CreateSpaceSampler(_mapenvironments.begin()->second->shared_from_this(),"MT19937");
         }
@@ -621,7 +639,7 @@ protected:
             return std::string();
         }
 
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         boost::filesystem::path fullfilename;
         boost::filesystem::path filename(_filename);
 
@@ -686,11 +704,11 @@ protected:
     }
 
     void SetDataAccess(int options) {
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         _nDataAccessOptions = options;
     }
     int GetDataAccess() {
-        boost::mutex::scoped_lock lock(_mutexXML);
+        boost::mutex::scoped_lock lock(_mutexinternal);
         return _nDataAccessOptions;
     }
 
@@ -856,11 +874,12 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
-    boost::mutex _mutexXML;
+    boost::mutex _mutexinternal;
     std::map<InterfaceType, READERSMAP > _mapreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
     std::map<IkParameterizationType,string> _mapikparameterization, _mapikparameterizationlower;
     std::map<int, EnvironmentBase*> _mapenvironments;
+    std::list<boost::function<void()> > _listDestroyCallbacks;
     std::string _homedirectory;
     std::vector<std::string> _vdbdirectories;
     int _nGlobalEnvironmentId;
@@ -950,6 +969,11 @@ UserDataPtr RaveGlobalState()
 void RaveDestroy()
 {
     RaveGlobal::instance()->Destroy();
+}
+
+void RaveAddCallbackForDestroy(const boost::function<void()>& fn)
+{
+    RaveGlobal::instance()->AddCallbackForDestroy(fn);
 }
 
 int RaveGetEnvironmentId(EnvironmentBasePtr penv)

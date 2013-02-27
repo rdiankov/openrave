@@ -2552,6 +2552,14 @@ OPENRAVE_API UserDataPtr RaveGlobalState();
 /// resources are relased appropriately.
 OPENRAVE_API void RaveDestroy();
 
+/// \brief Add a callback when the OpenRAVE global runtime is destroyed.
+///
+/// The callback is called after all OpenRAVE environments have been destroyed and
+/// before plugins are unloaded.
+/// Callback is added only for this run-time. Once the run-time is destroyed/swapped, it will have to be re-added.
+/// OpenRAVE runtime is destroyed when \ref RaveDestroy is called or on system exits.
+OPENRAVE_API void RaveAddCallbackForDestroy(const boost::function<void()>& fn);
+
 /// \brief Get all the loaded plugins and the interfaces they support.
 ///
 /// \param plugins A list of plugins. Each entry has the plugin name and the interfaces it supports

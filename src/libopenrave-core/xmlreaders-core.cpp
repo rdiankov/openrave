@@ -66,7 +66,7 @@ namespace OpenRAVEXMLParser
 static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
 static boost::once_flag __onceSetAssimpLog = BOOST_ONCE_INIT;
 
-/// lock for parsing XML, don't destroy it in order to ensure it remains valid for as long as possible
+/// lock for parsing XML, don't make it a static variable in order to ensure it remains valid for as long as possible
 static EnvironmentMutex* __mutexXML;
 void __CreateXMLMutex()
 {
