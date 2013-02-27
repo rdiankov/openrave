@@ -1,5 +1,7 @@
 /** \example orcrrtplanning.cpp
     \author Rosen Diankov
+
+    Shows how to start a planning with the OpenRAVE C bindings.
  */
 
 #include <openrave-core_c.h>

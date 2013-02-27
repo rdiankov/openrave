@@ -29,6 +29,11 @@ inline InterfaceBasePtr GetInterface(void* pinterface)
     return *static_cast<InterfaceBasePtr*>(pinterface);
 }
 
+inline KinBodyPtr GetBody(void* body) {
+    BOOST_ASSERT(!!body);
+    return RaveInterfaceCast<KinBody>(*static_cast<InterfaceBasePtr*>(body));
+}
+
 inline RobotBasePtr GetRobot(void* robot) {
     BOOST_ASSERT(!!robot);
     return RaveInterfaceCast<RobotBase>(*static_cast<InterfaceBasePtr*>(robot));
@@ -51,6 +56,20 @@ void ORCSetDebugLevel(int level)
 bool ORCEnvironmentLoad(void* env, const char* filename)
 {
     return GetEnvironment(env)->Load(filename);
+}
+
+int ORCEnvironmentGetBodies(void* env, void** bodies)
+{
+    EnvironmentBasePtr penv = GetEnvironment(env);
+    std::vector<KinBodyPtr> vbodies;
+    penv->GetBodies(vbodies);
+    if( !bodies ) {
+        return static_cast<int>(vbodies.size());
+    }
+    for(size_t i = 0; i < vbodies.size(); ++i) {
+        bodies[i] = new InterfaceBasePtr(vbodies[i]);
+    }
+    return vbodies.size();
 }
 
 int ORCEnvironmentGetRobots(void* env, void** robots)
@@ -90,6 +109,11 @@ void ORCInterfaceRelease(void* pinterface)
     if( !!pinterface ) {
         delete static_cast<InterfaceBasePtr*>(pinterface);
     }
+}
+
+const char* ORCBodyGetName(void* body)
+{
+    return GetBody(body)->GetName().c_str();
 }
 
 const char* ORCRobotGetName(void* robot)
