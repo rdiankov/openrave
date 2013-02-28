@@ -152,12 +152,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         if len(orghulls) > 0:
                             # add in the padding
                             if padding != 0:
-                                orghulls = [self.padMesh(hull[0],hull[1],padding) for hull in orghulls]
+                                orghulls = [self.PadMesh(hull[0],hull[1],padding) for hull in orghulls]
                             geoms.append((ig,[(hull[0],hull[1],self.computeHullPlanes(hull)) for hull in orghulls]))
                 self.linkgeometry.append(geoms)
         log.info('all convex decomposition finished in %fs',time.time()-starttime)
     @staticmethod
-    def padMesh(vertices,indices,padding):
+    def PadMesh(vertices,indices,padding):
         M = mean(vertices,0)
         facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
         facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
@@ -313,7 +313,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 colorindex+=len(hulls)
         raw_input('Press any key to exit: ')
 
-    def ShowLink(self,ilink):
+    def ShowLink(self,ilink,progressive=False):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
             time.sleep(0.4) # give time for viewer to initialize
@@ -332,8 +332,19 @@ class ConvexDecompositionModel(DatabaseGenerator):
             elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
                 hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
         try:
-            handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
-            raw_input('Press any key to exit: ')
+            if not progressive:
+                handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
+                raw_input('Press any key to exit: ')
+            else:
+                ihull = 0
+                while ihull < len(hulls):
+                    hull = hulls[ihull]
+                    handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(ihull,len(volumecolors))])]
+                    cmd = raw_input(str(ihull))
+                    if cmd == 'p':
+                        ihull -= 1
+                    else:
+                        ihull += 1
         finally:
             handles = None
             

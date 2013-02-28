@@ -74,7 +74,18 @@ public:
 
     bool _SetFreeIncrementsCommand(ostream& sout, istream& sinput)
     {
-        sinput >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
+        dReal fFreeIncRevolute=0.1, fFreeIncPrismaticNum=100;
+        sinput >> fFreeIncRevolute >> fFreeIncPrismaticNum >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
+        _vFreeInc.resize(_vfreeparams.size());
+        for(size_t i = 0; i < _vFreeInc.size(); ++i) {
+            if( _vfreerevolute[i] ) {
+                _vFreeInc[i] = fFreeIncRevolute;
+            }
+            else {
+                _vFreeInc[i] = (_qupper.at(_vfreeparams[i])-_qlower.at(_vfreeparams[i]))/fFreeIncPrismaticNum;
+            }
+        }
+        //RAVELOG_VERBOSE(str(boost::format("SetFreeIncrements: %f %f %f %f")%fFreeIncRevolute%fFreeIncPrismaticNum%_fFreeIncRevolute%_fFreeIncPrismaticNum));
         return !!sinput;
     }
 

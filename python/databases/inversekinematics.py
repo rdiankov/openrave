@@ -328,7 +328,14 @@ class InverseKinematicsModel(DatabaseGenerator):
                     
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
-            return self.manip.SetIKSolver(self.iksolver)
+            success = self.manip.SetIKSolver(self.iksolver)
+            if success and self.manip.GetIkSolver() is not None and self.freeinc is not None:
+                try:
+                    freeincvalue = self.freeinc[0]
+                except TypeError:
+                    freeincvalue = float(self.freeinc)
+                self.manip.GetIkSolver().SendCommand('SetFreeIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+            return success
         return self.has()
     
     def getDefaultFreeIncrements(self,freeincrot, freeinctrans):
