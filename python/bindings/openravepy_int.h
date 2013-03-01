@@ -377,6 +377,11 @@ public:
     void SetShow(bool bshow) {
         _handle->SetShow(bshow);
     }
+    void Close()
+    {
+        _handle.reset();
+    }
+
 private:
     GraphHandlePtr _handle;
 };

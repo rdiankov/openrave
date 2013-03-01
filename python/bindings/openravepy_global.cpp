@@ -1230,6 +1230,7 @@ void init_openravepy_global()
     class_<PyGraphHandle, boost::shared_ptr<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
     .def("SetTransform",&PyGraphHandle::SetTransform,DOXY_FN(GraphHandle,SetTransform))
     .def("SetShow",&PyGraphHandle::SetShow,DOXY_FN(GraphHandle,SetShow))
+    .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 
     class_<PyUserData, boost::shared_ptr<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
