@@ -330,8 +330,10 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             success = self.manip.SetIKSolver(self.iksolver)
             if success and self.manip.GetIkSolver() is not None and self.freeinc is not None:
+                freeincvalue = 0.01
                 try:
-                    freeincvalue = self.freeinc[0]
+                    if len(self.freeinc) > 0:
+                        freeincvalue = self.freeinc[0]
                 except TypeError:
                     freeincvalue = float(self.freeinc)
                 self.manip.GetIkSolver().SendCommand('SetFreeIncrements %f 100 %f 10'%(freeincvalue,pi/8))
