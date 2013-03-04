@@ -171,7 +171,7 @@ protected:
         _pviewer.reset();
         {
             boost::mutex::scoped_lock lock(_mutexViewer);
-            _pviewer = RaveCreateViewer(_penv, strviewer.c_str());
+            _pviewer = RaveCreateViewer(_penv, strviewer);
             if( !!_pviewer ) {
                 _penv->AddViewer(_pviewer);
             }

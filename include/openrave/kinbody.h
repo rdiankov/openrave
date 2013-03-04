@@ -211,7 +211,7 @@ public:
             static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
             static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
-            Geometry(boost::shared_ptr<Link> parent, const GeometryInfo& info);
+            Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
             virtual ~Geometry() {
             }
 

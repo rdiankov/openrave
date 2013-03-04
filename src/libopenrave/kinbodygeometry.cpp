@@ -222,7 +222,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
-KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const GeometryInfo& info) : _parent(parent), _info(info)
+KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
 
@@ -300,7 +300,7 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::Link::Geometry::SetCollisionMesh(const TRIMESH& mesh)
+void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
 {
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
