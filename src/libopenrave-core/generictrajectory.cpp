@@ -17,6 +17,7 @@
 #include "ravep.h"
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
+#include <openrave/xmlreaders.h>
 
 namespace OpenRAVE {
 
@@ -343,6 +344,14 @@ public:
         O << "</data>" << endl;
         if( GetDescription().size() > 0 ) {
             O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        }
+        if( GetReadableInterfaces().size() > 0 ) {
+            xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
+            FOREACHC(it, GetReadableInterfaces()) {
+                BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+                it->second->Serialize(newwriter,options);
+            }
+            writer->Serialize(O);
         }
         O << "</trajectory>" << endl;
     }

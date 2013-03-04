@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -29,6 +29,42 @@ namespace OpenRAVE {
 
 namespace xmlreaders {
 
+class OPENRAVE_API StringXMLReadable : public XMLReadable
+{
+public:
+    StringXMLReadable(const std::string& xmlid, const std::string& data) : XMLReadable(xmlid), _data(data)
+    {
+    }
+
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const
+    {
+        writer->SetCharData(_data);
+    }
+
+    const std::string& GetData() const {
+        return _data;
+    }
+
+    std::string _data;
+};
+
+typedef boost::shared_ptr<StringXMLReadable> StringXMLReadablePtr;
+
+/// \brief maintains a hierarchy of classes each containing the xml attributes and data
+class OPENRAVE_API HierarchicalXMLReadable : public XMLReadable
+{
+public:
+    HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts);
+    virtual ~HierarchicalXMLReadable() {
+    }
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    std::string _data;
+    AttributesList _atts;
+    std::list<boost::shared_ptr<HierarchicalXMLReadable> > _listchildren;
+};
+
+typedef boost::shared_ptr<HierarchicalXMLReadable> HierarchicalXMLReadablePtr;
+
 /// \brief create a xml parser for trajectories
 class OPENRAVE_API TrajectoryReader : public BaseXMLReader
 {
@@ -52,6 +88,7 @@ protected:
     BaseXMLReaderPtr _pcurreader;
     int _datacount;
     std::vector<dReal> _vdata;
+    bool _bInReadable;
 };
 
 typedef boost::shared_ptr<TrajectoryReader> TrajectoryReaderPtr;
@@ -90,6 +127,72 @@ protected:
 };
 
 typedef boost::shared_ptr<GeometryInfoReader> GeometryInfoReaderPtr;
+
+/// \brief reads and stores the infromation hierarchically
+class OPENRAVE_API HierarchicalXMLReader : public BaseXMLReader
+{
+public:
+    HierarchicalXMLReader(const std::string& xmlid, const AttributesList& atts);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+    virtual XMLReadablePtr GetReadable();
+private:
+    std::string _xmlid;
+    boost::shared_ptr<HierarchicalXMLReader> _pcurreader;
+    HierarchicalXMLReadablePtr _readable;
+};
+
+typedef boost::shared_ptr<HierarchicalXMLReader> HierarchicalXMLReaderPtr;
+
+class OPENRAVE_API StreamXMLWriter : public BaseXMLWriter
+{
+public:
+    StreamXMLWriter(const std::string& xmltag, const AttributesList& atts=AttributesList()) : _xmltag(xmltag), _atts(atts)
+    {
+    }
+
+    const std::string& GetFormat() const
+    {
+        static const std::string format("xml");
+        return format;
+    }
+
+    virtual void SetCharData(const std::string& data)
+    {
+        _data = data;
+    }
+
+    virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList())
+    {
+        boost::shared_ptr<StreamXMLWriter> child(new StreamXMLWriter(xmltag,atts));
+        _listchildren.push_back(child);
+        return child;
+    }
+
+    virtual void Serialize(std::ostream& stream)
+    {
+        stream << "<" << _xmltag << " ";
+        FOREACHC(it, _atts) {
+            stream << it->first << "=\"" << it->second << "\" ";
+        }
+        // don't skip any lines since could affect reading back _data
+        stream << ">";
+        if( _data.size() > 0 ) {
+            stream << "<![CDATA[" << _data << "]]>";
+        }
+        FOREACHC(it, _listchildren) {
+            (*it)->Serialize(stream);
+        }
+        stream << "</" << _xmltag << ">" << std::endl;
+    }
+
+    std::list<boost::shared_ptr<StreamXMLWriter> > _listchildren;
+    std::string _xmltag, _data;
+    AttributesList _atts;
+};
+
+typedef boost::shared_ptr<StreamXMLWriter> StreamXMLWriterPtr;
 
 } // xmlreaders
 } // OpenRAVE

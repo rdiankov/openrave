@@ -757,16 +757,19 @@ public:
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
-/// reads until the tag ends
+/// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
-    DummyXMLReader(const std::string& pfieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
+    DummyXMLReader(const std::string& fieldname, const std::string& parentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     const std::string& GetFieldName() const {
         return _fieldname;
+    }
+    virtual boost::shared_ptr<std::ostream> GetStream() const {
+        return _osrecord;
     }
 private:
     std::string _parentname;     /// XML filename

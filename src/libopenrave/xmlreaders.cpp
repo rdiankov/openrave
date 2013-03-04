@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -22,9 +22,22 @@
 namespace OpenRAVE {
 namespace xmlreaders {
 
+HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : XMLReadable(xmlid), _atts(atts)
+{
+}
+
+void HierarchicalXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    writer->SetCharData(_data);
+    for(std::list<HierarchicalXMLReadablePtr>::const_iterator it = _listchildren.begin(); it != _listchildren.end(); ++it) {
+        BaseXMLWriterPtr childwriter = writer->AddChild((*it)->GetXMLId(), (*it)->_atts);
+        (*it)->Serialize(childwriter,options);
+    }
+}
 
 TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
 {
+    _bInReadable = false;
     _datacount = 0;
     FOREACHC(itatt, atts) {
         if( itatt->first == "type" ) {
@@ -50,13 +63,20 @@ BaseXMLReader::ProcessElement TrajectoryReader::startElement(const std::string& 
         }
         return PE_Ignore;
     }
-
+    if( _bInReadable ) {
+        _pcurreader.reset(new HierarchicalXMLReader(name,atts));
+        return PE_Support;
+    }
     if( name == "trajectory" ) {
         _pcurreader.reset(new TrajectoryReader(_ptraj->GetEnv(), _ptraj, atts));
         return PE_Support;
     }
     else if( name == "configuration" ) {
         _pcurreader.reset(new ConfigurationSpecification::Reader(_spec));
+        return PE_Support;
+    }
+    else if( name == "readable" ) {
+        _bInReadable = true;
         return PE_Support;
     }
     else if( name == "data" ) {
@@ -79,14 +99,21 @@ bool TrajectoryReader::endElement(const std::string& name)
 {
     if( !!_pcurreader ) {
         if( _pcurreader->endElement(name) ) {
-            if( !!boost::dynamic_pointer_cast<ConfigurationSpecification::Reader>(_pcurreader) ) {
-                BOOST_ASSERT(_spec.IsValid());
-                _ptraj->Init(_spec);
+            if( _bInReadable ) {
+                HierarchicalXMLReaderPtr reader = boost::dynamic_pointer_cast<HierarchicalXMLReader>(_pcurreader);
+                _ptraj->SetReadableInterface(reader->GetReadable()->GetXMLId(), reader->GetReadable());
+                _pcurreader.reset();
             }
-            bool bret = !!boost::dynamic_pointer_cast<TrajectoryReader>(_pcurreader);
-            _pcurreader.reset();
-            if( bret ) {
-                return true;
+            else {
+                if( !!boost::dynamic_pointer_cast<ConfigurationSpecification::Reader>(_pcurreader) ) {
+                    BOOST_ASSERT(_spec.IsValid());
+                    _ptraj->Init(_spec);
+                }
+                bool bret = !!boost::dynamic_pointer_cast<TrajectoryReader>(_pcurreader);
+                _pcurreader.reset();
+                if( bret ) {
+                    return true;
+                }
             }
         }
     }
@@ -107,6 +134,9 @@ bool TrajectoryReader::endElement(const std::string& name)
     }
     else if( name == "trajectory" ) {
         return true;
+    }
+    else if( name == "readable" ) {
+        _bInReadable = false;
     }
     return false;
 }
@@ -351,6 +381,56 @@ void GeometryInfoReader::characters(const std::string& ch)
         _ss.clear();
         _ss << ch;
     }
+}
+
+HierarchicalXMLReader::HierarchicalXMLReader(const std::string& xmlid, const AttributesList& atts) : _xmlid(xmlid)
+{
+    _readable.reset(new HierarchicalXMLReadable(xmlid,atts));
+}
+
+BaseXMLReader::ProcessElement HierarchicalXMLReader::startElement(const std::string& name, const AttributesList& atts)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->startElement(name, atts) == PE_Support ) {
+            return PE_Support;
+        }
+        return PE_Ignore;
+    }
+
+    _pcurreader.reset(new HierarchicalXMLReader(name,atts));
+    return PE_Support;
+}
+
+bool HierarchicalXMLReader::endElement(const std::string& name)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(name) ) {
+            _readable->_listchildren.push_back(_pcurreader->_readable);
+            _pcurreader.reset();
+        }
+        return false;
+    }
+
+    if( name == _xmlid ) {
+        return true;
+    }
+    RAVELOG_ERROR(str(boost::format("invalid xml tag %s, expected %s\n")%name%_xmlid));
+    return false;
+}
+
+void HierarchicalXMLReader::characters(const std::string& ch)
+{
+    if( !_pcurreader ) {
+        _readable->_data += ch;
+    }
+    else {
+        _pcurreader->characters(ch);
+    }
+}
+
+XMLReadablePtr HierarchicalXMLReader::GetReadable()
+{
+    return _readable;
 }
 
 } // xmlreaders

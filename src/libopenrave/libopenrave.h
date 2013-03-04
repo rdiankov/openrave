@@ -321,7 +321,6 @@ private:
 typedef boost::shared_ptr<Grabbed> GrabbedPtr;
 typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
 
-
 /// -1 v1 is smaller than v2
 // 0 two vectors are equivalent
 /// +1 v1 is greater than v2

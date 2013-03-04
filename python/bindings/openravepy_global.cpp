@@ -343,7 +343,7 @@ public:
     {
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         Transform t;
-        if( otransform != object() ) {
+        if( !(otransform == object()) ) {
             t = openravepy::ExtractTransform(otransform);
         }
         if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
@@ -500,7 +500,7 @@ PyConfigurationSpecificationPtr pyRaveGetAffineConfigurationSpecification(int af
 object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, object oActvAffineRotationAxis=object())
 {
     Vector vActvAffineRotationAxis(0,0,1);
-    if( oActvAffineRotationAxis != object() ) {
+    if( !(oActvAffineRotationAxis == object()) ) {
         vActvAffineRotationAxis = ExtractVector3(oActvAffineRotationAxis);
     }
     std::vector<dReal> values(RaveGetAffineDOF(affinedofs));
@@ -553,10 +553,10 @@ void raveLogVerbose(const string &s)
     raveLog(s,Level_Verbose);
 }
 
-int pyGetIntFromPy(object olevel)
+int pyGetIntFromPy(object olevel, int defaultvalue)
 {
-    int level = Level_Info;
-    if( olevel != object() ) {
+    int level = defaultvalue;
+    if( !(olevel == object()) ) {
         // some version of boost python return true for extract::check, even through the actual conversion will throw an OverflowError
         // therefore check for conversion compatibility starting at the longest signed integer
         extract<int64_t> levelint64(olevel);
@@ -590,18 +590,18 @@ int pyGetIntFromPy(object olevel)
 
 void pyRaveSetDebugLevel(object olevel)
 {
-    OpenRAVE::RaveSetDebugLevel(pyGetIntFromPy(olevel));
+    OpenRAVE::RaveSetDebugLevel(pyGetIntFromPy(olevel, Level_Info));
 }
 
 int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=object())
 {
 
-    return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel));
+    return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel, Level_Info));
 }
 
 void pyRaveSetDataAccess(object oaccess)
 {
-    OpenRAVE::RaveSetDataAccess(pyGetIntFromPy(oaccess));
+    OpenRAVE::RaveSetDataAccess(pyGetIntFromPy(oaccess, Level_Info));
 }
 
 object RaveGetPluginInfo()

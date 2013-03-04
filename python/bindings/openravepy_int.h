@@ -146,6 +146,7 @@ XMLReadablePtr ExtractXMLReadable(object o);
 object toPyXMLReadable(XMLReadablePtr p);
 bool ExtractIkParameterization(object o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
+object toPyIkParameterization(const std::string& serializeddata);
 //@}
 
 struct null_deleter {
@@ -556,6 +557,7 @@ object toPyIkReturn(const IkReturn& ret);
 object GetUserData(UserDataPtr pdata);
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
+EnvironmentBasePtr GetEnvironment(object);
 void LockEnvironment(PyEnvironmentBasePtr);
 void UnlockEnvironment(PyEnvironmentBasePtr);
 int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
@@ -579,7 +581,9 @@ void init_openravepy_kinbody();
 KinBodyPtr GetKinBody(object);
 KinBodyPtr GetKinBody(PyKinBodyPtr);
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
+object toPyKinBody(KinBodyPtr, object opyenv);
 object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
+object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv);
 KinBody::LinkPtr GetKinBodyLink(object);
 KinBody::LinkConstPtr GetKinBodyLinkConst(object);
 object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);
@@ -616,12 +620,14 @@ TrajectoryBasePtr GetTrajectory(object);
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
 PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
+// input can be class derived from PyInterfaceBase
+object toPyEnvironment(object opyinterface);
 PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr);
 void init_openravepy_viewer();
 ViewerBasePtr GetViewer(PyViewerBasePtr);
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
-int pyGetIntFromPy(object olevel);
+int pyGetIntFromPy(object olevel, int defaultvalue);
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification&);
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr);

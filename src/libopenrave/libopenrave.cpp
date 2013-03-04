@@ -448,7 +448,7 @@ public:
             (*itcallback)();
         }
         listDestroyCallbacks.clear();
-        
+
         if( !!_pdatabase ) {
             // force destroy in case some one is holding a pointer to it
             _pdatabase->Destroy();
@@ -1780,15 +1780,17 @@ DummyXMLReader::DummyXMLReader(const std::string& fieldname, const std::string& 
 BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& name, const AttributesList &atts)
 {
     if( !!_pcurreader ) {
-        if( _pcurreader->startElement(name, atts) == PE_Support )
+        if( _pcurreader->startElement(name, atts) == PE_Support ) {
             return PE_Support;
+        }
         return PE_Ignore;
     }
 
     if( !!_osrecord ) {
         *_osrecord << "<" << name << " ";
-        FOREACHC(itatt, atts)
-        *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
+        FOREACHC(itatt, atts) {
+            *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
+        }
         *_osrecord << ">" << endl;
     }
 
@@ -1802,14 +1804,16 @@ bool DummyXMLReader::endElement(const std::string& name)
     if( !!_pcurreader ) {
         if( _pcurreader->endElement(name) ) {
             _pcurreader.reset();
-            if( !!_osrecord )
+            if( !!_osrecord ) {
                 *_osrecord << "</" << name << ">" << endl;
+            }
         }
         return false;
     }
 
-    if( name == _fieldname )
+    if( name == _fieldname ) {
         return true;
+    }
     RAVELOG_ERROR(str(boost::format("invalid xml tag %s\n")%name));
     return false;
 }
@@ -1817,8 +1821,9 @@ bool DummyXMLReader::endElement(const std::string& name)
 void DummyXMLReader::characters(const std::string& ch)
 {
     if( !_pcurreader ) {
-        if( !!_osrecord )
+        if( !!_osrecord ) {
             *_osrecord << ch;
+        }
     }
     else {
         _pcurreader->characters(ch);

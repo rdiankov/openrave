@@ -124,11 +124,11 @@ public:
         return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
     }
 
-    object serialize(int options=0)
+    object serialize(object ooptions=object())
     {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        _ptrajectory->serialize(ss,options);
+        _ptrajectory->serialize(ss,pyGetIntFromPy(ooptions,0));
         return object(ss.str());
     }
 
@@ -138,7 +138,7 @@ public:
         return true;
     }
 
-    object Write(int options) {
+    object Write(object options) {
         RAVELOG_WARN("Trajectory.Write deprecated please use Trajerctory.serialize\n");
         return serialize(options);
     }

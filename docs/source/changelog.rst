@@ -55,28 +55,28 @@ Inverse Kinematics
 Planning
 --------
 
-- Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters`
+* Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters`
 
-- Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
+* Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
 
-- Added options parameter to :meth:`.Planner.PlannerParameters.serialize`
+* Added options parameter to :meth:`.Planner.PlannerParameters.serialize`
 
-- Speed up of smoothing algorithms by early rejecting bad candidates.
+* Speed up of smoothing algorithms by early rejecting bad candidates.
 
-- Added much faster linear smoother :ref:`linear smoothing <planner-linearsmoother>` which can also do per-DOF smoothing.
+* Added much faster linear smoother :ref:`linear smoothing <planner-linearsmoother>` which can also do per-DOF smoothing.
 
-- planningutils smoothing and retiming functions like :meth:`planningutils.SmoothActiveDOFTrajectory` now return planning failure rather than to throw exceptions.
+* planningutils smoothing and retiming functions like :meth:`planningutils.SmoothActiveDOFTrajectory` now return planning failure rather than to throw exceptions.
 
-- Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
+* Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
 
-- Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
+* Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
 
 Python
 ------
 
 * Added __hash__ to most classes like KinBody.Link, Robot.Manipulator, etc so they can be used in dictionaries.
 
-* Register RaveDestroy function call on sys exit (John Schulman).
+* Register :meth:`RaveDestroy` function call on sys exit (John Schulman).
 
 Misc
 ----
@@ -98,6 +98,8 @@ Misc
 * collada-dom DAE is now globally managed so that it doesn't release its resources everytime a collada object is loaded. This also solves many random crashes.
 
 * Can open binary DirectX files
+
+* Added many helpers in xmlreaders.h to parse and write XML.
 
 Version 0.8.2
 =============

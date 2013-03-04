@@ -38,6 +38,14 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     if( GetDescription().size() > 0 ) {
         O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
     }
+    if( GetReadableInterfaces().size() > 0 ) {
+        xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
+        FOREACHC(it, GetReadableInterfaces()) {
+            BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+            it->second->Serialize(newwriter,options);
+        }
+        writer->Serialize(O);
+    }
     O << "</trajectory>" << endl;
 }
 

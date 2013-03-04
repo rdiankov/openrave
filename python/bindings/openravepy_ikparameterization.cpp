@@ -28,7 +28,6 @@ public:
     }
     PyIkParameterization(const string &s) {
         stringstream ss(s);
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss >> _param;
     }
     PyIkParameterization(object o, IkParameterizationType type)
@@ -328,6 +327,11 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
 object toPyIkParameterization(const IkParameterization &ikparam)
 {
     return object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
+}
+
+object toPyIkParameterization(const std::string& serializeddata)
+{
+    return object(PyIkParameterizationPtr(new PyIkParameterization(serializeddata)));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite

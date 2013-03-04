@@ -90,14 +90,14 @@ public:
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
-        if( _meshcollision != object() ) {
+        if( !(_meshcollision == object()) ) {
             ExtractTriMesh(_meshcollision,info._meshcollision);
         }
         info._type = _type;
-        if( _filenamerender != boost::python::object() ) {
+        if( !(_filenamerender == boost::python::object()) ) {
             info._filenamerender = boost::python::extract<std::string>(_filenamerender);
         }
-        if( _filenamecollision != boost::python::object() ) {
+        if( !(_filenamecollision == boost::python::object()) ) {
             info._filenamecollision = boost::python::extract<std::string>(_filenamecollision);
         }
         info._vRenderScale = ExtractVector3(_vRenderScale);
@@ -161,7 +161,7 @@ public:
             PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
             info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
         }
-        if( _name != boost::python::object() ) {
+        if( !(_name == boost::python::object()) ) {
             info._name = boost::python::extract<std::string>(_name);
         }
         info._t = ExtractTransform(_t);
@@ -274,13 +274,13 @@ public:
         KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
-        if( _name != boost::python::object() ) {
+        if( !(_name == boost::python::object()) ) {
             info._name = boost::python::extract<std::string>(_name);
         }
-        if( _linkname0 != boost::python::object() ) {
+        if( !(_linkname0 == boost::python::object()) ) {
             info._linkname0 = boost::python::extract<std::string>(_linkname0);
         }
-        if( _linkname1 != boost::python::object() ) {
+        if( !(_linkname1 == boost::python::object()) ) {
             info._linkname1 = boost::python::extract<std::string>(_linkname1);
         }
         info._vanchor = ExtractVector3(_vanchor);
@@ -288,7 +288,7 @@ public:
         for(size_t i = 0; i < num; ++i) {
             info._vaxes.at(i) = ExtractVector3(_vaxes[i]);
         }
-        if( _vcurrentvalues != object() ) {
+        if( !(_vcurrentvalues == object()) ) {
             info._vcurrentvalues = ExtractArray<dReal>(_vcurrentvalues);
         }
         num = len(_vresolution);
@@ -327,13 +327,13 @@ public:
         for(size_t i = 0; i < num; ++i) {
             info._vupperlimit.at(i) = boost::python::extract<dReal>(_vupperlimit[i]);
         }
-        if( _trajfollow != boost::python::object() ) {
+        if( !(_trajfollow == boost::python::object()) ) {
             info._trajfollow = GetTrajectory(_trajfollow);
         }
-        if( _vmimic != object() ) {
+        if( !(_vmimic == object()) ) {
             num = len(_vmimic);
             for(size_t i = 0; i < num; ++i) {
-                if( _vmimic[i] != object() ) {
+                if( !(_vmimic[i] == object()) ) {
                     OPENRAVE_ASSERT_OP(len(_vmimic[i]),==,3);
                     info._vmimic[i].reset(new KinBody::MimicInfo());
                     for(size_t j = 0; j < 3; ++j) {
@@ -969,11 +969,11 @@ class PyKinBodyStateSaver
 public:
     PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
     }
-    PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),pyGetIntFromPy(options)) {
+    PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),pyGetIntFromPy(options,0)) {
     }
     PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(pbody) {
     }
-    PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options)) {
+    PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options, 0)) {
     }
     virtual ~PyKinBodyStateSaver() {
         _state.Release();
@@ -1816,7 +1816,7 @@ void PyKinBody::SetDOFTorques(object otorques, bool bAdd)
 object PyKinBody::ComputeJacobianTranslation(int index, object oposition, object oindices)
 {
     vector<int> vindices;
-    if( oindices != object() ) {
+    if( !(oindices == object()) ) {
         vindices = ExtractArray<int>(oindices);
     }
     std::vector<dReal> vjacobian;
@@ -1828,7 +1828,7 @@ object PyKinBody::ComputeJacobianTranslation(int index, object oposition, object
 object PyKinBody::ComputeJacobianAxisAngle(int index, object oindices)
 {
     vector<int> vindices;
-    if( oindices != object() ) {
+    if( !(oindices == object()) ) {
         vindices = ExtractArray<int>(oindices);
     }
     std::vector<dReal> vjacobian;
@@ -1864,7 +1864,7 @@ object PyKinBody::CalculateAngularVelocityJacobian(int index) const
 object PyKinBody::ComputeHessianTranslation(int index, object oposition, object oindices)
 {
     vector<int> vindices;
-    if( oindices != object() ) {
+    if( !(oindices == object()) ) {
         vindices = ExtractArray<int>(oindices);
     }
     size_t dof = vindices.size() == 0 ? (size_t)_pbody->GetDOF() : vindices.size();
@@ -1877,7 +1877,7 @@ object PyKinBody::ComputeHessianTranslation(int index, object oposition, object 
 object PyKinBody::ComputeHessianAxisAngle(int index, object oindices)
 {
     vector<int> vindices;
-    if( oindices != object() ) {
+    if( !(oindices == object()) ) {
         vindices = ExtractArray<int>(oindices);
     }
     size_t dof = vindices.size() == 0 ? (size_t)_pbody->GetDOF() : vindices.size();
@@ -1890,11 +1890,11 @@ object PyKinBody::ComputeHessianAxisAngle(int index, object oindices)
 object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque, bool returncomponents)
 {
     vector<dReal> vDOFAccelerations;
-    if( odofaccelerations != object() ) {
+    if( !(odofaccelerations == object()) ) {
         vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
     }
     KinBody::ForceTorqueMap mapExternalForceTorque;
-    if( oexternalforcetorque != object() ) {
+    if( !(oexternalforcetorque == object()) ) {
         boost::python::dict odict = (boost::python::dict)oexternalforcetorque;
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         vector<dReal> v;
@@ -2110,6 +2110,15 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     return object(PyLinkPtr(new PyLink(plink,pyenv)));
 }
 
+object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
+{
+    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    if( pyenv.check() ) {
+        return object(toPyKinBodyLink(plink,(PyEnvironmentBasePtr)pyenv));
+    }
+    return object();
+}
+
 object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 {
     if( !pjoint ) {
@@ -2185,6 +2194,15 @@ PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
 {
     return !pkinbody ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyKinBody(pkinbody,pyenv));
+}
+
+object toPyKinBody(KinBodyPtr pkinbody, object opyenv)
+{
+    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    if( pyenv.check() ) {
+        return object(toPyKinBody(pkinbody,(PyEnvironmentBasePtr)pyenv));
+    }
+    return object();
 }
 
 PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& name)

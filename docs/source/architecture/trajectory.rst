@@ -62,6 +62,9 @@ The file format for exporting the trajectory is in XML:
     <data count="#N">
       1 2 3 4 5
     </data>
+    <readable>
+      <usercustomclasses/>
+    </readable>
   </trajectory>
 
 ----
