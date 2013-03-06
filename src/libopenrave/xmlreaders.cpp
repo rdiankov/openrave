@@ -22,6 +22,30 @@
 namespace OpenRAVE {
 namespace xmlreaders {
 
+StringXMLReadable::StringXMLReadable(const std::string& xmlid, const std::string& data) : XMLReadable(xmlid), _data(data)
+{
+}
+
+void StringXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    if( writer->GetFormat() == "collada" ) {
+        AttributesList atts;
+        atts.push_back(make_pair(string("type"),"stringxmlreadable"));
+        atts.push_back(make_pair(string("name"), GetXMLId()));
+        BaseXMLWriterPtr child = writer->AddChild("extra",atts);
+        atts.clear();
+        atts.push_back(make_pair(string("profile"), string("OpenRAVE")));
+        writer = child->AddChild("technique",atts)->AddChild("data");
+    }
+
+    writer->SetCharData(_data);
+}
+
+const std::string& StringXMLReadable::GetData() const
+{
+    return _data;
+}
+
 HierarchicalXMLReadable::HierarchicalXMLReadable(const std::string& xmlid, const AttributesList& atts) : XMLReadable(xmlid), _atts(atts)
 {
 }

@@ -79,6 +79,9 @@ XMLReadablePtr ExtractXMLReadable(object o) {
 }
 
 object toPyXMLReadable(XMLReadablePtr p) {
+    if( !p ) {
+        return object();
+    }
     return object(PyXMLReadablePtr(new PyXMLReadable(p)));
 }
 

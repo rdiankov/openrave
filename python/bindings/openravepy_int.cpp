@@ -125,6 +125,11 @@ object PyInterfaceBase::GetReadableInterfaces()
     return ointerfaces;
 }
 
+object PyInterfaceBase::GetReadableInterface(const std::string& xmltag)
+{
+    return toPyXMLReadable(_pbase->GetReadableInterface(xmltag));
+}
+
 void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
 {
     _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
@@ -1436,6 +1441,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SendCommand",&PyInterfaceBase::SendCommand,SendCommand_overloads(args("cmd","releasegil"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
+        .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)

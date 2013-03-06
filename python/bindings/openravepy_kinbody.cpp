@@ -787,6 +787,9 @@ public:
         _pjoint->GetValues(values);
         return toPyArray(values);
     }
+    dReal GetValue(int iaxis) const {
+        return _pjoint->GetValue(iaxis);
+    }
     object GetVelocities() const {
         vector<dReal> values;
         _pjoint->GetVelocities(values);
@@ -2688,6 +2691,7 @@ void init_openravepy_kinbody()
                           .def("GetType", &PyJoint::GetType, DOXY_FN(KinBody::Joint,GetType))
                           .def("GetDOF", &PyJoint::GetDOF, DOXY_FN(KinBody::Joint,GetDOF))
                           .def("GetValues", &PyJoint::GetValues, DOXY_FN(KinBody::Joint,GetValues))
+                          .def("GetValue", &PyJoint::GetValue, DOXY_FN(KinBody::Joint,GetValue))
                           .def("GetVelocities", &PyJoint::GetVelocities, DOXY_FN(KinBody::Joint,GetVelocities))
                           .def("GetAnchor", &PyJoint::GetAnchor, DOXY_FN(KinBody::Joint,GetAnchor))
                           .def("GetAxis", &PyJoint::GetAxis,GetAxis_overloads(args("axis"), DOXY_FN(KinBody::Joint,GetAxis)))

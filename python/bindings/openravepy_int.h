@@ -525,6 +525,7 @@ public:
     }
 
     virtual object GetReadableInterfaces();
+    virtual object GetReadableInterface(const std::string& xmltag);
 
     virtual void SetReadableInterface(const std::string& xmltag, object oreadable);
 

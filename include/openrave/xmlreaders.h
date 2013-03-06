@@ -32,19 +32,9 @@ namespace xmlreaders {
 class OPENRAVE_API StringXMLReadable : public XMLReadable
 {
 public:
-    StringXMLReadable(const std::string& xmlid, const std::string& data) : XMLReadable(xmlid), _data(data)
-    {
-    }
-
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const
-    {
-        writer->SetCharData(_data);
-    }
-
-    const std::string& GetData() const {
-        return _data;
-    }
-
+    StringXMLReadable(const std::string& xmlid, const std::string& data);
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    const std::string& GetData() const;
     std::string _data;
 };
 

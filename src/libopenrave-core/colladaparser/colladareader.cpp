@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
 #include <boost/algorithm/string.hpp>
+#include <openrave/xmlreaders.h>
 
 namespace OpenRAVE
 {
@@ -3462,13 +3463,26 @@ private:
     void _ExtractExtraData(KinBodyPtr pbody, const domExtra_Array& arr) {
         AttributesList atts;
         for(size_t i = 0; i < arr.getCount(); ++i) {
-            _ExtractAttributesList(arr[i],atts);
-            string extratype = arr[i]->getType();
-            BaseXMLReaderPtr preader = RaveCallXMLReader(pbody->IsRobot() ? PT_Robot : PT_KinBody, extratype, pbody,atts);
-            if( !!preader ) {
-                if( _ProcessXMLReader(preader,arr[i]) ) {
-                    if( !!preader->GetReadable() ) {
-                        pbody->SetReadableInterface(extratype,preader->GetReadable());
+            domExtraRef pextra = arr[i];
+            if( !!pextra->getType() && !!pextra->getName() && strcmp(pextra->getType(), "stringxmlreadable") == 0 ) {
+                std::string xmlid(pextra->getName());
+                domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
+                if( !!tec ) {
+                    daeElementRef pdata = tec->getChild("data");
+                    if( !!pdata ) {
+                        pbody->SetReadableInterface(xmlid, XMLReadablePtr(new xmlreaders::StringXMLReadable(xmlid, pdata->getCharData())));
+                    }
+                }
+            }
+            else {
+                _ExtractAttributesList(arr[i],atts);
+                string extratype = arr[i]->getType();
+                BaseXMLReaderPtr preader = RaveCallXMLReader(pbody->IsRobot() ? PT_Robot : PT_KinBody, extratype, pbody,atts);
+                if( !!preader ) {
+                    if( _ProcessXMLReader(preader,arr[i]) ) {
+                        if( !!preader->GetReadable() ) {
+                            pbody->SetReadableInterface(extratype,preader->GetReadable());
+                        }
                     }
                 }
             }
