@@ -433,5 +433,56 @@ XMLReadablePtr HierarchicalXMLReader::GetReadable()
     return _readable;
 }
 
+
+StreamXMLWriter::StreamXMLWriter(const std::string& xmltag, const AttributesList& atts) : _xmltag(xmltag), _atts(atts)
+{
+}
+
+const std::string& StreamXMLWriter::GetFormat() const
+{
+    static const std::string format("xml");
+    return format;
+}
+
+void StreamXMLWriter::SetCharData(const std::string& data)
+{
+    _data = data;
+}
+
+BaseXMLWriterPtr StreamXMLWriter::AddChild(const std::string& xmltag, const AttributesList& atts)
+{
+    boost::shared_ptr<StreamXMLWriter> child(new StreamXMLWriter(xmltag,atts));
+    _listchildren.push_back(child);
+    return child;
+}
+
+void StreamXMLWriter::Serialize(std::ostream& stream)
+{
+    if( _xmltag.size() > 0 ) {
+        stream << "<" << _xmltag << " ";
+        FOREACHC(it, _atts) {
+            stream << it->first << "=\"" << it->second << "\" ";
+        }
+        // don't skip any lines since could affect reading back _data
+        stream << ">";
+    }
+    if( _data.size() > 0 ) {
+        if( _xmltag.size() > 0 ) {
+            stream << "<![CDATA[" << _data << "]]>";
+        }
+        else {
+            // there's no tag, so can render plaintext
+            stream << _data;
+        }
+    }
+    FOREACHC(it, _listchildren) {
+        (*it)->Serialize(stream);
+    }
+    if( _xmltag.size() > 0 ) {
+        stream << "</" << _xmltag << ">" << std::endl;
+    }
+}
+
+
 } // xmlreaders
 } // OpenRAVE

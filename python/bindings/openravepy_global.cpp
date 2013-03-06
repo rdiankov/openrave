@@ -18,6 +18,8 @@
 #include "openravepy_int.h"
 
 #include <openrave/planningutils.h>
+#include <openrave/xmlreaders.h>
+#include <openrave/utils.h>
 
 namespace openravepy {
 
@@ -54,9 +56,16 @@ public:
     std::string GetXMLId() const {
         return _xmlreadable->GetXMLId();
     }
-    void Serialize(BaseXMLWriterPtr writer, int options) const {
-        _xmlreadable->Serialize(writer,options);
+    object Serialize(int options=0)
+    {
+        std::string xmlid;
+        OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
+        _xmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+        std::stringstream ss;
+        writer.Serialize(ss);
+        return ConvertStringToUnicode(ss.str());
     }
+
     XMLReadablePtr GetXMLReadable() {
         return _xmlreadable;
     }
@@ -72,6 +81,16 @@ XMLReadablePtr ExtractXMLReadable(object o) {
 object toPyXMLReadable(XMLReadablePtr p) {
     return object(PyXMLReadablePtr(new PyXMLReadable(p)));
 }
+
+namespace xmlreaders
+{
+
+PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
+{
+    return PyXMLReadablePtr(new PyXMLReadable(XMLReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
+}
+
+} // end namespace xmlreaders
 
 object toPyGraphHandle(const GraphHandlePtr p)
 {
@@ -1128,7 +1147,7 @@ public:
 
 typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSamplerPtr;
 
-}
+} // end namespace planningutils
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
@@ -1149,6 +1168,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigura
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
 
 void init_openravepy_global()
 {
@@ -1274,7 +1294,7 @@ void init_openravepy_global()
     class_<PyXMLReadable, PyXMLReadablePtr >("XMLReadable", DOXY_CLASS(XMLReadable), no_init)
     .def(init<XMLReadablePtr>(args("readableraw")))
     .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
-    .def("Serialize", &PyXMLReadable::Serialize, DOXY_FN(XMLReadable, Serialize))
+    .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(args("options"), DOXY_FN(XMLReadable, Serialize)))
     ;
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
@@ -1331,7 +1351,12 @@ void init_openravepy_global()
 
     openravepy::spec_from_group();
 
-
+    {
+        scope x = class_<object>("xmlreaders")
+                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, args("xmlid", "data"))
+                  .staticmethod("CreateStringXMLReadable")
+        ;
+    }
 
     {
         scope x = class_<object>("planningutils")

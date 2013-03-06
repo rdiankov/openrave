@@ -148,44 +148,11 @@ typedef boost::shared_ptr<HierarchicalXMLReader> HierarchicalXMLReaderPtr;
 class OPENRAVE_API StreamXMLWriter : public BaseXMLWriter
 {
 public:
-    StreamXMLWriter(const std::string& xmltag, const AttributesList& atts=AttributesList()) : _xmltag(xmltag), _atts(atts)
-    {
-    }
-
-    const std::string& GetFormat() const
-    {
-        static const std::string format("xml");
-        return format;
-    }
-
-    virtual void SetCharData(const std::string& data)
-    {
-        _data = data;
-    }
-
-    virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList())
-    {
-        boost::shared_ptr<StreamXMLWriter> child(new StreamXMLWriter(xmltag,atts));
-        _listchildren.push_back(child);
-        return child;
-    }
-
-    virtual void Serialize(std::ostream& stream)
-    {
-        stream << "<" << _xmltag << " ";
-        FOREACHC(it, _atts) {
-            stream << it->first << "=\"" << it->second << "\" ";
-        }
-        // don't skip any lines since could affect reading back _data
-        stream << ">";
-        if( _data.size() > 0 ) {
-            stream << "<![CDATA[" << _data << "]]>";
-        }
-        FOREACHC(it, _listchildren) {
-            (*it)->Serialize(stream);
-        }
-        stream << "</" << _xmltag << ">" << std::endl;
-    }
+    StreamXMLWriter(const std::string& xmltag, const AttributesList& atts=AttributesList());
+    const std::string& GetFormat() const;
+    virtual void SetCharData(const std::string& data);
+    virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList());
+    virtual void Serialize(std::ostream& stream);
 
     std::list<boost::shared_ptr<StreamXMLWriter> > _listchildren;
     std::string _xmltag, _data;
