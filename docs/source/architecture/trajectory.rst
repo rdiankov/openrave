@@ -65,6 +65,8 @@ The file format for exporting the trajectory is in XML:
     <readable>
       <usercustomclasses/>
     </readable>
+    <description>My trajectory
+    </description>
   </trajectory>
 
 ----
