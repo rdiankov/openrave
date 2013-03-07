@@ -88,6 +88,11 @@ object toPyXMLReadable(XMLReadablePtr p) {
 namespace xmlreaders
 {
 
+class PyStaticClass
+{
+public:
+};
+
 PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
 {
     return PyXMLReadablePtr(new PyXMLReadable(XMLReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
@@ -887,6 +892,11 @@ string poseSerialization(object o)
 namespace planningutils
 {
 
+class PyStaticClass
+{
+public:
+};
+
 bool pyJitterTransform(PyKinBodyPtr pybody, float fJitter, int nMaxIterations=1000)
 {
     return OpenRAVE::planningutils::JitterTransform(openravepy::GetKinBody(pybody), fJitter, nMaxIterations);
@@ -1355,14 +1365,14 @@ void init_openravepy_global()
     openravepy::spec_from_group();
 
     {
-        scope x = class_<object>("xmlreaders")
-                  .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, args("xmlid", "data"))
-                  .staticmethod("CreateStringXMLReadable")
+        scope scope_xmlreaders = class_<xmlreaders::PyStaticClass>("xmlreaders")
+                                 .def("CreateStringXMLReadable",xmlreaders::pyCreateStringXMLReadable, args("xmlid", "data"))
+                                 .staticmethod("CreateStringXMLReadable")
         ;
     }
 
     {
-        scope x = class_<object>("planningutils")
+        scope x = class_<planningutils::PyStaticClass>("planningutils")
                   .def("JitterTransform",planningutils::pyJitterTransform,JitterTransform_overloads(args("body","jitter","maxiterations"),DOXY_FN1(JitterTransform)))
                   .staticmethod("JitterTransform")
                   .def("ConvertTrajectorySpecification",planningutils::pyConvertTrajectorySpecification,args("trajectory","spec"),DOXY_FN1(ConvertTrajectorySpecification))

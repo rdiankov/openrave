@@ -44,7 +44,7 @@ from threading import Thread
 
 from PyQt4 import QtGui, QtCore
 
-logger = None
+logger = logging.getLogger('PyqtControl')
 
 #Change to main Gui Server which just inits a Qt or OpenRAVE Gui
 class Example(Thread):
@@ -346,7 +346,6 @@ class MainWindow(QtGui.QMainWindow,Ui_MainWindow):
 def main(env,options):
     "Main example code."
     global logger
-    logger = logging.getLogger('PyqtControl')
     lhandler =logging.StreamHandler(sys.stdout)
     lhandler.setFormatter(logging.Formatter("%(levelname)-10s:: %(filename)-20s - %(lineno)4d :: %(message)s"))
     logger.setLevel(logging.INFO)
