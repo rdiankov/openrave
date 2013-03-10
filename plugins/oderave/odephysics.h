@@ -229,7 +229,7 @@ The possible properties that can be set are: ";
     {
         _report.reset(new CollisionReport());
 
-        _odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
+        _odespace->SetSynchronizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
         if( !_odespace->InitEnvironment() ) {
             return false;
         }

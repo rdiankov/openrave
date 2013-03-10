@@ -222,7 +222,7 @@ private:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     ODESpace(EnvironmentBasePtr penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
     {
@@ -573,7 +573,7 @@ private:
         return _ode->contactgroup;
     }
 
-    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) {
+    void SetSynchronizationCallback(const SynchronizeCallbackFn& synccallback) {
         _synccallback = synccallback;
     }
 
@@ -641,7 +641,7 @@ private:
     boost::shared_ptr<ODEResources> _ode;
     std::string _userdatakey;
 
-    SynchornizeCallbackFn _synccallback;
+    SynchronizeCallbackFn _synccallback;
     bool _bUsingPhysics;
 };
 
