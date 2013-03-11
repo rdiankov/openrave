@@ -297,6 +297,10 @@ private:
                 dBodyDisable(link->body);
                 link->_bEnabled = false;
             }
+
+            //Store the COM of the link to offset ODE coordinate system
+            Transform com=(*itlink)->GetLocalMassFrame();
+
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 KinBody::Link::GeometryPtr geom = *itgeom;
@@ -345,7 +349,14 @@ private:
                 // set the transformation
                 RaveTransform<dReal> t = geom->GetTransform();
                 dGeomSetQuaternion(odegeom,&t.rot[0]);
-                dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
+
+                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                dReal x,y,z;
+                x=t.trans.x+com_rot[0];
+                y=t.trans.y+com_rot[1];
+                z=t.trans.z+com_rot[2];
+
+                dGeomSetPosition(odegeom,x,y,z);
 
                 // finally set the geom to the ode body
                 dGeomSetBody(odegeomtrans, link->body);
@@ -377,16 +388,20 @@ private:
                         mass.I[8] = 0; mass.I[9] = 0; mass.I[10] = 1;
                     }
                 }
-                // ignore center of mass for now (ode doesn't like it when it is non-zero)
-                //mass.c = ?;
-
+                //ODE link coordinate system coincides with center of mass:
                 dBodySetMass(link->body, &mass);
             }
 
             link->_plink = *itlink;
-            // set the transformation
+            // Calculate ODE transform consisting of link origin + center of mass offset
             RaveTransform<dReal> t = (*itlink)->GetTransform();
-            dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
+            RaveVector<dReal> com_rot=t.rotate(com.trans);
+            dReal x,y,z;
+            x=t.trans.x+com_rot[0];
+            y=t.trans.y+com_rot[1];
+            z=t.trans.z+com_rot[2];
+            dBodySetPosition(link->body,x,y,z);
+
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
             dBodySetData(link->body, link.get());     // so that the link can be retreived from the body
@@ -435,26 +450,38 @@ private:
                     axis1 = -axis1;
                 }
 
+                //Joint anchors are specified here
+                // Retrieve parent COM to offset joint anchor
+                KinBody::LinkPtr parent = (*itjoint)->GetHierarchyParentLink();
+                Transform com=parent->GetLocalMassFrame();
+                Transform t=parent->GetTransform();
+                dReal x,y,z;
+                //Subtract COM transformation from joint anchor parent
+                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                x=anchor.x-com_rot[0];
+                y=anchor.y-com_rot[1];
+                z=anchor.z-com_rot[2];
+
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge:
-                    dJointSetHingeAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetHingeAnchor(joint,x,y,z);
                     dJointSetHingeAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
                 case KinBody::JointSlider:
                     dJointSetSliderAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
                 case KinBody::JointUniversal:
-                    dJointSetUniversalAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetUniversalAnchor(joint,x,y,z);
                     dJointSetUniversalAxis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetUniversalAxis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
                 case KinBody::JointHinge2:
-                    dJointSetHinge2Anchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetHinge2Anchor(joint,x,y,z);
                     dJointSetHinge2Axis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetHinge2Axis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
                 case KinBody::JointSpherical:
-                    dJointSetBallAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetBallAnchor(joint,x,y,z);
                     break;
                 default:
                     break;
@@ -612,7 +639,15 @@ private:
                 RaveTransform<dReal> t = vtrans[i];
                 BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
                 dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
-                dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
+                //TODO: Add appropriate offsets here for COM
+                Transform com=(pinfo->vlinks[i]->_plink.lock())->GetLocalMassFrame();
+                dReal x,y,z;
+                //Subtract COM transformation from joint anchor parent
+                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                x=t.trans.x+com_rot[0];
+                y=t.trans.y+com_rot[1];
+                z=t.trans.z+com_rot[2];
+                dBodySetPosition(pinfo->vlinks[i]->body, x,y,z);
             }
 
             // update stamps also reflect enable links
