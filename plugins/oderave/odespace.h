@@ -352,9 +352,9 @@ private:
 
                 RaveVector<dReal> com_rot=t.rotate(com.trans);
                 dReal x,y,z;
-                x=t.trans.x+com_rot[0];
-                y=t.trans.y+com_rot[1];
-                z=t.trans.z+com_rot[2];
+                x=t.trans.x-com_rot[0];
+                y=t.trans.y-com_rot[1];
+                z=t.trans.z-com_rot[2];
 
                 dGeomSetPosition(odegeom,x,y,z);
 
@@ -639,7 +639,7 @@ private:
                 RaveTransform<dReal> t = vtrans[i];
                 BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
                 dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
-                //TODO: Add appropriate offsets here for COM
+                //TODO: potentially slowing down sync here...
                 Transform com=(pinfo->vlinks[i]->_plink.lock())->GetLocalMassFrame();
                 dReal x,y,z;
                 //Subtract COM transformation from joint anchor parent
