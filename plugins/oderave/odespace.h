@@ -299,7 +299,7 @@ private:
             }
 
             //Store the COM of the link to offset ODE coordinate system
-            Transform com=(*itlink)->GetLocalMassFrame();
+            Vector com=(*itlink)->GetCOMOffset();
 
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
@@ -350,7 +350,7 @@ private:
                 RaveTransform<dReal> t = geom->GetTransform();
                 dGeomSetQuaternion(odegeom,&t.rot[0]);
 
-                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                RaveVector<dReal> com_rot=t.rotate(com);
                 dReal x,y,z;
                 x=t.trans.x-com_rot[0];
                 y=t.trans.y-com_rot[1];
@@ -395,7 +395,7 @@ private:
             link->_plink = *itlink;
             // Calculate ODE transform consisting of link origin + center of mass offset
             RaveTransform<dReal> t = (*itlink)->GetTransform();
-            RaveVector<dReal> com_rot=t.rotate(com.trans);
+            RaveVector<dReal> com_rot=t.rotate(com);
             dReal x,y,z;
             x=t.trans.x+com_rot[0];
             y=t.trans.y+com_rot[1];
@@ -453,11 +453,12 @@ private:
                 //Joint anchors are specified here
                 // Retrieve parent COM to offset joint anchor
                 KinBody::LinkPtr parent = (*itjoint)->GetHierarchyParentLink();
-                Transform com=parent->GetLocalMassFrame();
+                Vector com=parent->GetCOMOffset();
                 Transform t=parent->GetTransform();
                 dReal x,y,z;
                 //Subtract COM transformation from joint anchor parent
-                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                Vector com_rot=t.rotate(com);
+                RAVELOG_DEBUG("COM %f %f %f\n",com_rot[0],com_rot[1],com_rot[2]);
                 x=anchor.x-com_rot[0];
                 y=anchor.y-com_rot[1];
                 z=anchor.z-com_rot[2];
@@ -640,10 +641,10 @@ private:
                 BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
                 dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
                 //TODO: potentially slowing down sync here...
-                Transform com=(pinfo->vlinks[i]->_plink.lock())->GetLocalMassFrame();
+                Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
                 dReal x,y,z;
                 //Subtract COM transformation from joint anchor parent
-                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                RaveVector<dReal> com_rot=t.rotate(com);
                 x=t.trans.x+com_rot[0];
                 y=t.trans.y+com_rot[1];
                 z=t.trans.z+com_rot[2];

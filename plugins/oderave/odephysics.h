@@ -565,8 +565,8 @@ The possible properties that can be set are: ";
                 Vector trans(ptrans[0],ptrans[1],ptrans[2]);
                 //Crude way to rotate COM offset (probably slow)
                 Transform t=Transform(vrot,trans);
-                Transform com=(pinfo->vlinks[i]->_plink.lock())->GetLocalMassFrame();
-                RaveVector<dReal> com_rot=t.rotate(com.trans);
+                Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
+                RaveVector<dReal> com_rot=t.rotate(com);
                 dReal x,y,z;
                 x=t.trans.x-com_rot[0];
                 y=t.trans.y-com_rot[1];
