@@ -400,6 +400,7 @@ private:
             x=t.trans.x+com_rot[0];
             y=t.trans.y+com_rot[1];
             z=t.trans.z+com_rot[2];
+            RAVELOG_DEBUG("Link %s position [%f,%f,%f]\n",(*itlink)->GetName().c_str(),x,y,z);
             dBodySetPosition(link->body,x,y,z);
 
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
@@ -462,6 +463,7 @@ private:
                 x=anchor.x-com_rot[0];
                 y=anchor.y-com_rot[1];
                 z=anchor.z-com_rot[2];
+                RAVELOG_DEBUG("Joint %s anchor [%f,%f,%f]\n",(*itjoint)->GetName().c_str(),x,y,z);
 
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge:
@@ -626,6 +628,7 @@ private:
 private:
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
+        //TODO: Get Centers of mass in addition to transforms here, update transform including this property
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
             boost::shared_ptr<boost::mutex::scoped_lock> lockode;
             if( block ) {
@@ -642,12 +645,14 @@ private:
                 dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
                 //TODO: potentially slowing down sync here...
                 Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
+                string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
                 dReal x,y,z;
                 //Subtract COM transformation from joint anchor parent
                 RaveVector<dReal> com_rot=t.rotate(com);
                 x=t.trans.x+com_rot[0];
                 y=t.trans.y+com_rot[1];
                 z=t.trans.z+com_rot[2];
+                RAVELOG_VERBOSE("Body %s position [%f,%f,%f]\n",name.c_str(),x,y,z);
                 dBodySetPosition(pinfo->vlinks[i]->body, x,y,z);
             }
 

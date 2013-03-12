@@ -43,6 +43,7 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
+//FIXME: Not detecting assimp3 built from source...maybe golems version is behind?
 #if defined(OPENRAVE_IS_ASSIMP3)
 #include <assimp/scene.h>
 #include <assimp/LogStream.hpp>

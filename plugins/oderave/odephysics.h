@@ -137,7 +137,7 @@ public:
                 if (temp >= 0) {
                     _physics->_num_iterations = temp;
                 }
-                RAVELOG_VERBOSE("Setting QuickStep iterations to: %d\n",_physics->_num_iterations);
+                RAVELOG_DEBUG("Setting QuickStep iterations to: %d\n",_physics->_num_iterations);
             }
             else {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
@@ -562,6 +562,7 @@ The possible properties that can be set are: ";
                 }
                 const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
 
+                string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
                 Vector trans(ptrans[0],ptrans[1],ptrans[2]);
                 //Crude way to rotate COM offset (probably slow)
                 Transform t=Transform(vrot,trans);
@@ -571,6 +572,7 @@ The possible properties that can be set are: ";
                 x=t.trans.x-com_rot[0];
                 y=t.trans.y-com_rot[1];
                 z=t.trans.z-com_rot[2];
+                RAVELOG_VERBOSE("Body %s position [%f,%f,%f]\n",name.c_str(),x,y,z);
                 
                 vtrans.at(i) = Transform(vrot,Vector(x,y,z));
             }

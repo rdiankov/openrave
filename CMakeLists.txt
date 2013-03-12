@@ -197,9 +197,9 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
 
   # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
   # libraries linking with openrave to use it
-#  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
-#    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
-#  endif()
+  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
+  endif()
 endif()
 
 if( MSVC )
@@ -462,6 +462,9 @@ endif()
 #  # MSVC has prepackaged assimp libraries
 #  set(ASSIMP_PATH ${CMAKE_CURRENT_SOURCE_DIR}/msvc_assimp)
 #endif()
+
+#Enable this if you are building assimp from source and the package search fails
+option(ASSIMP_FORCE_USE_VERSION_3 OFF)
 find_package(ASSIMP)
 if( NOT ASSIMP_FOUND )
   pkg_check_modules(ASSIMP assimp)
@@ -482,7 +485,7 @@ if( ASSIMP_FOUND )
   IS_ASSIMP_PRE_R896 
   )
   set(CMAKE_REQUIRED_LIBRARIES)
-  if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
+  if( ${ASSIMP_VERSION} STRGREATER "2.0.0" OR ASSIMP_FORCE_USE_VERSION_3 )
     set(IS_ASSIMP3 1)
   endif()
 endif()
