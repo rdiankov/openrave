@@ -29,4 +29,4 @@ while True:
             for manip,solution in izip(dualsolver.manips, solutions):
                 robot.SetDOFValues(solution,manip.GetArmIndices())
             
-    time.sleep(0.1)
+    time.sleep(0.2)

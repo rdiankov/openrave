@@ -1076,6 +1076,7 @@ def test_ik():
     IkType=IkParameterizationType
     ikmodel=self
     self = solver
+    self.ikfast_module = ikmodel.ikfast
     freeindices = ikmodel.freeindices
     log = ikmodel.ikfast.log
     log.setLevel(logging.DEBUG)

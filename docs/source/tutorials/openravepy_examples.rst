@@ -108,3 +108,8 @@ Creating Custom Kinematics Body
 -------------------------------
 
 .. literalinclude:: openravepy_examples/create_custombody.py
+
+Solve Dual-Arm Inverse Kinematics
+---------------------------------
+
+.. literalinclude:: openravepy_examples/solve_dualarm_ik.py

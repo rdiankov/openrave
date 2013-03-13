@@ -94,9 +94,18 @@ def evalNumbers(expr):
         for arg in expr.args:
             result *= evalNumbers(arg)
     elif expr.is_Add:
-        result = S.Zero
-        for arg in expr.args:
-            result += evalNumbers(arg)
+        # because the arguments can get to the thousands, do a tree for adding numbers
+        evalexprs = [evalNumbers(arg) for arg in expr.args]
+        N = len(evalexprs)
+        while N > 1:
+            for i in range(N/2):
+                evalexprs[2*i]+=evalexprs[2*i+1]
+                evalexprs[i] = evalexprs[2*i]
+            if N & 1:
+                evalexprs[N/2] = evalexprs[N-1]
+                N += 1
+            N /= 2
+        return evalexprs[0]
     elif expr.is_Pow:
         # don't replace the exponent
         result = evalNumbers(expr.base)**expr.exp
@@ -115,7 +124,7 @@ def customcse(rawexprs,symbols=None):
     # fractions can get big, so evaluate as many decimals as possible
     reduced_exprs = []
     allexprs = []
-    for expr in rawexprs:
+    for iexpr,expr in enumerate(rawexprs):
         evalexpr = evalNumbers(expr)
         complexity = evalexpr.count_ops()
         # need to threshold complexity or otherwise cse will not terminate
@@ -1429,7 +1438,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     def endCheckZeros(self, node):
         return ''
     def generateFreeParameter(self, node):
-        #print 'free variable ',node.jointname,': ',self.freevars
+        #'free variable ',node.jointname,': ',self.freevars
         self.freevars.append(node.jointname)
         self.freevardependencies.append((node.jointname,node.jointname))
         code = 'IkReal %smul = 1;\n%s=0;\n'%(node.jointname,node.jointname)

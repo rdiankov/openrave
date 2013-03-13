@@ -2096,6 +2096,13 @@ class IKFastSolver(AutoReloader):
                 Tgripper[i,j] = self.convertRealToRational(Tgripperraw[i,j])
         Tfirstright = LinksRaw[-1]*Tgripper
         Links = LinksRaw[:-1]
+#         if Links[0][0:3,0:3] == eye(3):
+#             # first axis is prismatic, so zero out self.Tee
+#             for i in range(3):
+#                 if Links[0][i,3] != S.Zero:
+#                     self.Tee[i,3] = S.Zero
+#             self.Teeinv = self.affineInverse(self.Tee)
+
         LinksInv = [self.affineInverse(link) for link in Links]
         Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
@@ -2357,7 +2364,7 @@ class IKFastSolver(AutoReloader):
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
-            for j in range(2):
+            for j in [0,1]
                 if rawpolyeqs2[j] is None:
                     if j == 0:
                         # invert, this seems to always give simpler solutions, so prioritize it
@@ -2751,6 +2758,9 @@ class IKFastSolver(AutoReloader):
                 l0 = T0[irow,0:3].transpose()
                 l1 = T1[irow,0:3].transpose()
         return self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars),numminvars
+
+    def CheckEquationForVarying(self, eq):
+        return eq.has('vj0px') or eq.has('vj0py') or eq.has('vj0pz')
     
     def buildRaghavanRothEquations(self,p0,p1,l0,l1,solvejointvars):
         eqs = []
@@ -2768,6 +2778,8 @@ class IKFastSolver(AutoReloader):
             eqs.append([ppl0[i],ppl1[i]])
         eqs.append([p0.dot(p0),p1.dot(p1)])
         eqs.append([l0.dot(p0),l1.dot(p1)])
+        # prune any that have varying symbols
+        eqs = [(eq0,eq1) for eq0,eq1 in eqs if not self.CheckEquationForVarying(eq0) and not self.CheckEquationForVarying(eq1)]
         trigsubs = []
         polysubs = []
         polyvars = []
@@ -3414,7 +3426,7 @@ class IKFastSolver(AutoReloader):
             nummatrixsymbols = __builtin__.sum([1 for a in AU if not a.is_number])
             if nummatrixsymbols > 80:
                 raise self.CannotSolveError('matrix has too many symbols (%d), giving up since most likely will freeze'%nummatrixsymbols)
-
+            
             AUdet = AU.det()
             if AUdet != S.Zero:
                 rows = range(A.shape[1])
@@ -3485,19 +3497,28 @@ class IKFastSolver(AutoReloader):
                 C = AL*(AUinv*BU)-BL
             for c in C:
                 reducedeqs.append(c)
-
+                
         # is now a (len(neweqs)-len(allmonoms))x1 matrix, usually this is 4x1
         htvars = []
         htvarsubs = []
         htvarsubs2 = []
         usedvars = []
-        for nextindex in [0,2]:
-            name = othersymbols[nextindex].name[1:]
-            htvar = Symbol('ht%s'%name)
-            htvarsubs += [(othersymbols[nextindex],(1-htvar**2)/(1+htvar**2)),(othersymbols[nextindex+1],2*htvar/(1+htvar**2))]
-            htvars.append(htvar)
-            htvarsubs2.append((Symbol(name),2*atan(htvar)))
-            usedvars.append(Symbol(name))
+        htvarcossinoffsets = []
+        nonhtvars = []
+        for iothersymbol, othersymbol in enumerate(othersymbols):
+            if othersymbol.name[0] == 'c':
+                assert(othersymbols[iothersymbol+1].name[0] == 's')
+                htvarcossinoffsets.append(iothersymbol)
+                name = othersymbol.name[1:]
+                htvar = Symbol('ht%s'%name)
+                htvarsubs += [(othersymbol,(1-htvar**2)/(1+htvar**2)),(othersymbols[iothersymbol+1],2*htvar/(1+htvar**2))]
+                htvars.append(htvar)
+                htvarsubs2.append((Symbol(name),2*atan(htvar)))
+                usedvars.append(Symbol(name))
+            elif othersymbol.name[0] != 'h' and othersymbol.name[0] != 's':
+                # not half-tan, sin, or cos
+                nonhtvars.append(othersymbol)
+                usedvars.append(othersymbol)
         htvarsubs += [(cvar,(1-tvar**2)/(1+tvar**2)),(svar,2*tvar/(1+tvar**2))]
         htvars.append(tvar)
         htvarsubs2.append((Symbol(varname),2*atan(tvar)))
@@ -3520,7 +3541,7 @@ class IKFastSolver(AutoReloader):
                     jointtrees2.append(halfanglesolution)
                     halfanglevar = unknownvars[0] if halfanglesolution.jointname==unknownvars[0].name else unknownvars[1]
                     unknownvars.remove(halfanglevar)
-
+                    
                     try:
                         # give that two variables are solved, can most likely solve the rest. Solving with the original
                         # equations yields simpler solutions since reducedeqs hold half-tangents
@@ -3534,11 +3555,11 @@ class IKFastSolver(AutoReloader):
                         self.sortComplexity(AllEquationsOrig)
                         jointtrees2 += self.solveAllEquations(AllEquationsOrig,curvars=curvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree)
                         return solutiontree+treefirst,solvejointvars
-                
+                    
                     except self.CannotSolveError,e:
                         # try another strategy
                         log.debug(e)
-
+                        
                     # solve all the unknowns now
                     jointtrees3=[]
                     treesecond = self.solveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees3])])
@@ -3614,23 +3635,31 @@ class IKFastSolver(AutoReloader):
         hassinglevariable = False
         for eq in reducedeqs:
             peq = Poly(eq,*othersymbols)
-            maxdenom = [0,0]
+            maxdenom = [0]*len(htvarcossinoffsets)
             for monoms in peq.monoms():
-                for i in range(len(maxdenom)):
-                    maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+                for i,ioffset in enumerate(htvarcossinoffsets):
+                    maxdenom[i] = max(maxdenom[i],monoms[ioffset]+monoms[ioffset+1])
             eqnew = S.Zero
             for monoms,c in peq.terms():
                 term = c
-                for i in range(4):
-                    num,denom = fraction(htvarsubs[i][1])
-                    term *= num**monoms[i]
-                term *= tvar**monoms[4]
-                # the denoms for 0,1 and 2,3 are the same
-                for i in range(len(maxdenom)):
+                for i,ioffset in enumerate(htvarcossinoffsets):
+                    # for cos
+                    num, denom = fraction(htvarsubs[2*i][1])
+                    term *= num**monoms[ioffset]
+                    # for sin
+                    num, denom = fraction(htvarsubs[2*i+1][1])
+                    term *= num**monoms[ioffset+1]
+                # the denoms for sin/cos of the same joint variable are the same
+                for i,ioffset in enumerate(htvarcossinoffsets):
                     denom = fraction(htvarsubs[2*i][1])[1]
-                    term *= denom**(maxdenom[i]-monoms[2*i]-monoms[2*i+1])
+                    term *= denom**(maxdenom[i]-monoms[ioffset]-monoms[ioffset+1])
+                # multiply the rest of the monoms
+                for imonom, monom in enumerate(monoms):
+                    if not imonom in htvarcossinoffsets and not imonom-1 in htvarcossinoffsets:
+                        # handle non-sin/cos variables yet
+                        term *= othersymbols[imonom]**monom
                 eqnew += term
-            newpeq = Poly(eqnew,htvars[0],htvars[1],tvar)
+            newpeq = Poly(eqnew,htvars+nonhtvars)
             newreducedeqs.append(newpeq)
             hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms()]) for i in range(3)])
         
@@ -3673,6 +3702,7 @@ class IKFastSolver(AutoReloader):
 #             pass
 #         
 
+
         exportcoeffeqs = None
         for ileftvar in range(len(htvars)):
             try:
@@ -3682,6 +3712,95 @@ class IKFastSolver(AutoReloader):
                 log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
                 
         if exportcoeffeqs is None:
+            if len(nonhtvars) > 0:
+                # try to solve one variable in terms of the others
+                usedvar0solution = solve(newreducedeqs[0],nonhtvars[0])[0]
+                num,denom = fraction(usedvar0solution)
+                igenoffset = len(htvars)
+                # substitute all instances of the variable
+                processedequations = []
+                for peq in newreducedeqs[1:]:
+                    maxdegree = peq.degree(igenoffset)
+                    eqnew = S.Zero
+                    for monoms,c in peq.terms():
+                        term = c
+                        term *= denom**(maxdegree-monoms[igenoffset])
+                        term *= num**(monoms[igenoffset])
+                        for imonom, monom in enumerate(monoms):
+                            if imonom != igenoffset:
+                                term *= htvars[imonom]**monom
+                        eqnew += term
+                    try:
+                        newpeq = Poly(eqnew,htvars)
+                    except PolynomialError, e:
+                        # most likel uservar0solution was bad
+                        raise self.CannotSolveError('equation %s cannot be represented as a polynomial')
+                    
+                    if newpeq != S.Zero:
+                        processedequations.append(newpeq)
+                # check if any variables have degree <= 1 for all equations
+                for ihtvar,htvar in enumerate(htvars):
+                    leftoverhtvars = list(htvars)
+                    leftoverhtvars.pop(ihtvar)
+                    freeequations = []
+                    linearequations = []
+                    higherequations = []
+                    for peq in processedequations:
+                        if peq.degree(ihtvar) == 0:
+                            freeequations.append(peq)
+                        elif peq.degree(ihtvar) == 1:
+                            linearequations.append(peq)
+                        else:
+                            higherequations.append(peq)
+                    if len(freeequations) > 0:
+                        log.info('found a way to solve this! still need to implement it though...')
+                    elif len(linearequations) > 0 and len(leftoverhtvars) == 1:
+                        # try substituting one into the other equations Ax = B
+                        A = S.Zero
+                        B = S.Zero
+                        for monoms,c in linearequations[0].terms():
+                            term = c
+                            for imonom, monom in enumerate(monoms):
+                                if imonom != ihtvar:
+                                    term *= htvars[imonom]**monom
+                            if monoms[ihtvar] > 0:
+                                A += term
+                            else:
+                                B -= term
+                        Apoly = Poly(A,leftoverhtvars)
+                        Bpoly = Poly(B,leftoverhtvars)
+                        singlepolyequations = []
+                        for peq in linearequations[1:]+higherequations:
+                            peqnew = Poly(S.Zero,leftoverhtvars)
+                            maxhtvardegree = peq.degree(ihtvar)
+                            for monoms,c in peq.terms():
+                                term = c
+                                for imonom, monom in enumerate(monoms):
+                                    if imonom != ihtvar:
+                                        term *= htvars[imonom]**monom
+                                termpoly = Poly(term,leftoverhtvars)
+                                peqnew += termpoly * (Bpoly**(monoms[ihtvar]) * Apoly**(maxhtvardegree-monoms[ihtvar]))
+                            singlepolyequations.append(peqnew)
+                        if len(singlepolyequations) > 0:
+                            jointsol = 2*atan(leftoverhtvars[0])
+                            jointname = leftoverhtvars[0].name[2:]
+                            firstsolution = AST.SolverPolynomialRoots(jointname=jointname,poly=singlepolyequations[0],jointeval=[jointsol],isHinge=self.isHinge(jointname))
+                            firstsolution.checkforzeros = []
+                            # fail if the denom evaluations to 0
+                            firstsolution.postcheckforzeros = [A.as_expr()]
+                            firstsolution.postcheckfornonzeros = []
+                            firstsolution.postcheckforrange = []
+                            firstsolution.AddHalfTanValue = True
+
+                            secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.isHinge(htvar.name[2:]))
+                            secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
+                            secondsolution.AddHalfTanValue = True
+                            
+                            thirdsolution = AST.SolverSolution(nonhtvars[0].name, isHinge=self.isHinge(nonhtvars[0].name))
+                            thirdsolution.jointeval = [usedvar0solution]
+                            
+                            return [firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
+                        
             raise self.CannotSolveError('failed to solve dialytically')
         
         if ileftvar > 0:
