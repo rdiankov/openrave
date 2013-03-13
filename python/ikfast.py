@@ -2364,7 +2364,7 @@ class IKFastSolver(AutoReloader):
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
-            for j in [0,1]
+            for j in [0,1]:
                 if rawpolyeqs2[j] is None:
                     if j == 0:
                         # invert, this seems to always give simpler solutions, so prioritize it
