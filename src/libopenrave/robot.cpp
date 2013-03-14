@@ -1896,42 +1896,50 @@ void RobotBase::_ParametersChanged(int parameters)
                 FOREACH(itgrabbed,_vGrabbedBodies) {
                     GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-
-                        if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink) != pgrabbed->_listNonCollidingLinks.end() ) {
+                        std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
+                        if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
+                            if( pgrabbed->WasLinkNonColliding(*itlink) == 0 ) {
+                                pgrabbed->_listNonCollidingLinks.erase(itnoncolliding);
+                            }
                             mapcheckcollisions[pgrabbed].push_back(*itlink);
                         }
                         else {
-                            // not in the non-colliding list and link most likely still in collision, so don't do anything...
+                            // try to restore
+                            if( pgrabbed->WasLinkNonColliding(*itlink) == 1 ) {
+                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
+                            }
                         }
                     }
                 }
             }
             else {
-                // always add since it is disabled
+                // add since it is disabled?
                 FOREACH(itgrabbed,_vGrabbedBodies) {
                     GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
                     if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
                         if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                            pgrabbed->_listNonCollidingLinks.push_back(*itlink);
+                            if( pgrabbed->WasLinkNonColliding(*itlink) != 0 ) {
+                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
+                            }
                         }
                     }
                 }
             }
         }
 
-        if( mapcheckcollisions.size() > 0 ) {
-            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
-            FOREACH(itgrabbed, mapcheckcollisions) {
-                KinBodyPtr pgrabbedbody(itgrabbed->first->_pgrabbedbody);
-                _RemoveAttachedBody(pgrabbedbody);
-                CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
-                FOREACH(itlink, itgrabbed->second) {
-                    if( GetEnv()->CheckCollision(*itlink, KinBodyConstPtr(pgrabbedbody)) ) {
-                        itgrabbed->first->_listNonCollidingLinks.remove(*itlink);
-                    }
-                }
-            }
-        }
+//        if( mapcheckcollisions.size() > 0 ) {
+//            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+//            FOREACH(itgrabbed, mapcheckcollisions) {
+//                KinBodyPtr pgrabbedbody(itgrabbed->first->_pgrabbedbody);
+//                _RemoveAttachedBody(pgrabbedbody);
+//                CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
+//                FOREACH(itlink, itgrabbed->second) {
+//                    if( GetEnv()->CheckCollision(*itlink, KinBodyConstPtr(pgrabbedbody)) ) {
+//                        itgrabbed->first->_listNonCollidingLinks.remove(*itlink);
+//                    }
+//                }
+//            }
+//        }
     }
 }
 

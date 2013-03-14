@@ -310,7 +310,10 @@ protected:
                     KinBodyPtr pcolliding = report->plink2->GetParent();
                     FOREACH(it,_listGrabbedSavedStates) {
                         if( it->GetBody() == pcolliding ) {
-                            return CA_Ignore;
+                            // if plink1 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
+                            if( !report->plink1 || report->plink1->GetParent() != _probot ) {
+                                return CA_Ignore;
+                            }
                         }
                     }
                 }
@@ -318,7 +321,10 @@ protected:
                     KinBodyPtr pcolliding = report->plink1->GetParent();
                     FOREACH(it,_listGrabbedSavedStates) {
                         if( it->GetBody() == pcolliding ) {
-                            return CA_Ignore;
+                            // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
+                            if( !report->plink2 || report->plink2->GetParent() != _probot ) {
+                                return CA_Ignore;
+                            }
                         }
                     }
                 }

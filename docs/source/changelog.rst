@@ -52,6 +52,8 @@ Inverse Kinematics
 
 * :mod:`.database.inversekinematics` does a better job of automatically choosing a free joint for redundant kinematics.
 
+* Fixed major bug in :ref:`IkFilterOptions.IgnoreEndEffectorCollisions` implementation.
+
 Planning
 --------
 

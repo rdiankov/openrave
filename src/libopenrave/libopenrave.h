@@ -250,6 +250,7 @@ public:
     Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
         _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::_EnableCallback, this));
         _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
+        _bProcessedWhenEnabled = false;
     }
     virtual ~Grabbed() {
     }
@@ -266,16 +267,23 @@ public:
     {
         _setRobotLinksToIgnore = setRobotLinksToIgnore;
         _listNonCollidingLinks.clear();
+        _mapLinkIsNonColliding.clear();
         KinBodyConstPtr pgrabbedbody(_pgrabbedbody);
+        if( pgrabbedbody->IsEnabled() ) {
+            _bProcessedWhenEnabled = true;
+        }
         RobotBaseConstPtr probot = RaveInterfaceConstCast<RobotBase>(_plinkrobot->GetParent());
         EnvironmentBasePtr penv = _plinkrobot->GetParent()->GetEnv();
         CollisionOptionsStateSaver colsaver(penv->GetCollisionChecker(),0); // have to reset the collision options
         // check collision with all links to see which are valid
         FOREACHC(itlink, probot->GetLinks()) {
+            _mapLinkIsNonColliding[*itlink] = 0;
             if( find(_vattachedlinks.begin(),_vattachedlinks.end(), *itlink) == _vattachedlinks.end() ) {
                 if( !penv->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
                     if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
+                        RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
                         _listNonCollidingLinks.push_back(*itlink);
+                        _mapLinkIsNonColliding[*itlink] = 1;
                     }
                 }
             }
@@ -291,10 +299,13 @@ public:
             }
             if( pothergrabbedbody != pgrabbedbody ) {
                 FOREACHC(itlink, pothergrabbedbody->GetLinks()) {
+                    _mapLinkIsNonColliding[*itlink] = 0;
                     if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
                     }
                     else if( !penv->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
                         _listNonCollidingLinks.push_back(*itlink);
+                        _mapLinkIsNonColliding[*itlink] = 1;
                     }
                 }
             }
@@ -305,17 +316,34 @@ public:
         return _vattachedlinks;
     }
 
+    /// return -1 for unknown, 0 for no, 1 for yes
+    int WasLinkNonColliding(KinBody::LinkConstPtr plink) const
+    {
+        std::map<KinBody::LinkConstPtr, int>::const_iterator it = _mapLinkIsNonColliding.find(plink);
+        if( it != _mapLinkIsNonColliding.end() ) {
+            return it->second;
+        }
+        return -1;
+    }
+
 private:
     void _EnableCallback()
     {
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
         if( !!probot ) {
-            probot->_Regrab(shared_from_this());
+            // note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, try not to regrab unless absolutely necessary.
+            // only regrab if hasn't been processed with enabled flag yet.
+            if( !_bProcessedWhenEnabled ) {
+                probot->_Regrab(shared_from_this());
+            }
         }
     }
 
+    bool _bProcessedWhenEnabled;
     std::vector<KinBody::LinkPtr> _vattachedlinks;
     UserDataPtr _enablecallback; ///< callback for grabbed body when it is enabled/disabled
+
+    std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link in robot that is cached
 };
 
 typedef boost::shared_ptr<Grabbed> GrabbedPtr;
