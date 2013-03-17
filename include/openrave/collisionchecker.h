@@ -172,12 +172,17 @@ public:
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
-protected:
     /// \brief Checks self collision only with the links of the passed in body.
     ///
     /// Links that are joined together are ignored.
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
+    /// \brief Checks self collision of the link with the rest of the links with its parent
+    ///
+    /// Links that are joined together are ignored.
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+protected:
     /// \deprecated (12/12/11)
     virtual void SetCollisionData(KinBodyPtr pbody, UserDataPtr data) RAVE_DEPRECATED {
         pbody->SetUserData(GetXMLId(), data);
@@ -216,6 +221,7 @@ private:
     CollisionCheckerBasePtr _p;
 };
 
+typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
 
 } // end namespace OpenRAVE
 

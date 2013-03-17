@@ -784,6 +784,12 @@ public:
         return bCollision;
     }
 
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    {
+        // dummy
+        return CheckSelfCollision(plink->GetParent(), report);
+    }
+
     virtual void SetTolerance(dReal tolerance) {
         RAVELOG_WARN("not implemented\n");
     }

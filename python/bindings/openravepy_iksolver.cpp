@@ -250,6 +250,8 @@ void init_openravepy_iksolver()
     .value("IgnoreJointLimits",IKFO_IgnoreJointLimits)
     .value("IgnoreCustomFilters",IKFO_IgnoreCustomFilters)
     .value("IgnoreEndEffectorCollisions",IKFO_IgnoreEndEffectorCollisions)
+    .value("IgnoreEndEffectorEnvCollisions",IKFO_IgnoreEndEffectorEnvCollisions)
+    .value("IgnoreEndEffectorSelfCollisions",IKFO_IgnoreEndEffectorSelfCollisions)
     ;
 
     enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))

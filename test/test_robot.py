@@ -148,7 +148,89 @@ class RunRobot(EnvironmentSetup):
             assert(not robot.CheckSelfCollision())
             robot.Enable(True)
             assert(not robot.CheckSelfCollision())
-            
+
+    def test_grabcollision_dynamic2(self):
+        self.log.info('more tests for dynamic bodies and self-collisions')
+        env=self.env
+        with env:
+            robot = self.LoadRobot('robots/barrettwam.robot.xml')
+            b=RaveCreateKinBody(env,'')
+            b.InitFromBoxes(array([[0,0,0,0.05,1,0.05]]),True)
+            b.SetName('obstacle')
+            env.Add(b)
+            Tbody=eye(4)
+            Tbody[2,3] = 1
+            b.SetTransform(Tbody)
+
+            b2=RaveCreateKinBody(env,'')
+            b2.InitFromBoxes(array([[0,0,0,0.2,0.2,0.2]]),True)
+            b2.SetName('obstacle2')
+            b2.GetLinks()[0].GetGeometries()[0].SetDiffuseColor([0,1,0])
+            env.Add(b2)
+            Tbody2=eye(4)
+            Tbody2[0:3,3] = [0.7,0,0.3]
+            b2.SetTransform(Tbody2)
+
+            manip=robot.GetActiveManipulator()
+            ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,IkParameterizationType.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+
+            robot.Grab(b)
+            robot.SetActiveDOFs(manip.GetArmIndices())
+
+            posegoal = array([  1.03713883e-02,   7.52075143e-01,   6.58889422e-01, 1.18381978e-02,   3.04044037e-01,  -5.96046308e-10, 1.61406347e-01])
+
+            b2.Enable(False)
+            sols = manip.FindIKSolutions(posegoal,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)>0)
+            # test the solution
+            with robot:
+                for sol in sols:
+                    robot.SetActiveDOFValues(sol)
+                    assert(not robot.CheckSelfCollision())
+                    assert(not env.CheckCollision(robot))
+
+            sols = manip.FindIKSolutions(posegoal,IkFilterOptions.IgnoreSelfCollisions)
+            assert(len(sols)>0)
+            # test the solution
+            with robot:
+                # make sure there is at least one self-collision
+                hasself = False
+                for sol in sols:
+                    robot.SetActiveDOFValues(sol)
+                    if robot.CheckSelfCollision():
+                        hasself = True
+                assert(hasself)
+
+            b2.Enable(True)
+            sols = manip.FindIKSolutions(posegoal,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions)
+            assert(len(sols)>0)
+            with robot:
+                for sol in sols:
+                    robot.SetActiveDOFValues(sol)
+                    assert(not robot.CheckSelfCollision())
+
+            b.Enable(False)
+            manip.GetEndEffector().Enable(False)
+            sols = manip.FindIKSolutions(posegoal,IkFilterOptions.CheckEnvCollisions)
+            assert(len(sols)>0)
+            with robot:
+                for sol in sols:
+                    robot.SetActiveDOFValues(sol)
+                    assert(not robot.CheckSelfCollision())
+                    assert(not env.CheckCollision(robot))
+
+            b2.Enable(True)
+            b.Enable(True)
+            manip.GetEndEffector().Enable(True)
+            sols = manip.FindIKSolutions(posegoal,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions)
+            assert(len(sols)>0)
+            with robot:
+                for sol in sols:
+                    robot.SetActiveDOFValues(sol)
+                    assert(not robot.CheckSelfCollision())
+
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
         env=self.env
@@ -190,9 +272,10 @@ class RunRobot(EnvironmentSetup):
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions) is None)
-            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorEnvCollisions|IkFilterOptions.IgnoreEndEffectorSelfCollisions) is not None)
             assert(not manip.CheckEndEffectorCollision(Tmanip))
-
+            
             box = RaveCreateKinBody(env,'')
             box.InitFromBoxes(array([[0,0,0,0.05,0.05,0.2]]),True)
             box.SetName('box')
@@ -203,9 +286,10 @@ class RunRobot(EnvironmentSetup):
             assert(robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
-
+            
             assert(not robot.CheckSelfCollision())
-            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorEnvCollisions) is None)
+            assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorSelfCollisions) is not None)
             assert(not robot.CheckSelfCollision())
             assert(not manip.CheckEndEffectorCollision(Tmanip))
 

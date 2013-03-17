@@ -350,6 +350,7 @@ public:
         _pactiverobot.reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
+
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 ) {
@@ -368,6 +369,34 @@ public:
             if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(*itset&0xffff)), KinBody::LinkConstPtr(pbody->GetLinks().at(*itset>>16)), report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    {
+        KinBodyPtr pbody = plink->GetParent();
+        if( pbody->GetLinks().size() <= 1 ) {
+            return false;
+        }
+        if(!!report ) {
+            report->Reset(_options);
+        }
+        _InitKinBody(pbody);
+        int adjacentoptions = KinBody::AO_Enabled;
+        if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
+            adjacentoptions |= KinBody::AO_ActiveDOFs;
+        }
+        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        FOREACHC(itset, nonadjacent) {
+            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
+            if( plink == plink1 || plink == plink2 ) {
+                if( CheckCollision(plink1, plink2, report) ) {
+                    RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
+                    return true;
+                }
             }
         }
 

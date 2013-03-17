@@ -90,6 +90,9 @@ public:
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr pbody, CollisionReportPtr) {
+        return false;
+    }
 
     virtual void SetTolerance(dReal tolerance) {
     }

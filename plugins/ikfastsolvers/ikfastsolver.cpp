@@ -220,7 +220,8 @@ public:
 public:
         StateCheckEndEffector(RobotBasePtr probot, const std::vector<KinBody::LinkPtr>& vchildlinks, const std::vector<KinBody::LinkPtr>& vindependentlinks, int filteroptions) : _vchildlinks(vchildlinks), _vindependentlinks(vindependentlinks) {
             _probot = probot;
-            _bCheckEndEffectorCollision = !(filteroptions & IKFO_IgnoreEndEffectorCollisions);
+            _bCheckEndEffectorEnvCollision = !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions);
+            _bCheckEndEffectorSelfCollision = !(filteroptions & (IKFO_IgnoreEndEffectorSelfCollisions|IKFO_IgnoreSelfCollisions));
             _bCheckSelfCollision = !(filteroptions & IKFO_IgnoreSelfCollisions);
             _bDisabled = false;
         }
@@ -235,7 +236,7 @@ public:
 
         void SetEnvironmentCollisionState()
         {
-            if( !_bDisabled && !_bCheckEndEffectorCollision ) {
+            if( !_bDisabled && (!_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision) ) {
                 _InitSavers();
                 for(size_t i = 0; i < _vchildlinks.size(); ++i) {
                     _vchildlinks[i]->Enable(false);
@@ -258,18 +259,18 @@ public:
                 }
                 _bDisabled = false;
             }
-            if( !_bCheckEndEffectorCollision && !_callbackhandle ) {
+            if( (!_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision) && !_callbackhandle ) {
                 _InitSavers();
                 // have to register a handle if we're ignoring end effector collisions
                 _callbackhandle = _probot->GetEnv()->RegisterCollisionCallback(boost::bind(&StateCheckEndEffector::_CollisionCallback,this,_1,_2));
             }
         }
 
-        bool NeedCheckEndEffectorCollision() {
-            return _bCheckEndEffectorCollision;
+        bool NeedCheckEndEffectorEnvCollision() {
+            return _bCheckEndEffectorEnvCollision;
         }
-        void ResetCheckEndEffectorCollision() {
-            _bCheckEndEffectorCollision = false;
+        void ResetCheckEndEffectorEnvCollision() {
+            _bCheckEndEffectorEnvCollision = false;
             SetEnvironmentCollisionState();
         }
 
@@ -295,23 +296,37 @@ protected:
 
         CollisionAction _CollisionCallback(CollisionReportPtr report, bool IsCalledFromPhysicsEngine)
         {
-            if( !_bCheckEndEffectorCollision ) {
-                // doing self-collision
+            if( !_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision ) {
                 bool bChildLink1 = find(_vchildlinks.begin(),_vchildlinks.end(),report->plink1) != _vchildlinks.end();
                 bool bChildLink2 = find(_vchildlinks.begin(),_vchildlinks.end(),report->plink2) != _vchildlinks.end();
                 bool bIndependentLink1 = find(_vindependentlinks.begin(),_vindependentlinks.end(),report->plink1) != _vindependentlinks.end();
                 bool bIndependentLink2 = find(_vindependentlinks.begin(),_vindependentlinks.end(),report->plink2) != _vindependentlinks.end();
-                if( (bChildLink1&&bIndependentLink2) || (bChildLink2&&bIndependentLink1) ) {
-                    // child+independent link when should be ignore end-effector collisions
-                    return CA_Ignore;
+                if( !_bCheckEndEffectorEnvCollision ) {
+                    if( (bChildLink1 && !bIndependentLink2) || (bChildLink2 && bIndependentLink1) ) {
+                        // end effector colliding with environment
+                        return CA_Ignore;
+                    }
                 }
+                if( !_bCheckEndEffectorSelfCollision ) {
+                    if( (bChildLink1&&bIndependentLink2) || (bChildLink2&&bIndependentLink1) ) {
+                        // child+independent link when should be ignore end-effector collisions
+                        return CA_Ignore;
+                    }
+                }
+
                 // check for attached bodies of the child links
                 if( !bIndependentLink2 && !bChildLink2 && !!report->plink2 ) {
                     KinBodyPtr pcolliding = report->plink2->GetParent();
                     FOREACH(it,_listGrabbedSavedStates) {
                         if( it->GetBody() == pcolliding ) {
-                            // if plink1 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
-                            if( !report->plink1 || report->plink1->GetParent() != _probot ) {
+                            if( !_bCheckEndEffectorEnvCollision ) {
+                                // if plink1 is not part of the robot, then ignore.
+                                if( !report->plink1 || report->plink1->GetParent() != _probot ) {
+                                    return CA_Ignore;
+                                }
+                            }
+                            // otherwise counted as self-collision since a part of this end effector
+                            if( !_bCheckEndEffectorSelfCollision ) {
                                 return CA_Ignore;
                             }
                         }
@@ -321,8 +336,14 @@ protected:
                     KinBodyPtr pcolliding = report->plink1->GetParent();
                     FOREACH(it,_listGrabbedSavedStates) {
                         if( it->GetBody() == pcolliding ) {
-                            // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
-                            if( !report->plink2 || report->plink2->GetParent() != _probot ) {
+                            if( !_bCheckEndEffectorEnvCollision ) {
+                                // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
+                                if( !report->plink2 || report->plink2->GetParent() != _probot ) {
+                                    return CA_Ignore;
+                                }
+                            }
+                            // otherwise counted as self-collision since a part of this end effector
+                            if( !_bCheckEndEffectorSelfCollision ) {
                                 return CA_Ignore;
                             }
                         }
@@ -337,7 +358,7 @@ protected:
         vector<uint8_t> _vlinkenabled;
         UserDataPtr _callbackhandle;
         const std::vector<KinBody::LinkPtr>& _vchildlinks, &_vindependentlinks;
-        bool _bCheckEndEffectorCollision, _bCheckSelfCollision, _bDisabled;
+        bool _bCheckEndEffectorEnvCollision, _bCheckEndEffectorSelfCollision, _bCheckSelfCollision, _bDisabled;
     };
 
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
@@ -913,27 +934,24 @@ private:
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             // check for self collisions
             stateCheck.SetSelfCollisionState();
+            CollisionReportPtr ptempreport;
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
-                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
-                }
+                ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
             }
-            else {
-                if( probot->CheckSelfCollision() ) {
-                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
-                }
+            if( probot->CheckSelfCollision(ptempreport) ) {
+                return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
         if( filteroptions&IKFO_CheckEnvCollisions ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() ) {
+            if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if(  pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
                     }
-                    stateCheck.ResetCheckEndEffectorCollision();
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
@@ -1093,29 +1111,26 @@ private:
             listlocalikreturns.push_back(localret);
         }
 
+        CollisionReport report;
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
+            CollisionReportPtr ptempreport;
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                CollisionReport report;
-                if( probot->CheckSelfCollision(boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
-                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
-                }
+                ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
             }
-            else {
-                if( probot->CheckSelfCollision() ) {
-                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
-                }
+            if( probot->CheckSelfCollision(ptempreport) ) {
+                return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
         if( (filteroptions&IKFO_CheckEnvCollisions) ) {
             stateCheck.SetEnvironmentCollisionState();
-            if( stateCheck.NeedCheckEndEffectorCollision() ) {
+            if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
                     }
-                    stateCheck.ResetCheckEndEffectorCollision();
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {

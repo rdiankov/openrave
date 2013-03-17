@@ -235,7 +235,7 @@ public:
          */
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /** \brief Checks collision with only the gripper given its end-effector transform. Ignores disabled links.
+        /** \brief Checks collision with only the gripper given its end-effector transform and the rest of the environment. Ignores disabled links.
 
             \param tEE the end effector transform
             \param[out] report [optional] collision report
@@ -243,7 +243,15 @@ public:
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
-        /** \brief Checks collision with only the gripper given an IK parameterization of the gripper.
+        /** \brief Checks self-collision with only the gripper given its end-effector transform with the rest of the robot. Ignores disabled links.
+
+            \param tEE the end effector transform
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+         */
+        virtual bool CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+
+        /** \brief Checks environment collisions with only the gripper given an IK parameterization of the gripper.
 
             Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
             \param ikparam the ik parameterization determining the gripper transform
@@ -252,6 +260,16 @@ public:
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
         virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr()) const;
+
+        /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
+
+            Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
+            \param ikparam the ik parameterization determining the gripper transform
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+            /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
+         */
+        virtual bool CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
 
@@ -426,7 +444,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
+        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -825,6 +843,14 @@ private:
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);

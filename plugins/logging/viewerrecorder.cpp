@@ -20,6 +20,8 @@
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>
 
+#include <boost/lexical_cast.hpp>
+
 #ifdef _WIN32
 
 #define AVIIF_KEYFRAME  0x00000010L // this frame is a key frame.
@@ -108,6 +110,7 @@ class ViewerRecorder : public ModuleBase
     std::string _filename;
     UserDataPtr _callback;
     int _nUseSimulationTime; // 0 to record as is, 1 to record with respect to simulation, 2 to control simulation to viewer updates
+    dReal _fSimulationTimeMultiplier; // how many times to make the simulation time faster
     list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
     boost::shared_ptr<VideoFrame> _frameLastAdded;
 
@@ -116,7 +119,7 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
         RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
-                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtime] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
+                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtim[=timestepmult]] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
         RegisterCommand("Stop",boost::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
                         "Stops recording and saves the file. Format::\n\n  Stop\n\n");
         RegisterCommand("GetCodecs",boost::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
@@ -126,6 +129,7 @@ public:
         _nFrameCount = _nVideoWidth = _nVideoHeight = 0;
         _framerate = 0;
         _nUseSimulationTime = 1;
+        _fSimulationTimeMultiplier = 1;
         _starttime = 0;
         _bContinueThread = true;
         _bStopRecord = true;
@@ -199,7 +203,10 @@ protected:
                     if( type == "simtime" ) {
                         _nUseSimulationTime = 1;
                     }
-                    else if( type == "controlsimtime" ) {
+                    else if( type.size() >= 14 && type.substr(0,14) == "controlsimtime" ) {
+                        if( type.size() > 14 && type[14] == '=' ) {
+                            _fSimulationTimeMultiplier = boost::lexical_cast<dReal>(type.substr(15));
+                        }
                         _nUseSimulationTime = 2;
                     }
                     else if( type == "realtime" ) {
@@ -315,7 +322,7 @@ protected:
             while(_bContinueThread && !_bStopRecord) {
                 boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
                 if( !!lockenv ) {
-                    GetEnv()->StepSimulation(1.0/_framerate);
+                    GetEnv()->StepSimulation(_fSimulationTimeMultiplier/_framerate);
                     break;
                 }
             }

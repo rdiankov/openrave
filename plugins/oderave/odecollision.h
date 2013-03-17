@@ -705,6 +705,58 @@ public:
         return false;
     }
 
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    {
+        if( _options & OpenRAVE::CO_Distance ) {
+            RAVELOG_WARN("ode doesn't support CO_Distance\n");
+            return false;
+        }
+        if( !!report ) {
+            report->Reset(_options);
+        }
+        KinBodyPtr pbody = plink->GetParent();
+        if( pbody->GetLinks().size() <= 1 ) {
+            return false;
+        }
+
+        int adjacentoptions = KinBody::AO_Enabled;
+        if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
+            adjacentoptions |= KinBody::AO_ActiveDOFs;
+        }
+
+        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+
+#ifndef ODE_USE_MULTITHREAD
+        boost::mutex::scoped_lock lock(_mutexode);
+#endif
+        odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
+        FOREACHC(itset, nonadjacent) {
+            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
+            if( plink == plink1 || plink == plink2 ) {
+                if( _CheckCollision(plink1,plink2, report) ) {
+                    if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                        RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
+                        std::vector<OpenRAVE::dReal> v;
+                        pbody->GetDOFValues(v);
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        for(size_t i = 0; i < v.size(); ++i ) {
+                            if( i > 0 ) {
+                                ss << "," << v[i];
+                            }
+                            else {
+                                ss << "colvalues=[" << v[i];
+                            }
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE(ss.str());
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 private:
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {

@@ -38,6 +38,8 @@ Core
 
 * Added `.KinBody.Link.GetInfo`, `.KinBody.Joint.GetInfo`, and `.KinBody.Geometry.GetInfo` for getting all properties.
 
+* Added `.Robot.Manipulator.CheckEndEffectorSelfCollision` and `.Robot.CheckLinkSelfCollision` for self-collision checking.
+
 C Bindings
 ----------
 
@@ -53,6 +55,8 @@ Inverse Kinematics
 * :mod:`.database.inversekinematics` does a better job of automatically choosing a free joint for redundant kinematics.
 
 * Fixed major bug in :ref:`IkFilterOptions.IgnoreEndEffectorCollisions` implementation.
+
+* Added `IkFilterOptions.IgnoreEndEffectorSelfCollisions` for ignoring self-collision with end effector.
 
 Planning
 --------

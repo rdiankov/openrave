@@ -4405,7 +4405,7 @@ class IKFastSolver(AutoReloader):
                 curvarsubssol.append((var0,var1,raweqns,complexity))
         curvarsubssol.sort(lambda x, y: x[3]-y[3])
         
-        if len(curvars) == 2 and self.isHinge(curvars[0].name) and self.isHinge(curvars[1].name):
+        if len(curvars) == 2 and self.isHinge(curvars[0].name) and self.isHinge(curvars[1].name) and len(curvarsubssol) > 0:
             # there's only two variables left, it might be the case that the axes are aligning and the two variables are dependent on each other
             var0,var1,raweqns,complexity = curvarsubssol[0]
             dummyvar = Symbol('dummy') # curvars[0] + curvars[1]
@@ -4469,7 +4469,7 @@ class IKFastSolver(AutoReloader):
         # take the least complex solution and go on
         if len(solutions) > 0:
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
-                
+        
         # test with higher degrees, necessary?
         for curvar in curvars:
             othervars = unknownvars+[var for var in curvars if var != curvar]
@@ -4487,15 +4487,14 @@ class IKFastSolver(AutoReloader):
                     solutions.append((solution,curvar))
                 except self.CannotSolveError:
                     pass
-
+                
         if len(solutions) > 0:
             return self.addSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
-
-        # solve with all 3 variables together
-
-        # have got this far, so perhaps two axes are aligned?
         
-        raise self.CannotSolveError('failed to find a variable to solve')
+        # solve with all 3 variables together
+        
+        # have got this far, so perhaps two axes are aligned?
+        raise self.CannotSolveError('solveAllEquations failed to find a variable to solve')
 
     def addSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None):
         """Take the least complex solution of a set of solutions and resume solving

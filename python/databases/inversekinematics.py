@@ -420,7 +420,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if self.iktype == IkParameterizationType.Transform6D:
                     if num3intersecting > 0:
                         # try to preserve the intersecting axes
-                        if intersecting3axes[2]:
+                        # only choose wrist if wrist isn't intersecting and [2] is
+                        if intersecting3axes[2] > 0 and intersecting3axes[-1] == 0:
                             indextopop = len(intersecting3axes)-1
                         else:
                             indextopop = 2
