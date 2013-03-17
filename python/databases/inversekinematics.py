@@ -424,7 +424,19 @@ class InverseKinematicsModel(DatabaseGenerator):
                         if intersecting3axes[2] > 0 and intersecting3axes[-1] == 0:
                             indextopop = len(intersecting3axes)-1
                         else:
-                            indextopop = 2
+                            hasother = False
+                            # prioritize 2 by checking if there exists other intersecting axes
+                            for j in range(len(intersecting3axes)-1,-1,-1):
+                                if (intersecting3axes[j] & ~intersecting3axes[2]) > 0:
+                                    hasother = True
+                            if hasother:
+                                indextopop = 2
+                            else:
+                                # prioritize the first index that is not in intersecting
+                                for j in range(len(intersecting3axes)-1,-1,-1):
+                                    if intersecting3axes[j] == 0:
+                                        indextopop = j
+                                        break
                     else:
                         # already complicated enough, so take from the bottom in order to avoid variables coming inside the kinematics
                         indextopop = 0
