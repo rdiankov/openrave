@@ -51,7 +51,7 @@ if( OPT_CBINDINGS )
     CLEAN_DIRECT_OUTPUT 1
     COMPILE_FLAGS " ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
     LINK_FLAGS "${FPARSER_LINK_FLAGS}")
-  target_link_libraries(libopenrave_c libopenrave)
+  target_link_libraries(libopenrave_c libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
   if( MSVC )
     install(TARGETS libopenrave_c EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
   else()
