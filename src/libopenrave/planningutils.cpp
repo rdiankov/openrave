@@ -1502,7 +1502,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     params->_diffstatefn(dQ,pQ0);
     int i, numSteps = 1;
     std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
+    OPENRAVE_ASSERT_OP((int)params->_vConfigResolution.size(),==,params->GetDOF());
     int totalsteps = 0;
     for (i = 0; i < params->GetDOF(); i++,itres++) {
         int steps;
@@ -1518,6 +1518,9 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         }
     }
     if( totalsteps == 0 && start > 0) {
+        if( bCheckEnd && !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->push_back(pQ1);
+        }
         return true;
     }
 
@@ -1528,6 +1531,9 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         }
         if( robot->CheckSelfCollision(_report) ) {
             return false;
+        }
+        if( !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->push_back(pQ0);
         }
         start = 1;
     }
@@ -1674,6 +1680,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
         }
         if( !!pvCheckedConfigurations ) {
             pvCheckedConfigurations->push_back(_vtempconfig);
+
         }
         if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
             RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));

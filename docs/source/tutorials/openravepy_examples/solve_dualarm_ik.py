@@ -15,7 +15,7 @@ robot=env.GetRobots()[0]
 dualsolver = misc.MultiManipIKSolver([robot.GetManipulator('leftarm'), robot.GetManipulator('rightarm')])
 
 body=env.GetKinBody('Object1')
-while True:    
+for itry in range(5):
     with env:
         Tbody=body.GetTransform()
         ab = body.ComputeAABB().extents()

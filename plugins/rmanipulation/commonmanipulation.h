@@ -216,7 +216,7 @@ public:
             _lasterror=0;
             for(_iter = 0; _iter < _nMaxIterations; ++_iter) {
                 T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
-                if( totalerror2 < _errorthresh2 ) {
+                if( totalerror2 < 0.99*_errorthresh2 ) { // always aim a little slower in order for future checks to pass
                     if( fdistcur > 2*fdistprev ) {
                         RAVELOG_VERBOSE(str(boost::format("new distance from previous %f is greater than delta distance %f, so scaling and trying again")%fdistcur%fdistprev));
                         dReal t = fdistprev/fdistcur;

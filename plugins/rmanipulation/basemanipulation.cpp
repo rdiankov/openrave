@@ -735,6 +735,7 @@ protected:
             pconstraints->_distmetricfn = params->_distmetricfn;
             params->_neighstatefn = boost::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,_1,_2);
             // use linear interpolation!
+            params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
             vector<dReal> vdelta(params->vinitialconfig.size(),0);
             if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {

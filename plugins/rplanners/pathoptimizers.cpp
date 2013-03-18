@@ -129,6 +129,9 @@ protected:
                 }
                 continue;
             }
+            if(listNewConfigs->size() == 0 ) {
+                continue;
+            }
 
             // check how long the new path is
             ConfigurationList::iterator itnewconfig1 = listNewConfigs->begin();
