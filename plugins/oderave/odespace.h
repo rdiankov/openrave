@@ -452,18 +452,12 @@ private:
                 }
 
                 //Joint anchors are specified here
-                // Retrieve parent COM to offset joint anchor
                 KinBody::LinkPtr parent = (*itjoint)->GetHierarchyParentLink();
-                Vector com=parent->GetCOMOffset();
-                Transform t=parent->GetTransform();
                 dReal x,y,z;
-                //Subtract COM transformation from joint anchor parent
-                Vector com_rot=t.rotate(com);
-                RAVELOG_DEBUG("COM %f %f %f\n",com_rot[0],com_rot[1],com_rot[2]);
-                x=anchor.x-com_rot[0];
-                y=anchor.y-com_rot[1];
-                z=anchor.z-com_rot[2];
-                RAVELOG_DEBUG("Joint %s anchor [%f,%f,%f]\n",(*itjoint)->GetName().c_str(),x,y,z);
+                x=anchor.x;
+                y=anchor.y;
+                z=anchor.z;
+                RAVELOG_VERBOSE("Joint %s anchor [%f,%f,%f]\n",(*itjoint)->GetName().c_str(),x,y,z);
 
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge:
@@ -647,7 +641,7 @@ private:
                 Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
                 string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
                 dReal x,y,z;
-                //Subtract COM transformation from joint anchor parent
+                //Add center of mass offset to links copied from OpenRAVE environment
                 RaveVector<dReal> com_rot=t.rotate(com);
                 x=t.trans.x+com_rot[0];
                 y=t.trans.y+com_rot[1];
