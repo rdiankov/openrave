@@ -133,7 +133,12 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,c
 void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts);
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts);
 
+} // end OpenRAVE namespace
+
 #else // OPENRAVE_COLLADA_SUPPORT
+
+namespace OpenRAVE
+{
 
 inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
 {
@@ -193,8 +198,9 @@ inline void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const 
     RAVELOG_ERROR("collada files not supported\n");
 }
 
+} // end OpenRAVE namespace
+
 #endif // OPENRAVE_COLLADA_SUPPORT
 
-} // end OpenRAVE namespace
 
 #endif

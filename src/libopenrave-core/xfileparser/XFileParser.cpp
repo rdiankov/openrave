@@ -166,43 +166,43 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
     // If this is a compressed X file, apply the inflate algorithm to it
     if (compressed)
     {
-#ifdef ASSIMP_BUILD_NO_COMPRESSED_X
+#ifndef OPENRAVE_HAS_ZLIB
         throw DeadlyImportError("Assimp was built without compressed X support");
 #else
-        /* ///////////////////////////////////////////////////////////////////////
-         * COMPRESSED X FILE FORMAT
-         * ///////////////////////////////////////////////////////////////////////
-         *    [xhead]
-         *    2 major
-         *    2 minor
-         *    4 type    // bzip,tzip
-         *    [mszip_master_head]
-         *    4 unkn    // checksum?
-         *    2 unkn    // flags? (seems to be constant)
-         *    [mszip_head]
-         *    2 ofs     // offset to next section
-         *    2 magic   // 'CK'
-         *    ... ofs bytes of data
-         *    ... next mszip_head
-         *
-         *  http://www.kdedevelopers.org/node/3181 has been very helpful.
-         * ///////////////////////////////////////////////////////////////////////
-         */
+/* ///////////////////////////////////////////////////////////////////////
+ * COMPRESSED X FILE FORMAT
+ * ///////////////////////////////////////////////////////////////////////
+ *    [xhead]
+ *    2 major
+ *    2 minor
+ *    4 type    // bzip,tzip
+ *    [mszip_master_head]
+ *    4 unkn    // checksum?
+ *    2 unkn    // flags? (seems to be constant)
+ *    [mszip_head]
+ *    2 ofs     // offset to next section
+ *    2 magic   // 'CK'
+ *    ... ofs bytes of data
+ *    ... next mszip_head
+ *
+ *  http://www.kdedevelopers.org/node/3181 has been very helpful.
+ * ///////////////////////////////////////////////////////////////////////
+ */
 
-        // build a zlib stream
+// build a zlib stream
         z_stream stream;
         stream.opaque = NULL;
         stream.zalloc = &dummy_alloc;
         stream.zfree  = &dummy_free;
         stream.data_type = (mIsBinaryFormat ? Z_BINARY : Z_ASCII);
 
-        // initialize the inflation algorithm
+// initialize the inflation algorithm
         ::inflateInit2(&stream, -MAX_WBITS);
 
-        // skip unknown data (checksum, flags?)
+// skip unknown data (checksum, flags?)
         P += 6;
 
-        // First find out how much storage we'll need. Count sections.
+// First find out how much storage we'll need. Count sections.
         const char* P1       = P;
         unsigned int est_out = 0;
 
@@ -227,7 +227,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
             est_out += MSZIP_BLOCK; // one decompressed block is 32786 in size
         }
 
-        // Allocate storage and terminating zero and do the actual uncompressing
+// Allocate storage and terminating zero and do the actual uncompressing
         uncompressed.resize(est_out + 1);
         char* out = &uncompressed.front();
         while (P + 3 < End)
@@ -255,15 +255,15 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
             P   += ofs;
         }
 
-        // terminate zlib
+// terminate zlib
         ::inflateEnd(&stream);
 
-        // ok, update pointers to point to the uncompressed file data
+// ok, update pointers to point to the uncompressed file data
         P = &uncompressed[0];
         End = out;
 
-        // FIXME: we don't need the compressed data anymore, could release
-        // it already for better memory usage. Consider breaking const-co.
+// FIXME: we don't need the compressed data anymore, could release
+// it already for better memory usage. Consider breaking const-co.
         DefaultLogger::get()->info("Successfully decompressed MSZIP-compressed file");
 #endif // !! ASSIMP_BUILD_NO_COMPRESSED_X
     }
