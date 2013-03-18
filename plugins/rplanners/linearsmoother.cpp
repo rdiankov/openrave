@@ -142,7 +142,7 @@ protected:
                 RAVELOG_VERBOSE("smoothing quitting early\n");
                 break;
             }
-            dReal fstartdist = std::max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+            dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
             dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
             dReal fstartdistdelta=0, fenddistdelta=0;
             dReal fcurdist = 0;
@@ -241,7 +241,7 @@ protected:
                 RAVELOG_VERBOSE("smoothing quitting early\n");
                 break;
             }
-            dReal fstartdist = std::max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+            dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
             dReal fenddist = fstartdist + (totaldist-fstartdist)*_puniformsampler->SampleSequenceOneReal(IT_OpenStart);
             uint32_t ioptdof = _puniformsampler->SampleSequenceOneUInt32()%uint32_t(numdof); // dof to optimize
 

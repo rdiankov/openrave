@@ -328,8 +328,8 @@ public:
             PARABOLIC_RAMP_ASSERT(u1 <= itramp1->endTime+ParabolicRamp::EpsilonT);
             PARABOLIC_RAMP_ASSERT(u2 >= 0);
             PARABOLIC_RAMP_ASSERT(u2 <= itramp2->endTime+ParabolicRamp::EpsilonT);
-            u1 = std::min(u1,itramp1->endTime);
-            u2 = std::min(u2,itramp2->endTime);
+            u1 = min(u1,itramp1->endTime);
+            u2 = min(u2,itramp2->endTime);
             itramp1->Evaluate(u1,x0);
             itramp2->Evaluate(u2,x1);
             itramp1->Derivative(u1,dx0);

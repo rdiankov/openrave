@@ -321,7 +321,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     if self.forceikfast:
                         return False
                     
-                    self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId()+iksuffix) if self.manip.GetIkSolver() is not None else None
+                    self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId().split(' ',1)[0]+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
                         raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))

@@ -376,10 +376,11 @@ protected:
 /// \param nummaxsamples the max samples to query from a particular workspace goal. This does not necessarily mean every goal will have this many samples.
 /// \param nummaxtries number of attemps to return a goal per Sample call.
 /// \param fsampleprob The probability to attempt to sample a goal
+/// \param searchfreeparameters if true, will search all the free parameters of the manipulator. Otherwise will use the current free parameters set on the robot
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true);
     virtual ~ManipulatorIKGoalSampler() {
     }
 
@@ -425,6 +426,7 @@ protected:
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
+    bool _searchfreeparameters;
 };
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;

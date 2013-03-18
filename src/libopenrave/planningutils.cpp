@@ -1764,7 +1764,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
     return samples.size()>0;
 }
 
-ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob)
+ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _searchfreeparameters(searchfreeparameters)
 {
     _tempikindex = -1;
     _fjittermaxdist = 0;
@@ -1907,23 +1907,29 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         std::vector<dReal> vfree;
         int orgindex = itsample->_orgindex;
         if( _pmanip->GetIkSolver()->GetNumFreeParameters() > 0 ) {
-            if( !itsample->_psampler ) {
-                itsample->_psampler = RaveCreateSpaceSampler(_probot->GetEnv(),"halton");
-                itsample->_psampler->SetSpaceDOF(_pmanip->GetIkSolver()->GetNumFreeParameters());
+
+            if( _searchfreeparameters ) {
+                if( !itsample->_psampler ) {
+                    itsample->_psampler = RaveCreateSpaceSampler(_probot->GetEnv(),"halton");
+                    itsample->_psampler->SetSpaceDOF(_pmanip->GetIkSolver()->GetNumFreeParameters());
+                }
+                itsample->_psampler->SampleSequence(vfree,1);
+                for(size_t i = 0; i < _vfreestart.size(); ++i) {
+                    vfree.at(i) += _vfreestart[i];
+                    if( vfree[i] < 0 ) {
+                        vfree[i] += 1;
+                    }
+                    if( vfree[i] > 1 ) {
+                        vfree[i] -= 1;
+                    }
+                }
             }
-            itsample->_psampler->SampleSequence(vfree,1);
-            for(size_t i = 0; i < _vfreestart.size(); ++i) {
-                vfree.at(i) += _vfreestart[i];
-                if( vfree[i] < 0 ) {
-                    vfree[i] += 1;
-                }
-                if( vfree[i] > 1 ) {
-                    vfree[i] -= 1;
-                }
+            else {
+                _pmanip->GetIkSolver()->GetFreeParameters(vfree);
             }
         }
         bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0), _vikreturns);
-        if( --itsample->_numleft <= 0 || vfree.size() == 0 ) {
+        if( --itsample->_numleft <= 0 || vfree.size() == 0 || !_searchfreeparameters ) {
             _listsamples.erase(itsample);
         }
 

@@ -28,7 +28,7 @@ EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins) {
 }
 }
 
-#ifndef OPENRAVE_ASSIMP
+#if !defined(OPENRAVE_IS_ASSIMP3) && !defined(OPENRAVE_ASSIMP)
 
 bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts)
 {
@@ -42,13 +42,13 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
     return false;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts)
+bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList& atts)
 {
     RAVELOG_ERROR("x-files not supported\n");
     return false;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts)
+bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList& atts)
 {
     RAVELOG_ERROR("x-files not supported\n");
     return false;

@@ -1103,7 +1103,7 @@ boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
 class PyManipulatorIKGoalSampler
 {
 public:
-    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0) {
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true) {
         std::list<IkParameterization> listparameterizations;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
@@ -1115,7 +1115,8 @@ public:
                 throw OPENRAVE_EXCEPTION_FORMAT0("ManipulatorIKGoalSampler parameterizations need to be all IkParameterization objeccts",ORE_InvalidArguments);
             }
         }
-        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizations, nummaxsamples, nummaxtries));
+        dReal fsampleprob=1;
+        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizations, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters));
         _sampler->SetJitter(jitter);
     }
     virtual ~PyManipulatorIKGoalSampler() {
@@ -1421,7 +1422,7 @@ void init_openravepy_global()
 
 
         class_<planningutils::PyManipulatorIKGoalSampler, planningutils::PyManipulatorIKGoalSamplerPtr >("ManipulatorIKGoalSampler", DOXY_CLASS(planningutils::ManipulatorIKGoalSampler), no_init)
-        .def(init<object, object, int, int, dReal>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter")))
+        .def(init<object, object, int, int, dReal, bool>(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter","searchfreeparameters")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("maxsamples", "maxchecksamples", "releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
         ;
