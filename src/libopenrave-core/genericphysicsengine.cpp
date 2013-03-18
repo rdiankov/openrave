@@ -121,6 +121,12 @@ public:
         return true;
     }
 
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque) {
+        force = Vector(0,0,0);
+        torque = Vector(0,0,0);
+        return true;
+    }
+
     virtual void SimulateStep(dReal fTimeElapsed) {
     }
 

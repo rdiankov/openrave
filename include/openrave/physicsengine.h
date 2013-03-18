@@ -110,11 +110,11 @@ public:
     /// \param[out] torque current torque on the COM of the link
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// \param[in] joint
-    /// \param[out] force current accumulated force on the COM of the link
-    /// \param[out] torque current accumulated torque on the COM of the link
-    //virtual bool GetJointForceTorque(KinBody::JointConstPtr joint, KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
-
+    /// Return forces and torques exerted by a joint wrt the joint anchor frame.
+    /// \param[in] joint a constant pointer to a joint
+    /// \param[out] force current overall force exerted by the joint
+    /// \param[out] torque current overall torque exerted by the joint
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr joint, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// set the gravity direction
     virtual void SetGravity(const Vector& gravity) OPENRAVE_DUMMY_IMPLEMENTATION;
