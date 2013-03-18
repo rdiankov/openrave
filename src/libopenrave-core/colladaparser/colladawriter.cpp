@@ -165,7 +165,8 @@ static size_t Parse(daeElementRef pelt, const char* buffer, int size)
 
     return ret==0 ? reader._offset : 0;
 }
-};
+
+} // end namespace XMLtoDAE
 
 class ColladaWriter : public daeErrorHandler
 {

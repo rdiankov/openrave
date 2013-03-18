@@ -88,8 +88,6 @@ class EnvironmentXMLReader;
 
 class Environment;
 class RaveDatabase;
-class ColladaReader;
-class ColladaWriter;
 class XFileReader;
 
 #include "openrave-core.h"
@@ -98,6 +96,9 @@ class XFileReader;
 // exports from libopenrave.h
 namespace OpenRAVE
 {
+
+class ColladaReader;
+class ColladaWriter;
 
 bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
 

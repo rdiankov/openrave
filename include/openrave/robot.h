@@ -934,20 +934,19 @@ private:
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;
-    friend class ColladaWriter;
     friend class OpenRAVEXMLParser::RobotXMLReader;
     friend class OpenRAVEXMLParser::ManipulatorXMLReader;
     friend class OpenRAVEXMLParser::AttachedSensorXMLReader;
     friend class XFileReader;
 #else
     friend class ::Environment;
-    friend class ::ColladaWriter;
     friend class ::OpenRAVEXMLParser::RobotXMLReader;
     friend class ::OpenRAVEXMLParser::ManipulatorXMLReader;
     friend class ::OpenRAVEXMLParser::AttachedSensorXMLReader;
     friend class ::XFileReader;
 #endif
 #endif
+    friend class ColladaWriter;
     friend class ColladaReader;
     friend class RaveDatabase;
     friend class Grabbed;
