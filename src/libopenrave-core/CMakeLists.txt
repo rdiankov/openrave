@@ -78,7 +78,7 @@ if( OPT_CBINDINGS )
    SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
     VERSION ${OPENRAVE_VERSION}
     CLEAN_DIRECT_OUTPUT 1
-    COMPILE_FLAGS "-DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
+    COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries (libopenrave-core_c libopenrave-core ${OPENRAVE_CORE_LIBRARIES})
   if( MSVC )
