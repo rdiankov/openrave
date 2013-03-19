@@ -139,6 +139,15 @@ public:
                 }
                 RAVELOG_DEBUG("Setting QuickStep iterations to: %d\n",_physics->_num_iterations);
             }
+            else if( name == "surfacelayer") {
+                float temp=0;
+                _ss >> temp;
+                // Set surface layer depth
+                if (temp >= 0) {
+                    _physics->_surfacelayer = temp;
+                }
+                RAVELOG_DEBUG("Setting surface layer depth to: %f\n",_physics->_surfacelayer);
+            }
             else {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
             }
@@ -161,8 +170,8 @@ public:
             }
         }
 
-        static const boost::array<string, 10>& GetTags() {
-            static const boost::array<string, 10> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox", "numiterations" }};
+        static const boost::array<string, 11>& GetTags() {
+            static const boost::array<string, 11> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox", "numiterations", "surfacelayer" }};
             return tags;
         }
 
@@ -205,6 +214,7 @@ The possible properties that can be set are: ";
         //Default to openrave 0.6.6 behavior, but this really should default to
         //enable the friction pyramid model.
         _surface_mode = 0;
+        _surfacelayer = 0.001;
         _options = OpenRAVE::PEO_SelfCollisions;
 
         memset(_jointadd, 0, sizeof(_jointadd));
@@ -246,6 +256,7 @@ The possible properties that can be set are: ";
         dWorldSetERP(_odespace->GetWorld(),_globalerp);
         dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
         dWorldSetQuickStepNumIterations (_odespace->GetWorld(), _num_iterations);
+        dWorldSetContactSurfaceLayer(_odespace->GetWorld(), _surfacelayer);
         return true;
     }
 
@@ -730,6 +741,7 @@ private:
      * for more infomation.
      */
     int _surface_mode;  ///> friction model and soft contact flags
+    float _surfacelayer;  ///> Surface layer depth
 
     int _num_iterations; ///> Max QuickStep iterations for each timestep
 
