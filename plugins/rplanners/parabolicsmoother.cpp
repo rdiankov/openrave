@@ -35,7 +35,6 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
-        _probot = pbase;
         return _InitPlan();
     }
 
@@ -44,7 +43,6 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
-        _probot = pbase;
         return _InitPlan();
     }
 
@@ -70,9 +68,23 @@ public:
             return PS_Failed;
         }
 
-        RobotBase::RobotStateSaverPtr statesaver;
-        if( !!_probot ) {
-            statesaver.reset(new RobotBase::RobotStateSaver(_probot));
+        // save velocities
+        std::vector<KinBody::KinBodyStateSaverPtr> vstatesavers;
+        std::vector<KinBodyPtr> vusedbodies;
+        _parameters->_configurationspecification.ExtractUsedBodies(GetEnv(), vusedbodies);
+        if( vusedbodies.size() == 0 ) {
+            RAVELOG_WARN("there are no used bodies in this configuration\n");
+        }
+
+        FOREACH(itbody, vusedbodies) {
+            KinBody::KinBodyStateSaverPtr statesaver;
+            if( (*itbody)->IsRobot() ) {
+                statesaver.reset(new RobotBase::RobotStateSaver(RaveInterfaceCast<RobotBase>(*itbody), KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator|KinBody::Save_LinkVelocities));
+            }
+            else {
+                statesaver.reset(new KinBody::KinBodyStateSaver(*itbody, KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator|KinBody::Save_LinkVelocities));
+            }
+            vstatesavers.push_back(statesaver);
         }
 
         uint32_t basetime = utils::GetMilliTime();
@@ -228,9 +240,6 @@ public:
             RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
         }
         catch (const std::exception& ex) {
-            stringstream sdesc; sdesc << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            sdesc << "robot: " << _probot->GetTransform();
-            ptraj->SetDescription(sdesc.str());
             string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
             RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
             ofstream f(filename.c_str());
@@ -253,21 +262,21 @@ public:
                     anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
                 //_parameters->_setstatefn(anew);
-                if( !_parameters->_checkpathconstraintsfn(anew,anew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                if( _parameters->CheckPathAllConstraints(anew,anew,da, da, 0, IT_OpenStart) <= 0 ) {
                     return false;
                 }
             }
         }
         else {
             //_parameters->_setstatefn(a);
-            if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) <= 0 ) {
                 return false;
             }
         }
         return true;
     }
 
-    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db)
+    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
     {
         if( _bUsePerterbation ) {
             // test with tolerances!
@@ -279,14 +288,14 @@ public:
                     bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
                 //_parameters->_setstatefn(anew);
-                if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
                     return false;
                 }
             }
         }
         else {
             //_parameters->_setstatefn(a);
-            if( !_parameters->_checkpathconstraintsfn(a,b,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
                 return false;
             }
         }
@@ -301,7 +310,6 @@ public:
 protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
-    RobotBasePtr _probot;
     bool _bUsePerterbation;
 };
 

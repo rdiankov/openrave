@@ -1094,7 +1094,7 @@ public:
 
         if( xmlname == "body" ) {
             if(( _plink->GetGeometries().size() == 0) && !_bSkipGeometry) {
-                RAVELOG_WARN(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
+                RAVELOG_VERBOSE(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
             }
             // perform final processing stages
             MASS totalmass;

@@ -480,6 +480,22 @@ int ConfigurationSpecification::AddGroup(const ConfigurationSpecification::Group
     return AddGroup(g.name,g.dof,g.interpolation);
 }
 
+void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const
+{
+    usedbodies.resize(0);
+    FOREACHC(itgroup, _vgroups) {
+        if( (itgroup->name.size() >= 6 && itgroup->name.substr(0,6) == "joint_") || (itgroup->name.size() >= 7 && itgroup->name.substr(0,7) == "affine_") || (itgroup->name.size() >= 8 && itgroup->name.substr(0,8) == "grabbody") ) {
+            std::stringstream ss(itgroup->name);
+            std::string type, bodyname;
+            ss >> type >> bodyname;
+            KinBodyPtr pbody = env->GetKinBody(bodyname);
+            if( !!pbody ) {
+                usedbodies.push_back(pbody);
+            }
+        }
+    }
+}
+
 ConfigurationSpecification& ConfigurationSpecification::operator+= (const ConfigurationSpecification& r)
 {
     list< std::vector<Group>::const_iterator > listaddgroups;
@@ -919,7 +935,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
-            ss.clear(); ss.str(g.name.substr(12));
+            ss.clear(); ss.str(g.name.substr(16));
             ss >> bodyname;
             BOOST_ASSERT(!!ss);
             KinBodyPtr pbody = penv->GetKinBody(bodyname);
@@ -933,7 +949,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
-            ss.clear(); ss.str(g.name.substr(12));
+            ss.clear(); ss.str(g.name.substr(16));
             int affinedofs=0;
             ss >> bodyname >> affinedofs;
             BOOST_ASSERT(!!ss);
@@ -947,7 +963,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
-            ss.clear(); ss.str(g.name.substr(12));
+            ss.clear(); ss.str(g.name.substr(17));
             int affinedofs=0;
             ss >> bodyname >> affinedofs;
             BOOST_ASSERT(!!ss);

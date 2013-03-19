@@ -199,7 +199,7 @@ public:
                 return ET_Failed;
             }
 
-            if( !params->_checkpathconstraintsfn(_fromgoal ? _vNewConfig : pnode->q, _fromgoal ? pnode->q : _vNewConfig, _fromgoal ? IT_OpenEnd : IT_OpenStart, PlannerBase::ConfigurationListPtr()) ) {
+            if( params->CheckPathAllConstraints(_fromgoal ? _vNewConfig : pnode->q, _fromgoal ? pnode->q : _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, _fromgoal ? IT_OpenEnd : IT_OpenStart) <= 0 ) {
                 return bHasAdded ? ET_Sucess : ET_Failed;
             }
 

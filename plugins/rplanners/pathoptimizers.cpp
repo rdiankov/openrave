@@ -94,7 +94,7 @@ protected:
         PlannerParametersConstPtr parameters = GetParameters();
         std::vector<dReal> vtempdists;
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itendnode;
-        ConfigurationListPtr listNewConfigs(new ConfigurationList());
+        ConfigurationVelocityListPtr listNewConfigs(new ConfigurationVelocityList());
 
         int nrejected = 0;
         int i = parameters->_nMaxIterations;
@@ -123,7 +123,7 @@ protected:
 
             // check if the nodes can be connected by a straight line
             listNewConfigs->clear();
-            if (!parameters->_checkpathconstraintsfn(itstartnode->first, itendnode->first, IT_Open, listNewConfigs)) {
+            if (parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, listNewConfigs) <= 0 ) {
                 if( nrejected++ > (int)listpath.size()+8 ) {
                     break;
                 }
@@ -134,20 +134,20 @@ protected:
             }
 
             // check how long the new path is
-            ConfigurationList::iterator itnewconfig1 = listNewConfigs->begin();
-            ConfigurationList::iterator itnewconfig0 = itnewconfig1++;
+            ConfigurationVelocityList::iterator itnewconfig1 = listNewConfigs->begin();
+            ConfigurationVelocityList::iterator itnewconfig0 = itnewconfig1++;
             vtempdists.resize(listNewConfigs->size()+1);
             std::vector<dReal>::iterator itdist = vtempdists.begin();
-            dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, *itnewconfig0);
+            dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, itnewconfig0->first);
             *itdist++ = newtotaldistance;
             while(itnewconfig1 != listNewConfigs->end() ) {
-                *itdist = parameters->_distmetricfn(*itnewconfig0, *itnewconfig1);
+                *itdist = parameters->_distmetricfn(itnewconfig0->first, itnewconfig1->first);
                 newtotaldistance += *itdist;
                 ++itdist;
                 itnewconfig0 = itnewconfig1;
                 ++itnewconfig1;
             }
-            *itdist = parameters->_distmetricfn(*itnewconfig0, itendnode->first);
+            *itdist = parameters->_distmetricfn(itnewconfig0->first, itendnode->first);
             newtotaldistance += *itdist;
             ++itdist;
             BOOST_ASSERT(itdist==vtempdists.end());
@@ -161,7 +161,7 @@ protected:
             itdist = vtempdists.begin();
             ++itstartnode;
             FOREACHC(itc, *listNewConfigs) {
-                listpath.insert(itstartnode, make_pair(*itc,*itdist++));
+                listpath.insert(itstartnode, make_pair(itc->first,*itdist++));
             }
             itendnode->second = *itdist++;
             BOOST_ASSERT(itdist==vtempdists.end());

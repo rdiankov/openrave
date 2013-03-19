@@ -597,7 +597,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
             if( space->NeedDerivativeForFeasibility() ) {
                 ramp.Derivative(divs[j],dq2);
             }
-            if(!space->SegmentFeasible(q1,q2, dq1, dq2)) {
+            if(!space->SegmentFeasible(q1,q2, dq1, dq2, divs[j]-divs[i])) {
                 return false;
             }
         }

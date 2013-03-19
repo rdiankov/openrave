@@ -357,6 +357,7 @@ protected:
         params->_minimumgoalpaths = _minimumgoalpaths;
         params->_nMaxIterations = 4000;     // max iterations before failure
         dReal jitter = 0.04;
+        int usedynamicsconstraints=0;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -416,6 +417,9 @@ protected:
                 }
                 boost::trim(params->_sPostProcessingPlanner);
             }
+            else if( cmd == "usedynamicsconstraints" ) {
+                sinput >> usedynamicsconstraints;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -432,6 +436,14 @@ protected:
         }
         RobotBase::RobotStateSaver saver(robot);
         params->SetRobotActiveJoints(robot);
+        if( usedynamicsconstraints ) {
+            // use dynamics constraints, so remove the old path constraint function
+            params->_checkpathconstraintsfn.clear();
+            std::list<KinBodyPtr> listCheckBodies;
+            listCheckBodies.push_back(robot);
+            planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params,listCheckBodies,true));
+            params->_checkpathvelocityconstraintsfn = boost::bind(&planningutils::DynamicsCollisionConstraint::Check,dynamics,_1,_2,_3,_4,_5,_6,_7);
+        }
         if( _sPostProcessingParameters.size() > 0 ) {
             params->_sPostProcessingParameters = _sPostProcessingParameters;
         }

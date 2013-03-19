@@ -3734,7 +3734,7 @@ class IKFastSolver(AutoReloader):
                         newpeq = Poly(eqnew,htvars)
                     except PolynomialError, e:
                         # most likel uservar0solution was bad
-                        raise self.CannotSolveError('equation %s cannot be represented as a polynomial')
+                        raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
                     
                     if newpeq != S.Zero:
                         processedequations.append(newpeq)

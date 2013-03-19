@@ -394,7 +394,7 @@ protected:
             FOREACH(it,_vchildlinks) {
                 (*it)->Enable(true);
             }
-            if( !_parameters->_checkpathconstraintsfn((_vprevsolution.size() > 0) ? _vprevsolution : vsolution, vsolution,IT_Open,ConfigurationListPtr()) ) {
+            if( _parameters->CheckPathAllConstraints((_vprevsolution.size() > 0) ? _vprevsolution : vsolution, vsolution, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open) <= 0 ) {
                 return IKRA_Reject;
             }
             FOREACH(it,_vchildlinks) {

@@ -322,7 +322,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         RobotBase::RobotStateSaver saver(_robot);
         Node* pcurrent=NULL, *pbest = NULL;
 
-        if( !_parameters->_checkpathconstraintsfn(_parameters->vinitialconfig,_parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
+        if( _parameters->CheckPathAllConstraints(_parameters->vinitialconfig,_parameters->vinitialconfig,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) <= 0 ) {
             return PS_Failed;
         }
 
@@ -363,7 +363,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
                         break;
                     }
 
-                    if ( _parameters->_checkpathconstraintsfn(pcurrent->q, _vSampleConfig, IT_OpenStart, ConfigurationListPtr())) {
+                    if ( _parameters->CheckPathAllConstraints(pcurrent->q, _vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) > 0 ) {
                         continue;
                     }
                     _parameters->_setstatefn(_vSampleConfig);
@@ -398,7 +398,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
-        if( !_parameters->_checkpathconstraintsfn(pbest->q,pbest->q,IT_OpenStart,ConfigurationListPtr()) ) {
+        if( _parameters->CheckPathAllConstraints(pbest->q,pbest->q,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) <= 0 ) {
             RAVELOG_WARN("RA* bad initial config\n");
         }
 
@@ -507,7 +507,7 @@ private:
             advance(endNode, endIndex-startIndex);
 
             // check if the nodes can be connected by a straight line
-            if( !_parameters->_checkpathconstraintsfn((*startNode)->q, (*endNode)->q, IT_Open,ConfigurationListPtr()) ) {
+            if( _parameters->CheckPathAllConstraints((*startNode)->q, (*endNode)->q, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open)  <= 0 ) {
                 continue;
             }
 

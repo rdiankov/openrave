@@ -36,14 +36,14 @@ Core
 
 * Added getting and settings custom parameters to links and joints via :meth:`.KinBody.Link.GetFloatParameters`, :meth:`.KinBody.Link.SetFloatParameters`, :meth:`.KinBody.Joint.GetFloatParameters`, :meth:`.KinBody.Joint.SetFloatParameters`.
 
-* Added `.KinBody.Link.GetInfo`, `.KinBody.Joint.GetInfo`, and `.KinBody.Geometry.GetInfo` for getting all properties.
+* Added :meth:`.KinBody.Link.GetInfo`, :meth:`.KinBody.Joint.GetInfo`, and :meth:`.KinBody.Geometry.GetInfo` for getting all properties.
 
-* Added `.Robot.Manipulator.CheckEndEffectorSelfCollision` and `.Robot.CheckLinkSelfCollision` for self-collision checking.
+* Added :meth:`.Robot.Manipulator.CheckEndEffectorSelfCollision` and :meth:`.Robot.CheckLinkSelfCollision` for self-collision checking.
 
 C Bindings
 ----------
 
-* Added pure C bindings in the **includeopenrave_c** folder with **libopenrave_c** and **libopenrave-core_c** libraries.
+* Added pure C bindings in the **include/openrave_c** folder with **libopenrave_c** and **libopenrave-core_c** libraries.
 
 Inverse Kinematics
 ------------------
@@ -56,7 +56,7 @@ Inverse Kinematics
 
 * Fixed major bug in :ref:`IkFilterOptions.IgnoreEndEffectorCollisions` implementation.
 
-* Added `IkFilterOptions.IgnoreEndEffectorSelfCollisions` for ignoring self-collision with end effector.
+* Added :ref:`IkFilterOptions.IgnoreEndEffectorSelfCollisions` for ignoring self-collision with end effector.
 
 Planning
 --------
@@ -76,6 +76,10 @@ Planning
 * Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
 
 * Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
+
+* Added a new PlannerParameters parameter called **_checkpathvelocityconstraintsfn** that also takes in the velocity of the current configuration space.
+
+* Added new :class:`.planningutils.DynamicsCollisionConstraint` for maintaining both collision and dynamics constraints.
 
 Python
 ------
@@ -105,7 +109,7 @@ Misc
 
 * Can open binary DirectX files
 
-* Added many helpers in xmlreaders.h to parse and write XML.
+* Added many helpers in `openrave/xmlreaders.h <../coreapihtml/xmlreaders_8h.html>`_ to parse and write XML.
 
 Version 0.8.2
 =============

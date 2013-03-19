@@ -1203,14 +1203,22 @@ protected:
      */
     virtual int AddGroup(const Group& g);
 
+    /** \brief extracts all the bodies that are used inside this specification
+
+        Because the specification contains names of bodies, an environment is necessary to get the body pointers.
+        \param[in] env the environment to extract the bodies from
+        \param[out] usedbodies a list of the bodies being used
+     */
+    virtual void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
+
     typedef boost::function<void (const std::vector<dReal>&)> SetConfigurationStateFn;
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 
     /// \brief return a function to set the states of the configuration in the environment
-    virtual boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr penv) const;
+    virtual boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
 
     /// \brief return a function to get the states of the configuration in the environment
-    virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr penv) const;
+    virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -2585,26 +2593,26 @@ OPENRAVE_API bool RaveLoadPlugin(const std::string& libraryname);
 /// \brief Returns true if interface can be created, otherwise false.
 OPENRAVE_API bool RaveHasInterface(InterfaceType type, const std::string& interfacename);
 
-OPENRAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename);
-OPENRAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name="");
-OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name);
-OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr env, InterfaceType type,const std::string& interfacename);
+OPENRAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr env, const std::string& name="");
+OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateModule(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr env, const std::string& name);
+OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr env, const std::string& name="");
 /// \brief Return an empty trajectory instance.
-OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name="");
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, const std::string& name="");
 
 /// \deprecated (11/10/01)
-OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof) RAVE_DEPRECATED;
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, int dof) RAVE_DEPRECATED;
 
 /// \brief returned a fully cloned interface
 template <typename T>
@@ -2641,7 +2649,7 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
-OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr penv);
+OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr env);
 
 /// \brief get the environment from its unique id
 /// \param id the unique environment id returned by \ref RaveGetEnvironmentId
@@ -2717,7 +2725,7 @@ inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vd
 
 /// \brief Create the interfaces, see \ref CreateInterfaceValidated.
 /// \ingroup plugin_exports
-typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr penv);
+typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr env);
 
 /// \brief Called to fill information about the plugin, see \ref GetPluginAttributesValidated.
 /// \ingroup plugin_exports
@@ -2728,7 +2736,7 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 typedef void (*PluginExportFn_DestroyPlugin)();
 
 /// \deprecated (12/01/01)
-typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr penv) RAVE_DEPRECATED;
+typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 
 /// \deprecated (12/01/01)
 typedef bool (*PluginExportFn_GetPluginAttributes)(PLUGININFO* pinfo, int size) RAVE_DEPRECATED;

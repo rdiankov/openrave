@@ -397,7 +397,7 @@ public:
                 anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
             }
             (*_setstatefn)(anew);
-            if( !_parameters->_checkpathconstraintsfn(a,a,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+            if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) <= 0 ) {
                 return false;
             }
         }
@@ -415,7 +415,7 @@ public:
         return true;
     }
 
-    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db)
+    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
     {
         // have to also test with tolerances!
         boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
@@ -425,8 +425,8 @@ public:
                 anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
             }
-            (*_setstatefn)(anew);
-            if( !_parameters->_checkpathconstraintsfn(anew,bnew,IT_OpenStart,PlannerBase::ConfigurationListPtr()) ) {
+            //(*_setstatefn)(anew);
+            if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
                 return false;
             }
         }

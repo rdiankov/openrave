@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -49,6 +49,8 @@ class OPENRAVE_API PlannerBase : public InterfaceBase
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
     typedef boost::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
+    typedef std::list< std::pair< std::vector<dReal>, std::vector<dReal> > > ConfigurationVelocityList;
+    typedef boost::shared_ptr< PlannerBase::ConfigurationVelocityList > ConfigurationVelocityListPtr;
 
     /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -171,13 +173,76 @@ private:
             If q0==q1, and interval==IT_OpenStart or IT_OpenEnd, then only one configuration should be checked. It is recommended to use IT_OpenStart.
             Because this function can internally use neighstatefn, need to make sure that Q0->Q1 is going from initial to goal direction.
 
-            \param q0 is the configuration the robot is coming from (currently set).
+            \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
             \param q1 is the configuration the robot should move to.
             \param interval Specifies whether to check the end points of the interval for constraints
             \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
          */
         typedef boost::function<bool (const std::vector<dReal>&, const std::vector<dReal>&, IntervalType, PlannerBase::ConfigurationListPtr)> CheckPathConstraintFn;
         CheckPathConstraintFn _checkpathconstraintsfn;
+
+        /** \brief Checks that all the constraints are satisfied between two configurations and passes in the velocity at each point.
+
+            The simplest and most fundamental constraint is linearly interpolating the positions and velocities and checking constraints at each discrete point.
+
+            success = _checkpathvelocityconstraintsfn(q0,q1,dq0,dq1,timeelapsed,interval,configurations)
+
+            When called, q0 and dq0 is guaranteed to be set on the robot.
+            The function returns true if the path to q1 satisfies all the constraints of the planner.
+            If q0==q1, and interval==IT_OpenStart or IT_OpenEnd, then only one configuration should be checked. It is recommended to use IT_OpenStart.
+            Because this function can internally use neighstatefn, need to make sure that Q0->Q1 is going from initial to goal direction.
+
+            \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
+            \param q1 is the configuration the robot should move to.
+            \param dq0 is the first time derivative (or velocity) of each DOF at q0.
+            \param dq1 is the first time derivative (or velocity) of each DOF at q1.
+            \param timeelapsed is the estimated time to go from q0 to q1 with the current constraints. Set to 0 if non-applicable.
+            \param interval Specifies whether to check the end points of the interval for constraints
+            \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
+            \return if <= 0 means constraint was violated and some error message occurred. if > 0 means constraint is good
+         */
+        typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, PlannerBase::ConfigurationVelocityListPtr)> CheckPathVelocityConstraintFn;
+        CheckPathVelocityConstraintFn _checkpathvelocityconstraintsfn;
+
+        /** \brief utility function to check constraints using _checkpathconstraintsfn and _checkpathvelocityconstraintsfn
+
+            Because the user can set two possible path constraints funtions, this function gives a way for planners to call on
+            both constraints. _checkpathconstraintsfn is called first.
+            \param q0 is the configuration the robot is coming from (shouldn't assume that it is currently set).
+            \param q1 is the configuration the robot should move to.
+            \param dq0 is the velocity of each DOF at q0 (shouldn't assume that it is currently set)
+            \param dq1 is the velocity of each DOF at q1.
+            \param interval Specifies whether to check the end points of the interval for constraints
+            \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
+            \return if <= 0 means constraint was violated and some error message occurred. if > 0 means constraint is good
+         */
+        inline int CheckPathAllConstraints(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr configurations = PlannerBase::ConfigurationVelocityListPtr()) const
+        {
+            if( !!_checkpathconstraintsfn ) {
+                PlannerBase::ConfigurationListPtr tempconfigurations;
+                if( !!configurations ) {
+                    tempconfigurations.reset(new PlannerBase::ConfigurationList());
+                }
+                int nsuccess = static_cast<int>(_checkpathconstraintsfn(q0,q1,interval, tempconfigurations));
+                if( !!configurations ) {
+                    std::vector<dReal> velocity;
+                    for(PlannerBase::ConfigurationList::iterator it = tempconfigurations->begin(); it != tempconfigurations->end(); ++it) {
+                        configurations->push_back(std::make_pair(*it, velocity));
+                    }
+                }
+                return nsuccess;
+            }
+            if( !!_checkpathvelocityconstraintsfn ) {
+                int nsuccess = _checkpathvelocityconstraintsfn(q0,q1,dq0,dq1,timeelapsed, interval,configurations);
+                return nsuccess;
+            }
+            return true;
+        }
+
+        inline bool HasPathConstraints() const
+        {
+            return !!_checkpathconstraintsfn || !!_checkpathvelocityconstraintsfn;
+        }
 
         /** \brief Samples a random configuration (mandatory)
 

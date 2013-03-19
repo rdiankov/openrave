@@ -118,6 +118,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _goalfn = r._goalfn;
     _distmetricfn = r._distmetricfn;
     _checkpathconstraintsfn = r._checkpathconstraintsfn;
+    _checkpathvelocityconstraintsfn = r._checkpathvelocityconstraintsfn;
     _samplefn = r._samplefn;
     _sampleneighfn = r._sampleneighfn;
     _samplegoalfn = r._samplegoalfn;
@@ -700,6 +701,9 @@ void PlannerBase::PlannerParameters::Validate() const
     }
     if( !!_checkpathconstraintsfn ) {
         _checkpathconstraintsfn(vstate,vstate,IT_OpenStart,ConfigurationListPtr());
+    }
+    if( !!_checkpathvelocityconstraintsfn ) {
+        _checkpathvelocityconstraintsfn(vstate,vstate,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart,ConfigurationVelocityListPtr());
     }
     if( !!_neighstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2 = vstate;

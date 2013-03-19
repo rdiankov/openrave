@@ -406,7 +406,7 @@ protected:
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
             }
             //parameters->_setstatefn(anew);
-            if( !parameters->_checkpathconstraintsfn(anew,bnew,interval,PlannerBase::ConfigurationListPtr()) ) {
+            if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval) <= 0 ) {
                 return false;
             }
         }
