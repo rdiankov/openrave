@@ -1350,6 +1350,15 @@ public:
     static int GetNumberOfValues(IkParameterizationType type) {
         return (type>>24)&0xf;
     }
+
+    /// \brief returns a string of the ik parameterization type names
+    ///
+    /// \param[in] alllowercase If 1, sets all characters to lower case. Otherwise can include upper case in order to match \ref IkParameterizationType definition.
+    static const std::map<IkParameterizationType,std::string>& GetIkParameterizationMap(int alllowercase=0);
+
+    /// \brief returns the IkParameterizationType given the unique id detmerined b IKP_UniqueIdMask
+    static IkParameterizationType GetIkTypeFromUniqueId(int uniqueid);
+
     /// \brief Returns the number of values used to represent the parameterization ( >= dof ). Does \b not count custom data.
     inline int GetNumberOfValues() const {
         return (_type>>24)&0xf;

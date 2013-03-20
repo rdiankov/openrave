@@ -338,7 +338,7 @@ public:
                 int goalindex = listgoalpaths.back().goalindex;
                 int startindex = listgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
-                    stringstream ss;
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ss << "found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << listgoalpaths.back().length << ", values=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << listgoalpaths.back().qall.at(listgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";

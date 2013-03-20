@@ -917,18 +917,12 @@ const std::map<InterfaceType,std::string>& RaveGetInterfaceNamesMap()
 
 const std::map<IkParameterizationType,std::string>& RaveGetIkParameterizationMap(int alllowercase)
 {
-    return RaveGlobal::instance()->GetIkParameterizationMap(alllowercase);
+    return IkParameterization::GetIkParameterizationMap(alllowercase);
 }
 
 IkParameterizationType RaveGetIkTypeFromUniqueId(int uniqueid)
 {
-    uniqueid &= IKP_UniqueIdMask;
-    FOREACHC(it, RaveGlobal::instance()->GetIkParameterizationMap()) {
-        if( (it->first & (IKP_UniqueIdMask&~IKP_VelocityDataBit)) == (uniqueid&(IKP_UniqueIdMask&~IKP_VelocityDataBit)) ) {
-            return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
-        }
-    }
-    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
+    return IkParameterization::GetIkTypeFromUniqueId(uniqueid);
 }
 
 const std::string& RaveGetInterfaceName(InterfaceType type)
@@ -1134,6 +1128,22 @@ void RaveSetDataAccess(int options)
 int RaveGetDataAccess()
 {
     return RaveGlobal::instance()->GetDataAccess();
+}
+
+const std::map<IkParameterizationType,std::string>& IkParameterization::GetIkParameterizationMap(int alllowercase)
+{
+    return RaveGlobal::instance()->GetIkParameterizationMap(alllowercase);
+}
+
+IkParameterizationType IkParameterization::GetIkTypeFromUniqueId(int uniqueid)
+{
+    uniqueid &= IKP_UniqueIdMask;
+    FOREACHC(it, RaveGlobal::instance()->GetIkParameterizationMap()) {
+        if( (it->first & (IKP_UniqueIdMask&~IKP_VelocityDataBit)) == (uniqueid&(IKP_UniqueIdMask&~IKP_VelocityDataBit)) ) {
+            return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
+        }
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
 }
 
 ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation)
