@@ -423,10 +423,11 @@ protected:
 /// \param nummaxtries number of attemps to return a goal per Sample call.
 /// \param fsampleprob The probability to attempt to sample a goal
 /// \param searchfreeparameters if true, will search all the free parameters of the manipulator. Otherwise will use the current free parameters set on the robot
+/// \param ikfilteroptions the filter options to pass to RobotBase::Manipulator::FindIKSolutions.
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true);
+    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions);
     virtual ~ManipulatorIKGoalSampler() {
     }
 
@@ -472,6 +473,7 @@ protected:
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
+    int _ikfilteroptions;
     bool _searchfreeparameters;
 };
 

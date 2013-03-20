@@ -2005,7 +2005,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
     return samples.size()>0;
 }
 
-ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _searchfreeparameters(searchfreeparameters)
+ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters, int ikfilteroptions) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _searchfreeparameters(searchfreeparameters), _ikfilteroptions(ikfilteroptions)
 {
     _tempikindex = -1;
     _fjittermaxdist = 0;
@@ -2065,6 +2065,10 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         advance(itsample,isampleindex);
 
         bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
+        if( _ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions ) {
+            // use requested end effector to be always ignored
+            bCheckEndEffector = false;
+        }
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
         if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
@@ -2169,7 +2173,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, IKFO_CheckEnvCollisions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorCollisions : 0), _vikreturns);
+        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _ikfilteroptions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorEnvCollisions : 0), _vikreturns);
         if( --itsample->_numleft <= 0 || vfree.size() == 0 || !_searchfreeparameters ) {
             _listsamples.erase(itsample);
         }
