@@ -159,8 +159,7 @@ public:
 
     /** \brief Return a joint configuration for the given end effector transform.
 
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solution [optional] Holds the IK solution
@@ -170,8 +169,7 @@ public:
 
     /** \brief Return a joint configuration for the given end effector transform.
 
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is NULL, returns the first solution found
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] ikreturn Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
@@ -181,11 +179,10 @@ public:
 
     /** \brief Return all joint configurations for the given end effector transform.
 
-       \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-       takes into account the grasp coordinate frame for the RobotBase::Manipulator
-       \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-       \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
-       \return true if at least one solution is found
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
+        \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& solutions) = 0;
 
@@ -196,18 +193,17 @@ public:
 
     /** \brief Return all joint configurations for the given end effector transform.
 
-       \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-       takes into account the grasp coordinate frame for the RobotBase::Manipulator
-       \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
-       \param[out] ikreturns Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
-       \return true if at least one solution is found
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        \param[out] ikreturns Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
+        \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
         Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is empty, returns the first solution found
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
@@ -219,7 +215,7 @@ public:
     /** Return a joint configuration for the given end effector transform.
 
         Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] q0 Return a solution nearest to the given configuration q0 in terms of the joint distance. If q0 is empty, returns the first solution found
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
@@ -231,8 +227,7 @@ public:
     /** \brief Return all joint configurations for the given end effector transform.
 
         Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] solutions All solutions within a reasonable discretization level of the free parameters.
@@ -248,8 +243,7 @@ public:
     /** \brief Return all joint configurations for the given end effector transform.
 
         Can specify the free parameters in [0,1] range. If NULL, the regular equivalent Solve is called
-        \param[in] param the pose the end effector has to achieve. Note that the end effector pose
-        takes into account the grasp coordinate frame for the RobotBase::Manipulator
+        \param[in] param the pose the end effector has to achieve in the manipulator base's coordinate system. Note that the end effector pose takes into account the grasp coordinate frame for the RobotBase::Manipulator
         \param[in] vFreeParameters The free parameters of the null space of the IK solutions. Always in range of [0,1]
         \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
         \param[out] ikreturns Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
@@ -260,6 +254,18 @@ public:
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /** \brief Calls the registered filters in their priority order and returns the value of the last called filter.
+
+        The current robot manipulator DOF values are used.
+        The parameters are the same as \ref IkFilterCallbackFn, except the IkReturn is an optional input parameter and the return
+        value is just the \ref IkReturnAction. For users that do not request the filter output, this allows the computation
+        to be optimized away.
+
+        \param param The paramterization that currently reflects the robot's configuration state, can also contain custom parameters. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
+        \return \ref IkReturn outputs the action to take for the current ik solution and any custom parameters the filter should pass to the user.
+     */
+    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
 protected:
     inline IkSolverBasePtr shared_iksolver() {
         return boost::static_pointer_cast<IkSolverBase>(shared_from_this());
@@ -268,11 +274,6 @@ protected:
         return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
     }
 
-    /// \brief calls the registered filters in their priority order and returns the value of the last called filter.
-    ///
-    /// The parameters are the same as \ref IkFilterCallbackFn, except the IkReturn is an optional input parameter and the return
-    /// value is just the \ref IkReturnAction. For users that do not request the filter output, this allows the computation
-    // to be optimized away.
     virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr());
 
 private:

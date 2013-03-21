@@ -58,6 +58,8 @@ Inverse Kinematics
 
 * Added :ref:`IkFilterOptions.IgnoreEndEffectorSelfCollisions` for ignoring self-collision with end effector.
 
+* Added  :meth:`.IkSolverBase.CallFilters` to call only the ik solver filters when the iksolution is already known.
+
 Planning
 --------
 

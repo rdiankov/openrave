@@ -104,6 +104,14 @@ public:
         return true;
     }
 
+    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn) {
+        // have to convert to the manipulator's base coordinate system
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
+        std::vector<dReal> vsolution;
+        pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
+        return _CallFilters(vsolution, pmanip, param, ikreturn);
+    }
+
     virtual void SetJointLimits()
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);

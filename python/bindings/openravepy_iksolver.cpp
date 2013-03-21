@@ -195,6 +195,18 @@ public:
         return pyreturns;
     }
 
+    PyIkReturnPtr CallFilters(object oparam)
+    {
+        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+        IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
+        IkParameterization ikparam;
+        if( !ExtractIkParameterization(oparam,ikparam) ) {
+            throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
+        }
+        _pIkSolver->CallFilters(ikparam, preturn);
+        return pyreturn;
+    }
+
     bool Supports(IkParameterizationType type) {
         return _pIkSolver->Supports(type);
     }
@@ -294,6 +306,7 @@ void init_openravepy_iksolver()
         .def("GetNumFreeParameters",&PyIkSolverBase::GetNumFreeParameters, DOXY_FN(IkSolverBase,GetNumFreeParameters))
         .def("GetFreeParameters",&PyIkSolverBase::GetFreeParameters, DOXY_FN(IkSolverBase,GetFreeParameters))
         .def("Supports",&PyIkSolverBase::Supports, args("iktype"), DOXY_FN(IkSolverBase,Supports))
+        .def("CallFilters",&PyIkSolverBase::CallFilters, args("ikparam"), DOXY_FN(IkSolverBase,CallFilters))
         .def("RegisterCustomFilter",&PyIkSolverBase::RegisterCustomFilter, args("priority","callback"), DOXY_FN(IkSolverBase,RegisterCustomFilter))
         ;
     }

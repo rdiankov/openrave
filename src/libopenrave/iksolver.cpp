@@ -34,7 +34,8 @@ bool IkReturn::Append(const IkReturn& r)
     else {
         FOREACHC(itr,r._mapdata) {
             if( !_mapdata.insert(*itr).second ) {
-                RAVELOG_WARN(str(boost::format("IkReturn _mapdata %s overwritten")%itr->first));
+                // actually this is pretty normal if a previous iksolution failed during the filters and it left old data...
+                //RAVELOG_WARN(str(boost::format("IkReturn _mapdata %s overwritten")%itr->first));
                 bclashing = true;
             }
         }
