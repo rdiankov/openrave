@@ -393,12 +393,13 @@ The possible properties that can be set are: ";
         return true;
     }
     
-    bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
+        _odespace->Synchronize(pjoint->GetParent());
         dJointID joint = _odespace->GetJoint(pjoint);
         dJointFeedback* feedback = dJointGetFeedback( joint );
 
         KinBody::LinkConstPtr link1 = pjoint->GetFirstAttached();
-        KinBody::LinkConstPtr link2 = pjoint->GetSecondAttached();
+        //KinBody::LinkConstPtr link2 = pjoint->GetSecondAttached();
         Vector force1 = (Vector)feedback->f1;
         Vector torque1 = (Vector)feedback->t1;
         
@@ -410,11 +411,9 @@ The possible properties that can be set are: ";
         force=force1;
         torque=torque1-r1.cross(force1);
 
-        //FIXME: potential speed penalty if call is executed for every
-        //joint at every timestep, depending on efficiency of logging
-        RAVELOG_VERBOSE("At link1 center, F=<%f,%f,%f>, T=<%f,%f,%f>\n",feedback->f1[0],feedback->f1[1],feedback->f1[2],feedback->t1[0],feedback->t1[1],feedback->t1[2]);
+        //RAVELOG_VERBOSE("At link1 center, F=<%f,%f,%f>, T=<%f,%f,%f>\n",feedback->f1[0],feedback->f1[1],feedback->f1[2],feedback->t1[0],feedback->t1[1],feedback->t1[2]);
 
-        RAVELOG_VERBOSE("At joint anchor, F=<%f,%f,%f>, T=<%f,%f,%f>\n",force[0],force[1],force[2],torque[0],torque[1],torque[1]);
+        //RAVELOG_VERBOSE("At joint anchor, F=<%f,%f,%f>, T=<%f,%f,%f>\n",force[0],force[1],force[2],torque[0],torque[1],torque[1]);
         return true;
     }
 
@@ -427,32 +426,50 @@ The possible properties that can be set are: ";
             //Loop over all joints in the parent body
             FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
                 //if this joint's parent or child body is the current body
-                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
-                    dJointID joint = _odespace->GetJoint(*itjoint);
-                    dJointFeedback* feedback = dJointGetFeedback( joint );
-                    BOOST_ASSERT(feedback != NULL);
-                    if( dJointGetBody( joint,0 ) == body ) {
-                        force += (Vector)feedback->f1;
-                        torque += (Vector)feedback->t1;
+                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+                if( bParentLink || bChildLink ) {
+                    Vector f;
+                    Vector T;
+                    GetJointForceTorque(*itjoint, f,T);
+
+                    if( bParentLink ) {
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force += f;
+                        torque += T;
+                        //Re-add moment due to equivalent load at body COM
+                        torque += r.cross(f);
                     }
-                    else if( dJointGetBody( joint,1 ) == body ) {
-                        force += (Vector)feedback->f2;
-                        torque += (Vector)feedback->t2; 
+                    else {
+                        //Equal but opposite sign
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force -= f;
+                        torque -= T; 
+                        torque -= r.cross(f);
                     }
                 }
             }
             FOREACHC(itjoint,plink->GetParent()->GetPassiveJoints()) {
-                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
-                    dJointID joint = _odespace->GetJoint(*itjoint);
-                    dJointFeedback* feedback = dJointGetFeedback( joint );
-                    BOOST_ASSERT(feedback != NULL);
-                    if( dJointGetBody( joint,0 ) == body ) {
-                        force += (Vector)feedback->f1;
-                        torque += (Vector)feedback->t1;
+                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+                if( bParentLink || bChildLink ) {
+                    Vector f;
+                    Vector T;
+                    GetJointForceTorque(*itjoint, f,T);
+
+                    if( bParentLink ) {
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force += f;
+                        torque += T;
+                        //Re-add moment due to equivalent load at body COM
+                        torque += r.cross(f);
                     }
-                    else if( dJointGetBody( joint,1 ) == body ) {
-                        force += (Vector)feedback->f2;
-                        torque += (Vector)feedback->t2;
+                    else {
+                        //Equal but opposite sign
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force -= f;
+                        torque -= T; 
+                        torque -= r.cross(f);
                     }
                 }
             }

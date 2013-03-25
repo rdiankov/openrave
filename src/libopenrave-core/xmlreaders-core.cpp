@@ -1140,12 +1140,12 @@ public:
                     //Lazily find the effective volume by finding a dummy total mass
                     dummytotal+=mass.fTotalMass;
                 }
-                RAVELOG_DEBUG("Total dummy mass is %f\n",dummytotal);
+                RAVELOG_VERBOSE("Total dummy mass is %f\n",dummytotal);
                 dReal ratio=_fTotalMass/dummytotal;
                 //Store new masses based on the percentage of the total geometry volume in each piece
                 FOREACH(itmass,masses){
                     itmass->fTotalMass=itmass->fTotalMass*ratio;
-                    RAVELOG_DEBUG("Assigning mass  %f\n",itmass->fTotalMass);
+                    RAVELOG_VERBOSE("Assigning mass  %f\n",itmass->fTotalMass);
                     totalmass += *itmass;
                 }
 
