@@ -43,7 +43,6 @@
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
-//FIXME: Not detecting assimp3 built from source...maybe golems version is behind?
 #if defined(OPENRAVE_IS_ASSIMP3)
 #include <assimp/scene.h>
 #include <assimp/LogStream.hpp>
@@ -1095,7 +1094,7 @@ public:
 
         if( xmlname == "body" ) {
             if(( _plink->GetGeometries().size() == 0) && !_bSkipGeometry) {
-                RAVELOG_WARN(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
+                RAVELOG_VERBOSE(str(boost::format("link %s has no geometry attached!\n")%_plink->GetName()));
             }
             // perform final processing stages
             MASS totalmass;
