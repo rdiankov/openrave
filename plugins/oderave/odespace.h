@@ -392,7 +392,6 @@ private:
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
-            //RAVELOG_VERBOSE("Link %s position [%f,%f,%f]\n",(*itlink)->GetName().c_str(),x,y,z);
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
             dBodySetData(link->body, link.get());     // so that the link can be retreived from the body
@@ -441,11 +440,8 @@ private:
                     axis1 = -axis1;
                 }
 
-                // Joint anchors are specified here
+                // Joint anchors are specified here, Don't need an offset here since the anchors are global
                 KinBody::LinkPtr parent = (*itjoint)->GetHierarchyParentLink();
-                // Don't need an offset here since the anchors are global
-                //RAVELOG_VERBOSE("Joint %s anchor [%f,%f,%f]\n",(*itjoint)->GetName().c_str(),x,y,z);
-
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge:
                     dJointSetHingeAnchor(joint,anchor.x,anchor.y,anchor.z);
@@ -498,7 +494,7 @@ private:
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         if( _bUsingPhysics ) {
-            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
+            pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic|KinBody::Prop_LinkDynamics, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         }
 
         _Synchronize(pinfo, false);
