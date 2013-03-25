@@ -118,7 +118,7 @@ private:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
     typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
-    typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
     }
@@ -394,7 +394,7 @@ private:
         return it->second;
     }
 
-    void SetSynchornizationCallback(const SynchornizeCallbackFn &synccallback) {
+    void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) {
         _synccallback = synccallback;
     }
 
@@ -450,7 +450,7 @@ private:
     GetInfoFn GetInfo;
     boost::shared_ptr<btCollisionWorld> _world;
     boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
-    SynchornizeCallbackFn _synccallback;
+    SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 };
 

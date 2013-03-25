@@ -130,6 +130,24 @@ public:
                 }
                 RAVELOG_DEBUG("surface mode flags: %x\n",_physics->_surface_mode);
             }
+            else if( name == "numiterations") {
+                int temp=0;
+                _ss >> temp;
+                //Set number of QuickStep iterations, use more iterations for highly articulated bodies
+                if (temp >= 0) {
+                    _physics->_num_iterations = temp;
+                }
+                RAVELOG_DEBUG("Setting QuickStep iterations to: %d\n",_physics->_num_iterations);
+            }
+            else if( name == "surfacelayer") {
+                float temp=0;
+                _ss >> temp;
+                // Set surface layer depth
+                if (temp >= 0) {
+                    _physics->_surfacelayer = temp;
+                }
+                RAVELOG_DEBUG("Setting surface layer depth to: %f\n",_physics->_surfacelayer);
+            }
             else {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
             }
@@ -152,8 +170,8 @@ public:
             }
         }
 
-        static const boost::array<string, 9>& GetTags() {
-            static const boost::array<string, 9> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox" }};
+        static const boost::array<string, 11>& GetTags() {
+            static const boost::array<string, 11> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox", "numiterations", "surfacelayer" }};
             return tags;
         }
 
@@ -179,6 +197,8 @@ It is possible to set ODE physics engine and its properties inside the <environm
       <friction>0.5</friction>\n\
       <gravity>0 0 -9.8</gravity>\n\
       <selfcollision>1</selfcollision>\n\
+      <dcontactapprox>1</dcontactapprox>\n\
+      <numiterations>1</numiterations>\n\
     </odeproperties>\n\
   </physicsengine>\n\n\
 The possible properties that can be set are: ";
@@ -190,9 +210,11 @@ The possible properties that can be set are: ";
         _globalfriction = 0.4;
         _globalerp = 0.01;
         _globalcfm = 1e-5;
+        _num_iterations = 20; 
         //Default to openrave 0.6.6 behavior, but this really should default to
         //enable the friction pyramid model.
         _surface_mode = 0;
+        _surfacelayer = 0.001;
         _options = OpenRAVE::PEO_SelfCollisions;
 
         memset(_jointadd, 0, sizeof(_jointadd));
@@ -217,7 +239,7 @@ The possible properties that can be set are: ";
     {
         _report.reset(new CollisionReport());
 
-        _odespace->SetSynchornizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
+        _odespace->SetSynchronizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
         if( !_odespace->InitEnvironment() ) {
             return false;
         }
@@ -227,9 +249,14 @@ The possible properties that can be set are: ";
             InitKinBody(*itbody);
         }
         SetGravity(_gravity);
-        RAVELOG_DEBUG(str(boost::format("ode params: erp=%e (%e), cfm=%e (%e)")%_globalerp%dWorldGetERP(_odespace->GetWorld())%_globalcfm%dWorldGetCFM(_odespace->GetWorld())));
+        RAVELOG_DEBUG(str(boost::format("ode params: erp=%e (%e), cfm=%e (%e), itrs=%e (%e)")
+                    %_globalerp%dWorldGetERP(_odespace->GetWorld())
+                    %_globalcfm%dWorldGetCFM(_odespace->GetWorld())
+                    %_num_iterations%dWorldGetQuickStepNumIterations (_odespace->GetWorld())));
         dWorldSetERP(_odespace->GetWorld(),_globalerp);
         dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
+        dWorldSetQuickStepNumIterations (_odespace->GetWorld(), _num_iterations);
+        dWorldSetContactSurfaceLayer(_odespace->GetWorld(), _surfacelayer);
         return true;
     }
 
@@ -290,9 +317,11 @@ The possible properties that can be set are: ";
         _globalcfm = r->_globalcfm;
         _globalerp = r->_globalerp;
         _surface_mode = r->_surface_mode;
+        _num_iterations = r->_num_iterations;
         if( !!_odespace && _odespace->IsInitialized() ) {
             dWorldSetERP(_odespace->GetWorld(),_globalerp);
             dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
+            dWorldSetQuickStepNumIterations (_odespace->GetWorld(), _num_iterations);
         }
     }
 
@@ -363,6 +392,30 @@ The possible properties that can be set are: ";
         }
         return true;
     }
+    
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
+        _odespace->Synchronize(pjoint->GetParent());
+        dJointID joint = _odespace->GetJoint(pjoint);
+        dJointFeedback* feedback = dJointGetFeedback( joint );
+
+        KinBody::LinkConstPtr link1 = pjoint->GetFirstAttached();
+        //KinBody::LinkConstPtr link2 = pjoint->GetSecondAttached();
+        Vector force1 = (Vector)feedback->f1;
+        Vector torque1 = (Vector)feedback->t1;
+        
+        //Find displacement from link1 COM to joint anchor
+        Vector r1 = pjoint->GetAnchor()-link1->GetGlobalCOM();
+    
+        // Returned value is for link1, F/T for link2 are equal and opposite 
+        // Note that the joint force and torque is at the joint anchor point, as applied to link1
+        force=force1;
+        torque=torque1-r1.cross(force1);
+
+        //RAVELOG_VERBOSE("At link1 center, F=<%f,%f,%f>, T=<%f,%f,%f>\n",feedback->f1[0],feedback->f1[1],feedback->f1[2],feedback->t1[0],feedback->t1[1],feedback->t1[2]);
+
+        //RAVELOG_VERBOSE("At joint anchor, F=<%f,%f,%f>, T=<%f,%f,%f>\n",force[0],force[1],force[2],torque[0],torque[1],torque[1]);
+        return true;
+    }
 
     virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
         _odespace->Synchronize(plink->GetParent());
@@ -373,32 +426,50 @@ The possible properties that can be set are: ";
             //Loop over all joints in the parent body
             FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
                 //if this joint's parent or child body is the current body
-                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
-                    dJointID joint = _odespace->GetJoint(*itjoint);
-                    dJointFeedback* feedback = dJointGetFeedback( joint );
-                    BOOST_ASSERT(feedback != NULL);
-                    if( dJointGetBody( joint,0 ) == body ) {
-                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
-                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+                if( bParentLink || bChildLink ) {
+                    Vector f;
+                    Vector T;
+                    GetJointForceTorque(*itjoint, f,T);
+
+                    if( bParentLink ) {
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force += f;
+                        torque += T;
+                        //Re-add moment due to equivalent load at body COM
+                        torque += r.cross(f);
                     }
-                    else if( dJointGetBody( joint,1 ) == body ) {
-                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
-                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                    else {
+                        //Equal but opposite sign
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force -= f;
+                        torque -= T; 
+                        torque -= r.cross(f);
                     }
                 }
             }
             FOREACHC(itjoint,plink->GetParent()->GetPassiveJoints()) {
-                if( (*itjoint)->GetHierarchyParentLink() == plink || (*itjoint)->GetHierarchyChildLink() == plink ) {
-                    dJointID joint = _odespace->GetJoint(*itjoint);
-                    dJointFeedback* feedback = dJointGetFeedback( joint );
-                    BOOST_ASSERT(feedback != NULL);
-                    if( dJointGetBody( joint,0 ) == body ) {
-                        force[0] += feedback->f1[0]; force[1] += feedback->f1[1]; force[2] += feedback->f1[2];
-                        torque[0] += feedback->t1[0]; torque[1] += feedback->t1[1]; torque[2] += feedback->t1[2];
+                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+                if( bParentLink || bChildLink ) {
+                    Vector f;
+                    Vector T;
+                    GetJointForceTorque(*itjoint, f,T);
+
+                    if( bParentLink ) {
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force += f;
+                        torque += T;
+                        //Re-add moment due to equivalent load at body COM
+                        torque += r.cross(f);
                     }
-                    else if( dJointGetBody( joint,1 ) == body ) {
-                        force[0] += feedback->f2[0]; force[1] += feedback->f2[1]; force[2] += feedback->f2[2];
-                        torque[0] += feedback->t2[0]; torque[1] += feedback->t2[1]; torque[2] += feedback->t2[2];
+                    else {
+                        //Equal but opposite sign
+                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                        force -= f;
+                        torque -= T; 
+                        torque -= r.cross(f);
                     }
                 }
             }
@@ -518,7 +589,20 @@ The possible properties that can be set are: ";
                     continue;
                 }
                 const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
-                vtrans.at(i) = Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2]));
+
+                string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
+                Vector trans(ptrans[0],ptrans[1],ptrans[2]);
+                //Crude way to rotate COM offset (probably slow)
+                Transform t=Transform(vrot,trans);
+                Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
+                RaveVector<dReal> com_rot=t.rotate(com);
+                dReal x,y,z;
+                x=t.trans.x-com_rot[0];
+                y=t.trans.y-com_rot[1];
+                z=t.trans.z-com_rot[2];
+                RAVELOG_VERBOSE("Body %s position [%f,%f,%f]\n",name.c_str(),x,y,z);
+                
+                vtrans.at(i) = Transform(vrot,Vector(x,y,z));
             }
             (*itbody)->SetLinkTransformations(vtrans,pinfo->_vdofbranches);
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
@@ -666,10 +750,17 @@ private:
     Vector _gravity;
     int _options;
     dReal _globalfriction, _globalcfm, _globalerp;
-    // _surface_mode stores global surface settings used in the
-    // dSurfaceParameters structure in ODE.
-    // See http://ode-wiki.org/wiki/index.php?title=Manual:_Joint_Types_and_Functions
-    int _surface_mode;
+    
+    /**
+     * _surface_mode stores global surface settings in dSurfaceParameters.
+     * See the ODE documentation at:
+     * http://ode-wiki.org/wiki/index.php?title=Manual:_Joint_Types_and_Functions
+     * for more infomation.
+     */
+    int _surface_mode;  ///> friction model and soft contact flags
+    float _surfacelayer;  ///> Surface layer depth
+
+    int _num_iterations; ///> Max QuickStep iterations for each timestep
 
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);

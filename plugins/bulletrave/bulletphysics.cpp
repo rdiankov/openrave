@@ -63,7 +63,7 @@ public:
     virtual bool InitEnvironment()
     {
         RAVELOG_VERBOSE("init bullet physics environment\n");
-        _space->SetSynchornizationCallback(boost::bind(&BulletPhysicsEngine::_SyncCallback, shared_physics(),_1));
+        _space->SetSynchronizationCallback(boost::bind(&BulletPhysicsEngine::_SyncCallback, shared_physics(),_1));
 
         _broadphase.reset(new btDbvtBroadphase());
         //btVector3 worldMin(-1000,-1000,-1000);

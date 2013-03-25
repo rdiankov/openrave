@@ -222,7 +222,7 @@ private:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
-    typedef boost::function<void (KinBodyInfoPtr)> SynchornizeCallbackFn;
+    typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     ODESpace(EnvironmentBasePtr penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
     {
@@ -297,6 +297,10 @@ private:
                 dBodyDisable(link->body);
                 link->_bEnabled = false;
             }
+
+            //Store the COM of the link to offset ODE coordinate system
+            Vector com=(*itlink)->GetCOMOffset();
+
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
                 KinBody::Link::GeometryPtr geom = *itgeom;
@@ -344,8 +348,14 @@ private:
 
                 // set the transformation
                 RaveTransform<dReal> t = geom->GetTransform();
+
+                dReal x,y,z;
+                x=t.trans.x-com[0];
+                y=t.trans.y-com[1];
+                z=t.trans.z-com[2];
+
+                dGeomSetPosition(odegeom,x,y,z);
                 dGeomSetQuaternion(odegeom,&t.rot[0]);
-                dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
 
                 // finally set the geom to the ode body
                 dGeomSetBody(odegeomtrans, link->body);
@@ -377,16 +387,21 @@ private:
                         mass.I[8] = 0; mass.I[9] = 0; mass.I[10] = 1;
                     }
                 }
-                // ignore center of mass for now (ode doesn't like it when it is non-zero)
-                //mass.c = ?;
-
+                //ODE link coordinate system coincides with center of mass:
                 dBodySetMass(link->body, &mass);
             }
 
             link->_plink = *itlink;
-            // set the transformation
+            // Calculate ODE transform consisting of link origin + center of mass offset
             RaveTransform<dReal> t = (*itlink)->GetTransform();
-            dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
+            RaveVector<dReal> com_rot=t.rotate(com);
+            dReal x,y,z;
+            x=t.trans.x+com_rot[0];
+            y=t.trans.y+com_rot[1];
+            z=t.trans.z+com_rot[2];
+            RAVELOG_VERBOSE("Link %s position [%f,%f,%f]\n",(*itlink)->GetName().c_str(),x,y,z);
+            dBodySetPosition(link->body,x,y,z);
+
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
             dBodySetData(link->body, link.get());     // so that the link can be retreived from the body
@@ -435,26 +450,35 @@ private:
                     axis1 = -axis1;
                 }
 
+                //Joint anchors are specified here
+                KinBody::LinkPtr parent = (*itjoint)->GetHierarchyParentLink();
+                //Don't need an offset here since the anchors are global
+                dReal x,y,z;
+                x=anchor.x;
+                y=anchor.y;
+                z=anchor.z;
+                RAVELOG_VERBOSE("Joint %s anchor [%f,%f,%f]\n",(*itjoint)->GetName().c_str(),x,y,z);
+
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge:
-                    dJointSetHingeAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetHingeAnchor(joint,x,y,z);
                     dJointSetHingeAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
                 case KinBody::JointSlider:
                     dJointSetSliderAxis(joint,axis0.x,axis0.y,axis0.z);
                     break;
                 case KinBody::JointUniversal:
-                    dJointSetUniversalAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetUniversalAnchor(joint,x,y,z);
                     dJointSetUniversalAxis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetUniversalAxis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
                 case KinBody::JointHinge2:
-                    dJointSetHinge2Anchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetHinge2Anchor(joint,x,y,z);
                     dJointSetHinge2Axis1(joint,axis0.x,axis0.y,axis0.z);
                     dJointSetHinge2Axis2(joint,axis1.x,axis1.y,axis1.z);
                     break;
                 case KinBody::JointSpherical:
-                    dJointSetBallAnchor(joint,anchor.x,anchor.y,anchor.z);
+                    dJointSetBallAnchor(joint,x,y,z);
                     break;
                 default:
                     break;
@@ -573,7 +597,7 @@ private:
         return _ode->contactgroup;
     }
 
-    void SetSynchornizationCallback(const SynchornizeCallbackFn& synccallback) {
+    void SetSynchronizationCallback(const SynchronizeCallbackFn& synccallback) {
         _synccallback = synccallback;
     }
 
@@ -598,6 +622,7 @@ private:
 private:
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
+        //TODO: Get Centers of mass in addition to transforms here, update transform including this property
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
             boost::shared_ptr<boost::mutex::scoped_lock> lockode;
             if( block ) {
@@ -612,7 +637,17 @@ private:
                 RaveTransform<dReal> t = vtrans[i];
                 BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
                 dBodySetQuaternion(pinfo->vlinks[i]->body, &t.rot[0]);
-                dBodySetPosition(pinfo->vlinks[i]->body, t.trans.x, t.trans.y, t.trans.z);
+                //TODO: potentially slowing down sync here...
+                Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
+                string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
+                dReal x,y,z;
+                //Add center of mass offset to links copied from OpenRAVE environment
+                RaveVector<dReal> com_rot=t.rotate(com);
+                x=t.trans.x+com_rot[0];
+                y=t.trans.y+com_rot[1];
+                z=t.trans.z+com_rot[2];
+                RAVELOG_VERBOSE("Body %s position [%f,%f,%f]\n",name.c_str(),x,y,z);
+                dBodySetPosition(pinfo->vlinks[i]->body, x,y,z);
             }
 
             // update stamps also reflect enable links
@@ -641,7 +676,7 @@ private:
     boost::shared_ptr<ODEResources> _ode;
     std::string _userdatakey;
 
-    SynchornizeCallbackFn _synccallback;
+    SynchronizeCallbackFn _synccallback;
     bool _bUsingPhysics;
 };
 
