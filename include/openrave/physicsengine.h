@@ -105,10 +105,8 @@ public:
     /// \param pTorques - the torques added to the joint. Pointer because the joint dof can be greater than 1.
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// \param[in] link a constant pointer to a link
-    /// \param[out] force current force on the COM of the link
-    /// \param[out] torque current torque on the COM of the link
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \deprecated (13/03/25)
+    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque);
 
     /// Return forces and torques exerted by a joint wrt the joint anchor frame.
     /// \param[in] joint a constant pointer to a joint

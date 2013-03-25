@@ -115,12 +115,6 @@ public:
         return _vgravity;
     }
 
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-        force = Vector(0,0,0);
-        torque = Vector(0,0,0);
-        return true;
-    }
-
     virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque) {
         force = Vector(0,0,0);
         torque = Vector(0,0,0);

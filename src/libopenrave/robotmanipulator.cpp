@@ -800,14 +800,15 @@ bool RobotBase::Manipulator::IsGrabbing(KinBodyConstPtr pbody) const
     RobotBasePtr probot(__probot);
     KinBody::LinkPtr plink = probot->IsGrabbing(pbody);
     if( !!plink ) {
-        if((plink == __pEffector)||(plink == __pBase)) {
+        if( plink == __pEffector || plink == __pBase ) {
             return true;
         }
         int iattlink = __pEffector->GetIndex();
         FOREACHC(itlink, probot->GetLinks()) {
             int ilink = (*itlink)->GetIndex();
-            if( ilink == iattlink )
+            if( ilink == iattlink ) {
                 continue;
+            }
             // gripper needs to be affected by all joints
             bool bGripperLink = true;
             FOREACHC(itarmdof,__varmdofindices) {

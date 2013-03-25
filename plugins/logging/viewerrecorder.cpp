@@ -119,7 +119,7 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
         RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
-                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtim[=timestepmult]] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
+                        "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtime[=timestepmult]] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
         RegisterCommand("Stop",boost::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
                         "Stops recording and saves the file. Format::\n\n  Stop\n\n");
         RegisterCommand("GetCodecs",boost::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
@@ -207,6 +207,7 @@ protected:
                         if( type.size() > 14 && type[14] == '=' ) {
                             _fSimulationTimeMultiplier = boost::lexical_cast<dReal>(type.substr(15));
                         }
+                        RAVELOG_DEBUG(str(boost::format("controlling sim time when recording, timestep=%f")%_fSimulationTimeMultiplier));
                         _nUseSimulationTime = 2;
                     }
                     else if( type == "realtime" ) {
@@ -243,7 +244,12 @@ protected:
             RAVELOG_INFO("video filename: %s, %d x %d @ %f frames/sec\n",_filename.c_str(),_nVideoWidth,_nVideoHeight,_framerate);
             _StartVideo(_filename,_framerate,_nVideoWidth,_nVideoHeight,24,codecid);
             _starttime = 0;
-            _frametime = (uint64_t)(1000000.0f/_framerate);
+            if( _nUseSimulationTime == 2 ) {
+                _frametime = (uint64_t)(1000000.0f*_fSimulationTimeMultiplier/_framerate);
+            }
+            else {
+                _frametime = (uint64_t)(1000000.0f/_framerate);
+            }
             _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             _bStopRecord = false;

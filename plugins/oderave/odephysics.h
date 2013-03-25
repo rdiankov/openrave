@@ -210,7 +210,7 @@ The possible properties that can be set are: ";
         _globalfriction = 0.4;
         _globalerp = 0.01;
         _globalcfm = 1e-5;
-        _num_iterations = 20; 
+        _num_iterations = 20;
         //Default to openrave 0.6.6 behavior, but this really should default to
         //enable the friction pyramid model.
         _surface_mode = 0;
@@ -250,9 +250,9 @@ The possible properties that can be set are: ";
         }
         SetGravity(_gravity);
         RAVELOG_DEBUG(str(boost::format("ode params: erp=%e (%e), cfm=%e (%e), itrs=%e (%e)")
-                    %_globalerp%dWorldGetERP(_odespace->GetWorld())
-                    %_globalcfm%dWorldGetCFM(_odespace->GetWorld())
-                    %_num_iterations%dWorldGetQuickStepNumIterations (_odespace->GetWorld())));
+                          %_globalerp%dWorldGetERP(_odespace->GetWorld())
+                          %_globalcfm%dWorldGetCFM(_odespace->GetWorld())
+                          %_num_iterations%dWorldGetQuickStepNumIterations (_odespace->GetWorld())));
         dWorldSetERP(_odespace->GetWorld(),_globalerp);
         dWorldSetCFM(_odespace->GetWorld(),_globalcfm);
         dWorldSetQuickStepNumIterations (_odespace->GetWorld(), _num_iterations);
@@ -392,7 +392,7 @@ The possible properties that can be set are: ";
         }
         return true;
     }
-    
+
     virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
         _odespace->Synchronize(pjoint->GetParent());
         dJointID joint = _odespace->GetJoint(pjoint);
@@ -402,11 +402,11 @@ The possible properties that can be set are: ";
         //KinBody::LinkConstPtr link2 = pjoint->GetSecondAttached();
         Vector force1 = (Vector)feedback->f1;
         Vector torque1 = (Vector)feedback->t1;
-        
+
         //Find displacement from link1 COM to joint anchor
         Vector r1 = pjoint->GetAnchor()-link1->GetGlobalCOM();
-    
-        // Returned value is for link1, F/T for link2 are equal and opposite 
+
+        // Returned value is for link1, F/T for link2 are equal and opposite
         // Note that the joint force and torque is at the joint anchor point, as applied to link1
         force=force1;
         torque=torque1-r1.cross(force1);
@@ -414,66 +414,6 @@ The possible properties that can be set are: ";
         //RAVELOG_VERBOSE("At link1 center, F=<%f,%f,%f>, T=<%f,%f,%f>\n",feedback->f1[0],feedback->f1[1],feedback->f1[2],feedback->t1[0],feedback->t1[1],feedback->t1[2]);
 
         //RAVELOG_VERBOSE("At joint anchor, F=<%f,%f,%f>, T=<%f,%f,%f>\n",force[0],force[1],force[2],torque[0],torque[1],torque[1]);
-        return true;
-    }
-
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque) {
-        _odespace->Synchronize(plink->GetParent());
-        dBodyID body = _odespace->GetLinkBody(plink);
-        force = Vector(0,0,0);
-        torque = Vector(0,0,0);
-        if( body ) {
-            //Loop over all joints in the parent body
-            FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
-                //if this joint's parent or child body is the current body
-                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
-                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
-                if( bParentLink || bChildLink ) {
-                    Vector f;
-                    Vector T;
-                    GetJointForceTorque(*itjoint, f,T);
-
-                    if( bParentLink ) {
-                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
-                        force += f;
-                        torque += T;
-                        //Re-add moment due to equivalent load at body COM
-                        torque += r.cross(f);
-                    }
-                    else {
-                        //Equal but opposite sign
-                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
-                        force -= f;
-                        torque -= T; 
-                        torque -= r.cross(f);
-                    }
-                }
-            }
-            FOREACHC(itjoint,plink->GetParent()->GetPassiveJoints()) {
-                bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
-                bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
-                if( bParentLink || bChildLink ) {
-                    Vector f;
-                    Vector T;
-                    GetJointForceTorque(*itjoint, f,T);
-
-                    if( bParentLink ) {
-                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
-                        force += f;
-                        torque += T;
-                        //Re-add moment due to equivalent load at body COM
-                        torque += r.cross(f);
-                    }
-                    else {
-                        //Equal but opposite sign
-                        Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
-                        force -= f;
-                        torque -= T; 
-                        torque -= r.cross(f);
-                    }
-                }
-            }
-        }
         return true;
     }
 
@@ -589,20 +529,7 @@ The possible properties that can be set are: ";
                     continue;
                 }
                 const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
-
-                string name=(pinfo->vlinks[i]->_plink.lock())->GetName();
-                Vector trans(ptrans[0],ptrans[1],ptrans[2]);
-                //Crude way to rotate COM offset (probably slow)
-                Transform t=Transform(vrot,trans);
-                Vector com=(pinfo->vlinks[i]->_plink.lock())->GetCOMOffset();
-                RaveVector<dReal> com_rot=t.rotate(com);
-                dReal x,y,z;
-                x=t.trans.x-com_rot[0];
-                y=t.trans.y-com_rot[1];
-                z=t.trans.z-com_rot[2];
-                RAVELOG_VERBOSE("Body %s position [%f,%f,%f]\n",name.c_str(),x,y,z);
-                
-                vtrans.at(i) = Transform(vrot,Vector(x,y,z));
+                vtrans.at(i) = Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])) * pinfo->vlinks[i]->tlinkmassinv;
             }
             (*itbody)->SetLinkTransformations(vtrans,pinfo->_vdofbranches);
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
@@ -750,7 +677,7 @@ private:
     Vector _gravity;
     int _options;
     dReal _globalfriction, _globalcfm, _globalerp;
-    
+
     /**
      * _surface_mode stores global surface settings in dSurfaceParameters.
      * See the ODE documentation at:

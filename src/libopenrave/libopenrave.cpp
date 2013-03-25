@@ -1660,6 +1660,62 @@ std::string CollisionReport::__str__() const
     return s.str();
 }
 
+bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
+{
+    force = Vector(0,0,0);
+    torque = Vector(0,0,0);
+    //Loop over all joints in the parent body
+    FOREACHC(itjoint,plink->GetParent()->GetJoints()) {
+        //if this joint's parent or child body is the current body
+        bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+        bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+        if( bParentLink || bChildLink ) {
+            Vector f;
+            Vector T;
+            GetJointForceTorque(*itjoint, f,T);
+            if( bParentLink ) {
+                Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                force += f;
+                torque += T;
+                //Re-add moment due to equivalent load at body COM
+                torque += r.cross(f);
+            }
+            else {
+                //Equal but opposite sign
+                Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                force -= f;
+                torque -= T;
+                torque -= r.cross(f);
+            }
+        }
+    }
+    FOREACHC(itjoint,plink->GetParent()->GetPassiveJoints()) {
+        bool bParentLink=(*itjoint)->GetHierarchyParentLink() == plink;
+        bool bChildLink=(*itjoint)->GetHierarchyChildLink() == plink;
+        if( bParentLink || bChildLink ) {
+            Vector f;
+            Vector T;
+            GetJointForceTorque(*itjoint, f,T);
+
+            if( bParentLink ) {
+                Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                force += f;
+                torque += T;
+                //Re-add moment due to equivalent load at body COM
+                torque += r.cross(f);
+            }
+            else {
+                //Equal but opposite sign
+                Vector r = (*itjoint)->GetAnchor()-plink->GetGlobalCOM();
+                force -= f;
+                torque -= T;
+                torque -= r.cross(f);
+            }
+        }
+    }
+    return true;
+}
+
 void TriMesh::ApplyTransform(const Transform& t)
 {
     FOREACH(it, vertices) {
