@@ -149,7 +149,7 @@ else:
     from numpy import array
 
 from ..openravepy_ext import openrave_exception, RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody
 from . import DatabaseGenerator
 from ..misc import relpath, TSP
 import time,platform,shutil,sys
@@ -362,9 +362,11 @@ class InverseKinematicsModel(DatabaseGenerator):
                     log.warn('cannot set increment for joint type %s'%joint.GetType())
             return freeinc
 
-    def GetDefaultIndices(self):
+    def GetDefaultIndices(self,avoidPrismaticAsFree=False):
         """Returns a default set of free indices if the robot has more joints than required by the IK.
         In the futrue, this function will contain heuristics in order to select the best indices candidates.
+        
+        :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
         """
         if self.iktype is None:
             raise ValueError('ik type is not set')
@@ -383,10 +385,12 @@ class InverseKinematicsModel(DatabaseGenerator):
             robot=self.manip.GetRobot()
             jointanchors = []
             jointaxes = []
+            jointtypes = []
             for i,index in enumerate(self.manip.GetArmIndices()):
                 joint=robot.GetJointFromDOFIndex(index)
                 jointanchors.append(joint.GetAnchor())
                 jointaxes.append(joint.GetAxis(index-joint.GetDOFIndex()))
+                jointtypes.append(joint.GetType())
             intersectingaxes = eye(N)
             for i in range(N):
                 for j in range(i+1,N):
@@ -401,19 +405,21 @@ class InverseKinematicsModel(DatabaseGenerator):
                         # axes are parallel
                         if sum(cross(jointaxes[i],diff)**2) <= 1e-10:
                             intersectingaxes[i,j] = intersectingaxes[j,i] = 1
+            # adjacent intersecting revolute joints
             intersecting3axes = [0]*N
             num3intersecting = 0
             for i in range(1,N-1):
-                if intersectingaxes[i-1,i] and intersectingaxes[i,i+1] and intersectingaxes[i-1,i+1]:
-                    # have to check if they intersect at a common point
-                    intersection = jointanchors[i] + jointaxes[i] * dot(jointaxes[i], jointanchors[i-1]-jointanchors[i])
-                    distfromintersection = sum(cross(jointaxes[i+1],intersection - jointanchors[i+1])**2)
-                    if distfromintersection < 1e-10:
-                        intersecting3axes[i-1] |= 1 << num3intersecting
-                        intersecting3axes[i] |= 1 << num3intersecting
-                        intersecting3axes[i+1] |= 1 << num3intersecting
-                        log.info('found 3-intersection centered on index %d', remainingindices[i])
-                        num3intersecting += 1
+                if jointtypes[i-1] == KinBody.JointType.Revolute and jointtypes[i] == KinBody.JointType.Revolute and jointtypes[i+1] == KinBody.JointType.Revolute:
+                    if intersectingaxes[i-1,i] and intersectingaxes[i,i+1] and intersectingaxes[i-1,i+1]:
+                        # have to check if they intersect at a common point
+                        intersection = jointanchors[i] + jointaxes[i] * dot(jointaxes[i], jointanchors[i-1]-jointanchors[i])
+                        distfromintersection = sum(cross(jointaxes[i+1],intersection - jointanchors[i+1])**2)
+                        if distfromintersection < 1e-10:
+                            intersecting3axes[i-1] |= 1 << num3intersecting
+                            intersecting3axes[i] |= 1 << num3intersecting
+                            intersecting3axes[i+1] |= 1 << num3intersecting
+                            log.info('found 3-intersection centered on index %d', remainingindices[i])
+                            num3intersecting += 1
             for i in range(N - dofexpected):
                 # by default always choose first
                 indextopop = 0
@@ -440,28 +446,39 @@ class InverseKinematicsModel(DatabaseGenerator):
                     else:
                         # already complicated enough, so take from the bottom in order to avoid variables coming inside the kinematics
                         indextopop = 0
+                        if avoidPrismaticAsFree and jointtypes[indextopop] == KinBody.JointType.Prismatic:
+                            # it's either one or the other
+                            indextopop = len(remainingindices)-1
                 elif self.iktype == IkParameterizationType.Lookat3D:
                     # usually head (rotation joints) are at the end
                     #freeindices = remainingindices[len(remainingindices)-2:]
                     #remainingindices=remainingindices[:-2]
                     #len(remainingindices)
                     indextopop = len(remainingindices)-1
+                    #avoidPrismaticAsFree?
                 elif self.iktype == IkParameterizationType.TranslationDirection5D:
                     # check if ray aligns with furthest axis
                     dirfromanchor = self.manip.GetTransform()[0:3,3]-jointanchors[-1]
                     if abs(dot(jointaxes[-1],dot(self.manip.GetTransform()[0:3,0:3],self.manip.GetLocalToolDirection()))) > 0.99999 and abs(dot(jointaxes[-1],dirfromanchor)) > 0.99999*linalg.norm(dirfromanchor):
-                        # have to take the last index since last axis aligns
+                        # have to take the last index since last axis aligns and is useless anyway
                         indextopop = len(remainingindices)-1
                     else:
-                        indextopop = 0
+                        for indextopop in range(len(remainingindices)):
+                            if not avoidPrismaticAsFree or jointtypes[indextopop] != KinBody.JointType.Prismatic:
+                                # done
+                                break
                 else:
                     # self.iktype == IkParameterizationType.Translation3D or self.iktype == IkParameterizationType.TranslationLocalGlobal6D
                     # if not 6D, then don't need to worry about intersecting joints
                     # so remove the least important joints
-                    indextopop = len(remainingindices)-1
+                    for indextopop in range(len(remainingindices)-1,-1,-1):
+                        if not avoidPrismaticAsFree or jointtypes[indextopop] != KinBody.JointType.Prismatic:
+                            # done
+                            break
                 freeindices.append(remainingindices.pop(indextopop))
                 jointanchors.pop(indextopop)
                 jointaxes.pop(indextopop)
+                jointtypes.pop(indextopop)
                 # have to clear any intersecting axes
                 mask = intersecting3axes.pop(indextopop)
                 for j in range(len(intersecting3axes)):
@@ -615,7 +632,10 @@ class InverseKinematicsModel(DatabaseGenerator):
         print 'getIndicesFromJointNames',freeindices,freejoints
         return freeindices
 
-    def generate(self,iktype=None,freejoints=None,freeinc=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,ipython=False):
+    def generate(self,iktype=None,freejoints=None,freeinc=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,avoidPrismaticAsFree=False,ipython=False):
+        """
+        :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
+        """
         self.iksolver = None
         if iktype is not None:
             self.iktype = iktype
@@ -756,7 +776,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             if freejoints is not None:
                 self.freeindices = self.getIndicesFromJointNames(freejoints)
             else:
-                self.solveindices,self.freeindices = self.GetDefaultIndices()
+                self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
             raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
