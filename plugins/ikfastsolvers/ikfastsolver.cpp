@@ -179,13 +179,23 @@ public:
         FOREACH(itfree, _vfreeparams) {
             int index = pmanip->GetArmIndices().at(*itfree);
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(index);
-            _vfreerevolute.push_back(pjoint->IsRevolute(index-pjoint->GetDOFIndex()));
+            if( pjoint->IsRevolute(index-pjoint->GetDOFIndex()) ) {
+                _vfreerevolute.push_back(pjoint->IsCircular(index-pjoint->GetDOFIndex()) ? 2 : 1);
+            }
+            else {
+                _vfreerevolute.push_back(0);
+            }
         }
 
         _vjointrevolute.resize(0);
         FOREACHC(it,pmanip->GetArmIndices()) {
             KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(*it);
-            _vjointrevolute.push_back(pjoint->IsRevolute(*it-pjoint->GetDOFIndex()));
+            if( pjoint->IsRevolute(*it-pjoint->GetDOFIndex()) ) {
+                _vjointrevolute.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()) ? 2 : 1);
+            }
+            else {
+                _vjointrevolute.push_back(0);
+            }
         }
 
         if( _vFreeInc.size() != _vfreeparams.size() ) {
@@ -566,6 +576,13 @@ private:
         // start searching for phi close to q0, as soon as a solution is found for the curphi, return it
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
+
+        if( _vfreerevolute.at(freeindex) == 2 ) {
+            startphi = utils::NormalizeCircularAngle(startphi, -PI, PI);
+            lowerphi = startphi-PI;
+            upperphi = startphi+PI;
+        }
+
         int iter = 0;
         dReal fFreeInc = vFreeInc.at(freeindex);
         int allres = IKRA_Reject;
@@ -1153,7 +1170,15 @@ private:
     bool _CheckJointAngles(std::vector<dReal>& vravesol) const
     {
         for(int j = 0; j < (int)_qlower.size(); ++j) {
-            if( _vjointrevolute.at(j) ) {
+            if( _vjointrevolute.at(j) == 2 ) {
+                while( vravesol.at(j) > PI ) {
+                    vravesol[j] -= 2*PI;
+                }
+                while( vravesol[j] < -PI ) {
+                    vravesol[j] += 2*PI;
+                }
+            }
+            else if( _vjointrevolute.at(j) == 1 ) {
                 while( vravesol.at(j) > _qupper[j] ) {
                     vravesol[j] -= 2*PI;
                 }
@@ -1306,7 +1331,7 @@ private:
 
     RobotBase::ManipulatorWeakPtr _pmanip;
     std::vector<int> _vfreeparams;
-    std::vector<uint8_t> _vfreerevolute, _vjointrevolute;
+    std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;
     UserDataPtr _cblimits;
     std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;

@@ -1012,6 +1012,9 @@ public:
         if( vvalues.size() > 0 ) {
             _probot->SetActiveDOFValues(vvalues,checklimits);
         }
+        else {
+            OPENRAVE_ASSERT_OP_FORMAT((int)vvalues.size(),>=,_probot->GetActiveDOF(), "not enough values %d<%d",vvalues.size()%_probot->GetActiveDOF(),ORE_InvalidArguments);
+        }
     }
     object GetActiveDOFValues() const
     {
