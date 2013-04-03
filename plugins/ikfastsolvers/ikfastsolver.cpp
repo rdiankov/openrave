@@ -577,7 +577,7 @@ private:
         dReal startphi = q0.size() == _qlower.size() ? q0.at(vfreeparams.at(freeindex)) : 0;
         dReal upperphi = _qupper.at(vfreeparams.at(freeindex)), lowerphi = _qlower.at(vfreeparams.at(freeindex)), deltaphi = 0;
 
-        if( _vfreerevolute.at(freeindex) == 2 ) {
+        if( _vjointrevolute.at(vfreeparams.at(freeindex)) == 2 ) {
             startphi = utils::NormalizeCircularAngle(startphi, -PI, PI);
             lowerphi = startphi-PI;
             upperphi = startphi+PI;
