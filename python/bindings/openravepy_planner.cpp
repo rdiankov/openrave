@@ -78,6 +78,10 @@ public:
             _paramswrite->SetConfigurationSpecification(openravepy::GetEnvironment(pyenv), openravepy::GetConfigurationSpecification(pyspec));
         }
 
+        object GetConfigurationSpecification() const {
+            return object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
+        }
+
         void SetExtraParameters(const std::string& s) {
             _paramswrite->_sExtraParameters = s;
         }
@@ -90,6 +94,13 @@ public:
         void SetInitialConfig(object o)
         {
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
+        }
+
+        int CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval)
+        {
+            const std::vector<dReal> q0, q1, dq0, dq1;
+            PlannerBase::ConfigurationVelocityListPtr configurations;
+            return _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval);
         }
 
         string __repr__() {
@@ -218,6 +229,14 @@ PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
     return PlannerBase::PlannerParametersPtr();
 }
 
+object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params)
+{
+    if( !params ) {
+        return object();
+    }
+    return object(PyPlannerBase::PyPlannerParametersPtr(new PyPlannerBase::PyPlannerParameters(params)));
+}
+
 PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name)
 {
     PlannerBasePtr p = OpenRAVE::RaveCreatePlanner(GetEnvironment(pyenv), name);
@@ -263,9 +282,11 @@ void init_openravepy_planner()
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(args("parameters")))
         .def("SetRobotActiveJoints",&PyPlannerBase::PyPlannerParameters::SetRobotActiveJoints, args("robot"), DOXY_FN(PlannerBase::PlannerParameters, SetRobotActiveJoints))
         .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, args("env","spec"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
+        .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
+        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,args("q0","q1","dq0","dq1","timeelapsed","interval"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)

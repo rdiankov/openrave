@@ -218,25 +218,27 @@ private:
          */
         inline int CheckPathAllConstraints(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr configurations = PlannerBase::ConfigurationVelocityListPtr()) const
         {
+            int nsuccess=1;
             if( !!_checkpathconstraintsfn ) {
                 PlannerBase::ConfigurationListPtr tempconfigurations;
                 if( !!configurations ) {
                     tempconfigurations.reset(new PlannerBase::ConfigurationList());
                 }
-                int nsuccess = static_cast<int>(_checkpathconstraintsfn(q0,q1,interval, tempconfigurations));
+                nsuccess = static_cast<int>(_checkpathconstraintsfn(q0,q1,interval, tempconfigurations));
                 if( !!configurations ) {
                     std::vector<dReal> velocity;
                     for(PlannerBase::ConfigurationList::iterator it = tempconfigurations->begin(); it != tempconfigurations->end(); ++it) {
                         configurations->push_back(std::make_pair(*it, velocity));
                     }
                 }
-                return nsuccess;
+                if( nsuccess <= 0 ) {
+                    return nsuccess;
+                }
             }
             if( !!_checkpathvelocityconstraintsfn ) {
-                int nsuccess = _checkpathvelocityconstraintsfn(q0,q1,dq0,dq1,timeelapsed, interval,configurations);
-                return nsuccess;
+                nsuccess = _checkpathvelocityconstraintsfn(q0,q1,dq0,dq1,timeelapsed, interval,configurations);
             }
-            return true;
+            return nsuccess;
         }
 
         inline bool HasPathConstraints() const
