@@ -1305,6 +1305,15 @@ public:
     }
 };
 
+RobotBasePtr GetRobot(object o)
+{
+    extract<PyRobotBasePtr> pyrobot(o);
+    if( pyrobot.check() ) {
+        return GetRobot((PyRobotBasePtr)pyrobot);
+    }
+    return RobotBasePtr();
+}
+
 RobotBasePtr GetRobot(PyRobotBasePtr pyrobot)
 {
     return !pyrobot ? RobotBasePtr() : pyrobot->GetRobot();
