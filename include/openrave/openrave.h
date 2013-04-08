@@ -1892,7 +1892,7 @@ public:
             Vector voldtrans(v.x,v.y,0);
             Vector vnewtrans = t*voldtrans;
             dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
-            SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+            SetTranslationXYOrientation3D(Vector(vnewtrans.x,vnewtrans.y,v.z+zangle));
             break;
         }
         case IKP_TranslationXYOrientation3DVelocity: {
@@ -2052,7 +2052,7 @@ public:
             Vector q = quatFromAxisAngle(Vector(0,0,1),v.z);
             Vector vnewtrans = voldtrans + quatRotate(q,t.trans);
             dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
-            SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+            SetTranslationXYOrientation3D(Vector(vnewtrans.x,vnewtrans.y,v.z+zangle));
             break;
         }
 //        case IKP_TranslationXYOrientation3DVelocity: {
@@ -2280,7 +2280,7 @@ inline IkParameterization operator* (const Transform &t, const IkParameterizatio
         Vector voldtrans(v.x,v.y,0);
         Vector vnewtrans = t*voldtrans;
         dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
-        local.SetTranslationXYOrientation3D(Vector(vnewtrans.y,vnewtrans.y,v.z+zangle));
+        local.SetTranslationXYOrientation3D(Vector(vnewtrans.x,vnewtrans.y,v.z+zangle));
         break;
     }
     case IKP_TranslationLocalGlobal6D:
