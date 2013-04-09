@@ -31,7 +31,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
     std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 1e5);
+    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
     std::fill(_vweights.begin(), _vweights.end(), 1);
     std::fill(_voffsets.begin(), _voffsets.end(), 0);
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);

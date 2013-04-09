@@ -868,11 +868,11 @@ public:
         return _pCurrentChecker->CheckCollision(ray,report);
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckSelfCollision(pbody,report);
+        return _pCurrentChecker->CheckStandaloneSelfCollision(pbody,report);
     }
 
     virtual void StepSimulation(dReal fTimeStep)

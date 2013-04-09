@@ -2943,9 +2943,16 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     }
 }
 
-bool KinBody::CheckSelfCollision(CollisionReportPtr report) const
+bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
-    if( GetEnv()->CheckSelfCollision(shared_kinbody_const(), report) ) {
+    if( !collisionchecker ) {
+        collisionchecker = GetEnv()->GetCollisionChecker();
+        if( !collisionchecker ) {
+            // no checker set
+            return false;
+        }
+    }
+    if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
             RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
         }

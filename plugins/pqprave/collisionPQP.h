@@ -334,6 +334,7 @@ public:
         _pactiverobot.reset();
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
+
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
         if(!!report ) {
@@ -342,6 +343,7 @@ public:
         _SetActiveBody(pbody);
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
+
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
     {
         if(!!report ) {
@@ -351,7 +353,7 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 ) {
             return false;
@@ -375,7 +377,7 @@ public:
         return false;
     }
 
-    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         KinBodyPtr pbody = plink->GetParent();
         if( pbody->GetLinks().size() <= 1 ) {
@@ -384,16 +386,19 @@ public:
         if(!!report ) {
             report->Reset(_options);
         }
-        _InitKinBody(pbody);
+        _SetActiveBody(plink->GetParent());
         int adjacentoptions = KinBody::AO_Enabled;
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
         const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( plink == plink1 || plink == plink2 ) {
-                if( CheckCollision(plink1, plink2, report) ) {
+                GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
+                GetPQPTransformFromTransform(plink2->GetTransform(),R2,T2);
+                if( DoPQP(plink1,R1,T1,plink2,R2,T2,report) ) {
                     RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
                     return true;
                 }
@@ -563,8 +568,9 @@ private:
             if(!report) {
                 PQP_CollideResult _colres;
                 PQP_Collide(&_colres,R1,T1,m1.get(),R2,T2,m2.get());
-                if(_colres.NumPairs() > 0)
+                if(_colres.NumPairs() > 0) {
                     bcollision = true;
+                }
             }
             else {
                 PQP_Collide(&colres,R1,T1,m1.get(),R2,T2,m2.get());
@@ -573,6 +579,7 @@ private:
                 if(colres.NumPairs() > 0) {
                     report->plink1 = link1;
                     report->plink2 = link2;
+                    report->minDistance = 0;
                     bcollision = true;
                 }
 
@@ -636,15 +643,19 @@ private:
         // tolerance
         if( _benabletol) {
             PQP_Tolerance(&tolres,R1,T1,m1.get(),R2,T2,m2.get(),_tolerance);
-            if(!!report)
-                report->numWithinTol +=tolres.CloserThanTolerance();
+            if(!!report) {
+                report->numWithinTol += tolres.CloserThanTolerance();
+            }
         }
-        if(_benablecol)
+        if(_benablecol) {
             return bcollision;
-        else if(_benabletol)
+        }
+        else if(_benabletol) {
             return tolres.CloserThanTolerance()>0;
-        else
+        }
+        else {
             return false;
+        }
     }
 
     int _options;

@@ -656,7 +656,7 @@ public:
         return cb._bOneCollision;
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
@@ -705,7 +705,7 @@ public:
         return false;
     }
 
-    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("ode doesn't support CO_Distance\n");

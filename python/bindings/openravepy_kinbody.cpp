@@ -1920,12 +1920,9 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
     }
 }
 
-bool PyKinBody::CheckSelfCollision() {
-    return _pbody->CheckSelfCollision();
-}
-bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport)
+bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport, PyCollisionCheckerBasePtr pycollisionchecker)
 {
-    bool bCollision = _pbody->CheckSelfCollision(openravepy::GetCollisionReport(pReport));
+    bool bCollision = _pbody->CheckSelfCollision(openravepy::GetCollisionReport(pReport), openravepy::GetCollisionChecker(pycollisionchecker));
     openravepy::UpdateCollisionReport(pReport,GetEnv());
     return bCollision;
 }
@@ -2319,6 +2316,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, Create
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckSelfCollision_overloads, CheckSelfCollision, 0, 2)
 
 void init_openravepy_kinbody()
 {
@@ -2340,8 +2338,6 @@ void init_openravepy_kinbody()
                           .value("Trimesh",GT_TriMesh)
     ;
     {
-        bool (PyKinBody::*pkinbodyself)() = &PyKinBody::CheckSelfCollision;
-        bool (PyKinBody::*pkinbodyselfr)(PyCollisionReportPtr) = &PyKinBody::CheckSelfCollision;
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues3)(object,object,uint32_t) = &PyKinBody::SetDOFValues;
@@ -2458,8 +2454,7 @@ void init_openravepy_kinbody()
                         .def("ComputeHessianTranslation",&PyKinBody::ComputeHessianTranslation,ComputeHessianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeHessianTranslation)))
                         .def("ComputeHessianAxisAngle",&PyKinBody::ComputeHessianAxisAngle,ComputeHessianAxisAngle_overloads(args("linkindex","indices"), DOXY_FN(KinBody,ComputeHessianAxisAngle)))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
-                        .def("CheckSelfCollision",pkinbodyself, DOXY_FN(KinBody,CheckSelfCollision))
-                        .def("CheckSelfCollision",pkinbodyselfr,args("report"), DOXY_FN(KinBody,CheckSelfCollision))
+                        .def("CheckSelfCollision",&PyKinBody::CheckSelfCollision, CheckSelfCollision_overloads(args("report","collisionchecker"), DOXY_FN(KinBody,CheckSelfCollision)))
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                         .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))

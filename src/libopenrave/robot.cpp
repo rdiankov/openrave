@@ -1639,12 +1639,18 @@ void RobotBase::RemoveManipulator(ManipulatorPtr manip)
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
-bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
+bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
-    if( KinBody::CheckSelfCollision(report) ) {
+    if( KinBody::CheckSelfCollision(report, collisionchecker) ) {
         return true;
     }
-    CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
+    if( !collisionchecker ) {
+        collisionchecker = GetEnv()->GetCollisionChecker();
+        if( !collisionchecker ) {
+            // no checker set
+            return false;
+        }
+    }
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     bool bCollision = false;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
@@ -1656,7 +1662,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
         FOREACHC(itrobotlink,pgrabbed->_listNonCollidingLinks) {
             // have to use link/link collision since link/body checks attached bodies
             FOREACHC(itbodylink,pbody->GetLinks()) {
-                if( pchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),report) ) {
+                if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),report) ) {
                     bCollision = true;
                     break;
                 }
@@ -1669,7 +1675,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
             break;
         }
 
-        if( pbody->CheckSelfCollision(report) ) {
+        if( pbody->CheckSelfCollision(report, collisionchecker) ) {
             bCollision = true;
             break;
         }
@@ -1688,7 +1694,7 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report) const
                     if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink2) != pgrabbed->_listNonCollidingLinks.end() ) {
                         FOREACHC(itlink, pbody->GetLinks()) {
                             if( find(pgrabbed2->_listNonCollidingLinks.begin(),pgrabbed2->_listNonCollidingLinks.end(),*itlink) != pgrabbed2->_listNonCollidingLinks.end() ) {
-                                if( pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
+                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
                                     bCollision = true;
                                     break;
                                 }
@@ -1784,7 +1790,7 @@ bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktra
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
-        if( pchecker->CheckSelfCollision(LinkConstPtr(plink),report) ) {
+        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
             return true;
         }
     }

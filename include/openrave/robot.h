@@ -830,11 +830,13 @@ private:
      */
     virtual void SimulationStep(dReal fElapsedTime);
 
-    /** \brief Check if body is self colliding. Links that are joined together are ignored.
+    /** \brief Check if body is self colliding with its links or its grabbed bodies.
 
+        Links that are joined together are ignored.
+        Collisions between grabbed bodies are also considered as self-collisions for this body.
         \param report [optional] collision report
      */
-    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
     /** \brief checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
 

@@ -174,13 +174,30 @@ public:
 
     /// \brief Checks self collision only with the links of the passed in body.
     ///
-    /// Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    /// Only checks KinBody::GetNonAdjacentLinks(), Links that are joined together are ignored.
+    /// \param[in] pbody The body to check self-collision for
+    /// \param[out] report [optional] collision report to be filled with data about the collision.
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief Checks self collision of the link with the rest of the links with its parent
     ///
-    /// Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    /// Only checks KinBody::GetNonAdjacentLinks(), Links that are joined together are ignored.
+    /// \param[out] report [optional] collision report to be filled with data about the collision.
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+    /// \deprecated (13/04/09)
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
+    {
+        //RAVELOG_WARN("CollisionCheckerBase::CheckSelfCollision has been deprecated, please use CollisionCheckerBase::CheckStandaloneSelfCollision\n");
+        return CheckStandaloneSelfCollision(pbody,report);
+    }
+
+    /// \deprecated (13/04/09)
+    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
+    {
+        //RAVELOG_WARN("CollisionCheckerBase::CheckSelfCollision has been deprecated, please use CollisionCheckerBase::CheckStandaloneSelfCollision\n");
+        return CheckStandaloneSelfCollision(plink,report);
+    }
 
 protected:
     /// \deprecated (12/12/11)

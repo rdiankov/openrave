@@ -87,10 +87,10 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckSelfCollision(KinBody::LinkConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr pbody, CollisionReportPtr) {
         return false;
     }
 

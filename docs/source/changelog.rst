@@ -40,6 +40,8 @@ Core
 
 * Added :meth:`.Robot.Manipulator.CheckEndEffectorSelfCollision` and :meth:`.Robot.CheckLinkSelfCollision` for self-collision checking.
 
+* Added **collisionchecker** parameter to :meth:`.KinBody.CheckSelfCollision` to allow collision checkers not added to the environment to run the self-collision process with grabbed bodies.
+
 C Bindings
 ----------
 

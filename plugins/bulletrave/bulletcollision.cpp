@@ -766,7 +766,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
             //RAVELOG_WARN(str(boost::format("body %s not valid\n")%pbody->GetName()));
@@ -784,10 +784,10 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
         // dummy
-        return CheckSelfCollision(plink->GetParent(), report);
+        return CheckStandaloneSelfCollision(plink->GetParent(), report);
     }
 
     virtual void SetTolerance(dReal tolerance) {

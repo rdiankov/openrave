@@ -1073,7 +1073,7 @@ Attributes
   :delim: |
   :widths: 15, 15, 70
 
-  type | **xs:token** | Required. The type of the actuator. Possible types are: **motor**
+  type | **xs:token** | Required. The type of the actuator. Possible types are: **electric_motor**
   id | **xs:ID** | Required. A text string containing the unique identifier of the <actuator> element. This value must be unique within the instance document.
 
 Child Elements
@@ -1223,11 +1223,8 @@ Extra parameters for each axis specified through the **<newparam>** element type
   planning_weight | **xs:float** | For each joint, a measure of how much a joint's movement impacts the robot (base joints have more impact than end effector joints). this information should be used by all planners to evaluate importance of joints.
   discretization_resolution | **xs:float** | The maximum step size a joint range can be safely discretized in order to guarantee that any point on the kinematic body will not move beyond a certain specified range. For example, resolutions for each joint can be set in order to guarnatee to point moves more than 5mm when the joints move.
 
-COLLADA Usage
-=============
-
-COLLADA Format Notes
-~~~~~~~~~~~~~~~~~~~~
+Notes/Usage
+===========
 
 * **articulated_system** tag is used for saving both Robot and KinBody objects
   *  if child is a **motion** tag, get accelerations and velocity limits from it
@@ -1279,7 +1276,7 @@ Although COLLADA is very flexible in terms of referencing libraries of models, i
 
 * robot joint values
 * robot position
-* what bodies the robot is grabbing (:ref:`dynamic_rigid_constraints`)
+* what bodies the robot is grabbing (:ref:`collada_dynamic_rigid_constraints`)
 * joint limits
 
 For most cases, the **<kinematics_scene>** defined in the separate robot file can be left intact and overrides can happen inside **<instance_kinematics_scene>**. For example, a minimal file that references a robot and sets joint0's value to 1.5 is:
@@ -1371,10 +1368,10 @@ One thing that separates a base description of the robot from the real robot tha
 
 All these parameters will change per robot, and it won't be a good idea asking every person to go and modify their one robot file. Instead there should have a different calibration file that the main collada file always references. It should be setup in such a way that the calibration file becomes optional.
 
-Controllers
-~~~~~~~~~~~
+Trajectories
+~~~~~~~~~~~~
 
-There is a **<animation>** element for containing trajectories and their targets. OpenRAVE will have to output animation data in this formation.
+Store the openrave XML trajectories, or possibly store as the COLLADA native **<animation>** elements.
 
 Contributors
 ============

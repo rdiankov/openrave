@@ -119,7 +119,14 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \see CollisionCheckerBase::CheckSelfCollision
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+    /// \deprecated (13/04/09)
+    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
+    {
+        //RAVELOG_WARN("CollisionCheckerBase::CheckSelfCollision has been deprecated, please use CollisionCheckerBase::CheckStandaloneSelfCollision\n");
+        return CheckStandaloneSelfCollision(pbody, report);
+    }
 
     typedef boost::function<CollisionAction(CollisionReportPtr,bool)> CollisionCallbackFn;
 

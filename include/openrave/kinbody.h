@@ -1702,7 +1702,9 @@ private:
     virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
 
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
-    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+    ///
+    /// \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
+    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr body) const;

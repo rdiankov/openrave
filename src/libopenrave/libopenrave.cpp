@@ -1643,6 +1643,8 @@ void CollisionReport::Reset(int coloptions)
     numWithinTol = 0;
     contacts.resize(0);
     vLinkColliding.resize(0);
+    plink1.reset();
+    plink2.reset();
 }
 
 std::string CollisionReport::__str__() const
