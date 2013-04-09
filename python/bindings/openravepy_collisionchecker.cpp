@@ -541,6 +541,24 @@ public:
         openravepy::UpdateCollisionReport(pReport,_pyenv);
         return bCollision;
     }
+
+    virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport)
+    {
+        KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
+        KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
+        bool bCollision;
+        if( !!plink1 ) {
+            bCollision = _pCollisionChecker->CheckSelfCollision(plink1, openravepy::GetCollisionReport(pReport));
+        }
+        else if( !!pbody1 ) {
+            bCollision = _pCollisionChecker->CheckSelfCollision(pbody1, openravepy::GetCollisionReport(pReport));
+        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT0("invalid parameters to CheckSelfCollision", ORE_InvalidArguments);
+        }
+        openravepy::UpdateCollisionReport(pReport,_pyenv);
+        return bCollision;
+    }
 };
 
 CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr pyCollisionChecker)
@@ -679,6 +697,7 @@ void init_openravepy_collisionchecker()
     .def("CheckCollision",pcolybr,args("ray","body","report"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
     .def("CheckCollision",pcoly,args("ray"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; CollisionReportPtr"))
     .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(CollisionCheckerBase,CheckCollision "const RAY; CollisionReportPtr"))
+    .def("CheckSelfCollision",&PyCollisionCheckerBase::CheckSelfCollision,args("linkbody", "report"), DOXY_FN(CollisionCheckerBase,CheckSelfCollision "KinBodyConstPtr, CollisionReportPtr"))
     .def("CheckCollisionRays",&PyCollisionCheckerBase::CheckCollisionRays,
          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
