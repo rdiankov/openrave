@@ -60,8 +60,8 @@ public:
         Prop_LinkEnable=0x800,     ///< enable property of link changed
         Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
         Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
-        Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters() and Joint::SetIntParameters() are called
-        Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters() and Link::SetIntParameters() are called
+        Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters(), Joint::SetIntParameters(), and Joint::SetStringParameters() are called
+        Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters(), Link::SetIntParameters(), Link::SetStringParameters() are called
 
         // robot only
         // 0x00010000
@@ -167,6 +167,7 @@ public:
         Vector _vinertiamoments;
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
         std::vector<std::string> _vForcedAdjacentLinks;
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -527,6 +528,16 @@ protected:
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
 
+        /// \brief return a map of custom float parameters
+        inline const std::map<std::string, std::string >& GetStringParameters() const {
+            return _info._mapStringParameters;
+        }
+
+        /// \brief set custom string parameters
+        ///
+        /// \param value if empty, then removes the parameter
+        virtual void SetStringParameters(const std::string& key, const std::string& value);
+
         /// \brief Updates several fields in \ref _info depending on the current state of the link
         virtual void UpdateInfo();
 
@@ -692,6 +703,7 @@ public:
 
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
 
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
@@ -1018,6 +1030,16 @@ public:
         ///
         /// \param parameters if empty, then removes the parameter
         virtual void SetIntParameters(const std::string& key, const std::vector<int>& parameters);
+
+        /// \brief return a map of custom string parameters
+        inline const std::map<std::string, std::string >& GetStringParameters() const {
+            return _info._mapStringParameters;
+        }
+
+        /// \brief set custom string parameters
+        ///
+        /// \param parameters if empty, then removes the parameter
+        virtual void SetStringParameters(const std::string& key, const std::string& value);
 
         /// \brief Updates several fields in \ref _info depending on the current state of the joint.
         virtual void UpdateInfo();

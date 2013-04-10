@@ -398,6 +398,17 @@ void KinBody::Link::SetIntParameters(const std::string& key, const std::vector<i
     GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
 }
 
+void KinBody::Link::SetStringParameters(const std::string& key, const std::string& value)
+{
+    if( value.size() > 0 ) {
+        _info._mapStringParameters[key] = value;
+    }
+    else {
+        _info._mapStringParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+}
+
 bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
 {
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();

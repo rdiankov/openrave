@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1307,7 +1307,7 @@ private:
             // write the float/int parameters for all links
             for(size_t ilink = 0; ilink < vlinksids.size(); ++ilink) {
                 KinBody::LinkPtr plink = pbody->GetLinks().at(ilink);
-                if( plink->GetFloatParameters().size() == 0 && plink->GetIntParameters().size() == 0 ) {
+                if( plink->GetFloatParameters().size() == 0 && plink->GetIntParameters().size() == 0 && plink->GetStringParameters().size() == 0 ) {
                     continue;
                 }
                 domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
@@ -1338,6 +1338,11 @@ private:
                     }
                     int_array->setCharData(ss.str());
                 }
+                FOREACHC(itparam, plink->GetStringParameters()) {
+                    daeElementRef string_value = ptec->add("string_value");
+                    string_value->setAttribute("name",itparam->first.c_str());
+                    string_value->setCharData(itparam->second);
+                }
             }
         }
         if( IsWrite("joint_info") ) {
@@ -1347,7 +1352,7 @@ private:
             // write the float/int parameters for all joints
             FOREACH(itjoint, vjoints) {
                 KinBody::JointConstPtr pjoint = itjoint->second;
-                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 ) {
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 ) {
                     continue;
                 }
                 string jointsid = str(boost::format("joint%d")%itjoint->first);
@@ -1377,6 +1382,11 @@ private:
                         ss << *itvalue << " ";
                     }
                     int_array->setCharData(ss.str());
+                }
+                FOREACHC(itparam, pjoint->GetStringParameters()) {
+                    daeElementRef string_value = ptec->add("string_value");
+                    string_value->setAttribute("name",itparam->first.c_str());
+                    string_value->setCharData(itparam->second);
                 }
             }
         }

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>, Stefan Ulbrich, Gustavo Rodriguez
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>, Stefan Ulbrich, Gustavo Rodriguez
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -1339,16 +1339,21 @@ public:
                     if( !!tec ) {
                         for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                             daeElementRef pelt = tec->getContents()[ic];
-                            bool bfloat_array = pelt->getElementName() == string("float_array");
-                            bool bint_array = pelt->getElementName() == string("int_array");
-                            if( bfloat_array || bint_array ) {
+                            bool bFloatArray = pelt->getElementName() == string("float_array");
+                            bool bIntArray = pelt->getElementName() == string("int_array");
+                            bool bStringValue = pelt->getElementName() == string("string_value");
+                            if( bFloatArray || bIntArray || bStringValue ) {
                                 std::string name = pelt->getAttribute("name");
-                                ss.clear(); ss.str(pelt->getCharData());
-                                if( bfloat_array ) {
+                                if( bFloatArray ) {
+                                    ss.clear(); ss.str(pelt->getCharData());
                                     plink->_info._mapFloatParameters[name] = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
                                 }
-                                else if( bint_array ) {
+                                else if( bIntArray ) {
+                                    ss.clear(); ss.str(pelt->getCharData());
                                     plink->_info._mapIntParameters[name] = std::vector<int>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                }
+                                else if( bStringValue ) {
+                                    plink->_info._mapStringParameters[name] = pelt->getCharData();
                                 }
                             }
                         }
@@ -1364,16 +1369,21 @@ public:
                         if( !!tec ) {
                             for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                                 daeElementRef pelt = tec->getContents()[ic];
-                                bool bfloat_array = pelt->getElementName() == string("float_array");
-                                bool bint_array = pelt->getElementName() == string("int_array");
-                                if( bfloat_array || bint_array ) {
+                                bool bFloatArray = pelt->getElementName() == string("float_array");
+                                bool bIntArray = pelt->getElementName() == string("int_array");
+                                bool bStringValue = pelt->getElementName() == string("string_value");
+                                if( bFloatArray || bIntArray || bStringValue ) {
                                     std::string name = pelt->getAttribute("name");
-                                    ss.clear(); ss.str(pelt->getCharData());
-                                    if( bfloat_array ) {
+                                    if( bFloatArray ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
                                         pjoint->_info._mapFloatParameters[name] = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
                                     }
-                                    else if( bint_array ) {
+                                    else if( bIntArray ) {
+                                        ss.clear(); ss.str(pelt->getCharData());
                                         pjoint->_info._mapIntParameters[name] = std::vector<int>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                    }
+                                    else if( bStringValue ) {
+                                        pjoint->_info._mapStringParameters[name] = pelt->getCharData();
                                     }
                                 }
                             }

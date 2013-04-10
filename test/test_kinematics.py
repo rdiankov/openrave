@@ -1069,6 +1069,7 @@ class TestKinematics(EnvironmentSetup):
             link0._name = 'link0'
             link0._mapFloatParameters = {'param0':[1,2.3]}
             link0._mapIntParameters = {'param0':[4,5.6]}
+            link0._mapStringParameters = {'jp':'日本語'.decode('utf-8'), 'test':'has spaces'}
             link1 = KinBody.LinkInfo()
             link1._vgeometryinfos = [infobox2]
             link1._name = 'link1'
@@ -1084,6 +1085,7 @@ class TestKinematics(EnvironmentSetup):
             joint0._vlowerlimit = [-0.5]
             joint0._vupperlimit = [1.0]
             joint0._vaxes = [[0,0,1]]
+            joint0._mapStringParameters = {'jp2':u'\u65e5\u672c\u8a9e', 'test2':'has spaces'}
             body = RaveCreateKinBody(env,'')
             success=body.Init([link0,link1],[joint0])
             body.SetName('temp')
@@ -1093,3 +1095,5 @@ class TestKinematics(EnvironmentSetup):
             assert(len(body.GetJoints())==1)
             body.SetDOFValues([0.8])
             assert(transdist(body.GetLinks()[1].GetTransform(), array([[ 0.69670671, -0.71735609,  0.        ,  0.34835335], [ 0.71735609,  0.69670671,  0.        ,  0.35867805], [ 0.        ,  0.        ,  1.        ,  0.        ], [ 0.        ,  0.        ,  0.        ,  1.        ]])) <= 1e-7)
+            assert(body.GetLinks()[0].GetStringParameters('jp') == u'\u65e5\u672c\u8a9e')
+            assert(body.GetJoints()[0].GetStringParameters('test2') == 'has spaces')

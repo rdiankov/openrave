@@ -1367,6 +1367,17 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
     GetParent()->_ParametersChanged(Prop_JointCustomParameters);
 }
 
+void KinBody::Joint::SetStringParameters(const std::string& key, const std::string& value)
+{
+    if( value.size() > 0 ) {
+        _info._mapStringParameters[key] = value;
+    }
+    else {
+        _info._mapStringParameters.erase(key);
+    }
+    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+}
+
 void KinBody::Joint::UpdateInfo()
 {
     _info._vcurrentvalues.resize(0);

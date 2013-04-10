@@ -144,6 +144,9 @@ public:
         FOREACHC(it, info._mapIntParameters) {
             _mapIntParameters[it->first] = toPyArray(it->second);
         }
+        FOREACH(it, info._mapStringParameters) {
+            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
+        }
         boost::python::list vForcedAdjacentLinks;
         FOREACHC(it, info._vForcedAdjacentLinks) {
             vForcedAdjacentLinks.append(ConvertStringToUnicode(*it));
@@ -184,6 +187,14 @@ public:
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
         }
+        okeyvalueiter = _mapStringParameters.iteritems();
+        num = len(_mapStringParameters);
+        info._mapStringParameters.clear();
+        for(size_t i = 0; i < num; ++i) {
+            object okeyvalue = okeyvalueiter.attr("next") ();
+            std::string name = extract<std::string>(okeyvalue[0]);
+            info._mapStringParameters[name] = (std::string)extract<std::string>(okeyvalue[1]);
+        }
         info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
         info._bStatic = _bStatic;
         info._bIsEnabled = _bIsEnabled;
@@ -195,7 +206,7 @@ public:
     object _t, _tMassFrame;
     dReal _mass;
     object _vinertiamoments;
-    boost::python::dict _mapFloatParameters, _mapIntParameters;
+    boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _vForcedAdjacentLinks;
     bool _bStatic;
     bool _bIsEnabled;
@@ -261,6 +272,9 @@ public:
         }
         FOREACHC(it, info._mapIntParameters) {
             _mapIntParameters[it->first] = toPyArray(it->second);
+        }
+        FOREACHC(it, info._mapStringParameters) {
+            _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
         }
         boost::python::list bIsCircular;
         FOREACHC(it, info._bIsCircular) {
@@ -358,6 +372,14 @@ public:
             std::string name = extract<std::string>(okeyvalue[0]);
             info._mapIntParameters[name] = ExtractArray<int>(okeyvalue[1]);
         }
+        okeyvalueiter = _mapStringParameters.iteritems();
+        num = len(_mapStringParameters);
+        info._mapStringParameters.clear();
+        for(size_t i = 0; i < num; ++i) {
+            object okeyvalue = okeyvalueiter.attr("next") ();
+            std::string name = extract<std::string>(okeyvalue[0]);
+            info._mapStringParameters[name] = (std::string)extract<std::string>(okeyvalue[1]);
+        }
         num = len(_bIsCircular);
         for(size_t i = 0; i < num; ++i) {
             info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
@@ -371,7 +393,7 @@ public:
     object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
     boost::python::list _vmimic;
-    boost::python::dict _mapFloatParameters, _mapIntParameters;
+    boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular;
     bool _bIsActive;
 };
@@ -672,6 +694,28 @@ public:
         _plink->SetIntParameters(key,ExtractArray<int>(oparameters));
     }
 
+    boost::python::object GetStringParameters(object oname=boost::python::object()) const
+    {
+        if( oname == object() ) {
+            boost::python::dict oparameters;
+            FOREACHC(it, _plink->GetStringParameters()) {
+                oparameters[it->first] = ConvertStringToUnicode(it->second);
+            }
+            return oparameters;
+        }
+        std::string name = boost::python::extract<std::string>(oname);
+        std::map<std::string, std::string >::const_iterator it = _plink->GetStringParameters().find(name);
+        if( it != _plink->GetStringParameters().end() ) {
+            return ConvertStringToUnicode(it->second);
+        }
+        return boost::python::object();
+    }
+
+    void SetStringParameters(const std::string& key, object ovalue)
+    {
+        _plink->SetStringParameters(key,extract<std::string>(ovalue));
+    }
+
     void UpdateInfo() {
         _plink->UpdateInfo();
     }
@@ -933,6 +977,27 @@ public:
     void SetIntParameters(const std::string& key, object oparameters)
     {
         _pjoint->SetIntParameters(key,ExtractArray<int>(oparameters));
+    }
+
+    boost::python::object GetStringParameters(object oname=boost::python::object()) const {
+        if( oname == object() ) {
+            boost::python::dict oparameters;
+            FOREACHC(it, _pjoint->GetStringParameters()) {
+                oparameters[it->first] = ConvertStringToUnicode(it->second);
+            }
+            return oparameters;
+        }
+        std::string name = boost::python::extract<std::string>(oname);
+        std::map<std::string, std::string >::const_iterator it = _pjoint->GetStringParameters().find(name);
+        if( it != _pjoint->GetStringParameters().end() ) {
+            return ConvertStringToUnicode(it->second);
+        }
+        return boost::python::object();
+    }
+
+    void SetStringParameters(const std::string& key, object ovalue)
+    {
+        _pjoint->SetStringParameters(key,extract<std::string>(ovalue));
     }
 
     void UpdateInfo() {
@@ -2243,9 +2308,10 @@ class LinkInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyLinkInfo& r)
     {
-        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled);
+        return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
     }
     static void setstate(PyLinkInfo& r, boost::python::tuple state) {
+        int num = len(state);
         r._vgeometryinfos = boost::python::list(state[0]);
         r._name = state[1];
         r._t = state[2];
@@ -2256,6 +2322,9 @@ public:
         r._vForcedAdjacentLinks = dict(state[7]);
         r._bStatic = boost::python::extract<bool>(state[8]);
         r._bIsEnabled = boost::python::extract<bool>(state[9]);
+        if( num > 10 ) {
+            r._mapStringParameters = dict(state[10]);
+        }
     }
 };
 
@@ -2264,7 +2333,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive));
+        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
@@ -2284,11 +2353,15 @@ public:
         r._vlowerlimit = state[1][7];
         r._vupperlimit = state[1][8];
         r._trajfollow = state[2][0];
+        int num2 = len(state[2]);
         r._vmimic = boost::python::list(state[2][1]);
         r._mapFloatParameters = boost::python::dict(state[2][2]);
         r._mapIntParameters = boost::python::dict(state[2][3]);
         r._bIsCircular = state[2][4];
         r._bIsActive = boost::python::extract<bool>(state[2][5]);
+        if( num2 > 6 ) {
+            r._mapStringParameters = boost::python::dict(state[2][6]);
+        }
     }
 };
 
@@ -2316,6 +2389,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, Create
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetStringParameters_overloads, GetStringParameters, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckSelfCollision_overloads, CheckSelfCollision, 0, 2)
 
 void init_openravepy_kinbody()
@@ -2545,6 +2619,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vinertiamoments",&PyLinkInfo::_vinertiamoments)
                           .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
                           .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
+                          .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
                           .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                           .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                           .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
@@ -2571,6 +2646,7 @@ void init_openravepy_kinbody()
                            .def_readwrite("_vmimic",&PyJointInfo::_vmimic)
                            .def_readwrite("_mapFloatParameters",&PyJointInfo::_mapFloatParameters)
                            .def_readwrite("_mapIntParameters",&PyJointInfo::_mapIntParameters)
+                           .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
                            .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                            .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
                            .def_pickle(JointInfo_pickle_suite())
@@ -2615,6 +2691,9 @@ void init_openravepy_kinbody()
                          .def("GetFloatParameters",&PyLink::GetFloatParameters,GetFloatParameters_overloads(args("name","index"), DOXY_FN(KinBody::Link,GetFloatParameters)))
                          .def("SetFloatParameters",&PyLink::SetFloatParameters,DOXY_FN(KinBody::Link,SetFloatParameters))
                          .def("GetIntParameters",&PyLink::GetIntParameters,GetIntParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Link,GetIntParameters)))
+                         .def("SetIntParameters",&PyLink::SetIntParameters,DOXY_FN(KinBody::Link,SetIntParameters))
+                         .def("GetStringParameters",&PyLink::GetStringParameters,GetStringParameters_overloads(args("name"), DOXY_FN(KinBody::Link,GetStringParameters)))
+                         .def("SetStringParameters",&PyLink::SetStringParameters,DOXY_FN(KinBody::Link,SetStringParameters))
                          .def("UpdateInfo",&PyLink::UpdateInfo,DOXY_FN(KinBody::Link,UpdateInfo))
                          .def("GetInfo",&PyLink::GetInfo,DOXY_FN(KinBody::Link,GetInfo))
                          .def("UpdateAndGetInfo",&PyLink::UpdateAndGetInfo,DOXY_FN(KinBody::Link,UpdateAndGetInfo))
@@ -2719,6 +2798,8 @@ void init_openravepy_kinbody()
                           .def("SetFloatParameters",&PyJoint::SetFloatParameters,DOXY_FN(KinBody::Joint,SetFloatParameters))
                           .def("GetIntParameters",&PyJoint::GetIntParameters,GetIntParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Joint,GetIntParameters)))
                           .def("SetIntParameters",&PyJoint::SetIntParameters,DOXY_FN(KinBody::Joint,SetIntParameters))
+                          .def("GetStringParameters",&PyJoint::GetStringParameters,GetStringParameters_overloads(args("name", "index"), DOXY_FN(KinBody::Joint,GetStringParameters)))
+                          .def("SetStringParameters",&PyJoint::SetStringParameters,DOXY_FN(KinBody::Joint,SetStringParameters))
                           .def("UpdateInfo",&PyJoint::UpdateInfo,DOXY_FN(KinBody::Joint,UpdateInfo))
                           .def("GetInfo",&PyJoint::GetInfo,DOXY_FN(KinBody::Joint,GetInfo))
                           .def("UpdateAndGetInfo",&PyJoint::UpdateAndGetInfo,DOXY_FN(KinBody::Joint,UpdateAndGetInfo))

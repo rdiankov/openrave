@@ -34,7 +34,7 @@ Core
 
 * Added :meth:`.SpaceSample.SampleSequenceOneReal` and :meth:`.SpaceSample.SampleSequenceOneUINT32` for easier retrieval of samples.
 
-* Added getting and settings custom parameters to links and joints via :meth:`.KinBody.Link.GetFloatParameters`, :meth:`.KinBody.Link.SetFloatParameters`, :meth:`.KinBody.Joint.GetFloatParameters`, :meth:`.KinBody.Joint.SetFloatParameters`.
+* Added getting and settings custom float, int, and string parameters to links and joints. Examples are :meth:`.KinBody.Link.GetFloatParameters`, :meth:`.KinBody.Link.SetFloatParameters`, :meth:`.KinBody.Joint.GetFloatParameters`, :meth:`.KinBody.Joint.SetFloatParameters`.
 
 * Added :meth:`.KinBody.Link.GetInfo`, :meth:`.KinBody.Joint.GetInfo`, and :meth:`.KinBody.Geometry.GetInfo` for getting all properties.
 
