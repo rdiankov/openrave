@@ -96,11 +96,22 @@ public:
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
         }
 
-        int CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval)
+        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, bool returnconfigurations=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
             PlannerBase::ConfigurationVelocityListPtr configurations;
-            return _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval);
+            if( returnconfigurations ) {
+                configurations.reset(new PlannerBase::ConfigurationVelocityList());
+            }
+            int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, configurations);
+            if( returnconfigurations ) {
+                boost::python::list oconfigurations;
+                FOREACHC(it, *configurations) {
+                    oconfigurations.append(boost::python::make_tuple(toPyArray(it->first), toPyArray(it->second)));
+                }
+                return boost::python::make_tuple(ret,oconfigurations);
+            }
+            return object(ret);
         }
 
         string __repr__() {
@@ -248,6 +259,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 7)
 
 void init_openravepy_planner()
 {
@@ -286,7 +298,7 @@ void init_openravepy_planner()
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
-        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,args("q0","q1","dq0","dq1","timeelapsed","interval"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints))
+        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
