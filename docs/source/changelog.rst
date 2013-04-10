@@ -42,6 +42,10 @@ Core
 
 * Added **collisionchecker** parameter to :meth:`.KinBody.CheckSelfCollision` to allow collision checkers not added to the environment to run the self-collision process with grabbed bodies.
 
+* :meth:`.Robot.CheckSelfCollision` now supports :ref:`CollisionOptions.Distance` option to get accurate self distance.
+
+* Renamed :meth:`CollisionChecker.CheckSelfCollision` to :meth:`CollisionChecker.CheckStandaloneSelfCollision` to make it clear grabbed bodies are not checked.
+
 C Bindings
 ----------
 

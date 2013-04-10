@@ -1651,6 +1651,14 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
             return false;
         }
     }
+    // if collision checker is set to distance checking, have to compare reports for the minimum distance
+    int coloptions = collisionchecker->GetCollisionOptions();
+    CollisionReport tempreport;
+    CollisionReportPtr pusereport = report;
+    if( !!report && (coloptions & CO_Distance) ) {
+        pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
+    }
+
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     bool bCollision = false;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
@@ -1662,9 +1670,12 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
         FOREACHC(itrobotlink,pgrabbed->_listNonCollidingLinks) {
             // have to use link/link collision since link/body checks attached bodies
             FOREACHC(itbodylink,pbody->GetLinks()) {
-                if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),report) ) {
+                if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
                     bCollision = true;
                     break;
+                }
+                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+                    *report = *pusereport;
                 }
             }
             if( bCollision ) {
@@ -1675,9 +1686,12 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
             break;
         }
 
-        if( pbody->CheckSelfCollision(report, collisionchecker) ) {
+        if( pbody->CheckSelfCollision(pusereport, collisionchecker) ) {
             bCollision = true;
             break;
+        }
+        if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+            *report = *pusereport;
         }
 
         // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
@@ -1694,9 +1708,12 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
                     if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink2) != pgrabbed->_listNonCollidingLinks.end() ) {
                         FOREACHC(itlink, pbody->GetLinks()) {
                             if( find(pgrabbed2->_listNonCollidingLinks.begin(),pgrabbed2->_listNonCollidingLinks.end(),*itlink) != pgrabbed2->_listNonCollidingLinks.end() ) {
-                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),report) ) {
+                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),pusereport) ) {
                                     bCollision = true;
                                     break;
+                                }
+                                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+                                    *report = *pusereport;
                                 }
                             }
                             if( bCollision ) {
@@ -1719,6 +1736,9 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
     }
 
     if( bCollision && !!report ) {
+        if( report != pusereport ) {
+            *report = *pusereport;
+        }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
             std::vector<OpenRAVE::dReal> v;

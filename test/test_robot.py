@@ -578,7 +578,46 @@ class RunRobot(EnvironmentSetup):
             env2.Add(robot2)
             robot2.SetTransform(Trobot)
             misc.CompareBodies(robot,robot2,computeadjacent=False,comparemanipulators=True,comparesensors=False)
-                
+
+    def test_distancechecking(self):
+        env=self.env
+        robot = self.LoadRobot('robots/barrettwam.robot.xml')
+        
+        manip = robot.GetActiveManipulator()
+        report = CollisionReport()
+        env.SetCollisionChecker(RaveCreateCollisionChecker(env,'ode'))
+        distancechecker = RaveCreateCollisionChecker(env,'pqp')        
+        distancechecker.SetCollisionOptions(CollisionOptions.Contacts|CollisionOptions.Distance)
+        
+        target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+        env.Add(target)
+        T = manip.GetTransform()
+        target.SetTransform(T)
+        
+        coltarget = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+        coltarget.SetName('collision')
+        env.Add(coltarget)
+        T = eye(4)
+        T[0:3,3] = [0.5,0,0.5]
+        coltarget.SetTransform(T)
+        
+        #assert(not robot.CheckSelfCollision())
+        distancechecker.CheckCollision(robot,report=report)
+        assert(abs(report.minDistance - 0.02014762095143412) <= 1e-7)
+        robot.CheckSelfCollision(report=report,collisionchecker=distancechecker)
+        assert(abs(report.minDistance - 0.22146797060110873) <= 1e-7)
+        
+        robot.Grab(target)
+
+        robot.CheckSelfCollision(report=report,collisionchecker=distancechecker)
+        assert(abs(report.minDistance - 0.0244822362795) <= 1e-7)
+
+        robot.SetDOFValues([-4.42034423e-01,2.02136660e+00],[1,3])
+        distancechecker.CheckCollision(robot,report=report)
+        assert(abs(report.minDistance - 0.077989158061126093) <= 1e-7)
+        assert(report.plink1.GetParent() == target)
+        assert(report.plink2.GetParent() == coltarget)
+
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

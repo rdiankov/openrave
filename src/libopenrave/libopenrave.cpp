@@ -1659,6 +1659,9 @@ std::string CollisionReport::__str__() const
         s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
     }
     s << ") contacts="<<contacts.size();
+    if( minDistance < 1e10 ) {
+        s << ", mindist="<<minDistance;
+    }
     return s.str();
 }
 
