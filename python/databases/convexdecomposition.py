@@ -77,6 +77,7 @@ from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 from .. import convexdecompositionpy
 
+import numpy
 import time
 import os.path
 from optparse import OptionParser

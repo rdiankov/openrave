@@ -433,7 +433,7 @@ public:
         pbody->GetAttached(setattached);
         FOREACH(itbody,setattached) {
             FOREACHC(itlink, (*itbody)->GetLinks()) {
-                if( cb.IsActiveLink(*itbody,(*itlink)->GetIndex()) ) {
+                if( (*itlink)->IsEnabled() && cb.IsActiveLink(*itbody,(*itlink)->GetIndex()) ) {
                     if( _CheckCollision(plink, KinBody::LinkConstPtr(*itlink), report) ) {
                         return true;
                     }
