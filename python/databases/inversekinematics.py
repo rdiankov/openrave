@@ -459,7 +459,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 elif self.iktype == IkParameterizationType.TranslationDirection5D:
                     # check if ray aligns with furthest axis
                     dirfromanchor = self.manip.GetTransform()[0:3,3]-jointanchors[-1]
-                    if abs(dot(jointaxes[-1],dot(self.manip.GetTransform()[0:3,0:3],self.manip.GetLocalToolDirection()))) > 0.99999 and abs(dot(jointaxes[-1],dirfromanchor)) > 0.99999*linalg.norm(dirfromanchor):
+                    if abs(dot(jointaxes[-1],dot(self.manip.GetTransform()[0:3,0:3],self.manip.GetLocalToolDirection()))) > 0.99999 and linalg.norm(cross(jointaxes[-1],dirfromanchor)) <= 1e-5:
                         # have to take the last index since last axis aligns and is useless anyway
                         indextopop = len(remainingindices)-1
                     else:
