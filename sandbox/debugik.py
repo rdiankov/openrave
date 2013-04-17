@@ -1089,6 +1089,7 @@ def test_ik():
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
     
+    #T0links.append(self.affineInverse(T1links.pop(-1)))
     # get values
     possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
     jointvalues = [S.Zero]*len(jointvars)
@@ -1106,14 +1107,13 @@ def test_ik():
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
     if len(self.globalsymbols) > 0:
-        psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]
-
+        psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]    
     if len(raghavansolutiontree) > 0:
         psubs += [(s,v.subs(psubs)) for s,v in raghavansolutiontree[0].subs]
     dummyvaluesubs = [(dvar,self.convertRealToRational(var.subs(valsubs).evalf())) for dvar,var in dummyvars]
     allsubs = valsubs+psubs+dummyvaluesubs
     localsymbolsvalues = [(var,value.subs(valsubs+psubs)) for var,value in localsymbols]
-
+    
     for var,value in izip(jointvars,jointvalues):
         valsubs += [(var,value),(Symbol('c%s'%var.name),(cos(value).evalf())),(Symbol('s%s'%var.name),(sin(value).evalf())),(Symbol('t%s'%var.name),(tan(value).evalf())),(Symbol('ht%s'%var.name),(tan(value/2).evalf()))]
     psubs = []
@@ -1121,10 +1121,10 @@ def test_ik():
         psubs.append((self.Tee[i],(Tfinal[i].subs(psubs+valsubs).evalf())))
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
-
+        
     newsubs=[(var,eq.subs(self.testconsistentvalues[1]).evalf()) for var,eq in coupledsolutions[0].dictequations]
     mpmath.polyroots(coupledsolutions[0].poly.subs(newsubs).coeffs)
-
+    
     jointvalues = [-0.2898119639388401, 0.0, -5.913881500780583, 0.0, -3.116541584197247, 1.570796326794897]
 """
 ikfast notes;

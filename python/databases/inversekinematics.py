@@ -891,8 +891,10 @@ class InverseKinematicsModel(DatabaseGenerator):
             results = self.ikfastproblem.SendCommand('PerfTiming num %d %s'%(num,self.getfilename(True)))
             return [double(s)*1e-9 for s in results.split()]
         
-    def testik(self,iktests):
+    def testik(self,iktests,jacobianthreshold=None):
         """Tests the iksolver.
+        :param iktests: the number of tests, or a filename that describes the tests
+        :param jacobianthreshold: When testing configurations, the eigenvalues of the jacobian all have to be greater than this value
         """
         if self.ikfeasibility is not None:
             raise ValueError('ik is infeasible')
@@ -907,6 +909,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 cmd += 'numtests %d '%int(iktests)
             else:
                 cmd += 'readfile %s '%iktests
+            if jacobianthreshold is not None:
+                cmd += 'jacobianthreshold %s '%jacobianthreshold
             res = self.ikfastproblem.SendCommand(cmd).split()
             numtested = float(res[0])
             successrate = float(res[1])/numtested
@@ -988,6 +992,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='The discretization value of freejoints.')
         parser.add_option('--numiktests','--iktests',action='store',type='string',dest='iktests',default=None,
                           help='Will test the ik solver and return the success rate. IKTESTS can be an integer to specify number of random tests, it can also be a filename to specify the joint values of the manipulator to test. The formst of the filename is #numiktests [dof values]*')
+        parser.add_option('--iktestjthresh',action='store',type='float',dest='iktestjthresh',default=None,
+                          help='When testing configurations, the eigenvalues of the jacobian all have to be greater than this value')
         parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
                           help='Number of IK calls for measuring the internal ikfast solver.')
         parser.add_option('--outputlang', action='store',type='string',dest='outputlang',default=None,
@@ -1028,7 +1034,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     raise ValueError('failed to load ik')
                 
                 if options.iktests is not None:
-                    successrate, wrongrate = ikmodel.testik(iktests=options.iktests)
+                    successrate, wrongrate = ikmodel.testik(iktests=options.iktests,jacobianthreshold=options.iktestjthresh)
                     if wrongrate > 0:
                         raise ValueError('wrong rate %f > 0!'%wrongrate)
                     

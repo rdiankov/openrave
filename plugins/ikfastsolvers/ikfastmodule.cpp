@@ -21,6 +21,16 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/version.hpp>
+
+// used for inverse jacobian computation
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/vector_proxy.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/triangular.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
+
 #if BOOST_VERSION >= 104400
 #define FILE_DESCRIPTOR_FLAG boost::iostreams::never_close_handle
 #else
@@ -69,6 +79,34 @@
 
 class IkFastModule : public ModuleBase
 {
+    static int determinant_sign(const boost::numeric::ublas::permutation_matrix<std::size_t>& pm)
+    {
+        int pm_sign=1;
+        std::size_t size = pm.size();
+        for (std::size_t i = 0; i < size; ++i) {
+            if (i != pm(i)) {
+                pm_sign *= -1.0; // swap_rows would swap a pair of rows here, so we change sign
+            }
+        }
+        return pm_sign;
+    }
+
+
+    static dReal determinant( boost::numeric::ublas::matrix<dReal>& m ) {
+        boost::numeric::ublas::permutation_matrix<std::size_t> pm(m.size1());
+        dReal det = 1.0;
+        if( boost::numeric::ublas::lu_factorize(m,pm) ) {
+            det = 0.0;
+        }
+        else {
+            for(size_t i = 0; i < m.size1(); i++) {
+                det *= m(i,i);                                  // multiply by elements on diagonal
+            }
+            det = det * determinant_sign( pm );
+        }
+        return det;
+    }
+
     class IkLibrary : public boost::enable_shared_from_this<IkLibrary>
     {
 public:
@@ -741,6 +779,7 @@ public:
 
     bool DebugIK(ostream& sout, istream& sinput)
     {
+        using namespace boost::numeric;
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
         int num_itrs = 1000;
@@ -750,6 +789,9 @@ public:
         string readfilename;
         bool bReadFile = false, bTestSelfCollision = false;
         dReal sampledegeneratecases = 0.2f, fthreshold = 0.000001f;
+
+        // if nonzero, checks the jacobian of the end effector and only accepts the solution if all its eigenvalues are > than jacobianthreshold
+        dReal jacobianthreshold=0;
 
         int filteroptions = IKFO_IgnoreJointLimits|IKFO_IgnoreSelfCollisions|IKFO_IgnoreCustomFilters;
         RobotBasePtr robot;
@@ -782,6 +824,10 @@ public:
             else if( cmd == "threshold" ) {
                 sinput >> fthreshold;
                 fthreshold *= fthreshold;
+            }
+            else if( cmd == "jacobianthreshold" ) {
+                sinput >> jacobianthreshold;
+                RAVELOG_INFO("using jacobianthreshold %e\n", jacobianthreshold);
             }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
@@ -842,6 +888,12 @@ public:
         int nTotalIterations = 0;
         int nNumFreeTests = 100*pmanip->GetIkSolver()->GetNumFreeParameters();
 
+        std::vector<dReal> vjacobian;
+        boost::numeric::ublas::matrix<dReal> J, Jt, JJt;
+        ublas::matrix<dReal, boost::numeric::ublas::column_major > U(6, 6), Vt(6,6);
+        ublas::vector<dReal> S(6);
+        J.resize(6,pmanip->GetArmIndices().size());
+
         FOREACHC(itiktype, RaveGetIkParameterizationMap()) {
             if( !pmanip->GetIkSolver()->Supports(itiktype->first) ) {
                 continue;
@@ -865,8 +917,9 @@ public:
                         }
                     }
                     else {
-                        for(int j = 0; j < (int)vrealsolution.size(); j++) {
-                            if( RaveRandomFloat() > sampledegeneratecases ) {
+                        if( jacobianthreshold > 0 ) {
+                            // don't want any degenerate cases
+                            for(int j = 0; j < (int)vrealsolution.size(); j++) {
                                 int dof = pmanip->GetArmIndices().at(j);
                                 if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
                                     vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
@@ -875,11 +928,24 @@ public:
                                     vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
                                 }
                             }
-                            else {
-                                switch(RaveRandomInt()%3) {
-                                case 0: vrealsolution[j] = utils::ClampOnRange(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                                case 2: vrealsolution[j] = utils::ClampOnRange(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
-                                default: vrealsolution[j] = utils::ClampOnRange(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
+                        }
+                        else {
+                            for(int j = 0; j < (int)vrealsolution.size(); j++) {
+                                if( RaveRandomFloat() > sampledegeneratecases ) {
+                                    int dof = pmanip->GetArmIndices().at(j);
+                                    if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
+                                        vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
+                                    }
+                                    else {
+                                        vrealsolution[j] = vlowerlimit[j] + (vupperlimit[j]-vlowerlimit[j])*RaveRandomFloat();
+                                    }
+                                }
+                                else {
+                                    switch(RaveRandomInt()%3) {
+                                    case 0: vrealsolution[j] = utils::ClampOnRange(dReal(-PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                                    case 2: vrealsolution[j] = utils::ClampOnRange(dReal(PI*0.5),vlowerlimit[j],vupperlimit[j]); break;
+                                    default: vrealsolution[j] = utils::ClampOnRange(dReal(0),vlowerlimit[j],vupperlimit[j]); break;
+                                    }
                                 }
                             }
                         }
@@ -897,6 +963,34 @@ public:
                 }
                 else {
                     twrist = pmanip->GetIkParameterization(itiktype->first);
+                }
+
+                if( jacobianthreshold > 0 ) {
+                    // compute the jacobian and get its determinant
+                    // compute jacobians, make sure to transform by the world frame
+                    pmanip->CalculateAngularVelocityJacobian(vjacobian);
+                    size_t armdof = pmanip->GetArmIndices().size();
+                    for(size_t j = 0; j < armdof; ++j) {
+                        J(0,j) = vjacobian[j];
+                        J(1,j) = vjacobian[armdof+j];
+                        J(2,j) = vjacobian[2*armdof+j];
+                    }
+                    pmanip->CalculateJacobian(vjacobian);
+                    for(size_t j = 0; j < armdof; ++j) {
+                        J(3+0,j) = vjacobian[j];
+                        J(3+1,j) = vjacobian[armdof+j];
+                        J(3+2,j) = vjacobian[2*armdof+j];
+                    }
+                    // pseudo inverse of jacobian
+                    Jt = ublas::trans(J);
+                    JJt = ublas::prod(J,Jt);
+                    //boost::numeric::bindings::lapack::gesvd(JJt, S, U, Vt);
+                    dReal jdeterminant = RaveFabs(determinant(JJt));
+                    // because the original eigenvalues are squared the multiplier is 6*2=12
+                    if( RaveLog(jdeterminant) <= 12*RaveLog(jacobianthreshold) ) {
+                        RAVELOG_VERBOSE("determinant is too small\n");
+                        continue;
+                    }
                 }
 
                 if( !pmanip->GetIkSolver()->GetFreeParameters(vfreeparameters_real) ) {
