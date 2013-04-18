@@ -68,11 +68,11 @@ __license__ = 'Apache License, Version 2.0'
 
 if not __openravepy_build_doc__:
     from numpy import *
-else:
-    from numpy import array
+
+from numpy import reshape, array, float64, int32, zeros
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
-from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh
+from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule
 from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 from .. import convexdecompositionpy
@@ -83,8 +83,21 @@ import os.path
 from optparse import OptionParser
 from itertools import izip
 
+try:
+    from cStringIO import StringIO
+except:
+    from StringIO import StringIO
+    
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
+class ConvexDecompositionError(Exception):
+    def __init__(self,msg=u''):
+        self.msg = msg
+    def __unicode__(self):
+        return u'Convex Decomposition Error: %s'%self.msg
+    def __str__(self):
+        return unicode(self).encode('utf-8')
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
@@ -92,6 +105,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.linkgeometry = None
         self.convexparams = None
+        self._graspermodule = None # for convex hulls
+        
     def clone(self,envother):
         clone = DatabaseGenerator.clone(self,envother)
         #TODO need to set convex decomposition?
@@ -131,10 +146,16 @@ class ConvexDecompositionModel(DatabaseGenerator):
         else:
             self.generate()
         self.save()
-    def generate(self,padding=None,**kwargs):
+    def generate(self,padding=None,convexHullLinks=None,**kwargs):
+        """
+        :param padding: the padding in meters
+        :param convexHullLinks: a list of link names to compute convex hulls instead of decomposition
+        """
         self.convexparams = kwargs
         if padding is None:
             padding = 0.0
+        if convexHullLinks is None:
+            convexHullLinks = []
         log.info('Generating Convex Decomposition: %r',self.convexparams)
         starttime = time.time()
         self.linkgeometry = []
@@ -144,27 +165,60 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 log.info('link %d/%d',il,len(links))
                 geoms = []
                 for ig,geom in enumerate(link.GetGeometries()):
-                    if geom.GetType() == KinBody.Link.GeomType.Trimesh:
-                        trimesh = geom.GetCollisionMesh()
-                        if len(trimesh.indices) > 0:
-                            orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+                    if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
+                        if link.GetName() in convexHullLinks:
+                            orghulls = [self.ComputePaddedConvexHullFromGeometry(geom,padding)]
                         else:
-                            orghulls = []
-                        if len(orghulls) > 0:
-                            # add in the padding
-                            if padding != 0:
-                                orghulls = [self.PadMesh(hull[0],hull[1],padding) for hull in orghulls]
-                            geoms.append((ig,[(hull[0],hull[1],self.computeHullPlanes(hull)) for hull in orghulls]))
+                            orghulls = self.ComputePaddedConvexDecompositionFromGeometry(geom,padding)
+                        geoms.append((ig,[(hull[0],hull[1],self.ComputeHullPlanes(hull)) for hull in orghulls]))
                 self.linkgeometry.append(geoms)
         log.info('all convex decomposition finished in %fs',time.time()-starttime)
+
+    def ComputePaddedConvexDecompositionFromGeometry(self, geom, padding=0.0):
+        trimesh = geom.GetCollisionMesh()
+        if len(trimesh.indices) > 0:
+            orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+        else:
+            orghulls = []
+        if len(orghulls) > 0:
+            # add in the padding
+            if padding != 0:
+                orghulls = [self.PadMesh(hull[0],hull[1],padding) for hull in orghulls]
+        return orghulls
+    
+    def ComputePaddedConvexHullFromGeometry(self, geom, padding=0.0):
+        """computes a padded convex hull from all the links and returns it as a list of trimeshes
+        """
+        trimesh = geom.GetCollisionMesh()
+        if len(trimesh.indices) > 0:
+            if self._graspermodule is None:
+                self._graspermodule = RaveCreateModule(self.env,'grasper')
+                self.env.AddModule(self._graspermodule,self.robot.GetName())
+            cmd = StringIO()
+            cmd.write('ConvexHull returnplanes 1 returnfaces 0 returntriangles 1 points %d %d '%(len(trimesh.vertices),3))
+            for v in trimesh.vertices:
+                cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))            
+            res = self._graspermodule.SendCommand(cmd.getvalue()).split()
+            if res is None:
+                raise ConvexDecompositionError(u'failed to compute convex hull')
+            
+            offset = 0
+            numplanes = int(res[offset]); offset += 1
+            planes = reshape(array(res[offset:(offset+4*numplanes)], float64), (numplanes,4))
+            offset += 4*numplanes
+            numtriangles = int(res[offset]); offset += 1
+            return self.PadMesh(trimesh.vertices,reshape(array(res[offset:(offset+3*numtriangles)],int32),(numtriangles,3)), padding)
+        
     @staticmethod
     def PadMesh(vertices,indices,padding):
+        """pads a mesh by increasing towards the normal
+        """
         M = mean(vertices,0)
         facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
         facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
         # make sure normals are facing outward
         newvertices = zeros((0,3),float64)
-        newindices = zeros((0,3),int)
+        newindices = zeros((0,3),int32)
         originaledges = []
         for i in range(len(facenormals)):
             if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
@@ -197,8 +251,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return newvertices,newindices
 
     @staticmethod
-    def computeHullPlanes(hull,thresh=0.99999):
-        """The computed planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
+    def ComputeHullPlanes(hull,thresh=0.99999):
+        """computes the planes of a hull
+        
+        The computed planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
         """
         vm = mean(hull[0],0)
         v0 = hull[0][hull[1][:,0],:]
@@ -216,7 +272,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         for i in range(len(normalizedplanes)-1):
             uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<thresh
         return planes[uniqueplanes]
-
+    
     def testPointsInside(self,points):
         """tests if a point is inside the convex mesh of the robot.
 
