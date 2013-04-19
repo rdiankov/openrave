@@ -170,11 +170,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             orghulls = [self.ComputePaddedConvexHullFromGeometry(geom,padding)]
                         else:
                             orghulls = self.ComputePaddedConvexDecompositionFromGeometry(geom,padding)
+                        cdhulls = []
                         for hull in orghulls:
                             if any(isnan(hull[0])):
                                 raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
-                            
-                            geoms.append((ig,[(hull[0],hull[1],self.ComputeHullPlanes(hull))]))
+                            cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
+                        geoms.append((ig,cdhulls))
                 self.linkgeometry.append(geoms)
         log.info('all convex decomposition finished in %fs',time.time()-starttime)
 
