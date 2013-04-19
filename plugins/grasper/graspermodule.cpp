@@ -119,7 +119,9 @@ public:
             return -1;
         }
 
-        _ComputeJointMaxLengths(_vjointmaxlengths);
+        if( !!_robot ) {
+            _ComputeJointMaxLengths(_vjointmaxlengths);
+        }
         return 0;
     }
 

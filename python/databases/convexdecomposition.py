@@ -142,7 +142,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
 
     def autogenerate(self,options=None):
         if options is not None:
-            self.generate(padding=options.padding,skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration)
+            self.generate(padding=options.padding,skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration,convexHullLinks=options.convexHullLinks.split(','))
         else:
             self.generate()
         self.save()
@@ -431,6 +431,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
                           help='whether or not to perform initial island generation on the input mesh (default=%default).')
         parser.add_option('--useIslandGeneration',action='store',type='int',dest='useIslandGeneration',default=0,
                           help='Whether or not to perform island generation at each split.  Currently disabled due to bug in RemoveTjunctions (default=%default).')
+        parser.add_option('--convexHullLinks',action='store',type='str',dest='convexHullLinks',default='',
+                          help='comma separated list of link names to compute convex hull for instead')
         return parser
     @staticmethod
     def RunFromParser(Model=None,parser=None,**kwargs):
