@@ -204,7 +204,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             gparams = f['params']
             for name,value in gparams.iteritems():
                 self.convexparams[name] = value.value
-            self._padding = f['padding']
+            self._padding = f['padding'].value
             glinkgeometry = f['linkgeometry']
             self.linkgeometry = []
             for ilink, glink in glinkgeometry.iteritems():
