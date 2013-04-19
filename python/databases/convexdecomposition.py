@@ -69,7 +69,7 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros
+from numpy import reshape, array, float64, int32, zeros, isnan
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule
@@ -170,7 +170,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             orghulls = [self.ComputePaddedConvexHullFromGeometry(geom,padding)]
                         else:
                             orghulls = self.ComputePaddedConvexDecompositionFromGeometry(geom,padding)
-                        geoms.append((ig,[(hull[0],hull[1],self.ComputeHullPlanes(hull)) for hull in orghulls]))
+                        for hull in orghulls:
+                            if any(isnan(hull[0])):
+                                raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
+                            
+                            geoms.append((ig,[(hull[0],hull[1],self.ComputeHullPlanes(hull))]))
                 self.linkgeometry.append(geoms)
         log.info('all convex decomposition finished in %fs',time.time()-starttime)
 
@@ -233,17 +237,28 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     originaledges.append([indices[i,j1],indices[i,j0],offset+j1,offset+j0])
         # find the connecting edges across the new faces
         originaledges = array(originaledges)
-        offset = len(newvertices)
+        offset = 0
+        verticesofinterest = {}
         for i,edge in enumerate(originaledges):
             inds = flatnonzero(logical_and(edge[0]==originaledges[i+1:,0],edge[1]==originaledges[i+1:,1]))
             if len(inds) > 0:
                 # add 2 triangles for the edge, and 2 for each vertex
                 cedge = originaledges[i+1+inds[0]]
-                newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],offset+edge[0]],[edge[3],cedge[3],offset+edge[1]]]]
+                if not edge[0] in verticesofinterest:
+                    verticesofinterest[edge[0]] = len(newvertices)+offset
+                    offset += 1
+                if not edge[1] in verticesofinterest:
+                    verticesofinterest[edge[1]] = len(newvertices)+offset
+                    offset += 1
+                newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],verticesofinterest[edge[0]]],[edge[3],cedge[3],verticesofinterest[edge[1]]]]]
+        if offset > 0:
+            newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
-        for i in range(len(vertices)):
-            vertexindices = flatnonzero(indices==i)
-            newvertices = r_[newvertices,[mean(newvertices[vertexindices],0)]]
+        for originalvertex, newvertex in verticesofinterest.iteritems():
+            vertexindices = flatnonzero(indices==originalvertex)
+            assert(len(vertexindices) > 0)
+            newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
+        assert(not any(isnan(newvertices)))
         # make sure all faces are facing outward
         for inds in newindices:
             if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
