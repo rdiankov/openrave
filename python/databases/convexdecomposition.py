@@ -80,6 +80,7 @@ from .. import convexdecompositionpy
 import numpy
 import time
 import os.path
+from os import makedirs
 from optparse import OptionParser
 from itertools import izip
 
@@ -101,10 +102,14 @@ class ConvexDecompositionError(Exception):
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
-    def __init__(self,robot):
+    def __init__(self,robot,padding=0.0):
+        """
+        :param padding: the desired padding
+        """
         DatabaseGenerator.__init__(self,robot=robot)
         self.linkgeometry = None
         self.convexparams = None
+        self._padding = padding
         self._graspermodule = None # for convex hulls
         
     def clone(self,envother):
@@ -115,7 +120,62 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     def getversion(self):
         return 2
+
+    def save(self):
+        try:
+            self.SaveHDF5()
+        except ImportError:
+            log.warn('python h5py library not found, will not be able to speedup database access')
+            self.SavePickle()
+
     def load(self):
+        try:
+            try:
+                return self.LoadHDF5()
+            except ImportError:
+                log.warn('python h5py library not found, will not be able to speedup database access')
+                return self.LoadPickle()
+        except Exception, e:
+            log.warn(e)
+            return False
+
+    def SavePickle(self):
+        DatabaseGenerator.save(self,(self.linkgeometry,self.convexparams))
+
+    def SaveHDF5(self):
+        import h5py
+        filename=self.getfilename(False)
+        log.info(u'saving model to %s',filename)
+        try:
+            makedirs(os.path.split(filename)[0])
+        except OSError:
+            pass
+        
+        f=h5py.File(filename,'w')
+        try:
+            f['version'] = self.getversion()
+            gparams = f.create_group('params')
+            for name,value in self.convexparams.iteritems():
+                gparams[name] = value
+            f['padding'] = self._padding
+            glinkgeometry = f.create_group('linkgeometry')
+            for ilink, linkgeometry in enumerate(self.linkgeometry):
+                glink = glinkgeometry.create_group(str(ilink))
+                for ig, geometryhulls in linkgeometry:
+                    glinkhulls = glink.create_group(str(ig))
+                    glinkhulls['igeometry'] = ig
+                    ghulls = glinkhulls.create_group('hulls')
+                    for j, hull in enumerate(geometryhulls):
+                        ghull = ghulls.create_group(str(j))
+                        for name,values in izip(['vertices','indices','planes'],hull):
+                            if len(values) == 0:
+                                ghull.create_dataset(name,[],dtype=values.dtype)
+                            else:
+                                ghull[name] = values
+        finally:
+            f.close()
+
+    def LoadPickle(self):
         try:
             params = DatabaseGenerator.load(self)
             if params is None:
@@ -127,6 +187,49 @@ class ConvexDecompositionModel(DatabaseGenerator):
         except e:
             return False
 
+    def LoadHDF5(self):
+        import h5py
+        filename = self.getfilename(True)
+        if len(filename) == 0:
+            return False
+
+        self._CloseDatabase()
+        try:
+            f=h5py.File(filename,'r')
+            if f['version'].value != self.getversion():
+                log.error(u'version is wrong %s!=%s ',f['version'],self.getversion())
+                return False
+
+            self.convexparams = {}
+            gparams = f['params']
+            for name,value in gparams.iteritems():
+                self.convexparams[name] = value.value
+            self._padding = f['padding']
+            glinkgeometry = f['linkgeometry']
+            self.linkgeometry = []
+            for ilink, glink in glinkgeometry.iteritems():
+                linkgeometry = []
+                for ig, glinkhulls in glink.iteritems():
+                    ghulls = glinkhulls['hulls']
+                    geometryhulls = []
+                    for j, ghull in ghulls.iteritems():
+                        hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                        geometryhulls.append(hull)
+                    linkgeometry.append((int(ig),geometryhulls))
+                while len(self.linkgeometry) <= int(ilink):
+                    self.linkgeometry.append(None)
+                self.linkgeometry[int(ilink)] = linkgeometry
+            self._databasefile = f
+            f = None
+            return self.has()
+        
+        except Exception,e:
+            log.debug(u'LoadHDF5 for %s: ',filename,e)
+            return False
+        finally:
+            if f is not None:
+                f.close()
+
     def setrobot(self):
         with self.env:
             for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
@@ -134,12 +237,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     if link.GetGeometries()[ig].IsModifiable():
                         link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
 
-    def save(self):
-        DatabaseGenerator.save(self,(self.linkgeometry,self.convexparams))
-
     def getfilename(self,read=False):
-        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition.pp'),read)
-
+        filename = 'convexdecomposition_%.3f.pp'%self._padding
+        return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition_%.3f.pp'%self._padding),read)
+    
     def autogenerate(self,options=None):
         if options is not None:
             self.generate(padding=options.padding,skinWidth=options.skinWidth, decompositionDepth=options.decompositionDepth, maxHullVertices=options.maxHullVertices,concavityThresholdPercent=options.concavityThresholdPercent, mergeThresholdPercent=options.mergeThresholdPercent, volumeSplitThresholdPercent=options.volumeSplitThresholdPercent, useInitialIslandGeneration=options.useInitialIslandGeneration, useIslandGeneration=options.useIslandGeneration,convexHullLinks=options.convexHullLinks.split(','))
@@ -153,7 +254,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
         """
         self.convexparams = kwargs
         if padding is None:
-            padding = 0.0
+            padding = self._padding
+            if padding is None:
+                padding = 0.0
         if convexHullLinks is None:
             convexHullLinks = []
         log.info('Generating Convex Decomposition: %r',self.convexparams)
@@ -177,6 +280,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
                         geoms.append((ig,cdhulls))
                 self.linkgeometry.append(geoms)
+        self._padding = padding
         log.info('all convex decomposition finished in %fs',time.time()-starttime)
 
     def ComputePaddedConvexDecompositionFromGeometry(self, geom, padding=0.0):
@@ -200,7 +304,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 self._graspermodule = RaveCreateModule(self.env,'grasper')
                 self.env.AddModule(self._graspermodule,self.robot.GetName())
             cmd = StringIO()
-            cmd.write('ConvexHull returnplanes 1 returnfaces 0 returntriangles 1 points %d %d '%(len(trimesh.vertices),3))
+            cmd.write('ConvexHull returnplanes 0 returnfaces 0 returntriangles 1 points %d %d '%(len(trimesh.vertices),3))
             for v in trimesh.vertices:
                 cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))            
             res = self._graspermodule.SendCommand(cmd.getvalue()).split()
@@ -208,9 +312,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 raise ConvexDecompositionError(u'failed to compute convex hull')
             
             offset = 0
-            numplanes = int(res[offset]); offset += 1
-            planes = reshape(array(res[offset:(offset+4*numplanes)], float64), (numplanes,4))
-            offset += 4*numplanes
+            #numplanes = int(res[offset]); offset += 1
+            #planes = reshape(array(res[offset:(offset+4*numplanes)], float64), (numplanes,4))
+            #offset += 4*numplanes
             numtriangles = int(res[offset]); offset += 1
             return self.PadMesh(trimesh.vertices,reshape(array(res[offset:(offset+3*numtriangles)],int32),(numtriangles,3)), padding)
         
@@ -451,16 +555,17 @@ class ConvexDecompositionModel(DatabaseGenerator):
                           help='comma separated list of link names to compute convex hull for instead')
         return parser
     @staticmethod
-    def RunFromParser(Model=None,parser=None,**kwargs):
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         """Executes the ConvexDecompositionModel database generation
         """
         if parser is None:
             parser = ConvexDecompositionModel.CreateOptionParser()
+        (options, leftargs) = parser.parse_args(args=args)
         env = Environment()
         try:
             if Model is None:
-                Model = lambda robot: ConvexDecompositionModel(robot=robot)
-            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,allowkinbody=True,**kwargs)
+                Model = lambda robot: ConvexDecompositionModel(robot=robot,padding=options.padding)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,allowkinbody=True,args=args,**kwargs)
         finally:
             env.Destroy()
             RaveDestroy()

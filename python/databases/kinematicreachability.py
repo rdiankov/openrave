@@ -166,7 +166,7 @@ class ReachabilityModel(DatabaseGenerator):
     def SaveHDF5(self):
         import h5py
         filename=self.getfilename(False)
-        log.info('saving model to %s',filename)
+        log.info(u'saving model to %s',filename)
         try:
             makedirs(os.path.split(filename)[0])
         except OSError:
