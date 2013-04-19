@@ -341,6 +341,43 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
+void KinBody::Link::InitGeometriesFromExtra(const std::string& geomname)
+{
+    std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
+    if( geomname.size() == 0 ) {
+        pvinfos = &_info._vgeometryinfos;
+    }
+    else {
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(geomname);
+        if( it == _info._mapExtraGeometries.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("could not find geometries %s for link %s",geomname%GetName(),ORE_InvalidArguments);
+        }
+        pvinfos = &it->second;
+    }
+    _vGeometries.resize(pvinfos->size());
+    for(size_t i = 0; i < pvinfos->size(); ++i) {
+        _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));
+    }
+    _Update();
+    GetParent()->_ParametersChanged(Prop_LinkGeometry);
+}
+
+void KinBody::Link::SetExtraGeometries(const std::string& geomname, std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+    it->second.resize(geometries.size());
+    std::copy(geometries.begin(),geometries.end(),it->second.begin());
+}
+
+int KinBody::Link::GetNumExtraGeometries(const std::string& geomname) const
+{
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(geomname);
+    if( it == _info._mapExtraGeometries.end() ) {
+        return -1;
+    }
+    return it->second.size();
+}
+
 void KinBody::Link::SwapGeometries(boost::shared_ptr<Link>& link)
 {
     _vGeometries.swap(link->_vGeometries);

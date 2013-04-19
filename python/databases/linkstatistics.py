@@ -83,9 +83,12 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class LinkStatisticsModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""
-    def __init__(self,robot):
+    def __init__(self,robot,cdmodel=None):
         DatabaseGenerator.__init__(self,robot=robot)
-        self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        if cdmodel is None:
+            self.cdmodel = convexdecomposition.ConvexDecompositionModel(self.robot)
+        else:
+            self.cdmodel = cdmodel
         self.linkstats = None
         self.jointvolumes = None
         self.affinevolumes = None # affine volumes for x,y,z translation and rotation around x-,y-,z-axes

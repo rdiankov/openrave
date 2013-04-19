@@ -72,7 +72,7 @@ if not __openravepy_build_doc__:
 from numpy import reshape, array, float64, int32, zeros, isnan
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
-from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule
+from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType
 from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 from .. import convexdecompositionpy
@@ -116,11 +116,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         clone = DatabaseGenerator.clone(self,envother)
         #TODO need to set convex decomposition?
         return clone
+    
     def has(self):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
+    
     def getversion(self):
         return 2
-
+    
     def save(self):
         try:
             self.SaveHDF5()
@@ -192,14 +194,14 @@ class ConvexDecompositionModel(DatabaseGenerator):
         filename = self.getfilename(True)
         if len(filename) == 0:
             return False
-
+        
         self._CloseDatabase()
         try:
             f=h5py.File(filename,'r')
             if f['version'].value != self.getversion():
                 log.error(u'version is wrong %s!=%s ',f['version'],self.getversion())
                 return False
-
+            
             self.convexparams = {}
             gparams = f['params']
             for name,value in gparams.iteritems():
@@ -235,7 +237,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             for link,linkcd in izip(self.robot.GetLinks(),self.linkgeometry):
                 for ig,hulls in linkcd:
                     if link.GetGeometries()[ig].IsModifiable():
-                        link.GetGeometries()[ig].SetCollisionMesh(self.generateTrimeshFromHulls(hulls))
+                        link.GetGeometries()[ig].SetCollisionMesh(self.GenerateTrimeshFromHulls(hulls))
 
     def getfilename(self,read=False):
         filename = 'convexdecomposition_%.3f.pp'%self._padding
@@ -247,9 +249,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
         else:
             self.generate()
         self.save()
-    def generate(self,padding=None,convexHullLinks=None,**kwargs):
+    def generate(self,padding=None,minTriangleConvexHullThresh=None,convexHullLinks=None,**kwargs):
         """
         :param padding: the padding in meters
+        :param minTriangleConvexHullThresh: If not None, then describes the minimum number of triangles needed to use convex hull rather than convex decomposition. Although this might seem counter intuitive, the current convex decomposition module cannot handle really complex meshes and it takes a long time if it does handle them.
         :param convexHullLinks: a list of link names to compute convex hulls instead of decomposition
         """
         self.convexparams = kwargs
@@ -259,32 +262,34 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 padding = 0.0
         if convexHullLinks is None:
             convexHullLinks = []
-        log.info('Generating Convex Decomposition: %r',self.convexparams)
+        log.info(u'Generating Convex Decomposition: %r',self.convexparams)
         starttime = time.time()
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
             for il,link in enumerate(links):
-                log.info('link %d/%d',il,len(links))
-                geoms = []
-                for ig,geom in enumerate(link.GetGeometries()):
+                geomhulls = []
+                geometries = link.GetGeometries()
+                for ig,geom in enumerate(geometries):
                     if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
-                        if link.GetName() in convexHullLinks:
-                            orghulls = [self.ComputePaddedConvexHullFromGeometry(geom,padding)]
+                        trimesh = geom.GetCollisionMesh()
+                        if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
+                            log.info(u'computing hull for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
+                            orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
                         else:
-                            orghulls = self.ComputePaddedConvexDecompositionFromGeometry(geom,padding)
+                            log.info(u'computing decomposition for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
+                            orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
                         cdhulls = []
                         for hull in orghulls:
                             if any(isnan(hull[0])):
                                 raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
                             cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
-                        geoms.append((ig,cdhulls))
-                self.linkgeometry.append(geoms)
+                        geomhulls.append((ig,cdhulls))
+                self.linkgeometry.append(geomhulls)
         self._padding = padding
-        log.info('all convex decomposition finished in %fs',time.time()-starttime)
+        log.info(u'all convex decomposition finished in %fs',time.time()-starttime)
 
-    def ComputePaddedConvexDecompositionFromGeometry(self, geom, padding=0.0):
-        trimesh = geom.GetCollisionMesh()
+    def ComputePaddedConvexDecompositionFromTriMesh(self, trimesh, padding=0.0):
         if len(trimesh.indices) > 0:
             orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
         else:
@@ -295,10 +300,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 orghulls = [self.PadMesh(hull[0],hull[1],padding) for hull in orghulls]
         return orghulls
     
-    def ComputePaddedConvexHullFromGeometry(self, geom, padding=0.0):
+    def ComputePaddedConvexHullFromTriMesh(self, trimesh, padding=0.0):
         """computes a padded convex hull from all the links and returns it as a list of trimeshes
         """
-        trimesh = geom.GetCollisionMesh()
         if len(trimesh.indices) > 0:
             if self._graspermodule is None:
                 self._graspermodule = RaveCreateModule(self.env,'grasper')
@@ -438,8 +442,30 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         break
         return inside
 
+    def GetGeometryInfosFromLink(self,ilink):
+        with self.env:
+            geometries = []
+            for ig,hulls in self.linkgeometry[ilink]:
+                ginfo = KinBody.GeometryInfo()
+                ginfo._vDiffuseColor = [0,0,0.4]
+                ginfo._type = GeometryType.Trimesh
+                ginfo._meshcollision = TriMesh()
+                numvertices = 0
+                numindices = 0
+                for hull in hulls:
+                    numvertices += len(hull[0])
+                    numindices += len(hull[1])
+                ginfo._meshcollision.vertices = zeros((numvertices,3),float64)
+                ginfo._meshcollision.indices = zeros((numindices,3),int)
+                offset = 0
+                for hull in hulls:
+                    ginfo._meshcollision.vertices[offset:(offset+len(hull[0])),:] = hull[0]
+                    ginfo._meshcollision.indices[offset:(offset+len(hull[1])),:] = hull[1]
+                geometries.append(ginfo)
+            return geometries
+    
     @staticmethod
-    def generateTrimeshFromHulls(hulls):
+    def GenerateTrimeshFromHulls(hulls):
         allvertices = zeros((0,3),float64)
         allindices = zeros((0,3),int)
         for hull in hulls:

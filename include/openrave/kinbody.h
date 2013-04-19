@@ -155,9 +155,13 @@ public:
         virtual ~LinkInfo() {
         }
         std::vector<GeometryInfoPtr> _vgeometryinfos;
-        /// unique link name
+        /// extra-purpose geometries like
+        /// self -  self-collision specific geometry
+        std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
+
+        /// \brief unique link name
         std::string _name;
-        ///< the current transformation of the link with respect to the body coordinate system
+        /// the current transformation of the link with respect to the body coordinate system
         Transform _t;
         /// the frame for inertia and center of mass of the link in the link's coordinate system
         Transform _tMassFrame;
@@ -173,7 +177,7 @@ public:
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
-        ///< shouldn't be affected by physics (including gravity). Collision still works.
+        /// shouldn't be affected by physics (including gravity). Collision still works.
         bool _bStatic;
 
         /// \true false if the link is disabled. disabled links do not participate in collision detection
@@ -488,6 +492,22 @@ protected:
         /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
         virtual void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries);
         virtual void InitGeometries(std::list<KinBody::GeometryInfo>& geometries);
+
+        /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
+        ///
+        /// If name is empty, will initialize the default geometries. If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
+        virtual void InitGeometriesFromExtra(const std::string& name);
+
+        /// \brief stores geometries for later retrieval
+        ///
+        /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
+        /// any be careful not to modify the geometries afterwards
+        virtual void SetExtraGeometries(const std::string& name, std::vector<KinBody::GeometryInfoPtr>& geometries);
+
+        /// \brief returns the number of geometries stored from a particular key
+        ///
+        /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
+        virtual int GetNumExtraGeometries(const std::string& name) const;
 
         /// \brief swaps the geometries with the link
         virtual void SwapGeometries(boost::shared_ptr<Link>& link);

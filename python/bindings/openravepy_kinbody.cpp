@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+
 // Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
@@ -81,6 +81,8 @@ public:
         _fTransparency = info._fTransparency;
         _bVisible = info._bVisible;
         _bModifiable = info._bModifiable;
+        //TODO
+        //_mapExtraGeometries = info. _mapExtraGeometries;
     }
 
     KinBody::GeometryInfoPtr GetGeometryInfo() {
@@ -105,6 +107,8 @@ public:
         info._fTransparency = _fTransparency;
         info._bVisible = _bVisible;
         info._bModifiable = _bModifiable;
+        //TODO
+        //info._mapExtraGeometries =  _mapExtraGeometries;
         return pinfo;
     }
 
@@ -112,6 +116,7 @@ public:
     GeometryType _type;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
+    boost::python::dict _mapExtraGeometries;
     float _fTransparency;
     bool _bVisible, _bModifiable;
 };
@@ -648,6 +653,29 @@ public:
             geometries[i] = pygeom->GetGeometryInfo();
         }
         return _plink->InitGeometries(geometries);
+    }
+
+    void InitGeometriesFromExtra(const std::string& name)
+    {
+        _plink->InitGeometriesFromExtra(name);
+    }
+
+    void SetExtraGeometries(const std::string& name, object ogeometryinfos)
+    {
+        std::vector<KinBody::GeometryInfoPtr> geometries(len(ogeometryinfos));
+        for(size_t i = 0; i < geometries.size(); ++i) {
+            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
+            if( !pygeom ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
+            }
+            geometries[i] = pygeom->GetGeometryInfo();
+        }
+        _plink->SetExtraGeometries(name, geometries);
+    }
+
+    int GetNumExtraGeometries(const std::string& geomname)
+    {
+        return _plink->GetNumExtraGeometries(geomname);
     }
 
     object GetRigidlyAttachedLinks() const {
@@ -2284,9 +2312,10 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable);
+        return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
+        int num = len(state);
         r._t = state[0];
         r._vGeomData = state[1];
         r._vDiffuseColor = state[2];
@@ -2300,6 +2329,9 @@ public:
         r._fTransparency = boost::python::extract<float>(state[10]);
         r._bVisible = boost::python::extract<bool>(state[11]);
         r._bModifiable = boost::python::extract<bool>(state[12]);
+        if( num > 13 ) {
+            r._mapExtraGeometries = dict(state[13]);
+        }
     }
 };
 
@@ -2608,6 +2640,7 @@ void init_openravepy_kinbody()
                               .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
                               .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                               .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
+                              .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                               .def_pickle(GeometryInfo_pickle_suite())
         ;
         object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
@@ -2684,6 +2717,9 @@ void init_openravepy_kinbody()
                          .def("SetTorque",&PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
                          .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                          .def("InitGeometries",&PyLink::InitGeometries, args("geometries"), DOXY_FN(KinBody::Link,InitGeometries))
+                         .def("InitGeometriesFromExtra",&PyLink::InitGeometriesFromExtra, args("name"), DOXY_FN(KinBody::Link,InitGeometriesFromExtra))
+                         .def("SetExtraGeometries",&PyLink::SetExtraGeometries, args("geometries"), DOXY_FN(KinBody::Link,SetExtraGeometries))
+                         .def("GetNumExtraGeometries",&PyLink::GetNumExtraGeometries, args("geometries"), DOXY_FN(KinBody::Link,GetNumExtraGeometries))
                          .def("GetRigidlyAttachedLinks",&PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
                          .def("IsRigidlyAttached",&PyLink::IsRigidlyAttached, DOXY_FN(KinBody::Link,IsRigidlyAttached))
                          .def("GetVelocity",&PyLink::GetVelocity,DOXY_FN(KinBody::Link,GetVelocity))

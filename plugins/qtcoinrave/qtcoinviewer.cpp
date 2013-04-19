@@ -3270,8 +3270,8 @@ uint8_t* QtCoinViewer::_GetVideoFrame()
     }
 
     // flip R and B
-    for(int i = 0; i < _nRenderHeight; ++i) {
-        for(int j = 0; j < _nRenderWidth; ++j) {
+    for(unsigned int i = 0; i < _nRenderHeight; ++i) {
+        for(unsigned int j = 0; j < _nRenderWidth; ++j) {
             unsigned char* ptr = _ivOffscreen.getBuffer() + 3 * (i * _nRenderWidth + j);
             swap(ptr[0], ptr[2]);
         }
