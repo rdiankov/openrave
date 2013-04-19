@@ -314,13 +314,13 @@ class LinkStatisticsModel(DatabaseGenerator):
                         hulls += [self.cdmodel.transformHull(geom.GetTransform(),hull) for hull in cdhulls[0]]
                     elif geom.GetType() == KinBody.Link.GeomType.Box:
                         hull= self.cdmodel.transformHull(geom.GetTransform(),ComputeBoxMesh(geom.GetBoxExtents()))
-                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
+                        hulls.append([hull[0],hull[1],self.cdmodel.ComputeHullPlanes(hull,0.999)])
                     elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeGeodesicSphereMesh(geom.GetSphereRadius(),level=1))
-                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
+                        hulls.append([hull[0],hull[1],self.cdmodel.ComputeHullPlanes(hull,0.999)])
                     elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
                         hull = self.cdmodel.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight()))
-                        hulls.append([hull[0],hull[1],self.cdmodel.computeHullPlanes(hull,0.999)])
+                        hulls.append([hull[0],hull[1],self.cdmodel.ComputeHullPlanes(hull,0.999)])
                 self.linkstats[ilink] = self.ComputeGeometryStatistics(hulls)
                 
             log.info('Generating swept volumes...')
