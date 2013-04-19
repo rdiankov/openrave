@@ -444,12 +444,14 @@ class ConvexDecompositionModel(DatabaseGenerator):
 
     def GetGeometryInfosFromLink(self,ilink):
         with self.env:
-            geometries = []
+            geometryinfos = []
+            geometries = self.robot.GetLinks()[ilink].GetGeometries()
             for ig,hulls in self.linkgeometry[ilink]:
                 ginfo = KinBody.GeometryInfo()
                 ginfo._vDiffuseColor = [0,0,0.4]
                 ginfo._type = GeometryType.Trimesh
                 ginfo._meshcollision = TriMesh()
+                ginfo._t = geometries[ig].GetTransform()
                 numvertices = 0
                 numindices = 0
                 for hull in hulls:
@@ -457,12 +459,15 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     numindices += len(hull[1])
                 ginfo._meshcollision.vertices = zeros((numvertices,3),float64)
                 ginfo._meshcollision.indices = zeros((numindices,3),int)
-                offset = 0
+                voffset = 0
+                ioffset = 0
                 for hull in hulls:
-                    ginfo._meshcollision.vertices[offset:(offset+len(hull[0])),:] = hull[0]
-                    ginfo._meshcollision.indices[offset:(offset+len(hull[1])),:] = hull[1]
-                geometries.append(ginfo)
-            return geometries
+                    ginfo._meshcollision.vertices[voffset:(voffset+len(hull[0])),:] = hull[0]
+                    ginfo._meshcollision.indices[ioffset:(ioffset+len(hull[1])),:] = hull[1]+voffset
+                    voffset += len(hull[0])
+                    ioffset += len(hull[1])
+                geometryinfos.append(ginfo)
+            return geometryinfos
     
     @staticmethod
     def GenerateTrimeshFromHulls(hulls):
