@@ -1099,3 +1099,16 @@ class TestKinematics(EnvironmentSetup):
             assert(transdist(body.GetLinks()[1].GetTransform(), array([[ 0.69670671, -0.71735609,  0.        ,  0.34835335], [ 0.71735609,  0.69670671,  0.        ,  0.35867805], [ 0.        ,  0.        ,  1.        ,  0.        ], [ 0.        ,  0.        ,  0.        ,  1.        ]])) <= 1e-7)
             assert(body.GetLinks()[0].GetStringParameters('jp') == u'\u65e5\u672c\u8a9e')
             assert(body.GetJoints()[0].GetStringParameters('test2') == 'has spaces')
+
+    def test_paddinggeometry(self):
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        assert(not robot.CheckSelfCollision())
+        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(robot=body,padding=0.05)
+        if not cdmodel.load():
+            cdmodel.generate(padding=0.05,minTriangleConvexHullThresh=12000, skinWidth=0, decompositionDepth=8, maxHullVertices=256, concavityThresholdPercent=10, mergeThresholdPercent=30, volumeSplitThresholdPercent=15)
+            cdmodel.save()
+        cdmodel.setrobot()
+        assert(robot.CheckSelfCollision())
+        robot.SetNonCollidingConfiguration()
+        assert(not robot.CheckSelfCollision())

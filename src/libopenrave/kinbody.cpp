@@ -357,6 +357,8 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
         }
         (*itlink)->_Update(false);
     }
+    // have to reset the adjacency cache
+    _ResetInternalCollisionCache();
 }
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos)
