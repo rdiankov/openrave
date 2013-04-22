@@ -125,6 +125,19 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
         }
     }
 
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        for(size_t i = 0; i < newdof.size(); ++i ) {
+            if( i > 0 ) {
+                ss << "," << newdof[i];
+            }
+            else {
+                ss << "jitteredvalues=[" << newdof[i];
+            }
+        }
+        ss << "]";
+        RAVELOG_VERBOSE(ss.str());
+    }
     return 0;
 }
 
