@@ -339,16 +339,16 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     _Update();
 }
 
-void KinBody::Link::SetGeometriesFromExtra(const std::string& geomname)
+void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
 {
     std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
-    if( geomname.size() == 0 ) {
+    if( groupname.size() == 0 ) {
         pvinfos = &_info._vgeometryinfos;
     }
     else {
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(geomname);
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
         if( it == _info._mapExtraGeometries.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("could not find geometries %s for link %s",geomname%GetName(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("could not find geometries %s for link %s",groupname%GetName(),ORE_InvalidArguments);
         }
         pvinfos = &it->second;
     }
@@ -359,16 +359,16 @@ void KinBody::Link::SetGeometriesFromExtra(const std::string& geomname)
     _Update();
 }
 
-void KinBody::Link::SetExtraGeometries(const std::string& geomname, std::vector<KinBody::GeometryInfoPtr>& geometries)
+void KinBody::Link::SetGroupGeometries(const std::string& groupname, std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
 }
 
-int KinBody::Link::GetNumExtraGeometries(const std::string& geomname) const
+int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
 {
-    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(geomname);
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
         return -1;
     }

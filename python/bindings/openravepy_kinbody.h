@@ -99,7 +99,7 @@ public:
     bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw);
     bool InitFromTrimesh(object pytrimesh, bool bDraw);
     bool InitFromGeometries(object ogeometries);
-    void SetLinkGeometriesFromExtra(const std::string& geomname);
+    void SetLinkGeometriesFromGroup(const std::string& geomname);
     bool Init(object olinkinfos, object ojointinfos);
     void SetName(const std::string& name);
     object GetName() const;

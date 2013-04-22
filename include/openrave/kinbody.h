@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -156,7 +156,7 @@ public:
         }
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
-        /// self -  self-collision specific geometry
+        /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
         /// \brief unique link name
@@ -496,18 +496,18 @@ protected:
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// If name is empty, will initialize the default geometries. If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
-        virtual void SetGeometriesFromExtra(const std::string& name);
+        virtual void SetGeometriesFromGroup(const std::string& name);
 
         /// \brief stores geometries for later retrieval
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        virtual void SetExtraGeometries(const std::string& name, std::vector<KinBody::GeometryInfoPtr>& geometries);
+        virtual void SetGroupGeometries(const std::string& name, std::vector<KinBody::GeometryInfoPtr>& geometries);
 
         /// \brief returns the number of geometries stored from a particular key
         ///
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
-        virtual int GetNumExtraGeometries(const std::string& name) const;
+        virtual int GetGroupNumGeometries(const std::string& name) const;
 
         /// \brief swaps the geometries with the link
         virtual void SwapGeometries(boost::shared_ptr<Link>& link);
@@ -1312,9 +1312,9 @@ private:
     ///
     /// \param name The name of the extra geometries group stored in each link.
     /// The geometries can be set while the body is added to the environment. No other information will be touched.
-    /// This method is faster than Link::SetGeometriesFromExtra since it makes only one change callback.
+    /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
-    virtual void SetLinkGeometriesFromExtra(const std::string& name);
+    virtual void SetLinkGeometriesFromGroup(const std::string& name);
 
     /// \brief initializes an complex kinematics body with links and joints
     ///

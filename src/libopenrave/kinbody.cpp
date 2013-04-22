@@ -335,7 +335,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     return true;
 }
 
-void KinBody::SetLinkGeometriesFromExtra(const std::string& geomname)
+void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
     // need to call _ParametersChanged at the very end, even if exception occurs
     CallFunctionAtDestructor callfn(boost::bind(&KinBody::_ParametersChanged, this, Prop_LinkGeometry));
@@ -3840,6 +3840,18 @@ void KinBody::_ComputeInternalInformation()
         group.offset = offset;
         group.dof = RaveGetAffineDOF(DOF_Transform);
         _spec._vgroups.push_back(group);
+    }
+
+    // set the "self" extra geometry group
+    std::string selfgroup("self");
+    FOREACH(itlink, _veclinks) {
+        if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
+            std::vector<GeometryInfoPtr> vgeoms;
+            FOREACH(itgeom, (*itlink)->_vGeometries) {
+                vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
+            }
+            (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
+        }
     }
 
     // notify any callbacks of the changes
