@@ -46,7 +46,7 @@ Core
 
 * Renamed :meth:`CollisionChecker.CheckSelfCollision` to :meth:`CollisionChecker.CheckStandaloneSelfCollision` to make it clear grabbed bodies are not checked.
 
-* Links can now store different geoemtries for different purposes. Added _mapExtraGeometries to :class:`.KinBody.LinkInfo`. Added :meth:`.KinBody.Link.InitGeometriesFromExtra`, :meth:`.KinBody.Link.SetExtraGeometries`, and :meth:`.KinBody.Link.GetNumExtraGeometries`.
+* Links can now store different geoemtries for different purposes. Added _mapExtraGeometries to :class:`.KinBody.LinkInfo`. Added :meth:`.KinBody.Link.InitGeometriesFromExtra`, :meth:`.KinBody.Link.SetExtraGeometries`, :meth:`.KinBody.Link.GetNumExtraGeometries`, and :meth:`.KinBody.SetLinkGeometriesFromExtra`
 
 C Bindings
 ----------

@@ -43,6 +43,19 @@ protected:
     boost::weak_ptr<KinBody const> _pweakbody;
 };
 
+class CallFunctionAtDestructor
+{
+public:
+    CallFunctionAtDestructor(const boost::function<void()>& fn) : _fn(fn) {
+    }
+    ~CallFunctionAtDestructor() {
+        _fn();
+    }
+
+protected:
+    boost::function<void()> _fn;
+};
+
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
@@ -320,6 +333,30 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     }
     _veclinks.push_back(plink);
     return true;
+}
+
+void KinBody::SetLinkGeometriesFromExtra(const std::string& geomname)
+{
+    // need to call _ParametersChanged at the very end, even if exception occurs
+    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_ParametersChanged, this, Prop_LinkGeometry));
+    FOREACHC(itlink, _veclinks) {
+        std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
+        if( geomname.size() == 0 ) {
+            pvinfos = &(*itlink)->_info._vgeometryinfos;
+        }
+        else {
+            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
+            if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("could not find geometries %s for link %s",geomname%GetName(),ORE_InvalidArguments);
+            }
+            pvinfos = &it->second;
+        }
+        (*itlink)->_vGeometries.resize(pvinfos->size());
+        for(size_t i = 0; i < pvinfos->size(); ++i) {
+            (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+        }
+        (*itlink)->_Update(false);
+    }
 }
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos)

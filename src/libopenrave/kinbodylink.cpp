@@ -326,7 +326,6 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
     }
     _Update();
-    GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
@@ -338,10 +337,9 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
         ++i;
     }
     _Update();
-    GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
-void KinBody::Link::InitGeometriesFromExtra(const std::string& geomname)
+void KinBody::Link::SetGeometriesFromExtra(const std::string& geomname)
 {
     std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
     if( geomname.size() == 0 ) {
@@ -359,7 +357,6 @@ void KinBody::Link::InitGeometriesFromExtra(const std::string& geomname)
         _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));
     }
     _Update();
-    GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 void KinBody::Link::SetExtraGeometries(const std::string& geomname, std::vector<KinBody::GeometryInfoPtr>& geometries)
@@ -389,8 +386,6 @@ void KinBody::Link::SwapGeometries(boost::shared_ptr<Link>& link)
     }
     _Update();
     link->_Update();
-    GetParent()->_ParametersChanged(Prop_LinkGeometry);
-    link->GetParent()->_ParametersChanged(Prop_LinkGeometry);
 }
 
 bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal) const
@@ -465,14 +460,22 @@ void KinBody::Link::UpdateInfo()
     }
 }
 
-void KinBody::Link::_Update()
+void KinBody::Link::_Update(bool parameterschanged)
 {
-    _collision.vertices.resize(0);
-    _collision.indices.resize(0);
-    FOREACH(itgeom,_vGeometries) {
-        _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
+    // if there's only one trimesh geometry and it has identity offset, then copy it directly
+    if( _vGeometries.size() == 1 && _vGeometries.at(0)->GetType() == GT_TriMesh && TransformDistanceFast(Transform(), _vGeometries.at(0)->GetTransform()) <= g_fEpsilonLinear ) {
+        _collision = _vGeometries.at(0)->GetCollisionMesh();
     }
-    GetParent()->_ParametersChanged(Prop_LinkGeometry);
+    else {
+        _collision.vertices.resize(0);
+        _collision.indices.resize(0);
+        FOREACH(itgeom,_vGeometries) {
+            _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
+        }
+    }
+    if( parameterschanged ) {
+        GetParent()->_ParametersChanged(Prop_LinkGeometry);
+    }
 }
 
 }

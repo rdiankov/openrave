@@ -655,9 +655,9 @@ public:
         return _plink->InitGeometries(geometries);
     }
 
-    void InitGeometriesFromExtra(const std::string& name)
+    void SetGeometriesFromExtra(const std::string& name)
     {
-        _plink->InitGeometriesFromExtra(name);
+        _plink->SetGeometriesFromExtra(name);
     }
 
     void SetExtraGeometries(const std::string& name, object ogeometryinfos)
@@ -1222,6 +1222,11 @@ bool PyKinBody::InitFromGeometries(object ogeometries)
         geometries[i] = pygeom->GetGeometryInfo();
     }
     return _pbody->InitFromGeometries(geometries);
+}
+
+void PyKinBody::SetLinkGeometriesFromExtra(const std::string& geomname)
+{
+    _pbody->SetLinkGeometriesFromExtra(geomname);
 }
 
 void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos)
@@ -2481,6 +2486,7 @@ void init_openravepy_kinbody()
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,args("spherex","draw"), DOXY_FN(KinBody,InitFromSpheres))
                         .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
                         .def("InitFromGeometries",&PyKinBody::InitFromGeometries,args("geometries"), DOXY_FN(KinBody,InitFromGeometries))
+                        .def("SetLinkGeometriesFromExtra",&PyKinBody::SetLinkGeometriesFromExtra, args("name"), DOXY_FN(KinBody,SetLinkGeometriesFromExtra))
                         .def("Init",&PyKinBody::Init,args("linkinfos","jointinfos"), DOXY_FN(KinBody,Init))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
@@ -2717,7 +2723,7 @@ void init_openravepy_kinbody()
                          .def("SetTorque",&PyLink::SetTorque,args("torque","add"), DOXY_FN(KinBody::Link,SetTorque))
                          .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                          .def("InitGeometries",&PyLink::InitGeometries, args("geometries"), DOXY_FN(KinBody::Link,InitGeometries))
-                         .def("InitGeometriesFromExtra",&PyLink::InitGeometriesFromExtra, args("name"), DOXY_FN(KinBody::Link,InitGeometriesFromExtra))
+                         .def("SetGeometriesFromExtra",&PyLink::SetGeometriesFromExtra, args("name"), DOXY_FN(KinBody::Link,SetGeometriesFromExtra))
                          .def("SetExtraGeometries",&PyLink::SetExtraGeometries, args("geometries"), DOXY_FN(KinBody::Link,SetExtraGeometries))
                          .def("GetNumExtraGeometries",&PyLink::GetNumExtraGeometries, args("geometries"), DOXY_FN(KinBody::Link,GetNumExtraGeometries))
                          .def("GetRigidlyAttachedLinks",&PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))

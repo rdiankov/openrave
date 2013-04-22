@@ -496,7 +496,7 @@ protected:
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
         /// If name is empty, will initialize the default geometries. If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
-        virtual void InitGeometriesFromExtra(const std::string& name);
+        virtual void SetGeometriesFromExtra(const std::string& name);
 
         /// \brief stores geometries for later retrieval
         ///
@@ -577,7 +577,9 @@ protected:
 
 protected:
         /// \brief Updates the cached information due to changes in the collision data.
-        virtual void _Update();
+        ///
+        /// \param parameterschanged if true, will
+        virtual void _Update(bool parameterschanged=true);
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
@@ -1305,6 +1307,14 @@ private:
     /// \param visible if true, will be rendered in the scene
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries);
     virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
+
+    /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
+    ///
+    /// \param name The name of the extra geometries group stored in each link.
+    /// The geometries can be set while the body is added to the environment. No other information will be touched.
+    /// This method is faster than Link::SetGeometriesFromExtra since it makes only one change callback.
+    /// \throw If any links do not have the particular geometry, an exception will be raised.
+    virtual void SetLinkGeometriesFromExtra(const std::string& name);
 
     /// \brief initializes an complex kinematics body with links and joints
     ///
