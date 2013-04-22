@@ -121,23 +121,24 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 }
             }
             robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                for(size_t i = 0; i < newdof.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << newdof[i];
+                    }
+                    else {
+                        ss << "jitteredvalues=[" << newdof[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+
             return 1;
         }
     }
 
-    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        for(size_t i = 0; i < newdof.size(); ++i ) {
-            if( i > 0 ) {
-                ss << "," << newdof[i];
-            }
-            else {
-                ss << "jitteredvalues=[" << newdof[i];
-            }
-        }
-        ss << "]";
-        RAVELOG_VERBOSE(ss.str());
-    }
     return 0;
 }
 
@@ -1730,6 +1731,7 @@ int DynamicsCollisionConstraint::_CheckState()
 {
     if( !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
+            RAVELOG_VERBOSE("pre usercheckfn failed\n");
             return 0;
         }
     }
@@ -1770,18 +1772,35 @@ int DynamicsCollisionConstraint::_CheckState()
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            return false;
+            PlannerBase::PlannerParametersPtr params = _parameters.lock();
+            std::vector<dReal> vcurrentvalues;
+            params->_getstatefn(vcurrentvalues);
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            ss << "collision: " << _report->__str__() << ", ";
+            for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
+                if( i > 0 ) {
+                    ss << "," << vcurrentvalues[i];
+                }
+                else {
+                    ss << "colvalues=[" << vcurrentvalues[i];
+                }
+            }
+            ss << "]";
+            RAVELOG_VERBOSE(ss.str());
+            return 0;
         }
         if( (*itbody)->CheckSelfCollision(_report) ) {
-            return false;
+            RAVELOG_VERBOSE("self-collision failed\n");
+            return 0;
         }
     }
     if( !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
-            return false;
+            RAVELOG_VERBOSE("post usercheckfn failed\n");
+            return 0;
         }
     }
-    return true;
+    return 1;
 }
 
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr pvCheckedConfigurations)
@@ -1838,7 +1857,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
         int nstateret = _CheckState();
         if( nstateret <= 0 ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return nstateret;
         }
     }
@@ -1880,7 +1898,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
         int nstateret = _CheckState();
         if( nstateret <= 0 ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return nstateret;
         }
         start = 1;
@@ -1909,7 +1926,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             (*_setvelstatefn)(_vtempvelconfig);
         }
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
@@ -1923,7 +1939,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
         int nstateret = _CheckState();
         if( nstateret <= 0 ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return nstateret;
         }
         if( !!params->_getstatefn ) {
@@ -1934,7 +1949,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
         }
         if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
