@@ -442,7 +442,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         break
         return inside
 
-    def GetGeometryInfosFromLink(self,ilink):
+    def GetGeometryInfosFromLink(self,ilink,preservetransform=False):
+        """gets a list of geometries for the link
+        :param preservetransform: if True, will set the same geometry transform as the original geometry. Otherwise will pre-multiply with the new trimesh.
+        """
         with self.env:
             geometryinfos = []
             geometries = self.robot.GetLinks()[ilink].GetGeometries()
@@ -451,7 +454,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 ginfo._vDiffuseColor = [0,0,0.4]
                 ginfo._type = GeometryType.Trimesh
                 ginfo._meshcollision = TriMesh()
-                ginfo._t = geometries[ig].GetTransform()
+                if preservetransform:
+                    ginfo._t = geometries[ig].GetTransform()
+                else:
+                    ginfo._t = eye(4)
                 numvertices = 0
                 numindices = 0
                 for hull in hulls:
@@ -462,7 +468,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 voffset = 0
                 ioffset = 0
                 for hull in hulls:
-                    ginfo._meshcollision.vertices[voffset:(voffset+len(hull[0])),:] = hull[0]
+                    if preservetransform:
+                        ginfo._meshcollision.vertices[voffset:(voffset+len(hull[0])),:] = hull[0]
+                    else:
+                        ginfo._meshcollision.vertices[voffset:(voffset+len(hull[0])),:] = transformPoints(geometries[ig].GetTransform(),hull[0])
                     ginfo._meshcollision.indices[ioffset:(ioffset+len(hull[1])),:] = hull[1]+voffset
                     voffset += len(hull[0])
                     ioffset += len(hull[1])
