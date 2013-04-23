@@ -798,6 +798,7 @@ public:
 private:
     boost::shared_ptr<BulletSpace> bulletspace;
     int _options;
+    std::string _userdatakey;
 
     boost::shared_ptr<btBroadphaseInterface> _broadphase;
     boost::shared_ptr<btDefaultCollisionConfiguration> _collisionConfiguration;
