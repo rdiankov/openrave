@@ -93,10 +93,20 @@ public:
 
         uint32_t basetime = utils::GetMilliTime();
 
+        ConfigurationSpecification posspec = _parameters->_configurationspecification;
+        _setstatefn = posspec.GetSetFn(GetEnv());
+        ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
+        _setvelstatefn = velspec.GetSetFn(GetEnv());
+
+        std::vector<dReal> startvelocity, endvelocity;
+        ptraj->Sample(startvelocity,0,velspec)
+        ptraj->Sample(endvelocity,ptraj->GetDuration(),velspec)
+
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());
         vector<dReal> vtrajpoints;
-        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,_parameters->_configurationspecification);
+        ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
+
         ParabolicRamp::Vector q(_parameters->GetDOF());
         for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
             std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
@@ -129,9 +139,12 @@ public:
             }
             path.push_back(q);
         }
+
+        // assume that the trajectory has velocity data
+
         try {
             std::list<ParabolicRamp::ParabolicRampND> ramps;
-            SetMilestones(ramps, path);
+            SetMilestones(ramps, path, startvelocity, endvelocity);
             dReal totaltime=0;
             FOREACH(itramp, ramps) {
                 totaltime += itramp->endTime;
@@ -142,11 +155,6 @@ public:
                 *it *= _parameters->_pointtolerance;
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
-
-            ConfigurationSpecification posspec = _parameters->_configurationspecification;
-            _setstatefn = posspec.GetSetFn(GetEnv());
-            ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
-            _setvelstatefn = velspec.GetSetFn(GetEnv());
 
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
@@ -262,7 +270,7 @@ public:
         return feas;
     }
 
-    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x)
+    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, const std::vector<dReal>& startvelocity, const std::vector<dReal>& endvelocity)
     {
         ramps.clear();
         if(x.size()==1) {
@@ -275,8 +283,18 @@ public:
                 ramps.push_back(ParabolicRamp::ParabolicRampND());
                 ramps.back().x0 = x[i];
                 ramps.back().x1 = x[i+1];
-                ramps.back().dx0 = zero;
-                ramps.back().dx1 = zero;
+                if( i == 0 && startvelocity.size() == x[i].size() ) {
+                    ramps.back().dx0 = startvelocity;
+                }
+                else {
+                    ramps.back().dx0 = zero;
+                }
+                if( i+1 == x.size() && endvelocity.size() == x[i].size() ) {
+                    ramps.back().dx1 = endvelocity;
+                }
+                else {
+                    ramps.back().dx1 = zero;
+                }
                 bool res=ramps.back().SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
                 PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
             }
