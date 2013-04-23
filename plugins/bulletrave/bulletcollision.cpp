@@ -387,6 +387,7 @@ public:
 public:
     BulletCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput) : CollisionCheckerBase(penv), bulletspace(new BulletSpace(penv, GetCollisionInfo, false)), _options(0) {
         __description = ":Interface Author: Rosen Diankov\n\nCollision checker from the `Bullet Physics Package <http://bulletphysics.org>`";
+        _userdatakey = std::string("bulletcollision");
     }
     virtual ~BulletCollisionChecker() {
     }

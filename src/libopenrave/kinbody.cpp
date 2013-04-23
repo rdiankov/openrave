@@ -3007,13 +3007,30 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     }
 }
 
+void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
+{
+    if( _selfcollisionchecker != collisionchecker ) {
+        _selfcollisionchecker = collisionchecker;
+        // reset the internal cache
+        _ResetInternalCollisionCache();
+    }
+}
+
+CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
+{
+    return _selfcollisionchecker;
+}
+
 bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
     if( !collisionchecker ) {
-        collisionchecker = GetEnv()->GetCollisionChecker();
+        collisionchecker = _selfcollisionchecker;
         if( !collisionchecker ) {
-            // no checker set
-            return false;
+            collisionchecker = GetEnv()->GetCollisionChecker();
+            if( !collisionchecker ) {
+                // no checker set
+                return false;
+            }
         }
     }
     if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
@@ -4072,14 +4089,15 @@ private:
         // Check for colliding link pairs given the initial pose _vInitialLinkTransformations
         // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
         TransformsSaver saver(shared_kinbody_const());
-        CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             for(size_t j = i+1; j < _veclinks.size(); ++j) {
-                if((_setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end())&& !GetEnv()->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
+                if((_setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end())&& !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
                     _setNonAdjacentLinks[0].insert(i|(j<<16));
                 }
             }

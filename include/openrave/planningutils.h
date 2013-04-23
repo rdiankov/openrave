@@ -339,12 +339,14 @@ public:
 
 protected:
     virtual bool _CheckState();
+    virtual void _PrintOnFailure(const std::string& prefix);
 
     std::vector<dReal> _vtempconfig, dQ;
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckSelfCollisions;
     bool _bCheckEnv;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
+    PlannerBase::PlannerParametersWeakPtr _parameters;
 };
 
 /** \brief dynamics and collision checking with linear interpolation
@@ -375,6 +377,7 @@ public:
 
 protected:
     virtual int _CheckState();
+    virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakPtr _parameters;
     std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig; ///< in configuration space

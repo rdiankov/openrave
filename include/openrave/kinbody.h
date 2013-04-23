@@ -495,8 +495,15 @@ protected:
 
         /// \brief initializes the link with geometries from the extra geomeries in LinkInfo
         ///
-        /// If name is empty, will initialize the default geometries. If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
+        /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
+        /// \throw If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
         virtual void SetGeometriesFromGroup(const std::string& name);
+
+        /// \brief returns a const reference to the vector of geometries for a particular group
+        ///
+        /// \param name The name of the geometry group.
+        /// \throw openrave_exception If the group does not exist, throws an exception.
+        virtual const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& name) const;
 
         /// \brief stores geometries for later retrieval
         ///
@@ -1759,6 +1766,15 @@ private:
      */
     virtual void ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& doftorquecomponents, const std::vector<dReal>& dofaccelerations, const ForceTorqueMap& externalforcetorque=ForceTorqueMap()) const;
 
+    /// \brief sets a self-collision checker to be used whenever \ref CheckSelfCollision is called
+    ///
+    /// This function allows self-collisions to use a different, un-padded geometry for self-collisions
+    /// \param collisionchecker The new collision checker to use. If empty, will use the environment set collision checker.
+    virtual void SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker);
+
+    /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
+    virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
+
     /// \brief Check if body is self colliding. Links that are joined together are ignored.
     ///
     /// \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
@@ -1983,6 +1999,7 @@ protected:
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 
     ConfigurationSpecification _spec;
+    CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp

@@ -49,9 +49,15 @@ Core
 * **Links can now store different geoemtry groups for different purposes.**
 
   * Added _mapExtraGeometries to :class:`.KinBody.LinkInfo`. Added :meth:`.KinBody.Link.InitGeometriesFromGroup`, :meth:`.KinBody.Link.SetGroupGeometries`, :meth:`.KinBody.Link.GetGroupNumGeometries`, and :meth:`.KinBody.SetLinkGeometriesFromGroup`
-  * Collision Checkers now support prioritizing certain geometry groups via :meth:`.CollisionChecker.SetGeometryGroup`
 
 * Possible to bulk enable/disable links via :meth:`.KinBody.SetLinkEnableStates` and :meth:`.KinBody.GetLinkEnableStates`.
+
+Collision Checking
+-----------------
+
+* Collision Checkers now support prioritizing certain geometry groups via :meth:`.CollisionChecker.SetGeometryGroup`
+
+* KinBody can have own collision checkers settable via :meth:`.KinBody.SetSelfCollisionChecker`. Reason is to allow different geometry to be used for self and enviornment collisions. 
 
 C Bindings
 ----------

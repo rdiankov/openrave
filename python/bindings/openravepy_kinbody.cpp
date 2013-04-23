@@ -2031,6 +2031,16 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
     }
 }
 
+void PyKinBody::SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker)
+{
+    _pbody->SetSelfCollisionChecker(openravepy::GetCollisionChecker(pycollisionchecker));
+}
+
+PyInterfaceBasePtr PyKinBody::GetSelfCollisionChecker()
+{
+    return openravepy::toPyCollisionChecker(_pbody->GetSelfCollisionChecker(), _pyenv);
+}
+
 bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pReport, PyCollisionCheckerBasePtr pycollisionchecker)
 {
     bool bCollision = _pbody->CheckSelfCollision(openravepy::GetCollisionReport(pReport), openravepy::GetCollisionChecker(pycollisionchecker));
@@ -2581,6 +2591,8 @@ void init_openravepy_kinbody()
                         .def("ComputeHessianTranslation",&PyKinBody::ComputeHessianTranslation,ComputeHessianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeHessianTranslation)))
                         .def("ComputeHessianAxisAngle",&PyKinBody::ComputeHessianAxisAngle,ComputeHessianAxisAngle_overloads(args("linkindex","indices"), DOXY_FN(KinBody,ComputeHessianAxisAngle)))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
+                        .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,args("collisionchecker"), DOXY_FN(KinBody,SetSelfCollisionChecker))
+                        .def("GetSelfCollisionChecker",&PyKinBody::GetSelfCollisionChecker,args("collisionchecker"), DOXY_FN(KinBody,GetSelfCollisionChecker))
                         .def("CheckSelfCollision",&PyKinBody::CheckSelfCollision, CheckSelfCollision_overloads(args("report","collisionchecker"), DOXY_FN(KinBody,CheckSelfCollision)))
                         .def("IsAttached",&PyKinBody::IsAttached,args("body"), DOXY_FN(KinBody,IsAttached))
                         .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))

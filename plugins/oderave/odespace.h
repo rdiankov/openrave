@@ -166,8 +166,9 @@ public:
                         }
                     }
                     else if( dGeomGetClass(curgeom) == dTriMeshClass ) {
-                        if( dGeomTriMeshGetData(curgeom) != 0 )
+                        if( dGeomTriMeshGetData(curgeom) != 0 ) {
                             dGeomTriMeshDataDestroy(dGeomTriMeshGetData(curgeom));
+                        }
                     }
                     dGeomDestroy(curgeom);
                     curgeom = pnextgeom;
@@ -265,19 +266,6 @@ private:
         return !!_ode;
     }
 
-    void SetGeometryGroup(const std::string& groupname)
-    {
-        if( groupname != _geometrygroup ) {
-            _geometrygroup = groupname;
-            // reset all the existing bodies
-        }
-    }
-
-    const std::string& GetGeometryGroup()
-    {
-        return _geometrygroup;
-    }
-
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
@@ -315,59 +303,30 @@ private:
             link->tlinkmass = (*itlink)->GetLocalMassFrame();
             link->tlinkmassinv = link->tlinkmass.inverse();
 
-            // add all the correct geometry objects
-            FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                KinBody::Link::GeometryPtr geom = *itgeom;
-                dGeomID odegeom = NULL;
-                switch(geom->GetType()) {
-                case OpenRAVE::GT_Box:
-                    odegeom = dCreateBox(0,geom->GetBoxExtents().x*2.0f,geom->GetBoxExtents().y*2.0f,geom->GetBoxExtents().z*2.0f);
-                    break;
-                case OpenRAVE::GT_Sphere:
-                    odegeom = dCreateSphere(0,geom->GetSphereRadius());
-                    break;
-                case OpenRAVE::GT_Cylinder:
-                    odegeom = dCreateCylinder(0,geom->GetCylinderRadius(),geom->GetCylinderHeight());
-                    break;
-                case OpenRAVE::GT_TriMesh:
-                    if( geom->GetCollisionMesh().indices.size() > 0 ) {
-                        dTriIndex* pindices = new dTriIndex[geom->GetCollisionMesh().indices.size()];
-                        for(size_t i = 0; i < geom->GetCollisionMesh().indices.size(); ++i) {
-                            pindices[i] = geom->GetCollisionMesh().indices[i];
-                        }
-                        dReal* pvertices = new dReal[4*geom->GetCollisionMesh().vertices.size()];
-                        for(size_t i = 0; i < geom->GetCollisionMesh().vertices.size(); ++i) {
-                            Vector v = geom->GetCollisionMesh().vertices[i];
-                            pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
-                        }
-                        dTriMeshDataID id = dGeomTriMeshDataCreate();
-                        dGeomTriMeshDataBuildSimple(id, pvertices, geom->GetCollisionMesh().vertices.size(), pindices, geom->GetCollisionMesh().indices.size());
-                        odegeom = dCreateTriMesh(0, id, NULL, NULL, NULL);
-                        link->listtrimeshinds.push_back(pindices);
-                        link->listvertices.push_back(pvertices);
+            if( _geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(_geometrygroup) >= 0 ) {
+                // add a geometry object group
+                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(_geometrygroup);
+                FOREACHC(itgeominfo, vgeometryinfos) {
+                    dGeomID odegeomtrans = _CreateODEGeomFromGeometryInfo(pinfo->space, link, **itgeominfo);
+                    if( !odegeomtrans ) {
+                        continue;
                     }
-                    break;
-                default:
-                    RAVELOG_WARN("ode doesn't support geom type %d\n", geom->GetType());
-                    break;
+                    // finally set the geom to the ode body
+                    dGeomSetBody(odegeomtrans, link->body);
+                    link->geom = odegeomtrans; // is it ok that we're overwriting this?
                 }
-
-                if( !odegeom ) {
-                    continue;
+            }
+            else {
+                // add all the current geometry objects
+                FOREACHC(itgeom, (*itlink)->GetGeometries()) {
+                    dGeomID odegeomtrans = _CreateODEGeomFromGeometryInfo(pinfo->space, link, (*itgeom)->GetInfo());
+                    if( !odegeomtrans ) {
+                        continue;
+                    }
+                    // finally set the geom to the ode body
+                    dGeomSetBody(odegeomtrans, link->body);
+                    link->geom = odegeomtrans; // is it ok that we're overwriting this?
                 }
-                dGeomID odegeomtrans = dCreateGeomTransform(pinfo->space);
-                dGeomTransformSetCleanup(odegeomtrans, 1);
-                dGeomTransformSetGeom(odegeomtrans, odegeom);
-                dGeomSetData(odegeom, (void*)geom.get());
-
-                // set the transformation
-                RaveTransform<dReal> t = link->tlinkmassinv * geom->GetTransform();
-                dGeomSetQuaternion(odegeom,&t.rot[0]);
-                dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
-
-                // finally set the geom to the ode body
-                dGeomSetBody(odegeomtrans, link->body);
-                link->geom = odegeomtrans;
             }
 
             if( !(*itlink)->IsStatic() && _bUsingPhysics ) {
@@ -514,6 +473,29 @@ private:
         return pinfo;
     }
 
+    void SetGeometryGroup(const std::string& groupname)
+    {
+        if( groupname != _geometrygroup ) {
+            _geometrygroup = groupname;
+            // reset all the existing bodies
+            std::vector<KinBodyPtr> vbodies;
+            _penv->GetBodies(vbodies);
+            FOREACH(itbody, vbodies) {
+                KinBodyConstPtr pbody(*itbody);
+                KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+                if( !pinfo ) {
+                    InitKinBody(pbody,pinfo);
+                }
+            }
+        }
+    }
+
+    const std::string& GetGeometryGroup()
+    {
+        return _geometrygroup;
+    }
+
+
     void Synchronize()
     {
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
@@ -616,6 +598,59 @@ private:
     }
 
 private:
+    dGeomID _CreateODEGeomFromGeometryInfo(dSpaceID space, boost::shared_ptr<KinBodyInfo::LINK> link, const KinBody::GeometryInfo& info)
+    {
+        dGeomID odegeom = NULL;
+        switch(info._type) {
+        case OpenRAVE::GT_Box:
+            odegeom = dCreateBox(0,info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
+            break;
+        case OpenRAVE::GT_Sphere:
+            odegeom = dCreateSphere(0,info._vGeomData.x);
+            break;
+        case OpenRAVE::GT_Cylinder:
+            odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
+            break;
+        case OpenRAVE::GT_TriMesh:
+            if( info._meshcollision.indices.size() > 0 ) {
+                dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];
+                for(size_t i = 0; i < info._meshcollision.indices.size(); ++i) {
+                    pindices[i] = info._meshcollision.indices[i];
+                }
+                dReal* pvertices = new dReal[4*info._meshcollision.vertices.size()];
+                for(size_t i = 0; i < info._meshcollision.vertices.size(); ++i) {
+                    Vector v = info._meshcollision.vertices[i];
+                    pvertices[4*i+0] = v.x; pvertices[4*i+1] = v.y; pvertices[4*i+2] = v.z;
+                }
+                dTriMeshDataID id = dGeomTriMeshDataCreate();
+                dGeomTriMeshDataBuildSimple(id, pvertices, info._meshcollision.vertices.size(), pindices, info._meshcollision.indices.size());
+                odegeom = dCreateTriMesh(0, id, NULL, NULL, NULL);
+                link->listtrimeshinds.push_back(pindices);
+                link->listvertices.push_back(pvertices);
+            }
+            break;
+        default:
+            RAVELOG_WARN(str(boost::format("ode doesn't support geom type %d")%info._type));
+            break;
+        }
+
+        if( !odegeom ) {
+            return NULL;
+        }
+
+        dGeomID odegeomtrans = dCreateGeomTransform(space);
+        dGeomTransformSetCleanup(odegeomtrans, 1);
+        dGeomTransformSetGeom(odegeomtrans, odegeom);
+        //dGeomSetData(odegeom, (void*)geom.get());
+
+        // set the transformation
+        RaveTransform<dReal> t = link->tlinkmassinv * info._t;
+        dGeomSetQuaternion(odegeom,&t.rot[0]);
+        dGeomSetPosition(odegeom,t.trans.x, t.trans.y, t.trans.z);
+
+        return odegeomtrans;
+    }
+
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {

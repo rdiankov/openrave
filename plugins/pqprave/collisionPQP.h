@@ -18,6 +18,7 @@
 #define  COLPQP_H
 
 #include "pqp/PQP.h"
+#include <boost/lexical_cast.hpp>
 
 //wrapper class for PQP, distance and tolerance checking is _off_ by default, collision checking is _on_ by default
 class CollisionCheckerPQP : public CollisionCheckerBase
@@ -43,6 +44,7 @@ public:
     CollisionCheckerPQP(EnvironmentBasePtr penv) : CollisionCheckerBase(penv)
     {
         __description = ":Interface Authors: Dmitry Berenson, Rosen Diankov\n\nPQP collision checker, slow but allows distance queries to objects.";
+        _userdatakey = std::string("pqpcollision") + boost::lexical_cast<std::string>(this);
         _rel_err = 200.0;     //temporary change
         _abs_err = 0.001;       //temporary change
         _tolerance = 0.0;
@@ -72,7 +74,7 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            (*itbody)->RemoveUserData("pqpcollision");
+            (*itbody)->RemoveUserData(_userdatakey);
         }
     }
 
@@ -83,7 +85,7 @@ public:
 
     virtual bool _InitKinBody(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData("pqpcollision"));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !!pinfo && pinfo->GetBody() == pbody ) {
             return true;
@@ -92,7 +94,7 @@ public:
         pinfo.reset(new KinBodyInfo());
 
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
-        pbody->SetUserData("pqpcollision", pinfo);
+        pbody->SetUserData(_userdatakey, pinfo);
 
         PQP_REAL p1[3], p2[3], p3[3];
         pinfo->vlinks.reserve(pbody->GetLinks().size());
@@ -128,7 +130,7 @@ public:
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
         if( !!pbody ) {
-            pbody->RemoveUserData("pqpcollision");
+            pbody->RemoveUserData(_userdatakey);
         }
     }
 
@@ -410,7 +412,7 @@ public:
 
     boost::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData("pqpcollision"));
+        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData(_userdatakey));
         BOOST_ASSERT( pinfo->GetBody() == plink->GetParent());
         return pinfo->vlinks.at(plink->GetIndex());
     }
@@ -685,6 +687,7 @@ private:
 
     RobotBaseConstPtr _pactiverobot;     ///< set if ActiveDOFs option is enabled
     vector<uint8_t> _vactivelinks;
+    std::string _userdatakey;
 
     void _SetActiveBody(KinBodyConstPtr pbody) {
         if( _options & CO_ActiveDOFs ) {

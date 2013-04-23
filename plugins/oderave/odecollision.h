@@ -18,6 +18,8 @@
 
 #include "odespace.h"
 
+#include <boost/lexical_cast.hpp>
+
 #ifndef ODE_USE_MULTITHREAD
 static boost::mutex _mutexode;
 static bool _bnotifiedmessage=false;
@@ -106,7 +108,9 @@ private:
     }
 
 public:
-    ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv), odespace(new ODESpace(penv,"odecollision",false)) {
+    ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv) {
+        _userdatakey = std::string("odecollision") + boost::lexical_cast<std::string>(this);
+        _odespace.reset(new ODESpace(penv,_userdatakey,false));
         _options = 0;
         geomray = NULL;
         _nMaxStartContacts = 32;
@@ -121,7 +125,7 @@ public:
         }
 #endif
 
-        odespace->InitEnvironment();
+        _odespace->InitEnvironment();
         geomray = dCreateRay(0, 1000.0f);     // 1000m (is this used?)
     }
     ~ODECollisionChecker() {
@@ -129,7 +133,7 @@ public:
             dGeomDestroy(geomray);
             geomray = NULL;
         }
-        odespace->DestroyEnvironment();
+        _odespace->DestroyEnvironment();
     }
 
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
@@ -143,7 +147,7 @@ public:
 
     virtual bool InitEnvironment()
     {
-//        if( !odespace->InitEnvironment() ) {
+//        if( !_odespace->InitEnvironment() ) {
 //            return false;
 //        }
         vector<KinBodyPtr> vbodies;
@@ -162,17 +166,17 @@ public:
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
-            (*itbody)->RemoveUserData("odecollision");
+            (*itbody)->RemoveUserData(_userdatakey);
         }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odecollision"));
+        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
-            pinfo = odespace->InitKinBody(pbody);
-            pbody->SetUserData("odecollision", pinfo);
+            pinfo = _odespace->InitKinBody(pbody);
+            pbody->SetUserData(_userdatakey, pinfo);
         }
         return !!pinfo;
     }
@@ -180,7 +184,7 @@ public:
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
         if( !!pbody ) {
-            pbody->RemoveUserData("odecollision");
+            pbody->RemoveUserData(_userdatakey);
         }
     }
 
@@ -211,8 +215,8 @@ public:
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
-        odespace->Synchronize();
-        dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
+        _odespace->Synchronize();
+        dSpaceCollide(_odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
     }
 
@@ -236,7 +240,7 @@ public:
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
-        odespace->Synchronize();
+        _odespace->Synchronize();
 
         // have to go through all attached bodies manually (not sure if there's a fast way to set temporary groups in ode)
         std::set<KinBodyPtr> s1, s2;
@@ -244,7 +248,7 @@ public:
         pbody2->GetAttached(s2);
         FOREACH(it1,s1) {
             FOREACH(it2,s2) {
-                dSpaceCollide2((dGeomID)odespace->GetBodySpace(*it1),(dGeomID)odespace->GetBodySpace(*it2),&cb,KinBodyKinBodyCollisionCallback);
+                dSpaceCollide2((dGeomID)_odespace->GetBodySpace(*it1),(dGeomID)_odespace->GetBodySpace(*it2),&cb,KinBodyKinBodyCollisionCallback);
                 if( cb._bCollision ) {
                     return true;
                 }
@@ -269,8 +273,8 @@ public:
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
-        odespace->Synchronize();
-        dSpaceCollide(odespace->GetSpace(), &cb, LinkCollisionCallback);
+        _odespace->Synchronize();
+        dSpaceCollide(_odespace->GetSpace(), &cb, LinkCollisionCallback);
         return cb._bCollision;
     }
 
@@ -324,7 +328,7 @@ public:
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
-        odespace->Synchronize();
+        _odespace->Synchronize();
         return _CheckCollision(plink1,plink2,report);
     }
 
@@ -334,11 +338,11 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         vector<dContact> vcontacts;
-        dGeomID geom1 = odespace->GetLinkGeom(plink1);
+        dGeomID geom1 = _odespace->GetLinkGeom(plink1);
         int igeom1 = 0;
         while(geom1 != NULL) {
             BOOST_ASSERT(dGeomIsEnabled(geom1));
-            dGeomID geom2 = odespace->GetLinkGeom(plink2);
+            dGeomID geom2 = _odespace->GetLinkGeom(plink2);
             int igeom2 = 0;
             while(geom2 != NULL) {
                 BOOST_ASSERT(dGeomIsEnabled(geom2));
@@ -426,7 +430,7 @@ public:
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
-        odespace->Synchronize();
+        _odespace->Synchronize();
         COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
         std::set<KinBodyPtr> setattached;
@@ -479,8 +483,8 @@ public:
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
-        odespace->Synchronize();
-        dSpaceCollide(odespace->GetSpace(), &cb, KinBodyCollisionCallback);
+        _odespace->Synchronize();
+        dSpaceCollide(_odespace->GetSpace(), &cb, KinBodyCollisionCallback);
         return cb._bCollision;
     }
 
@@ -498,7 +502,7 @@ public:
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
-        odespace->Synchronize();
+        _odespace->Synchronize();
         OpenRAVE::dReal fmaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         if( RaveFabs(fmaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
@@ -515,7 +519,7 @@ public:
 
         bool bCollision = false;
         vector<dContact> vcontacts;
-        dGeomID geom1 = odespace->GetLinkGeom(plink);
+        dGeomID geom1 = _odespace->GetLinkGeom(plink);
         while(geom1 != NULL) {
             BOOST_ASSERT(dGeomIsEnabled(geom1));
 
@@ -608,7 +612,7 @@ public:
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
 
-        odespace->Synchronize();
+        _odespace->Synchronize();
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
         if( RaveFabs(cb.fraymaxdist-1) < 1e-4 ) {
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
@@ -619,7 +623,7 @@ public:
         dGeomRaySetLength(geomray,cb.fraymaxdist);
         dGeomRaySetParams(geomray,0,0);
         //dSpaceAdd(pbody->GetSpace(), geomray);
-        dSpaceCollide2((dGeomID)odespace->GetBodySpace(pbody), geomray, &cb, RayCollisionCallback);
+        dSpaceCollide2((dGeomID)_odespace->GetBodySpace(pbody), geomray, &cb, RayCollisionCallback);
         //dSpaceRemove(pbody->GetSpace(), geomray);
         return cb._bOneCollision;
     }
@@ -649,10 +653,10 @@ public:
         dGeomRaySetLength(geomray,cb.fraymaxdist);
         dGeomRaySetParams(geomray,0,0);
 
-        odespace->Synchronize();
-        //dSpaceAdd(odespace->GetSpace(), geomray);
-        dSpaceCollide2((dGeomID)odespace->GetSpace(), geomray, &cb, RayCollisionCallback);
-        //dSpaceRemove(odespace->GetSpace(), geomray);
+        _odespace->Synchronize();
+        //dSpaceAdd(_odespace->GetSpace(), geomray);
+        dSpaceCollide2((dGeomID)_odespace->GetSpace(), geomray, &cb, RayCollisionCallback);
+        //dSpaceRemove(_odespace->GetSpace(), geomray);
         return cb._bOneCollision;
     }
 
@@ -679,7 +683,7 @@ public:
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
-        odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
+        _odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( _CheckCollision(plink1,plink2, report) ) {
@@ -729,7 +733,7 @@ public:
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
 #endif
-        odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
+        _odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( plink == plink1 || plink == plink2 ) {
@@ -759,12 +763,12 @@ public:
 
     void SetGeometryGroup(const std::string& groupname)
     {
-        odespace->SetGeometryGroup(groupname);
+        _odespace->SetGeometryGroup(groupname);
     }
 
     const std::string& GetGeometryGroup()
     {
-        return odespace->GetGeometryGroup();
+        return _odespace->GetGeometryGroup();
     }
 
 private:
@@ -1196,8 +1200,9 @@ private:
 
     int _options;
     dGeomID geomray;     // used for all ray tests
-    boost::shared_ptr<ODESpace> odespace;
+    boost::shared_ptr<ODESpace> _odespace;
     size_t _nMaxStartContacts, _nMaxContacts;
+    std::string _userdatakey;
 };
 
 #endif

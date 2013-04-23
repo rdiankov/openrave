@@ -1458,28 +1458,54 @@ bool LineCollisionConstraint::_CheckState()
 {
     if( !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
+            _PrintOnFailure("pre-user check failed");
             return false;
         }
     }
     FOREACHC(itbody, _listCheckSelfCollisions) {
         if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+            _PrintOnFailure("collision failed");
             return false;
         }
         if( (*itbody)->CheckSelfCollision(_report) ) {
+            _PrintOnFailure("self-collision failed");
             return false;
         }
     }
     if( !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
+            _PrintOnFailure("post-user check failed");
             return false;
         }
     }
     return true;
 }
 
+void LineCollisionConstraint::_PrintOnFailure(const std::string& prefix)
+{
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        PlannerBase::PlannerParametersPtr params = _parameters.lock();
+        std::vector<dReal> vcurrentvalues;
+        params->_getstatefn(vcurrentvalues);
+        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        ss << prefix << ", ";
+        for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
+            if( i > 0 ) {
+                ss << "," << vcurrentvalues[i];
+            }
+            else {
+                ss << "colvalues=[" << vcurrentvalues[i];
+            }
+        }
+        ss << "]";
+        RAVELOG_VERBOSE(ss.str());
+    }
+}
+
 bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
+    _parameters = _params;
     PlannerBase::PlannerParametersPtr params = _params.lock();
     if( !params ) {
         RAVELOG_WARN("parameters have been destroyed!\n");
@@ -1602,6 +1628,7 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
 {
     // set the bounds based on the interval type
+    _parameters = _params;
     PlannerBase::PlannerParametersPtr params = _params.lock();
     if( !params ) {
         RAVELOG_WARN("parameters have been destroyed!\n");
@@ -1632,7 +1659,6 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if (bCheckEnd) {
         params->_setstatefn(pQ1);
         if( !_CheckState() ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
@@ -1664,7 +1690,6 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if (start == 0 ) {
         params->_setstatefn(pQ0);
         if( !_CheckState() ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         start = 1;
@@ -1684,14 +1709,12 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
     if( start > 0 ) {
         params->_setstatefn(_vtempconfig);
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
         if( !_CheckState() ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
         if( !!params->_getstatefn ) {
@@ -1702,7 +1725,6 @@ bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _param
 
         }
         if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            RAVELOG_VERBOSE(str(boost::format("collision: %s")%_report->__str__()));
             return false;
         }
     }
@@ -1731,7 +1753,7 @@ int DynamicsCollisionConstraint::_CheckState()
 {
     if( !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
-            RAVELOG_VERBOSE("pre usercheckfn failed\n");
+            _PrintOnFailure("pre usercheckfn failed");
             return 0;
         }
     }
@@ -1764,7 +1786,7 @@ int DynamicsCollisionConstraint::_CheckState()
                 int index = it->first;
                 dReal fmaxtorque = it->second;
                 if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
-                    RAVELOG_VERBOSE(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                    _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
                     return 0;
                 }
             }
@@ -1772,35 +1794,42 @@ int DynamicsCollisionConstraint::_CheckState()
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            PlannerBase::PlannerParametersPtr params = _parameters.lock();
-            std::vector<dReal> vcurrentvalues;
-            params->_getstatefn(vcurrentvalues);
-            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-            ss << "collision: " << _report->__str__() << ", ";
-            for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
-                if( i > 0 ) {
-                    ss << "," << vcurrentvalues[i];
-                }
-                else {
-                    ss << "colvalues=[" << vcurrentvalues[i];
-                }
-            }
-            ss << "]";
-            RAVELOG_VERBOSE(ss.str());
+            _PrintOnFailure(std::string("collision failed ")+_report->__str__());
             return 0;
         }
         if( (*itbody)->CheckSelfCollision(_report) ) {
-            RAVELOG_VERBOSE("self-collision failed\n");
+            _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
             return 0;
         }
     }
     if( !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
-            RAVELOG_VERBOSE("post usercheckfn failed\n");
+            _PrintOnFailure("post usercheckfn failed");
             return 0;
         }
     }
     return 1;
+}
+
+void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
+{
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        PlannerBase::PlannerParametersPtr params = _parameters.lock();
+        std::vector<dReal> vcurrentvalues;
+        params->_getstatefn(vcurrentvalues);
+        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        ss << prefix << ", ";
+        for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
+            if( i > 0 ) {
+                ss << "," << vcurrentvalues[i];
+            }
+            else {
+                ss << "colvalues=[" << vcurrentvalues[i];
+            }
+        }
+        ss << "]";
+        RAVELOG_VERBOSE(ss.str());
+    }
 }
 
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr pvCheckedConfigurations)

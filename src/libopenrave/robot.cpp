@@ -1645,12 +1645,16 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
         return true;
     }
     if( !collisionchecker ) {
-        collisionchecker = GetEnv()->GetCollisionChecker();
+        collisionchecker = _selfcollisionchecker;
         if( !collisionchecker ) {
-            // no checker set
-            return false;
+            collisionchecker = GetEnv()->GetCollisionChecker();
+            if( !collisionchecker ) {
+                // no checker set
+                return false;
+            }
         }
     }
+
     // if collision checker is set to distance checking, have to compare reports for the minimum distance
     int coloptions = collisionchecker->GetCollisionOptions();
     CollisionReport tempreport;

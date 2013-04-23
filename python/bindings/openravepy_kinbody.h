@@ -175,7 +175,9 @@ public:
     object ComputeHessianTranslation(int index, object oposition, object oindices=object());
     object ComputeHessianAxisAngle(int index, object oindices=object());
     object ComputeInverseDynamics(object odofaccelerations, object oexternalforcetorque=object(), bool returncomponents=false);
-    bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr collisionchecker=PyCollisionCheckerBasePtr());
+    void SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionchecker);
+    PyInterfaceBasePtr GetSelfCollisionChecker();
+    bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
     object GetAttached() const;
     void SetZeroConfiguration();
