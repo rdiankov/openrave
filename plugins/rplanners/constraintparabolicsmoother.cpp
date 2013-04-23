@@ -99,8 +99,8 @@ public:
         _setvelstatefn = velspec.GetSetFn(GetEnv());
 
         std::vector<dReal> startvelocity, endvelocity;
-        ptraj->Sample(startvelocity,0,velspec)
-        ptraj->Sample(endvelocity,ptraj->GetDuration(),velspec)
+        ptraj->Sample(startvelocity,0,velspec);
+        ptraj->Sample(endvelocity,ptraj->GetDuration(),velspec);
 
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());
