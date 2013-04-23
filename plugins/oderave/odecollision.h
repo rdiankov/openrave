@@ -757,6 +757,16 @@ public:
         return false;
     }
 
+    void SetGeometryGroup(const std::string& groupname)
+    {
+        odespace->SetGeometryGroup(groupname);
+    }
+
+    const std::string& GetGeometryGroup()
+    {
+        return odespace->GetGeometryGroup();
+    }
+
 private:
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {

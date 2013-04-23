@@ -680,6 +680,8 @@ class TestKinematics(EnvironmentSetup):
             del statesaver
             # should not restore it
             assert(transdist(body.GetTransform(),eye(4)) <= g_epsilon)
+            
+            body.SetLinkEnableStates(body.GetLinkEnableStates())
 
     def test_geometrychange(self):
         self.log.info('change geometry and test if changes are updated')

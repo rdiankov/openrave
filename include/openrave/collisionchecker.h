@@ -113,6 +113,16 @@ public:
 
     virtual void SetTolerance(dReal tolerance) = 0;
 
+    /// \brief Sets the geometry group that the collision checker will prefer to use (if present)
+    ///
+    /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
+    virtual void SetGeometryGroup(const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Gets the geometry group this collision checker is tracking.
+    ///
+    /// If empty, collision checker is not tracking any specific groups.
+    virtual const std::string& GetGeometryGroup() OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \brief initialize the checker with the current environment and gather all current bodies in the environment and put them in its collision space
     virtual bool InitEnvironment() = 0;
 

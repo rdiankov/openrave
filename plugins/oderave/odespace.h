@@ -265,6 +265,19 @@ private:
         return !!_ode;
     }
 
+    void SetGeometryGroup(const std::string& groupname)
+    {
+        if( groupname != _geometrygroup ) {
+            _geometrygroup = groupname;
+            // reset all the existing bodies
+        }
+    }
+
+    const std::string& GetGeometryGroup()
+    {
+        return _geometrygroup;
+    }
+
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
@@ -647,7 +660,7 @@ private:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<ODEResources> _ode;
     std::string _userdatakey;
-
+    std::string _geometrygroup;
     SynchronizeCallbackFn _synccallback;
     bool _bUsingPhysics;
 };

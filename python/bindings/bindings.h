@@ -293,6 +293,39 @@ struct int_from_int
     }
 };
 
+struct uint8_from_int
+{
+    uint8_from_int()
+    {
+        converter::registry::push_back(&convertible, &construct, type_id<uint8_t>());
+    }
+
+    static void* convertible( PyObject* obj)
+    {
+        PyObject* newobj = PyNumber_Int(obj);
+        if (!PyString_Check(obj) && newobj) {
+            Py_DECREF(newobj);
+            return obj;
+        }
+        else {
+            if (newobj) {
+                Py_DECREF(newobj);
+            }
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
+    static void construct(PyObject* _obj, converter::rvalue_from_python_stage1_data* data)
+    {
+        PyObject* newobj = PyNumber_Int(_obj);
+        uint8_t* storage = (uint8_t*)((converter::rvalue_from_python_storage<uint8_t>*)data)->storage.bytes;
+        *storage = extract<uint8_t>(newobj);
+        Py_DECREF(newobj);
+        data->convertible = storage;
+    }
+};
+
 template<typename T>
 struct T_from_number
 {
