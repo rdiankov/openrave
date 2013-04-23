@@ -390,6 +390,7 @@ public:
         _userdatakey = std::string("bulletcollision");
     }
     virtual ~BulletCollisionChecker() {
+        DestroyEnvironment();
     }
 
     virtual bool InitEnvironment()

@@ -54,6 +54,9 @@ public:
         _benabledis = false;
         _benabletol = false;
     }
+    virtual ~CollisionCheckerPQP() {
+        DestroyEnvironment();
+    }
 
     virtual bool InitEnvironment()
     {

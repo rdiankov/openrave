@@ -133,6 +133,7 @@ public:
             dGeomDestroy(geomray);
             geomray = NULL;
         }
+        DestroyEnvironment(); // need to remove the user data
         _odespace->DestroyEnvironment();
     }
 
