@@ -1682,6 +1682,19 @@ void PyKinBody::SetLinkVelocities(object ovelocities)
     return _pbody->SetLinkVelocities(velocities);
 }
 
+object PyKinBody::GetLinkEnableStates() const
+{
+    std::vector<uint8_t> enablestates;
+    _pbody->GetLinkEnableStates(enablestates);
+    return toPyArray(enablestates);
+}
+
+void PyKinBody::SetLinkEnableStates(object oenablestates)
+{
+    std::vector<uint8_t> enablestates = ExtractArray<uint8_t>(oenablestates);
+    _pbody->SetLinkEnableStates(enablestates);
+}
+
 bool PyKinBody::SetVelocity(object olinearvel, object oangularvel)
 {
     return _pbody->SetVelocity(ExtractVector3(olinearvel),ExtractVector3(oangularvel));
@@ -2542,6 +2555,8 @@ void init_openravepy_kinbody()
                         .def("SetDOFVelocities",setdofvelocities4, args("dofvelocities","linear","angular","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
                         .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
                         .def("GetLinkAccelerations",&PyKinBody::GetLinkAccelerations, DOXY_FN(KinBody,GetLinkAccelerations))
+                        .def("GetLinkEnableStates",&PyKinBody::GetLinkEnableStates, DOXY_FN(KinBody,GetLinkEnableStates))
+                        .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(KinBody,ComputeAABB))
                         .def("Enable",&PyKinBody::Enable,args("enable"), DOXY_FN(KinBody,Enable))
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))

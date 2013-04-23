@@ -48,6 +48,8 @@ Core
 
 * Links can now store different geoemtries for different purposes. Added _mapExtraGeometries to :class:`.KinBody.LinkInfo`. Added :meth:`.KinBody.Link.InitGeometriesFromGroup`, :meth:`.KinBody.Link.SetGroupGeometries`, :meth:`.KinBody.Link.GetGroupNumGeometries`, and :meth:`.KinBody.SetLinkGeometriesFromGroup`
 
+* Possible to bulk enable/disable links via :meth:`.KinBody.SetLinkEnableStates` and :meth:`.KinBody.GetLinkEnableStates`.
+
 C Bindings
 ----------
 

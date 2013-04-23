@@ -1516,6 +1516,9 @@ private:
         GetLinkTransformations(transforms);
     }
 
+    /// \brief gets the enable states of all links
+    virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
+
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
 
@@ -1630,6 +1633,9 @@ private:
 
     /// \brief sets the link velocities
     virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);
+
+    /// \brief sets the link enable states
+    virtual void SetLinkEnableStates(const std::vector<uint8_t>& enablestates);
 
     /// \brief Computes the translation jacobian with respect to a world position.
     ///

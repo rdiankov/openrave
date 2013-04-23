@@ -141,6 +141,8 @@ public:
     object GetLinkTransformations(bool returndofbranches=false) const;
     void SetLinkTransformations(object transforms, object odofbranches=object());
     void SetLinkVelocities(object ovelocities);
+    object GetLinkEnableStates() const;
+    void SetLinkEnableStates(object oenablestates);
     bool SetVelocity(object olinearvel, object oangularvel);
     void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel, uint32_t checklimits);
     void SetDOFVelocities(object odofvelocities, object olinearvel, object oangularvel);

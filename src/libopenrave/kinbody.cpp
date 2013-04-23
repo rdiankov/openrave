@@ -1107,6 +1107,14 @@ void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>
     }
 }
 
+void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
+{
+    enablestates.resize(_veclinks.size());
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        enablestates[ilink] = _veclinks[ilink]->IsEnabled();
+    }
+}
+
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 {
     return _vecjoints.at(_vDOFIndices.at(dofindex));
@@ -1219,6 +1227,23 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, c
 void KinBody::SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities)
 {
     GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
+}
+
+void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
+{
+    OPENRAVE_ASSERT_OP(enablestates.size(),==,_veclinks.size());
+    bool bchanged = false;
+    for(size_t ilink = 0; ilink < enablestates.size(); ++ilink) {
+        bool bEnable = enablestates[ilink]!=0;
+        if( _veclinks[ilink]->_info._bIsEnabled != bEnable ) {
+            _veclinks[ilink]->_info._bIsEnabled = bEnable;
+            _nNonAdjacentLinkCache &= ~AO_Enabled;
+            bchanged = true;
+        }
+    }
+    if( bchanged ) {
+        _ParametersChanged(Prop_LinkEnable);
+    }
 }
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, uint32_t checklimits)
