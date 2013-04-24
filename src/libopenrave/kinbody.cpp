@@ -3032,7 +3032,12 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                 return false;
             }
         }
+        else {
+            // have to set the same options as GetEnv()->GetCollisionChecker() since stuff like CO_ActiveDOFs is only set on the global checker
+            collisionchecker->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
+        }
     }
+
     if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
             RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
