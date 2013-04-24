@@ -1375,7 +1375,20 @@ Real PLPRamp::CalcMinTimeVariableV(Real endTime,Real a,Real vmax) const
 }
 
 
-
+// Set a ramp with desired position, velocity and time duration (added on 2013/04/24)
+void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t)
+{
+    PARABOLIC_RAMP_ASSERT(t > 0);
+    x0 = _x0;
+    dx0 = _dx0;
+    x1 = _x1;
+    dx1 = _dx1;
+    a1 = (dx1-dx0)/t;
+    v = a2 = 0;
+    tswitch1 = t;
+    tswitch2 = t;
+    ttotal = t;
+}
 
 
 
@@ -2003,7 +2016,19 @@ bool ParabolicRamp1D::IsValid() const
 }
 
 
-
+// Set a ramp with desired position, velocity and time duration (added on 2013/04/24)
+void ParabolicRampND::SetPosVelTime(const Vector& _x0, const Vector& _dx0, const Vector& _x1, const Vector& _dx1,Real t)
+{
+    x0 = _x0;
+    dx0 = _dx0;
+    x1 = _x1;
+    dx1 = _dx1;
+    endTime = t;
+    ramps.resize(x0.size());
+    for(size_t i=0; i<_x0.size(); i++) {
+        ramps[i].SetPosVelTime(_x0[i],_dx0[i],_x1[i],_dx1[i],t);
+    }
+}
 
 
 void ParabolicRampND::SetConstant(const Vector& x,Real t)
@@ -2037,6 +2062,8 @@ void ParabolicRampND::SetLinear(const Vector& _x0,const Vector& _x1,Real t)
 
 bool ParabolicRampND::SolveMinTimeLinear(const Vector& amax,const Vector& vmax)
 {
+    //PARABOLIC_RAMP_PLOG("Size x0 %d\n",(int)x0.size());
+    //PARABOLIC_RAMP_PLOG("Size amax %d\n",(int)amax.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == dx0.size());
     PARABOLIC_RAMP_ASSERT(x1.size() == dx1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());
@@ -3005,6 +3032,8 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                          const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                          vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp)
 {
+    //PARABOLIC_RAMP_PLOG("Size x0 %d\n",(int)x0.size());
+    //PARABOLIC_RAMP_PLOG("Size amax %d\n",(int)amax.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == v0.size());
     PARABOLIC_RAMP_ASSERT(x1.size() == v1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());

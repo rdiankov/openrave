@@ -52,6 +52,9 @@ class ParabolicRamp1D
 public:
     ParabolicRamp1D() : x0(0), dx0(0), x1(0), dx1(0), tswitch1(0), tswitch2(0), ttotal(0), a1(0), v(0), a2(0) {
     }
+    /// New function added on 2013/04/24 for setting a ramp with desired position, velocity and time duration
+    void SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t);
+
     /// Sets the ramp to a constant function for time t
     void SetConstant(Real x,Real t=0);
     /// Sets the ramp to a linear function from x0 to x1 with time t.
@@ -116,6 +119,9 @@ class ParabolicRampND
 public:
     ParabolicRampND() : endTime(0), constraintchecked(0) {
     }
+    /// New function added on 2013/04/24 for setting a ramp with desired position, velocity and time duration
+    void SetPosVelTime(const Vector& _x0, const Vector& _dx0, const Vector& _x1, const Vector& _dx1,Real t);
+
     void SetConstant(const Vector& x,Real t=0);
     void SetLinear(const Vector& x0,const Vector& x1,Real t);
     bool SolveMinTimeLinear(const Vector& amax,const Vector& vmax);

@@ -97,54 +97,71 @@ public:
         _setstatefn = posspec.GetSetFn(GetEnv());
         ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
         _setvelstatefn = velspec.GetSetFn(GetEnv());
-
-        std::vector<dReal> startvelocity, endvelocity;
-        ptraj->Sample(startvelocity,0,velspec);
-        ptraj->Sample(endvelocity,ptraj->GetDuration(),velspec);
+        ConfigurationSpecification timespec = ptraj->GetConfigurationSpecification();
+        timespec.AddDeltaTimeGroup();
 
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());
         vector<dReal> vtrajpoints;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
 
-        ParabolicRamp::Vector q(_parameters->GetDOF());
-        for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
-            std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
-            if( path.size() >= 2 ) {
-                // check if collinear by taking angle
-                const ParabolicRamp::Vector& x0 = path[path.size()-2];
-                const ParabolicRamp::Vector& x1 = path[path.size()-1];
-                dReal dotproduct=0,x0length2=0,x1length2=0;
-                for(size_t i = 0; i < q.size(); ++i) {
-                    dReal dx0=x0[i]-q[i];
-                    dReal dx1=x1[i]-q[i];
-                    dotproduct += dx0*dx1;
-                    x0length2 += dx0*dx0;
-                    x1length2 += dx1*dx1;
-                }
-                if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 1e-8 ) {
-                    path.back() = q;
-                    continue;
-                }
-            }
-            // check if the point is not the same as the previous point
-            if( path.size() > 0 ) {
-                dReal d = 0;
-                for(size_t i = 0; i < q.size(); ++i) {
-                    d += RaveFabs(q[i]-path.back().at(i));
-                }
-                if( d <= q.size()*std::numeric_limits<dReal>::epsilon() ) {
-                    continue;
-                }
-            }
-            path.push_back(q);
-        }
-
-        // assume that the trajectory has velocity data
-
         try {
             std::list<ParabolicRamp::ParabolicRampND> ramps;
-            SetMilestones(ramps, path, startvelocity, endvelocity);
+
+            if (posspec._vgroups.at(0).interpolation == "quadratic" ) {
+                // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
+                vector<dReal> x0, x1, dx0, dx1, ramptime;
+                ptraj->GetWaypoint(0,x0,posspec);
+                ptraj->GetWaypoint(0,dx0,velspec);
+                for(size_t i=0; i<ramps.size(); i++) {
+                    ptraj->GetWaypoint(i+1,ramptime,timespec);
+                    ptraj->GetWaypoint(i+1,x1,posspec);
+                    ptraj->GetWaypoint(i+1,dx1,velspec);
+                    ramps.push_back(ParabolicRamp::ParabolicRampND());
+                    ramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
+                    x0.swap(x1);
+                    dx0.swap(dx1);
+                }
+            }
+            else {
+                // assumes all the waypoints are joined by linear segments
+
+                ParabolicRamp::Vector q(_parameters->GetDOF());
+                for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
+                    std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
+                    if( path.size() >= 2 ) {
+                        // check if collinear by taking angle
+                        const ParabolicRamp::Vector& x0 = path[path.size()-2];
+                        const ParabolicRamp::Vector& x1 = path[path.size()-1];
+                        dReal dotproduct=0,x0length2=0,x1length2=0;
+                        for(size_t i = 0; i < q.size(); ++i) {
+                            dReal dx0=x0[i]-q[i];
+                            dReal dx1=x1[i]-q[i];
+                            dotproduct += dx0*dx1;
+                            x0length2 += dx0*dx0;
+                            x1length2 += dx1*dx1;
+                        }
+                        if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 1e-8 ) {
+                            path.back() = q;
+                            continue;
+                        }
+                    }
+                    // check if the point is not the same as the previous point
+                    if( path.size() > 0 ) {
+                        dReal d = 0;
+                        for(size_t i = 0; i < q.size(); ++i) {
+                            d += RaveFabs(q[i]-path.back().at(i));
+                        }
+                        if( d <= q.size()*std::numeric_limits<dReal>::epsilon() ) {
+                            continue;
+                        }
+                    }
+                    path.push_back(q);
+                }
+
+                SetMilestones(ramps, path);
+            }
+
             dReal totaltime=0;
             FOREACH(itramp, ramps) {
                 totaltime += itramp->endTime;
@@ -270,7 +287,7 @@ public:
         return feas;
     }
 
-    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, const std::vector<dReal>& startvelocity, const std::vector<dReal>& endvelocity)
+    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x)
     {
         ramps.clear();
         if(x.size()==1) {
@@ -283,25 +300,15 @@ public:
                 ramps.push_back(ParabolicRamp::ParabolicRampND());
                 ramps.back().x0 = x[i];
                 ramps.back().x1 = x[i+1];
-                if( i == 0 && startvelocity.size() == x[i].size() ) {
-                    ramps.back().dx0 = startvelocity;
-                }
-                else {
-                    ramps.back().dx0 = zero;
-                }
-                if( i+1 == x.size() && endvelocity.size() == x[i].size() ) {
-                    ramps.back().dx1 = endvelocity;
-                }
-                else {
-                    ramps.back().dx1 = zero;
-                }
+                ramps.back().dx0 = zero;
+                ramps.back().dx1 = zero;
                 bool res=ramps.back().SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
                 PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
             }
         }
     }
 
-    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>& ramps, int numIters,ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
+    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters,ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         int shortcuts = 0;
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
@@ -352,6 +359,9 @@ public:
             itramp2->Evaluate(u2,x1);
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
+
+            //RAVELOG_DEBUG(str(boost::format("\nx0[0]=%f\n")%x0[0]));
+
             bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, intermediate);
             if(!res) {
                 continue;
