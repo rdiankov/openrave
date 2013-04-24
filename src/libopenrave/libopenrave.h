@@ -272,12 +272,13 @@ public:
     }
     KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
     KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< vCollidingLinks: robot links that already collide with the body. This will always include plinkrobot and any other body's first link attached to plinkrobot (or static versions)
+    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab
     Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
     std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
 
     /// \brief check collision with all links to see which are valid.
     ///
+    /// Use the robot's self-collision checker if possible
     /// resets all cached data and re-evaluates the collisions
     /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
     void _ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
@@ -287,8 +288,12 @@ public:
         _mapLinkIsNonColliding.clear();
         KinBodyPtr pgrabbedbody(_pgrabbedbody);
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
-        EnvironmentBasePtr penv = _plinkrobot->GetParent()->GetEnv();
-        CollisionOptionsStateSaver colsaver(penv->GetCollisionChecker(),0); // have to reset the collision options
+        EnvironmentBasePtr penv = probot->GetEnv();
+        CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
+        if( !pchecker ) {
+            pchecker = penv->GetCollisionChecker();
+        }
+        CollisionOptionsStateSaver colsaver(pchecker,0); // have to reset the collision options
 
         {
             // have to enable all the links in order to compute accurate _mapLinkIsNonColliding info
@@ -301,7 +306,7 @@ public:
             FOREACHC(itlink, probot->GetLinks()) {
                 int noncolliding = 0;
                 if( find(_vattachedlinks.begin(),_vattachedlinks.end(), *itlink) == _vattachedlinks.end() ) {
-                    if( !penv->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
+                    if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
                         if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
                             noncolliding = 1;
                         }
@@ -325,7 +330,7 @@ public:
                         int noncolliding = 0;
                         if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
                         }
-                        else if( !penv->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        else if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
                             noncolliding = 1;
                         }
                         _mapLinkIsNonColliding[*itlink] = noncolliding;
@@ -346,6 +351,17 @@ public:
 
     inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
         return _vattachedlinks;
+    }
+
+    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore)
+    {
+        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
+        FOREACHC(itignoreindex, setRobotLinksToIgnore) {
+            _setRobotLinksToIgnore.insert(*itignoreindex);
+            KinBody::LinkPtr plink = probot->GetLinks().at(*itignoreindex);
+            _mapLinkIsNonColliding[plink] = 0;
+            _listNonCollidingLinks.remove(plink);
+        }
     }
 
     /// return -1 for unknown, 0 for no, 1 for yes
@@ -375,7 +391,10 @@ public:
         }
 
         CollisionOptionsStateSaverPtr colsaver;
-
+        CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
+        if( !pchecker ) {
+            pchecker = penv->GetCollisionChecker();
+        }
 
         std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
@@ -398,13 +417,13 @@ public:
                             // new body?
                             if( !colsaver ) {
                                 // have to reset the collision options
-                                colsaver.reset(new CollisionOptionsStateSaver(penv->GetCollisionChecker(),0));
+                                colsaver.reset(new CollisionOptionsStateSaver(pchecker,0));
                             }
                             if( !othergrabbedbodysaver ) {
                                 othergrabbedbodysaver.reset(new KinBody::KinBodyStateSaver(pothergrabbedbody, KinBody::Save_LinkEnable));
                                 pothergrabbedbody->Enable(true);
                             }
-                            _mapLinkIsNonColliding[*itgrabbedlink] = !penv->CheckCollision(KinBody::LinkConstPtr(*itgrabbedlink), pgrabbedbody);
+                            _mapLinkIsNonColliding[*itgrabbedlink] = !pchecker->CheckCollision(KinBody::LinkConstPtr(*itgrabbedlink), pgrabbedbody);
                         }
                     }
                 }

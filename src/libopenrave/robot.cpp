@@ -1392,6 +1392,16 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     OPENRAVE_ASSERT_FORMAT(!!pbody && !!pRobotLinkToGrabWith && pRobotLinkToGrabWith->GetParent() == shared_kinbody(), "robot %s invalid grab arguments",GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
     if( IsGrabbing(pbody) ) {
+        if( setRobotLinksToIgnore.size() > 0 ) {
+            // update the current grabbed info with setRobotLinksToIgnore
+            FOREACHC(itgrabbed, _vGrabbedBodies) {
+                GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+                if( KinBodyConstPtr(pgrabbed->_pgrabbedbody) == pbody ) {
+                    pgrabbed->AddMoreIgnoreLinks(setRobotLinksToIgnore);
+                    break;
+                }
+            }
+        }
         RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
         return true;
     }
@@ -1438,7 +1448,8 @@ void RobotBase::ReleaseAllGrabbed()
 
 void RobotBase::RegrabAll()
 {
-    CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
     std::vector<LinkPtr > vattachedlinks;
     FOREACH(itgrabbed, _vGrabbedBodies) {
         GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
@@ -1457,7 +1468,8 @@ void RobotBase::_Regrab(UserDataPtr _pgrabbed)
     KinBodyPtr pgrabbedbody = pgrabbed->_pgrabbedbody.lock();
     if( !!pgrabbedbody ) {
         // have to re-grab the body, which means temporarily resetting the collision checker and attachment
-        CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         _RemoveAttachedBody(pgrabbedbody);
         CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
         pgrabbed->_ProcessCollidingLinks(pgrabbed->_setRobotLinksToIgnore);
@@ -1508,7 +1520,8 @@ void RobotBase::GetGrabbedInfo(std::vector<RobotBase::GrabbedInfoPtr>& vgrabbedi
 void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& vgrabbedinfo)
 {
     ReleaseAllGrabbed();
-    CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
+    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
     FOREACHC(itgrabbedinfo, vgrabbedinfo) {
         GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
         KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
@@ -1809,7 +1822,7 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
 bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
     // TODO: have to consider rigidly attached links??
-    CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
