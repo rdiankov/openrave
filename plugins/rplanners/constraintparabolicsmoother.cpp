@@ -34,8 +34,8 @@ public:
     ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nConstraint-based smoothing with `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
-        _distancechecker = RaveCreateCollisionChecker(penv, "pqp");
-        OPENRAVE_ASSERT_FORMAT0(!!_distancechecker, "need pqp distance checker", ORE_Assert);
+        //_distancechecker = RaveCreateCollisionChecker(penv, "pqp");
+        //OPENRAVE_ASSERT_FORMAT0(!!_distancechecker, "need pqp distance checker", ORE_Assert);
         _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
     }
@@ -63,9 +63,9 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
-        if( !_distancechecker->InitEnvironment() ) {
-            return false;
-        }
+//        if( !_distancechecker->InitEnvironment() ) {
+//            return false;
+//        }
         _listCheckLinks.clear();
         if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
             // extract links from _parameters->_configurationspecification?
@@ -97,7 +97,7 @@ public:
         _setstatefn = posspec.GetSetFn(GetEnv());
         ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
         _setvelstatefn = velspec.GetSetFn(GetEnv());
-        ConfigurationSpecification timespec = ptraj->GetConfigurationSpecification();
+        ConfigurationSpecification timespec;
         timespec.AddDeltaTimeGroup();
 
         vector<ParabolicRamp::Vector> path;
@@ -108,12 +108,14 @@ public:
         try {
             std::list<ParabolicRamp::ParabolicRampND> ramps;
 
-            if (posspec._vgroups.at(0).interpolation == "quadratic" ) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
+            OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
+            if (itcompatposgroup->interpolation == "quadratic" ) {
                 // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
                 vector<dReal> x0, x1, dx0, dx1, ramptime;
                 ptraj->GetWaypoint(0,x0,posspec);
                 ptraj->GetWaypoint(0,dx0,velspec);
-                for(size_t i=0; i<ramps.size(); i++) {
+                for(size_t i=0; i+1<ptraj->GetNumWaypoints(); i++) {
                     ptraj->GetWaypoint(i+1,ramptime,timespec);
                     ptraj->GetWaypoint(i+1,x1,posspec);
                     ptraj->GetWaypoint(i+1,dx1,velspec);

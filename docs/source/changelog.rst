@@ -82,7 +82,7 @@ Inverse Kinematics
 Planning
 --------
 
-* Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters`
+* Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters` that allows more fine grained control of constraints for parabolic smoothing.
 
 * Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
 

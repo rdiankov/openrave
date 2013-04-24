@@ -1464,11 +1464,11 @@ bool LineCollisionConstraint::_CheckState()
     }
     FOREACHC(itbody, _listCheckSelfCollisions) {
         if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            _PrintOnFailure("collision failed");
+            _PrintOnFailure(std::string("collision failed ")+_report->__str__());
             return false;
         }
         if( (*itbody)->CheckSelfCollision(_report) ) {
-            _PrintOnFailure("self-collision failed");
+            _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
             return false;
         }
     }
