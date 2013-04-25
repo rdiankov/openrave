@@ -18,6 +18,7 @@
     \brief All definitions that involve ConfigurationSpecification
  */
 #include "libopenrave.h"
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace OpenRAVE {
@@ -478,6 +479,29 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
 int ConfigurationSpecification::AddGroup(const ConfigurationSpecification::Group& g)
 {
     return AddGroup(g.name,g.dof,g.interpolation);
+}
+
+int ConfigurationSpecification::RemoveGroups(const std::string& groupname, bool exactmatch)
+{
+    int numremoved=0;
+    std::vector<Group>::iterator itgroup = _vgroups.begin();
+    while(itgroup != _vgroups.end() ) {
+        if( exactmatch && itgroup->name == groupname ) {
+            ++numremoved;
+            itgroup = _vgroups.erase(itgroup);
+        }
+        else if( !exactmatch && boost::starts_with(itgroup->name, groupname) ) {
+            ++numremoved;
+            itgroup = _vgroups.erase(itgroup);
+        }
+        else {
+            ++itgroup;
+        }
+    }
+    if( numremoved > 0 ) {
+        ResetGroupOffsets();
+    }
+    return numremoved;
 }
 
 void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const
@@ -1358,7 +1382,8 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 RAVELOG_WARN("ikparam types do not match");
             }
         }
-        else if( targettokens.at(0).size() >= 4 && targettokens.at(0).substr(0,4) == "grab") {
+        // need a space since grabbody is also a group
+        else if( targettokens.at(0).size() >= 5 && targettokens.at(0).substr(0,5) == "grab ") {
             std::vector<int> vsourceindices(gsource.dof), vtargetindices(gtarget.dof);
             if( (int)sourcetokens.size() < gsource.dof+2 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
@@ -1392,6 +1417,9 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             if( bUninitializedData && filluninitialized ) {
                 vdefaultvalues.resize(vtargetindices.size(),0);
             }
+        }
+        else if( targettokens.at(0).size() >= 8 && targettokens.at(0).substr(0,8) == "grabbody") {
+            // TODO
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT("unsupported token conversion: %s",gtarget.name,ORE_InvalidArguments);

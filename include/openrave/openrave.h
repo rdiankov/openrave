@@ -1203,6 +1203,15 @@ protected:
      */
     virtual int AddGroup(const Group& g);
 
+    /** \brief removes all groups that match a name
+
+        ResetGroupOffsets will be called internally to fix the indices.
+        \param groupname the name used to look for groups
+        \param exactmatch if true, will remove groups only if the full name matches, otherwise will remove groups that start with groupname
+        \return number of groups removed
+     */
+    virtual int RemoveGroups(const std::string& groupname, bool exactmatch=true);
+
     /** \brief extracts all the bodies that are used inside this specification
 
         Because the specification contains names of bodies, an environment is necessary to get the body pointers.

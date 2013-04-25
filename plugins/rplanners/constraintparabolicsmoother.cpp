@@ -362,8 +362,6 @@ public:
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
 
-            //RAVELOG_DEBUG(str(boost::format("\nx0[0]=%f\n")%x0[0]));
-
             bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, intermediate);
             if(!res) {
                 continue;

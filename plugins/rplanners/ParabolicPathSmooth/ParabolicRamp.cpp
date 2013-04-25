@@ -3078,7 +3078,9 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         Real bmin,bmax;
         ramps[i][0].Bounds(bmin,bmax);
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) return -1;
-        if(ramps[i][0].ttotal > endTime) endTime = ramps[i][0].ttotal;
+        if(ramps[i][0].ttotal > endTime) {
+            endTime = ramps[i][0].ttotal;
+        }
     }
     //now we have a candidate end time -- repeat looking through solutions
     //until we have solved all ramps

@@ -356,6 +356,11 @@ public:
         return _spec.AddGroup(g);
     }
 
+    int RemoveGroups(const std::string& groupname, bool exactmatch=true)
+    {
+        return _spec.RemoveGroups(groupname, exactmatch);
+    }
+
     PyConfigurationSpecificationPtr ConvertToVelocitySpecification() const
     {
         return openravepy::toPyConfigurationSpecification(_spec.ConvertToVelocitySpecification());
@@ -1179,6 +1184,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -1333,6 +1339,7 @@ void init_openravepy_global()
                                            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
                                            .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups,args("adddeltatime"), DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
                                            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
+                                           .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(args("groupname","exactmatch"), DOXY_FN(ConfigurationSpecification, RemoveGroups)))
                                            .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))
                                            .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
