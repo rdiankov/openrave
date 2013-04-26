@@ -386,8 +386,19 @@ public:
 
 //    bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
 //
-//    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
-//
+    object ExtractAffineValues(object odata, PyKinBodyPtr pybody, int affinedofs, int timederivative=0) const
+    {
+        std::vector<dReal> vdata = ExtractArray<dReal>(odata);
+        std::vector<dReal> values(RaveGetAffineDOF(affinedofs),0);
+        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs,timederivative);
+        if( bfound ) {
+            return toPyArray(values);
+        }
+        else {
+            return object();
+        }
+    }
+
     object ExtractJointValues(object odata, PyKinBodyPtr pybody, object oindices, int timederivative=0) const
     {
         std::vector<int> vindices = ExtractArray<int>(oindices);
@@ -1183,6 +1194,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineDOFValuesFromTransform_overloads,
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
@@ -1346,6 +1358,7 @@ void init_openravepy_global()
                                            .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
 
                                            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(args("transform","data","body","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractTransform)))
+                                           .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(args("data","body","affinedofs","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
