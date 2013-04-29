@@ -2947,13 +2947,19 @@ public:
             for(size_t inewparam = 0; inewparam < pnewparamarray->getCount(); ++inewparam) {
                 domKinematics_newparamRef newparam = (*pnewparamarray)[inewparam];
                 if( !!newparam->getSid() &&( strcmp(newparam->getSid(), ref) == 0) ) {
-                    if( !!newparam->getSIDREF() ) {     // can only bind with SIDREF
+                    if( !!newparam->getSIDREF() ) {
                         if( !!instelt ) {
                             listInstanceScope.push_back(instelt);
                         }
                         if( !!newparam->getSIDREF()->getValue() ) {
                             return daeSidRef(newparam->getSIDREF()->getValue(),pbindelt).resolve().elt;
                         }
+                    }
+                    if( !!newparam->getFloat() ) {
+                        return newparam;
+                    }
+                    if( !!newparam->getInt() ) {
+                        return newparam;
                     }
                     RAVELOG_WARN(str(boost::format("newparam sid=%s does not have SIDREF\n")%getSid(newparam)));
                 }
@@ -3065,6 +3071,14 @@ public:
             stringstream sfloat(pfloat->getCharData());
             sfloat >> f;
             return !!sfloat;
+        }
+        daeElement* pint = pcommon->getChild("int");
+        if( !!pint ) {
+            stringstream sint(pint->getCharData());
+            int tempint=0;
+            sint >> tempint;
+            f = (domFloat)tempint;
+            return !!sint;
         }
         daeElement* pparam = pcommon->getChild("param");
         if( !!pparam ) {

@@ -132,6 +132,8 @@ Misc
 
 * Added many helpers in `openrave/xmlreaders.h <../coreapihtml/xmlreaders_8h.html>`_ to parse and write XML.
 
+* Writing COLLADA now writes the joint values directly in the top-level instance_articulated_system
+
 Version 0.8.2
 =============
 

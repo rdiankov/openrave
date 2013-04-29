@@ -629,9 +629,11 @@ private:
                     BOOST_ASSERT(!!articulated_system_motion);
                     // have to write another level of parameters
                     domKinematics_newparamRef param2 = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
-                    daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%sparamref).c_str());
                     sparamref = str(boost::format("ias_param%d")%idof);
                     param2->setSid(sparamref.c_str());
+                    // have the real value here instead of SIDREF
+                    daeSafeCast<domKinematics_newparam::domFloat>(param2->add(COLLADA_ELEMENT_FLOAT))->setValue(vjointvalues.at(idof));
+                    //daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%sparamref).c_str());
                 }
                 iasout->vaxissids.at(idof).jointnodesid = sidref;
                 iasout->vaxissids.at(idof).axissid = sparamref;
@@ -927,7 +929,9 @@ private:
                 domKinematics_newparamRef abvalue = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
                 valuesid = str(boost::format("%s_%s")%assym%kas.valuesid);
                 abvalue->setSid(valuesid.c_str());
-                daeSafeCast<domKinematics_newparam::domSIDREF>(abvalue->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s_%s")%asmid%asmid%kas.valuesid).c_str());
+                // have the real value here instead of SIDREF
+                daeSafeCast<domKinematics_newparam::domFloat>(abvalue->add(COLLADA_ELEMENT_FLOAT))->setValue(kas.value);
+                //daeSafeCast<domKinematics_newparam::doSIDREF>(abvalue->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s_%s")%asmid%asmid%kas.valuesid).c_str());
             }
             iasout->vaxissids.push_back(axis_sids(string(ab->getSid()),valuesid,kas.jointnodesid));
         }
@@ -1042,6 +1046,7 @@ private:
             dReal value = it->pjoint->GetValue(it->iaxis);
             daeSafeCast<domKinematics_newparam::domFloat>(pvalueparam->add(COLLADA_ELEMENT_FLOAT))->setValue(value);
             ikmout->vaxissids.push_back(axis_sids(sid,pvalueparam->getSid(),kmout->vaxissids.at(i).jointnodesid));
+            ikmout->vaxissids.back().value = value;
             ++i;
         }
 
