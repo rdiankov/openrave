@@ -17,6 +17,7 @@
 #define  BIRRT_PLANNER_H
 
 #include "rplanners.h"
+#include <boost/algorithm/string.hpp>
 
 template <typename Node>
 class RrtPlanner : public PlannerBase
@@ -165,6 +166,16 @@ public:
     {
         __description += "Bi-directional RRTs. See\n\n\
 - J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
+        RegisterCommand("DumpTree", boost::bind(&BirrtPlanner::_DumpTreeCommand,this,_1,_2),
+                        "dumps the source and goal trees to $OPENRAVE_HOME/birrtdump.txt. The first N values are the DOF values, the last value is the parent index.\n\
+Some python code to display data::\n\
+\n\
+  sourcetree=loadtxt(os.path.join(RaveGetHomeDirectory(),'sourcetree.txt'),delimiter=' ,')\n\
+  hs=env.plot3(sourcetree,5,[1,0,0])\n\
+  sourcedist = abs(sourcetree[:,0]-x[0]) + abs(sourcetree[:,1]-x[1])\n\
+  robot.SetActiveDOFValues(sourcetree[argmin(sourcedist)])\n\
+\n\
+");
     }
     virtual ~BirrtPlanner() {
     }
@@ -459,31 +470,27 @@ public:
         return _parameters;
     }
 
-    virtual void _DumpTreeCommand() {
-        /* python code to display data
-           sourcetree=loadtxt(os.path.join(RaveGetHomeDirectory(),'sourcetree.txt'))
-           hs=env.plot3(sourcetree,5,[1,0,0])
-           sourcedist = abs(sourcetree[:,0]-x[0]) + abs(sourcetree[:,1]-x[1])
-           robot.SetActiveDOFValues(sourcetree[argmin(sourcedist)])
-         */
-        {
-            ofstream f((RaveGetHomeDirectory() + string("/sourcetree.txt")).c_str());
-            FOREACH(itnode,_treeForward._nodes) {
-                FOREACH(it,(*itnode)->q) {
-                    f << *it << " ";
-                }
-                f << endl;
+    virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
+        std::string filename = RaveGetHomeDirectory() + string("/birrtdump.txt");
+        getline(is, filename);
+        boost::trim(filename);
+        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        f << _treeForward._nodes.size() << "," << _treeBackward._nodes.size() << endl;
+        FOREACH(itnode,_treeForward._nodes) {
+            FOREACH(it,(*itnode)->q) {
+                f << *it << ",";
             }
+            f << (*itnode)->parent << endl;
         }
-        {
-            ofstream f((RaveGetHomeDirectory() + string("/goaltree.txt")).c_str());
-            FOREACH(itnode,_treeBackward._nodes) {
-                FOREACH(it,(*itnode)->q) {
-                    f << *it << " ";
-                }
-                f << endl;
+        FOREACH(itnode,_treeBackward._nodes) {
+            FOREACH(it,(*itnode)->q) {
+                f << *it << ",";
             }
+            f << (*itnode)->parent << endl;
         }
+        return true;
     }
 
 protected:
