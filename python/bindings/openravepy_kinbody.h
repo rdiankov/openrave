@@ -189,6 +189,7 @@ public:
     bool IsRobot() const;
     int GetEnvironmentId() const;
     int DoesAffect(int jointindex, int linkindex ) const;
+    int DoesDOFAffectLink(int dofindex, int linkindex ) const;
     object GetViewerData() const;
     object GetURI() const;
     object GetNonAdjacentLinks() const;

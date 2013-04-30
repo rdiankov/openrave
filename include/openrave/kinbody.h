@@ -1799,7 +1799,7 @@ private:
     /// This id will not be copied when cloning in order to respect another environment's ids.
     virtual int GetEnvironmentId() const;
 
-    /** \brief Returns a nonzero value if the joint effects the link transformation.
+    /** \brief Returns a nonzero value if the joint index effects the link transformation.
 
         In closed loops, all joints on all paths to the root link are counted as affecting the link.
         If a mimic joint affects the link, then all the joints used in the mimic joint's computation affect the link.
@@ -1808,6 +1808,16 @@ private:
         \param linkindex index of the link
      */
     virtual int8_t DoesAffect(int jointindex, int linkindex) const;
+
+    /** \brief Returns a nonzero value if the dof index effects the link transformation.
+
+        In closed loops, all joints on all paths to the root link are counted as affecting the link.
+        If a mimic joint affects the link, then all the joints used in the mimic joint's computation affect the link.
+        If negative, the partial derivative of the Jacobian should be negated.
+        \param dofindex index of DOF as returned from \ref GetDOFValues
+        \param linkindex index of the link
+     */
+    virtual int8_t DoesDOFAffectLink(int dofindex, int linkindex) const;
 
     /// \deprecated (12/12/11)
     virtual UserDataPtr GetViewerData() const RAVE_DEPRECATED {

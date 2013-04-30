@@ -1,4 +1,4 @@
-
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
@@ -2111,6 +2111,11 @@ int PyKinBody::DoesAffect(int jointindex, int linkindex ) const
     return _pbody->DoesAffect(jointindex,linkindex);
 }
 
+int PyKinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
+{
+    return _pbody->DoesDOFAffectLink(dofindex,linkindex);
+}
+
 object PyKinBody::GetViewerData() const
 {
     return toPyUserData(_pbody->GetViewerData());
@@ -2605,6 +2610,7 @@ void init_openravepy_kinbody()
                         .def("IsRobot",&PyKinBody::IsRobot, DOXY_FN(KinBody,IsRobot))
                         .def("GetEnvironmentId",&PyKinBody::GetEnvironmentId, DOXY_FN(KinBody,GetEnvironmentId))
                         .def("DoesAffect",&PyKinBody::DoesAffect,args("jointindex","linkindex"), DOXY_FN(KinBody,DoesAffect))
+                        .def("DoesDOFAffectLink",&PyKinBody::DoesDOFAffectLink,args("dofindex","linkindex"), DOXY_FN(KinBody,DoesDOFAffectLink))
                         .def("GetViewerData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
                         .def("GetGuiData",&PyKinBody::GetViewerData, DOXY_FN(KinBody,GetViewerData))
                         .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))

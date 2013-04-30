@@ -1339,7 +1339,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                     RAVELOG_WARN(str(boost::format("dof %d value is not in limits %e<%e")%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT("dof %d value is not in limits %e<%e",((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT("dof %d value is not in limits %e>%e",((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlim[i];
@@ -4047,6 +4047,15 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
     CHECK_INTERNAL_COMPUTATION0;
     OPENRAVE_ASSERT_FORMAT(jointindex >= 0 && jointindex < (int)_vecjoints.size(), "body %s jointindex %d invalid (num joints %d)", GetName()%jointindex%_vecjoints.size(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
+    return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
+}
+
+int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
+{
+    CHECK_INTERNAL_COMPUTATION0;
+    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%GetDOF(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
+    int jointindex = _vDOFIndices.at(dofindex);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
 }
 
