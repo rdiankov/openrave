@@ -2032,6 +2032,21 @@ void RobotBase::_ParametersChanged(int parameters)
     }
 }
 
+std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators()
+{
+    return _vecManipulators;
+}
+
+RobotBase::ManipulatorPtr RobotBase::GetManipulator(const std::string& name) const
+{
+    FOREACHC(itmanip, _vecManipulators) {
+        if( (*itmanip)->GetName() == name ) {
+            return *itmanip;
+        }
+    }
+    return RobotBase::ManipulatorPtr();
+}
+
 void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     KinBody::Clone(preference,cloningoptions);

@@ -498,9 +498,10 @@ private:
 
 
     /// \brief Returns the manipulators of the robot
-    virtual std::vector<ManipulatorPtr>& GetManipulators() {
-        return _vecManipulators;
-    }
+    virtual std::vector<ManipulatorPtr>& GetManipulators();
+
+    /// \brief Returns a manipulator from its name. If no manipulator with that name is present, returns empty pointer.
+    virtual ManipulatorPtr GetManipulator(const std::string& name) const;
 
     virtual std::vector<AttachedSensorPtr>& GetAttachedSensors() {
         return _vecSensors;

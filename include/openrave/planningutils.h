@@ -371,6 +371,9 @@ public:
     virtual ~DynamicsCollisionConstraint() {
     }
 
+    /// \brief sets a new planner parmaeters structure for checking
+    virtual void SetPlannerParameters(PlannerBase::PlannerParametersPtr parameters);
+
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.

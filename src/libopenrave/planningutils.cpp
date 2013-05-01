@@ -1890,8 +1890,19 @@ DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerPar
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
     _parameters = parameters;
-    _specvel = parameters->_configurationspecification.ConvertToVelocitySpecification();
-    _setvelstatefn = _specvel.GetSetFn(listCheckBodies.front()->GetEnv());
+    if( !!parameters ) {
+        _specvel = parameters->_configurationspecification.ConvertToVelocitySpecification();
+        _setvelstatefn = _specvel.GetSetFn(_listCheckBodies.front()->GetEnv());
+    }
+}
+
+void DynamicsCollisionConstraint::SetPlannerParameters(PlannerBase::PlannerParametersPtr parameters)
+{
+    _parameters = parameters;
+    if( !!parameters ) {
+        _specvel = parameters->_configurationspecification.ConvertToVelocitySpecification();
+        _setvelstatefn = _specvel.GetSetFn(_listCheckBodies.front()->GetEnv());
+    }
 }
 
 void DynamicsCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
