@@ -1654,6 +1654,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
     scope().attr("__docformat__") = "restructuredtext";
 
     openravepy::init_openravepy_global();
+    openravepy::InitPlanningUtils();
 
     openravepy::init_openravepy_collisionchecker();
     openravepy::init_openravepy_controller();

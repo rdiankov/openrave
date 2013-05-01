@@ -31,11 +31,20 @@ namespace planningutils {
 
 /// \brief Jitters the active joint angles of the robot until it escapes collision.
 ///
-/// Return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded and position is different.
-OPENRAVE_API int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03f,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn());
+/// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded and position is different.
+OPENRAVE_API int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn());
 
 /// \brief Jitters the transform of a body until it escapes collision.
 OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000);
+
+/** \brief If the current configuration does not satisfy constraints, then jitters it using a \ref PlannerBase::PlannerParameters structure
+
+    \param maxiterations number of different configurations to test
+    \param maxjitter The max deviation of a dof value to jitter. value +- maxjitter
+    \param perturbation Test with perturbations since very small changes in angles can produce collision inconsistencies
+    \return Return 0 if jitter failed and constraints are not satisfied. -1 if constraints are originally satisfied. 1 if jitter succeeded, configuration is different, and constraints are satisfied.
+ */
+OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
 
 /** \brief validates a trajectory with respect to the planning constraints. <b>[multi-thread safe]</b>
 

@@ -102,6 +102,8 @@ Planning
 
 * Added new :class:`.planningutils.DynamicsCollisionConstraint` for maintaining both collision and dynamics constraints.
 
+* Added new jitter function using only PlannerParameters configuration called :meth:`.planningutils.JitterCurrentConfiguration`
+
 Python
 ------
 

@@ -63,6 +63,7 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
+        _bUsePerturbation = true;
 //        if( !_distancechecker->InitEnvironment() ) {
 //            return false;
 //        }
@@ -106,6 +107,7 @@ public:
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
 
         try {
+            _bUsePerturbation = true;
             std::list<ParabolicRamp::ParabolicRampND> ramps;
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
@@ -175,6 +177,7 @@ public:
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
+            _progress._iteration=0;
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
             if( numshortcuts < 0 ) {
@@ -217,6 +220,21 @@ public:
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
             FOREACHC(itrampnd,ramps) {
+                // double-check the current ramps
+                if(!itrampnd->constraintchecked ) {
+                    // part of original trajectory which might not have been processed with perterbations, so ignore them
+                    _bUsePerturbation = false;
+                    if( !checker.Check(*itrampnd)) {
+                        RAVELOG_DEBUG("original ramp is in collision!\n");
+                        return PS_Failed;
+                    }
+                    _bUsePerturbation = true; // re-enable
+                    _progress._iteration+=1;
+                    if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                        return PS_Interrupted;
+                    }
+                }
+
                 vswitchtimes.resize(0);
                 vswitchtimes.push_back(itrampnd->endTime);
                 if( _parameters->_outputaccelchanges ) {
@@ -323,7 +341,6 @@ public:
         ParabolicRamp::Vector x0,x1,dx0,dx1;
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
-        PlannerProgress progress;
         for(int iters=0; iters<numIters; iters++) {
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
@@ -339,8 +356,8 @@ public:
                 continue;
             }
 
-            progress._iteration=iters;
-            if( _CallCallbacks(progress) == PA_Interrupt ) {
+            _progress._iteration+=1;
+            if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return -1;
             }
 
@@ -417,15 +434,23 @@ public:
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
     {
-        // have to also test with tolerances!
-        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-        ParabolicRamp::Vector anew(a.size());
-        FOREACH(itperturbation,perturbations) {
-            for(size_t i = 0; i < a.size(); ++i) {
-                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+        if( _bUsePerturbation ) {
+            // have to also test with tolerances!
+            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
+            ParabolicRamp::Vector anew(a.size());
+            FOREACH(itperturbation,perturbations) {
+                for(size_t i = 0; i < a.size(); ++i) {
+                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                }
+                (*_setstatefn)(anew);
+                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) <= 0 ) {
+                    return false;
+                }
             }
-            (*_setstatefn)(anew);
-            if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) <= 0 ) {
+        }
+        else {
+            //_parameters->_setstatefn(a);
+            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) <= 0 ) {
                 return false;
             }
         }
@@ -445,16 +470,24 @@ public:
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
     {
-        // have to also test with tolerances!
-        boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-        ParabolicRamp::Vector anew(a.size()), bnew(b.size());
-        FOREACH(itperturbation,perturbations) {
-            for(size_t i = 0; i < a.size(); ++i) {
-                anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+        if( _bUsePerturbation ) {
+            // have to also test with tolerances!
+            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
+            ParabolicRamp::Vector anew(a.size()), bnew(b.size());
+            FOREACH(itperturbation,perturbations) {
+                for(size_t i = 0; i < a.size(); ++i) {
+                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                    bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                }
+                //(*_setstatefn)(anew);
+                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+                    return false;
+                }
             }
-            //(*_setstatefn)(anew);
-            if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+        }
+        else {
+            //_parameters->_setstatefn(a);
+            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
                 return false;
             }
         }
@@ -511,6 +544,8 @@ protected:
     //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
+    bool _bUsePerturbation;
+    PlannerProgress _progress;
 
 private:
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > __tempramps1d;

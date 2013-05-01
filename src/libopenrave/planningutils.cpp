@@ -169,6 +169,156 @@ bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
     return true;
 }
 
+int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations, dReal maxjitter, dReal perturbation)
+{
+    std::vector<dReal> curdof, newdof, deltadof, deltadof2, zerodof;
+    parameters->_getstatefn(curdof);
+    newdof.resize(curdof.size());
+    deltadof.resize(curdof.size(),0);
+    zerodof.resize(curdof.size(),0);
+    CollisionReport report;
+    CollisionReportPtr preport(&report,utils::null_deleter());
+    bool bCollision = false;
+    bool bConstraint = !!parameters->_neighstatefn;
+
+    // have to test with perturbations since very small changes in angles can produce collision inconsistencies
+    std::vector<dReal> perturbations;
+    if( perturbation > 0 ) {
+        perturbations.resize(3,0);
+        perturbations[1] = perturbation;
+        perturbations[2] = -perturbation;
+    }
+    else {
+        perturbations.resize(1,0);
+    }
+    FOREACH(itperturbation,perturbations) {
+        if( bConstraint ) {
+            FOREACH(it,deltadof) {
+                *it = *itperturbation;
+            }
+            newdof = curdof;
+            if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
+                parameters->_setstatefn(curdof);
+                return -1;
+            }
+        }
+        else {
+            for(size_t i = 0; i < newdof.size(); ++i) {
+                newdof[i] = curdof[i]+*itperturbation;
+            }
+        }
+
+        // don't need to set state since CheckPathAllConstraints does it
+        if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) <= 0 ) {
+            bCollision = true;
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << "constraints failed, ";
+                for(size_t i = 0; i < newdof.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << newdof[i];
+                    }
+                    else {
+                        ss << "colvalues=[" << newdof[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+            break;
+        }
+    }
+
+    if( !bCollision || maxjitter <= 0 ) {
+        // have to restore to initial non-perturbed configuration!
+        parameters->_setstatefn(curdof);
+        return -1;
+    }
+
+    deltadof2.resize(curdof.size(),0);
+    for(int iter = 0; iter < maxiterations; ++iter) {
+        for(size_t j = 0; j < newdof.size(); ++j) {
+            deltadof[j] = maxjitter * (RaveRandomFloat()-0.5f);
+        }
+        bCollision = false;
+        bool bConstraintFailed = false;
+        FOREACH(itperturbation,perturbations) {
+            for(size_t j = 0; j < deltadof.size(); ++j) {
+                deltadof2[j] = deltadof[j] + *itperturbation;
+            }
+            if( bConstraint ) {
+                newdof = curdof;
+                parameters->_setstatefn(newdof);
+                if( !parameters->_neighstatefn(newdof,deltadof2,0) ) {
+                    if( *itperturbation != 0 ) {
+                        RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
+                    }
+                    bConstraintFailed = true;
+                    break;
+                }
+            }
+            else {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    newdof[j] = curdof[j] + deltadof2[j];
+                }
+            }
+            // don't need to set state since CheckPathAllConstraints does it
+            if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) <= 0 ) {
+                bCollision = true;
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "constraints failed, ";
+                    for(size_t i = 0; i < newdof.size(); ++i ) {
+                        if( i > 0 ) {
+                            ss << "," << newdof[i];
+                        }
+                        else {
+                            ss << "colvalues=[" << newdof[i];
+                        }
+                    }
+                    ss << "]";
+                    RAVELOG_VERBOSE(ss.str());
+                }
+                break;
+            }
+        }
+        if( !bCollision && !bConstraintFailed ) {
+            // have to restore to non-perturbed configuration!
+            if( bConstraint ) {
+                newdof = curdof;
+                parameters->_setstatefn(newdof);
+                if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
+                    RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
+                    continue;
+                }
+            }
+            else {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    newdof[j] = curdof[j] + deltadof[j];
+                }
+            }
+            parameters->_setstatefn(newdof);
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                for(size_t i = 0; i < newdof.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << newdof[i];
+                    }
+                    else {
+                        ss << "jitteredvalues=[" << newdof[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 class TrajectoryVerifier
 {
 public:

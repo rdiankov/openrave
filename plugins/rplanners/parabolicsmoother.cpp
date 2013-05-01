@@ -51,7 +51,7 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
-        _bUsePerterbation = true;
+        _bUsePerturbation = true;
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         //_puniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
         return !!_puniformsampler;
@@ -127,7 +127,7 @@ public:
             path.push_back(q);
         }
         try {
-            _bUsePerterbation = true;
+            _bUsePerturbation = true;
             ParabolicRamp::DynamicPath dynamicpath;
             dynamicpath.Init(parameters->_vConfigVelocityLimit,parameters->_vConfigAccelerationLimit);
             dynamicpath._multidofinterp = _parameters->_multidofinterp;
@@ -189,12 +189,12 @@ public:
                 // double-check the current ramps
                 if(!itrampnd->constraintchecked ) {
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
-                    _bUsePerterbation = false;
+                    _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
-                        RAVELOG_DEBUG("ramp is in collision!\n");
+                        RAVELOG_DEBUG("original ramp is in collision!\n");
                         return PS_Failed;
                     }
-                    _bUsePerterbation = true; // re-enable
+                    _bUsePerturbation = true; // re-enable
                     progress._iteration=2;
                     if( _CallCallbacks(progress) == PA_Interrupt ) {
                         return PS_Interrupted;
@@ -253,7 +253,7 @@ public:
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
     {
-        if( _bUsePerterbation ) {
+        if( _bUsePerturbation ) {
             // have to also test with tolerances!
             boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
             ParabolicRamp::Vector anew(a.size());
@@ -278,7 +278,7 @@ public:
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
     {
-        if( _bUsePerterbation ) {
+        if( _bUsePerturbation ) {
             // test with tolerances!
             boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance }};
             ParabolicRamp::Vector anew(a.size()), bnew(b.size());
@@ -310,7 +310,7 @@ public:
 protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
-    bool _bUsePerterbation;
+    bool _bUsePerturbation;
 };
 
 

@@ -638,6 +638,7 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
 
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();
+void InitPlanningUtils();
 
 }
 
