@@ -2394,6 +2394,9 @@ public:
         // check for OpenRAVE profile simple geometric primitives
         for(size_t ie = 0; ie < domgeom->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = domgeom->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             string extra_type = pextra->getType();
             if( extra_type == "geometry_info" ) {
                 daeElementRef ptec = _ExtractOpenRAVEProfile(pextra);
