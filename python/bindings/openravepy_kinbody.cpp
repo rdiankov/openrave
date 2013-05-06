@@ -149,7 +149,7 @@ public:
         FOREACHC(it, info._mapIntParameters) {
             _mapIntParameters[it->first] = toPyArray(it->second);
         }
-        FOREACH(it, info._mapStringParameters) {
+        FOREACHC(it, info._mapStringParameters) {
             _mapStringParameters[it->first] = ConvertStringToUnicode(it->second);
         }
         boost::python::list vForcedAdjacentLinks;

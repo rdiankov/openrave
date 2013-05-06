@@ -231,7 +231,7 @@ public:
             _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
-            FOREACHC(itrampnd,ramps) {
+            FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
                 if(!itrampnd->constraintchecked ) {
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
