@@ -128,7 +128,8 @@ class RunPhysics(EnvironmentSetup):
                 robot.SetDOFValues(curvalues)
                 newlinks = robot.GetLinkTransformations()
                 numlinks = len(curlinks)
-                assert(transdist(curlinks,newlinks) <= 20*g_epsilon*numlinks)
+                errordist = transdist(curlinks,newlinks)
+                assert(errordist <= 25*g_epsilon*numlinks)
                 
     def test_rotationaxis(self):
         if self.physicsenginename != 'ode':
