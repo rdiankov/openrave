@@ -3406,7 +3406,7 @@ private:
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene, listInstanceScope);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {
-                RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
+                RAVELOG_WARN(str(boost::format("could not find joint axis for target %s\n")%bindjoint->getTarget()));
                 continue;
             }
 
