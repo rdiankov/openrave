@@ -1081,7 +1081,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         vwaypointstart.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvalues.begin(), robot->GetActiveConfigurationSpecification(), 1, traj->GetEnv(), true);
         if( dofvalues.size() == dofvelocities.size() ) {
-            ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec.ConvertToVelocitySpecification(), dofvelocities.begin(), robot->GetActiveConfigurationSpecification().ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+            ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvelocities.begin(), robot->GetActiveConfigurationSpecification().ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
         }
         traj->GetWaypoint(0,vwaypointend, newspec);
         traj->GetWaypoint(0,vtargetvalues); // in target spec
@@ -1159,7 +1159,7 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
         vwaypointstart.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvalues.begin(), parameters->_configurationspecification, 1, traj->GetEnv(), true);
         if( dofvalues.size() == dofvelocities.size() ) {
-            ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec.ConvertToVelocitySpecification(), dofvelocities.begin(), parameters->_configurationspecification.ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+            ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvelocities.begin(), parameters->_configurationspecification.ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
         }
         traj->GetWaypoint(0,vwaypointend, newspec);
         traj->GetWaypoint(0,vtargetvalues); // in target spec
@@ -1182,8 +1182,8 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
-    if( !planner->PlanPath(trajinitial) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to plan path %s", ORE_Assert);
+    if( !(planner->PlanPath(trajinitial) & PS_HasSolution) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to plan path", ORE_Assert);
     }
 
     // retiming is done, now merge the two trajectories
