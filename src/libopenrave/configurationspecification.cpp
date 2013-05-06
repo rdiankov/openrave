@@ -1388,7 +1388,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             }
         }
         // need a space since grabbody is also a group
-        else if( targettokens.at(0).size() >= 5 && targettokens.at(0).substr(0,5) == "grab ") {
+        else if( targettokens.at(0) == std::string("grab") ) {
             std::vector<int> vsourceindices(gsource.dof), vtargetindices(gtarget.dof);
             if( (int)sourcetokens.size() < gsource.dof+2 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
@@ -1423,7 +1423,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 vdefaultvalues.resize(vtargetindices.size(),0);
             }
         }
-        else if( targettokens.at(0).size() >= 8 && targettokens.at(0).substr(0,8) == "grabbody") {
+        else if( targettokens.at(0) == std::string("grabbody") ) {
             // TODO
         }
         else {

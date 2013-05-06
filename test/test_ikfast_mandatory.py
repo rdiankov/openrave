@@ -169,7 +169,7 @@ class TestIkFast(EnvironmentSetup):
     def test_fail2(self):
         self.RunIkFast('ikfastrobots/fail2.robot.xml','arm', IkParameterizationType.Transform6D, minimumsuccess=0.99)
     def test_fail3(self):
-        self.RunIkFast('ikfastrobots/fail3.robot.xml','FLLeg', IkParameterizationType.Transform6D, minimumsuccess=0.97)
+        self.RunIkFast('ikfastrobots/fail3.robot.xml','FLLeg', IkParameterizationType.Transform6D, minimumsuccess=0.96)
 #     def test_fail4(self):
 #         # should finish, but takes too long to complete...
 #         self.RunIkFast('ikfastrobots/fail4.dae','head', IkParameterizationType.Transform6D, minimumsuccess=0.99)

@@ -1106,7 +1106,7 @@ class TestKinematics(EnvironmentSetup):
         env=self.env
         robot=self.LoadRobot('robots/barrettwam.robot.xml')
         assert(not robot.CheckSelfCollision())
-        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(robot=body,padding=0.05)
+        cdmodel = databases.convexdecomposition.ConvexDecompositionModel(robot=robot,padding=0.05)
         if not cdmodel.load():
             cdmodel.generate(padding=0.05,minTriangleConvexHullThresh=12000, skinWidth=0, decompositionDepth=8, maxHullVertices=256, concavityThresholdPercent=10, mergeThresholdPercent=30, volumeSplitThresholdPercent=15)
             cdmodel.save()
