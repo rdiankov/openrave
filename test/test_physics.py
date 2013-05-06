@@ -121,7 +121,7 @@ class RunPhysics(EnvironmentSetup):
                 self.LoadEnv(robotfilename,{'skipgeometry':'1'})
                 robot=self.env.GetRobots()[0]
                 robot.GetLinks()[0].SetStatic(True)
-                for i in range(1000):
+                for i in range(2000):
                     env.StepSimulation(0.001)
                 curvalues = robot.GetDOFValues()
                 curlinks = robot.GetLinkTransformations()
@@ -129,7 +129,7 @@ class RunPhysics(EnvironmentSetup):
                 newlinks = robot.GetLinkTransformations()
                 numlinks = len(curlinks)
                 errordist = transdist(curlinks,newlinks)
-                assert(errordist <= 25*g_epsilon*numlinks)
+                assert(errordist <= 35*g_epsilon*numlinks)
                 
     def test_rotationaxis(self):
         if self.physicsenginename != 'ode':
