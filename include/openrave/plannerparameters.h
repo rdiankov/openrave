@@ -563,7 +563,7 @@ protected:
         if( _bCProcessing ) {
             return PE_Ignore;
         }
-        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        switch( TrajectoryTimingParameters::startElement(name,atts) ) {
         case PE_Pass: break;
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
@@ -601,7 +601,7 @@ protected:
         }
 
         // give a chance for the default parameters to get processed
-        return PlannerParameters::endElement(name);
+        return TrajectoryTimingParameters::endElement(name);
     }
 };
 
