@@ -133,7 +133,8 @@ public:
             dGeomDestroy(geomray);
             geomray = NULL;
         }
-        DestroyEnvironment(); // need to remove the user data
+        // don't call DestroyEnvironment since it relies on EnvironmentBase::GetBodies(), which can lead to a deadlock
+        //DestroyEnvironment();
         _odespace->DestroyEnvironment();
     }
 

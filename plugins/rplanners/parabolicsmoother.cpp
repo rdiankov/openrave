@@ -174,7 +174,12 @@ public:
                     itgroup->interpolation = "quadratic";
                 }
             }
-            ptraj->Init(newspec);
+
+            // have to write to another trajectory
+            if( !_dummytraj || _dummytraj->GetXMLId() != ptraj->GetXMLId() ) {
+                _dummytraj = RaveCreateTrajectory(GetEnv(), ptraj->GetXMLId());
+            }
+            _dummytraj->Init(newspec);
 
             // separate all the acceleration switches into individual points
             vtrajpoints.resize(newspec.GetDOF());
@@ -182,7 +187,7 @@ public:
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
             vtrajpoints.at(waypointoffset) = 1;
             vtrajpoints.at(timeoffset) = 0;
-            ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
+            _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
             FOREACHC(itrampnd,dynamicpath.ramps) {
@@ -191,8 +196,21 @@ public:
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
-                        RAVELOG_DEBUG("original ramp is in collision!\n");
-                        return PS_Failed;
+                        // try to time scale, perhaps collision and dynamics will change
+                        // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
+                        bool bSuccess = false;
+                        dReal mult = 1.05;
+                        for(size_t idilate = 0; idilate < 5; ++idilate ) {
+                            itrampnd->Dilate(mult);
+                            if( checker.Check(*itrampnd) ) {
+                                bSuccess = true;
+                                break;
+                            }
+                            mult += 0.05;
+                        }
+                        if( !bSuccess ) {
+                            throw OPENRAVE_EXCEPTION_FORMAT0("original ramp is in collision!", ORE_Assert);
+                        }
                     }
                     _bUsePerturbation = true; // re-enable
                     progress._iteration=2;
@@ -233,18 +251,24 @@ public:
                     ittargetdata += newspec.GetDOF();
                     prevtime = vswitchtimes[i];
                 }
-                ptraj->Insert(ptraj->GetNumWaypoints(),vtrajpoints);
+                _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             }
 
-            BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-ptraj->GetDuration())<0.001);
-            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%ptraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
+            BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration())<0.001);
+            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
+            ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
-            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-            RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
-            ofstream f(filename.c_str());
-            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ptraj->serialize(f);
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
+                ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                ptraj->serialize(f);
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
+            }
             return PS_Failed;
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
@@ -311,6 +335,7 @@ protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
     bool _bUsePerturbation;
+    TrajectoryBasePtr _dummytraj;
 };
 
 

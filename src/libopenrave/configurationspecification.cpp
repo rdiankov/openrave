@@ -520,6 +520,11 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
+void ConfigurationSpecification::Swap(ConfigurationSpecification& spec)
+{
+    _vgroups.swap(spec._vgroups);
+}
+
 ConfigurationSpecification& ConfigurationSpecification::operator+= (const ConfigurationSpecification& r)
 {
     list< std::vector<Group>::const_iterator > listaddgroups;

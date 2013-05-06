@@ -437,18 +437,18 @@ public:
 
     /** \brief Executes the main planner trying to solve for the goal condition.
 
-        Fill ptraj with the trajectory of the planned path that the robot needs to execute
-        \param ptraj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+        Fill traj with the trajectory of the planned path that the robot needs to execute
+        \param traj The output trajectory the robot has to follow in order to successfully complete the plan. If this planner is a path optimizer, the trajectory can be used as an input for generating a smoother path. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
         \return the status that the planner returned in.
      */
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj) = 0;
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj) = 0;
 
     /// \deprecated (11/10/03)
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
         if( !!pOutStream ) {
             RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
         }
-        return PlanPath(ptraj);
+        return PlanPath(traj);
     }
 
     /// \brief return the internal parameters of the planner
@@ -480,12 +480,12 @@ protected:
         constructed with the same freespace constraints as this planner.
         This function should always be called in PlanPath to post-process the trajectory.
         \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
-        \param ptraj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
+        \param traj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
      */
-    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj);
+    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
 
-    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr ptraj) RAVE_DEPRECATED {
-        return !!(_ProcessPostPlanners(probot,ptraj) & PS_HasSolution);
+    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
+        return !!(_ProcessPostPlanners(probot,traj) & PS_HasSolution);
     }
 
     /// \brief Calls the registered callbacks in order and returns immediately when an action other than PA_None is returned.

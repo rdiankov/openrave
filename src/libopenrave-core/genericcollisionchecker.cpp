@@ -96,6 +96,18 @@ public:
 
     virtual void SetTolerance(dReal tolerance) {
     }
+
+    virtual void SetGeometryGroup(const std::string& groupname)
+    {
+        _geometrygroup = groupname;
+    }
+
+    virtual const std::string& GetGeometryGroup()
+    {
+        return _geometrygroup;
+    }
+
+    std::string _geometrygroup;
 };
 
 CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)

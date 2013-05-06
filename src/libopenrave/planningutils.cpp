@@ -236,9 +236,15 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
     }
 
     deltadof2.resize(curdof.size(),0);
+    dReal imaxiterations = 1.0/dReal(maxiterations);
     for(int iter = 0; iter < maxiterations; ++iter) {
+        // ramp of the jitter as iterations increase
+        dReal jitter = maxjitter;
+        if( iter < maxiterations/2 ) {
+            jitter = maxjitter*dReal(iter)*(2.0*imaxiterations);
+        }
         for(size_t j = 0; j < newdof.size(); ++j) {
-            deltadof[j] = maxjitter * (RaveRandomFloat()-0.5f);
+            deltadof[j] = 2* jitter * (RaveRandomFloat()-0.5f);
         }
         bCollision = false;
         bool bConstraintFailed = false;
@@ -1087,7 +1093,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         vwaypointend.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvalues.begin(), robot->GetActiveConfigurationSpecification(), 1, traj->GetEnv(), true);
         if( dofvalues.size() == dofvelocities.size() ) {
-            ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec.ConvertToVelocitySpecification(), dofvelocities.begin(), robot->GetActiveConfigurationSpecification().ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+            ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvelocities.begin(), robot->GetActiveConfigurationSpecification().ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
         }
     }
     else {
@@ -1140,13 +1146,76 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     }
 }
 
+void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+{
+    PlannerBase::PlannerParametersConstPtr parameters = planner->GetParameters();
+    BOOST_ASSERT((int)dofvalues.size()==parameters->GetDOF());
+    vector<dReal> v1pos(parameters->GetDOF(),0), v1vel(parameters->GetDOF(),0);
+    ConfigurationSpecification newspec = parameters->_configurationspecification;
+    newspec.AddDerivativeGroups(1,false);
+
+    vector<dReal> vwaypointstart, vwaypointend, vtargetvalues;
+    if( waypointindex == 0 ) {
+        vwaypointstart.resize(newspec.GetDOF());
+        ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec, dofvalues.begin(), parameters->_configurationspecification, 1, traj->GetEnv(), true);
+        if( dofvalues.size() == dofvelocities.size() ) {
+            ConfigurationSpecification::ConvertData(vwaypointstart.begin(), newspec.ConvertToVelocitySpecification(), dofvelocities.begin(), parameters->_configurationspecification.ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+        }
+        traj->GetWaypoint(0,vwaypointend, newspec);
+        traj->GetWaypoint(0,vtargetvalues); // in target spec
+    }
+    else if( waypointindex == (int)traj->GetNumWaypoints() ) {
+        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
+        traj->GetWaypoint(waypointindex-1,vwaypointstart, newspec);
+
+        vwaypointend.resize(newspec.GetDOF());
+        ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvalues.begin(), parameters->_configurationspecification, 1, traj->GetEnv(), true);
+        if( dofvalues.size() == dofvelocities.size() ) {
+            ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvelocities.begin(), parameters->_configurationspecification.ConvertToVelocitySpecification(), 1, traj->GetEnv(), false);
+        }
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0("do no support inserting waypoints in middle of trajectories yet",ORE_InvalidArguments);
+    }
+
+    TrajectoryBasePtr trajinitial = RaveCreateTrajectory(traj->GetEnv(),traj->GetXMLId());
+    trajinitial->Init(newspec);
+    trajinitial->Insert(0,vwaypointstart);
+    trajinitial->Insert(1,vwaypointend);
+    if( !planner->PlanPath(trajinitial) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to plan path %s", ORE_Assert);
+    }
+
+    // retiming is done, now merge the two trajectories
+    size_t targetdof = vtargetvalues.size();
+    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
+        std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
+    }
+    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+
+    // copy to the target values while preserving other data
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+
+    if( waypointindex == 0 ) {
+        // have to insert the first N-1 and overwrite the Nth
+        vwaypointstart.resize(targetdof);
+        std::copy(vtargetvalues.begin()+vtargetvalues.size()-targetdof,vtargetvalues.end(),vwaypointstart.begin());
+        traj->Insert(waypointindex,vwaypointstart,true);
+        vtargetvalues.resize(vtargetvalues.size()-targetdof);
+        if( vtargetvalues.size() > 0 ) {
+            traj->Insert(waypointindex,vtargetvalues,false);
+        }
+    }
+    else {
+        // insert last N-1
+        vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
+        traj->Insert(waypointindex,vtargetvalues,false);
+    }
+}
+
 void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
-    if( index != (int)traj->GetNumWaypoints() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("InsertWaypointWithSmoothing only supports adding waypoints at the end",ORE_InvalidArguments);
-    }
-    OPENRAVE_ASSERT_OP(dofvalues.size(),==,dofvelocities.size());
-
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
     OPENRAVE_ASSERT_OP(specpos.GetDOF(),==,(int)dofvalues.size());
@@ -1161,11 +1230,25 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     params->_hasvelocities = true;
     params->_hastimestamps = false;
 
-    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolictrajectoryretimer"));
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to InitPlan",ORE_Failed);
     }
+
+    return InsertWaypointWithSmoothing(index, dofvalues, dofvelocities, traj, planner);
+}
+
+void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+{
+    if( index != (int)traj->GetNumWaypoints() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("InsertWaypointWithSmoothing only supports adding waypoints at the end",ORE_InvalidArguments);
+    }
+    OPENRAVE_ASSERT_OP(dofvalues.size(),==,dofvelocities.size());
+
+    PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
+    ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
+
+    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
 
     dReal fSamplingTime = 0.01; // for collision checking
     dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
@@ -1604,6 +1687,11 @@ void LineCollisionConstraint::SetUserCheckFunction(const boost::function<bool() 
     _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
 }
 
+void LineCollisionConstraint::SetCheckEnvironmentCollision(bool check)
+{
+    _bCheckEnv = check;
+}
+
 bool LineCollisionConstraint::_CheckState()
 {
     if( !!_usercheckfns[0] ) {
@@ -1908,6 +1996,11 @@ void DynamicsCollisionConstraint::SetPlannerParameters(PlannerBase::PlannerParam
 void DynamicsCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
 {
     _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
+}
+
+void DynamicsCollisionConstraint::SetCheckEnvironmentCollision(bool check)
+{
+    _bCheckEnv = check;
 }
 
 int DynamicsCollisionConstraint::_CheckState()
