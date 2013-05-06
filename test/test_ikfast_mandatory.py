@@ -165,7 +165,7 @@ class TestIkFast(EnvironmentSetup):
     def test_testik0(self):
         self.RunIkFast('ikfastrobots/testik0.zae','arm', IkParameterizationType.Transform6D, expectedruntime=45e-6,minimumsuccess=1)
     def test_fail1(self):
-        self.RunIkFast('ikfastrobots/fail1.dae','arm', IkParameterizationType.Transform6D, expectedruntime=450e-6,minimumsuccess=0.98)
+        self.RunIkFast('ikfastrobots/fail1.dae','arm', IkParameterizationType.Transform6D, expectedruntime=450e-6,minimumsuccess=0.969)
     def test_fail2(self):
         self.RunIkFast('ikfastrobots/fail2.robot.xml','arm', IkParameterizationType.Transform6D, minimumsuccess=0.99)
     def test_fail3(self):
