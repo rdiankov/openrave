@@ -1584,6 +1584,18 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
     }
 }
 
+bool KinBody::IsDOFRevolute(int dofindex) const
+{
+    int jointindex = _vDOFIndices.at(dofindex);
+    return _vecjoints.at(jointindex)->IsRevolute(dofindex-_vecjoints.at(jointindex)->GetDOFIndex());
+}
+
+bool KinBody::IsDOFPrismatic(int dofindex) const
+{
+    int jointindex = _vDOFIndices.at(dofindex);
+    return _vecjoints.at(jointindex)->IsPrismatic(dofindex-_vecjoints.at(jointindex)->GetDOFIndex());
+}
+
 KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 {
     for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {

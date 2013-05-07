@@ -155,6 +155,8 @@ public:
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
+    bool IsDOFRevolute(int dofindex) const;
+    bool IsDOFPrismatic(int dofindex) const;
     void SetTransform(object transform);
     void SetDOFWeights(object o);
     void SetDOFLimits(object olower, object oupper);
