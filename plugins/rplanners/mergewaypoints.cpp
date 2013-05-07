@@ -331,14 +331,15 @@ bool IterativeMergeRampsFixedTime(std::list<ParabolicRamp::ParabolicRampND>& ori
 
 }
 
-bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps2,dReal& hi, dReal minswitchtime,ConstraintTrajectoryTimingParametersPtr params,dReal maxcoef, dReal precision, int iters){
+bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps,dReal& hi, dReal minswitchtime,ConstraintTrajectoryTimingParametersPtr params,dReal maxcoef, dReal precision, int iters){
 
-    std::list<ParabolicRamp::ParabolicRampND> ramps;
+    std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
 
     printf("Coef = 1\n");
     TimeScale(origramps,ramps,1+g_fEpsilonLinear);
     bool res = IterativeMergeRampsFixedTime(ramps,ramps2,minswitchtime,params,iters);
     if (res) {
+        resramps = ramps2;
         return true;
     }
     printf("Coef = %f\n",maxcoef);
@@ -356,6 +357,7 @@ bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,st
         res = IterativeMergeRampsFixedTime(ramps,ramps2,minswitchtime,params,iters);
         if(res) {
             hi = testcoef;
+            resramps = ramps2;
         }
         else{
             lo = testcoef;

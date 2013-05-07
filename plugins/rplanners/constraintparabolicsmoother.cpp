@@ -208,16 +208,24 @@ public:
             BreakIntoUnitaryRamps(ramps,resramps);
             ramps = resramps;
             //TimeScale(ramps,1.1);
+            dReal durationbefore = 0;
             FOREACH(itramp, ramps) {
                 printf("ramp duration=%f\n",itramp->endTime);
+                durationbefore += itramp->endTime;
             }
             //bool res = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,_parameters);
             int iters = 1000;
             dReal testcoef;
-            bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.5,_parameters,2.,0.01,iters);
+            bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.11,_parameters,2.,0.01,iters);
+            dReal durationafter = 0;
+            FOREACH(itramp, resramps) {
+                printf("ramp duration=%f\n",itramp->endTime);
+                durationafter += itramp->endTime;
+            }
 
-            cout << res << '\n';
-            cout << testcoef << '\n';
+            if(res) {
+                cout << "Before:"<<durationbefore<<"  After:"<< durationafter << "  Ratio:"<<durationafter/durationbefore << "  Testcoef:"<<testcoef<<'\n';
+            }
 
 
             BOOST_ASSERT( ramps.size() > 0 );
