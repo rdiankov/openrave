@@ -169,7 +169,7 @@ class TestIkFast(EnvironmentSetup):
     def test_fail2(self):
         self.RunIkFast('ikfastrobots/fail2.robot.xml','arm', IkParameterizationType.Transform6D, minimumsuccess=0.99)
     def test_fail3(self):
-        self.RunIkFast('ikfastrobots/fail3.robot.xml','FLLeg', IkParameterizationType.Transform6D, minimumsuccess=0.97)
+        self.RunIkFast('ikfastrobots/fail3.robot.xml','FLLeg', IkParameterizationType.Transform6D, minimumsuccess=0.96)
 #     def test_fail4(self):
 #         # should finish, but takes too long to complete...
 #         self.RunIkFast('ikfastrobots/fail4.dae','head', IkParameterizationType.Transform6D, minimumsuccess=0.99)
@@ -178,6 +178,6 @@ class TestIkFast(EnvironmentSetup):
     def test_fail5_4d_0(self):
         self.RunIkFast('ikfastrobots/fail5_4d.zae','0', IkParameterizationType.TranslationXAxisAngleZNorm4D, minimumsuccess=1)
     def test_kawada_hironx_left(self):
-        self.RunIkFast('robots/kawada-hironx.zae','leftarm', IkParameterizationType.Transform6D, expectedruntime=0.0016, minimumsuccess=0.989)
+        self.RunIkFast('robots/kawada-hironx.zae','leftarm', IkParameterizationType.Transform6D, expectedruntime=0.0016, minimumsuccess=0.984)
     def test_kawada_hironx_lefttorso(self):
         self.RunIkFast('robots/kawada-hironx.zae','leftarm_torso', IkParameterizationType.Transform6D, [0], expectedruntime=0.0016, minimumsuccess=0.989)

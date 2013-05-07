@@ -83,77 +83,7 @@ public:
                     _timeoffset = itgroup->offset;
                 }
             }
-            _vgroupinterpolators.resize(_spec._vgroups.size());
-            _vgroupvalidators.resize(_spec._vgroups.size());
-            _vderivoffsets.resize(_spec.GetDOF(),-1);
-            for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
-                const string& interpolation = _spec._vgroups[i].interpolation;
-                int nNeedDerivatives = 0;
-                if( interpolation == "previous" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                }
-                else if( interpolation == "next" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                }
-                else if( interpolation == "linear" ) {
-                    if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
-                        stringstream ss(_spec._vgroups[i].name.substr(14));
-                        int niktype=0;
-                        ss >> niktype;
-                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                        // TODO add validation for ikparam until
-                    }
-                    else {
-                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                        _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                    }
-                    nNeedDerivatives = 2;
-                }
-                else if( interpolation == "quadratic" ) {
-                    if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
-                        stringstream ss(_spec._vgroups[i].name.substr(14));
-                        int niktype=0;
-                        ss >> niktype;
-                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                        // TODO add validation for ikparam until
-                    }
-                    else {
-                        _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                        _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                    }
-                    nNeedDerivatives = 3;
-                }
-                else if( interpolation == "cubic" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                    nNeedDerivatives = 3;
-                }
-                else if( interpolation == "quadric" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadric,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                    nNeedDerivatives = 3;
-                }
-                else if( interpolation == "quintic" ) {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                    nNeedDerivatives = 3;
-                }
-
-                if( nNeedDerivatives ) {
-                    std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
-                    if( itderiv == _spec._vgroups.end() ) {
-                        // don't throw an error here since it is unknown if the trajectory will be sampled
-                        for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                            _vderivoffsets[_spec._vgroups[i].offset+j] = -nNeedDerivatives;
-                        }
-                    }
-                    else {
-                        for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                            _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
-                        }
-                    }
-                }
-            }
+            _InitializeGroupFunctions();
         }
         _vtrajdata.resize(0);
         _vaccumtime.resize(0);
@@ -365,6 +295,22 @@ public:
         _bChanged = true;
     }
 
+    void Swap(TrajectoryBasePtr rawtraj)
+    {
+        OPENRAVE_ASSERT_OP(GetXMLId(),==,rawtraj->GetXMLId());
+        boost::shared_ptr<GenericTrajectory> traj = boost::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
+        _spec.Swap(traj->_spec);
+        _vderivoffsets.swap(traj->_vderivoffsets);
+        std::swap(_timeoffset, traj->_timeoffset);
+        std::swap(_bInit, traj->_bInit);
+        std::swap(_vtrajdata, traj->_vtrajdata);
+        std::swap(_vaccumtime, traj->_vaccumtime);
+        std::swap(_vdeltainvtime, traj->_vdeltainvtime);
+        std::swap(_bChanged, traj->_bChanged);
+        std::swap(_bSamplingVerified, traj->_bSamplingVerified);
+        _InitializeGroupFunctions();
+    }
+
 protected:
     void _ConvertData(std::vector<dReal>::iterator ittargetdata, std::vector<dReal>::const_iterator itsourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
     {
@@ -460,6 +406,86 @@ protected:
             }
         }
         _bSamplingVerified = true;
+    }
+
+    /// \brief called in order to initialize _vgroupinterpolators and _vgroupvalidators and _vderivoffsets
+    void _InitializeGroupFunctions()
+    {
+        // first set sizes to 0
+        _vgroupinterpolators.resize(0);
+        _vgroupvalidators.resize(0);
+        _vderivoffsets.resize(0);
+        _vgroupinterpolators.resize(_spec._vgroups.size());
+        _vgroupvalidators.resize(_spec._vgroups.size());
+        _vderivoffsets.resize(_spec.GetDOF(),-1);
+        for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
+            const string& interpolation = _spec._vgroups[i].interpolation;
+            int nNeedDerivatives = 0;
+            if( interpolation == "previous" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            }
+            else if( interpolation == "next" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            }
+            else if( interpolation == "linear" ) {
+                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                    stringstream ss(_spec._vgroups[i].name.substr(14));
+                    int niktype=0;
+                    ss >> niktype;
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                    // TODO add validation for ikparam until
+                }
+                else {
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                }
+                nNeedDerivatives = 2;
+            }
+            else if( interpolation == "quadratic" ) {
+                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                    stringstream ss(_spec._vgroups[i].name.substr(14));
+                    int niktype=0;
+                    ss >> niktype;
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                    // TODO add validation for ikparam until
+                }
+                else {
+                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                }
+                nNeedDerivatives = 3;
+            }
+            else if( interpolation == "cubic" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                nNeedDerivatives = 3;
+            }
+            else if( interpolation == "quadric" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadric,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                nNeedDerivatives = 3;
+            }
+            else if( interpolation == "quintic" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                nNeedDerivatives = 3;
+            }
+
+            if( nNeedDerivatives ) {
+                std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
+                if( itderiv == _spec._vgroups.end() ) {
+                    // don't throw an error here since it is unknown if the trajectory will be sampled
+                    for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                        _vderivoffsets[_spec._vgroups[i].offset+j] = -nNeedDerivatives;
+                    }
+                }
+                else {
+                    for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                        _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
+                    }
+                }
+            }
+        }
     }
 
     void _InterpolatePrevious(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
@@ -686,7 +712,8 @@ protected:
 
     std::vector<dReal> _vtrajdata;
     mutable std::vector<dReal> _vaccumtime, _vdeltainvtime;
-    mutable bool _bChanged, _bSamplingVerified;
+    mutable bool _bChanged; ///< if true, then _ComputeInternal() has to be called in order to compute _vaccumtime and _vdeltainvtime
+    mutable bool _bSamplingVerified; ///< if false, then _VerifySampling() has not be called yet to verify that all points can be sampled.
 };
 
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput)

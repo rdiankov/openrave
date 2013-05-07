@@ -462,6 +462,7 @@ class TestCOLLADA(EnvironmentSetup):
         for ilink,link in enumerate(robot.GetLinks()):
             enabled[ilink] = ilink%2
             link.Enable(enabled[ilink])
+        robot.SetDOFValues([1.5],[1])
         env.Save('test_external_extrainfo.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'link_collision_state'})
 
         env2=Environment()

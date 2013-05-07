@@ -104,6 +104,8 @@ Planning
 
 * Added new jitter function using only PlannerParameters configuration called :meth:`.planningutils.JitterCurrentConfiguration`
 
+* Add :meth:`.planningutils.InsertWaypointWithRetiming` and :meth:`.planningutils.InsertWaypointWithSmoothing` to insert a waypoint in a trajectory with a custom planner and configuration.
+
 Python
 ------
 
@@ -135,6 +137,8 @@ Misc
 * Added many helpers in `openrave/xmlreaders.h <../coreapihtml/xmlreaders_8h.html>`_ to parse and write XML.
 
 * Writing COLLADA now writes the joint values directly in the top-level instance_articulated_system
+
+* Added :meth:`.TrajectoryBase.Swap` for fast swapping of trajectory data
 
 Version 0.8.2
 =============

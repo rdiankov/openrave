@@ -456,6 +456,9 @@ public:
             domInstance_with_extraRef piscene = allscene->getInstance_physics_scene_array()[iscene];
             for(size_t ie = 0; ie < piscene->getExtra_array().getCount(); ++ie) {
                 domExtraRef pextra = piscene->getExtra_array()[ie];
+                if( !pextra->getType() ) {
+                    continue;
+                }
                 std::string extra_type = pextra->getType();
                 if( extra_type == "dynamic_rigid_constraints" ) {
                     domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
@@ -2394,6 +2397,9 @@ public:
         // check for OpenRAVE profile simple geometric primitives
         for(size_t ie = 0; ie < domgeom->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = domgeom->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             string extra_type = pextra->getType();
             if( extra_type == "geometry_info" ) {
                 daeElementRef ptec = _ExtractOpenRAVEProfile(pextra);
@@ -2564,6 +2570,9 @@ public:
     {
         for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = as->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             if( strcmp(pextra->getType(), "manipulator") == 0 ) {
                 string name = pextra->getAttribute("name");
                 if( name.size() == 0 ) {
@@ -2688,6 +2697,9 @@ public:
     {
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             if( strcmp(pextra->getType(), "attach_sensor") == 0 ) {
                 string name = pextra->getAttribute("name");
                 if( name.size() == 0 ) {
@@ -2730,6 +2742,9 @@ public:
         list<KinBody::JointPtr> listOrderedJoints;
         for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = as->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             if( strcmp(pextra->getType(), "attach_actuator") == 0 ) {
                 string name = pextra->getAttribute("name");
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
@@ -3265,6 +3280,9 @@ private:
         std::string idsuffix;
         for(size_t ie = 0; ie < inode->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = inode->getExtra_array()[ie];
+            if( !pextra->getType() ) {
+                continue;
+            }
             std::string extra_type = pextra->getType();
             if( extra_type == "idsuffix" ) {
                 if( !!pextra->getName() ) {
@@ -3388,7 +3406,7 @@ private:
             daeElement* pelt = searchBinding(bindjoint->getAxis(),kscene, listInstanceScope);
             domAxis_constraintRef pjointaxis = daeSafeCast<domAxis_constraint>(pelt);
             if (!pjointaxis) {
-                RAVELOG_WARN(str(boost::format("joint axis for target %s\n")%bindjoint->getTarget()));
+                RAVELOG_WARN(str(boost::format("could not find joint axis for target %s\n")%bindjoint->getTarget()));
                 continue;
             }
 
@@ -3488,6 +3506,9 @@ private:
         AttributesList atts;
         for(size_t i = 0; i < arr.getCount(); ++i) {
             domExtraRef pextra = arr[i];
+            if( !pextra->getType() ) {
+                continue;
+            }
             if( !!pextra->getType() && !!pextra->getName() && strcmp(pextra->getType(), "stringxmlreadable") == 0 ) {
                 std::string xmlid(pextra->getName());
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());

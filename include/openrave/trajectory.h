@@ -141,6 +141,12 @@ public:
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
+    /// \brief swap the contents of the data between the two trajectories.
+    ///
+    /// \param traj the trajrectory to swap data with. this->GetXMLId() == traj->GetXMLId() has to be met.
+    /// This function is meant to be extremely fast with as few memory copies as possible.
+    virtual void Swap(TrajectoryBasePtr traj) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     // Old Trajectory API
 
     /// \deprecated (11/10/04), please use newer API!

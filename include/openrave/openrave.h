@@ -1220,6 +1220,9 @@ protected:
      */
     virtual void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
 
+    /// \brief swaps the data between the two configuration specifications as efficiently as possible
+    virtual void Swap(ConfigurationSpecification& spec);
+
     typedef boost::function<void (const std::vector<dReal>&)> SetConfigurationStateFn;
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 

@@ -629,11 +629,9 @@ private:
                     BOOST_ASSERT(!!articulated_system_motion);
                     // have to write another level of parameters
                     domKinematics_newparamRef param2 = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
+                    daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%sparamref).c_str());
                     sparamref = str(boost::format("ias_param%d")%idof);
                     param2->setSid(sparamref.c_str());
-                    // have the real value here instead of SIDREF
-                    daeSafeCast<domKinematics_newparam::domFloat>(param2->add(COLLADA_ELEMENT_FLOAT))->setValue(vjointvalues.at(idof));
-                    //daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%sparamref).c_str());
                 }
                 iasout->vaxissids.at(idof).jointnodesid = sidref;
                 iasout->vaxissids.at(idof).axissid = sparamref;

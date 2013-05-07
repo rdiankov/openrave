@@ -127,7 +127,8 @@ protected:
     }
 
     CollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv) {
-        __description = ":Interface Author: Rosen Diankov\n\nAllows user to specify regions of the robot configuration space that are in self-collision via lookup tables. This is most commonly used when two or more joints are coupled and their joint limits cannot be specified by simple min/max limits. A CollisionMap robot allows the user to specify self-collision regions indexed by the values of two joints. The map will be 1 if the values are allowed or 0. If the robot gets into a 0 region, it will get into self-collision.\n\n\
+        __description = ":Interface Author: Rosen Diankov\n\nAllows user to specify regions of the robot configuration space that are in self-collision via lookup tables. This is most commonly used when two or more joints are coupled and their joint limits cannot be specified by simple min/max limits. A CollisionMap robot allows the user to specify self-collision regions indexed by the values of two joints.\n\n\
+The map will be 1 if the values are in free space (allowed) or 0 if they are in self-collision. If the robot gets into a 0 region, it will get into self-collision.\n\n\
 This is done by first creating a robot of type 'CollisionMapRobot' and using the **<collisionmap>** XML tag. Inside the **<collisionmap>** tag, multiple **<pair>** tags can be specified for coupled joints. For example, to specify a 181x181 2D map for joints J0, J1, J2, J3 where J0,J1 are paired and J2,J3 are paired, do: \n\n\
 .. code-block:: xml\n\n\
   <robot type=\"CollisionMapRobot\">\n\
@@ -141,7 +142,7 @@ This is done by first creating a robot of type 'CollisionMapRobot' and using the
       </pair>\n\
     </collisionmap>\n\
   </robot>\n\n\
-The first pair specifies a map where both joints J0 and J1 have range [-1.5708,1,5708]. This is usually the joint limits specified in the **<joint>** definition.\n\nIn order to index into the two maps defined above, the following operation is performed::\n\n\
+The first pair specifies a map where both joints J0 and J1 have range [-1.5708, 1.5708]. This is usually the joint limits specified in the **<joint>** definition.\n\nIn order to index into the two maps defined above, the following operation is performed::\n\n\
   pair_J0xJ1[ 180*(J0+1.57)/(1.57+1.57) ][ 180*(J1+1.57)/(1.57+1.57) ]\n\n\
 For joints J2xJ3, the index operation is::\n\n\
   pair_J2xJ3[ 90*(J2+1)/(1+1) ][ 130*(J3+2)/(2+2) ]\n\n\
@@ -196,9 +197,9 @@ For joints J2xJ3, the index operation is::\n\n\
         }
     }
 
-    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr()) const
+    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const
     {
-        if( RobotBase::CheckSelfCollision(report) ) {
+        if( RobotBase::CheckSelfCollision(report, collisionchecker) ) {
             return true;
         }
         // check if the current joint angles fall within the allowable range
