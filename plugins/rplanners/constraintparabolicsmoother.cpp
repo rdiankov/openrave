@@ -188,71 +188,10 @@ public:
             }
 
 
-
-
-
-            ///////////////////////////////////////////////////////////////////////////
-
-            //Tests here
-            vector<dReal> q0,v0,q1,v1,q2,v2,q3,v3,t0,t1,t2;
-            vector<dReal> amax = _parameters->_vConfigAccelerationLimit;
-            vector<dReal> vmax = _parameters->_vConfigVelocityLimit;
-            vector<dReal> qmin = _parameters->_vConfigLowerLimit;
-            vector<dReal> qmax = _parameters->_vConfigUpperLimit;
-
-
-            printf("\n-----------------------------------\n");
-
-            std::list<ParabolicRamp::ParabolicRampND> resramps;
-            BreakIntoUnitaryRamps(ramps,resramps);
-            TimeScale(resramps,2);
-
-            ParabolicRamp::ParabolicRampND ramp0,ramp1,ramp2,resramp0,resramp1;
-
-            int i =0;
-            FOREACH(itramp, resramps) {
-                printf("ramp duration=%f\n",itramp->endTime);
-                switch(i) {
-                case 0:
-                    ramp0 = *itramp;
-                    break;
-                case 1:
-                    ramp1 = *itramp;
-                    break;
-                case 2:
-                    ramp2 = *itramp;
-                    break;
-                }
-                i++;
-            }
-
-            printf("t0=%f,t1=%f,t2=%f\n",(float)ramp0.endTime,(float) ramp1.endTime,(float) ramp2.endTime);
-
-
-
-            bool res = MergeWaypoints(ramp0,ramp1,ramp2,resramp0,resramp1,qmin,qmax,vmax,amax);
-
-            printf("\n-----------------------------------\n");
-            cout << res << '\n';
-            cout << resramp0.endTime << '\n';
-            cout << resramp1.endTime << '\n';
-
-
-
-            //////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
             RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f")%path.size()%totaltime%_parameters->_pointtolerance));
+
+
+            // Start shortcutting
 
             _progress._iteration=0;
             int numshortcuts=0;
@@ -261,6 +200,25 @@ public:
                 // interrupted
                 return PS_Interrupted;
             }
+
+
+            // Merge waypoints
+
+            std::list<ParabolicRamp::ParabolicRampND> resramps;
+            BreakIntoUnitaryRamps(ramps,resramps);
+            ramps = resramps;
+            //TimeScale(ramps,1.1);
+            FOREACH(itramp, ramps) {
+                printf("ramp duration=%f\n",itramp->endTime);
+            }
+            //bool res = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,_parameters);
+            int iters = 1000;
+            dReal testcoef;
+            bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.5,_parameters,2.,0.01,iters);
+
+            cout << res << '\n';
+            cout << testcoef << '\n';
+
 
             BOOST_ASSERT( ramps.size() > 0 );
 
