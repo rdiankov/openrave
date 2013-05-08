@@ -3,6 +3,7 @@
 #include "mergewaypoints.h"
 
 #define INF 1e10
+#define TINY 1e-10
 
 
 class Interval {
@@ -40,7 +41,7 @@ Interval Intersection(Interval interval1,Interval interval2){
 
 //Solve the inequality ax => b
 Interval SolveIneq(dReal a,dReal b){
-    if (RaveFabs(a)<g_fEpsilonLinear) {
+    if (RaveFabs(a)<TINY) {
         if (b >= 0) {
             return Interval();
         }
@@ -64,13 +65,14 @@ Interval SolveIneq(dReal a,dReal b){
 void TimeScale(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef){
     ramps.resize(0);
     FOREACH(itramp,origramps){
+        PARABOLIC_RAMP_ASSERT(itramp->IsValid());
         dReal t = itramp->endTime;
         ParabolicRamp::Vector q0,v0,q1,v1;
         itramp->Evaluate(0,q0);
         itramp->Derivative(0,v0);
         itramp->Evaluate(t,q1);
         itramp->Derivative(t,v1);
-        if(abs(coef-1)<g_fEpsilonLinear) {
+        if(abs(coef-1)>TINY) {
             dReal invcoef = 1/coef;
             FOREACH(itv,v0){
                 *itv *= invcoef;
@@ -81,8 +83,10 @@ void TimeScale(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<Pa
         }
         ramps.push_back(ParabolicRamp::ParabolicRampND());
         ramps.back().SetPosVelTime(q0,v0,q1,v1,t*coef);
+        PARABOLIC_RAMP_ASSERT(ramps.back().IsValid());
     }
 }
+
 
 // //Copy a unitary ramp in place
 // void CopyRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& copyramps){
@@ -148,22 +152,28 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,std::vector<dReal>& q0,const std::vec
         v1 = (2*(q3[j]-q0[j])-(Ta*v0[j]+Tb*v3[j]))/(Ta+Tb);
         a0 = 1/Ta/(Ta+Tb)*(2*(q3[j]-q0[j])-(2*Ta+Tb)*v0[j]-Tb*v3[j]);
         a1 = 1/Tb/(Ta+Tb)*(-2*(q3[j]-q0[j])+(Ta+2*Tb)*v3[j]+Ta*v0[j]);
-        BOOST_ASSERT(v1>= -vmax[j] and v1 <= vmax[j] and a0>= -amax[j] and a0 <= amax[j] and a1>= -amax[j] and a1 <= amax[j]);
+        if(not (v1>= -vmax[j]-TINY and v1 <= vmax[j]+TINY and a0>= -amax[j]-TINY and a0 <= amax[j]+TINY and a1>= -amax[j]-TINY and a1 <= amax[j]+TINY)) {
+            cout << TINY<<"\n";
+            cout << "v1:" << -vmax[j]-TINY <<"<" << v1 << "<" << vmax[j]+TINY<<"\n";
+            cout << "a0:" << -amax[j]-TINY <<"<" << a0 << "<" << amax[j]+TINY<<"\n";
+            cout << "a1:" << -amax[j]-TINY <<"<" << a1 << "<" << amax[j]+TINY<<"\n";
+            BOOST_ASSERT(false);
+        }
         if (not (q1>= qmin[j] and q1 <= qmax[j])) {
             return false;
         }
         dReal tm,qm;
-        if (RaveFabs(a0)>g_fEpsilonLinear) {
+        if (RaveFabs(a0)>TINY) {
             tm = -v0[j]/a0;
             qm = q0[j]+v0[j]*tm+0.5*a0*tm*tm;
-            if (tm >0  and tm < Ta and (qm < qmin[j] or qm > qmax[j])) {
+            if (tm >0  and tm < Ta and (qm < qmin[j]-TINY or qm > qmax[j]+TINY)) {
                 return false;
             }
         }
-        if (RaveFabs(a1)>g_fEpsilonLinear) {
+        if (RaveFabs(a1)>TINY) {
             tm = -v1/a1;
             qm = q1+v1*tm+0.5*a1*tm*tm;
-            if (tm > 0 and tm < Tb and (qm < qmin[j] or qm > qmax[j])) {
+            if (tm > 0 and tm < Tb and (qm < qmin[j]-TINY or qm > qmax[j]+TINY)) {
                 return false;
             }
         }
@@ -208,6 +218,7 @@ bool MergeRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp:
     resramp0.SetPosVelTime(q0,v0,qres,vres,Ta);
     resramp1 = ParabolicRamp::ParabolicRampND();
     resramp1.SetPosVelTime(qres,vres,q3,v3,Tb);
+    PARABOLIC_RAMP_ASSERT(resramp0.IsValid()&&resramp1.IsValid());
     return true;
 }
 
@@ -334,25 +345,28 @@ bool IterativeMergeRampsFixedTime(std::list<ParabolicRamp::ParabolicRampND>& ori
 bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps,dReal& hi, dReal minswitchtime,ConstraintTrajectoryTimingParametersPtr params,dReal maxcoef, dReal precision, int iters){
 
     std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
+    dReal testcoef;
 
-    printf("Coef = 1\n");
-    TimeScale(origramps,ramps,1+g_fEpsilonLinear);
+    //printf("Coef = 1\n");
+    TimeScale(origramps,ramps,1);
     bool res = IterativeMergeRampsFixedTime(ramps,ramps2,minswitchtime,params,iters);
     if (res) {
+        hi = 1;
         resramps = ramps2;
         return true;
     }
-    printf("Coef = %f\n",maxcoef);
+    //printf("Coef = %f\n",maxcoef);
     TimeScale(origramps,ramps,maxcoef);
     res = IterativeMergeRampsFixedTime(ramps,ramps2,minswitchtime,params,iters);
     if (not res) {
+        hi = -1;
         return false;
     }
     dReal lo = 1;
     hi = maxcoef;
     while (hi-lo>precision) {
-        dReal testcoef = (hi+lo)/2;
-        printf("Coef = %f\n",testcoef);
+        testcoef = (hi+lo)/2;
+        //printf("Coef = %f\n",testcoef);
         TimeScale(origramps,ramps,testcoef);
         res = IterativeMergeRampsFixedTime(ramps,ramps2,minswitchtime,params,iters);
         if(res) {
@@ -363,6 +377,12 @@ bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,st
             lo = testcoef;
         }
     }
+
+    // cout << "Final ramps\n";
+    // FOREACHC(itramp,resramps){
+    //     cout<< "Ramp duration:" << itramp->endTime << "\n";
+    // }
+
     return true;
 
 
@@ -373,7 +393,9 @@ bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,st
 
 }
 
-void BreakOneRamp(ParabolicRamp::ParabolicRampND rampnd,std::list<ParabolicRamp::ParabolicRampND>& tempramp){
+void BreakOneRamp(ParabolicRamp::ParabolicRampND rampnd,std::list<ParabolicRamp::ParabolicRampND>& tempramp, dReal minswitchtime){
+
+    //if minswitchtime<0 no timescaling
 
     vector<dReal> vswitchtimes;
     vswitchtimes.resize(0);
@@ -394,38 +416,82 @@ void BreakOneRamp(ParabolicRamp::ParabolicRampND rampnd,std::list<ParabolicRamp:
         }
     }
 
-    tempramp.resize(0);
+    dReal coef=1;
     dReal tbeg,tend;
+    if(minswitchtime>TINY) {
+        tbeg = 0;
+        for(size_t i=0; i<vswitchtimes.size(); i++) {
+            tend = vswitchtimes[i];
+            if (tend-tbeg<minswitchtime) {
+                coef = max(coef,minswitchtime/(tend-tbeg));
+            }
+        }
+    }
+
+    tempramp.resize(0);
     tbeg = 0;
     for(size_t i=0; i<vswitchtimes.size(); i++) {
         ParabolicRamp::Vector q0,v0,q1,v1;
         tend = vswitchtimes[i];
         //printf("vswitch[i] = %f\n",tend);
         rampnd.Evaluate(tbeg,q0);
-        rampnd.Derivative(tend,v0);
-        rampnd.Evaluate(tbeg,q1);
+        rampnd.Derivative(tbeg,v0);
+        rampnd.Evaluate(tend,q1);
         rampnd.Derivative(tend,v1);
+        if(abs(coef-1)>TINY) {
+            dReal invcoef = 1/coef;
+            FOREACH(itv,v0){
+                *itv *= invcoef;
+            }
+            FOREACH(itv,v1){
+                *itv *= invcoef;
+            }
+        }
         tempramp.push_back(ParabolicRamp::ParabolicRampND());
-        tempramp.back().SetPosVelTime(q0,v0,q1,v1,tend-tbeg);
+        tempramp.back().SetPosVelTime(q0,v0,q1,v1,(tend-tbeg)*coef);
+        PARABOLIC_RAMP_ASSERT(tempramp.back().IsValid());
         tbeg = tend;
     }
+}
 
-    // tempramp.resize(0);
-    // FOREACHC(itramp,ramps){
-    //     BreakOneRamp(*itramp,tempramp);
-    //     resramps.splice(resramps.end(),tempramp);
-    // }
+
+dReal DetermineMinswitchtime(ParabolicRamp::ParabolicRampND rampnd){
+    vector<dReal> vswitchtimes;
+    vswitchtimes.resize(0);
+    vswitchtimes.push_back(rampnd.endTime);
+    FOREACHC(itramp,rampnd.ramps) {
+        vector<dReal>::iterator it;
+        if( itramp->tswitch1 != 0 ) {
+            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+            if( *it != itramp->tswitch1) {
+                vswitchtimes.insert(it,itramp->tswitch1);
+            }
+        }
+        if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
+            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+            if( *it != itramp->tswitch2 ) {
+                vswitchtimes.insert(it,itramp->tswitch2);
+            }
+        }
+    }
+    dReal tbeg,tend;
+    tbeg = 0;
+    dReal res = INF;
+    for(size_t i=0; i<vswitchtimes.size(); i++) {
+        tend = vswitchtimes[i];
+        res = min(res,tend-tbeg);
+        tbeg = tend;
+    }
+    return res;
 }
 
 
 
-
-void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps){
+void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps,dReal minswitchtime){
     resramps.resize(0);
     std::list<ParabolicRamp::ParabolicRampND> tempramp;
     FOREACHC(itramp,ramps){
-        BreakOneRamp(*itramp,tempramp);
+        BreakOneRamp(*itramp,tempramp,minswitchtime);
         resramps.splice(resramps.end(),tempramp);
     }
 }
-

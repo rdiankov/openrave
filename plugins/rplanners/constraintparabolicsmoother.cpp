@@ -21,6 +21,9 @@
 #include "ParabolicPathSmooth/DynamicPath.h"
 #include "mergewaypoints.h"
 
+#define MINSWITCHTIME 0
+#define INF 1e10
+#define MERGE_ITERS 1000
 
 namespace ParabolicRamp = ParabolicRampInternal;
 
@@ -84,6 +87,7 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
@@ -178,10 +182,49 @@ public:
                     path.push_back(q);
                 }
 
-                SetMilestones(ramps, path);
+                //SetMilestones(ramps, path);
+
+                // Convert to ramps, such that two waypoints are at least MINSWITCHTIME away
+                SetMilestones2(ramps, path, MINSWITCHTIME);
+                //SetMilestones(ramps, path, 0);
+            }
+
+            _bUsePerturbation = false;
+
+
+            FOREACH(itramp, ramps) {
+                if(!checker.Check(*itramp)) {
+                    cout << "---------------- Collision before ----------------\n";
+
+
+
+                    ParabolicRamp::Vector xmid;
+                    itramp->Evaluate(itramp->endTime*0.9,xmid);
+                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "x0=[";
+                    FOREACH(q, itramp->x0){
+                        ss << *q << ", ";
+                    }
+                    ss << "]\nx1=[";
+                    FOREACH(q, itramp->x1){
+                        ss << *q << ", ";
+                    }
+                    ss << "]\nxmid=[";
+                    FOREACH(q, xmid){
+                        ss << *q << ", ";
+                    }
+                    ss << "]\n";
+                    RAVELOG_WARN(ss.str());
+                    checker.Check(*itramp);
+                }
             }
 
 
+
+            // Break into unitary ramps
+            std::list<ParabolicRamp::ParabolicRampND> ramps2;
+            BreakIntoUnitaryRamps(ramps,ramps2,0);
+            ramps=ramps2;
             dReal totaltime=0;
             FOREACH(itramp, ramps) {
                 totaltime += itramp->endTime;
@@ -193,6 +236,12 @@ public:
 
             // Start shortcutting
 
+            FOREACH(itramp, ramps) {
+                cout << "Ramp before shortcut: "<<itramp->endTime<<"\n";
+                totaltime += itramp->endTime;
+            }
+
+
             _progress._iteration=0;
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
@@ -202,30 +251,55 @@ public:
             }
 
 
+            FOREACH(itramp, ramps) {
+                if(!checker.Check(*itramp)) {
+                    cout << "---------------- Collision after ----------------\n";
+                }
+            }
+
+
+            FOREACH(itramp, ramps) {
+                cout << "Ramp after shortcut: "<<itramp->endTime<<"\n";
+                totaltime += itramp->endTime;
+            }
+
+
+
             // Merge waypoints
 
-            std::list<ParabolicRamp::ParabolicRampND> resramps;
-            BreakIntoUnitaryRamps(ramps,resramps);
-            ramps = resramps;
-            //TimeScale(ramps,1.1);
-            dReal durationbefore = 0;
-            FOREACH(itramp, ramps) {
-                printf("ramp duration=%f\n",itramp->endTime);
-                durationbefore += itramp->endTime;
-            }
-            //bool res = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,_parameters);
-            int iters = 1000;
-            dReal testcoef;
-            bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.11,_parameters,2.,0.01,iters);
-            dReal durationafter = 0;
-            FOREACH(itramp, resramps) {
-                printf("ramp duration=%f\n",itramp->endTime);
-                durationafter += itramp->endTime;
-            }
+            // std::list<ParabolicRamp::ParabolicRampND> resramps;
+            // BreakIntoUnitaryRamps(ramps,resramps,0);
+            // ramps = resramps;
+            // //TimeScale(ramps,1.1);
+            // dReal durationbefore = 0;
+            // FOREACH(itramp, ramps) {
+            //     //printf("ramp duration=%f\n",itramp->endTime);
+            //     durationbefore += itramp->endTime;
+            // }
+            // //bool res = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,_parameters);
+            // int iters = 100;
+            // dReal testcoef;
+            // bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.2,_parameters,2.,0.01,iters);
+            // dReal durationafter = 0;
+            // FOREACH(itramp, resramps) {
+            //     //printf("ramp duration=%f\n",itramp->endTime);
+            //     durationafter += itramp->endTime;
+            //     // int i=4;
+            //     // ParabolicRamp::Vector q0,v0,q1,v1;
+            //     // dReal tend = itramp->endTime;
+            //     // rampnd.Evaluate(0,q0);
+            //     // rampnd.Derivative(tend,v0);
+            //     // rampnd.Evaluate(tbeg,q1);
+            //     // rampnd.Derivative(tend,v1);
+            //     // dReal a0i = (vres[i]-v0[i])/Ta;
+            //     // printf("qres: %f=%f\n",(float) q0[i]+Ta*v0[i]+0.5*a0i*Ta*Ta, qres[i]);
+            // }
 
-            if(res) {
-                cout << "Before:"<<durationbefore<<"  After:"<< durationafter << "  Ratio:"<<durationafter/durationbefore << "  Testcoef:"<<testcoef<<'\n';
-            }
+
+
+            // if(res) {
+            //     //cout << "Before:"<<durationbefore<<"  After:"<< durationafter << "  Ratio:"<<durationafter/durationbefore << "  Testcoef:"<<testcoef<<'\n';
+            // }
 
 
             BOOST_ASSERT( ramps.size() > 0 );
@@ -389,14 +463,91 @@ public:
                 ramps.back().dx0 = zero;
                 ramps.back().dx1 = zero;
                 bool res=ramps.back().SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
+
+                // ParabolicRamp::Vector xmid;
+                // ramps.back().Evaluate(ramps.back().endTime*0.9,xmid);
+                // std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                // ss << "x0=[";
+                // FOREACH(q, ramps.back().x0){
+                //     ss << *q << ", ";
+                // }
+                // ss << "]\nx1=[";
+                // FOREACH(q, ramps.back().x1){
+                //     ss << *q << ", ";
+                // }
+                // ss << "]\nxmid=[";
+                // FOREACH(q, xmid){
+                //     ss << *q << ", ";
+                // }
+                // ss << "]\n";
+                // RAVELOG_WARN(ss.str());
                 PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
             }
         }
     }
 
+
+    void SetMilestones2(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x,dReal minswitchtime)
+    {
+        // NB: The old SetMilestone(ramps,x) is equivalent to SetMilestone(ramps,x,0)
+        ramps.clear();
+        if(x.size()==1) {
+            ramps.push_back(ParabolicRamp::ParabolicRampND());
+            ramps.front().SetConstant(x[0]);
+        }
+        else if( !x.empty() ) {
+            ParabolicRamp::Vector zero(x[0].size(),0.0);
+            for(size_t i=0; i+1<x.size(); i++) {
+                dReal coef;
+                ParabolicRamp::ParabolicRampND newramp,newramp2;
+                newramp.x0 = x[i];
+                newramp.x1 = x[i+1];
+                newramp.dx0 = zero;
+                newramp.dx1 = zero;
+                if(minswitchtime<g_fEpsilonLinear) {
+                    bool res=newramp.SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
+                    ramps.push_back(newramp);
+                    PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
+                }
+                else{
+                    dReal hi = 1;
+                    dReal lo = 0;
+                    while(hi-lo>0.0001) {
+                        coef = (hi+lo)/2;
+                        //cout << "coef=" << coef <<"\n";
+                        std::vector<dReal> amax;
+                        size_t n = _parameters->_vConfigAccelerationLimit.size();
+                        amax.resize(n);
+                        for(size_t j=0; j<n; j++) {
+                            amax[j]=_parameters->_vConfigAccelerationLimit[j]*coef;
+                        }
+                        bool res=newramp.SolveMinTimeLinear(amax,_parameters->_vConfigVelocityLimit);
+                        //cout << "Mst=" << DetermineMinswitchtime(newramp) <<"\n";
+                        if(res && (DetermineMinswitchtime(newramp)>=minswitchtime)) {
+                            newramp2 = newramp;
+                            lo = coef;
+                        }
+                        else{
+                            hi = coef;
+                        }
+                    }
+                    //cout << "Best coef:" << lo << "\n";
+                    PARABOLIC_RAMP_ASSERT(newramp2.IsValid());
+                    BOOST_ASSERT(DetermineMinswitchtime(newramp2)>=minswitchtime);
+                    ramps.push_back(newramp2);
+                }
+            }
+        }
+    }
+
+
+
+
     int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters,ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         int shortcuts = 0;
+        std::list<ParabolicRamp::ParabolicRampND> saveramps;
+        TimeScale(ramps,saveramps,1);
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
         dReal endTime=0;
         int i = 0;
@@ -407,6 +558,9 @@ public:
         ParabolicRamp::Vector x0,x1,dx0,dx1;
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
+
+
+        // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
@@ -483,6 +637,44 @@ public:
                     PARABOLIC_RAMP_ASSERT(itramp1->dx1 == itramp2->dx0);
                     itramp1=itramp2;
                     ++itramp2;
+                }
+            }
+
+            if (MINSWITCHTIME>1e-5) {
+
+                //MergeWaypoints
+                std::list<ParabolicRamp::ParabolicRampND> resramps;
+                BreakIntoUnitaryRamps(ramps,resramps,0);
+                ramps = resramps;
+
+                dReal optcoef;
+                bool resmerge = IterativeMergeRamps(ramps,resramps,optcoef,MINSWITCHTIME,_parameters,2.,0.01,MERGE_ITERS);
+                if(resmerge) {
+                    dReal durationaftermerge = 0;
+                    FOREACH(itramp, resramps) {
+                        if(!check.Check(*itramp)) {
+                            durationaftermerge = INF;
+                            cout << "----Collision while merging waypoints----\n";
+                            resmerge = false;
+                            break;
+                        }
+                        durationaftermerge += itramp->endTime;
+                    }
+                    if(durationaftermerge<endTime) {
+                        cout << "**************Cool***********************\n";
+                        ramps = resramps;
+                        TimeScale(ramps,saveramps,1);
+                        FOREACH(itramp, ramps) {
+                            cout << "Ramp after shortcut "<<shortcuts<<": "<<itramp->endTime<<"\n";
+                        }
+                        cout << "\n\n";
+                    }
+                    else{
+                        resmerge = false;
+                    }
+                }
+                if(not resmerge) {
+                    TimeScale(saveramps,ramps,1);
                 }
             }
 
