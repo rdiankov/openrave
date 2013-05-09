@@ -1504,6 +1504,16 @@ private:
         return _veclinks;
     }
 
+    /// \brief returns true if the DOF describes a rotation around an axis.
+    ///
+    /// \param dofindex the degree of freedom index
+    virtual bool IsDOFRevolute(int dofindex) const;
+
+    /// \brief returns true if the DOF describes a translation around an axis.
+    ///
+    /// \param dofindex the degree of freedom index
+    virtual bool IsDOFPrismatic(int dofindex) const;
+
     /// return a pointer to the link with the given name
     virtual LinkPtr GetLink(const std::string& name) const;
 
@@ -1703,10 +1713,10 @@ private:
         H[i,j.k] = hessian[k+DOF*(j+3*i)]
         delta[j] = sum_i sum_k values[i] * H[i,j,k] * values[k]
 
-        /// \param linkindex of the link that defines the frame the position is attached to
-        /// \param position position in world space where to compute derivatives from.
-        /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta translation
-        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
+        \param linkindex of the link that defines the frame the position is attached to
+        \param position position in world space where to compute derivatives from.
+        \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta translation
+        \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
      */
     virtual void ComputeHessianTranslation(int linkindex, const Vector& position, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
 
@@ -1727,9 +1737,9 @@ private:
         H[i,j.k] = hessian[k+DOF*(j+3*i)]
         delta[j] = sum_i sum_k values[i] * H[i,j,k] * values[k]
 
-        /// \param linkindex of the link that defines the frame the position is attached to
-        /// \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta angle-axis
-        /// \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
+        \param linkindex of the link that defines the frame the position is attached to
+        \param hessian DOFx3xDOF matrix such that numpy.dot(dq,numpy.dot(hessian,dq)) is the expected second-order delta angle-axis
+        \param dofindices the dof indices to compute the hessian for. If empty, will compute for all the dofs
      */
     virtual void ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian, const std::vector<int>& dofindices=std::vector<int>()) const;
 

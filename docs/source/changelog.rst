@@ -52,6 +52,8 @@ Core
 
 * Possible to bulk enable/disable links via :meth:`.KinBody.SetLinkEnableStates` and :meth:`.KinBody.GetLinkEnableStates`.
 
+* Add faster methods for checking revolute/prismatic joints per dof :meth:`.KinBody.IsDOFRevolute` and :meth:`.KinBody.IsDOFPrismatic`
+
 Collision Checking
 -----------------
 

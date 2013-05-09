@@ -1798,6 +1798,17 @@ bool PyKinBody::IsVisible() const
 {
     return _pbody->IsVisible();
 }
+
+bool PyKinBody::IsDOFRevolute(int dofindex) const
+{
+    return _pbody->IsDOFRevolute(dofindex);
+}
+
+bool PyKinBody::IsDOFPrismatic(int dofindex) const
+{
+    return _pbody->IsDOFPrismatic(dofindex);
+}
+
 void PyKinBody::SetTransform(object transform)
 {
     _pbody->SetTransform(ExtractTransform(transform));
@@ -2577,6 +2588,8 @@ void init_openravepy_kinbody()
                         .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
                         .def("SetVisible",&PyKinBody::SetVisible,args("visible"), DOXY_FN(KinBody,SetVisible))
                         .def("IsVisible",&PyKinBody::IsVisible, DOXY_FN(KinBody,IsVisible))
+                        .def("IsDOFRevolute",&PyKinBody::IsDOFRevolute, args("dofindex"), DOXY_FN(KinBody,IsDOFRevolute))
+                        .def("IsDOFPrismatic",&PyKinBody::IsDOFPrismatic, args("dofindex"), DOXY_FN(KinBody,IsDOFPrismatic))
                         .def("SetTransform",&PyKinBody::SetTransform,args("transform"), DOXY_FN(KinBody,SetTransform))
                         .def("SetJointValues",psetdofvalues1,args("values"), DOXY_FN(KinBody,SetDOFValues "const std::vector; uint32_t; const std::vector"))
                         .def("SetJointValues",psetdofvalues2,args("values","dofindices"), DOXY_FN(KinBody,SetDOFValues "const std::vector; uint32_t; const std::vector"))
