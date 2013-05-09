@@ -3165,6 +3165,7 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
         PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
+    ramps.resize(x0.size());
     for(size_t i=0; i<ramps.size(); i++) {
         if(vmax[i]==0) {
             ramps[i].resize(1);
@@ -3198,6 +3199,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
         PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
+    ramps.resize(x0.size());
     for(size_t i=0; i<ramps.size(); i++) {
         if(vmax[i]==0) {
             ramps[i].resize(1);
