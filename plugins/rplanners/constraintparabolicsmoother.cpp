@@ -21,8 +21,10 @@
 #include "ParabolicPathSmooth/DynamicPath.h"
 #include "mergewaypoints.h"
 
-#define MINSWITCHTIME 0
+#define MINSWITCHTIME 0.5
 #define INF 1e10
+#define MERGE_MAXCOEF 1.2
+#define MERGE_PRECISION 0.01
 #define MERGE_ITERS 1000
 
 namespace ParabolicRamp = ParabolicRampInternal;
@@ -112,6 +114,15 @@ public:
         vector<dReal> vtrajpoints;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
 
+        //RaveSetDebugLevel(Level_Verbose);
+
+        // {
+        //     string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        //     RAVELOG_WARN(str(boost::format("parabolic planner failed: writing original trajectory to %s")%filename));
+        //     ofstream f(filename.c_str());
+        //     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        //     ptraj->serialize(f);
+        // }
 
         try {
             ParabolicRamp::Vector tol = _parameters->_vConfigResolution;
@@ -125,6 +136,8 @@ public:
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
+
+            // Time parameterize linear segments
             if (_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
                 // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
                 vector<dReal> x0, x1, dx0, dx1, ramptime;
@@ -148,7 +161,6 @@ public:
             }
             else {
                 // assumes all the waypoints are joined by linear segments
-
                 ParabolicRamp::Vector q(_parameters->GetDOF());
                 for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
                     std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
@@ -184,46 +196,53 @@ public:
 
                 //SetMilestones(ramps, path);
 
-                // Convert to ramps, such that two waypoints are at least MINSWITCHTIME away
+                // Convert to unitary ramps which are linear in config space
+                // and guarantees that that two waypoints are at least MINSWITCHTIME away
                 SetMilestones2(ramps, path, MINSWITCHTIME);
                 //SetMilestones(ramps, path, 0);
             }
 
+            //_bUsePerturbation = false;
+
+
+            // FOREACH(itramp, ramps) {
+            //     if(!checker.Check(*itramp)) {
+            //         cout << "---------------- Collision before ----------------\n";
+            //         ParabolicRamp::Vector xmid;
+            //         itramp->Evaluate(itramp->endTime*0.9,xmid);
+            //         std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            //         ss << "x0=[";
+            //         FOREACH(q, itramp->x0){
+            //             ss << *q << ", ";
+            //         }
+            //         ss << "]\nx1=[";
+            //         FOREACH(q, itramp->x1){
+            //             ss << *q << ", ";
+            //         }
+            //         ss << "]\nxmid=[";
+            //         FOREACH(q, xmid){
+            //             ss << *q << ", ";
+            //         }
+            //         ss << "]\n";
+            //         RAVELOG_WARN(ss.str());
+            //         checker.Check(*itramp);
+            //     }
+            // }
+
+            cout << "---- Check original ramp ----\n";
             _bUsePerturbation = false;
-
-
-            FOREACH(itramp, ramps) {
+            FOREACH(itramp,ramps) {
                 if(!checker.Check(*itramp)) {
-                    cout << "---------------- Collision before ----------------\n";
-
-
-
-                    ParabolicRamp::Vector xmid;
-                    itramp->Evaluate(itramp->endTime*0.9,xmid);
-                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "x0=[";
-                    FOREACH(q, itramp->x0){
-                        ss << *q << ", ";
-                    }
-                    ss << "]\nx1=[";
-                    FOREACH(q, itramp->x1){
-                        ss << *q << ", ";
-                    }
-                    ss << "]\nxmid=[";
-                    FOREACH(q, xmid){
-                        ss << *q << ", ";
-                    }
-                    ss << "]\n";
-                    RAVELOG_WARN(ss.str());
-                    checker.Check(*itramp);
+                    cout << "Collision\n";
                 }
+                itramp->constraintchecked = false;
             }
-
+            _bUsePerturbation = true;
 
 
             // Break into unitary ramps
             std::list<ParabolicRamp::ParabolicRampND> ramps2;
-            BreakIntoUnitaryRamps(ramps,ramps2,0);
+            BreakIntoUnitaryRamps(ramps,ramps2);
             ramps=ramps2;
             dReal totaltime=0;
             FOREACH(itramp, ramps) {
@@ -235,72 +254,48 @@ public:
 
 
             // Start shortcutting
-
             FOREACH(itramp, ramps) {
                 cout << "Ramp before shortcut: "<<itramp->endTime<<"\n";
                 totaltime += itramp->endTime;
             }
-
-
+            cout << "Total duration: " << totaltime << "\n";
+            cout << "\nStart shortcutting\n\n";
             _progress._iteration=0;
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations, checker, this);
+            cout << "\nEnd shortcutting\n\n";
+
+
+
+
+
+
+            cout << "---- Check final ramp ----\n";
+            _bUsePerturbation = false;
+            FOREACH(itramp,ramps) {
+                if(!checker.Check(*itramp)) {
+                    cout << "Collision\n";
+                }
+                itramp->constraintchecked = false;
+            }
+            _bUsePerturbation = true;
+
+
+
+
+
+
             if( numshortcuts < 0 ) {
                 // interrupted
                 return PS_Interrupted;
             }
 
-
-            FOREACH(itramp, ramps) {
-                if(!checker.Check(*itramp)) {
-                    cout << "---------------- Collision after ----------------\n";
-                }
-            }
-
-
+            totaltime = 0;
             FOREACH(itramp, ramps) {
                 cout << "Ramp after shortcut: "<<itramp->endTime<<"\n";
                 totaltime += itramp->endTime;
             }
-
-
-
-            // Merge waypoints
-
-            // std::list<ParabolicRamp::ParabolicRampND> resramps;
-            // BreakIntoUnitaryRamps(ramps,resramps,0);
-            // ramps = resramps;
-            // //TimeScale(ramps,1.1);
-            // dReal durationbefore = 0;
-            // FOREACH(itramp, ramps) {
-            //     //printf("ramp duration=%f\n",itramp->endTime);
-            //     durationbefore += itramp->endTime;
-            // }
-            // //bool res = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,_parameters);
-            // int iters = 100;
-            // dReal testcoef;
-            // bool res = IterativeMergeRamps(ramps,resramps,testcoef,0.2,_parameters,2.,0.01,iters);
-            // dReal durationafter = 0;
-            // FOREACH(itramp, resramps) {
-            //     //printf("ramp duration=%f\n",itramp->endTime);
-            //     durationafter += itramp->endTime;
-            //     // int i=4;
-            //     // ParabolicRamp::Vector q0,v0,q1,v1;
-            //     // dReal tend = itramp->endTime;
-            //     // rampnd.Evaluate(0,q0);
-            //     // rampnd.Derivative(tend,v0);
-            //     // rampnd.Evaluate(tbeg,q1);
-            //     // rampnd.Derivative(tend,v1);
-            //     // dReal a0i = (vres[i]-v0[i])/Ta;
-            //     // printf("qres: %f=%f\n",(float) q0[i]+Ta*v0[i]+0.5*a0i*Ta*Ta, qres[i]);
-            // }
-
-
-
-            // if(res) {
-            //     //cout << "Before:"<<durationbefore<<"  After:"<< durationafter << "  Ratio:"<<durationafter/durationbefore << "  Testcoef:"<<testcoef<<'\n';
-            // }
-
+            cout << "Total duration: " << totaltime << "\n";
 
             BOOST_ASSERT( ramps.size() > 0 );
 
@@ -548,6 +543,7 @@ public:
         int shortcuts = 0;
         std::list<ParabolicRamp::ParabolicRampND> saveramps;
         TimeScale(ramps,saveramps,1);
+        //_uniformsampler->SetSeed(utils::GetMicroTime());
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
         dReal endTime=0;
         int i = 0;
@@ -558,7 +554,6 @@ public:
         ParabolicRamp::Vector x0,x1,dx0,dx1;
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
-
 
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
@@ -640,43 +635,62 @@ public:
                 }
             }
 
+            //MergeWaypoints
             if (MINSWITCHTIME>1e-5) {
-
-                //MergeWaypoints
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
-                BreakIntoUnitaryRamps(ramps,resramps,0);
-                ramps = resramps;
 
+                BreakIntoUnitaryRamps(ramps,resramps);
+                ramps = resramps;
                 dReal optcoef;
-                bool resmerge = IterativeMergeRamps(ramps,resramps,optcoef,MINSWITCHTIME,_parameters,2.,0.01,MERGE_ITERS);
+                std::list<int> modifiedramps_idx;
+
+
+                bool resmerge = IterativeMergeRamps(ramps,resramps,modifiedramps_idx,optcoef,MINSWITCHTIME,_parameters,MERGE_MAXCOEF,MERGE_PRECISION,MERGE_ITERS);
                 if(resmerge) {
                     dReal durationaftermerge = 0;
+                    int itx=0;
+                    cout << "Modified ramps: [";
                     FOREACH(itramp, resramps) {
-                        if(!check.Check(*itramp)) {
-                            durationaftermerge = INF;
-                            cout << "----Collision while merging waypoints----\n";
-                            resmerge = false;
-                            break;
+                        if(itramp->modified) {
+                            cout << itx << ",";
                         }
+                        itx++;
+                    }
+                    cout << "]\n";
+
+                    FOREACH(itramp, resramps) {
                         durationaftermerge += itramp->endTime;
                     }
+                    // Check that shortcut-and-merge improves the time duration
                     if(durationaftermerge<endTime) {
-                        cout << "**************Cool***********************\n";
-                        ramps = resramps;
-                        TimeScale(ramps,saveramps,1);
-                        FOREACH(itramp, ramps) {
-                            cout << "Ramp after shortcut "<<shortcuts<<": "<<itramp->endTime<<"\n";
+                        // Now check for collision, only for the ramps that have been modified
+                        int itx = 0;
+                        FOREACH(itramp, resramps) {
+                            if(itramp->modified && (!check.Check(*itramp))) {
+                                cout << "Collision for ramp "<<itx<<"\n";
+                                resmerge = false;
+                                break;
+                            }
+                            itx++;
                         }
-                        cout << "\n\n";
+                        if(resmerge) {
+                            ramps = resramps;
+                            TimeScale(ramps,saveramps,1);
+                            cout << "I Duration after shortcut and merger "<<shortcuts<<": "<<durationaftermerge<<"\n";
+                        }
                     }
                     else{
                         resmerge = false;
+                        cout << "X Duration does not improve after merger\n";
                     }
                 }
-                if(not resmerge) {
+                if(!resmerge) {
+                    // Cancel all changes
                     TimeScale(saveramps,ramps,1);
+                    shortcuts--;
                 }
             }
+            //End of MergeWaypoints
 
             //revise the timing
             rampStartTime.resize(ramps.size());
@@ -687,8 +701,10 @@ public:
                 endTime += itramp->endTime;
             }
         }
+
         return shortcuts;
     }
+
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
     {
@@ -715,11 +731,11 @@ public:
         return true;
     }
 
-    /** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
+/** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
 
-       |w x (R x_i) + v| <= thresh
+   |w x (R x_i) + v| <= thresh
 
-     */
+ */
     virtual bool _CheckConstraintLinks() const {
         FOREACHC(itinfo, _listCheckLinks) {
         }
@@ -752,36 +768,36 @@ public:
         return true;
     }
 
-    /*
-       def ComputeDistanceToEnvironment(const std::vector<dReal>& vdofvalues):
-        """robot state is not saved and environment is not locked
-        """
-        env=self.robot.GetEnv()
-        pqpchecker = RaveCreateCollisionChecker(env,'pqp')
-        if pqpchecker is not None:
-            oldchecker = env.GetCollisionChecker()
-            try:
-                env.SetCollisionChecker(pqpchecker)
-                with CollisionOptionsStateSaver(pqpchecker, CollisionOptions.Distance|CollisionOptions.Contacts):
-                    self.robot.GetGrabbed()
-                    checklinks = set()
-                    for manip in self.robot.GetManipulators():
-                        for childlink in  manip.GetChildLinks():
-                            checklinks.add(childlink)
-                    for link in self.robot.GetLinks():
-                        if not link in checklinks:
-                            link.Enable(False)
-                    report=CollisionReport()
-                    distancevalues=[]
-                    for dofvalues in dofvaluess:
-                        self.robot.SetDOFValues(dofvalues)
-                        check = env.CheckCollision(self.robot, report=report)
-                        distancevalues.append([report.minDistance,report.contacts[0]])
-                    return distancevalues
+/*
+   def ComputeDistanceToEnvironment(const std::vector<dReal>& vdofvalues):
+    """robot state is not saved and environment is not locked
+    """
+    env=self.robot.GetEnv()
+    pqpchecker = RaveCreateCollisionChecker(env,'pqp')
+    if pqpchecker is not None:
+        oldchecker = env.GetCollisionChecker()
+        try:
+            env.SetCollisionChecker(pqpchecker)
+            with CollisionOptionsStateSaver(pqpchecker, CollisionOptions.Distance|CollisionOptions.Contacts):
+                self.robot.GetGrabbed()
+                checklinks = set()
+                for manip in self.robot.GetManipulators():
+                    for childlink in  manip.GetChildLinks():
+                        checklinks.add(childlink)
+                for link in self.robot.GetLinks():
+                    if not link in checklinks:
+                        link.Enable(False)
+                report=CollisionReport()
+                distancevalues=[]
+                for dofvalues in dofvaluess:
+                    self.robot.SetDOFValues(dofvalues)
+                    check = env.CheckCollision(self.robot, report=report)
+                    distancevalues.append([report.minDistance,report.contacts[0]])
+                return distancevalues
 
-            finally:
-                env.SetCollisionChecker(oldchecker)
-     */
+        finally:
+            env.SetCollisionChecker(oldchecker)
+ */
 
     virtual bool NeedDerivativeForFeasibility()
     {
@@ -799,7 +815,7 @@ protected:
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
-    //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
+//boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
     TrajectoryBasePtr _dummytraj;

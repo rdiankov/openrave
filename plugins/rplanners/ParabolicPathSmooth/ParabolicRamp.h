@@ -117,7 +117,7 @@ public:
 class ParabolicRampND
 {
 public:
-    ParabolicRampND() : endTime(0), constraintchecked(0) {
+    ParabolicRampND() : endTime(0), constraintchecked(0), modified(0) {
     }
     /// New function added on 2013/04/24 for setting a ramp with desired position, velocity and time duration
     void SetPosVelTime(const Vector& _x0, const Vector& _dx0, const Vector& _x1, const Vector& _dx1,Real t);
@@ -151,6 +151,7 @@ public:
     std::vector<ParabolicRamp1D> ramps;
 
     mutable int constraintchecked; ///< 0 if collision hasn't been checked yet, otherwise 1
+    mutable int modified; ///< 0 if has not been modified by the merging operation, otherwise 1
 };
 
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
