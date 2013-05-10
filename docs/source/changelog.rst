@@ -142,6 +142,8 @@ Misc
 
 * Added :meth:`.TrajectoryBase.Swap` for fast swapping of trajectory data
 
+* Fixed bug in IkFilterOptions.IgnoreCustomFilters ik solver option.
+
 Version 0.8.2
 =============
 
