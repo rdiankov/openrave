@@ -73,6 +73,8 @@ public:
     bool SolveFixedTime(Real amax,Real vmax,Real endTime);
     /// solves for the ramp given fixed switch times and end time
     bool SolveFixedSwitchTime(Real amax,Real vmax);
+    /// solves for the ramp given fixed tswitch1 and (ttotal-tswitch2). ttotal and tswitch2 will be solved for.
+    bool SolveFixedAccelSwitchTime(Real amax,Real vmax, Real deltaswitch1, Real deltaswitch3);
     /// Evaluates the trajectory
     Real Evaluate(Real t) const;
     /// Evaluates the derivative of the trajectory

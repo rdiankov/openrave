@@ -108,6 +108,8 @@ Planning
 
 * Add :meth:`.planningutils.InsertWaypointWithRetiming` and :meth:`.planningutils.InsertWaypointWithSmoothing` to insert a waypoint in a trajectory with a custom planner and configuration.
 
+* Many fixes for **multidofinterp=2** setting in the parabolic path smoother.
+
 Python
 ------
 
