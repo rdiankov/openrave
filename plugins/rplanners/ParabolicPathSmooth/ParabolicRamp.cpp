@@ -1989,11 +1989,17 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 bool ParabolicRamp1D::SolveFixedSwitchTime(Real amax,Real vmax)
 {
     Real denom = 0.5 * tswitch1 * (-tswitch1 +ttotal + tswitch2);
-    if( FuzzyEquals(denom,0,EpsilonT) ) {
-        return false;
-    }
     Real num = x1-x0+0.5*tswitch2*(dx1-dx0)-0.5*ttotal*(dx1+dx0);
-    a1 = num/denom;
+    if( FuzzyEquals(denom,0,EpsilonT) ) {
+        if( !FuzzyEquals(num,0,EpsilonT) ) {
+            // num is not 0, so really cannot solve
+            return false;
+        }
+        a1 = 0;
+    }
+    else {
+        a1 = num/denom;
+    }
     v = dx0 + a1*tswitch1;
     if( FuzzyEquals(tswitch2,ttotal,EpsilonT) ) {
         a2 = 0;
