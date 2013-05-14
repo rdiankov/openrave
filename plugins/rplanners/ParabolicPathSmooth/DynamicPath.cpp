@@ -954,9 +954,7 @@ bool DynamicPath::IsValid() const
             return false;
         }
         for(size_t j=0; j<ramps[i].ramps.size(); j++) {
-            if(Abs(ramps[i].ramps[j].a1) > accMax.at(j)+EpsilonA ||
-               Abs(ramps[i].ramps[j].v) > velMax.at(j) ||
-               Abs(ramps[i].ramps[j].a2) > accMax.at(j)+EpsilonA) {
+            if(Abs(ramps[i].ramps[j].a1) > accMax.at(j)+EpsilonA || Abs(ramps[i].ramps[j].v) > velMax.at(j)+EpsilonV || Abs(ramps[i].ramps[j].a2) > accMax.at(j)+EpsilonA) {
                 PARABOLICWARN("DynamicPath::IsValid: invalid acceleration or velocity on ramp %d\n",i);
                 PARABOLICWARN("\ta1 %g, v %g, a2 %g.  amax %g, vmax %g\n",ramps[i].ramps[j].a1,ramps[i].ramps[j].v,ramps[i].ramps[j].a2,accMax[j],velMax[j]);
                 return false;

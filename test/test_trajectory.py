@@ -255,7 +255,7 @@ class TestTrajectory(EnvironmentSetup):
                 data2 = traj2.Sample(t)
                 assert( transdist(data1,data2) <= g_epsilon)
 
-    def test_simpleretiming(self):
+    def test_multipleretiming(self):
         env=self.env
         env.Load('robots/barrettwam.robot.xml')
         with env:
@@ -265,6 +265,9 @@ class TestTrajectory(EnvironmentSetup):
             parameters = Planner.PlannerParameters()
             parameters.SetRobotActiveJoints(robot)
             retimer = planningutils.ActiveDOFTrajectoryRetimer(robot,'parabolictrajectoryretimer','')
+            controller_timestep = 0.00711111111111111111
+            retimer2 = planningutils.ActiveDOFTrajectoryRetimer(robot,'parabolictrajectoryretimer', plannerparameters='<multidofinterp>2</multidofinterp><outputaccelchanges>1</outputaccelchanges><_fsteplength>%.15e</_fsteplength>'%controller_timestep)
+            testretimers = [retimer,retimer2]
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,zeros(robot.GetActiveDOF()))
@@ -282,8 +285,12 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
 
-            assert(retimer.PlanPath(traj2,False)==PlannerStatus.HasSolution)
-            assert(abs(traj.GetDuration()-traj2.GetDuration()) <= g_epsilon)
+            testtraj = RaveClone(traj2, 0)
+            assert(retimer.PlanPath(testtraj,False)==PlannerStatus.HasSolution)
+            assert(abs(traj.GetDuration()-testtraj.GetDuration()) <= g_epsilon)
+            testtraj = RaveClone(traj2, 0)
+            assert(retimer2.PlanPath(testtraj,False)==PlannerStatus.HasSolution)
+            assert( abs(modf(testtraj.GetDuration()/controller_timestep+0.5)[0]-0.5) <= 0.01 ) # has to be a multiple
             
             self.log.info('try with timestamps')
             spec = robot.GetActiveConfigurationSpecification()
@@ -306,17 +313,36 @@ class TestTrajectory(EnvironmentSetup):
             self.RunTrajectory(robot,traj)
             assert( transdist(robot.GetActiveDOFValues(),finalvalues) <= g_epsilon)
 
-            assert(retimer.PlanPath(traj2,True)==PlannerStatus.HasSolution)
-            assert( abs(traj.GetDuration()-traj2.GetDuration()) <= g_epsilon)
-            planningutils.VerifyTrajectory(parameters,traj2,samplingstep=0.002)
-
+            testtraj = RaveClone(traj2, 0)
+            assert(retimer.PlanPath(testtraj,True)==PlannerStatus.HasSolution)
+            assert(abs(traj.GetDuration()-testtraj.GetDuration()) <= g_epsilon)
+            planningutils.VerifyTrajectory(parameters,testtraj,samplingstep=0.002)
+            
             robot.SetActiveDOFs(range(7,11))
             traj = RaveCreateTrajectory(env,'')
             traj.Init(robot.GetActiveConfigurationSpecification())
             traj.Insert(0,[0, -2.220446049250314e-16, 0, 1.047197551200003, 0.5, 0.5, 0.5, 1.0471975512])
             ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=1,maxaccelmult=1,plannername='parabolictrajectoryretimer',plannerparameters='<multidofinterp>1</multidofinterp>')
             assert(ret==PlannerStatus.HasSolution)
-            
+
+    def test_simpleretiming(self):
+        env=self.env
+        robot=self.LoadRobot('robots/pumaarm.zae')
+        robot.SetDOFVelocityLimits([  7.8540000000000001,   7.8540000000000001,   5.2359999999999998, 9.4247999999999994,  10.8747000000000007,  12.5663999999999998])
+        robot.SetDOFAccelerationLimits([ 26.1799999999999997,  19.6350000000000016,  14.9600000000000009, 47.1240000000000023,  36.2490000000000023,  41.8879999999999981])
+        robot.SetDOFLimits(array([-4.1887902047863905, -2.0943951023931953,  0.                , -3.4906585039886591, -2.0943951023931953, -6.2831853071795862]),
+                           array([ 4.1887902047863905,  2.0943951023931953,  2.8099800957108707, 3.4906585039886591,  2.0943951023931953,  6.2831853071795862]))
+        traj = RaveCreateTrajectory(robot.GetEnv(),'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[-1.5707962927971486, -0.5115644004003523,  2.7255228159183407, 3.1415927831636017,  0.6431620887230958,  6.2831852909169683])
+        traj.Insert(1, [1.5707962849435657e+00,   2.9701411104634212e-01, 2.3875409344616441e+00,  -3.1415927489387800e+00, 1.1137587187130915e+00,   1.2949949709057725e-07])
+        controller_timestep = 0.00711111111111
+        activeretimer = planningutils.ActiveDOFTrajectoryRetimer(robot, plannername='ParabolicTrajectoryRetimer',plannerparameters='<multidofinterp>2</multidofinterp><outputaccelchanges>1</outputaccelchanges><_fsteplength>%.15e</_fsteplength>'%controller_timestep)
+        RaveSetDebugLevel(DebugLevel.Verbose)
+        ret=activeretimer.PlanPath(traj,False)
+        assert(ret == PlannerStatus.HasSolution)
+        assert( abs(traj.GetDuration()-0.910222222222) < g_epsilon)
+        
     def test_ikparamretiming(self):
         self.log.info('retime workspace ikparam')
         env=self.env

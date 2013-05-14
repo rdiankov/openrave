@@ -190,26 +190,44 @@ public:
             _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
+            std::vector<ParabolicRamp::ParabolicRampND> temprampsnd;
             FOREACH(itrampnd,dynamicpath.ramps) {
+                temprampsnd.resize(1);
+                temprampsnd[0] = *itrampnd;
                 // double-check the current ramps
                 if(!itrampnd->constraintchecked ) {
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
+                        std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                         // try to time scale, perhaps collision and dynamics will change
                         // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
                         bool bSuccess = false;
                         dReal mult = 1.05;
+                        dReal endTime = itrampnd->endTime;
                         for(size_t idilate = 0; idilate < 5; ++idilate ) {
-                            itrampnd->Dilate(mult);
-                            if( checker.Check(*itrampnd) ) {
-                                bSuccess = true;
-                                break;
+                            tempramps1d.resize(0);
+                            endTime *= mult;
+                            if( ParabolicRamp::SolveAccelBounded(itrampnd->x0, itrampnd->dx0, itrampnd->x1, itrampnd->dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                temprampsnd.resize(0);
+                                CombineRamps(tempramps1d, temprampsnd);
+                                bool bHasBadRamp=false;
+                                FOREACH(itnewrampnd, temprampsnd) {
+                                    if( !checker.Check(*itnewrampnd) ) {
+                                        bHasBadRamp = true;
+                                        break;
+                                    }
+                                }
+                                if( !bHasBadRamp ) {
+                                    bSuccess = true;
+                                    temprampsnd = temprampsnd;
+                                    break;
+                                }
+                                mult += 0.05;
                             }
-                            mult += 0.05;
-                        }
-                        if( !bSuccess ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0("original ramp is in collision!", ORE_Assert);
+                            if( !bSuccess ) {
+                                throw OPENRAVE_EXCEPTION_FORMAT0("original ramp is in collision!", ORE_Assert);
+                            }
                         }
                     }
                     _bUsePerturbation = true; // re-enable
@@ -219,39 +237,41 @@ public:
                     }
                 }
 
-                vswitchtimes.resize(0);
-                vswitchtimes.push_back(itrampnd->endTime);
-                if( _parameters->_outputaccelchanges ) {
-                    FOREACHC(itramp,itrampnd->ramps) {
-                        vector<dReal>::iterator it;
-                        if( itramp->tswitch1 != 0 ) {
-                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                            if( *it != itramp->tswitch1) {
-                                vswitchtimes.insert(it,itramp->tswitch1);
+                FOREACH(itrampnd2, temprampsnd) {
+                    vswitchtimes.resize(0);
+                    vswitchtimes.push_back(itrampnd->endTime);
+                    if( _parameters->_outputaccelchanges ) {
+                        FOREACHC(itramp,itrampnd->ramps) {
+                            vector<dReal>::iterator it;
+                            if( itramp->tswitch1 != 0 ) {
+                                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                                if( *it != itramp->tswitch1) {
+                                    vswitchtimes.insert(it,itramp->tswitch1);
+                                }
                             }
-                        }
-                        if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
-                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                            if( *it != itramp->tswitch2 ) {
-                                vswitchtimes.insert(it,itramp->tswitch2);
+                            if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
+                                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+                                if( *it != itramp->tswitch2 ) {
+                                    vswitchtimes.insert(it,itramp->tswitch2);
+                                }
                             }
                         }
                     }
+                    vtrajpoints.resize(newspec.GetDOF()*vswitchtimes.size());
+                    vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
+                    dReal prevtime = 0;
+                    for(size_t i = 0; i < vswitchtimes.size(); ++i) {
+                        itrampnd->Evaluate(vswitchtimes[i],vconfig);
+                        ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
+                        itrampnd->Derivative(vswitchtimes[i],vconfig);
+                        ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
+                        *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
+                        *(ittargetdata+waypointoffset) = dReal(i+1==vswitchtimes.size());
+                        ittargetdata += newspec.GetDOF();
+                        prevtime = vswitchtimes[i];
+                    }
+                    _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
                 }
-                vtrajpoints.resize(newspec.GetDOF()*vswitchtimes.size());
-                vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
-                dReal prevtime = 0;
-                for(size_t i = 0; i < vswitchtimes.size(); ++i) {
-                    itrampnd->Evaluate(vswitchtimes[i],vconfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),oldspec,1,GetEnv(),true);
-                    itrampnd->Derivative(vswitchtimes[i],vconfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
-                    *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
-                    *(ittargetdata+waypointoffset) = dReal(i+1==vswitchtimes.size());
-                    ittargetdata += newspec.GetDOF();
-                    prevtime = vswitchtimes[i];
-                }
-                _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             }
 
             BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration())<0.001);

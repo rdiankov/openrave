@@ -108,6 +108,8 @@ Planning
 
 * Add :meth:`.planningutils.InsertWaypointWithRetiming` and :meth:`.planningutils.InsertWaypointWithSmoothing` to insert a waypoint in a trajectory with a custom planner and configuration.
 
+* Many fixes for **multidofinterp=2** setting in the parabolic path smoother.
+
 Python
 ------
 
@@ -141,6 +143,8 @@ Misc
 * Writing COLLADA now writes the joint values directly in the top-level instance_articulated_system
 
 * Added :meth:`.TrajectoryBase.Swap` for fast swapping of trajectory data
+
+* Fixed bug in IkFilterOptions.IgnoreCustomFilters ik solver option.
 
 Version 0.8.2
 =============

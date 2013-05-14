@@ -943,16 +943,20 @@ private:
             }
         }
         else {
-            _vsolutionindices = vsolutionindices;
-            probot->SetActiveDOFValues(vravesol,false);
-            // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-            paramnew = pmanip->GetIkParameterization(param,false);
-            paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
-
-            IkReturnPtr localret(new IkReturn(IKRA_Success));
-            localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-            localret->_vsolution = vravesol;
-            listlocalikreturns.push_back(localret);
+            FOREACH(itravesol, vravesols) {
+                _vsolutionindices = vsolutionindices;
+                FOREACH(it,_vsolutionindices) {
+                    *it += itravesol->second<<16;
+                }
+                probot->SetActiveDOFValues(vravesol,false);
+                // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
+                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
+                IkReturnPtr localret(new IkReturn(IKRA_Success));
+                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_vsolution.swap(itravesol->first);
+                listlocalikreturns.push_back(localret);
+            }
         }
 
         CollisionReport report;
@@ -1125,15 +1129,20 @@ private:
             }
         }
         else {
-            _vsolutionindices = vsolutionindices;
-            probot->SetActiveDOFValues(vravesol,false);
-            // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-            paramnew = pmanip->GetIkParameterization(param,false);
-            paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
-            IkReturnPtr localret(new IkReturn(IKRA_Success));
-            localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-            localret->_vsolution = vravesol;
-            listlocalikreturns.push_back(localret);
+            FOREACH(itravesol, vravesols) {
+                _vsolutionindices = vsolutionindices;
+                FOREACH(it,_vsolutionindices) {
+                    *it += itravesol->second<<16;
+                }
+                probot->SetActiveDOFValues(vravesol,false);
+                // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
+                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
+                IkReturnPtr localret(new IkReturn(IKRA_Success));
+                localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+                localret->_vsolution.swap(itravesol->first);
+                listlocalikreturns.push_back(localret);
+            }
         }
 
         CollisionReport report;
@@ -1162,6 +1171,21 @@ private:
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision);
             }
         }
+
+        // check that end effector moved in the correct direction
+        dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
+        if( ikworkspacedist > _ikthreshold ) {
+            BOOST_ASSERT(listlocalikreturns.size()>0);
+            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
+                ss << *itvalue << ", ";
+            }
+            ss << "]" << endl;
+            RAVELOG_ERROR(ss.str());
+            return static_cast<IkReturnAction>(retactionall); // signals to continue
+        }
+
 
         vikreturns.insert(vikreturns.end(),listlocalikreturns.begin(),listlocalikreturns.end());
         return static_cast<IkReturnAction>(retactionall); // signals to continue
