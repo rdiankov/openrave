@@ -3,7 +3,7 @@
 #include "mergewaypoints.h"
 
 #define INF 1e10
-#define TINY 1e-10
+#define TINY g_fEpsilonLinear
 
 
 
@@ -77,25 +77,27 @@ void TimeScale(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<Pa
     FOREACH(itramp,origramps){
         PARABOLIC_RAMP_ASSERT(itramp->IsValid());
         dReal t = itramp->endTime;
-        ParabolicRamp::Vector q0,v0,q1,v1;
-        itramp->Evaluate(0,q0);
-        itramp->Derivative(0,v0);
-        itramp->Evaluate(t,q1);
-        itramp->Derivative(t,v1);
-        if(dilated) {
-            dReal invcoef = 1/coef;
-            FOREACH(itv,v0){
-                *itv *= invcoef;
+        if(t>TINY) {
+            ParabolicRamp::Vector q0,v0,q1,v1;
+            itramp->Evaluate(0,q0);
+            itramp->Derivative(0,v0);
+            itramp->Evaluate(t,q1);
+            itramp->Derivative(t,v1);
+            if(dilated) {
+                dReal invcoef = 1/coef;
+                FOREACH(itv,v0){
+                    *itv *= invcoef;
+                }
+                FOREACH(itv,v1){
+                    *itv *= invcoef;
+                }
             }
-            FOREACH(itv,v1){
-                *itv *= invcoef;
-            }
+            ramps.push_back(ParabolicRamp::ParabolicRampND());
+            ramps.back().SetPosVelTime(q0,v0,q1,v1,t*coef);
+            ramps.back().modified = itramp->modified;
+            ramps.back().dilated = dilated || itramp->dilated;
+            PARABOLIC_RAMP_ASSERT(ramps.back().IsValid());
         }
-        ramps.push_back(ParabolicRamp::ParabolicRampND());
-        ramps.back().SetPosVelTime(q0,v0,q1,v1,t*coef);
-        ramps.back().modified = itramp->modified;
-        ramps.back().dilated = dilated || itramp->dilated;
-        PARABOLIC_RAMP_ASSERT(ramps.back().IsValid());
     }
 }
 
@@ -165,29 +167,6 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const st
     vector<dReal> qmin = params->_vConfigLowerLimit;
     vector<dReal> qmax = params->_vConfigUpperLimit;
     Interval sol = Interval(T0/T,(T0+T1)/T);
-    /* RAVELOG_INFO(str(boost::format("intervals %.15e, %.15e, %.15e")%T0%T1%T2));
-       std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-       ss << "q0=[";
-       FOREACHC(itq,q0) {
-        ss << *itq << ", ";
-       }
-       ss << "]" << endl;
-       ss << "v0=[";
-       FOREACHC(itq,v0) {
-        ss << *itq << ", ";
-       }
-       ss << "]" << endl;
-       ss << "q3=[";
-       FOREACHC(itq,q3) {
-        ss << *itq << ", ";
-       }
-       ss << "]" << endl;
-       ss << "v3=[";
-       FOREACHC(itq,v3) {
-        ss << *itq << ", ";
-       }
-       ss << "]" << endl;
-       RAVELOG_INFO(ss.str());*/
 
     for(size_t j=0; j<q0.size(); j++) {
         Q = 2*(q3[j]-q0[j])/T;
@@ -228,13 +207,13 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const st
 //Return the smallest multiple of step larger or equal to T
 dReal ceiling(dReal T,dReal step){
     dReal ratio = T/step;
-    return ceil(ratio)*step;
+    dReal ceilratio = ceil(ratio-TINY);
+    return ceilratio*step;
 }
 
 //Check whether T is a multiple of step
 bool ismult(dReal T,dReal step){
-    dReal ratio = T/step;
-    return RaveFabs(ceil(ratio)-ratio) < TINY;
+    return RaveFabs(T-ceiling(T,step)) < TINY;
 }
 
 
@@ -255,6 +234,7 @@ bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::P
     T1 = ramp1.endTime;
     Ta = ceiling(T0,params->_fStepLength);
     Tb = ceiling(T1,params->_fStepLength);
+    cout << params->_fStepLength << "\n";
 
     //printf("Try fixing: T0=%f, T1=%f, Ta=%f, Tb=%f...  ",T0,T1,Ta,Tb);
 
@@ -390,7 +370,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, Constra
  */
 bool IterativeMergeRampsFixedTime(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps, dReal minswitchtime,ConstraintTrajectoryTimingParametersPtr params,int iters,bool checkcontrollertime){
 
-    // Determine the number max of iteractions as a function of the number of short ramps
+    // Determine the number max of iterations as a function of the number of short ramps
     size_t i = 0;
     int nb_short_ramps = 0;
     FOREACHC(itramp,origramps){
@@ -564,8 +544,9 @@ bool IterativeMergeRamps(std::list<ParabolicRamp::ParabolicRampND>& origramps,st
         hi = -1;
         return false;
     }
-    dReal lo = 1;
+    resramps = ramps2;
     hi = maxcoef;
+    dReal lo = 1;
     while (hi-lo>precision) {
         testcoef = (hi+lo)/2;
         //printf("Coef = %f\n",testcoef);
@@ -673,6 +654,7 @@ dReal DetermineMinswitchtime(ParabolicRamp::ParabolicRampND rampnd){
 }
 
 
+
 /** Count the number of pieces in a ramp
     \param rampnd input ramp
  */
@@ -726,4 +708,36 @@ void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramp
         BreakOneRamp(*itramp,tempramp);
         resramps.splice(resramps.end(),tempramp);
     }
+}
+
+
+void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,ConstraintTrajectoryTimingParametersPtr params,bool warning){
+    int itx=0;
+    cout << "[";
+    FOREACH(itramp, ramps) {
+        cout << itx << "/";
+        if(itramp->modified) {
+            cout << "M";
+        }
+        if(itramp->dilated) {
+            cout << "D";
+        }
+        cout << "/"<<itramp->endTime;
+        cout << "/"<<itramp->endTime/params->_fStepLength << ";  ";
+        if(warning) {
+            if(!ismult(itramp->endTime,params->_fStepLength)) {
+
+                cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+                dReal T = itramp->endTime;
+                dReal step = params->_fStepLength;
+                dReal ratio = T/step;
+                dReal ceilratio = ceil(ratio);
+                cout << ratio << "\n";
+                cout << ceilratio << "\n";
+                cout << ceilratio-ratio << "\n";
+            }
+        }
+        itx++;
+    }
+    cout << "]\n";
 }

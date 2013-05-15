@@ -21,3 +21,5 @@ void TimeScaleOne(ParabolicRamp::ParabolicRampND& ramp,dReal coef);
 dReal DetermineMinswitchtime(ParabolicRamp::ParabolicRampND rampnd);
 
 size_t CountPieces(ParabolicRamp::ParabolicRampND rampnd);
+
+void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,ConstraintTrajectoryTimingParametersPtr params,bool warning);
