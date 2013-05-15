@@ -52,9 +52,12 @@ public:
             _parameters->_nMaxIterations = 100;
         }
         _bUsePerturbation = true;
-        _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        //_puniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
-        return !!_puniformsampler;
+        if( !_uniformsampler ) {
+            _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        }
+        _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
+        //_uniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
+        return !!_uniformsampler;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -348,12 +351,12 @@ public:
 
     virtual ParabolicRamp::Real Rand()
     {
-        return _puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
+        return _uniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
 
 protected:
     TrajectoryTimingParametersPtr _parameters;
-    SpaceSamplerBasePtr _puniformsampler;
+    SpaceSamplerBasePtr _uniformsampler;
     bool _bUsePerturbation;
     TrajectoryBasePtr _dummytraj;
 };

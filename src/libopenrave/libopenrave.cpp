@@ -198,6 +198,9 @@ dReal RaveSqrt(dReal f) {
 dReal RaveFabs(dReal f) {
     return fabs(f);
 }
+dReal RaveCeil(dReal f) {
+    return ceil(f);
+}
 
 #else // use all standard libm
 
@@ -247,6 +250,9 @@ dReal RaveSqrt(dReal f) {
 dReal RaveFabs(dReal f) {
     return fabsf(f);
 }
+dReal RaveCeil(dReal f) {
+    return ceilf(f);
+}
 #else
 dReal RaveExp(dReal f) {
     return exp(f);
@@ -292,6 +298,9 @@ dReal RaveSqrt(dReal f) {
 }
 dReal RaveFabs(dReal f) {
     return fabs(f);
+}
+dReal RaveCeil(dReal f) {
+    return ceil(f);
 }
 #endif
 

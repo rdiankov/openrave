@@ -133,6 +133,8 @@ OPENRAVE_API dReal RavePow(dReal fx, dReal fy);
 OPENRAVE_API dReal RaveSqrt(dReal f);
 /// \brief absolute value
 OPENRAVE_API dReal RaveFabs(dReal f);
+/// \brief ceil
+OPENRAVE_API dReal RaveCeil(dReal f);
 
 //@}
 
@@ -560,6 +562,13 @@ DefineRavePrintfA(_VERBOSELEVEL)
 #define RAVELOG_VERBOSEW RAVELOG_LEVELW(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
 #define RAVELOG_VERBOSE RAVELOG_VERBOSEA
+
+#define RAVELOG_FATAL_FORMAT(x, params) RAVELOG_FATAL(boost::str(boost::format(x)%params))
+#define RAVELOG_ERROR_FORMAT(x, params) RAVELOG_ERROR(boost::str(boost::format(x)%params))
+#define RAVELOG_WARN_FORMAT(x, params) RAVELOG_WARN(boost::str(boost::format(x)%params))
+#define RAVELOG_INFO_FORMAT(x, params) RAVELOG_INFO(boost::str(boost::format(x)%params))
+#define RAVELOG_DEBUG_FORMAT(x, params) RAVELOG_DEBUG(boost::str(boost::format(x)%params))
+#define RAVELOG_VERBOSE_FORMAT(x, params) RAVELOG_VERBOSE(boost::str(boost::format(x)%params))
 
 #define IS_DEBUGLEVEL(level) ((OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level))
 

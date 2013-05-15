@@ -21,12 +21,9 @@
 #include "ParabolicPathSmooth/DynamicPath.h"
 #include "mergewaypoints.h"
 
-#define MINSWITCHTIME 0.2
-#define CHECKCONTROLLERTIME true
-#define INF 1e10
+
+// TODO When merging between two waypoint fails, dislate time by this much in order to successfully merge
 #define MERGE_MAXCOEF 1.2
-#define MERGE_PRECISION 0.01
-#define MERGE_ITERS 1000
 
 namespace ParabolicRamp = ParabolicRampInternal;
 
@@ -42,10 +39,9 @@ public:
     ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nConstraint-based smoothing with `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
+        _bCheckControllerTimeStep = true;
         //_distancechecker = RaveCreateCollisionChecker(penv, "pqp");
         //OPENRAVE_ASSERT_FORMAT0(!!_distancechecker, "need pqp distance checker", ORE_Assert);
-        _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -81,6 +77,18 @@ public:
             //_listCheckLinks
             //_parameters->_configurationspecification
         }
+        if( !_uniformsampler ) {
+            _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+            OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
+        }
+
+        // check minswitchtime
+        _parameters->minswitchtime = ComputeStepSizeCeiling(_parameters->minswitchtime, _parameters->_fStepLength);
+        if(_bCheckControllerTimeStep) {
+            _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
+        }
+
+        _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
         return true;
     }
 
@@ -90,23 +98,10 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
-
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
         }
-
-
-        // Set minswitchtime
-        dReal minswitchtime;
-        if(CHECKCONTROLLERTIME) {
-            minswitchtime = max((float)MINSWITCHTIME,5*(float)_parameters->_fStepLength);
-        }
-        else{
-            minswitchtime = MINSWITCHTIME;
-        }
-
-
 
         RobotBase::RobotStateSaverPtr statesaver;
         if( !!_probot ) {
@@ -135,7 +130,7 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
             _bUsePerturbation = true;
-            std::list<ParabolicRamp::ParabolicRampND> ramps;
+            std::list<ParabolicRamp::ParabolicRampND> listrawramps;
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
@@ -150,17 +145,18 @@ public:
                     ptraj->GetWaypoint(i+1,ramptime,timespec);
                     ptraj->GetWaypoint(i+1,x1,posspec);
                     ptraj->GetWaypoint(i+1,dx1,velspec);
-                    ramps.push_back(ParabolicRamp::ParabolicRampND());
-                    ramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
-                    /*if( !checker.Check(ramps.back())) {
+                    listrawramps.push_back(ParabolicRamp::ParabolicRampND());
+                    listrawramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
+                    /*if( !checker.Check(listrawramps.back())) {
                         RAVELOG_WARN("ramp %d failed\n", i);
-                        ramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
-                        checker.Check(ramps.back());
+                        listrawramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
+                        checker.Check(listrawramps.back());
                         }*/
 
                     x0.swap(x1);
                     dx0.swap(dx1);
                 }
+                // TODO have to change timing of listrawramps so that they satisfy minswitchtime and _fStepLength constraints
             }
             else {
                 // assumes all the waypoints are joined by linear segments
@@ -197,15 +193,14 @@ public:
                     path.push_back(q);
                 }
 
-                // Convert to unitary ramps which are linear in config space
-                // and guarantees that that two waypoints are at least MINSWITCHTIME away
-                SetMilestones(ramps, path, minswitchtime);
+                // Convert to unitary listrawramps which are linear in config space
+                // and guarantees that that two waypoints are at least _parameters->minswitchtime away
+                SetMilestones(listrawramps, path);
             }
 
             // Break into unitary ramps
-            std::list<ParabolicRamp::ParabolicRampND> ramps2;
-            BreakIntoUnitaryRamps(ramps,ramps2);
-            ramps=ramps2;
+            std::list<ParabolicRamp::ParabolicRampND> ramps;
+            BreakIntoUnitaryRamps(listrawramps,ramps);
 
             // Reset all ramps
             FOREACH(itramp, ramps) {
@@ -213,24 +208,22 @@ public:
                 itramp->dilated = false;
             }
 
-
             dReal totaltime=0;
             FOREACH(itramp, ramps) {
-                cout << "Ramp before shortcut: "<<itramp->endTime<<"\n";
+                RAVELOG_VERBOSE_FORMAT("Ramp before shortcut: %f", itramp->endTime);
                 totaltime += itramp->endTime;
             }
-            cout << "Total duration: " << totaltime << "\n";
-            RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f")%path.size()%totaltime%_parameters->_pointtolerance));
+            RAVELOG_DEBUG_FORMAT("initial path size=%d, duration=%f, pointtolerance=%f", path.size()%totaltime%_parameters->_pointtolerance);
 
 
             _bUsePerturbation = true;
 
             // Start shortcutting
-            cout << "\nStart shortcutting\n\n";
+            RAVELOG_VERBOSE("\nStart shortcutting\n");
             _progress._iteration=0;
             int numshortcuts=0;
-            numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,minswitchtime,checker, this);
-            cout << "\nEnd shortcutting\n\n";
+            numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
+            RAVELOG_VERBOSE("End shortcutting\n\n");
 
 
             if( numshortcuts < 0 ) {
@@ -283,31 +276,15 @@ public:
             vtrajpoints.at(waypointoffset) = 1;
             vtrajpoints.at(timeoffset) = 0;
             _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
-            vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
+            // TODO ramps are unitary so don't have to track switch points
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
                 if(!itrampnd->constraintchecked ) {
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
-                        // try to time scale, perhaps collision and dynamics will change
-                        // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
-                        dReal oldtime = itrampnd->endTime;
-                        bool bSuccess = false;
-                        dReal mult = 1.05;
-                        for(size_t idilate = 0; idilate < 5; ++idilate ) {
-                            itrampnd->Dilate(mult);
-                            if( checker.Check(*itrampnd) ) {
-                                bSuccess = true;
-                                break;
-                            }
-                            mult += 0.05;
-                        }
-                        if( !bSuccess ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0("original ramp is in collision!", ORE_Assert);
-                        }
-                        totaltime += itrampnd->endTime-oldtime;
+                        throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
                     }
                     _bUsePerturbation = true; // re-enable
                     _progress._iteration+=1;
@@ -316,43 +293,25 @@ public:
                     }
                 }
 
-                vswitchtimes.resize(0);
-                vswitchtimes.push_back(itrampnd->endTime);
-                if( _parameters->_outputaccelchanges ) {
-                    FOREACHC(itramp,itrampnd->ramps) {
-                        vector<dReal>::iterator it;
-                        if( itramp->tswitch1 != 0 ) {
-                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                            if( *it != itramp->tswitch1) {
-                                vswitchtimes.insert(it,itramp->tswitch1);
-                            }
-                        }
-                        if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
-                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                            if( *it != itramp->tswitch2 ) {
-                                vswitchtimes.insert(it,itramp->tswitch2);
-                            }
-                        }
-                    }
+                if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-g_fEpsilonLinear ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
                 }
-                vtrajpoints.resize(newspec.GetDOF()*vswitchtimes.size());
+                if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-g_fEpsilonLinear ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
+                }
+
+                vtrajpoints.resize(newspec.GetDOF());
                 vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
-                dReal prevtime = 0;
-                for(size_t i = 0; i < vswitchtimes.size(); ++i) {
-                    itrampnd->Evaluate(vswitchtimes[i],vconfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),posspec,1,GetEnv(),true);
-                    itrampnd->Derivative(vswitchtimes[i],vconfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata,newspec,vconfig.begin(),velspec,1,GetEnv(),false);
-                    *(ittargetdata+timeoffset) = vswitchtimes[i]-prevtime;
-                    *(ittargetdata+waypointoffset) = dReal(i+1==vswitchtimes.size());
-                    ittargetdata += newspec.GetDOF();
-                    prevtime = vswitchtimes[i];
-                }
+                ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->x1.begin(),posspec,1,GetEnv(),true);
+                ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->dx1.begin(),velspec,1,GetEnv(),false);
+                *(ittargetdata+timeoffset) = itrampnd->endTime;
+                *(ittargetdata+waypointoffset) = 1;
+                ittargetdata += newspec.GetDOF();
                 _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             }
 
             BOOST_ASSERT(RaveFabs(totaltime-_dummytraj->GetDuration())<0.001);
-            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%ramps.size()%_dummytraj->GetNumWaypoints()%totaltime));
+            RAVELOG_DEBUG_FORMAT("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", numshortcuts%ramps.size()%_dummytraj->GetNumWaypoints()%totaltime);
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -415,7 +374,7 @@ public:
     // }
 
 
-    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x,dReal minswitchtime)
+    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x)
     {
         // NB: The old SetMilestone(ramps,x) is equivalent to SetMilestone(ramps,x,0)
         ramps.clear();
@@ -432,12 +391,14 @@ public:
                 newramp.x1 = x[i+1];
                 newramp.dx0 = zero;
                 newramp.dx1 = zero;
-                if(minswitchtime<g_fEpsilonLinear) {
+                if(_parameters->minswitchtime<=g_fEpsilonLinear) {
+                    // necessary?
                     bool res=newramp.SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
                     ramps.push_back(newramp);
                     PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
                 }
-                else{
+                else {
+                    // retime linear segments so that they satisfy both the min switch time condition and _fStepLength condition
                     dReal hi = 1;
                     dReal lo = 0;
                     while(hi-lo>0.0001) {
@@ -450,9 +411,9 @@ public:
                             amax[j]=_parameters->_vConfigAccelerationLimit[j]*coef;
                         }
                         bool res=newramp.SolveMinTimeLinear(amax,_parameters->_vConfigVelocityLimit);
-                        //cout << "Mst=" << DetermineMinswitchtime(newramp) <<"\n";
-                        //cout << "Pieces=" << CountPieces(newramp) <<"\n";
-                        if(res && (DetermineMinswitchtime(newramp)>=minswitchtime) && (CountPieces(newramp)<=2)) {
+                        //cout << "Mst=" << mergewaypoints::DetermineMinswitchtime(newramp) <<"\n";
+                        //cout << "Pieces=" << CountUnitaryRamps(newramp) <<"\n";
+                        if(res && (mergewaypoints::DetermineMinswitchtime(newramp)>=_parameters->minswitchtime) && (mergewaypoints::CountUnitaryRamps(newramp)<=2)) {
                             newramp2 = newramp;
                             lo = coef;
                         }
@@ -462,18 +423,19 @@ public:
                     }
                     //cout << "Best coef:" << lo << "\n";
                     PARABOLIC_RAMP_ASSERT(newramp2.IsValid());
-                    BOOST_ASSERT(DetermineMinswitchtime(newramp2)>=minswitchtime);
-                    std::list<ParabolicRamp::ParabolicRampND> tmpramps0,tmpramps1,tmpramps2;
+                    BOOST_ASSERT(mergewaypoints::DetermineMinswitchtime(newramp2)>=_parameters->minswitchtime);
+
+                    std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1, tmpramps2;
                     tmpramps0.resize(0);
                     tmpramps0.push_back(newramp2);
                     BreakIntoUnitaryRamps(tmpramps0,tmpramps1);
-                    if(CHECKCONTROLLERTIME) {
-                        TimeScale(tmpramps1,tmpramps2,ceiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime);
+                    if(_bCheckControllerTimeStep) {
+                        mergewaypoints::ScaleRampTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime);
+                        ramps.splice(ramps.end(),tmpramps2);
                     }
                     else{
-                        tmpramps2 = tmpramps1;
+                        ramps.splice(ramps.end(),tmpramps1);
                     }
-                    ramps.splice(ramps.end(),tmpramps2);
                 }
             }
         }
@@ -481,13 +443,11 @@ public:
 
 
 
-    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters,dReal minswitchtime,ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
+    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         int shortcuts = 0;
         std::list<ParabolicRamp::ParabolicRampND> saveramps;
-        TimeScale(ramps,saveramps,1);
 
-        _uniformsampler->SetSeed(utils::GetMicroTime());
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
         dReal endTime=0;
         int i = 0;
@@ -509,6 +469,9 @@ public:
                 t1 = 0;
                 t2 = endTime;
             }
+            else {
+                // TODO discretize t1 and t2 along _fStepLength
+            }
             if(t1 > t2) {
                 std::swap(t1,t2);
             }
@@ -522,6 +485,7 @@ public:
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return -1;
             }
+
 
             //same ramp
             dReal u1 = t1-rampStartTime[i1];
@@ -542,28 +506,29 @@ public:
             itramp2->Derivative(u2,dx1);
 
             bool docheck = true;
-            docheck = minswitchtime < 1e-5;
+            docheck = _parameters->minswitchtime == 0;
             bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, docheck, intermediate);
 
             if(!res) {
                 continue;
             }
 
-            // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
+            // no idea what a good time improvement delta  is... _parameters->_fStepLength?
+            dReal fimprovetimethresh = _parameters->_fStepLength;
             dReal newramptime = 0;
             FOREACH(itramp, intermediate) {
                 newramptime += itramp->endTime;
                 itramp->modified = true;
             }
 
-            if( newramptime+_parameters->_fStepLength > t2-t1 ) {
+            if( newramptime+fimprovetimethresh >= t2-t1 ) {
                 // reject since it didn't make significant improvement
                 RAVELOG_VERBOSE("shortcut iter=%d rejected time=%fs\n", iters, endTime-(t2-t1)+newramptime);
                 continue;
             }
 
+            saveramps = ramps;
             //perform shortcut
-            shortcuts++;
             itramp1->TrimBack(itramp1->endTime-u1);
             itramp1->x1 = intermediate.front().x0;
             itramp1->dx1 = intermediate.front().dx0;
@@ -593,7 +558,7 @@ public:
                 }
             }
 
-            if(minswitchtime>1e-5) {
+            if(_parameters->minswitchtime > 0) {
 
                 // Merge waypoints
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
@@ -602,15 +567,13 @@ public:
                 //ramps = resramps;
 
                 // cout << "Before Merger: ";
-                // PrintRamps(ramps,_parameters,false);
+                // mergewaypoints::PrintRamps(ramps,_parameters,false);
                 // cout << "\n";
 
-                dReal optcoef;
-                bool resmerge = IterativeMergeRamps(ramps,resramps,optcoef,minswitchtime,_parameters,MERGE_MAXCOEF,MERGE_PRECISION,MERGE_ITERS,CHECKCONTROLLERTIME);
+                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, MERGE_MAXCOEF, _bCheckControllerTimeStep, _uniformsampler);
                 if(resmerge) {
-
                     //cout << "After Merger: ";
-                    //PrintRamps(resramps,_parameters,CHECKCONTROLLERTIME);
+                    //mergewaypoints::PrintRamps(resramps,_parameters,_bCheckControllerTimeStep);
                     //cout << "\n";
 
                     dReal durationaftermerge = 0;
@@ -618,7 +581,7 @@ public:
                         durationaftermerge += itramp->endTime;
                     }
                     // Check whether shortcut-and-merge improves the time duration
-                    if(durationaftermerge<endTime-_parameters->_fStepLength) {
+                    if(durationaftermerge<=endTime-fimprovetimethresh) {
                         // Now check for collision, only for the ramps that have been modified
                         int itx = 0;
                         FOREACH(itramp, resramps) {
@@ -630,11 +593,11 @@ public:
                             itx++;
                         }
                         if(resmerge) {
-                            ramps = resramps;
+                            ramps.swap(resramps);
                             FOREACH(itramp, ramps) {
                                 itramp->modified = false;
                             }
-                            TimeScale(ramps,saveramps,1);
+                            shortcuts++;
                             cout << "I Duration after shortcut and merger "<<shortcuts<<": "<<durationaftermerge<<"\n\n";
                         }
                     }
@@ -646,10 +609,12 @@ public:
 
 
                 if(!resmerge) {
-                    // Cancel all changes
-                    TimeScale(saveramps,ramps,1);
-                    shortcuts--;
+                    // restore the ramps
+                    ramps = saveramps;
                 }
+            }
+            else {
+                shortcuts++;
             }
 
             //revise the timing
@@ -675,6 +640,12 @@ public:
             FOREACH(itperturbation,perturbations) {
                 for(size_t i = 0; i < a.size(); ++i) {
                     anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
+                    if( anew[i] < _parameters->_vConfigLowerLimit.at(i) ) {
+                        anew[i] = _parameters->_vConfigLowerLimit.at(i);
+                    }
+                    if( anew[i] > _parameters->_vConfigUpperLimit.at(i) ) {
+                        anew[i] = _parameters->_vConfigUpperLimit.at(i);
+                    }
                 }
                 (*_setstatefn)(anew);
                 if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) <= 0 ) {
@@ -683,7 +654,6 @@ public:
             }
         }
         else {
-            //_parameters->_setstatefn(a);
             if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) <= 0 ) {
                 return false;
             }
@@ -691,11 +661,11 @@ public:
         return true;
     }
 
-/** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
+    /** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
 
-   |w x (R x_i) + v| <= thresh
+       |w x (R x_i) + v| <= thresh
 
- */
+     */
     virtual bool _CheckConstraintLinks() const {
         FOREACHC(itinfo, _listCheckLinks) {
         }
@@ -781,6 +751,65 @@ public:
         return _uniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
 
+    /** Break one ramp into unitary ramps. A unitary ramp consists of a single acceleration
+        \param ramp input ramp
+        \param resramp result ramp
+     */
+    void BreakOneRamp(ParabolicRamp::ParabolicRampND ramp,std::list<ParabolicRamp::ParabolicRampND>& resramp)
+    {
+        vector<dReal> vswitchtimes;
+        vswitchtimes.resize(0);
+        vswitchtimes.push_back(ramp.endTime);
+        FOREACHC(itramp,ramp.ramps) {
+            vector<dReal>::iterator it;
+            if( itramp->tswitch1 != 0 ) {
+                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                if( *it != itramp->tswitch1) {
+                    vswitchtimes.insert(it,itramp->tswitch1);
+                }
+            }
+            if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
+                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
+                if( *it != itramp->tswitch2 ) {
+                    vswitchtimes.insert(it,itramp->tswitch2);
+                }
+            }
+        }
+        dReal tbeg,tend;
+        resramp.resize(0);
+        tbeg = 0;
+        for(size_t i=0; i<vswitchtimes.size(); i++) {
+            ParabolicRamp::Vector q0,v0,q1,v1;
+            tend = vswitchtimes[i];
+            // Discard ramps that have tiny time durations
+            if(tend-tbeg>g_fEpsilonLinear) {
+                ramp.Evaluate(tbeg,q0);
+                ramp.Derivative(tbeg,v0);
+                ramp.Evaluate(tend,q1);
+                ramp.Derivative(tend,v1);
+                resramp.push_back(ParabolicRamp::ParabolicRampND());
+                resramp.back().SetPosVelTime(q0,v0,q1,v1,(tend-tbeg));
+                resramp.back().modified = ramp.modified;
+                resramp.back().dilated = ramp.dilated;
+                PARABOLIC_RAMP_ASSERT(resramp.back().IsValid());
+            }
+            tbeg = tend;
+        }
+    }
+
+    /** Break ramps list into unitary ramps
+        \param ramps input ramp
+        \param resramps result ramp
+     */
+    void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps){
+        resramps.resize(0);
+        std::list<ParabolicRamp::ParabolicRampND> tempramp;
+        FOREACHC(itramp,ramps){
+            BreakOneRamp(*itramp,tempramp);
+            resramps.splice(resramps.end(),tempramp);
+        }
+    }
+
 protected:
     ConstraintTrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _uniformsampler;
@@ -791,7 +820,8 @@ protected:
 
     std::list< LinkConstraintInfo > _listCheckLinks;
     TrajectoryBasePtr _dummytraj;
-    bool _bUsePerturbation;
+    bool _bUsePerturbation; ///< if true, perterbs joint values a little before testing them for the constraints
+    bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
     PlannerProgress _progress;
 
 private:

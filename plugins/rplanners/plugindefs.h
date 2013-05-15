@@ -65,4 +65,19 @@ using namespace OpenRAVE;
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.75);
 static const dReal g_fEpsilonWorkSpaceLimitSqr = RavePow(g_fEpsilon,0.9);
+
+/// Return the smallest multiple of step larger or equal to T
+inline dReal ComputeStepSizeCeiling(dReal T,dReal step)
+{
+    dReal ratio = T/step;
+    dReal ceilratio = RaveCeil(ratio-g_fEpsilonLinear);
+    return ceilratio*step;
+}
+
+/// Check whether T is a multiple of step
+inline bool IsMultipleOfStepSize(dReal T,dReal step)
+{
+    return RaveFabs(T-ComputeStepSizeCeiling(T,step)) <= g_fEpsilonLinear;
+}
+
 #endif
