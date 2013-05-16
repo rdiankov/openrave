@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ParabolicPathSmooth/ParabolicRamp.h"
+#include "ParabolicPathSmooth/DynamicPath.h"
 
 namespace ParabolicRamp = ParabolicRampInternal;
 
@@ -23,18 +24,17 @@ namespace mergewaypoints
 /** Iteratively merge all ramps that are shorter than minswitchtime. Determine the optimal time duration that allows to do so
     \param origramps input ramps
     \param ramps result ramps
-    \param maxcoef maximum timescaling coefficient to try
+    \param upperbound maximum time duration to try
     \param precision precision in the dichotomy search for the best timescaling coef
     \param iters max number of random iterations
  */
-bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params,  dReal maxcoef, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler);
-
+bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
 /** Timescale a ramp. Assume the ramp is unitary.
     \param origramps input ramp
     \param resramps result ramp
     \param coef timescaling coefficient
  */
-void ScaleRampTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
+void ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
 
 /** Determine the minimum switchtime in a ramp
     \param rampnd input ramp

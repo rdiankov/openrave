@@ -89,9 +89,9 @@ public:
         //Testing purpose
         //_bCheckControllerTimeStep = false;
         //_parameters->minswitchtime = 0;
-        _parameters->_randomgeneratorseed = 1;
+        //_parameters->_randomgeneratorseed = 1;
 
-        cout << "Seed: " << _parameters->_randomgeneratorseed << "\n";
+        //cout << "Seed: " << _parameters->_randomgeneratorseed << "\n";
 
         _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
         return true;
@@ -135,7 +135,7 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
             _bUsePerturbation = true;
-            std::list<ParabolicRamp::ParabolicRampND> listrawramps;
+            std::list<ParabolicRamp::ParabolicRampND> listrawramps,listrawramps2;
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
@@ -161,7 +161,18 @@ public:
                     x0.swap(x1);
                     dx0.swap(dx1);
                 }
-                // TODO have to change timing of listrawramps so that they satisfy minswitchtime and _fStepLength constraints
+                // Change timing of listrawramps so that they satisfy minswitchtime and _fStepLength constraints
+                dReal upperbound = 2 * mergewaypoints::ComputeRampsDuration(listrawramps);
+                bool docheck = true;
+                // Disable usePerturbation for this particular stage
+                bool saveUsePerturbation = _bUsePerturbation;
+                _bUsePerturbation = false;
+                bool res = mergewaypoints::IterativeMergeRamps(listrawramps,listrawramps2, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                _bUsePerturbation = saveUsePerturbation;
+                if(!res) {
+                    cout << "Could not obtain a feasible trajectory from initial quadratic traj\n";
+                    return PS_Failed;
+                }
             }
             else {
                 // assumes all the waypoints are joined by linear segments
@@ -223,11 +234,11 @@ public:
             _bUsePerturbation = true;
 
             // Start shortcutting
-            RAVELOG_VERBOSE("\nStart shortcutting\n");
+            RAVELOG_DEBUG("\nStart shortcutting\n");
             _progress._iteration=0;
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
-            RAVELOG_VERBOSE("End shortcutting\n\n");
+            RAVELOG_DEBUG("End shortcutting\n\n");
 
 
             if( numshortcuts < 0 ) {
@@ -423,7 +434,7 @@ public:
                     tmpramps0.push_back(newramp2);
                     BreakIntoUnitaryRamps(tmpramps0,tmpramps1);
                     if(_bCheckControllerTimeStep) {
-                        mergewaypoints::ScaleRampTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime,false,_parameters);
+                        mergewaypoints::ScaleRampsTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime,false,_parameters);
                         ramps.splice(ramps.end(),tmpramps2);
                     }
                     else{
@@ -435,14 +446,14 @@ public:
     }
 
 
-    bool hasbeenattempted(dReal t1,dReal t2,std::list<dReal>& t1list,std::list<dReal>& t2list,dReal threshold){
+    bool hasbeenattempted(dReal t1,dReal t2,std::list<dReal>& t1list,std::list<dReal>& t2list,dReal shortcutlimen){
 
         if(t1list.size()==0) {
             return false;
         }
         std::list<dReal>::iterator it1 = t1list.begin(), it2 = t2list.begin();
         while(it1!=t1list.end()) {
-            if(RaveFabs(*it1-t1)<=threshold+g_fEpsilonLinear && RaveFabs(*it2-t2)<=threshold+g_fEpsilonLinear) {
+            if(RaveFabs(*it1-t1)<=shortcutlimen+g_fEpsilonLinear && RaveFabs(*it2-t2)<=shortcutlimen+g_fEpsilonLinear) {
                 return true;
             }
             it1++;
@@ -471,7 +482,7 @@ public:
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
 
         dReal contrtime = _parameters->_fStepLength;
-        dReal threshold = 0.2;
+        dReal shortcutlimen = 0.1;
 
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
@@ -482,10 +493,11 @@ public:
                 t2 = endTime;
             }
             else {
-                // snap t1 and t2 to the closest multiple of fStepLength
+                // round t1 and t2 to the closest multiple of fStepLength
                 t1 = floor(t1/contrtime+0.5)*contrtime;
                 t2 = floor(t2/contrtime+0.5)*contrtime;
-                if(hasbeenattempted(t1,t2,t1list,t2list,threshold)) {
+                // snap to previously attempted shortcuts
+                if(hasbeenattempted(t1,t2,t1list,t2list,shortcutlimen)) {
                     RAVELOG_DEBUG_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
                     continue;
                 }
@@ -587,7 +599,8 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
 
                 dReal upperbound = endTime-fimprovetimethresh;
-                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler);
+                bool docheck = false;
+                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,docheck);
 
                 if(resmerge) {
 
