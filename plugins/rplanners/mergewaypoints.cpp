@@ -209,8 +209,8 @@ bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::P
     resramp1.SetPosVelTime(qres,vres,q2,v2,Tb);
     PARABOLIC_RAMP_ASSERT(resramp0.IsValid()&&resramp1.IsValid());
     bool changed = (RaveFabs(Ta-ramp0.endTime)>TINY) || (RaveFabs(Tb-ramp1.endTime)>TINY);
-    resramp0.modified = ramp0.modified && changed;
-    resramp1.modified = ramp1.modified && changed;
+    resramp0.modified = ramp0.modified || changed;
+    resramp1.modified = ramp1.modified || changed;
     return true;
 }
 
