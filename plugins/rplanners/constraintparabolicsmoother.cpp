@@ -22,9 +22,6 @@
 #include "mergewaypoints.h"
 
 
-// TODO When merging between two waypoint fails, dislate time by this much in order to successfully merge
-#define MERGE_MAXCOEF 1.2
-
 namespace ParabolicRamp = ParabolicRampInternal;
 
 class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
@@ -87,6 +84,8 @@ public:
         if(_bCheckControllerTimeStep) {
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
         }
+
+        cout << "Seed: " << _parameters->_randomgeneratorseed << "\n";
 
         _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
         return true;
@@ -205,14 +204,12 @@ public:
             // Reset all ramps
             FOREACH(itramp, ramps) {
                 itramp->modified = false;
-                itramp->dilated = false;
             }
 
-            dReal totaltime=0;
-            FOREACH(itramp, ramps) {
-                RAVELOG_VERBOSE_FORMAT("Ramp before shortcut: %f", itramp->endTime);
-                totaltime += itramp->endTime;
-            }
+
+            RAVELOG_DEBUG("Ramps before shortcutting\n");
+            mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+            dReal totaltime = mergewaypoints::ComputeRampsDuration(ramps);
             RAVELOG_DEBUG_FORMAT("initial path size=%d, duration=%f, pointtolerance=%f", path.size()%totaltime%_parameters->_pointtolerance);
 
 
@@ -231,16 +228,12 @@ public:
                 return PS_Interrupted;
             }
 
-            totaltime = 0;
-            FOREACH(itramp, ramps) {
-                cout << "Ramp after shortcut: "<<itramp->endTime;
-                cout << " -- Multiple of controller time "<<  itramp->endTime/_parameters->_fStepLength << "\n";
-                totaltime += itramp->endTime;
-            }
-            cout << "Total duration: " << totaltime << "\n";
+            RAVELOG_DEBUG("Ramps after shortcutting\n");
+            mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+            totaltime = mergewaypoints::ComputeRampsDuration(ramps);
+
 
             BOOST_ASSERT( ramps.size() > 0 );
-
             ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
             int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
@@ -264,10 +257,6 @@ public:
             }
             _dummytraj->Init(newspec);
 
-            totaltime=0;
-            FOREACH(itramp, ramps) {
-                totaltime += itramp->endTime;
-            }
 
             // separate all the acceleration switches into individual points
             vtrajpoints.resize(newspec.GetDOF());
@@ -403,7 +392,6 @@ public:
                     dReal lo = 0;
                     while(hi-lo>0.0001) {
                         coef = (hi+lo)/2;
-                        //cout << "coef=" << coef <<"\n";
                         std::vector<dReal> amax;
                         size_t n = _parameters->_vConfigAccelerationLimit.size();
                         amax.resize(n);
@@ -411,8 +399,6 @@ public:
                             amax[j]=_parameters->_vConfigAccelerationLimit[j]*coef;
                         }
                         bool res=newramp.SolveMinTimeLinear(amax,_parameters->_vConfigVelocityLimit);
-                        //cout << "Mst=" << mergewaypoints::DetermineMinswitchtime(newramp) <<"\n";
-                        //cout << "Pieces=" << CountUnitaryRamps(newramp) <<"\n";
                         if(res && (mergewaypoints::DetermineMinswitchtime(newramp)>=_parameters->minswitchtime) && (mergewaypoints::CountUnitaryRamps(newramp)<=2)) {
                             newramp2 = newramp;
                             lo = coef;
@@ -421,7 +407,6 @@ public:
                             hi = coef;
                         }
                     }
-                    //cout << "Best coef:" << lo << "\n";
                     PARABOLIC_RAMP_ASSERT(newramp2.IsValid());
                     BOOST_ASSERT(mergewaypoints::DetermineMinswitchtime(newramp2)>=_parameters->minswitchtime);
 
@@ -430,7 +415,7 @@ public:
                     tmpramps0.push_back(newramp2);
                     BreakIntoUnitaryRamps(tmpramps0,tmpramps1);
                     if(_bCheckControllerTimeStep) {
-                        mergewaypoints::ScaleRampTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime);
+                        mergewaypoints::ScaleRampTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime,false,_parameters);
                         ramps.splice(ramps.end(),tmpramps2);
                     }
                     else{
@@ -462,7 +447,8 @@ public:
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
 
-            cout << "Iter no: " << iters << "\n";
+
+            RAVELOG_DEBUG_FORMAT("Iter no: %d\n",iters);
 
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
@@ -485,7 +471,6 @@ public:
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return -1;
             }
-
 
             //same ramp
             dReal u1 = t1-rampStartTime[i1];
@@ -563,30 +548,18 @@ public:
                 // Merge waypoints
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
 
-                //BreakIntoUnitaryRamps(ramps,resramps);
-                //ramps = resramps;
-
-                // cout << "Before Merger: ";
-                // mergewaypoints::PrintRamps(ramps,_parameters,false);
-                // cout << "\n";
-
-                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, MERGE_MAXCOEF, _bCheckControllerTimeStep, _uniformsampler);
+                dReal upperbound = endTime-fimprovetimethresh;
+                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler);
                 if(resmerge) {
-                    //cout << "After Merger: ";
-                    //mergewaypoints::PrintRamps(resramps,_parameters,_bCheckControllerTimeStep);
-                    //cout << "\n";
 
-                    dReal durationaftermerge = 0;
-                    FOREACH(itramp, resramps) {
-                        durationaftermerge += itramp->endTime;
-                    }
                     // Check whether shortcut-and-merge improves the time duration
+                    dReal durationaftermerge = mergewaypoints::ComputeRampsDuration(resramps);
                     if(durationaftermerge<=endTime-fimprovetimethresh) {
                         // Now check for collision, only for the ramps that have been modified
                         int itx = 0;
                         FOREACH(itramp, resramps) {
                             if(itramp->modified && (!check.Check(*itramp))) {
-                                cout << "C Collision for ramp "<<itx<<"\n\n";
+                                RAVELOG_DEBUG_FORMAT("Collision for ramp: %d\n",itx);
                                 resmerge = false;
                                 break;
                             }
@@ -598,12 +571,12 @@ public:
                                 itramp->modified = false;
                             }
                             shortcuts++;
-                            cout << "I Duration after shortcut and merger "<<shortcuts<<": "<<durationaftermerge<<"\n\n";
+                            RAVELOG_DEBUG_FORMAT("Duration after shortcut and merger: %f\n",durationaftermerge);
                         }
                     }
                     else{
                         resmerge = false;
-                        cout << "X Duration did not significantly improve after merger\n\n";
+                        RAVELOG_DEBUG("Duration did not significantly improve after merger\n");
                     }
                 }
 
@@ -790,7 +763,6 @@ public:
                 resramp.push_back(ParabolicRamp::ParabolicRampND());
                 resramp.back().SetPosVelTime(q0,v0,q1,v1,(tend-tbeg));
                 resramp.back().modified = ramp.modified;
-                resramp.back().dilated = ramp.dilated;
                 PARABOLIC_RAMP_ASSERT(resramp.back().IsValid());
             }
             tbeg = tend;

@@ -34,12 +34,18 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origra
     \param resramps result ramp
     \param coef timescaling coefficient
  */
-void ScaleRampTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef);
+void ScaleRampTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
 
 /** Determine the minimum switchtime in a ramp
     \param rampnd input ramp
  */
 dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd);
+
+/** Compute time duration of ramps
+    \param rampnd input ramp
+ */
+dReal ComputeRampsDuration(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
+
 
 /** Count the number of pieces in a ramp
     \param rampnd input ramp
