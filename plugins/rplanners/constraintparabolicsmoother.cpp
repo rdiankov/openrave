@@ -79,7 +79,7 @@ public:
             OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
         }
 
-        // check minswitchtime
+        // check and update minswitchtime
         _parameters->minswitchtime = ComputeStepSizeCeiling(_parameters->minswitchtime, _parameters->_fStepLength);
         if(_bCheckControllerTimeStep) {
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
@@ -135,7 +135,7 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
             _bUsePerturbation = true;
-            std::list<ParabolicRamp::ParabolicRampND> listrawramps,listrawramps2;
+            std::list<ParabolicRamp::ParabolicRampND> rawramps,rawramps2;
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
@@ -150,27 +150,27 @@ public:
                     ptraj->GetWaypoint(i+1,ramptime,timespec);
                     ptraj->GetWaypoint(i+1,x1,posspec);
                     ptraj->GetWaypoint(i+1,dx1,velspec);
-                    listrawramps.push_back(ParabolicRamp::ParabolicRampND());
-                    listrawramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
-                    /*if( !checker.Check(listrawramps.back())) {
+                    rawramps.push_back(ParabolicRamp::ParabolicRampND());
+                    rawramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
+                    /*if( !checker.Check(rawramps.back())) {
                         RAVELOG_WARN("ramp %d failed\n", i);
-                        listrawramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
-                        checker.Check(listrawramps.back());
+                        rawramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
+                        checker.Check(rawramps.back());
                         }*/
 
                     x0.swap(x1);
                     dx0.swap(dx1);
                 }
-                // Change timing of listrawramps so that they satisfy minswitchtime and _fStepLength constraints
-                dReal upperbound = 2 * mergewaypoints::ComputeRampsDuration(listrawramps);
+                // Change timing of rawramps so that they satisfy minswitchtime and _fStepLength constraints
+                dReal upperbound = 2 * mergewaypoints::ComputeRampsDuration(rawramps);
                 bool docheck = true;
                 // Disable usePerturbation for this particular stage
                 bool saveUsePerturbation = _bUsePerturbation;
                 _bUsePerturbation = false;
-                bool res = mergewaypoints::IterativeMergeRamps(listrawramps,listrawramps2, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                bool res = mergewaypoints::IterativeMergeRamps(rawramps,rawramps2, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
                 _bUsePerturbation = saveUsePerturbation;
                 if(!res) {
-                    cout << "Could not obtain a feasible trajectory from initial quadratic traj\n";
+                    cout << "Could not obtain a feasible trajectory from initial quadratic trajectory\n";
                     return PS_Failed;
                 }
             }
@@ -209,29 +209,27 @@ public:
                     path.push_back(q);
                 }
 
-                // Convert to unitary listrawramps which are linear in config space
+                // Convert to unitary rawramps which are linear in config space
                 // and guarantees that that two waypoints are at least _parameters->minswitchtime away
-                SetMilestones(listrawramps, path);
+                // Note that this should never fail
+                SetMilestones(rawramps, path);
             }
 
             // Break into unitary ramps
             std::list<ParabolicRamp::ParabolicRampND> ramps;
-            BreakIntoUnitaryRamps(listrawramps,ramps);
+            BreakIntoUnitaryRamps(rawramps,ramps);
 
             // Reset all ramps
             FOREACH(itramp, ramps) {
                 itramp->modified = false;
             }
 
-
+            // Log before shortcutting
             RAVELOG_DEBUG("Ramps before shortcutting\n");
             mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
             dReal totaltime = mergewaypoints::ComputeRampsDuration(ramps);
             RAVELOG_DEBUG_FORMAT("initial path size=%d, duration=%f, pointtolerance=%f", path.size()%totaltime%_parameters->_pointtolerance);
 
-
-
-            _bUsePerturbation = true;
 
             // Start shortcutting
             RAVELOG_DEBUG("\nStart shortcutting\n");
@@ -239,18 +237,19 @@ public:
             int numshortcuts=0;
             numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
             RAVELOG_DEBUG("End shortcutting\n\n");
-
-
             if( numshortcuts < 0 ) {
                 // interrupted
                 return PS_Interrupted;
             }
 
+
+            // Log after shortcutting
             RAVELOG_DEBUG("Ramps after shortcutting\n");
             mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
             totaltime = mergewaypoints::ComputeRampsDuration(ramps);
 
 
+            // Convert to Rave Trajectory
             BOOST_ASSERT( ramps.size() > 0 );
             ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
@@ -288,7 +287,6 @@ public:
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
                 if(true) {
-                    //if(!itrampnd->constraintchecked ) {
                     // part of original trajectory which might not have been processed with perterbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
@@ -338,6 +336,11 @@ public:
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return PS_HasSolution;
     }
+
+
+
+
+
 
     inline bool SolveMinTimeWithConstraints(const ParabolicRamp::Vector& x0,const ParabolicRamp::Vector& dx0,const ParabolicRamp::Vector& x1,const ParabolicRamp::Vector& dx1, dReal curtime, ParabolicRamp::RampFeasibilityChecker& check, bool docheck, std::list<ParabolicRamp::ParabolicRampND>& rampsout)
     {
@@ -445,15 +448,15 @@ public:
         }
     }
 
-
-    bool hasbeenattempted(dReal t1,dReal t2,std::list<dReal>& t1list,std::list<dReal>& t2list,dReal shortcutlimen){
+    // Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
+    bool hasbeenattempted(dReal t1,dReal t2,std::list<dReal>& t1list,std::list<dReal>& t2list,dReal shortcutinnovationthreshold){
 
         if(t1list.size()==0) {
             return false;
         }
         std::list<dReal>::iterator it1 = t1list.begin(), it2 = t2list.begin();
         while(it1!=t1list.end()) {
-            if(RaveFabs(*it1-t1)<=shortcutlimen+g_fEpsilonLinear && RaveFabs(*it2-t2)<=shortcutlimen+g_fEpsilonLinear) {
+            if(RaveFabs(*it1-t1)<=shortcutinnovationthreshold+g_fEpsilonLinear && RaveFabs(*it2-t2)<=shortcutinnovationthreshold+g_fEpsilonLinear) {
                 return true;
             }
             it1++;
@@ -462,6 +465,7 @@ public:
         return false;
     }
 
+    // Perform the shortcuts
     int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         int shortcuts = 0;
@@ -471,33 +475,33 @@ public:
         t2list.resize(0);
 
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
-        dReal endTime=0;
+        dReal currenttrajduration=0;
         int i = 0;
         FOREACH(itramp, ramps) {
-            rampStartTime[i++] = endTime;
-            endTime += itramp->endTime;
+            rampStartTime[i++] = currenttrajduration;
+            currenttrajduration += itramp->endTime;
         }
         ParabolicRamp::Vector x0,x1,dx0,dx1;
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
 
         dReal contrtime = _parameters->_fStepLength;
-        dReal shortcutlimen = 0.1;
+        dReal shortcutinnovationthreshold = 0.1;
 
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
 
-            dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
+            dReal t1=rng->Rand()*currenttrajduration,t2=rng->Rand()*currenttrajduration;
             if( iters == 0 ) {
                 t1 = 0;
-                t2 = endTime;
+                t2 = currenttrajduration;
             }
             else {
                 // round t1 and t2 to the closest multiple of fStepLength
                 t1 = floor(t1/contrtime+0.5)*contrtime;
                 t2 = floor(t2/contrtime+0.5)*contrtime;
-                // snap to previously attempted shortcuts
-                if(hasbeenattempted(t1,t2,t1list,t2list,shortcutlimen)) {
+                // check whether the shortcut is close to a previously attempted shortcut
+                if(hasbeenattempted(t1,t2,t1list,t2list,shortcutinnovationthreshold)) {
                     RAVELOG_DEBUG_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
                     continue;
                 }
@@ -539,6 +543,7 @@ public:
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
 
+            // Check collision at this stage only if we don't run mergewaypoints afterwards
             bool docheck = _parameters->minswitchtime == 0;
             bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, docheck, intermediate);
 
@@ -558,7 +563,7 @@ public:
             if( newramptime+fimprovetimethresh >= t2-t1 ) {
                 // reject since it didn't make significant improvement
                 RAVELOG_DEBUG("... Duration did not improve (even before merge)\n");
-                RAVELOG_VERBOSE("shortcut iter=%d rejected time=%fs\n", iters, endTime-(t2-t1)+newramptime);
+                RAVELOG_VERBOSE("shortcut iter=%d rejected time=%fs\n", iters, currenttrajduration-(t2-t1)+newramptime);
                 continue;
             }
 
@@ -593,20 +598,30 @@ public:
                 }
             }
 
-            if(_parameters->minswitchtime > 0) {
-
+            if(_parameters->minswitchtime == 0) {
+                // Do not check for minswitchtime neither controllertime
+                shortcuts++;
+            }
+            else{
                 // Merge waypoints
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
-
-                dReal upperbound = endTime-fimprovetimethresh;
+                dReal upperbound = currenttrajduration-fimprovetimethresh;
+                // Do not check collision during merge, check later
                 bool docheck = false;
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,docheck);
 
-                if(resmerge) {
-
+                if(!resmerge) {
+                    RAVELOG_DEBUG("... Could not merge\n");
+                }
+                else{
+                    // Merge succeeded
                     // Check whether shortcut-and-merge improves the time duration
                     dReal durationaftermerge = mergewaypoints::ComputeRampsDuration(resramps);
-                    if(durationaftermerge<=endTime-fimprovetimethresh) {
+                    if(durationaftermerge>currenttrajduration-fimprovetimethresh) {
+                        resmerge = false;
+                        RAVELOG_DEBUG("... Duration did not significantly improve after merger\n");
+                    }
+                    else{
                         // Now check for collision, only for the ramps that have been modified
                         int itx = 0;
                         FOREACH(itramp, resramps) {
@@ -617,45 +632,35 @@ public:
                             }
                             itx++;
                         }
-
                         if(resmerge) {
                             ramps.swap(resramps);
                             FOREACH(itramp, ramps) {
                                 itramp->modified = false;
                             }
                             shortcuts++;
-                            RAVELOG_DEBUG_FORMAT("Duration after shortcut and merger: %f\n",durationaftermerge);
+                            RAVELOG_DEBUG_FORMAT("... Duration after shortcut and merger: %f\n",durationaftermerge);
                             t1list.resize(0);
                             t2list.resize(0);
                         }
-                    }
-                    else{
-                        resmerge = false;
-                        RAVELOG_DEBUG("Duration did not significantly improve after merger\n");
-                    }
-                }
-                else{
-                    RAVELOG_DEBUG("Merge failure\n");
-                }
+                    } // end collision check
+                } // end post-mergewaypoint checks
 
                 if(!resmerge) {
                     // restore the ramps
                     ramps = saveramps;
                 }
-            }
-            else {
-                shortcuts++;
-            }
+            } // end mergewaypoints
+
 
             //revise the timing
             rampStartTime.resize(ramps.size());
-            endTime=0;
+            currenttrajduration=0;
             i = 0;
             FOREACH(itramp, ramps) {
-                rampStartTime[i++] = endTime;
-                endTime += itramp->endTime;
+                rampStartTime[i++] = currenttrajduration;
+                currenttrajduration += itramp->endTime;
             }
-        }
+        } // end shortcutting loop
 
         return shortcuts;
     }
