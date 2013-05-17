@@ -360,6 +360,10 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
             if (solved) {
                 break;
             }
+            if(ramps.size()<=2) {
+                solved = false;
+                break;
+            }
             std::vector<int> invalidrampindices;
             invalidrampindices.resize(0);
             i = 0;
@@ -395,7 +399,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         }
         // Handle the beginning the trajectory
         while(ramps.begin()->endTime<params->minswitchtime) {
-            if (ramps.size()<2) {
+            if (ramps.size()<=2) {
                 solved = false;
                 break;
             }
@@ -424,7 +428,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         }
         // Handle the end the trajectory
         while(ramps.back().endTime < params->minswitchtime) {
-            if (ramps.size()<2) {
+            if (ramps.size()<=2) {
                 solved= false;
                 break;
             }
