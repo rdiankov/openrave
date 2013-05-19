@@ -353,7 +353,7 @@ public:
                 _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
             }
 
-            BOOST_ASSERT(RaveFabs(totaltime-_dummytraj->GetDuration())<0.001);
+            OPENRAVE_ASSERT_OP(RaveFabs(totaltime-_dummytraj->GetDuration()),<,0.001);
             RAVELOG_DEBUG_FORMAT("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", numshortcuts%ramps.size()%_dummytraj->GetNumWaypoints()%totaltime);
             ptraj->Swap(_dummytraj);
         }
@@ -475,9 +475,7 @@ public:
 
                     PARABOLIC_RAMP_ASSERT(newramp2.IsValid());
 
-
-
-                    BOOST_ASSERT(mergewaypoints::DetermineMinswitchtime(newramp2)>=_parameters->minswitchtime);
+                    OPENRAVE_ASSERT_OP(mergewaypoints::DetermineMinswitchtime(newramp2),>=,_parameters->minswitchtime);
 
                     std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1, tmpramps2;
                     tmpramps0.resize(0);
@@ -487,7 +485,6 @@ public:
                     // FOREACH(itramp, tmpramps1) {
                     //     cout << "Before scale:" << check.Check(*itramp) << "\n";
                     // }
-
 
                     if(_bCheckControllerTimeStep) {
                         mergewaypoints::ScaleRampsTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp2.endTime,_parameters->_fStepLength*2)/newramp2.endTime,false,_parameters);
