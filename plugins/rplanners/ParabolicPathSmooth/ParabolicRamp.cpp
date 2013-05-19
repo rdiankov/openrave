@@ -1765,6 +1765,12 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         return false;
     }
     a2 = -a1;
+    if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
+        tswitch1 = 0;
+    }
+    if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
+        tswitch2 = 0;
+    }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("Failure to find valid path!\n");
@@ -1966,6 +1972,12 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         return false;
     }
     a2 = -a1;
+    if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
+        tswitch1 = 0;
+    }
+    if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
+        tswitch2 = 0;
+    }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
@@ -2015,6 +2027,12 @@ bool ParabolicRamp1D::SolveFixedSwitchTime(Real amax,Real vmax)
     }
     if( Abs(v) > vmax+EpsilonV ) {
         return false;
+    }
+    if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
+        tswitch1 = 0;
+    }
+    if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
+        tswitch2 = 0;
     }
     PARABOLIC_RAMP_ASSERT(IsValid());
     return true;
@@ -3099,7 +3117,7 @@ bool SolveMaxAccel(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax, Real 
     }
     Real bmin,bmax;
     ramp.Bounds(bmin,bmax);
-    if(bmin >= xmin && bmax <= xmax) {
+    if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
         ramps.resize(1);
         ramps[0] = ramp;
         return true;
@@ -3119,7 +3137,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
     if(!ramp.SolveFixedTime(amax,vmax,endTime)) return false;
     Real bmin,bmax;
     ramp.Bounds(bmin,bmax);
-    if(bmin >= xmin && bmax <= xmax) {
+    if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
         ramps.resize(1);
         ramps[0] = ramp;
         return true;
@@ -3186,7 +3204,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             if(temp[1].SolveMinAccel(endTime-bt0,vmax)) {
                 if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
                     temp[1].Bounds(bmin,bmax);
-                    if(bmin >= xmin && bmax <= xmax) {
+                    if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
                         //got a better path
                         ramps = temp;
                         amax = Max(Abs(ba0),Max(Abs(temp[1].a1),Abs(temp[1].a2)));
@@ -3221,7 +3239,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             if(temp[0].SolveMinAccel(endTime-bt1,vmax)) {
                 if(Max(Abs(temp[0].a1),Abs(temp[0].a2)) < amax) {
                     temp[0].Bounds(bmin,bmax);
-                    if(bmin >= xmin && bmax <= xmax) {
+                    if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
                         //got a better path
                         ramps = temp;
                         amax = Max(Abs(ba1),Max(Abs(temp[0].a1),Abs(temp[0].a2)));
@@ -3617,7 +3635,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
         //now solve minimum acceleration within bounds
         if( multidofinterp == 2 ) {
             if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],ramps[i])) {
-                PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
+                PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d, endTime=%f\n",i, endTime);
                 return false;
             }
         }
