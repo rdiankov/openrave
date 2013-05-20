@@ -56,6 +56,14 @@ OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstP
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
 
+
+
+/** \brief extends the last ramp of the trajectory in order to reach a goal (necessary when use jitter)
+ */
+//OPENRAVE_API void ExtendLastWaypoint(TrajectoryPtr ptraj, PlannerBasePtr retimerplanner, const std::vector<dReal>& vgoal);
+
+
+
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
     Only initial and goal configurations are preserved.

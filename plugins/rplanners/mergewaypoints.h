@@ -29,6 +29,20 @@ namespace mergewaypoints
     \param iters max number of random iterations
  */
 bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
+
+/** Same as IterativeMergeRamps but run a straightforward line search on the trajectory duration instead of dichotomy search
+**/
+bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
+
+/** If the beginning or the end of the ramps are linear segments then treat them separately
+**/
+bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check);
+
+/** Compute a straight ramp with good time duration
+**/
+bool ComputeStraightRamp(ParabolicRamp::ParabolicRampND& newramp,const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params,ParabolicRamp::RampFeasibilityChecker& check);
+
+
 /** Timescale a ramp. Assume the ramp is unitary.
     \param origramps input ramp
     \param resramps result ramp
@@ -40,6 +54,7 @@ void ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,s
     \param rampnd input ramp
  */
 dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd);
+dReal DetermineMinswitchtimeRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
 /** Compute time duration of ramps
     \param rampnd input ramp
@@ -54,4 +69,6 @@ size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd);
 
 void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,ConstraintTrajectoryTimingParametersPtr params,bool warning);
 
+
+void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps);
 } // end namespace mergewaypoints
