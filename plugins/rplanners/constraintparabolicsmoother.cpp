@@ -424,6 +424,8 @@ public:
 
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
         // NB: The old SetMilestone(ramps,x) is equivalent to SetMilestone(ramps,x,0)
+        bool savebUsePerturbation = _bUsePerturbation;
+        _bUsePerturbation = false;
         ramps.clear();
         if(x.size()==1) {
             ramps.push_back(ParabolicRamp::ParabolicRampND());
@@ -447,7 +449,7 @@ public:
                 else {
                     // retime linear segments so that they satisfy the min switch time condition the _fStepLength condition, and the dynamics condition (e.g. torque limits)
                     // note that the collision condition should be satisfied before entering this function
-                    dReal hi = 1;
+                    dReal hi = 2;
                     dReal lo = 0;
                     while(hi-lo>0.0001) {
                         coef = (hi+lo)/2;
@@ -458,6 +460,7 @@ public:
                             amax[j]=_parameters->_vConfigAccelerationLimit[j]*coef;
                         }
                         bool res=newramp.SolveMinTimeLinear(amax,_parameters->_vConfigVelocityLimit);
+
                         if(res && (mergewaypoints::DetermineMinswitchtime(newramp)>=_parameters->minswitchtime) && (mergewaypoints::CountUnitaryRamps(newramp)<=2) && check.Check(newramp)) {
                             newramp2 = newramp;
                             lo = coef;
@@ -492,8 +495,6 @@ public:
                         // FOREACH(itramp, tmpramps2) {
                         //     cout << "After scale:" << check.Check(*itramp)<< "\n";
                         // }
-
-
                         ramps.splice(ramps.end(),tmpramps2);
                     }
                     else{
@@ -501,7 +502,8 @@ public:
                     }
                 }
             } // end for loop
-        }
+        } // end of if x is empty
+        _bUsePerturbation = savebUsePerturbation;
     }
 
     // Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
