@@ -47,7 +47,7 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
     return I;
 }
 
-void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
+void SubtractStates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
 {
     BOOST_ASSERT(q1.size()==q2.size());
     for(size_t i = 0; i < q1.size(); ++i) {
@@ -55,11 +55,26 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
     }
 }
 
-bool addstates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
+bool AddStates(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal)
 {
     BOOST_ASSERT(q.size()==qdelta.size());
     for(size_t i = 0; i < q.size(); ++i) {
         q[i] += qdelta[i];
+    }
+    return true;
+}
+
+bool AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qdelta, int fromgoal, const std::vector<dReal>& vLowerLimits, const std::vector<dReal>& vUpperLimits)
+{
+    BOOST_ASSERT(q.size()==qdelta.size());
+    for(size_t i = 0; i < q.size(); ++i) {
+        q[i] += qdelta[i];
+        if( q[i] > vUpperLimits.at(i) ) {
+            q[i] = vUpperLimits.at(i);
+        }
+        else if( q[i] < vLowerLimits.at(i) ) {
+            q[i] = vLowerLimits.at(i);
+        }
     }
     return true;
 }
@@ -88,8 +103,8 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
 
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother)
 {
-    _diffstatefn = subtractstates;
-    _neighstatefn = addstates;
+    _diffstatefn = SubtractStates;
+    _neighstatefn = AddStates;
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
     _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>100</_nmaxiterations></_postprocessing>";
     _vXMLParameters.reserve(20);
@@ -356,10 +371,10 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
-    _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1,false);
+    // should setstatefn check limits?
+    _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1, KinBody::CLA_CheckLimits);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
-    _neighstatefn = addstates; // probably ok...
 
     std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
     boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
@@ -371,6 +386,8 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
     _configurationspecification = robot->GetActiveConfigurationSpecification();
+
+    _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
 }
 
 void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
@@ -617,9 +634,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             setstatefns[isavegroup].second = g.dof;
             getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
-            neighstatefns[isavegroup].first = addstates;
             neighstatefns[isavegroup].second = g.dof;
             pbody->GetDOFLimits(v0,v1,dofindices);
+            neighstatefns[isavegroup].first = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, v0, v1);
             std::copy(v0.begin(),v0.end(), vConfigLowerLimit.begin()+g.offset);
             std::copy(v1.begin(),v1.end(), vConfigUpperLimit.begin()+g.offset);
             pbody->GetDOFVelocityLimits(v0,dofindices);

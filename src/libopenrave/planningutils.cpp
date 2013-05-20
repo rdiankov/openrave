@@ -122,6 +122,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
             }
             robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                robot->GetActiveDOFValues(newdof);
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
@@ -205,6 +206,12 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         else {
             for(size_t i = 0; i < newdof.size(); ++i) {
                 newdof[i] = curdof[i]+*itperturbation;
+                if( newdof[i] > parameters->_vConfigUpperLimit.at(i) ) {
+                    newdof[i] = parameters->_vConfigUpperLimit.at(i);
+                }
+                else if( newdof[i] < parameters->_vConfigLowerLimit.at(i) ) {
+                    newdof[i] = parameters->_vConfigLowerLimit.at(i);
+                }
             }
         }
 
@@ -266,6 +273,12 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             else {
                 for(size_t j = 0; j < deltadof.size(); ++j) {
                     newdof[j] = curdof[j] + deltadof2[j];
+                    if( newdof[j] > parameters->_vConfigUpperLimit.at(j) ) {
+                        newdof[j] = parameters->_vConfigUpperLimit.at(j);
+                    }
+                    else if( newdof[j] < parameters->_vConfigLowerLimit.at(j) ) {
+                        newdof[j] = parameters->_vConfigLowerLimit.at(j);
+                    }
                 }
             }
             // don't need to set state since CheckPathAllConstraints does it
@@ -301,10 +314,17 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             else {
                 for(size_t j = 0; j < deltadof.size(); ++j) {
                     newdof[j] = curdof[j] + deltadof[j];
+                    if( newdof[j] > parameters->_vConfigUpperLimit.at(j) ) {
+                        newdof[j] = parameters->_vConfigUpperLimit.at(j);
+                    }
+                    else if( newdof[j] < parameters->_vConfigLowerLimit.at(j) ) {
+                        newdof[j] = parameters->_vConfigLowerLimit.at(j);
+                    }
                 }
             }
             parameters->_setstatefn(newdof);
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                parameters->_getstatefn(newdof);
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 for(size_t i = 0; i < newdof.size(); ++i ) {
                     if( i > 0 ) {
