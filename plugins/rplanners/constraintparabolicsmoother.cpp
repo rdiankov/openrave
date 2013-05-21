@@ -114,9 +114,7 @@ public:
         RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        ptraj->serialize(f);
-
-
+        //ptraj->serialize(f);
 
         RobotBase::RobotStateSaverPtr statesaver;
         if( !!_probot ) {
@@ -450,8 +448,8 @@ public:
         else if( !x.empty() ) {
             for(size_t i=0; i+1<x.size(); i++) {
                 ParabolicRamp::ParabolicRampND newramp;
-                bool res = mergewaypoints::ComputeStraightRamp(newramp,x[i],x[i+1],_parameters,check);
-                BOOST_ASSERT(res);
+                bool cansetmilestone = mergewaypoints::ComputeStraightRamp(newramp,x[i],x[i+1],_parameters,check);
+                BOOST_ASSERT(cansetmilestone);
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1, tmpramps2;
                 tmpramps0.resize(0);
                 tmpramps0.push_back(newramp);
@@ -522,11 +520,11 @@ public:
                 t2 = floor(t2/contrtime+0.5)*contrtime;
                 // check whether the shortcut is close to a previously attempted shortcut
                 if(hasbeenattempted(t1,t2,t1list,t2list,shortcutinnovationthreshold)) {
-                    RAVELOG_DEBUG_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
+                    RAVELOG_VERBOSE_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
                     continue;
                 }
                 else{
-                    RAVELOG_DEBUG_FORMAT("Iter %d: Attempt shortcut (%f,%f)...\n",iters%t1%t2);
+                    RAVELOG_VERBOSE_FORMAT("Iter %d: Attempt shortcut (%f,%f)...\n",iters%t1%t2);
                     t1list.push_back(t1);
                     t2list.push_back(t2);
                 }
@@ -537,7 +535,7 @@ public:
             int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
             int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
             if(i1 == i2) {
-                RAVELOG_DEBUG("... Same ramp\n");
+                RAVELOG_VERBOSE("... Same ramp\n");
                 continue;
             }
 
@@ -568,7 +566,7 @@ public:
             bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, docheck, intermediate);
 
             if(!res) {
-                RAVELOG_DEBUG("... Could not SolveMinTime\n");
+                RAVELOG_VERBOSE("... Could not SolveMinTime\n");
                 continue;
             }
 
@@ -582,7 +580,7 @@ public:
 
             if( newramptime+fimprovetimethresh >= t2-t1 ) {
                 // reject since it didn't make significant improvement
-                RAVELOG_DEBUG("... Duration did not improve (even before merge)\n");
+                RAVELOG_VERBOSE("... Duration did not improve (even before merge)\n");
                 RAVELOG_VERBOSE("shortcut iter=%d rejected time=%fs\n", iters, currenttrajduration-(t2-t1)+newramptime);
                 continue;
             }
@@ -631,7 +629,7 @@ public:
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,docheck);
 
                 if(!resmerge) {
-                    RAVELOG_DEBUG("... Could not merge\n");
+                    RAVELOG_VERBOSE("... Could not merge\n");
                 }
                 else{
                     // Merge succeeded
@@ -639,14 +637,14 @@ public:
                     dReal durationaftermerge = mergewaypoints::ComputeRampsDuration(resramps);
                     if(durationaftermerge>currenttrajduration-fimprovetimethresh) {
                         resmerge = false;
-                        RAVELOG_DEBUG("... Duration did not significantly improve after merger\n");
+                        RAVELOG_VERBOSE("... Duration did not significantly improve after merger\n");
                     }
                     else{
                         // Now check for collision, only for the ramps that have been modified
                         int itx = 0;
                         FOREACH(itramp, resramps) {
                             if(itramp->modified && (!check.Check(*itramp))) {
-                                RAVELOG_DEBUG_FORMAT("... Collision for ramp %d after merge\n",itx);
+                                RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
                                 resmerge = false;
                                 break;
                             }
