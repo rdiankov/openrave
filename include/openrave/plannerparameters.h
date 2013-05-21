@@ -529,7 +529,7 @@ typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingPara
 class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
 {
 public:
-    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), maxmanipspeed(0), maxmanipaccel(0), mingripperdistance(0), velocitydistancethresh(0), maxmergeiterations(1000), minswitchtime(0.2), _bCProcessing(false) {
+    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), maxmanipspeed(0), maxmanipaccel(0), mingripperdistance(0), velocitydistancethresh(0), maxmergeiterations(1000), minswitchtime(0.2),nshortcutcycles(1), _bCProcessing(false) {
         _vXMLParameters.push_back("maxlinkspeed");
         _vXMLParameters.push_back("maxlinkaccel");
         _vXMLParameters.push_back("maxmanipspeed");
@@ -538,6 +538,7 @@ public:
         _vXMLParameters.push_back("velocitydistancethresh");
         _vXMLParameters.push_back("maxmergeiterations");
         _vXMLParameters.push_back("minswitchtime");
+        _vXMLParameters.push_back("nshortcutcycles");
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
@@ -550,6 +551,7 @@ public:
     // merging waypoint related parameters
     int maxmergeiterations; ///< when merging several ramps together, the order that they are merged in depends. This parameters pecifies how many permutations to test before giving up.
     dReal minswitchtime; ///< the minimum time between switching accelerations of any joint (waypoints).
+    int nshortcutcycles; ///< number of times the shortcut cycle is repeted.
 
 protected:
     bool _bCProcessing;
@@ -566,6 +568,7 @@ protected:
         O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
         O << "<maxmergeiterations>" << maxmergeiterations << "</maxmergeiterations>" << std::endl;
         O << "<minswitchtime>" << minswitchtime << "</minswitchtime>" << std::endl;
+        O << "<nshortcutcycles>" << nshortcutcycles << "</nshortcutcycles>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -583,7 +586,7 @@ protected:
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
         }
-        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="maxmanipspeed" || name =="maxmanipaccel" || name=="mingripperdistance" || name=="velocitydistancethresh" || name=="maxmergeiterations" || name=="minswitchtime";
+        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="maxmanipspeed" || name =="maxmanipaccel" || name=="mingripperdistance" || name=="velocitydistancethresh" || name=="maxmergeiterations" || name=="minswitchtime"|| name=="nshortcutcycles";
         return _bCProcessing ? PE_Support : PE_Pass;
     }
 
@@ -613,6 +616,9 @@ protected:
             }
             else if( name == "minswitchtime") {
                 _ss >> minswitchtime;
+            }
+            else if( name == "nshortcutcycles") {
+                _ss >> nshortcutcycles;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
