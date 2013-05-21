@@ -108,12 +108,10 @@ public:
             return PS_Failed;
         }
 
-
-
-        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        ofstream f(filename.c_str());
-        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        //string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        //RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+        //ofstream f(filename.c_str());
+        //f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         //ptraj->serialize(f);
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -249,7 +247,6 @@ public:
 
             RAVELOG_DEBUG("Sanity check before starting shortcutting...\n");
 
-            RaveSetDebugLevel(Level_Verbose);
             // Check for validity before any shortcutting
             bool saveUsePerturbation = _bUsePerturbation;
             _bUsePerturbation = false;
@@ -261,14 +258,10 @@ public:
                     ofstream f(filename.c_str());
                     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     ptraj->serialize(f);
-
-
-                    RaveSetDebugLevel(Level_Debug);
                     throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
                 }
             }
             _bUsePerturbation = saveUsePerturbation;
-            RaveSetDebugLevel(Level_Debug);
 
             // Reset all ramps
             FOREACH(itramp, ramps) {
