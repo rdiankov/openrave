@@ -47,8 +47,9 @@ bool ComputeStraightRamp(ParabolicRamp::ParabolicRampND& newramp,const Parabolic
     \param origramps input ramp
     \param resramps result ramp
     \param coef timescaling coefficient
+    \param flag
  */
-void ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
+bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
 
 /** Determine the minimum switchtime in a ramp
     \param rampnd input ramp
@@ -69,6 +70,7 @@ size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd);
 
 void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,ConstraintTrajectoryTimingParametersPtr params,bool warning);
 
+bool iszero(const ParabolicRamp::Vector& v);
 
 void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps);
 } // end namespace mergewaypoints

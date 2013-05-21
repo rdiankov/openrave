@@ -108,11 +108,14 @@ public:
             return PS_Failed;
         }
 
-        //string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        //RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        //ofstream f(filename.c_str());
-        //f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        //ptraj->serialize(f);
+
+        // Writing the incoming traj
+        // string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        // RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+        // ofstream f(filename.c_str());
+        // f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        // ptraj->serialize(f);
+
 
         RobotBase::RobotStateSaverPtr statesaver;
         if( !!_probot ) {
@@ -448,7 +451,8 @@ public:
                 tmpramps0.push_back(newramp);
                 mergewaypoints::BreakIntoUnitaryRamps(tmpramps0,tmpramps1);
                 if(_bCheckControllerTimeStep) {
-                    mergewaypoints::ScaleRampsTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp.endTime,_parameters->_fStepLength*2)/newramp.endTime,false,_parameters);
+                    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp.endTime,_parameters->_fStepLength*2)/newramp.endTime,false,_parameters);
+                    BOOST_ASSERT(canscale);
                     ramps.splice(ramps.end(),tmpramps2);
                 }
                 else{
