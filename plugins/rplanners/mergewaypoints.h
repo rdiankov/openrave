@@ -30,6 +30,15 @@ namespace mergewaypoints
  */
 bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
 
+/** Once the ramps are all OK, further merge ramps
+    \param origramps input ramps
+    \param ramps result ramps
+    \param upperbound maximum time duration to try
+    \param precision precision in the dichotomy search for the best timescaling coef
+    \param iters max number of random iterations
+ */
+bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
+
 /** Same as IterativeMergeRamps but run a straightforward line search on the trajectory duration instead of dichotomy search
 **/
 bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
@@ -38,8 +47,12 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
 **/
 bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check);
 
-/** Compute a straight ramp with good time duration
-**/
+/** Compute a straight ramp between x0 and x1, with initial and final velocities equal to zero. Assume that the straight path is collision free. Scale up time duration until the trajectory passes the dynamics check and satisfies minswitchtime and fStepLength conditions
+    \param newramp the resulting ramp
+    \param x0, x1 initial and final joint values
+    \param params planner parameters
+    \param check checker for collision and dynamics
+ **/
 bool ComputeStraightRamp(ParabolicRamp::ParabolicRampND& newramp,const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params,ParabolicRamp::RampFeasibilityChecker& check);
 
 
@@ -55,7 +68,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,s
     \param rampnd input ramp
  */
 dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd);
-dReal DetermineMinswitchtimeRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
+dReal DetermineMinswitchtime(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
 /** Compute time duration of ramps
     \param rampnd input ramp
@@ -68,9 +81,18 @@ dReal ComputeRampsDuration(const std::list<ParabolicRamp::ParabolicRampND>& ramp
  */
 size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd);
 
+size_t CountUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
+
 void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,ConstraintTrajectoryTimingParametersPtr params,bool warning);
+
+/** Break ramps into unitary ramps (in place)
+    \param ramps the ramps to be broken
+ */
+void BreakIntoUnitaryRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
 bool iszero(const ParabolicRamp::Vector& v);
 
-void BreakIntoUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,std::list<ParabolicRamp::ParabolicRampND>& resramps);
+dReal quality(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
+
+
 } // end namespace mergewaypoints

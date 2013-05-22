@@ -85,14 +85,6 @@ public:
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
         }
 
-
-        //Testing purpose
-        //_bCheckControllerTimeStep = false;
-        //_parameters->minswitchtime = 0;
-        //_parameters->_randomgeneratorseed = 1;
-
-        //cout << "Seed: " << _parameters->_randomgeneratorseed << "\n";
-
         _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
         return true;
     }
@@ -109,12 +101,12 @@ public:
         }
 
 
-        // Writing the incoming traj
-        // string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        // RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        // ofstream f(filename.c_str());
-        // f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        // ptraj->serialize(f);
+        Writing the incoming traj
+        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        ptraj->serialize(f);
 
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -144,13 +136,23 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
             _bUsePerturbation = true;
-            std::list<ParabolicRamp::ParabolicRampND> rawramps,rawramps2;
+
+
+
+            /////////////////////////////////////////////////////////////////////////
+            /////////////////////////  Convert to ramps /////////////////////////////
+            /////////////////////////////////////////////////////////////////////////
+
+            std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
 
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
 
+
+            ////////////////// Case 1 : Initial traj is quadratic ////////////////////
+
+            // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
             if (_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
-                // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
                 RAVELOG_DEBUG("Initial traj is piecewise quadratic\n");
                 vector<dReal> x0, x1, dx0, dx1, ramptime;
                 ptraj->GetWaypoint(0,x0,posspec);
@@ -160,49 +162,50 @@ public:
                     if (ramptime.at(0) > g_fEpsilonLinear) {
                         ptraj->GetWaypoint(i+1,x1,posspec);
                         ptraj->GetWaypoint(i+1,dx1,velspec);
-                        rawramps.push_back(ParabolicRamp::ParabolicRampND());
-                        rawramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
-                        /*if( !checker.Check(rawramps.back())) {
+                        ramps.push_back(ParabolicRamp::ParabolicRampND());
+                        ramps.back().SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
+                        /*if( !checker.Check(ramps.back())) {
                             RAVELOG_WARN("ramp %d failed\n", i);
-                            rawramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
-                            checker.Check(rawramps.back());
+                            ramps.back().SetPosVelTime(x0,dx0,x1,dx1,2.0*ramptime.at(0));
+                            checker.Check(ramps.back());
                             }*/
                         x0.swap(x1);
                         dx0.swap(dx1);
                     }
                 }
-                // Change timing of rawramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
-                dReal upperbound = 10 * mergewaypoints::ComputeRampsDuration(rawramps);
+                // Change timing of ramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
+                dReal upperbound = 10 * mergewaypoints::ComputeRampsDuration(ramps);
                 dReal stepsize = 0.1;
                 bool docheck = true;
                 // Disable usePerturbation for this particular stage
                 bool saveUsePerturbation = _bUsePerturbation;
                 _bUsePerturbation = false;
                 // Reset all ramps
-                FOREACH(itramp, rawramps) {
+                FOREACH(itramp, ramps) {
                     itramp->modified = true;
                 }
-                mergewaypoints::PrintRamps(rawramps,_parameters,false);
-                bool res = mergewaypoints::FixRampsEnds(rawramps,rawramps2, _parameters,checker);
+                mergewaypoints::PrintRamps(ramps,_parameters,false);
+                bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker);
                 if(!res) {
-                    res = mergewaypoints::IterativeMergeRampsNoDichotomy(rawramps,rawramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                    res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
                 }
                 _bUsePerturbation = saveUsePerturbation;
                 // Reset all ramps
-                FOREACH(itramp, rawramps2) {
+                FOREACH(itramp, ramps2) {
                     itramp->modified = false;
                 }
-                rawramps.swap(rawramps2);
-
+                ramps.swap(ramps2);
                 if(!res) {
                     throw OPENRAVE_EXCEPTION_FORMAT0("Could not obtain a feasible trajectory from initial quadratic trajectory",ORE_Assert);
                     return PS_Failed;
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
-
             }
+
+
+            ////////////////// Case 2 : Initial traj is linear ////////////////////////
+
             else {
-                // assumes all the waypoints are joined by linear segments
                 RAVELOG_DEBUG("Initial traj is piecewise linear\n");
                 ParabolicRamp::Vector q(_parameters->GetDOF());
                 for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
@@ -237,15 +240,21 @@ public:
                     path.push_back(q);
                 }
 
-                // Convert to unitary rawramps which are linear in config space
+                // Convert to unitary ramps which are linear in config space
                 // and guarantees that that two waypoints are at least _parameters->minswitchtime away
-                // Note that this should never fail
-                SetMilestones(rawramps, path,checker);
+                // Note that this should never fail if initial traj is collision-free
+                // and if dynamics is always satisfied at zero velocity
+                SetMilestones(ramps, path,checker);
             }
 
+
+
+            /////////////////////////////////////////////////////////////////////////
+            ////////////////////////////  Shortcutting //////////////////////////////
+            /////////////////////////////////////////////////////////////////////////
+
             // Break into unitary ramps
-            std::list<ParabolicRamp::ParabolicRampND> ramps;
-            mergewaypoints::BreakIntoUnitaryRamps(rawramps,ramps);
+            mergewaypoints::BreakIntoUnitaryRamps(ramps);
 
 
             RAVELOG_DEBUG("Sanity check before starting shortcutting...\n");
@@ -282,12 +291,10 @@ public:
             RAVELOG_DEBUG("\nStart shortcutting\n");
             _progress._iteration=0;
             int numshortcuts=0;
-            int seed = _parameters->_randomgeneratorseed;
             dReal besttime = 1e10;
             std::list<ParabolicRamp::ParabolicRampND> bestramps,initramps;
             initramps = ramps;
             for(int rep=0; rep<_parameters->nshortcutcycles; rep++) {
-                _uniformsampler->SetSeed(seed++);
                 ramps = initramps;
                 RAVELOG_DEBUG_FORMAT("\nStart shortcut cycle %d\n",rep);
                 numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
@@ -298,8 +305,6 @@ public:
                 }
             }
             ramps = bestramps;
-
-
 
             RAVELOG_DEBUG("End shortcutting\n\n");
             if( numshortcuts < 0 ) {
@@ -314,7 +319,39 @@ public:
             totaltime = mergewaypoints::ComputeRampsDuration(ramps);
 
 
-            // Convert to Rave Trajectory
+
+            //////////////////////////////////////////////////////////////////////////
+            //////////////////////  Further merge if possible ////////////////////////
+            //////////////////////////////////////////////////////////////////////////
+
+            bool docheck = true;
+            dReal upperbound = totaltime * 1.05;
+            std::list<ParabolicRamp::ParabolicRampND> resramps;
+            bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+            if(resmerge) {
+                RAVELOG_DEBUG("Great, could further merge ramps!!\n");
+                size_t nbrampsbefore = mergewaypoints::CountUnitaryRamps(ramps);
+                size_t nbrampsafter = mergewaypoints::CountUnitaryRamps(resramps);
+                dReal qualitybefore = mergewaypoints::quality(ramps);
+                dReal qualityafter = mergewaypoints::quality(resramps);
+                dReal totaltime2 = mergewaypoints::ComputeRampsDuration(resramps);
+                RAVELOG_DEBUG("Nb ramps %d --> %d\n",nbrampsbefore,nbrampsafter);
+                RAVELOG_DEBUG("Quality %f --> %f\n",qualitybefore,qualityafter);
+                RAVELOG_DEBUG("Duration %f --> %f\n",totaltime,totaltime2);
+                totaltime = totaltime2;
+                ramps.swap(resramps);
+                mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+
+            }
+            else{
+                RAVELOG_DEBUG("Could not further merge ramps\n");
+            }
+
+
+            ///////////////////////////////////////////////////////////////////////////
+            ////////////////// Convert back to Rave Trajectory ////////////////////////
+            ///////////////////////////////////////////////////////////////////////////
+
             BOOST_ASSERT( ramps.size() > 0 );
             ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
@@ -352,7 +389,7 @@ public:
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
                 if(true) {
-                    // part of original trajectory which might not have been processed with perterbations, so ignore them
+                    // part of original trajectory which might not have been processed with perturbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
                         throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
@@ -403,10 +440,6 @@ public:
     }
 
 
-
-
-
-
     inline bool SolveMinTimeWithConstraints(const ParabolicRamp::Vector& x0,const ParabolicRamp::Vector& dx0,const ParabolicRamp::Vector& x1,const ParabolicRamp::Vector& dx1, dReal curtime, ParabolicRamp::RampFeasibilityChecker& check, bool docheck, std::list<ParabolicRamp::ParabolicRampND>& rampsout)
     {
         __tempramps1d.resize(0);
@@ -428,28 +461,6 @@ public:
         return feas;
     }
 
-    // void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x)
-    // {
-    //     ramps.clear();
-    //     if(x.size()==1) {
-    //         ramps.push_back(ParabolicRamp::ParabolicRampND());
-    //         ramps.front().SetConstant(x[0]);
-    //     }
-    //     else if( !x.empty() ) {
-    //         ParabolicRamp::Vector zero(x[0].size(),0.0);
-    //         for(size_t i=0; i+1<x.size(); i++) {
-    //             ramps.push_back(ParabolicRamp::ParabolicRampND());
-    //             ramps.back().x0 = x[i];
-    //             ramps.back().x1 = x[i+1];
-    //             ramps.back().dx0 = zero;
-    //             ramps.back().dx1 = zero;
-    //             bool res=ramps.back().SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
-    //             PARABOLIC_RAMP_ASSERT(res && ramps.back().IsValid());
-    //         }
-    //     }
-    // }
-
-
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
         // NB: The old SetMilestone(ramps,x) is equivalent to SetMilestone(ramps,x,0)
         bool savebUsePerturbation = _bUsePerturbation;
@@ -464,17 +475,17 @@ public:
                 ParabolicRamp::ParabolicRampND newramp;
                 bool cansetmilestone = mergewaypoints::ComputeStraightRamp(newramp,x[i],x[i+1],_parameters,check);
                 BOOST_ASSERT(cansetmilestone);
-                std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1, tmpramps2;
+                std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
                 tmpramps0.resize(0);
                 tmpramps0.push_back(newramp);
-                mergewaypoints::BreakIntoUnitaryRamps(tmpramps0,tmpramps1);
+                mergewaypoints::BreakIntoUnitaryRamps(tmpramps0);
                 if(_bCheckControllerTimeStep) {
-                    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps1,tmpramps2,ComputeStepSizeCeiling(newramp.endTime,_parameters->_fStepLength*2)/newramp.endTime,false,_parameters);
+                    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(newramp.endTime,_parameters->_fStepLength*2)/newramp.endTime,false,_parameters);
                     BOOST_ASSERT(canscale);
-                    ramps.splice(ramps.end(),tmpramps2);
+                    ramps.splice(ramps.end(),tmpramps1);
                 }
                 else{
-                    ramps.splice(ramps.end(),tmpramps1);
+                    ramps.splice(ramps.end(),tmpramps0);
                 }
             }
         }
@@ -615,9 +626,8 @@ public:
             ++itramp1;
             ramps.erase(itramp1, itramp2);
 
-            std::list<ParabolicRamp::ParabolicRampND> tmpintermediate;
-            mergewaypoints::BreakIntoUnitaryRamps(intermediate,tmpintermediate);
-            ramps.splice(itramp2, tmpintermediate);
+            mergewaypoints::BreakIntoUnitaryRamps(intermediate);
+            ramps.splice(itramp2, intermediate);
 
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 //check for consistency
