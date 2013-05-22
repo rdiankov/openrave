@@ -101,7 +101,7 @@ public:
         }
 
 
-        Writing the incoming traj
+        //Writing the incoming traj
         string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
         RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
         ofstream f(filename.c_str());
@@ -137,7 +137,8 @@ public:
 
             _bUsePerturbation = true;
 
-
+            RAVELOG_DEBUG_FORMAT("Minswitchtime = %f\n",_parameters->minswitchtime);
+            RAVELOG_DEBUG_FORMAT("Controller timestep = %f\n",_parameters->_fStepLength);
 
             /////////////////////////////////////////////////////////////////////////
             /////////////////////////  Convert to ramps /////////////////////////////
