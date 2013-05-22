@@ -102,11 +102,11 @@ public:
 
 
         //Writing the incoming traj
-        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        ofstream f(filename.c_str());
-        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        ptraj->serialize(f);
+        // string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        // RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+        // ofstream f(filename.c_str());
+        // f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        // ptraj->serialize(f);
 
 
         RobotBase::RobotStateSaverPtr statesaver;
