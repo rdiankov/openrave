@@ -336,8 +336,8 @@ public:
                 RAVELOG_DEBUG("Great, could further merge ramps!!\n");
                 size_t nbrampsbefore = mergewaypoints::CountUnitaryRamps(ramps);
                 size_t nbrampsafter = mergewaypoints::CountUnitaryRamps(resramps);
-                dReal qualitybefore = mergewaypoints::quality(ramps);
-                dReal qualityafter = mergewaypoints::quality(resramps);
+                dReal qualitybefore = mergewaypoints::ComputeRampQuality(ramps);
+                dReal qualityafter = mergewaypoints::ComputeRampQuality(resramps);
                 dReal totaltime2 = mergewaypoints::ComputeRampsDuration(resramps);
                 RAVELOG_DEBUG("Nb ramps %d --> %d\n",nbrampsbefore,nbrampsafter);
                 RAVELOG_DEBUG("Quality %f --> %f\n",qualitybefore,qualityafter);

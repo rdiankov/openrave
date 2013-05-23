@@ -90,9 +90,12 @@ void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps,Constrain
  */
 void BreakIntoUnitaryRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
-bool iszero(const ParabolicRamp::Vector& v);
+/// check if all numbers in the vector are zero
+bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon=g_fEpsilonLinear);
 
-dReal quality(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
+// Provides a measure of quality of a ramps
+// Now set to the 1/sum(1/rampduration^2) toi penalize small ramps
+dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
 
 } // end namespace mergewaypoints
