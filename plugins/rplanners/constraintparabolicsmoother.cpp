@@ -293,7 +293,7 @@ public:
 
 
             // Start shortcutting
-            RAVELOG_DEBUG("\nStart shortcutting\n");
+            RAVELOG_DEBUG("Start shortcutting\n");
             _progress._iteration=0;
             int numshortcuts=0;
             dReal besttime = 1e10;
@@ -301,7 +301,7 @@ public:
             initramps = ramps;
             for(int rep=0; rep<_parameters->nshortcutcycles; rep++) {
                 ramps = initramps;
-                RAVELOG_DEBUG_FORMAT("\nStart shortcut cycle %d\n",rep);
+                RAVELOG_DEBUG_FORMAT("Start shortcut cycle %d\n",rep);
                 numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
                 totaltime = mergewaypoints::ComputeRampsDuration(ramps);
                 if(totaltime < besttime) {
@@ -311,7 +311,7 @@ public:
             }
             ramps = bestramps;
 
-            RAVELOG_DEBUG("End shortcutting\n\n");
+            RAVELOG_DEBUG("End shortcutting\n");
             if( numshortcuts < 0 ) {
                 // interrupted
                 return PS_Interrupted;
