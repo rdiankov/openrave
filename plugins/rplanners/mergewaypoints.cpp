@@ -502,7 +502,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
     }
 
     // If dilatation is necessary but either the initial or the final trajectory is nonzero, cannot timescale
-    if(dodilate && !(iszero(origramps.begin()->dx0) && iszero(origramps.back().dx1))) {
+    if(dodilate && !(CheckIfZero(origramps.begin()->dx0, ParabolicRamp::EpsilonV) && CheckIfZero(origramps.back().dx1, ParabolicRamp::EpsilonV))) {
         return false;
     }
 
@@ -540,39 +540,37 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
     return true;
 }
 
-// Provides a measure of quality of a ramps
-// Now set to the 1/sum(1/rampduration^2) toi penalize small ramps
-dReal quality(const std::list<ParabolicRamp::ParabolicRampND>& ramps){
+dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps){
     dReal res=0;
     FOREACHC(itramp,ramps){
         dReal duration = itramp->endTime;
-        res += 1/(duration*duration);
+        if( duration <= ParabolicRamp::EpsilonT ) {
+            RAVELOG_WARN("ramp has very small duration!");
+            return 0;
+        }
+        else {
+            res += 1/(duration*duration);
+        }
     }
     return 1/res;
 }
-
 
 bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
     //int nitersfurthermerge = params->nitersfurthermerge;
     int nitersfurthermerge = 0;
     resramps = origramps;
-    bool globalres = false;
+    bool bHasChanged = false;
     std::list<ParabolicRamp::ParabolicRampND> ramps;
     for(int rep = 0; rep<nitersfurthermerge; rep++) {
         ramps = origramps;
-        while(true) {
-            if(ramps.size()<3) {
-                break;
-            }
+        while(ramps.size()>=3) {
             std::list<ParabolicRamp::ParabolicRampND>::iterator itlist = ramps.begin();
             int randidx = uniformsampler->SampleSequenceOneUInt32()%(ramps.size()-2);
             std::advance(itlist,randidx);
             ParabolicRamp::ParabolicRampND ramp0,ramp1,ramp2,resramp0,resramp1,resramp0x,resramp1x;
-            ramp0 = *itlist;
-            itlist++;
-            ramp1 = *itlist;
-            itlist++;
-            ramp2 = *itlist;
+            ramp0 = *itlist++;
+            ramp1 = *itlist++;
+            ramp2 = *itlist++;
             bool resmerge = MergeRamps(ramp0,ramp1,ramp2,resramp0,resramp1,params);
             if(!resmerge) {
                 break;
@@ -586,7 +584,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
             if(!resfix || !check.Check(resramp0x) || !check.Check(resramp1x)) {
                 break;
             }
-            globalres = true;
+            bHasChanged = true;
             itlist--;
             itlist--;
             itlist = ramps.erase(itlist);
@@ -598,13 +596,13 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
         }
         //cout << "Rep: " << rep << "\n";
         //PrintRamps(ramps,params,true);
-        if(ramps.size()<resramps.size() || (ramps.size()==resramps.size()&& quality(ramps)>quality(resramps))) {
+        if(ramps.size()<resramps.size() || (ramps.size()==resramps.size()&& ComputeRampQuality(ramps)>ComputeRampQuality(resramps))) {
             resramps = ramps;
         }
     }
     //cout << "Finally\n";
     //PrintRamps(resramps,params,true);
-    return globalres;
+    return bHasChanged;
 }
 
 bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
@@ -747,16 +745,16 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
 }
 
 
-bool iszero(const ParabolicRamp::Vector& v){
+bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon){
     FOREACHC(itv,v){
-        if (RaveFabs(*itv) > TINY) {
+        if (RaveFabs(*itv) > epsilon) {
             return false;
         }
     }
     return true;
 }
 
-bool formstraightline(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::ParabolicRampND& ramp1){
+bool FormStraightLineRamp(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::ParabolicRampND& ramp1){
     dReal dotproduct=0, x0length2=0, x1length2=0;
     for(size_t i = 0; i < ramp0.x0.size(); ++i) {
         dReal dx0=ramp0.x1[i]-ramp0.x0[i];
@@ -778,7 +776,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
     itramp1++;
-    if (iszero(itramp1->dx1) && formstraightline(*itramp0,*itramp1)) {
+    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
         RAVELOG_DEBUG("First two ramps come from a jittering operation\n");
     }
     else{
@@ -787,7 +785,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         itramp1--;
         itramp0 = itramp1;
         itramp0--;
-        if (iszero(itramp1->dx1) && formstraightline(*itramp0,*itramp1)) {
+        if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
             RAVELOG_DEBUG("Last two ramps come from a jittering operation\n");
             isbeg = false;
         }
@@ -1007,7 +1005,7 @@ void BreakOneRamp(ParabolicRamp::ParabolicRampND ramp,std::list<ParabolicRamp::P
         ParabolicRamp::Vector q0,v0,q1,v1;
         tend = vswitchtimes[i];
         // Discard ramps that have tiny time durations
-        if(tend-tbeg>g_fEpsilonLinear) {
+        if(tend-tbeg>ParabolicRamp::EpsilonT) {
             ramp.Evaluate(tbeg,q0);
             ramp.Derivative(tbeg,v0);
             ramp.Evaluate(tend,q1);
@@ -1021,10 +1019,6 @@ void BreakOneRamp(ParabolicRamp::ParabolicRampND ramp,std::list<ParabolicRamp::P
     }
 }
 
-/** Break ramps list into unitary ramps list
-    \param ramps input ramp
-    \param resramps result ramp
- */
 void BreakIntoUnitaryRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps){
     std::list<ParabolicRamp::ParabolicRampND> tmpramps,resramps;
     FOREACHC(itramp,ramps){
