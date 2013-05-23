@@ -102,12 +102,13 @@ public:
 
 
         //Writing the incoming traj
-        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        ofstream f(filename.c_str());
-        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        ptraj->serialize(f);
-
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+            RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+            ofstream f(filename.c_str());
+            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ptraj->serialize(f);
+        }
 
         RobotBase::RobotStateSaverPtr statesaver;
         if( !!_probot ) {
@@ -444,26 +445,27 @@ public:
     }
 
 
-    inline bool SolveMinTimeWithConstraints(const ParabolicRamp::Vector& x0,const ParabolicRamp::Vector& dx0,const ParabolicRamp::Vector& x1,const ParabolicRamp::Vector& dx1, dReal curtime, ParabolicRamp::RampFeasibilityChecker& check, bool docheck, std::list<ParabolicRamp::ParabolicRampND>& rampsout)
-    {
-        __tempramps1d.resize(0);
-        dReal mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, __tempramps1d, _parameters->_multidofinterp);
-        if(mintime < 0 || mintime > curtime ) {
-            return false;
-        }
-        rampsout.clear();
-        CombineRamps(__tempramps1d,rampsout);
-        bool feas=true;
-        if(docheck) {
-            FOREACH(itramp, rampsout) {
-                if(!check.Check(*itramp)) {
-                    feas=false;
-                    break;
-                }
-            }
-        }
-        return feas;
-    }
+    // inline bool SolveMinTimeWithConstraints(const ParabolicRamp::Vector& x0,const ParabolicRamp::Vector& dx0,const ParabolicRamp::Vector& x1,const ParabolicRamp::Vector& dx1, dReal curtime, ParabolicRamp::RampFeasibilityChecker& check, bool docheck, std::list<ParabolicRamp::ParabolicRampND>& rampsout)
+    // {
+    //     __tempramps1d.resize(0);
+    //     dReal mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, __tempramps1d, _parameters->_multidofinterp);
+    //     if(mintime < 0 || mintime > curtime ) {
+    //         return false;
+    //     }
+    //     rampsout.clear();
+    //     CombineRamps(__tempramps1d,rampsout);
+    //     bool feas=true;
+    //     if(docheck) {
+    //         FOREACH(itramp, rampsout) {
+    //             if(!check.Check(*itramp)) {
+    //                 feas=false;
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     return feas;
+    // }
+
 
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
         bool savebUsePerturbation = _bUsePerturbation;
@@ -475,15 +477,12 @@ public:
         }
         else if( !x.empty() ) {
             for(size_t i=0; i+1<x.size(); i++) {
-                ParabolicRamp::ParabolicRampND newramp;
-                bool cansetmilestone = mergewaypoints::ComputeStraightRamp(newramp,x[i],x[i+1],_parameters,check);
-                BOOST_ASSERT(cansetmilestone);
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-                tmpramps0.resize(0);
-                tmpramps0.push_back(newramp);
-                mergewaypoints::BreakIntoUnitaryRamps(tmpramps0);
+                bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check);
+                BOOST_ASSERT(cansetmilestone);
                 if(_bCheckControllerTimeStep) {
-                    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(newramp.endTime,_parameters->_fStepLength*2)/newramp.endTime,false,_parameters);
+                    dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
+                    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,_parameters->_fStepLength*2)/tmpduration,false,_parameters);
                     BOOST_ASSERT(canscale);
                     ramps.splice(ramps.end(),tmpramps1);
                 }
@@ -592,7 +591,7 @@ public:
 
             // Check collision at this stage only if we don't run mergewaypoints afterwards
             bool docheck = _parameters->minswitchtime == 0;
-            bool res=SolveMinTimeWithConstraints(x0,dx0,x1,dx1,t2-t1, check, docheck, intermediate);
+            bool res = mergewaypoints::ComputeQuadraticRampsWithConstraints(intermediate,x0,dx0,x1,dx1,t2-t1, _parameters, check, docheck);
 
             if(!res) {
                 RAVELOG_VERBOSE("... Could not SolveMinTime\n");

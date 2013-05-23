@@ -17,6 +17,7 @@
 #include <openrave/planningutils.h>
 #include "mergewaypoints.h"
 
+
 #define INF 1e30
 #define TINY g_fEpsilonLinear
 
@@ -672,60 +673,77 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
     return false;
 }
 
-// Break ramps into unitary ramps before checking each unitary ramp
-// This is necessary because of the strange behavior of check (probably caused by sampling along parabolic segments)
-bool checkunitary(const ParabolicRamp::ParabolicRampND& rampnd, ParabolicRamp::RampFeasibilityChecker& check){
-    std::list<ParabolicRamp::ParabolicRampND> tmpramps;
-    tmpramps.push_back(rampnd);
-    BreakIntoUnitaryRamps(tmpramps);
-    FOREACHC(itramp, tmpramps) {
-        if(!check.Check(*itramp)) {
-            return false;
-        }
-    }
-    return true;
-}
+// // Break ramps into unitary ramps before checking each unitary ramp
+// // This is necessary because of the strange behavior of check (probably caused by sampling along parabolic segments)
+// bool checkunitary(const ParabolicRamp::ParabolicRampND& rampnd, ParabolicRamp::RampFeasibilityChecker& check){
+//     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
+//     tmpramps.push_back(rampnd);
+//     BreakIntoUnitaryRamps(tmpramps);
+//     FOREACHC(itramp, tmpramps) {
+//         if(!check.Check(*itramp)) {
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
-bool ComputeStraightRamp(ParabolicRamp::ParabolicRampND& newramp,const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params,ParabolicRamp::RampFeasibilityChecker& check){
+
+bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check){
+    // retime linear segments so that they satisfy the minswitch time condition the _fStepLength condition, and the dynamics condition (e.g. torque limits)
+    // note that the collision condition should be satisfied before entering this function
     ParabolicRamp::Vector zero(x0.size(),0.0);
+    ParabolicRamp::ParabolicRampND newramp;
+    std::list<ParabolicRamp::ParabolicRampND> tmpramps;
     newramp.x0 = x0;
     newramp.x1 = x1;
     newramp.dx0 = zero;
     newramp.dx1 = zero;
-    if(params->minswitchtime==0) {
-        bool res=newramp.SolveMinTimeLinear(params->_vConfigAccelerationLimit, params->_vConfigVelocityLimit);
-        return res && newramp.IsValid();
-    }
-    else {
-        // retime linear segments so that they satisfy the minswitch time condition the _fStepLength condition, and the dynamics condition (e.g. torque limits)
-        // note that the collision condition should be satisfied before entering this function
-        dReal hi = 1;
-        dReal lo = 0;
-        dReal coef = hi;
-        ParabolicRamp::ParabolicRampND newramp2 = newramp;
-        while(hi-lo>0.01) {
-            std::vector<dReal> amax;
-            size_t n = params->_vConfigAccelerationLimit.size();
-            amax.resize(n);
-            for(size_t j=0; j<n; j++) {
-                amax[j]=params->_vConfigAccelerationLimit[j]*coef;
+    dReal hi = 1;
+    dReal lo = 0;
+    dReal coef = hi;
+    resramps.resize(0);
+    while(hi-lo>0.01) {
+        std::vector<dReal> amax;
+        size_t n = params->_vConfigAccelerationLimit.size();
+        amax.resize(n);
+        for(size_t j=0; j<n; j++) {
+            amax[j]=params->_vConfigAccelerationLimit[j]*coef;
+        }
+        bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
+        if(!res) {
+            hi = coef;
+        }
+        else {
+            tmpramps.resize(0);
+            tmpramps.push_back(newramp);
+            BreakIntoUnitaryRamps(tmpramps);
+            if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check))) {
+                hi = coef;
             }
-            bool res=newramp2.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
-            if(res && DetermineMinswitchtime(newramp2)>=params->minswitchtime && CountUnitaryRamps(newramp2)<=2 && checkunitary(newramp2,check)) {
-                newramp = newramp2;
+            else{
+                lo = coef;
+                resramps = tmpramps;
                 if(coef == hi) {
                     break;
                 }
-                lo = coef;
             }
-            else{
-                hi = coef;
-            }
-            coef = (hi+lo)/2;
         }
-        bool resfinal = newramp.IsValid() && DetermineMinswitchtime(newramp) >= params->minswitchtime && CountUnitaryRamps(newramp)<=2 && checkunitary(newramp,check);
-        return resfinal;
+        coef = (hi+lo)/2;
     }
+    return DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check);
+}
+
+
+bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal curtime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
+    std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tmpramps1d;
+    dReal mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, params->_vConfigAccelerationLimit, params->_vConfigVelocityLimit, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
+    if(mintime < 0 || mintime > curtime ) {
+        return false;
+    }
+    resramps.resize(0);
+    CombineRamps(tmpramps1d,resramps);
+    BreakIntoUnitaryRamps(resramps);
+    return (!docheck) || CheckRamps(resramps,check);
 }
 
 
@@ -779,16 +797,14 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         }
     }
     // Now make straight ramps with good time durations out of these two ramps
-    ParabolicRamp::ParabolicRampND newramp;
-    bool res = ComputeStraightRamp(newramp,itramp0->x0,itramp1->x1,params,check);
+    std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
+    bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
     if(!res) {
         RAVELOG_DEBUG("Could not make straight ramps out of the two ramps\n");
         return false;
     }
-    std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-    tmpramps0.push_back(newramp);
-    BreakIntoUnitaryRamps(tmpramps0);
-    bool canscale = ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(newramp.endTime,params->_fStepLength*2)/newramp.endTime,false,params);
+    dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
+    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
     if(!canscale) {
         RAVELOG_DEBUG("Could not make straight ramps out of the two ramps\n");
         return false;
