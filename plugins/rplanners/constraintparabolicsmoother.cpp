@@ -286,81 +286,92 @@ public:
             }
 
             // Log before shortcutting
-            RAVELOG_DEBUG("Ramps before shortcutting\n");
+            //RAVELOG_DEBUG("Ramps before shortcutting\n");
             mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
             dReal totaltime = mergewaypoints::ComputeRampsDuration(ramps);
             RAVELOG_DEBUG_FORMAT("initial path size=%d, duration=%f, pointtolerance=%f", path.size()%totaltime%_parameters->_pointtolerance);
-
-
-            // Start shortcutting
-            RAVELOG_DEBUG("Start shortcutting\n");
-            _progress._iteration=0;
             int numshortcuts=0;
-            dReal besttime = 1e10;
-            std::list<ParabolicRamp::ParabolicRampND> bestramps,initramps;
-            initramps = ramps;
-            for(int rep=0; rep<_parameters->nshortcutcycles; rep++) {
-                ramps = initramps;
-                RAVELOG_DEBUG_FORMAT("Start shortcut cycle %d\n",rep);
-                numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
+            if( totaltime > _parameters->_fStepLength ) {
+
+                // Start shortcutting
+                RAVELOG_DEBUG("Start shortcutting\n");
+                _progress._iteration=0;
+                dReal besttime = 1e10;
+                std::list<ParabolicRamp::ParabolicRampND> bestramps,initramps;
+                initramps = ramps;
+                for(int rep=0; rep<_parameters->nshortcutcycles; rep++) {
+                    ramps = initramps;
+                    RAVELOG_DEBUG_FORMAT("Start shortcut cycle %d\n",rep);
+                    numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
+                    totaltime = mergewaypoints::ComputeRampsDuration(ramps);
+                    if(totaltime < besttime) {
+                        bestramps = ramps;
+                        besttime = totaltime;
+                    }
+                }
+                ramps = bestramps;
+
+                RAVELOG_DEBUG("End shortcutting\n");
+                if( numshortcuts < 0 ) {
+                    // interrupted
+                    return PS_Interrupted;
+                }
+
+
+                // Log after shortcutting
+                RAVELOG_DEBUG("Ramps after shortcutting\n");
+                mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
                 totaltime = mergewaypoints::ComputeRampsDuration(ramps);
-                if(totaltime < besttime) {
-                    bestramps = ramps;
-                    besttime = totaltime;
+
+
+
+                //////////////////////////////////////////////////////////////////////////
+                //////////////////////  Further merge if possible ////////////////////////
+                //////////////////////////////////////////////////////////////////////////
+
+                bool docheck = true;
+                dReal upperbound = totaltime * 1.05;
+                std::list<ParabolicRamp::ParabolicRampND> resramps;
+                bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                if(resmerge) {
+                    RAVELOG_DEBUG("Great, could further merge ramps!!\n");
+                    size_t nbrampsbefore = mergewaypoints::CountUnitaryRamps(ramps);
+                    size_t nbrampsafter = mergewaypoints::CountUnitaryRamps(resramps);
+                    dReal qualitybefore = mergewaypoints::ComputeRampQuality(ramps);
+                    dReal qualityafter = mergewaypoints::ComputeRampQuality(resramps);
+                    dReal totaltime2 = mergewaypoints::ComputeRampsDuration(resramps);
+                    RAVELOG_DEBUG("Nb ramps %d --> %d\n",nbrampsbefore,nbrampsafter);
+                    RAVELOG_DEBUG("Quality %f --> %f\n",qualitybefore,qualityafter);
+                    RAVELOG_DEBUG("Duration %f --> %f\n",totaltime,totaltime2);
+                    totaltime = totaltime2;
+                    ramps.swap(resramps);
+                    mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+
+                }
+                else{
+                    RAVELOG_DEBUG("Could not further merge ramps\n");
                 }
             }
-            ramps = bestramps;
-
-            RAVELOG_DEBUG("End shortcutting\n");
-            if( numshortcuts < 0 ) {
-                // interrupted
-                return PS_Interrupted;
+            else {
+                RAVELOG_DEBUG_FORMAT("ramps are so close (%fs), so no need to shortcut", totaltime);
             }
-
-
-            // Log after shortcutting
-            RAVELOG_DEBUG("Ramps after shortcutting\n");
-            mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
-            totaltime = mergewaypoints::ComputeRampsDuration(ramps);
-
-
-
-            //////////////////////////////////////////////////////////////////////////
-            //////////////////////  Further merge if possible ////////////////////////
-            //////////////////////////////////////////////////////////////////////////
-
-            bool docheck = true;
-            dReal upperbound = totaltime * 1.05;
-            std::list<ParabolicRamp::ParabolicRampND> resramps;
-            bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
-            if(resmerge) {
-                RAVELOG_DEBUG("Great, could further merge ramps!!\n");
-                size_t nbrampsbefore = mergewaypoints::CountUnitaryRamps(ramps);
-                size_t nbrampsafter = mergewaypoints::CountUnitaryRamps(resramps);
-                dReal qualitybefore = mergewaypoints::ComputeRampQuality(ramps);
-                dReal qualityafter = mergewaypoints::ComputeRampQuality(resramps);
-                dReal totaltime2 = mergewaypoints::ComputeRampsDuration(resramps);
-                RAVELOG_DEBUG("Nb ramps %d --> %d\n",nbrampsbefore,nbrampsafter);
-                RAVELOG_DEBUG("Quality %f --> %f\n",qualitybefore,qualityafter);
-                RAVELOG_DEBUG("Duration %f --> %f\n",totaltime,totaltime2);
-                totaltime = totaltime2;
-                ramps.swap(resramps);
-                mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
-
-            }
-            else{
-                RAVELOG_DEBUG("Could not further merge ramps\n");
-            }
-
 
             ///////////////////////////////////////////////////////////////////////////
             ////////////////// Convert back to Rave Trajectory ////////////////////////
             ///////////////////////////////////////////////////////////////////////////
-
-            BOOST_ASSERT( ramps.size() > 0 );
             ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
             int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
+
+            if( ramps.size() == 0 ) {
+                // most likely a trajectory with the same start and end points were given, so return a similar trajectory
+                // get the first point
+                vtrajpoints.resize(posspec.GetDOF());
+                ptraj->GetWaypoint(0,vtrajpoints,posspec);
+                ptraj->Init(newspec);
+                ptraj->Insert(0, vtrajpoints, posspec);
+                return PS_HasSolution;
+            }
 
             int timeoffset=-1;
             FOREACH(itgroup,newspec._vgroups) {
