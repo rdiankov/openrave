@@ -2028,7 +2028,7 @@ int DynamicsCollisionConstraint::_CheckState()
     if( !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
             _PrintOnFailure("pre usercheckfn failed");
-            return 0;
+            return 0x81000000;
         }
     }
     // check dynamics
@@ -2061,7 +2061,7 @@ int DynamicsCollisionConstraint::_CheckState()
                 dReal fmaxtorque = it->second;
                 if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
                     _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
-                    return 0;
+                    return 0xc0000000;
                 }
             }
         }
@@ -2069,17 +2069,17 @@ int DynamicsCollisionConstraint::_CheckState()
     FOREACHC(itbody, _listCheckBodies) {
         if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
             _PrintOnFailure(std::string("collision failed ")+_report->__str__());
-            return 0;
+            return 0xa0000000;
         }
         if( (*itbody)->CheckSelfCollision(_report) ) {
             _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
-            return 0;
+            return 0x90000000;
         }
     }
     if( !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
             _PrintOnFailure("post usercheckfn failed");
-            return 0;
+            return 0x82000000;
         }
     }
     return 1;

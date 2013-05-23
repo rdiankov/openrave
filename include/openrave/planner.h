@@ -199,7 +199,7 @@ private:
             \param timeelapsed is the estimated time to go from q0 to q1 with the current constraints. Set to 0 if non-applicable.
             \param interval Specifies whether to check the end points of the interval for constraints
             \param configurations Optional argument that will hold the intermediate configuraitons checked between q0 and q1 configurations. The appended configurations will be all valid and in free space. They are appended after the items already stored on the list.
-            \return if <= 0 means constraint was violated and some error message occurred. if > 0 means constraint is good
+            \return if <= 0 means constraint was violated and some error message occurred. if > 0 means constraint is good. If 0x4000000 is set, then a time-related constraint was violated. If 0x2000000 is set, then an environment collision-related cosntraint was violated. If 0x1000000 is set, then a self-collision-related cosntraint was violated.
          */
         typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, PlannerBase::ConfigurationVelocityListPtr)> CheckPathVelocityConstraintFn;
         CheckPathVelocityConstraintFn _checkpathvelocityconstraintsfn;

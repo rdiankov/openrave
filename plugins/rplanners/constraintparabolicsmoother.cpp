@@ -102,11 +102,11 @@ public:
 
 
         //Writing the incoming traj
-        // string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-        // RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
-        // ofstream f(filename.c_str());
-        // f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        // ptraj->serialize(f);
+        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+        RAVELOG_WARN(str(boost::format("Writing original traj to %s")%filename));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        ptraj->serialize(f);
 
 
         RobotBase::RobotStateSaverPtr statesaver;
@@ -139,6 +139,8 @@ public:
 
             RAVELOG_DEBUG_FORMAT("Minswitchtime = %f\n",_parameters->minswitchtime);
             RAVELOG_DEBUG_FORMAT("Controller timestep = %f\n",_parameters->_fStepLength);
+
+
 
             /////////////////////////////////////////////////////////////////////////
             /////////////////////////  Convert to ramps /////////////////////////////
@@ -258,23 +260,24 @@ public:
             mergewaypoints::BreakIntoUnitaryRamps(ramps);
 
 
-            RAVELOG_DEBUG("Sanity check before starting shortcutting...\n");
+            // Sanity check before any shortcutting
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                RAVELOG_VERBOSE("Sanity check before starting shortcutting...\n");
+                bool saveUsePerturbation = _bUsePerturbation;
+                _bUsePerturbation = false;
+                FOREACHC(itramp,ramps){
+                    if(!checker.Check(*itramp)) {
 
-            // Check for validity before any shortcutting
-            bool saveUsePerturbation = _bUsePerturbation;
-            _bUsePerturbation = false;
-            FOREACHC(itramp,ramps){
-                if(!checker.Check(*itramp)) {
-
-                    string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                    RAVELOG_WARN(str(boost::format("Original traj invalid, writing to %s")%filename));
-                    ofstream f(filename.c_str());
-                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ptraj->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
+                        string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+                        RAVELOG_WARN(str(boost::format("Original traj invalid, writing to %s")%filename));
+                        ofstream f(filename.c_str());
+                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ptraj->serialize(f);
+                        throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
+                    }
                 }
+                _bUsePerturbation = saveUsePerturbation;
             }
-            _bUsePerturbation = saveUsePerturbation;
 
             // Reset all ramps
             FOREACH(itramp, ramps) {
@@ -463,7 +466,6 @@ public:
     }
 
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
-        // NB: The old SetMilestone(ramps,x) is equivalent to SetMilestone(ramps,x,0)
         bool savebUsePerturbation = _bUsePerturbation;
         _bUsePerturbation = false;
         ramps.clear();
@@ -782,7 +784,11 @@ public:
         }
         else {
             //_parameters->_setstatefn(a);
-            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart);
+            if( pathreturn <= 0 ) {
+                if( pathreturn & 0x40000000 ) {
+                    // time-related
+                }
                 return false;
             }
         }

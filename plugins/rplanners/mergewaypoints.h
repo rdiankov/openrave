@@ -37,7 +37,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origra
     \param precision precision in the dichotomy search for the best timescaling coef
     \param iters max number of random iterations
  */
-bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
+bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck);
 
 /** Same as IterativeMergeRamps but run a straightforward line search on the trajectory duration instead of dichotomy search
 **/
