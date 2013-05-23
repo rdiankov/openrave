@@ -947,7 +947,7 @@ void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>&ramps,Constraint
                 dReal T = itramp->endTime;
                 dReal step = params->_fStepLength;
                 dReal ratio = T/step;
-                dReal ceilratio = ceil(ratio);
+                dReal ceilratio = RaveCeil(ratio);
                 RAVELOG_WARN_FORMAT("Ratio= %d, CeilRatio= %d\n",ratio%ceilratio);
             }
         }

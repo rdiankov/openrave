@@ -517,11 +517,9 @@ public:
     {
         int shortcuts = 0;
         std::list<ParabolicRamp::ParabolicRampND> saveramps;
-        std::list<dReal> t1list,t2list;
-        t1list.resize(0);
-        t2list.resize(0);
-
+        //std::map<int, std::list<int> > mapTestedTimeRanges; // (starttime, list of end times) pairs where the end times are always > than starttime
         std::vector<dReal> rampStartTime; rampStartTime.resize(ramps.size());
+        std::list<dReal> t1list, t2list;
         dReal currenttrajduration=0;
         int i = 0;
         FOREACH(itramp, ramps) {
@@ -532,7 +530,7 @@ public:
         std::list<ParabolicRamp::ParabolicRampND> intermediate;
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
 
-        dReal contrtime = _parameters->_fStepLength;
+        dReal fStepLength = _parameters->_fStepLength;
         dReal shortcutinnovationthreshold = 0.1;
 
         // Iterative shortcutting
@@ -545,8 +543,8 @@ public:
             }
             else {
                 // round t1 and t2 to the closest multiple of fStepLength
-                t1 = floor(t1/contrtime+0.5)*contrtime;
-                t2 = floor(t2/contrtime+0.5)*contrtime;
+                t1 = floor(t1/fStepLength+0.5)*fStepLength;
+                t2 = floor(t2/fStepLength+0.5)*fStepLength;
                 // check whether the shortcut is close to a previously attempted shortcut
                 if(hasbeenattempted(t1,t2,t1list,t2list,shortcutinnovationthreshold)) {
                     RAVELOG_VERBOSE_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
