@@ -352,8 +352,7 @@ public:
                 }
             }
             else {
-                //RAVELOG_DEBUG_FORMAT(
-                throw OPENRAVE_EXCEPTION_FORMAT("ramps are so close (%fs), so no need to shortcut", totaltime, ORE_Assert);
+                RAVELOG_DEBUG_FORMAT("ramps are so close (%fs), so no need to shortcut", totaltime);
             }
 
             ///////////////////////////////////////////////////////////////////////////
