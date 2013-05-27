@@ -85,7 +85,7 @@ public:
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
         }
 
-        _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
+        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         return true;
     }
 

@@ -101,7 +101,7 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
     _params->_setstatefn(_values);
 }
 
-PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother)
+PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
@@ -119,6 +119,7 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_nmaxiterations");
     _vXMLParameters.push_back("_fsteplength");
     _vXMLParameters.push_back("_postprocessing");
+    _vXMLParameters.push_back("_nrandomgeneratorseed");
 }
 
 PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
@@ -142,6 +143,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _getstatefn = r._getstatefn;
     _diffstatefn = r._diffstatefn;
     _neighstatefn = r._neighstatefn;
+    _listInternalSamplers = r._listInternalSamplers;
 
     vinitialconfig.resize(0);
     vgoalconfig.resize(0);
@@ -156,6 +158,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _sExtraParameters.resize(0);
     _nMaxIterations = 0;
     _fStepLength = 0.04f;
+    _nRandomGeneratorSeed = 0;
     _plannerparametersdepth = 0;
 
     // transfer data
@@ -212,6 +215,7 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
 
     O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
     O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
+    O << "<_nrandomgeneratorseed>" << _nRandomGeneratorSeed << "</_nrandomgeneratorseed>" << endl;
     O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
     if( !(options & 1) ) {
         O << _sExtraParameters << endl;
@@ -266,7 +270,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    static const boost::array<std::string,10> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_fsteplength","_postprocessing"}};
+    static const boost::array<std::string,11> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_fsteplength","_postprocessing", "_nrandomgeneratorseed"}};
     if( find(names.begin(),names.end(),name) != names.end() ) {
         __processingtag = name;
         return PE_Support;
@@ -324,6 +328,9 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         else if( name == "_fsteplength") {
             _ss >> _fStepLength;
         }
+        else if( name == "_nrandomgeneratorseed") {
+            _ss >> _nRandomGeneratorSeed;
+        }
         if( name !=__processingtag ) {
             RAVELOG_WARN(str(boost::format("invalid tag %s!=%s\n")%name%__processingtag));
         }
@@ -368,6 +375,8 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     using namespace planningutils;
     _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
+    _listInternalSamplers.clear();
+    _listInternalSamplers.push_back(pconfigsampler);
     boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
@@ -590,6 +599,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
         vgroupoffsets[igroup].second = igroup;
         nMaxDOFForGroup = max(nMaxDOFForGroup,spec._vgroups[igroup].dof);
     }
+
+    _listInternalSamplers.clear();
+    
     std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
     for(size_t igroup = 0; igroup < spec._vgroups.size(); ++igroup) {
         const ConfigurationSpecification::Group& g = spec._vgroups[igroup];
@@ -615,6 +627,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             distmetricfns[isavegroup].second = g.dof;
 
             SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(penv,str(boost::format("bodyconfiguration %s")%pbody->GetName()));
+            _listInternalSamplers.push_back(pconfigsampler);
             {
                 ss.clear(); ss.str(""); ss << "SetDOFs ";
                 FOREACHC(itindex,dofindices) {

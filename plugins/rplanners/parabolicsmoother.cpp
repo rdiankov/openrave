@@ -55,7 +55,7 @@ public:
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
-        _uniformsampler->SetSeed(_parameters->_randomgeneratorseed);
+        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         //_uniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
         return !!_uniformsampler;
     }
