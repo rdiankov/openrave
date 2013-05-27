@@ -687,8 +687,6 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
 
 
 bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check){
-    // retime linear segments so that they satisfy the minswitch time condition the _fStepLength condition, and the dynamics condition (e.g. torque limits)
-    // note that the collision condition should be satisfied before entering this function
     ParabolicRamp::Vector zero(x0.size(),0.0);
     ParabolicRamp::ParabolicRampND newramp;
     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
@@ -696,6 +694,8 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.x1 = x1;
     newramp.dx0 = zero;
     newramp.dx1 = zero;
+    // Here iteratively timescales up until the time-related constraints are satisfied
+    // Note that this can be improved if one can check time-related constraints separately
     dReal hi = 1;
     dReal lo = 0;
     dReal coef = hi;
@@ -741,7 +741,16 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     resramps.resize(0);
     CombineRamps(tmpramps1d,resramps);
     BreakIntoUnitaryRamps(resramps);
+    // Here iteratively timescales up until the time-related constraints are met
+    // Note that this can be improved if one can check time-related constraints separately
+    dReal hi = curtime;
+    dReal lo = 1;
+    dReal coef = lo;
+    while(false) {
+        hi = coef;
+    }
     return (!docheck) || CheckRamps(resramps,check);
+
 }
 
 
