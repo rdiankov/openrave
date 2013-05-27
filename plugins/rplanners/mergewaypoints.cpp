@@ -728,7 +728,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         coef = (hi+lo)/2;
     }
-    return DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check);
+    return resramps.size() > 0 && DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check);
 }
 
 
@@ -862,10 +862,8 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     }
 }
 
-
-
-
-dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd){
+dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd)
+{
     vector<dReal> vswitchtimes;
     vswitchtimes.resize(0);
     vswitchtimes.push_back(rampnd.endTime);
@@ -895,7 +893,11 @@ dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd){
     return res;
 }
 
-dReal DetermineMinswitchtime(const std::list<ParabolicRamp::ParabolicRampND>&ramps){
+dReal DetermineMinswitchtime(const std::list<ParabolicRamp::ParabolicRampND>&ramps)
+{
+    if( ramps.size() == 0 ) {
+        return 0;
+    }
     dReal mintime = 1e10;
     FOREACHC(itramp,ramps) {
         mintime=min (DetermineMinswitchtime(*itramp),mintime);
@@ -903,7 +905,8 @@ dReal DetermineMinswitchtime(const std::list<ParabolicRamp::ParabolicRampND>&ram
     return mintime;
 }
 
-size_t CountUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps){
+size_t CountUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps)
+{
     size_t nbunitramps = 0;
     FOREACHC(itramp,ramps){
         nbunitramps += CountUnitaryRamps(*itramp);
@@ -911,7 +914,8 @@ size_t CountUnitaryRamps(const std::list<ParabolicRamp::ParabolicRampND>& ramps)
     return nbunitramps;
 }
 
-size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd){
+size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd)
+{
     vector<dReal> vswitchtimes;
     vswitchtimes.resize(0);
     vswitchtimes.push_back(rampnd.endTime);
@@ -972,7 +976,7 @@ void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>&ramps,Constraint
                 dReal T = itramp->endTime;
                 dReal step = params->_fStepLength;
                 dReal ratio = T/step;
-                dReal ceilratio = ceil(ratio);
+                dReal ceilratio = RaveCeil(ratio);
                 RAVELOG_WARN_FORMAT("Ratio= %d, CeilRatio= %d\n",ratio%ceilratio);
             }
         }
