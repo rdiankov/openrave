@@ -110,6 +110,8 @@ Planning
 
 * Many fixes for **multidofinterp=2** setting in the parabolic path smoother.
 
+* Added _nRandomGeneratorSeed to :class:`.Planner.PlannerParameters` in order to control all random seeds in the process.
+
 Python
 ------
 

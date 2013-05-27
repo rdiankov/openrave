@@ -44,8 +44,15 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _goalindex = -1;
         _startindex = -1;
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        if( !_uniformsampler ) {
+            _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        }
         _robot = pbase;
+
+        _uniformsampler->SetSeed(params->_nRandomGeneratorSeed);
+        FOREACH(it, params->_listInternalSamplers) {
+            (*it)->SetSeed(params->_nRandomGeneratorSeed);
+        }
 
         PlannerParameters::StateSaver savestate(params);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -88,17 +95,14 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         typename list<Node*>::iterator startNode, endNode;
         ConfigurationVelocityListPtr listconfigs(new ConfigurationVelocityList());
-        SpaceSamplerBasePtr psampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        std::vector<uint32_t> vindexsamples;
         int nrejected = 0;
         int i = numiterations;
         while(i > 0 && nrejected < (int)path.size()+4 ) {
             --i;
-
+            
             // pick a random node on the path, and a random jump ahead
-            psampler->SampleSequence(vindexsamples,2);
-            int endIndex = 2+(vindexsamples.at(0)%((int)path.size()-2));
-            int startIndex = vindexsamples.at(1)%(endIndex-1);
+            int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()-2));
+            int startIndex = _uniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
 
             startNode = path.begin();
             advance(startNode, startIndex);
@@ -289,16 +293,13 @@ Some python code to display data::\n\
             }
 
             _sampleConfig.resize(0);
-            std::vector<dReal> sample(1);
-            _uniformsampler->SampleSequence(sample,1);
-            if( (bSampleGoal || sample[0] < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
+            if( (bSampleGoal || _uniformsampler->SampleSequenceOneReal() < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
                 bSampleGoal = false;
                 // sample goal as early as possible
-                std::vector<uint32_t> sampleindex(1);
                 uint32_t bestgoalindex = -1;
                 for(size_t testiter = 0; testiter < _vecGoals.size()*3; ++testiter) {
-                    _uniformsampler->SampleSequence(sampleindex,1);
-                    uint32_t goalindex = sampleindex[0]%_vecGoals.size();
+                    uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
+                    uint32_t goalindex = sampleindex%_vecGoals.size();
                     if( _vecGoals.at(goalindex).size() == 0 ) {
                         continue; // dummy
                     }

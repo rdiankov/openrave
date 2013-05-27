@@ -9,8 +9,7 @@ import shutil
 if __name__=='__main__':
     srcdir = sys.argv[1]
     destdir = sys.argv[2]
-
-    removefiles = '.git docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.7.1.tgz'.split()
+    
     def ignorefiles(src, names):
         if src == srcdir:
             return '.git docs release sandbox test sympy msvc_boost.tgz msvc_collada.tgz msvc_libxml2.tgz msvc_ode.tgz msvc_soqt.tgz msvc_include sympy_0.7.1.tgz'.split()

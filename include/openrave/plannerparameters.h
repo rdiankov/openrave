@@ -432,7 +432,7 @@ typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), _randomgeneratorseed(0), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), _bProcessing(false) {
         _fStepLength = 0; // reset to 0 since it is being used
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
@@ -440,7 +440,6 @@ public:
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("multidofinterp");
-        _vXMLParameters.push_back("randomgeneratorseed");
     }
 
     std::string _interpolation;
@@ -448,8 +447,6 @@ public:
     bool _hastimestamps, _hasvelocities;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
-
-    uint32_t _randomgeneratorseed; ///< random generator seed
 
 protected:
     bool _bProcessing;
@@ -464,7 +461,6 @@ protected:
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
-        O << "<randomgeneratorseed>" << _randomgeneratorseed << "</randomgeneratorseed>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -483,7 +479,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp" || name=="randomgeneratorseed";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -507,9 +503,6 @@ protected:
             }
             else if( name == "multidofinterp" ) {
                 _ss >> _multidofinterp;
-            }
-            else if( name == "randomgeneratorseed" ) {
-                _ss >> _randomgeneratorseed;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));

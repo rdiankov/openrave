@@ -357,11 +357,22 @@ private:
         /// \brief Extra parameters data that does not fit within this planner parameters structure, but is still important not to lose all the information.
         std::string _sExtraParameters;
 
+        /// \brief Random generator seed for all the random numbers a planner needs.
+        ///
+        /// The same seed should produce the smae results!
+        uint32_t _nRandomGeneratorSeed;
+        
         /// \brief Return the degrees of freedom of the planning configuration space
         virtual int GetDOF() const {
             return _configurationspecification.GetDOF();
         }
 
+        /// \brief A list of samplers used in the callbacks of the planner parameter functions
+        ///
+        /// The list is useful when resetting the seeds for all the samplers
+        /// For example, when _samplefn is set and a SpaceSampler is used as the underlying number generator, then it should be added to this list.
+        std::list<SpaceSamplerBasePtr> _listInternalSamplers;
+        
 protected:
         inline boost::shared_ptr<PlannerBase::PlannerParameters> shared_parameters() {
             return boost::static_pointer_cast<PlannerBase::PlannerParameters>(shared_from_this());
@@ -385,7 +396,7 @@ protected:
         /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor
         std::vector<std::string> _vXMLParameters;
         //@}
-
+        
 private:
         /// prevent copy constructors since it gets complicated with virtual functions
         PlannerParameters(const PlannerParameters &r);

@@ -53,7 +53,9 @@ public:
             _parameters->_fStepLength = 0.04;
         }
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
-        //_puniformsampler->SetSeed(utils::GetMilliTime()); // use only for testing
+        if( !!_puniformsampler ) {
+            _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        }
         _linearretimer->InitPlan(RobotBasePtr(), _parameters);
         return !!_puniformsampler;
     }
