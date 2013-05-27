@@ -671,20 +671,6 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
     return false;
 }
 
-// // Break ramps into unitary ramps before checking each unitary ramp
-// // This is necessary because of the strange behavior of check (probably caused by sampling along parabolic segments)
-// bool checkunitary(const ParabolicRamp::ParabolicRampND& rampnd, ParabolicRamp::RampFeasibilityChecker& check){
-//     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
-//     tmpramps.push_back(rampnd);
-//     BreakIntoUnitaryRamps(tmpramps);
-//     FOREACHC(itramp, tmpramps) {
-//         if(!check.Check(*itramp)) {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
 
 bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check){
     ParabolicRamp::Vector zero(x0.size(),0.0);

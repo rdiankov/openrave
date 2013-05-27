@@ -65,6 +65,7 @@ public:
             _parameters->_nMaxIterations = 100;
         }
         _bUsePerturbation = true;
+        //_bUsePerturbation = false;
 //        if( !_distancechecker->InitEnvironment() ) {
 //            return false;
 //        }
