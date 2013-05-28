@@ -277,7 +277,10 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
     ittnext = ittprev;
     ++ittnext;
 
-    while(itrampprev != ramps.end() && itrampnext != ramps.end()) {
+    int dumbcounter = 0;
+
+    while(itrampprev != ramps.end() && itrampnext != ramps.end() && dumbcounter<1000) {
+        dumbcounter++;
         if(RaveFabs(itrampprev->endTime-*ittprev)>TINY || RaveFabs(itrampnext->endTime-*ittnext)>TINY) {
             // Avoid using an unmodified ramp to fix durations
             if (RaveFabs(itrampprev->endTime-*ittprev)<=TINY && !itrampprev->modified) {
@@ -316,6 +319,11 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
             --ittprev;
         }
     }
+
+    if(dumbcounter>=1000) {
+        return false;
+    }
+
     return true;
 }
 
