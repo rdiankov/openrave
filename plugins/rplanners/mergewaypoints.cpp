@@ -708,6 +708,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         if(iter==2) {
             coef = lo;
         }
+        cout << coef << "\n";
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);

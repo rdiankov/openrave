@@ -1079,6 +1079,14 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
 
 
 void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername){
+
+    int ran = RaveRandomInt()%10000;
+    string filename = str(boost::format("/var/www/.openrave/origtraj-%d.xml")%ran);
+    RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
+    ofstream f(filename.c_str());
+    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    traj->serialize(f);
+
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
@@ -1095,8 +1103,21 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
+
+    filename = str(boost::format("/var/www/.openrave/cut-%d.xml")%ran);
+    RAVELOG_DEBUG_FORMAT("Writing cut traj to %s", filename);
+    ofstream f3(filename.c_str());
+    f3 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    traj->serialize(f3);
+
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
+
+    filename = str(boost::format("/var/www/.openrave/extended-%d.xml")%ran);
+    RAVELOG_DEBUG_FORMAT("Writing extended traj to %s", filename);
+    ofstream f2(filename.c_str());
+    f2 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    traj->serialize(f2);
 }
 
 
