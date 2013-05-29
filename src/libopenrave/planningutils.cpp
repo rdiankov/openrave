@@ -186,7 +186,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
     FOREACH(it, parameters->_listInternalSamplers) {
         (*it)->SetSeed(parameters->_nRandomGeneratorSeed);
     }
-    
+
     // have to test with perturbations since very small changes in angles can produce collision inconsistencies
     std::vector<dReal> perturbations;
     if( perturbation > 0 ) {
@@ -1117,6 +1117,8 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     f3 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     traj->serialize(f3);
 
+    cout << plannername << "\n";
+
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 
@@ -1160,8 +1162,8 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         traj->GetWaypoint(0,vtargetvalues); // in target spec
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
-        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
         traj->GetWaypoint(waypointindex-1,vwaypointstart, newspec);
+        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
 
         vwaypointend.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvalues.begin(), robot->GetActiveConfigurationSpecification(), 1, traj->GetEnv(), true);
@@ -1178,6 +1180,9 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
     std::string newplannername = plannername;
+
+    cout <<  interpolation << "\n";
+
     if( newplannername.size() == 0 ) {
         if( interpolation == "linear" ) {
             newplannername = "lineartrajectoryretimer";
@@ -2367,17 +2372,25 @@ SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psample
 
 bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std::vector<dReal>& vCurSample, dReal fRadius)
 {
+    if( fRadius <= g_fEpsilonLinear ) {
+        vNewSample = vCurSample;
+        return true;
+    }
     _psampler->SampleSequence(vNewSample);
     size_t dof = vCurSample.size();
     BOOST_ASSERT(dof==vNewSample.size() && &vNewSample != &vCurSample);
     dReal fDist = _distmetricfn(vNewSample,vCurSample);
+    int iter = 0;
     while(fDist > fRadius) {
         for (size_t i = 0; i < dof; i++) {
             vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
         }
         fDist = _distmetricfn(vNewSample,vCurSample);
+        if( ++iter > 20 ) {
+            return false;
+        }
     }
-    for(int iter = 0; iter < 20; ++iter) {
+    for(iter = 0; iter < 20; ++iter) {
         for (size_t i = 0; i < dof; i++) {
             vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
         }
@@ -2389,20 +2402,6 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std
             break;
         }
     }
-
-    //        vNewSample.resize(lower.size());
-    //        for (size_t i = 0; i < dof; i++) {
-    //            if( sample[i] < lower[i] ) {
-    //                vNewSample[i] = lower[i];
-    //            }
-    //            else if( sample[i] > upper[i] ) {
-    //                vNewSample[i] = upper[i];
-    //            }
-    //            else {
-    //                vNewSample[i] = sample[i];
-    //            }
-    //        }
-
     return true;
 }
 
