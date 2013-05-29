@@ -191,14 +191,6 @@ public:
                 // Try first easy solution
                 bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker);
                 if(!res) {
-                    bool debug = true;
-                    if(debug ) {
-                        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                        RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
-                        ofstream f(filename.c_str());
-                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ptraj->serialize(f);
-                    }
                     RAVELOG_DEBUG("Shit: First or last two ramps could not be fixed, try something more general...\n");
                     res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
                 }
