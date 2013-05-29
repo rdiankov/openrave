@@ -177,7 +177,7 @@ public:
                     }
                 }
                 // Change timing of ramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
-                dReal upperbound = 10 * mergewaypoints::ComputeRampsDuration(ramps);
+                dReal upperbound = 2 * mergewaypoints::ComputeRampsDuration(ramps);
                 dReal stepsize = 0.1;
                 bool docheck = true;
                 // Disable usePerturbation for this particular stage
@@ -188,8 +188,18 @@ public:
                     itramp->modified = true;
                 }
                 mergewaypoints::PrintRamps(ramps,_parameters,false);
+                // Try first easy solution
                 bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker);
                 if(!res) {
+                    bool debug = true;
+                    if(debug ) {
+                        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+                        RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
+                        ofstream f(filename.c_str());
+                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ptraj->serialize(f);
+                    }
+                    RAVELOG_DEBUG("Shit: First or last two ramps could not be fixed, try something more general...\n");
                     res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
                 }
                 _bUsePerturbation = saveUsePerturbation;
@@ -545,7 +555,7 @@ public:
         std::list<ParabolicRamp::ParabolicRampND>::iterator itramp1, itramp2;
 
         dReal fStepLength = _parameters->_fStepLength;
-        dReal shortcutinnovationthreshold = 0.1;
+        dReal shortcutinnovationthreshold = 0;
 
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {

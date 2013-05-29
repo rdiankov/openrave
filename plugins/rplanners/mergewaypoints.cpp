@@ -676,7 +676,7 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
         bool res = IterativeMergeRampsFixedTime(ramps, resramps, params, checkcontrollertime, uniformsampler);
         res = res && (!docheck || CheckRamps(resramps,check));
         if(res) {
-            RAVELOG_DEBUG_FORMAT("Timescale coefficient: %f\n",testcoef);
+            RAVELOG_DEBUG_FORMAT("Timescale coefficient: %f succeeded\n",testcoef);
             return true;
         }
     }
@@ -692,13 +692,22 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.x1 = x1;
     newramp.dx0 = zero;
     newramp.dx1 = zero;
+
     // Here iteratively timescales up until the time-related constraints are satisfied
     // Note that this can be improved if one can check time-related constraints separately
     dReal hi = 1;
-    dReal lo = 0;
-    dReal coef = hi;
+    dReal lo = 1e-6;
+    dReal coef = 0;
+    int iter = 0;
     resramps.resize(0);
-    while(hi-lo>0.01) {
+    while(hi-lo>1e-2 && iter<1000) {
+        iter++;
+        if(iter==1) {
+            coef = hi;
+        }
+        if(iter==2) {
+            coef = lo;
+        }
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);
@@ -707,6 +716,10 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
         if(!res) {
+            if(coef==lo) {
+                RAVELOG_DEBUG("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
+                return false;
+            }
             hi = coef;
         }
         else {
@@ -714,6 +727,10 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             tmpramps.push_back(newramp);
             BreakIntoUnitaryRamps(tmpramps);
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check))) {
+                if(coef==lo) {
+                    RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
+                    return false;
+                }
                 hi = coef;
             }
             else{
@@ -783,8 +800,8 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
     itramp1++;
-    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
-        RAVELOG_DEBUG("First two ramps come from a jittering operation\n");
+    if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+        RAVELOG_DEBUG("First two ramps probably come from a jittering operation\n");
     }
     else{
         // Check whether the last two ramps come from a jittering operation
@@ -792,8 +809,8 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         itramp1--;
         itramp0 = itramp1;
         itramp0--;
-        if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
-            RAVELOG_DEBUG("Last two ramps come from a jittering operation\n");
+        if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+            RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
             isbeg = false;
         }
         else{
@@ -805,13 +822,13 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
     bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
     if(!res) {
-        RAVELOG_DEBUG("Could not make straight ramps out of the two ramps\n");
+        RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
         return false;
     }
     dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
     bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
     if(!canscale) {
-        RAVELOG_DEBUG("Could not make straight ramps out of the two ramps\n");
+        RAVELOG_WARN("Could not round up to controller time step\n");
         return false;
     }
     // Insert in the original trajectory
@@ -855,7 +872,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         return true;
     }
     else{
-        RAVELOG_DEBUG("Shit: First or last two ramps could not be fixed, try something more general...\n");
+        RAVELOG_WARN("Failed final test, this is very rare\n");
         return false;
     }
 }
