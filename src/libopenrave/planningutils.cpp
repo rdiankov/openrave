@@ -1181,8 +1181,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Insert(1,vwaypointend);
     std::string newplannername = plannername;
 
-    cout <<  interpolation << "\n";
-
     if( newplannername.size() == 0 ) {
         if( interpolation == "linear" ) {
             newplannername = "lineartrajectoryretimer";
