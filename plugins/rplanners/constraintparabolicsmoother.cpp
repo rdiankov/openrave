@@ -191,7 +191,7 @@ public:
                 // Try first easy solution
                 bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker);
                 if(!res) {
-                    RAVELOG_DEBUG("Shit: First or last two ramps could not be fixed, try something more general...\n");
+                    RAVELOG_DEBUG("First or last two ramps could not be fixed, try something more general...\n");
                     res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
                 }
                 _bUsePerturbation = saveUsePerturbation;

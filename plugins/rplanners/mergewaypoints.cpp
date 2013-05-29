@@ -708,7 +708,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         if(iter==2) {
             coef = lo;
         }
-        cout << coef << "\n";
+        //cout << coef << "\n";
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);
@@ -801,7 +801,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
     itramp1++;
-    if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1) && (!IsMultipleOfStepSize(itramp0->endTime,params->_fStepLength)) && (!IsMultipleOfStepSize(itramp1->endTime,params->_fStepLength))  ) {
         RAVELOG_DEBUG("First two ramps probably come from a jittering operation\n");
     }
     else{
@@ -810,7 +810,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         itramp1--;
         itramp0 = itramp1;
         itramp0--;
-        if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+        if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1) && (!IsMultipleOfStepSize(itramp0->endTime,params->_fStepLength)) && (!IsMultipleOfStepSize(itramp1->endTime,params->_fStepLength)) ) {
             RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
             isbeg = false;
         }

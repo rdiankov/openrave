@@ -757,6 +757,9 @@ class TestTrajectory(EnvironmentSetup):
             goal=array([-0.75,1,0,2,-1,-1.5,1])
             jitteredgoal = goal + 0.1*ones(len(goal))
             jitteredinit = 0.1*ones(len(goal))
+
+
+            
             origtraj=manipprob.MoveManipulator(goal=goal,outputtrajobj=True,execute=False)
 
             traj = RaveClone(origtraj, 0)

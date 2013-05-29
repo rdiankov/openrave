@@ -1117,8 +1117,6 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     f3 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     traj->serialize(f3);
 
-    cout << plannername << "\n";
-
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 
@@ -1179,6 +1177,8 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
+
+
     std::string newplannername = plannername;
 
     if( newplannername.size() == 0 ) {
@@ -1192,7 +1192,22 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             throw OPENRAVE_EXCEPTION_FORMAT("currently do not support retiming for %s interpolations",interpolation,ORE_InvalidArguments);
         }
     }
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername);
+
+    int ran = RaveRandomInt()%10000;
+    string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
+    RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
+    ofstream f(filename.c_str());
+    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    trajinitial->serialize(f);
+
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
+
+
+    filename = str(boost::format("/var/www/.openrave/afterretime-%d.xml")%ran);
+    RAVELOG_DEBUG_FORMAT("Writing after retime traj to %s", filename);
+    ofstream f2(filename.c_str());
+    f2 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    trajinitial->serialize(f2);
 
     // retiming is done, now merge the two trajectories
     size_t targetdof = vtargetvalues.size();
