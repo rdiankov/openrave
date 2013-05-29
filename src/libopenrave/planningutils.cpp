@@ -1076,6 +1076,31 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
+
+
+void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername){
+    if( traj->GetNumWaypoints()<1) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
+    }
+    if( waypointindex == 0 ) {
+        //Remove the first waypoint
+        traj->Remove(waypointindex,waypointindex+1);
+    }
+    else if( waypointindex == (int)traj->GetNumWaypoints() ) {
+        //Remove the last waypoint
+        traj->Remove(waypointindex-1,waypointindex);
+        //Decrese waypointindex by 1
+        waypointindex--;
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
+    }
+    // Run Insertwaypoint
+    InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
+}
+
+
+
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
@@ -1166,6 +1191,30 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     }
 }
 
+
+void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
+    if( traj->GetNumWaypoints()<1) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
+    }
+    if( waypointindex == 0 ) {
+        //Remove the first waypoint
+        traj->Remove(waypointindex,waypointindex+1);
+    }
+    else if( waypointindex == (int)traj->GetNumWaypoints() ) {
+        //Remove the last waypoint
+        traj->Remove(waypointindex,waypointindex+1);
+        //Decrese waypointindex by 1
+        waypointindex--;
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
+    }
+    // Run Insertwaypoint
+    InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
+}
+
+
+
 void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
     PlannerBase::PlannerParametersConstPtr parameters = planner->GetParameters();
@@ -1185,8 +1234,8 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
         traj->GetWaypoint(0,vtargetvalues); // in target spec
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
-        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
         traj->GetWaypoint(waypointindex-1,vwaypointstart, newspec);
+        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
 
         vwaypointend.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvalues.begin(), parameters->_configurationspecification, 1, traj->GetEnv(), true);

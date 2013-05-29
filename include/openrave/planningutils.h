@@ -60,8 +60,11 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
 
 /** \brief extends the last ramp of the trajectory in order to reach a goal (necessary when use jitter)
  */
-//OPENRAVE_API void ExtendLastWaypoint(TrajectoryPtr ptraj, PlannerBasePtr retimerplanner, const std::vector<dReal>& vgoal);
 
+OPENRAVE_API void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+
+
+OPENRAVE_API void ExtendActiveDOFWaypoint(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
@@ -121,7 +124,7 @@ typedef boost::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmooth
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the positional data from the trajectory. <b>[multi-thread safe]</b>
 
@@ -195,7 +198,7 @@ typedef boost::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimer
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retimer planner the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -258,7 +261,7 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
  */
-OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -269,7 +272,7 @@ OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vect
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner initialized planner that will do the retiming. \ref PlannerBase::InitPlan should already be called.
  */
-OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /** \brief Insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -280,7 +283,7 @@ OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory smoother.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -291,10 +294,10 @@ OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner the initialized planner to use for smoothing. \ref PlannerBase::InitPlan should already be called on it. The planner parameters should be initialized to ignore timestamps. Optionally they could be initialized to accept velocities.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /// \brief convert the trajectory and all its points to a new specification
-OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec);
+OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification &spec);
 
 /** \brief computes the trajectory derivatives and modifies the trajetory configuration to store them.
 
@@ -315,7 +318,7 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
 /// Each trajectory needs to have a 'deltatime' group for timestamps. The trajectories cannot share common configuration data because only one
 /// trajectories's data can be set at a time.
 /// \throw openrave_exception throws an exception if the trajectory data is incompatible and cannot be merged.
-OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories);
+OPENRAVE_API TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>&listtrajectories);
 
 /** \brief represents the DH parameters for one joint
 
@@ -348,7 +351,7 @@ public:
     \param vparameters One set of parameters are returned for each joint. \see DHParameter.
     \param tstart the initial transform in the body coordinate system to the first joint
  */
-OPENRAVE_API void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody);
+OPENRAVE_API void GetDHParameters(std::vector<DHParameter>&vparameters, KinBodyConstPtr pbody);
 
 /// \brief Line collision
 class OPENRAVE_API LineCollisionConstraint
