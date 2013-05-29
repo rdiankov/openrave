@@ -697,7 +697,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     // Note that this can be improved if one can check time-related constraints separately
     dReal hi = 1;
     dReal lo = 1e-6;
-    dReal coef = 0;
+    dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
     int iter = 0;
     resramps.resize(0);
     while(hi-lo>1e-2 && iter<1000) {
@@ -716,7 +716,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
         if(!res) {
-            if(coef==lo) {
+            if(coef <= 1e-6) {
                 RAVELOG_DEBUG("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
                 return false;
             }
@@ -727,7 +727,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             tmpramps.push_back(newramp);
             BreakIntoUnitaryRamps(tmpramps);
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check))) {
-                if(coef==lo) {
+                if(coef <= 1e-6) {
                     RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
                     return false;
                 }
@@ -736,7 +736,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             else{
                 lo = coef;
                 resramps = tmpramps;
-                if(coef == hi) {
+                if(coef >= 1) {
                     break;
                 }
             }

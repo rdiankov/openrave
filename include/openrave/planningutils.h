@@ -125,7 +125,7 @@ typedef boost::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmooth
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the positional data from the trajectory. <b>[multi-thread safe]</b>
 
