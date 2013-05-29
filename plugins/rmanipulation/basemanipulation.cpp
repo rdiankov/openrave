@@ -442,7 +442,7 @@ protected:
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params,listCheckBodies,true));
-            params->_checkpathvelocityconstraintsfn = boost::bind(&planningutils::DynamicsCollisionConstraint::Check,dynamics,_1,_2,_3,_4,_5,_6,_7);
+            params->_checkpathvelocityconstraintsfn = boost::bind(&planningutils::DynamicsCollisionConstraint::Check,dynamics,_1,_2,_3,_4,_5,_6,_7,_8);
         }
         if( _sPostProcessingParameters.size() > 0 ) {
             params->_sPostProcessingParameters = _sPostProcessingParameters;

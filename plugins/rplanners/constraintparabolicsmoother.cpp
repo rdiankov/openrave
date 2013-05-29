@@ -743,13 +743,13 @@ public:
                     }
                 }
                 (*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) <= 0 ) {
+                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) != 0 ) {
                     return false;
                 }
             }
         }
         else {
-            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) <= 0 ) {
+            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) != 0 ) {
                 return false;
             }
         }
@@ -791,7 +791,7 @@ public:
                     }
                 }
                 //(*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) != 0 ) {
                     return false;
                 }
             }
@@ -799,8 +799,8 @@ public:
         else {
             //_parameters->_setstatefn(a);
             int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart);
-            if( pathreturn <= 0 ) {
-                if( pathreturn & 0x40000000 ) {
+            if( pathreturn != 0 ) {
+                if( pathreturn & CFO_CheckTimeBasedConstraints ) {
                     // time-related
                 }
                 return false;

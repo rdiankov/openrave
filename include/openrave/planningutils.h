@@ -57,16 +57,12 @@ OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstP
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
 
-
-
 /** \brief extends the last ramp of the trajectory in order to reach a goal (necessary when use jitter)
  */
-
 OPENRAVE_API void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 
-OPENRAVE_API void ExtendActiveDOFWaypoint(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
-
+OPENRAVE_API void ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -262,7 +258,7 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
  */
-OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -273,7 +269,7 @@ OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vect
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner initialized planner that will do the retiming. \ref PlannerBase::InitPlan should already be called.
  */
-OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /** \brief Insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -284,7 +280,7 @@ OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory smoother.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -295,7 +291,7 @@ OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner the initialized planner to use for smoothing. \ref PlannerBase::InitPlan should already be called on it. The planner parameters should be initialized to ignore timestamps. Optionally they could be initialized to accept velocities.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>&dofvalues, const std::vector<dReal>&dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification &spec);
@@ -354,47 +350,6 @@ public:
  */
 OPENRAVE_API void GetDHParameters(std::vector<DHParameter>&vparameters, KinBodyConstPtr pbody);
 
-/// \brief Line collision
-class OPENRAVE_API LineCollisionConstraint
-{
-public:
-    LineCollisionConstraint() RAVE_DEPRECATED;
-    /// \param listCheckCollisions initialize with these bodies to check environment and self-collision with
-    LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv=true);
-    virtual ~LineCollisionConstraint() {
-    }
-
-    /// \brief sets whether to check the environment or not
-    virtual void SetCheckEnvironmentCollision(bool check);
-
-    /// \brief set user check fucntions
-    ///
-    /// Two functions can be set, one to be called before check collision and one after.
-    /// \param bCallAfterCheckCollision if set, function will be called after check collision functions.
-    virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
-
-    /// \deprecated (12/04/23)
-    virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr body, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations) RAVE_DEPRECATED;
-
-    /// \brief checks line collision. Uses the constructor's self-collisions
-    virtual bool Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations);
-
-    CollisionReportPtr GetReport() const {
-        return _report;
-    }
-
-protected:
-    virtual bool _CheckState();
-    virtual void _PrintOnFailure(const std::string& prefix);
-
-    std::vector<dReal> _vtempconfig, dQ;
-    CollisionReportPtr _report;
-    std::list<KinBodyPtr> _listCheckSelfCollisions;
-    bool _bCheckEnv;
-    boost::array< boost::function<bool() >, 2> _usercheckfns;
-    PlannerBase::PlannerParametersWeakPtr _parameters;
-};
-
 /** \brief dynamics and collision checking with linear interpolation
 
     For any joints with maxtorque > 0, uses KinBody::ComputeInverseDynamics to check if the necessary torque exceeds the max torque. Max torque is always called via GetMaxTorque
@@ -402,17 +357,20 @@ protected:
 class OPENRAVE_API DynamicsCollisionConstraint
 {
 public:
-    /// \param listCheckBodies initialize with these bodies to check environment and self-collision with
-    /// \param parameters stored inside the structure as a weak pointer
-    DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, bool bCheckEnv=true);
+    /*
+       \param listCheckBodies initialize with these bodies to check environment and self-collision with
+       \param parameters stored inside the structure as a weak pointer
+       \param filtermask A mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
+     */
+    DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask);
     virtual ~DynamicsCollisionConstraint() {
     }
 
     /// \brief sets a new planner parmaeters structure for checking
     virtual void SetPlannerParameters(PlannerBase::PlannerParametersPtr parameters);
 
-    /// \brief sets whether to check the environment or not
-    virtual void SetCheckEnvironmentCollision(bool check);
+    /// \brief Sets a new mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
+    virtual void SetFilterMask(int filtermask);
 
     /// \brief set user check fucntions
     ///
@@ -421,21 +379,21 @@ public:
     virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
 
     /// \brief checks line collision. Uses the constructor's self-collisions
-    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr pvCheckedConfigurations);
+    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
 
     CollisionReportPtr GetReport() const {
         return _report;
     }
 
 protected:
-    virtual int _CheckState();
+    virtual int _CheckState(int options, ConstraintFilterReturnPtr filterreturn);
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakPtr _parameters;
     std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
-    bool _bCheckEnv;
+    int _filtermask;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
     // for dynamics
@@ -447,6 +405,67 @@ protected:
 };
 
 typedef boost::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
+
+/// \deprecated (13/05/29)
+class OPENRAVE_API LineCollisionConstraint
+{
+public:
+    LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv=true) : _constraint(PlannerBase::PlannerParametersPtr(), listCheckCollisions, bCheckEnv ? (CFO_CheckEnvCollisions|CFO_CheckSelfCollisions) : CFO_CheckSelfCollisions) {
+    }
+    virtual ~LineCollisionConstraint() {
+    }
+
+    inline void SetCheckEnvironmentCollision(bool check) RAVE_DEPRECATED
+    {
+        if( check ) {
+            _constraint.SetFilterMask(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions);
+        }
+        else {
+            _constraint.SetFilterMask(CFO_CheckSelfCollisions);
+        }
+    }
+
+    inline void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false) RAVE_DEPRECATED
+    {
+        _constraint.SetUserCheckFunction(usercheckfn, bCallAfterCheckCollision);
+    }
+
+    inline bool Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& q0, const std::vector<dReal>& q1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations) RAVE_DEPRECATED
+    {
+        PlannerBase::PlannerParametersPtr params = _params.lock();
+        if( !!params ) {
+            _constraint.SetPlannerParameters(params);
+        }
+        std::vector<dReal> vzero(q0.size());
+
+        if( !!pvCheckedConfigurations ) {
+            pvCheckedConfigurations->resize(0);
+            if( !_filterreturn ) {
+                _filterreturn.reset(new ConstraintFilterReturn());
+            }
+            else {
+                _filterreturn->Clear();
+            }
+        }
+        int ret = _constraint.Check(q0, q1, vzero, vzero, 0, interval, 0xffff, _filterreturn);
+        if( !!_filterreturn && _filterreturn->_configurations.size() > 0 ) {
+            BOOST_ASSERT(params->GetDOF() == (int)q0.size());
+            pvCheckedConfigurations->resize(_filterreturn->_configurations.size()/params->GetDOF());
+            for(std::vector<dReal>::iterator it = _filterreturn->_configurations.begin(); it != _filterreturn->_configurations.end(); it += params->GetDOF()) {
+                pvCheckedConfigurations->push_back(std::vector<dReal>(it, it+params->GetDOF()));
+            }
+        }
+        return ret;
+    }
+
+    CollisionReportPtr GetReport() const {
+        return _constraint.GetReport();
+    }
+
+protected:
+    DynamicsCollisionConstraint _constraint;
+    ConstraintFilterReturnPtr _filterreturn;
+} RAVE_DEPRECATED;
 
 /// \brief simple distance metric based on joint weights
 class OPENRAVE_API SimpleDistanceMetric

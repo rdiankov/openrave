@@ -92,12 +92,15 @@ protected:
     void _OptimizePath(list< std::pair< vector<dReal>, dReal> >& listpath)
     {
         PlannerParametersConstPtr parameters = GetParameters();
-        std::vector<dReal> vtempdists;
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itendnode;
-        ConfigurationVelocityListPtr listNewConfigs(new ConfigurationVelocityList());
+        if( !_filterreturn ) {
+            _filterreturn.reset(new ConstraintFilterReturn());
+        }
 
+        int dof = parameters->GetDOF();
         int nrejected = 0;
         int i = parameters->_nMaxIterations;
+        std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
         while(i > 0 && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
             --i;
 
@@ -122,35 +125,37 @@ protected:
             }
 
             // check if the nodes can be connected by a straight line
-            listNewConfigs->clear();
-            if (parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, listNewConfigs) <= 0 ) {
+            _filterreturn->Clear();
+            if (parameters->CheckPathAllConstraints(itstartnode->first, itendnode->first, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
                 if( nrejected++ > (int)listpath.size()+8 ) {
                     break;
                 }
                 continue;
             }
-            if(listNewConfigs->size() == 0 ) {
+            if(_filterreturn->_configurations.size() == 0 ) {
                 continue;
             }
-
+            OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof, ==, 0);
             // check how long the new path is
-            ConfigurationVelocityList::iterator itnewconfig1 = listNewConfigs->begin();
-            ConfigurationVelocityList::iterator itnewconfig0 = itnewconfig1++;
-            vtempdists.resize(listNewConfigs->size()+1);
-            std::vector<dReal>::iterator itdist = vtempdists.begin();
-            dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, itnewconfig0->first);
+            _vtempdists.resize(_filterreturn->_configurations.size()/dof+1);
+            std::vector<dReal>::iterator itdist = _vtempdists.begin();
+            std::vector<dReal>::iterator itnewconfig = _filterreturn->_configurations.begin();
+            std::copy(itnewconfig, itnewconfig+dof, vnewconfig0.begin());
+            dReal newtotaldistance = parameters->_distmetricfn(itstartnode->first, vnewconfig0);
             *itdist++ = newtotaldistance;
-            while(itnewconfig1 != listNewConfigs->end() ) {
-                *itdist = parameters->_distmetricfn(itnewconfig0->first, itnewconfig1->first);
+            itnewconfig += dof;
+            while(itnewconfig != _filterreturn->_configurations.end() ) {
+                std::copy(itnewconfig, itnewconfig+dof, vnewconfig1.begin());
+                *itdist = parameters->_distmetricfn(vnewconfig0, vnewconfig1);
                 newtotaldistance += *itdist;
                 ++itdist;
-                itnewconfig0 = itnewconfig1;
-                ++itnewconfig1;
+                vnewconfig0.swap(vnewconfig1);
+                itnewconfig += dof;
             }
-            *itdist = parameters->_distmetricfn(itnewconfig0->first, itendnode->first);
+            *itdist = parameters->_distmetricfn(vnewconfig0, itendnode->first);
             newtotaldistance += *itdist;
             ++itdist;
-            BOOST_ASSERT(itdist==vtempdists.end());
+            BOOST_ASSERT(itdist==_vtempdists.end());
 
             if( newtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
                 // new path is not that good, so reject
@@ -158,13 +163,16 @@ protected:
             }
 
             // finally add
-            itdist = vtempdists.begin();
+            itdist = _vtempdists.begin();
             ++itstartnode;
-            FOREACHC(itc, *listNewConfigs) {
-                listpath.insert(itstartnode, make_pair(itc->first,*itdist++));
+            itnewconfig = _filterreturn->_configurations.begin();
+            while(itnewconfig != _filterreturn->_configurations.end()) {
+                std::copy(itnewconfig, itnewconfig+dof, vnewconfig1.begin());
+                listpath.insert(itstartnode, make_pair(vnewconfig1, *itdist++));
+                itnewconfig += dof;
             }
             itendnode->second = *itdist++;
-            BOOST_ASSERT(itdist==vtempdists.end());
+            BOOST_ASSERT(itdist==_vtempdists.end());
 
             // splice out in-between nodes in path
             listpath.erase(itstartnode, itendnode);
@@ -225,6 +233,8 @@ protected:
 
     TrajectoryTimingParametersPtr _parameters;
     RobotBasePtr _probot;
+    ConstraintFilterReturnPtr _filterreturn;
+    std::vector<dReal> _vtempdists;
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
