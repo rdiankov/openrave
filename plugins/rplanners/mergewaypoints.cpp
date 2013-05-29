@@ -277,10 +277,9 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
     ittnext = ittprev;
     ++ittnext;
 
-    int dumbcounter = 0;
-
-    while(itrampprev != ramps.end() && itrampnext != ramps.end() && dumbcounter<1000) {
-        dumbcounter++;
+    int counter = 0;
+    while(itrampprev != ramps.end() && itrampnext != ramps.end() && counter<1000) {
+        counter++;
         if(RaveFabs(itrampprev->endTime-*ittprev)>TINY || RaveFabs(itrampnext->endTime-*ittnext)>TINY) {
             // Avoid using an unmodified ramp to fix durations
             if (RaveFabs(itrampprev->endTime-*ittprev)<=TINY && !itrampprev->modified) {
@@ -320,7 +319,8 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
         }
     }
 
-    if(dumbcounter>=1000) {
+    if(counter>=1000) {
+        RAVELOG_ERROR("counter exceeded, most likely a bug in the code\n");
         return false;
     }
 
