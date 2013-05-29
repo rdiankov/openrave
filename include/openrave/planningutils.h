@@ -39,6 +39,7 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
 
 /** \brief If the current configuration does not satisfy constraints, then jitters it using a \ref PlannerBase::PlannerParameters structure
 
+    \param parameters The planner parameters used to define the configuration space to jitter. The following fields are required: _getstatefn, _setstatefn, _vConfigUpperLimit, _vConfigLowerLimit, (_checkpathconstraintsfn or _checkpathvelocityconstraintsfn), _sampleneighfn, _diffstatefn. The following are used and optional : _neighstatefn (used for constraining on manifolds), _nRandomGeneratorSeed (used for _sampleneighfn)
     \param maxiterations number of different configurations to test
     \param maxjitter The max deviation of a dof value to jitter. value +- maxjitter
     \param perturbation Test with perturbations since very small changes in angles can produce collision inconsistencies

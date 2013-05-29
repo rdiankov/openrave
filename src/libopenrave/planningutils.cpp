@@ -182,6 +182,11 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
     bool bCollision = false;
     bool bConstraint = !!parameters->_neighstatefn;
 
+    // reset the samplers with the seed
+    FOREACH(it, parameters->_listInternalSamplers) {
+        (*it)->SetSeed(parameters->_nRandomGeneratorSeed);
+    }
+    
     // have to test with perturbations since very small changes in angles can produce collision inconsistencies
     std::vector<dReal> perturbations;
     if( perturbation > 0 ) {
@@ -250,9 +255,11 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         if( iter < maxiterations/2 ) {
             jitter = maxjitter*dReal(iter)*(2.0*imaxiterations);
         }
-        for(size_t j = 0; j < newdof.size(); ++j) {
-            deltadof[j] = 2* jitter * (RaveRandomFloat()-0.5f);
+        if( !parameters->_sampleneighfn(deltadof, curdof, jitter) ) {
+            continue;
         }
+        parameters->_diffstatefn(deltadof,curdof);
+
         bCollision = false;
         bool bConstraintFailed = false;
         FOREACH(itperturbation,perturbations) {
