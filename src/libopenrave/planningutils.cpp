@@ -1200,6 +1200,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     trajinitial->serialize(f);
 
+    // This ensures that the beginning and final velocities will be preserved
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
 
