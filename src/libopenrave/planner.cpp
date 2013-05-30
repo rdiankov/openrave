@@ -381,16 +381,16 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 
     using namespace planningutils;
     _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
+    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
-    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn));
+    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
     // should setstatefn check limits?
     _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1, KinBody::CLA_CheckLimits);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
-    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
 
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
@@ -646,7 +646,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to set body %s configuration to %s",pbody->GetName()%ss.str(), ORE_Assert);
                 }
             }
-            boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first));
+            boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
             samplefns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
             samplefns[isavegroup].second = g.dof;
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);

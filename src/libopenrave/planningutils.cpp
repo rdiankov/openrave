@@ -182,11 +182,6 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
     bool bCollision = false;
     bool bConstraint = !!parameters->_neighstatefn;
 
-    // reset the samplers with the seed
-    FOREACH(it, parameters->_listInternalSamplers) {
-        (*it)->SetSeed(parameters->_nRandomGeneratorSeed);
-    }
-
     // have to test with perturbations since very small changes in angles can produce collision inconsistencies
     std::vector<dReal> perturbations;
     if( perturbation > 0 ) {
@@ -247,6 +242,15 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         return -1;
     }
 
+    FOREACH(itsampler, parameters->_listInternalSamplers) {
+        (*itsampler)->SetSeed(parameters->_nRandomGeneratorSeed);
+    }
+    // reset the samplers with the seed, possibly there's some way to cache?
+    std::vector<dReal> vLimitOneThird(parameters->_vConfigLowerLimit.size()), vLimitTwoThirds(parameters->_vConfigLowerLimit.size());
+    for(size_t i = 0; i < vLimitOneThird.size(); ++i) {
+        vLimitOneThird[i] = (2*parameters->_vConfigLowerLimit[i] + parameters->_vConfigUpperLimit[i])/3.0;
+        vLimitTwoThirds[i] = (parameters->_vConfigLowerLimit[i] + 2*parameters->_vConfigUpperLimit[i])/3.0;
+    }
     deltadof2.resize(curdof.size(),0);
     dReal imaxiterations = 1.0/dReal(maxiterations);
     for(int iter = 0; iter < maxiterations; ++iter) {
@@ -255,11 +259,19 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         if( iter < maxiterations/2 ) {
             jitter = maxjitter*dReal(iter)*(2.0*imaxiterations);
         }
-        if( !parameters->_sampleneighfn(deltadof, curdof, jitter) ) {
-            continue;
+        parameters->_samplefn(deltadof);
+        // check which third the sampled dof is in
+        for(size_t j = 0; j < newdof.size(); ++j) {
+            if( deltadof[j] < vLimitOneThird[j] ) {
+                deltadof[j] = -jitter;
+            }
+            else if( deltadof[j] > vLimitTwoThirds[j] ) {
+                deltadof[j] = jitter;
+            }
+            else {
+                deltadof[j] = 0;
+            }
         }
-        parameters->_diffstatefn(deltadof,curdof);
-
         bCollision = false;
         bool bConstraintFailed = false;
         FOREACH(itperturbation,perturbations) {
@@ -2111,7 +2123,7 @@ dReal SimpleDistanceMetric::Eval(const std::vector<dReal>& c0, const std::vector
     return RaveSqrt(dist);
 }
 
-SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psampler, const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) : _psampler(psampler), _distmetricfn(distmetricfn)
+SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psampler, const PlannerBase::PlannerParameters::DistMetricFn& distmetricfn, const PlannerBase::PlannerParameters::DiffStateFn& diffstatefn) : _psampler(psampler), _distmetricfn(distmetricfn), _diffstatefn(diffstatefn)
 {
 }
 
@@ -2125,26 +2137,13 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std
     size_t dof = vCurSample.size();
     BOOST_ASSERT(dof==vNewSample.size() && &vNewSample != &vCurSample);
     dReal fDist = _distmetricfn(vNewSample,vCurSample);
-    int iter = 0;
-    while(fDist > fRadius) {
-        for (size_t i = 0; i < dof; i++) {
-            vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
-        }
-        fDist = _distmetricfn(vNewSample,vCurSample);
-        if( ++iter > 20 ) {
-            return false;
-        }
-    }
-    for(iter = 0; iter < 20; ++iter) {
-        for (size_t i = 0; i < dof; i++) {
-            vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
-        }
-        if(_distmetricfn(vNewSample, vCurSample) > fRadius ) {
-            // take the previous
-            for (size_t i = 0; i < dof; i++) {
-                vNewSample[i] = 0.833333333333333*vNewSample[i]-0.16666666666666669*vCurSample[i];
-            }
-            break;
+    // most distance metrics preserve the following property:
+    // d=dist(x, x + y) ==> d*t == dist(x, x + t*y)
+    if( fDist > fRadius ) {
+        dReal fMult = fRadius/fDist;
+        _diffstatefn(vNewSample, vCurSample);
+        for(size_t i = 0; i < vNewSample.size(); ++i) {
+            vNewSample[i] = vNewSample[i]*fMult + vCurSample[i];
         }
     }
     return true;
