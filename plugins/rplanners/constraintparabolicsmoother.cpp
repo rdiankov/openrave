@@ -153,7 +153,7 @@ public:
 
             // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
             if (_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
-                RAVELOG_DEBUG("Initial traj is piecewise quadratic\n");
+                RAVELOG_VERBOSE("Initial traj is piecewise quadratic\n");
                 vector<dReal> x0, x1, dx0, dx1, ramptime;
                 ptraj->GetWaypoint(0,x0,posspec);
                 ptraj->GetWaypoint(0,dx0,velspec);
@@ -207,7 +207,7 @@ public:
             ////////////////// Case 2 : Initial traj is linear ////////////////////////
 
             else {
-                RAVELOG_DEBUG("Initial traj is piecewise linear\n");
+                RAVELOG_VERBOSE("Initial traj is piecewise linear\n");
                 ParabolicRamp::Vector q(_parameters->GetDOF());
                 vector<ParabolicRamp::Vector> path;
                 path.reserve(ptraj->GetNumWaypoints());

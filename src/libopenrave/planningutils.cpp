@@ -843,8 +843,8 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
             params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
-            params->_checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerBase::PlannerParametersWeakPtr(params), _1, _2, _3, _4);
+            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions));
+            params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatefn, params->_getstatefn));
         }
     }
