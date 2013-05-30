@@ -392,10 +392,6 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
 
-    std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,CFO_CheckEnvCollisions|CFO_CheckSelfCollisions));
-    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
-
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
     robot->GetActiveDOFAccelerationLimits(_vConfigAccelerationLimit);
@@ -404,6 +400,12 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _configurationspecification = robot->GetActiveConfigurationSpecification();
 
     _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
+
+    // have to do this last
+    std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,CFO_CheckEnvCollisions|CFO_CheckSelfCollisions));
+    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+
 }
 
 void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)

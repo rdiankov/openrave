@@ -64,6 +64,7 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
+        _constraintreturn.reset(new ConstraintFilterReturn());
         _bUsePerturbation = true;
         //_bUsePerturbation = false;
 //        if( !_distancechecker->InitEnvironment() ) {
@@ -136,11 +137,7 @@ public:
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
             _bUsePerturbation = true;
-
-            RAVELOG_DEBUG_FORMAT("Minswitchtime = %f\n",_parameters->minswitchtime);
-            RAVELOG_DEBUG_FORMAT("Controller timestep = %f\n",_parameters->_fStepLength);
-
-
+            RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
 
             /////////////////////////////////////////////////////////////////////////
             /////////////////////////  Convert to ramps /////////////////////////////
@@ -743,13 +740,15 @@ public:
                     }
                 }
                 (*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart) != 0 ) {
+                int options = 0xffff;
+                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart, options) != 0 ) {
                     return false;
                 }
             }
         }
         else {
-            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) != 0 ) {
+            int options = 0xffff;
+            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
                 return false;
             }
         }
@@ -791,14 +790,16 @@ public:
                     }
                 }
                 //(*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) != 0 ) {
+                int options = 0xffff;
+                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart, options) != 0 ) {
                     return false;
                 }
             }
         }
         else {
             //_parameters->_setstatefn(a);
-            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart);
+            int options = 0xffff;
+            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options);
             if( pathreturn != 0 ) {
                 if( pathreturn & CFO_CheckTimeBasedConstraints ) {
                     // time-related
@@ -856,6 +857,7 @@ protected:
     SpaceSamplerBasePtr _uniformsampler;
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
+    ConstraintFilterReturnPtr _constraintreturn;
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
 //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 

@@ -1868,6 +1868,7 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
 
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
+    int maskoptions = options&_filtermask;
     if( !!filterreturn ) {
         filterreturn->Clear();
     }
@@ -1921,7 +1922,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if (bCheckEnd) {
         params->_setstatefn(q1);
-        if( !!_setvelstatefn && dq1.size() == q1.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq1.size() == q1.size() ) {
             (*_setvelstatefn)(dq1);
         }
         int nstateret = _CheckState(options, filterreturn);
@@ -1981,7 +1982,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
     if (start == 0 ) {
         params->_setstatefn(q0);
-        if( !!_setvelstatefn && dq0.size() == q0.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq0.size() == q0.size() ) {
             (*_setvelstatefn)(dq0);
         }
         int nstateret = _CheckState(options, filterreturn);
@@ -2015,11 +2016,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vtempconfig.at(i) = q0.at(i);
     }
     if( dq0.size() == q0.size() ) {
-        _vtempconfig = dq0;
+        _vtempvelconfig = dq0;
     }
     if( start > 0 ) {
         params->_setstatefn(_vtempconfig);
-        if( !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
             (*_setvelstatefn)(_vtempvelconfig);
         }
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
@@ -2031,7 +2032,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
             (*_setvelstatefn)(_vtempvelconfig);
         }
         int nstateret = _CheckState(options, filterreturn);
