@@ -1085,9 +1085,8 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-
-
-void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername){
+void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+{
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
@@ -1104,11 +1103,10 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
+
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
-
-
 
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
@@ -1141,8 +1139,8 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         traj->GetWaypoint(0,vtargetvalues); // in target spec
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
-        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
         traj->GetWaypoint(waypointindex-1,vwaypointstart, newspec);
+        traj->GetWaypoint(waypointindex-1,vtargetvalues); // in target spec
 
         vwaypointend.resize(newspec.GetDOF());
         ConfigurationSpecification::ConvertData(vwaypointend.begin(), newspec, dofvalues.begin(), robot->GetActiveConfigurationSpecification(), 1, traj->GetEnv(), true);
@@ -1158,7 +1156,10 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Init(newspec);
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
+
+
     std::string newplannername = plannername;
+
     if( newplannername.size() == 0 ) {
         if( interpolation == "linear" ) {
             newplannername = "lineartrajectoryretimer";
@@ -1170,7 +1171,8 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
             throw OPENRAVE_EXCEPTION_FORMAT("currently do not support retiming for %s interpolations",interpolation,ORE_InvalidArguments);
         }
     }
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername);
+
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
     // retiming is done, now merge the two trajectories
     size_t targetdof = vtargetvalues.size();
@@ -1200,7 +1202,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     }
 }
 
-
 void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
@@ -1221,8 +1222,6 @@ void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, cons
     // Run Insertwaypoint
     InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
 }
-
-
 
 void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
@@ -2092,17 +2091,25 @@ SimpleNeighborhoodSampler::SimpleNeighborhoodSampler(SpaceSamplerBasePtr psample
 
 bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std::vector<dReal>& vCurSample, dReal fRadius)
 {
+    if( fRadius <= g_fEpsilonLinear ) {
+        vNewSample = vCurSample;
+        return true;
+    }
     _psampler->SampleSequence(vNewSample);
     size_t dof = vCurSample.size();
     BOOST_ASSERT(dof==vNewSample.size() && &vNewSample != &vCurSample);
     dReal fDist = _distmetricfn(vNewSample,vCurSample);
+    int iter = 0;
     while(fDist > fRadius) {
         for (size_t i = 0; i < dof; i++) {
             vNewSample[i] = 0.5f*vCurSample[i]+0.5f*vNewSample[i];
         }
         fDist = _distmetricfn(vNewSample,vCurSample);
+        if( ++iter > 20 ) {
+            return false;
+        }
     }
-    for(int iter = 0; iter < 20; ++iter) {
+    for(iter = 0; iter < 20; ++iter) {
         for (size_t i = 0; i < dof; i++) {
             vNewSample[i] = 1.2f*vNewSample[i]-0.2f*vCurSample[i];
         }
@@ -2114,20 +2121,6 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& vNewSample, const std
             break;
         }
     }
-
-    //        vNewSample.resize(lower.size());
-    //        for (size_t i = 0; i < dof; i++) {
-    //            if( sample[i] < lower[i] ) {
-    //                vNewSample[i] = lower[i];
-    //            }
-    //            else if( sample[i] > upper[i] ) {
-    //                vNewSample[i] = upper[i];
-    //            }
-    //            else {
-    //                vNewSample[i] = sample[i];
-    //            }
-    //        }
-
     return true;
 }
 

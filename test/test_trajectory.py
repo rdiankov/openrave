@@ -745,3 +745,38 @@ class TestTrajectory(EnvironmentSetup):
                 expectedaccel=array([  0.00000000e+00,   7.50000000e+00,   1.00000000e+01, 1.00000000e+01,   1.00000000e+01,   0.00000000e+00, 3.50596745e-16,   4.67462326e-16,   4.67462326e-16, 4.67462326e-16,   0.00000000e+00,  -7.50000000e+00, -1.00000000e+01,  -1.00000000e+01,  -1.00000000e+01, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00, 0.00000000e+00,   0.00000000e+00])
                 assert(transdist(expectedaccel,acceldata) <= g_epsilon)
 
+    def test_extendwaypoint(self):
+        env=self.env
+        self.LoadEnv('data/lab1.env.xml')
+        robot=env.GetRobots()[0]
+        with robot:
+            manipprob = interfaces.BaseManipulation(robot)
+            manip = robot.GetActiveManipulator()
+            robot.SetActiveDOFs(manip.GetArmIndices())
+            
+            goal=array([-0.75,1,0,2,-1,-1.5,1])
+            jitteredgoal = goal + 0.1*ones(len(goal))
+            jitteredinit = 0.1*ones(len(goal))
+
+
+            
+            origtraj=manipprob.MoveManipulator(goal=goal,outputtrajobj=True,execute=False)
+
+            traj = RaveClone(origtraj, 0)
+            planningutils.ExtendActiveDOFWaypoint(traj.GetNumWaypoints(),jitteredgoal,zeros(len(jitteredgoal)), traj, robot, 1, 1, 'ParabolicTrajectoryRetimer')
+            assert( sum(abs(traj.GetWaypoint(-1, robot.GetActiveConfigurationSpecification())-jitteredgoal)) <= g_epsilon)
+            parameters=Planner.PlannerParameters()
+            parameters.SetRobotActiveJoints(robot)
+            planningutils.VerifyTrajectory(parameters, traj,0.01)
+            
+            planningutils.ExtendActiveDOFWaypoint(0,jitteredinit,zeros(len(jitteredinit)), traj, robot, 1, 1, 'ParabolicTrajectoryRetimer')
+            assert( sum(abs(traj.GetWaypoint(0, robot.GetActiveConfigurationSpecification())-jitteredinit)) <= g_epsilon)
+            parameters=Planner.PlannerParameters()
+            parameters.SetRobotActiveJoints(robot)
+            planningutils.VerifyTrajectory(parameters, traj,0.01)
+            
+            traj = RaveClone(origtraj)
+            planningutils.ExtendWaypoint(traj.GetNumWaypoints(),jitteredgoal,zeros(len(jitteredgoal)), traj, robot)
+            assert( sum(abs(traj.GetWaypoint(-1, robot.GetActiveConfigurationSpecification())-jitteredgoal)) <= g_epsilon)
+            planningutils.VerifyTrajectory(parameters, traj,0.01)
+            

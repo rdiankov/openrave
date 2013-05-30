@@ -606,13 +606,11 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
             itlist--;
             ramps.insert(itlist,resramp0x);
         }
-        //cout << "Rep: " << rep << "\n";
         //PrintRamps(ramps,params,true);
         if(ramps.size()<resramps.size() || (ramps.size()==resramps.size()&& ComputeRampQuality(ramps)>ComputeRampQuality(resramps))) {
             resramps = ramps;
         }
     }
-    //cout << "Finally\n";
     //PrintRamps(resramps,params,true);
     return bHasChanged;
 }
@@ -795,46 +793,28 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     if (origramps.size()<2) {
         return false;
     }
-    bool isbeg = true;
+    bool jittered = false;
     std::list<ParabolicRamp::ParabolicRampND>::iterator itramp0 = origramps.begin(),itramp1,itramp2;
+
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
     itramp1++;
-    if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
         RAVELOG_DEBUG("First two ramps probably come from a jittering operation\n");
-    }
-    else{
-        // Check whether the last two ramps come from a jittering operation
-        itramp1 = origramps.end();
-        itramp1--;
-        itramp0 = itramp1;
-        itramp0--;
-        if (itramp0->endTime < params->minswitchtime &&  itramp1->endTime < params->minswitchtime && CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
-            RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
-            isbeg = false;
-        }
-        else{
-            RAVELOG_WARN("This trajectory does not seem to come from a previous jittering...\n");
+        jittered = true;
+        std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
+        bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
+        if(!res) {
+            RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
             return false;
         }
-    }
-    // Now make straight ramps with good time durations out of these two ramps
-    std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-    bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
-    if(!res) {
-        RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
-        return false;
-    }
-    dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
-    bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
-    if(!canscale) {
-        RAVELOG_WARN("Could not round up to controller time step\n");
-        return false;
-    }
-    // Insert in the original trajectory
-    resramps.resize(0);
-    if(isbeg) {
-        // Insert at the beginning
+        dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
+        bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
+        if(!canscale) {
+            RAVELOG_WARN("Could not round up to controller time step\n");
+            return false;
+        }
+        // Insert at beginning
         resramps.splice(resramps.begin(),tmpramps1);
         itramp0 = origramps.begin();
         advance(itramp0,2);
@@ -843,8 +823,28 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
             itramp0++;
         }
     }
-    else{
-        // Insert at the end
+
+    // Check whether the last two ramps come from a jittering operation
+    itramp1 = origramps.end();
+    itramp1--;
+    itramp0 = itramp1;
+    itramp0--;
+    if (CheckIfZero(itramp0->dx0, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+        jittered = true;
+        RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
+        std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
+        bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
+        if(!res) {
+            RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
+            return false;
+        }
+        dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
+        bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
+        if(!canscale) {
+            RAVELOG_WARN("Could not round up to controller time step\n");
+            return false;
+        }
+        // Insert at end
         itramp0 = origramps.begin();
         while(itramp0!=origramps.end()) {
             itramp1=itramp0;
@@ -858,21 +858,28 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         }
         resramps.splice(resramps.end(),tmpramps1);
     }
+
     // Final check to make sure everything is right
-    BreakIntoUnitaryRamps(resramps);
-    std::list<dReal> desireddurations;
-    desireddurations.resize(0);
-    FOREACHC(itramp, resramps) {
-        desireddurations.push_back(ComputeStepSizeCeiling(itramp->endTime,params->_fStepLength));
-    }
-    //PrintRamps(resramps,params,false);
-    bool res2 = IterativeFixRamps(resramps,desireddurations,params);
-    if( res2 && DetermineMinswitchtime(resramps) >= params->minswitchtime) {
-        RAVELOG_DEBUG("Cool: First or last two ramps could be fixed\n");
-        return true;
+    if(jittered) {
+        BreakIntoUnitaryRamps(resramps);
+        std::list<dReal> desireddurations;
+        desireddurations.resize(0);
+        FOREACHC(itramp, resramps) {
+            desireddurations.push_back(ComputeStepSizeCeiling(itramp->endTime,params->_fStepLength));
+        }
+        //PrintRamps(resramps,params,false);
+        bool res2 = IterativeFixRamps(resramps,desireddurations,params);
+        if( res2 && DetermineMinswitchtime(resramps) >= params->minswitchtime) {
+            RAVELOG_DEBUG("Cool: First or last two ramps could be fixed\n");
+            return true;
+        }
+        else{
+            RAVELOG_WARN("Failed final test, normally this should not happen!\n");
+            return false;
+        }
     }
     else{
-        RAVELOG_WARN("Failed final test, this is very rare\n");
+        RAVELOG_WARN("This trajectory does not seem to come from a previous jittering...\n");
         return false;
     }
 }

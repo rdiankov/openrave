@@ -57,11 +57,17 @@ OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstP
  */
 OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
 
-/** \brief extends the last ramp of the trajectory in order to reach a goal (necessary when use jitter)
+/** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space matches the positional data of the trajectory.
+
+    \param index the waypoint index of the trajectory
+    Useful when appending jittered points to the trajectory.
  */
-OPENRAVE_API void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API void ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
+/** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space is just the active DOF of the robot.
 
+    Useful when appending jittered points to the trajectory.
+ */
 OPENRAVE_API void ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
