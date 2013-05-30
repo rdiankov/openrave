@@ -105,6 +105,9 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
 {
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
+    // have to add the default router
+    _checkpathconstraintsfn = boost::bind(&PlannerParameters::_CheckPathConstraintsOld, this, _1, _2, _3, _4);
+
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
     _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>100</_nmaxiterations></_postprocessing>";
     _vXMLParameters.reserve(20);
@@ -120,6 +123,10 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.push_back("_fsteplength");
     _vXMLParameters.push_back("_postprocessing");
     _vXMLParameters.push_back("_nrandomgeneratorseed");
+}
+
+PlannerBase::PlannerParameters::~PlannerParameters()
+{
 }
 
 PlannerBase::PlannerParameters::PlannerParameters(const PlannerParameters &r) : XMLReadable("")
@@ -385,10 +392,6 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
     _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
 
-    std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-    boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
-    _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), _1, _2, _3, _4);
-
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
     robot->GetActiveDOFAccelerationLimits(_vConfigAccelerationLimit);
@@ -397,6 +400,12 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     _configurationspecification = robot->GetActiveConfigurationSpecification();
 
     _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
+
+    // have to do this last
+    std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,CFO_CheckEnvCollisions|CFO_CheckSelfCollisions));
+    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+
 }
 
 void _CallDiffStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::DiffStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v0, const std::vector<dReal>& v1)
@@ -601,7 +610,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     }
 
     _listInternalSamplers.clear();
-    
+
     std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
     for(size_t igroup = 0; igroup < spec._vgroups.size(); ++igroup) {
         const ConfigurationSpecification::Group& g = spec._vgroups[igroup];
@@ -733,7 +742,7 @@ void PlannerBase::PlannerParameters::Validate() const
         _checkpathconstraintsfn(vstate,vstate,IT_OpenStart,ConfigurationListPtr());
     }
     if( !!_checkpathvelocityconstraintsfn ) {
-        _checkpathvelocityconstraintsfn(vstate,vstate,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart,ConfigurationVelocityListPtr());
+        _checkpathvelocityconstraintsfn(vstate,vstate,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart,0xffff,ConstraintFilterReturnPtr());
     }
     if( !!_neighstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2 = vstate;

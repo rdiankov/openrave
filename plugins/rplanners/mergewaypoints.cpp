@@ -606,13 +606,11 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
             itlist--;
             ramps.insert(itlist,resramp0x);
         }
-        //cout << "Rep: " << rep << "\n";
         //PrintRamps(ramps,params,true);
         if(ramps.size()<resramps.size() || (ramps.size()==resramps.size()&& ComputeRampQuality(ramps)>ComputeRampQuality(resramps))) {
             resramps = ramps;
         }
     }
-    //cout << "Finally\n";
     //PrintRamps(resramps,params,true);
     return bHasChanged;
 }
@@ -708,7 +706,6 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         if(iter==2) {
             coef = lo;
         }
-        //cout << coef << "\n";
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);

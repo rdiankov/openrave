@@ -84,6 +84,8 @@ Inverse Kinematics
 Planning
 --------
 
+* Added a new PlannerParameters parameter called **_checkpathvelocityconstraintsfn** that also takes in the velocity of the current configuration space. It takes a set of options via :class:`.ConstraintFilterOptions` to allow separation of different constraints depending on the planner context, and it returns a :class:`.ConstraintFilterReturn` with info on what failed. Deprecated the old **_checkpathconstraints**. 
+
 * Added :class:`.planningparameters.ConstraintTrajectoryTimingParameters` that allows more fine grained control of constraints for parabolic smoothing.
 
 * Path retiming now treats PlannerParameters::_fStepLength as the robot controller control time
@@ -99,8 +101,6 @@ Planning
 * Removed fallback on linear smoother in :meth:`.PlannerBase._ProcessPostPlanners`
 
 * Added several helper classes that cache parameters values so they are faster to bulk execute: :class:`.planningutils.AffineTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectoryRetimer`, :class:`.planningutils.ActiveDOFTrajectorySmoother`
-
-* Added a new PlannerParameters parameter called **_checkpathvelocityconstraintsfn** that also takes in the velocity of the current configuration space.
 
 * Added new :class:`.planningutils.DynamicsCollisionConstraint` for maintaining both collision and dynamics constraints.
 

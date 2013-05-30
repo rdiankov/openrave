@@ -96,20 +96,21 @@ public:
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
         }
 
-        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, bool returnconfigurations=false)
+        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
-            PlannerBase::ConfigurationVelocityListPtr configurations;
-            if( returnconfigurations ) {
-                configurations.reset(new PlannerBase::ConfigurationVelocityList());
+            ConstraintFilterReturnPtr pfilterreturn;
+            if( filterreturn ) {
+                pfilterreturn.reset(new ConstraintFilterReturn());
             }
-            int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, configurations);
-            if( returnconfigurations ) {
-                boost::python::list oconfigurations;
-                FOREACHC(it, *configurations) {
-                    oconfigurations.append(boost::python::make_tuple(toPyArray(it->first), toPyArray(it->second)));
+            int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
+            if( filterreturn ) {
+                if( ret <= 0 ) {
+                    return boost::python::make_tuple(ret, pfilterreturn->_invalidvalues, pfilterreturn->_invalidvelocities);
                 }
-                return boost::python::make_tuple(ret,oconfigurations);
+                else {
+                    return boost::python::make_tuple(ret, boost::python::object(), boost::python::object());
+                }
             }
             return object(ret);
         }

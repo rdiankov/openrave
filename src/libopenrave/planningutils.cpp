@@ -221,7 +221,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         }
 
         // don't need to set state since CheckPathAllConstraints does it
-        if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) <= 0 ) {
+        if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
             bCollision = true;
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -289,7 +289,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 }
             }
             // don't need to set state since CheckPathAllConstraints does it
-            if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) <= 0 ) {
+            if( parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
                 bCollision = true;
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -417,16 +417,16 @@ public:
             }
         }
 
-        if( _parameters->HasPathConstraints() && trajectory->GetNumWaypoints() >= 2 ) {
+        if( !!_parameters->_checkpathvelocityconstraintsfn && trajectory->GetNumWaypoints() >= 2 ) {
 
             if( trajectory->GetDuration() > 0 && samplingstep > 0 ) {
                 // use sampling and check segment constraints
                 std::vector<dReal> vprevdata, vprevdatavel;
-                PlannerBase::ConfigurationVelocityListPtr configs(new PlannerBase::ConfigurationVelocityList());
+                ConstraintFilterReturnPtr filterreturn(new ConstraintFilterReturn());
                 trajectory->Sample(vprevdata,0,_parameters->_configurationspecification);
                 trajectory->Sample(vprevdatavel,0,velspec);
                 for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
-                    configs->clear();
+                    filterreturn->Clear();
                     trajectory->Sample(vdata,ftime+samplingstep,_parameters->_configurationspecification);
                     trajectory->Sample(vdatavel,ftime+samplingstep,velspec);
                     vdiff = vdata;
@@ -435,24 +435,26 @@ public:
                         dReal velthresh = _parameters->_vConfigVelocityLimit.at(i)*samplingstep+fthresh;
                         OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
-                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, samplingstep, IT_Closed, configs) <= 0 ) {
+                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, samplingstep, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
                         throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s",ftime%(ftime+samplingstep)%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
-                    PlannerBase::ConfigurationVelocityList::iterator itprevconfig = configs->begin();
-                    PlannerBase::ConfigurationVelocityList::iterator itcurconfig = ++configs->begin();
-                    for(; itcurconfig != configs->end(); ++itcurconfig) {
-                        BOOST_ASSERT( (int)itcurconfig->first.size() == _parameters->GetDOF());
-                        for(size_t i = 0; i < itcurconfig->first.size(); ++i) {
-                            deltaq.at(i) = itcurconfig->first.at(i) - itprevconfig->first.at(i);
+                    OPENRAVE_ASSERT_OP(filterreturn->_configurations.size()%_parameters->GetDOF(),==,0);
+                    std::vector<dReal>::iterator itprevconfig = filterreturn->_configurations.begin();
+                    std::vector<dReal>::iterator itcurconfig = itprevconfig + _parameters->GetDOF();
+                    for(; itcurconfig != filterreturn->_configurations.end(); itcurconfig += _parameters->GetDOF()) {
+                        std::vector<dReal> vprevconfig(itprevconfig,itprevconfig+_parameters->GetDOF());
+                        std::vector<dReal> vcurconfig(itcurconfig,itcurconfig+_parameters->GetDOF());
+                        for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                            deltaq.at(i) = vcurconfig.at(i) - vprevconfig.at(i);
                         }
-                        _parameters->_setstatefn(itprevconfig->first);
-                        vector<dReal> vtemp = itprevconfig->first;
+                        _parameters->_setstatefn(vprevconfig);
+                        vector<dReal> vtemp = vprevconfig;
                         if( !_parameters->_neighstatefn(vtemp,deltaq,0) ) {
                             throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s",ftime%(ftime+samplingstep)%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                         }
                         else {
-                            dReal fprevdist = _parameters->_distmetricfn(itprevconfig->first,vtemp);
-                            dReal fcurdist = _parameters->_distmetricfn(itcurconfig->first,vtemp);
+                            dReal fprevdist = _parameters->_distmetricfn(vprevconfig,vtemp);
+                            dReal fcurdist = _parameters->_distmetricfn(vcurconfig,vtemp);
                             OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
                         }
                         itprevconfig=itcurconfig;
@@ -464,7 +466,7 @@ public:
             else {
                 for(size_t i = 0; i < trajectory->GetNumWaypoints(); ++i) {
                     trajectory->GetWaypoint(i,vdata,_parameters->_configurationspecification);
-                    if( _parameters->CheckPathAllConstraints(vdata,vdata,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) <= 0 ) {
+                    if( _parameters->CheckPathAllConstraints(vdata,vdata,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
                         throw OPENRAVE_EXCEPTION_FORMAT("CheckPathAllConstraints, failed at %d, wrote trajectory to %s",i%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
                 }
@@ -1083,17 +1085,8 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-
-
-void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername){
-
-    int ran = RaveRandomInt()%10000;
-    string filename = str(boost::format("/var/www/.openrave/origtraj-%d.xml")%ran);
-    RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
-    ofstream f(filename.c_str());
-    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    traj->serialize(f);
-
+void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+{
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
@@ -1111,23 +1104,9 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
 
-    filename = str(boost::format("/var/www/.openrave/cut-%d.xml")%ran);
-    RAVELOG_DEBUG_FORMAT("Writing cut traj to %s", filename);
-    ofstream f3(filename.c_str());
-    f3 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    traj->serialize(f3);
-
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
-
-    filename = str(boost::format("/var/www/.openrave/extended-%d.xml")%ran);
-    RAVELOG_DEBUG_FORMAT("Writing extended traj to %s", filename);
-    ofstream f2(filename.c_str());
-    f2 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    traj->serialize(f2);
 }
-
-
 
 void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
@@ -1203,13 +1182,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     // This ensures that the beginning and final velocities will be preserved
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
-
-    filename = str(boost::format("/var/www/.openrave/afterretime-%d.xml")%ran);
-    RAVELOG_DEBUG_FORMAT("Writing after retime traj to %s", filename);
-    ofstream f2(filename.c_str());
-    f2 << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    trajinitial->serialize(f2);
-
     // retiming is done, now merge the two trajectories
     size_t targetdof = vtargetvalues.size();
     vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
@@ -1238,7 +1210,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     }
 }
 
-
 void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
@@ -1259,8 +1230,6 @@ void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, cons
     // Run Insertwaypoint
     InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
 }
-
-
 
 void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
@@ -1415,7 +1384,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
                 bool bInCollision = false;
                 for(dReal t = fSamplingTime; t < ptesttraj->GetDuration(); t+=fSamplingTime) {
                     ptesttraj->Sample(vwaypoint,t,specpos);
-                    if( params->CheckPathAllConstraints(vprevpoint,vwaypoint,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) <= 0 ) {
+                    if( params->CheckPathAllConstraints(vprevpoint,vwaypoint,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
                         bInCollision = true;
                         break;
                     }
@@ -1788,308 +1757,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-LineCollisionConstraint::LineCollisionConstraint() : _bCheckEnv(true)
-{
-    _report.reset(new CollisionReport());
-}
-
-LineCollisionConstraint::LineCollisionConstraint(const std::list<KinBodyPtr>& listCheckCollisions, bool bCheckEnv) : _listCheckSelfCollisions(listCheckCollisions), _bCheckEnv(bCheckEnv)
-{
-    _report.reset(new CollisionReport());
-}
-
-void LineCollisionConstraint::SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision)
-{
-    _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
-}
-
-void LineCollisionConstraint::SetCheckEnvironmentCollision(bool check)
-{
-    _bCheckEnv = check;
-}
-
-bool LineCollisionConstraint::_CheckState()
-{
-    if( !!_usercheckfns[0] ) {
-        if( !_usercheckfns[0]() ) {
-            _PrintOnFailure("pre-user check failed");
-            return false;
-        }
-    }
-    FOREACHC(itbody, _listCheckSelfCollisions) {
-        if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            _PrintOnFailure(std::string("collision failed ")+_report->__str__());
-            return false;
-        }
-        if( (*itbody)->CheckSelfCollision(_report) ) {
-            _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
-            return false;
-        }
-    }
-    if( !!_usercheckfns[1] ) {
-        if( !_usercheckfns[1]() ) {
-            _PrintOnFailure("post-user check failed");
-            return false;
-        }
-    }
-    return true;
-}
-
-void LineCollisionConstraint::_PrintOnFailure(const std::string& prefix)
-{
-    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        PlannerBase::PlannerParametersPtr params = _parameters.lock();
-        std::vector<dReal> vcurrentvalues;
-        params->_getstatefn(vcurrentvalues);
-        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << prefix << ", ";
-        for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
-            if( i > 0 ) {
-                ss << "," << vcurrentvalues[i];
-            }
-            else {
-                ss << "colvalues=[" << vcurrentvalues[i];
-            }
-        }
-        ss << "]";
-        RAVELOG_VERBOSE(ss.str());
-    }
-}
-
-bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, KinBodyPtr robot, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
-{
-    // set the bounds based on the interval type
-    _parameters = _params;
-    PlannerBase::PlannerParametersPtr params = _params.lock();
-    if( !params ) {
-        RAVELOG_WARN("parameters have been destroyed!\n");
-        return false;
-    }
-    int start=0;
-    bool bCheckEnd=false;
-    switch (interval) {
-    case IT_Open:
-        start = 1;  bCheckEnd = false;
-        break;
-    case IT_OpenStart:
-        start = 1;  bCheckEnd = true;
-        break;
-    case IT_OpenEnd:
-        start = 0;  bCheckEnd = false;
-        break;
-    case IT_Closed:
-        start = 0;  bCheckEnd = true;
-        break;
-    default:
-        BOOST_ASSERT(0);
-    }
-
-    // first make sure the end is free
-    _vtempconfig.resize(params->GetDOF());
-    if (bCheckEnd) {
-        params->_setstatefn(pQ1);
-        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
-            return false;
-        }
-        if( robot->CheckSelfCollision(_report) ) {
-            return false;
-        }
-    }
-
-    // compute  the discretization
-    dQ = pQ1;
-    params->_diffstatefn(dQ,pQ0);
-    int i, numSteps = 1;
-    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-    OPENRAVE_ASSERT_OP((int)params->_vConfigResolution.size(),==,params->GetDOF());
-    int totalsteps = 0;
-    for (i = 0; i < params->GetDOF(); i++,itres++) {
-        int steps;
-        if( *itres != 0 ) {
-            steps = (int)(fabs(dQ[i]) / *itres);
-        }
-        else {
-            steps = (int)(fabs(dQ[i]) * 100);
-        }
-        totalsteps += steps;
-        if (steps > numSteps) {
-            numSteps = steps;
-        }
-    }
-    if( totalsteps == 0 && start > 0) {
-        if( bCheckEnd && !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(pQ1);
-        }
-        return true;
-    }
-
-    if (start == 0 ) {
-        params->_setstatefn(pQ0);
-        if (_bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot),_report) ) {
-            return false;
-        }
-        if( robot->CheckSelfCollision(_report) ) {
-            return false;
-        }
-        if( !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(pQ0);
-        }
-        start = 1;
-    }
-
-    dReal fisteps = dReal(1.0f)/numSteps;
-    for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
-        *it *= fisteps;
-    }
-
-    // check for collision along the straight-line path
-    // NOTE: this does not check the end config, and may or may
-    // not check the start based on the value of 'start'
-    for (i = 0; i < params->GetDOF(); i++) {
-        _vtempconfig[i] = pQ0[i];
-    }
-    if( start > 0 ) {
-        params->_setstatefn(_vtempconfig);
-        if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            return false;
-        }
-    }
-    for (int f = start; f < numSteps; f++) {
-        params->_setstatefn(_vtempconfig);
-        if( _bCheckEnv && robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
-            return false;
-        }
-        if( robot->CheckSelfCollision() ) {
-            return false;
-        }
-        if( !!params->_getstatefn ) {
-            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
-        }
-        if( !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(_vtempconfig);
-        }
-        if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            return false;
-        }
-    }
-
-    if( bCheckEnd && !!pvCheckedConfigurations ) {
-        pvCheckedConfigurations->push_back(pQ1);
-    }
-    return true;
-}
-
-bool LineCollisionConstraint::Check(PlannerBase::PlannerParametersWeakPtr _params, const std::vector<dReal>& pQ0, const std::vector<dReal>& pQ1, IntervalType interval, PlannerBase::ConfigurationListPtr pvCheckedConfigurations)
-{
-    // set the bounds based on the interval type
-    _parameters = _params;
-    PlannerBase::PlannerParametersPtr params = _params.lock();
-    if( !params ) {
-        RAVELOG_WARN("parameters have been destroyed!\n");
-        return false;
-    }
-    BOOST_ASSERT(_listCheckSelfCollisions.size()>0);
-    int start=0;
-    bool bCheckEnd=false;
-    switch (interval) {
-    case IT_Open:
-        start = 1;  bCheckEnd = false;
-        break;
-    case IT_OpenStart:
-        start = 1;  bCheckEnd = true;
-        break;
-    case IT_OpenEnd:
-        start = 0;  bCheckEnd = false;
-        break;
-    case IT_Closed:
-        start = 0;  bCheckEnd = true;
-        break;
-    default:
-        BOOST_ASSERT(0);
-    }
-
-    // first make sure the end is free
-    _vtempconfig.resize(params->GetDOF());
-    if (bCheckEnd) {
-        params->_setstatefn(pQ1);
-        if( !_CheckState() ) {
-            return false;
-        }
-    }
-
-    // compute  the discretization
-    dQ = pQ1;
-    params->_diffstatefn(dQ,pQ0);
-    int i, numSteps = 1;
-    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
-    int totalsteps = 0;
-    for (i = 0; i < params->GetDOF(); i++,itres++) {
-        int steps;
-        if( *itres != 0 ) {
-            steps = (int)(fabs(dQ[i]) / *itres);
-        }
-        else {
-            steps = (int)(fabs(dQ[i]) * 100);
-        }
-        totalsteps += steps;
-        if (steps > numSteps) {
-            numSteps = steps;
-        }
-    }
-    if( totalsteps == 0 && start > 0 ) {
-        return true;
-    }
-
-    if (start == 0 ) {
-        params->_setstatefn(pQ0);
-        if( !_CheckState() ) {
-            return false;
-        }
-        start = 1;
-    }
-
-    dReal fisteps = dReal(1.0f)/numSteps;
-    for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
-        *it *= fisteps;
-    }
-
-    // check for collision along the straight-line path
-    // NOTE: this does not check the end config, and may or may
-    // not check the start based on the value of 'start'
-    for (i = 0; i < params->GetDOF(); i++) {
-        _vtempconfig[i] = pQ0[i];
-    }
-    if( start > 0 ) {
-        params->_setstatefn(_vtempconfig);
-        if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            return false;
-        }
-    }
-    for (int f = start; f < numSteps; f++) {
-        params->_setstatefn(_vtempconfig);
-        if( !_CheckState() ) {
-            return false;
-        }
-        if( !!params->_getstatefn ) {
-            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
-        }
-        if( !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(_vtempconfig);
-
-        }
-        if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            return false;
-        }
-    }
-
-    if( bCheckEnd && !!pvCheckedConfigurations ) {
-        pvCheckedConfigurations->push_back(pQ1);
-    }
-    return true;
-}
-
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, bool bCheckEnv) : _listCheckBodies(listCheckBodies), _bCheckEnv(bCheckEnv)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -2114,71 +1782,74 @@ void DynamicsCollisionConstraint::SetUserCheckFunction(const boost::function<boo
     _usercheckfns[bCallAfterCheckCollision] = usercheckfn;
 }
 
-void DynamicsCollisionConstraint::SetCheckEnvironmentCollision(bool check)
+void DynamicsCollisionConstraint::SetFilterMask(int filtermask)
 {
-    _bCheckEnv = check;
+    _filtermask = filtermask;
 }
 
-int DynamicsCollisionConstraint::_CheckState()
+int DynamicsCollisionConstraint::_CheckState(int options, ConstraintFilterReturnPtr filterreturn)
 {
-    if( !!_usercheckfns[0] ) {
+    options &= _filtermask;
+    if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
             _PrintOnFailure("pre usercheckfn failed");
-            return 0x81000000;
+            return CFO_CheckUserConstraints;
         }
     }
-    // check dynamics
-    FOREACHC(itbody, _listCheckBodies) {
-        KinBodyPtr pbody = *itbody;
-        _vtorquevalues.resize(0);
-        FOREACHC(itjoint, pbody->GetJoints()) {
-            for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                dReal fmaxtorque = (*itjoint)->GetMaxTorque(idof);
-                if( fmaxtorque > 0 ) {
-                    _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,fmaxtorque));
+    if( options & CFO_CheckTimeBasedConstraints ) {
+        // check dynamics
+        FOREACHC(itbody, _listCheckBodies) {
+            KinBodyPtr pbody = *itbody;
+            _vtorquevalues.resize(0);
+            FOREACHC(itjoint, pbody->GetJoints()) {
+                for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                    dReal fmaxtorque = (*itjoint)->GetMaxTorque(idof);
+                    if( fmaxtorque > 0 ) {
+                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,fmaxtorque));
+                    }
+                }
+            }
+            if( _vtorquevalues.size() > 0 ) {
+                _doftorques.resize(pbody->GetDOF(),0);
+                _dofaccelerations.resize(pbody->GetDOF(),0);
+                _vdofindices.resize(pbody->GetDOF());
+                for(int i = 0; i < pbody->GetDOF(); ++i) {
+                    _vdofindices[i] = i;
+                }
+
+                // have to extract the correct accelerations from _vtempaccelconfig, use specvel and timederivative=1
+                _specvel.ExtractJointValues(_dofaccelerations.begin(), _vtempaccelconfig.begin(), pbody, _vdofindices, 1);
+
+                // compute inverse dynamics and check
+                pbody->ComputeInverseDynamics(_doftorques, _dofaccelerations);
+                FOREACH(it, _vtorquevalues) {
+                    int index = it->first;
+                    dReal fmaxtorque = it->second;
+                    if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
+                        _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                        return CFO_CheckTimeBasedConstraints;
+                    }
                 }
             }
         }
-        if( _vtorquevalues.size() > 0 ) {
-            _doftorques.resize(pbody->GetDOF(),0);
-            _dofaccelerations.resize(pbody->GetDOF(),0);
-            _vdofindices.resize(pbody->GetDOF());
-            for(int i = 0; i < pbody->GetDOF(); ++i) {
-                _vdofindices[i] = i;
-            }
-
-            // have to extract the correct accelerations from _vtempaccelconfig, use specvel and timederivative=1
-            _specvel.ExtractJointValues(_dofaccelerations.begin(), _vtempaccelconfig.begin(), pbody, _vdofindices, 1);
-
-            // compute inverse dynamics and check
-            pbody->ComputeInverseDynamics(_doftorques, _dofaccelerations);
-            FOREACH(it, _vtorquevalues) {
-                int index = it->first;
-                dReal fmaxtorque = it->second;
-                if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
-                    _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
-                    return 0xc0000000;
-                }
-            }
-        }
     }
     FOREACHC(itbody, _listCheckBodies) {
-        if( _bCheckEnv && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+        if( (options&CFO_CheckEnvCollisions) && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
             _PrintOnFailure(std::string("collision failed ")+_report->__str__());
-            return 0xa0000000;
+            return CFO_CheckEnvCollisions;
         }
-        if( (*itbody)->CheckSelfCollision(_report) ) {
+        if( (options&CFO_CheckSelfCollisions) && (*itbody)->CheckSelfCollision(_report) ) {
             _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
-            return 0x90000000;
+            return CFO_CheckSelfCollisions;
         }
     }
-    if( !!_usercheckfns[1] ) {
+    if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
             _PrintOnFailure("post usercheckfn failed");
-            return 0x82000000;
+            return CFO_CheckUserConstraints;
         }
     }
-    return 1;
+    return 0;
 }
 
 void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
@@ -2202,13 +1873,20 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
     }
 }
 
-int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, PlannerBase::ConfigurationVelocityListPtr pvCheckedConfigurations)
+int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
+    int maskoptions = options&_filtermask;
+    if( !!filterreturn ) {
+        filterreturn->Clear();
+    }
     // set the bounds based on the interval type
     PlannerBase::PlannerParametersPtr params = _parameters.lock();
     if( !params ) {
         RAVELOG_WARN("parameters have been destroyed!\n");
-        return false;
+        if( !!filterreturn ) {
+            filterreturn->_returncode = 0x80000000;
+        }
+        return 0x80000000;
     }
     BOOST_ASSERT(_listCheckBodies.size()>0);
     int start=0;
@@ -2251,11 +1929,20 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if (bCheckEnd) {
         params->_setstatefn(q1);
-        if( !!_setvelstatefn && dq1.size() == q1.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq1.size() == q1.size() ) {
             (*_setvelstatefn)(dq1);
         }
-        int nstateret = _CheckState();
-        if( nstateret <= 0 ) {
+        int nstateret = _CheckState(options, filterreturn);
+        if( nstateret != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = nstateret;
+                filterreturn->_invalidvalues = q1;
+                filterreturn->_invalidvelocities = dq1;
+                filterreturn->_fTimeWhenInvalid = timeelapsed;
+                if( options & CFO_FillCheckedConfiguration ) {
+                    filterreturn->_configurations = q1;
+                }
+            }
             return nstateret;
         }
     }
@@ -2287,16 +1974,35 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
     if( totalsteps == 0 && start > 0 ) {
-        return true;
+        if( !!filterreturn ) {
+            if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
+                filterreturn->_configurations = q1;
+            }
+        }
+        return 0;
     }
 
+    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+        if( (int)filterreturn->_configurations.capacity() < (1+numSteps)*params->GetDOF() ) {
+            filterreturn->_configurations.reserve((1+numSteps)*params->GetDOF());
+        }
+    }
     if (start == 0 ) {
         params->_setstatefn(q0);
-        if( !!_setvelstatefn && dq0.size() == q0.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq0.size() == q0.size() ) {
             (*_setvelstatefn)(dq0);
         }
-        int nstateret = _CheckState();
-        if( nstateret <= 0 ) {
+        int nstateret = _CheckState(options, filterreturn);
+        if( nstateret != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = nstateret;
+                filterreturn->_invalidvalues = q0;
+                filterreturn->_invalidvelocities = dq0;
+                filterreturn->_fTimeWhenInvalid = 0;
+                if( options & CFO_FillCheckedConfiguration ) {
+                    filterreturn->_configurations.insert(filterreturn->_configurations.begin(), q0.begin(), q0.end());
+                }
+            }
             return nstateret;
         }
         start = 1;
@@ -2317,15 +2023,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         _vtempconfig.at(i) = q0.at(i);
     }
     if( dq0.size() == q0.size() ) {
-        _vtempconfig = dq0;
+        _vtempvelconfig = dq0;
     }
     if( start > 0 ) {
         params->_setstatefn(_vtempconfig);
-        if( !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
             (*_setvelstatefn)(_vtempvelconfig);
         }
         if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            return false;
+            return 0x80000000;
         }
         for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
             _vtempvelconfig.at(i) += _vtempveldelta[i];
@@ -2333,32 +2039,39 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
     for (int f = start; f < numSteps; f++) {
         params->_setstatefn(_vtempconfig);
-        if( !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
+        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
             (*_setvelstatefn)(_vtempvelconfig);
         }
-        int nstateret = _CheckState();
-        if( nstateret <= 0 ) {
-            return nstateret;
-        }
+        int nstateret = _CheckState(options, filterreturn);
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
         }
-        if( !!pvCheckedConfigurations ) {
-            pvCheckedConfigurations->push_back(make_pair(_vtempconfig, _vtempvelconfig));
-
+        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
         }
+        if( nstateret != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = nstateret;
+                filterreturn->_invalidvalues = _vtempconfig;
+                filterreturn->_invalidvelocities = _vtempvelconfig;
+                filterreturn->_fTimeWhenInvalid = 0;
+            }
+            return nstateret;
+        }
+
         if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            return false;
+            return 0x80000000;
         }
         for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
             _vtempvelconfig.at(i) += _vtempveldelta[i];
         }
     }
 
-    if( bCheckEnd && !!pvCheckedConfigurations ) {
-        pvCheckedConfigurations->push_back(make_pair(q1,dq1));
+    if( bCheckEnd && !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+        filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
     }
-    return true;
+
+    return 0;
 }
 
 SimpleDistanceMetric::SimpleDistanceMetric(RobotBasePtr robot) : _robot(robot)

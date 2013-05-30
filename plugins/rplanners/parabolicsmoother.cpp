@@ -309,14 +309,14 @@ public:
                     anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
                 //_parameters->_setstatefn(anew);
-                if( _parameters->CheckPathAllConstraints(anew,anew,da, da, 0, IT_OpenStart) <= 0 ) {
+                if( _parameters->CheckPathAllConstraints(anew,anew,da, da, 0, IT_OpenStart) != 0 ) {
                     return false;
                 }
             }
         }
         else {
             //_parameters->_setstatefn(a);
-            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) <= 0 ) {
+            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) != 0 ) {
                 return false;
             }
         }
@@ -335,14 +335,14 @@ public:
                     bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
                 }
                 //_parameters->_setstatefn(anew);
-                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) != 0 ) {
                     return false;
                 }
             }
         }
         else {
             //_parameters->_setstatefn(a);
-            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) <= 0 ) {
+            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) != 0 ) {
                 return false;
             }
         }

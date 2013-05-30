@@ -70,7 +70,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         _nNumInitialConfigurations = 0;
         for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
             std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
-            if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) <= 0 ) {
+            if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
                 continue;
             }
             _treeForward.AddNode(-_nNumInitialConfigurations-1, vinitialconfig);
@@ -94,12 +94,15 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         PlannerParametersConstPtr params = GetParameters();
 
         typename list<Node*>::iterator startNode, endNode;
-        ConfigurationVelocityListPtr listconfigs(new ConfigurationVelocityList());
+        if( !_filterreturn ) {
+            _filterreturn.reset(new ConstraintFilterReturn());
+        }
+        int dof = GetParameters()->GetDOF();
         int nrejected = 0;
         int i = numiterations;
         while(i > 0 && nrejected < (int)path.size()+4 ) {
             --i;
-            
+
             // pick a random node on the path, and a random jump ahead
             int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()-2));
             int startIndex = _uniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
@@ -111,8 +114,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             nrejected++;
 
             // check if the nodes can be connected by a straight line
-            listconfigs->clear();
-            if ( params->CheckPathAllConstraints((*startNode)->q, (*endNode)->q, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, listconfigs) <= 0 ) {
+            _filterreturn->Clear();
+            if ( params->CheckPathAllConstraints((*startNode)->q, (*endNode)->q, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
                 if( nrejected++ > (int)path.size()+8 ) {
                     break;
                 }
@@ -120,8 +123,9 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             }
 
             ++startNode;
-            FOREACHC(itc, *listconfigs) {
-                int index = _treeForward.AddNode(0x80000000,itc->first);
+            OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
+            for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
+                int index = _treeForward.AddNode(0x80000000,std::vector<dReal>(itvalues,itvalues+dof));
                 path.insert(startNode, _treeForward._nodes.at(index));
             }
             // splice out in-between nodes in path
@@ -148,10 +152,11 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
 protected:
     RobotBasePtr _robot;
-    std::vector<dReal>         _sampleConfig;
+    std::vector<dReal> _sampleConfig;
     int _goalindex, _startindex;
     SpaceSamplerBasePtr _uniformsampler;
     int _nNumInitialConfigurations;
+    ConstraintFilterReturnPtr _filterreturn;
 
     SpatialTree< RrtPlanner<Node>, Node > _treeForward;
 
@@ -213,7 +218,7 @@ Some python code to display data::\n\
         _vecGoals.resize(0);
         for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
-            if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) > 0 ) {
+            if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                 _treeBackward.AddNode(-static_cast<int>(_vecGoals.size())-1, vgoal);
                 _vecGoals.push_back(vgoal);
             }
@@ -542,7 +547,7 @@ public:
                 goal_index++;
             }
 
-            if( GetParameters()->CheckPathAllConstraints(vgoal,vgoal, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) > 0 ) {
+            if( GetParameters()->CheckPathAllConstraints(vgoal,vgoal, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                 _vecGoals.push_back(vgoal);
             }
             else {
@@ -804,7 +809,7 @@ protected:
                 if( !_parameters->_sampleneighfn(vSampleConfig,pnode->q,_parameters->_fStepLength) ) {
                     return PS_Failed;
                 }
-                if( GetParameters()->CheckPathAllConstraints(pnode->q, vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) > 0 ) {
+                if( GetParameters()->CheckPathAllConstraints(pnode->q, vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                     _treeForward.AddNode(inode,vSampleConfig);
                     GetEnv()->UpdatePublishedBodies();
                     RAVELOG_DEBUG(str(boost::format("size %d\n")%_treeForward._nodes.size()));
