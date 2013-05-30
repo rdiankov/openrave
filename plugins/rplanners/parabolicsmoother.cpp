@@ -298,7 +298,7 @@ public:
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
-    virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
+    virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
         if( _bUsePerturbation ) {
             // have to also test with tolerances!
@@ -323,7 +323,7 @@ public:
         return true;
     }
 
-    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
+    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         if( _bUsePerturbation ) {
             // test with tolerances!

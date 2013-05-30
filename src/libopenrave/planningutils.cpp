@@ -1090,14 +1090,30 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
+    ConfigurationSpecification spec = robot->GetActiveConfigurationSpecification();
+    vector<dReal> jitteredvalues;
+
     if( waypointindex == 0 ) {
-        //Remove the first waypoint
+        traj->GetWaypoint(waypointindex,jitteredvalues, spec);
+        dReal diff = 0;
+        for(size_t i = 0; i < dofvalues.size(); ++i) {
+            dReal d = (dofvalues[i]-jitteredvalues[i]);
+            diff += d*d;
+        }
+        diff = sqrt(diff);
+        RAVELOG_DEBUG_FORMAT("Jitter distance (init) = %f", diff);
         traj->Remove(waypointindex,waypointindex+1);
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
-        //Remove the last waypoint
+        traj->GetWaypoint(waypointindex-1,jitteredvalues, spec);
+        dReal diff = 0;
+        for(size_t i = 0; i < dofvalues.size(); ++i) {
+            dReal d = (dofvalues[i]-jitteredvalues[i]);
+            diff += d*d;
+        }
+        diff = sqrt(diff);
+        RAVELOG_DEBUG_FORMAT("Jitter distance (goal)= %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
-        //Decrese waypointindex by 1
         waypointindex--;
     }
     else {
@@ -1172,6 +1188,16 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         }
     }
 
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        int ran = RaveRandomInt()%10000;
+        string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
+        RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        trajinitial->serialize(f);
+    }
+
+    // This ensures that the beginning and final velocities will be preserved
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
     // retiming is done, now merge the two trajectories
@@ -1212,7 +1238,7 @@ void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, cons
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
         //Remove the last waypoint
-        traj->Remove(waypointindex,waypointindex+1);
+        traj->Remove(waypointindex-1,waypointindex);
         //Decrese waypointindex by 1
         waypointindex--;
     }

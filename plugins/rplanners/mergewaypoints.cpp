@@ -543,9 +543,9 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
 }
 
 // Check whether ramps satisfy constraints associated with checker
-bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::RampFeasibilityChecker& check){
+bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::RampFeasibilityChecker& check,int options = 0xffff){
     FOREACHC(itramp,ramps){
-        if(!check.Check(*itramp)) {
+        if(!check.Check(*itramp,options)) {
             return false;
         }
     }
@@ -692,7 +692,9 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.dx1 = zero;
 
     // Here iteratively timescales up until the time-related constraints are satisfied
-    // Note that this can be improved if one can check time-related constraints separately
+    // Disable collision checks since timescaling a linear ramp should not change its path
+    int options = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+
     dReal hi = 1;
     dReal lo = 1e-6;
     dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
@@ -724,7 +726,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             tmpramps.resize(0);
             tmpramps.push_back(newramp);
             BreakIntoUnitaryRamps(tmpramps);
-            if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check))) {
+            if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check,options))) {
                 if(coef <= 1e-6) {
                     RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
                     return false;
@@ -741,7 +743,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         coef = (hi+lo)/2;
     }
-    return resramps.size() > 0 && DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check);
+    return resramps.size() > 0 && DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check,options);
 }
 
 

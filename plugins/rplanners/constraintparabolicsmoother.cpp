@@ -723,7 +723,7 @@ public:
     }
 
 
-    virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da)
+    virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
         if( _bUsePerturbation ) {
             // have to also test with tolerances!
@@ -740,14 +740,12 @@ public:
                     }
                 }
                 (*_setstatefn)(anew);
-                int options = 0xffff;
                 if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart, options) != 0 ) {
                     return false;
                 }
             }
         }
         else {
-            int options = 0xffff;
             if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
                 return false;
             }
@@ -766,7 +764,7 @@ public:
         return true;
     }
 
-    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed)
+    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         if( _bUsePerturbation ) {
             // have to also test with tolerances!
@@ -790,7 +788,6 @@ public:
                     }
                 }
                 //(*_setstatefn)(anew);
-                int options = 0xffff;
                 if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart, options) != 0 ) {
                     return false;
                 }
@@ -798,8 +795,7 @@ public:
         }
         else {
             //_parameters->_setstatefn(a);
-            int options = 0xffff;
-            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options);
+            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
             if( pathreturn != 0 ) {
                 if( pathreturn & CFO_CheckTimeBasedConstraints ) {
                     // time-related
