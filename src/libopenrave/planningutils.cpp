@@ -1172,12 +1172,14 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         }
     }
 
-    int ran = RaveRandomInt()%10000;
-    string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
-    RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
-    ofstream f(filename.c_str());
-    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    trajinitial->serialize(f);
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        int ran = RaveRandomInt()%10000;
+        string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
+        RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        trajinitial->serialize(f);
+    }
 
     // This ensures that the beginning and final velocities will be preserved
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");

@@ -513,17 +513,17 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,Distance
     return true;
 }
 
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol)
+bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol,int options)
 {
     PARABOLIC_RAMP_ASSERT(tol.size() == ramp.ramps.size());
     for(size_t i = 0; i < tol.size(); ++i) {
         PARABOLIC_RAMP_ASSERT(tol[i] > 0);
     }
     ramp.constraintchecked = 1;
-    if(!space->ConfigFeasible(ramp.x0, ramp.dx0)) {
+    if(!space->ConfigFeasible(ramp.x0, ramp.dx0, options)) {
         return false;
     }
-    if(!space->ConfigFeasible(ramp.x1, ramp.dx1)) {
+    if(!space->ConfigFeasible(ramp.x1, ramp.dx1, options)) {
         return false;
     }
     //PARABOLIC_RAMP_ASSERT(space->ConfigFeasible(ramp.x0));
@@ -597,7 +597,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
             if( space->NeedDerivativeForFeasibility() ) {
                 ramp.Derivative(divs[j],dq2);
             }
-            if(!space->SegmentFeasible(q1,q2, dq1, dq2, divs[j]-divs[i])) {
+            if(!space->SegmentFeasible(q1,q2, dq1, dq2, divs[j]-divs[i],options)) {
                 return false;
             }
         }
@@ -607,7 +607,7 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
             if( space->NeedDerivativeForFeasibility() ) {
                 ramp.Derivative(divs[k],dq1);
             }
-            if(!space->ConfigFeasible(q1, dq1)) {
+            if(!space->ConfigFeasible(q1, dq1,options)) {
                 return false;
             }
             segs.push_back(pair<int,int>(i,k));
@@ -627,13 +627,13 @@ RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,Dis
 {
 }
 
-bool RampFeasibilityChecker::Check(const ParabolicRampND& x)
+bool RampFeasibilityChecker::Check(const ParabolicRampND& x,int options)
 {
     if(distance) {
-        return CheckRamp(x,feas,distance,maxiters);
+        return CheckRamp(x,feas,distance,maxiters,options);
     }
     else {
-        return CheckRamp(x,feas,tol);
+        return CheckRamp(x,feas,tol,options);
     }
 }
 
