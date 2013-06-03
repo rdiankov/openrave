@@ -488,7 +488,9 @@ public:
         else if( x.size() > 1 ) {
             for(size_t i=0; i+1<x.size(); i++) {
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-                bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check);
+                //int options  = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                int options = 0xffff;
+                bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check,options);
                 if( !cansetmilestone ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d failed to pass constraints", i%(i+1), ORE_Assert);
                 }
@@ -601,9 +603,12 @@ public:
             itramp1->Derivative(u1,dx0);
             itramp2->Derivative(u2,dx1);
 
-            // Check collision at this stage only if we don't run mergewaypoints afterwards
-            bool docheck = _parameters->minswitchtime == 0;
-            bool res = mergewaypoints::ComputeQuadraticRampsWithConstraints(intermediate,x0,dx0,x1,dx1,t2-t1, _parameters, check, docheck);
+            int options = 0xffff;
+            // If we run mergewaypoints afterwards, no need to check for collision at this stage
+            if(_parameters->minswitchtime > 0) {
+                options = options &(~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+            }
+            bool res = mergewaypoints::ComputeQuadraticRampsWithConstraints(intermediate,x0,dx0,x1,dx1,t2-t1, _parameters, check, options);
 
             if(!res) {
                 RAVELOG_VERBOSE("... Could not SolveMinTime\n");
