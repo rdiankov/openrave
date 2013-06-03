@@ -1112,14 +1112,13 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
             diff += d*d;
         }
         diff = sqrt(diff);
-        RAVELOG_DEBUG_FORMAT("Jitter distance (goal)= %f", diff);
+        RAVELOG_DEBUG_FORMAT("Jitter distance (goal) = %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
         waypointindex--;
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
-
     // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }

@@ -765,7 +765,6 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         hi = coef;
     }
     return (!docheck) || CheckRamps(resramps,check);
-
 }
 
 
