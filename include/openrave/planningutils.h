@@ -368,7 +368,7 @@ public:
        \param parameters stored inside the structure as a weak pointer
        \param filtermask A mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
      */
-    DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask);
+    DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask=0xffffffff);
     virtual ~DynamicsCollisionConstraint() {
     }
 
@@ -377,6 +377,12 @@ public:
 
     /// \brief Sets a new mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
     virtual void SetFilterMask(int filtermask);
+
+    /// \brief sets the perturbation to +- apply to all tested joint values.
+    ///
+    /// By default, perturbation is 0.1 and only applied if filtermask specifies it.
+    /// \param perturbation It is multiplied by each DOF's resolution (_vConfigResolution) before added to the state.
+    virtual void SetPerturbation(dReal perturbation);
 
     /// \brief set user check fucntions
     ///
@@ -392,14 +398,23 @@ public:
     }
 
 protected:
-    virtual int _CheckState(int options, ConstraintFilterReturnPtr filterreturn);
+    /// \brief checks an already set state
+    ///
+    /// \param options should already be masked with _filtermask
+    virtual int _CheckState(const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
+
+    /// \brief sets and checks the state, also takes into account perturbations
+    ///
+    /// \param options should already be masked with _filtermask
+    virtual int _SetAndCheckState(PlannerBase::PlannerParametersPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn);
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
+    dReal _perturbation;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
     // for dynamics
