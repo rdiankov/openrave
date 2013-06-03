@@ -102,6 +102,12 @@ public:
             return PS_Failed;
         }
 
+        _inittraj = ptraj;
+
+
+        if(!_parameters->verifyinitialpath) {
+            RAVELOG_WARN("Initial path verification is disabled\n");
+        }
 
         //Writing the incoming traj
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -403,7 +409,7 @@ public:
             // TODO ramps are unitary so don't have to track switch points
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
-                if(true) {
+                if(_parameters->verifyinitialpath) {
                     // part of original trajectory which might not have been processed with perturbations, so ignore them
                     _bUsePerturbation = false;
                     if( !checker.Check(*itrampnd)) {
@@ -488,10 +494,17 @@ public:
         else if( x.size() > 1 ) {
             for(size_t i=0; i+1<x.size(); i++) {
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-                //int options  = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
                 int options = 0xffff;
+                if(!_parameters->verifyinitialpath) {
+                    options  = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                }
                 bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check,options);
                 if( !cansetmilestone ) {
+                    string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+                    RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
+                    ofstream f(filename.c_str());
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    _inittraj->serialize(f);
                     throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d failed to pass constraints", i%(i+1), ORE_Assert);
                 }
                 dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
@@ -863,7 +876,7 @@ protected:
 //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
-    TrajectoryBasePtr _dummytraj;
+    TrajectoryBasePtr _dummytraj,_inittraj;
     bool _bUsePerturbation; ///< if true, perterbs joint values a little before testing them for the constraints
     bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
     PlannerProgress _progress;

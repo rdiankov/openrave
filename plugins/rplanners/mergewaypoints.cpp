@@ -727,6 +727,9 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check,options))) {
                 if(coef <= 1e-6) {
                     RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
+                    // RaveSetDebugLevel(Level_Verbose);
+                    // CheckRamps(tmpramps,check,options);
+                    // RaveSetDebugLevel(Level_Debug);
                     return false;
                 }
                 hi = coef;
@@ -874,7 +877,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         FOREACHC(itramp, resramps) {
             desireddurations.push_back(ComputeStepSizeCeiling(itramp->endTime,params->_fStepLength));
         }
-        PrintRamps(resramps,params,false);
+        //PrintRamps(resramps,params,false);
         bool res2 = IterativeFixRamps(resramps,desireddurations,params);
         if( res2 && DetermineMinswitchtime(resramps) >= params->minswitchtime) {
             RAVELOG_DEBUG("Cool: First or last two ramps could be fixed\n");
