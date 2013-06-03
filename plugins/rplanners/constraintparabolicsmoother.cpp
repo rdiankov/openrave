@@ -731,29 +731,10 @@ public:
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
         if( _bUsePerturbation ) {
-            // have to also test with tolerances!
-            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-            ParabolicRamp::Vector anew(a.size());
-            FOREACH(itperturbation,perturbations) {
-                for(size_t i = 0; i < a.size(); ++i) {
-                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                    if( anew[i] < _parameters->_vConfigLowerLimit.at(i) ) {
-                        anew[i] = _parameters->_vConfigLowerLimit.at(i);
-                    }
-                    if( anew[i] > _parameters->_vConfigUpperLimit.at(i) ) {
-                        anew[i] = _parameters->_vConfigUpperLimit.at(i);
-                    }
-                }
-                (*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(a,a,da,da,0,IT_OpenStart, options) != 0 ) {
-                    return false;
-                }
-            }
+            options |= CFO_CheckWithPerturbation;
         }
-        else {
-            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
-                return false;
-            }
+        if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
+            return false;
         }
         return true;
     }
@@ -772,41 +753,15 @@ public:
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         if( _bUsePerturbation ) {
-            // have to also test with tolerances!
-            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-            ParabolicRamp::Vector anew(a.size()), bnew(b.size());
-            FOREACH(itperturbation,perturbations) {
-                for(size_t i = 0; i < a.size(); ++i) {
-                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                    if( anew[i] < _parameters->_vConfigLowerLimit.at(i) ) {
-                        anew[i] = _parameters->_vConfigLowerLimit.at(i);
-                    }
-                    if( anew[i] > _parameters->_vConfigUpperLimit.at(i) ) {
-                        anew[i] = _parameters->_vConfigUpperLimit.at(i);
-                    }
-                    bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                    if( bnew[i] < _parameters->_vConfigLowerLimit.at(i) ) {
-                        bnew[i] = _parameters->_vConfigLowerLimit.at(i);
-                    }
-                    if( bnew[i] > _parameters->_vConfigUpperLimit.at(i) ) {
-                        bnew[i] = _parameters->_vConfigUpperLimit.at(i);
-                    }
-                }
-                //(*_setstatefn)(anew);
-                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart, options) != 0 ) {
-                    return false;
-                }
-            }
+            options |= CFO_CheckWithPerturbation;
         }
-        else {
-            //_parameters->_setstatefn(a);
-            int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
-            if( pathreturn != 0 ) {
-                if( pathreturn & CFO_CheckTimeBasedConstraints ) {
-                    // time-related
-                }
-                return false;
+        //_parameters->_setstatefn(a);
+        int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
+        if( pathreturn != 0 ) {
+            if( pathreturn & CFO_CheckTimeBasedConstraints ) {
+                // time-related
             }
+            return false;
         }
         return true;
     }

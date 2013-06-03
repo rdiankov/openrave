@@ -855,7 +855,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
             params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, CFO_CheckEnvCollisions|CFO_CheckSelfCollisions));
+            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
             params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatefn, params->_getstatefn));
         }
@@ -1786,7 +1786,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -1816,7 +1816,46 @@ void DynamicsCollisionConstraint::SetFilterMask(int filtermask)
     _filtermask = filtermask;
 }
 
-int DynamicsCollisionConstraint::_CheckState(int options, ConstraintFilterReturnPtr filterreturn)
+void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
+{
+    _perturbation = perturbation;
+}
+
+int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
+{
+    params->_setstatefn(vdofvalues);
+    if( (options & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && vdofvelocities.size() == vdofvalues.size() ) {
+        (*_setvelstatefn)(vdofvelocities);
+    }
+    int nstateret = _CheckState(vdofaccels, options, filterreturn);
+    if( nstateret != 0 ) {
+        return nstateret;
+    }
+    if( (options & CFO_CheckWithPerturbation) && _perturbation > 0 ) {
+        // only check collision constraints with the perturbation since they are the only ones that don't have settable limits
+        _vperturbedvalues.resize(vdofvalues.size());
+        boost::array<dReal,3> perturbations = {{_perturbation,-_perturbation}};
+        FOREACH(itperturbation,perturbations) {
+            for(size_t i = 0; i < vdofvalues.size(); ++i) {
+                _vperturbedvalues[i] = vdofvalues[i] + *itperturbation * params->_vConfigResolution.at(i);
+                if( _vperturbedvalues[i] < params->_vConfigLowerLimit.at(i) ) {
+                    _vperturbedvalues[i] = params->_vConfigLowerLimit.at(i);
+                }
+                if( _vperturbedvalues[i] > params->_vConfigUpperLimit.at(i) ) {
+                    _vperturbedvalues[i] = params->_vConfigUpperLimit.at(i);
+                }
+            }
+            params->_setstatefn(_vperturbedvalues);
+            int nstateret = _CheckState(vdofaccels, options, filterreturn);
+            if( nstateret != 0 ) {
+                return nstateret;
+            }
+        }
+    }
+    return 0;
+}
+
+int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
     options &= _filtermask;
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
@@ -1838,7 +1877,7 @@ int DynamicsCollisionConstraint::_CheckState(int options, ConstraintFilterReturn
                     }
                 }
             }
-            if( _vtorquevalues.size() > 0 ) {
+            if( _vtorquevalues.size() > 0 && vdofaccels.size() > 0 ) {
                 _doftorques.resize(pbody->GetDOF(),0);
                 _dofaccelerations.resize(pbody->GetDOF(),0);
                 _vdofindices.resize(pbody->GetDOF());
@@ -1846,8 +1885,8 @@ int DynamicsCollisionConstraint::_CheckState(int options, ConstraintFilterReturn
                     _vdofindices[i] = i;
                 }
 
-                // have to extract the correct accelerations from _vtempaccelconfig, use specvel and timederivative=1
-                _specvel.ExtractJointValues(_dofaccelerations.begin(), _vtempaccelconfig.begin(), pbody, _vdofindices, 1);
+                // have to extract the correct accelerations from vdofaccels use specvel and timederivative=1
+                _specvel.ExtractJointValues(_dofaccelerations.begin(), vdofaccels.begin(), pbody, _vdofindices, 1);
 
                 // compute inverse dynamics and check
                 pbody->ComputeInverseDynamics(_doftorques, _dofaccelerations);
@@ -1957,11 +1996,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     if (bCheckEnd) {
-        params->_setstatefn(q1);
-        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq1.size() == q1.size() ) {
-            (*_setvelstatefn)(dq1);
-        }
-        int nstateret = _CheckState(options, filterreturn);
+        int nstateret = _SetAndCheckState(params, q1, dq1, _vtempaccelconfig, maskoptions, filterreturn);
         if( nstateret != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = nstateret;
@@ -2017,11 +2052,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
     if (start == 0 ) {
-        params->_setstatefn(q0);
-        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && dq0.size() == q0.size() ) {
-            (*_setvelstatefn)(dq0);
-        }
-        int nstateret = _CheckState(options, filterreturn);
+        int nstateret = _SetAndCheckState(params, q0, dq0, _vtempaccelconfig, maskoptions, filterreturn);
         if( nstateret != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = nstateret;
@@ -2067,11 +2098,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
     for (int f = start; f < numSteps; f++) {
-        params->_setstatefn(_vtempconfig);
-        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
-            (*_setvelstatefn)(_vtempvelconfig);
-        }
-        int nstateret = _CheckState(options, filterreturn);
+        int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
         if( !!params->_getstatefn ) {
             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
         }

@@ -301,24 +301,10 @@ public:
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
         if( _bUsePerturbation ) {
-            // have to also test with tolerances!
-            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance}};
-            ParabolicRamp::Vector anew(a.size());
-            FOREACH(itperturbation,perturbations) {
-                for(size_t i = 0; i < a.size(); ++i) {
-                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                }
-                //_parameters->_setstatefn(anew);
-                if( _parameters->CheckPathAllConstraints(anew,anew,da, da, 0, IT_OpenStart) != 0 ) {
-                    return false;
-                }
-            }
+            options |= CFO_CheckWithPerturbation;
         }
-        else {
-            //_parameters->_setstatefn(a);
-            if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) != 0 ) {
-                return false;
-            }
+        if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart) != 0 ) {
+            return false;
         }
         return true;
     }
@@ -326,25 +312,10 @@ public:
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         if( _bUsePerturbation ) {
-            // test with tolerances!
-            boost::array<dReal,3> perturbations = {{ 0,_parameters->_pointtolerance,-_parameters->_pointtolerance }};
-            ParabolicRamp::Vector anew(a.size()), bnew(b.size());
-            FOREACH(itperturbation,perturbations) {
-                for(size_t i = 0; i < a.size(); ++i) {
-                    anew[i] = a[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                    bnew[i] = b[i] + *itperturbation * _parameters->_vConfigResolution.at(i);
-                }
-                //_parameters->_setstatefn(anew);
-                if( _parameters->CheckPathAllConstraints(anew,bnew,da, db, timeelapsed, IT_OpenStart) != 0 ) {
-                    return false;
-                }
-            }
+            options |= CFO_CheckWithPerturbation;
         }
-        else {
-            //_parameters->_setstatefn(a);
-            if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) != 0 ) {
-                return false;
-            }
+        if( _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart) != 0 ) {
+            return false;
         }
         return true;
     }

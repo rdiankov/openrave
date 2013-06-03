@@ -35,8 +35,8 @@ enum ConstraintFilterOptions
     CFO_BreakOnFirstValidation=0x8, ///< if set, will break as soon as any constraint is violated (even if more than one are violated, the return code will only show one constraint breaking)
     CFO_CheckUserConstraints=0x00008000, ///< user-defined functions which don't fit any of the above descriptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
-    CFO_FillCheckedConfiguration=0x00020000 ///< if set, will fill \ref ConstraintFilterReturn::_configurations
-
+    CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations
+    CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
 };
 
 /// \brief the status of the PlanPath method. Used when PlanPath can be called multiple times to resume planning.
