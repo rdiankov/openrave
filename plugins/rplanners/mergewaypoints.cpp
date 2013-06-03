@@ -567,7 +567,7 @@ dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps)
     return 1/res;
 }
 
-bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
+bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options){
     //int nitersfurthermerge = params->nitersfurthermerge;
     int nitersfurthermerge = 0;
     resramps = origramps;
@@ -593,7 +593,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
                 break;
             }
             bool resfix = FixRamps(resramp0,resramp1,resramp0x,resramp1x,t0,t1,params);
-            if(!resfix || !check.Check(resramp0x) || !check.Check(resramp1x)) {
+            if(!resfix || !check.Check(resramp0x,options) || !check.Check(resramp1x,options)) {
                 break;
             }
             bHasChanged = true;
@@ -615,13 +615,13 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
     return bHasChanged;
 }
 
-bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
+bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options){
     std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
     dReal testcoef;
 
     //printf("Coef = 1\n");
     bool res = IterativeMergeRampsFixedTime(origramps, ramps2, params, checkcontrollertime, uniformsampler);
-    res = res && (!docheck || CheckRamps(ramps2,check));
+    res = res &&  CheckRamps(ramps2,check,options);
     if (res) {
         resramps.swap(ramps2);
         return true;
@@ -634,7 +634,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origram
         return false;
     }
     res = IterativeMergeRampsFixedTime(ramps, ramps2, params, checkcontrollertime, uniformsampler);
-    res = res && (!docheck || CheckRamps(ramps2,check));
+    res = res && CheckRamps(ramps2,check,options);
     if (!res) {
         return false;
     }
@@ -651,7 +651,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origram
             continue;
         }
         res = IterativeMergeRampsFixedTime(ramps, ramps2, params, checkcontrollertime, uniformsampler);
-        res = res && (!docheck || CheckRamps(ramps2,check));
+        res = res && CheckRamps(ramps2,check,options);
         if(res) {
             hi = testcoef;
             resramps.swap(ramps2);
@@ -664,7 +664,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origram
 }
 
 
-bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, bool docheck){
+bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options){
     std::list<ParabolicRamp::ParabolicRampND> ramps;
     for(dReal testcoef=1; testcoef<=upperbound; testcoef+=stepsize) {
         bool canscale = ScaleRampsTime(origramps,ramps,testcoef,true,params);
@@ -672,7 +672,7 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
             continue;
         }
         bool res = IterativeMergeRampsFixedTime(ramps, resramps, params, checkcontrollertime, uniformsampler);
-        res = res && (!docheck || CheckRamps(resramps,check));
+        res = res && CheckRamps(resramps,check,options);
         if(res) {
             RAVELOG_DEBUG_FORMAT("Timescale coefficient: %f succeeded\n",testcoef);
             return true;
@@ -791,12 +791,17 @@ bool FormStraightLineRamp(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::P
 }
 
 
-bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check){
+bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
     if (origramps.size()<2) {
         return false;
     }
     bool jittered = false;
     std::list<ParabolicRamp::ParabolicRampND>::iterator itramp0 = origramps.begin(),itramp1,itramp2;
+
+    if(!params->verifyinitialpath) {
+        RAVELOG_WARN("Initial path verification is disabled (in FixRampsEnds)\n");
+        options  = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+    }
 
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
@@ -805,8 +810,6 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         RAVELOG_DEBUG("First two ramps probably come from a jittering operation\n");
         jittered = true;
         std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-        //int options  = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
-        int options = 0xffff;
         bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check,options);
         if(!res) {
             RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
@@ -841,7 +844,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         jittered = true;
         RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
         std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-        bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check);
+        bool res = ComputeLinearRampsWithConstraints(tmpramps0,itramp0->x0,itramp1->x1,params,check,options);
         if(!res) {
             RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
             return false;
