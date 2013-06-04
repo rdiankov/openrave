@@ -865,6 +865,9 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                     int err = pjoint->_Eval(i,1,vtempvalues,veval);
                     if( err ) {
                         RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%err));
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            err = pjoint->_Eval(i,1,vtempvalues,veval);
+                        }
                     }
                     else {
                         for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {

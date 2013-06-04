@@ -149,7 +149,7 @@ else:
     from numpy import array
 
 from ..openravepy_ext import openrave_exception, RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix
 from . import DatabaseGenerator
 from ..misc import relpath, TSP
 import time,platform,shutil,sys
@@ -683,7 +683,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             solvefn=solveFullIK_TranslationXY2D
         elif self.iktype == IkParameterizationType.TranslationXYOrientation3D:
             rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
-            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetLocalToolTransform()[0:3,0:3])[0]
+            rawangle=-normalizeAxisRotation([0,0,1],quatFromRotationMatrix(self.manip.GetLocalToolTransform()[0:3,0:3]))[0]
             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawangle'] = rawangle
