@@ -325,6 +325,12 @@ public:
         return _uniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
 
+    virtual bool NeedDerivativeForFeasibility()
+    {
+        // always enable since CheckPathAllConstraints needs to interpolate quadratically
+        return true;
+    }
+
 protected:
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _uniformsampler;

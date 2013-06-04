@@ -410,7 +410,7 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
