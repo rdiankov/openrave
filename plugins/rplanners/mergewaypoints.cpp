@@ -691,8 +691,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.dx0 = zero;
     newramp.dx1 = zero;
 
-    // Here iteratively timescales up until the time-related constraints are satisfied
-    // Disable collision checks since timescaling a linear ramp should not change its path
+    // Iteratively timescales up until the time-related constraints are satisfied
     dReal hi = 1;
     dReal lo = 1e-6;
     dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
@@ -701,10 +700,10 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     while(hi-lo>1e-2 && iter<1000) {
         iter++;
         if(iter==1) {
-            coef = hi;
+            coef = 1;
         }
         if(iter==2) {
-            coef = lo;
+            coef = 1e-6;
         }
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
@@ -750,22 +749,62 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
 
 bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal curtime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tmpramps1d;
-    dReal mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, params->_vConfigAccelerationLimit, params->_vConfigVelocityLimit, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
-    if(mintime < 0 || mintime > curtime ) {
-        return false;
+    std::list<ParabolicRamp::ParabolicRampND> tmpramps;
+    dReal mintime;
+
+    // Iteratively timescales up until the time-related constraints are met
+    dReal hi = 1;
+    dReal lo = 0.1;
+    dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
+    int iter = 0;
+    while(hi-lo>params->_fStepLength && iter<100) {
+        iter++;
+        if(iter==1) {
+            coef = 1;
+        }
+        if(iter==2) {
+            coef = 0.1;
+        }
+        std::vector<dReal> amax;
+        size_t n = params->_vConfigAccelerationLimit.size();
+        amax.resize(n);
+        for(size_t j=0; j<n; j++) {
+            amax[j]=params->_vConfigAccelerationLimit[j]*coef;
+        }
+        mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, params->_vConfigVelocityLimit, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
+        if(mintime > curtime) {
+            if(coef>=1) {
+                RAVELOG_VERBOSE("Traj with time-scaling 1 (amax = acceleration_limit) has time duration > curtime, so stopping ComputeQuadraticRamps right away\n");
+                return false;
+            }
+            lo = coef;
+        }
+        else if (mintime <0) {
+            RAVELOG_VERBOSE_FORMAT("Coef %f could not Solvemintime, so stopping ComputeQuadraticRamps right away\n",coef);
+            return false;
+        }
+        else{
+            tmpramps.resize(0);
+            CombineRamps(tmpramps1d,tmpramps);
+            BreakIntoUnitaryRamps(tmpramps);
+            if(!CheckRamps(tmpramps,check,options)) {
+                if(coef <= 0.1) {
+                    RAVELOG_VERBOSE("Super slow traj (amax = 0.1*acceleration_limit) failed check, so stopping ComputeQuadraticRamps right away\n");
+                    return false;
+                }
+                hi = coef;
+            }
+            else{
+                lo = coef;
+                resramps = tmpramps;
+                if(coef>=1) {
+                    break;
+                }
+            }
+        }
+        coef = (hi+lo)/2;
     }
-    resramps.resize(0);
-    CombineRamps(tmpramps1d,resramps);
-    BreakIntoUnitaryRamps(resramps);
-    // Here iteratively timescales up until the time-related constraints are met
-    // Note that this can be improved if one can check time-related constraints separately
-    dReal hi = curtime;
-    dReal lo = 1;
-    dReal coef = lo;
-    while(false) {
-        hi = coef;
-    }
-    return CheckRamps(resramps,check,options);
+    return (ComputeRampsDuration(resramps)<= curtime) && CheckRamps(resramps,check,options);
 }
 
 
@@ -815,8 +854,8 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
             RAVELOG_WARN("Could not make straight ramps out of the two ramps\n");
             return false;
         }
-        dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
-        bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
+        dReal tmpduration = ComputeRampsDuration(tmpramps0);
+        bool canscale = ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
         if(!canscale) {
             RAVELOG_WARN("Could not round up to controller time step\n");
             return false;
