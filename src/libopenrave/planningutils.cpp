@@ -22,6 +22,8 @@
 namespace OpenRAVE {
 namespace planningutils {
 
+static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.55); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
+
 int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn)
 {
     RAVELOG_VERBOSE("starting jitter active dof...\n");
@@ -1981,10 +1983,16 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     _vtempvelconfig.resize(dq0.size());
     // if velocity is valid, compute the acceleration for every DOF
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+        // do quadratic interpolation, so make sure the positions, velocities, and timeelapsed are consistent
+        // v0 + timeelapsed*0.5*(dq0+dq1) - v1 = 0
         _vtempaccelconfig.resize(dq0.size());
         dReal itimeelapsed = 1.0/timeelapsed;
         for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
             _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
+            dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
+            if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic);
+            }
         }
     }
     else {
@@ -2020,23 +2028,26 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             _vtempveldelta.at(i) -= dq0.at(i);
         }
     }
-    int i, numSteps = 1;
+
+    int i, numSteps = 1, nLargestStepIndex = 0;
     std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
     BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
     for (i = 0; i < params->GetDOF(); i++,itres++) {
         int steps;
         if( *itres != 0 ) {
-            steps = (int)(fabs(dQ[i]) / *itres);
+            steps = (int)(RaveFabs(dQ[i]) / *itres);
         }
         else {
-            steps = (int)(fabs(dQ[i]) * 100);
+            steps = (int)(RaveFabs(dQ[i]) * 100);
         }
         totalsteps += steps;
         if (steps > numSteps) {
             numSteps = steps;
+            nLargestStepIndex = i;
         }
     }
+
     if( totalsteps == 0 && start > 0 ) {
         if( !!filterreturn ) {
             if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
@@ -2053,73 +2064,121 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
     if (start == 0 ) {
         int nstateret = _SetAndCheckState(params, q0, dq0, _vtempaccelconfig, maskoptions, filterreturn);
+        if( options & CFO_FillCheckedConfiguration ) {
+            filterreturn->_configurations.insert(filterreturn->_configurations.begin(), q0.begin(), q0.end());
+        }
         if( nstateret != 0 ) {
             if( !!filterreturn ) {
                 filterreturn->_returncode = nstateret;
                 filterreturn->_invalidvalues = q0;
                 filterreturn->_invalidvelocities = dq0;
                 filterreturn->_fTimeWhenInvalid = 0;
-                if( options & CFO_FillCheckedConfiguration ) {
-                    filterreturn->_configurations.insert(filterreturn->_configurations.begin(), q0.begin(), q0.end());
-                }
             }
             return nstateret;
         }
         start = 1;
     }
 
-    dReal fisteps = dReal(1.0f)/numSteps;
-    for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
-        *it *= fisteps;
-    }
-    for(std::vector<dReal>::iterator it = _vtempveldelta.begin(); it != _vtempveldelta.end(); ++it) {
-        *it *= fisteps;
-    }
-
-    // check for collision along the straight-line path
-    // NOTE: this does not check the end config, and may or may
-    // not check the start based on the value of 'start'
     for (i = 0; i < params->GetDOF(); i++) {
         _vtempconfig.at(i) = q0.at(i);
     }
     if( dq0.size() == q0.size() ) {
         _vtempvelconfig = dq0;
     }
-    if( start > 0 ) {
-        params->_setstatefn(_vtempconfig);
-        if( (maskoptions & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && _vtempconfig.size() == _vtempvelconfig.size() ) {
-            (*_setvelstatefn)(_vtempvelconfig);
-        }
-        if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
-            return 0x80000000;
-        }
-        for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
-            _vtempvelconfig.at(i) += _vtempveldelta[i];
+
+    if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+        // quadratic interpolation
+        // given the nLargestStepIndex, determine the timestep for all joints
+        dReal fLargestStepDelta = dQ.at(nLargestStepIndex)/dReal(numSteps);
+        dReal fLargestStepAccel = _vtempaccelconfig.at(nLargestStepIndex);
+        dReal fLargestStepVelocity = dq0.at(nLargestStepIndex);
+        dReal timesteproots[2], timestep=0;
+        dReal fStep = 0;
+        for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
+            int nstateret = 0;
+            if( istep >= start ) {
+                nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+            }
+            if( !!params->_getstatefn ) {
+                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+            }
+            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+            }
+            if( nstateret != 0 ) {
+                return nstateret;
+            }
+            if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
+                timestep = fStep/fLargestStepVelocity;
+            }
+            else {
+                int numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepVelocity, -fStep, timesteproots[0], timesteproots[1]);
+                bool bfound = false;
+                for(int i = 0; i < numroots; ++i) {
+                    if( timesteproots[i] >= 0 && (!bfound || timestep > timesteproots[i]) ) {
+                        timestep = timesteproots[i];
+                        bfound = true;
+                    }
+                }
+                if( !bfound ) {
+                    RAVELOG_WARN("cannot take root for quadratic interpolation\n");
+                    return 0x80000000;
+                }
+            }
+            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                _vtempconfig[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i));
+                _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
+            }
+
+            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+                return 0x80000000;
+            }
         }
     }
-    for (int f = start; f < numSteps; f++) {
-        int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-        if( !!params->_getstatefn ) {
-            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+    else {
+        // check for collision along the straight-line path
+        // NOTE: this does not check the end config, and may or may
+        // not check the start based on the value of 'start'
+        dReal fisteps = dReal(1.0f)/numSteps;
+        for(std::vector<dReal>::iterator it = dQ.begin(); it != dQ.end(); ++it) {
+            *it *= fisteps;
         }
-        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-        }
-        if( nstateret != 0 ) {
-            if( !!filterreturn ) {
-                filterreturn->_returncode = nstateret;
-                filterreturn->_invalidvalues = _vtempconfig;
-                filterreturn->_invalidvelocities = _vtempvelconfig;
-                filterreturn->_fTimeWhenInvalid = 0;
-            }
-            return nstateret;
+        for(std::vector<dReal>::iterator it = _vtempveldelta.begin(); it != _vtempveldelta.end(); ++it) {
+            *it *= fisteps;
         }
 
-        if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
-            return 0x80000000;
+        if( start > 0 ) {
+            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+                return 0x80000000;
+            }
+            for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
+                _vtempvelconfig.at(i) += _vtempveldelta[i];
+            }
         }
-        for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
-            _vtempvelconfig.at(i) += _vtempveldelta[i];
+        for (int f = start; f < numSteps; f++) {
+            int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+            if( !!params->_getstatefn ) {
+                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+            }
+            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+            }
+            if( nstateret != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = nstateret;
+                    filterreturn->_invalidvalues = _vtempconfig;
+                    filterreturn->_invalidvelocities = _vtempvelconfig;
+                    filterreturn->_fTimeWhenInvalid = 0;
+                }
+                return nstateret;
+            }
+
+            if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+                return 0x80000000;
+            }
+            for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
+                _vtempvelconfig.at(i) += _vtempveldelta[i];
+            }
         }
     }
 

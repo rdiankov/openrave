@@ -799,7 +799,8 @@ public:
 
     virtual bool NeedDerivativeForFeasibility()
     {
-        return _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel > 0 || _parameters->velocitydistancethresh > 0;
+        // always enable since CheckPathAllConstraints needs to interpolate quadratically
+        return true;
     }
 
     virtual ParabolicRamp::Real Rand()
