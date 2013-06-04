@@ -29,7 +29,8 @@ class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::Fe
     struct LinkConstraintInfo
     {
         KinBody::LinkPtr plink;
-        AABB ablocal; // local aabb of the link
+        OBB obb; // local obb of the link in the link's coordinate system
+
     };
 
 public:
@@ -81,6 +82,38 @@ public:
         if(_bCheckControllerTimeStep) {
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
         }
+
+        /*_listCheckLinks.clear();
+           std::list<KinBodyPtr> listUsedBodies;
+           std::set<KinBody::LinkPtr> setCheckedLinks;
+           _parameters->_configurationspecification.ExtractUsedBodies(GetEnv(), listUsedBodies);
+           FOREACH(itbody, listUsedBodies) {
+            KinBodyPtr pbody = *itbody;
+            if( pbody->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+                std::vector<int> vusedindices;
+                _parameters->_configurationspecification.ExtractUsedIndices(probot, vusedindices);
+                // go through every manipulator and see if it depends on vusedindices
+                FOREACH(itmanip, probot->GetManipulators()) {
+                    if( setCheckedLinks.find((*itmanip)->GetEndEffector()) == setCheckedLinks.end() ) {
+                        // already checked, so don't do anything
+                        continue;
+                    }
+                    FOREACH(itdofindex, vusedindices) {
+                        if( probot->DoesDOFAffectLink(*itdofindex, (*itmanip)->GetEndEffector()) ) {
+                            // add the link
+                            LinkConstraintInfo info;
+                            info.plink = (*itmanip)->GetEndEffector();
+                            // get all child links and grabbed objects below the end effector tree
+
+                            // initialize info.ablocal with the bounding box of all these objects
+                            _listCheckLinks.push_back(info);
+                        }
+                    }
+                    setCheckedLinks.insert((*itmanip)->GetEndEffector());
+                }
+            }
+           }*/
 
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         return true;

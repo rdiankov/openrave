@@ -1229,6 +1229,13 @@ protected:
      */
     virtual void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
 
+    /** \brief extracts all the indices that the configuration maintains for a particular body (looks for joint_values groups)
+
+        \param[in] body the body to query for
+        \param[out] usedindices a list of the DOF indices used for the body
+     */
+    virtual void ExtractUsedIndices(KinBodyPtr body, std::vector<int>& usedindices) const;
+
     /// \brief swaps the data between the two configuration specifications as efficiently as possible
     virtual void Swap(ConfigurationSpecification& spec);
 

@@ -520,6 +520,11 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& usedindices) const
+{
+    BOOST_ASSERT(0);
+}
+
 void ConfigurationSpecification::Swap(ConfigurationSpecification& spec)
 {
     _vgroups.swap(spec._vgroups);
