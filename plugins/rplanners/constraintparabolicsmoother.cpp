@@ -65,11 +65,6 @@ public:
             _parameters->_nMaxIterations = 100;
         }
         _constraintreturn.reset(new ConstraintFilterReturn());
-        _bUsePerturbation = true;
-        //_bUsePerturbation = false;
-//        if( !_distancechecker->InitEnvironment() ) {
-//            return false;
-//        }
         _listCheckLinks.clear();
         if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
             // extract links from _parameters->_configurationspecification?
@@ -102,6 +97,7 @@ public:
             return PS_Failed;
         }
 
+        _inittraj = ptraj;
 
         //Writing the incoming traj
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -136,7 +132,6 @@ public:
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
 
-            _bUsePerturbation = true;
             RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
 
             /////////////////////////////////////////////////////////////////////////
@@ -176,22 +171,19 @@ public:
                 // Change timing of ramps so that they satisfy minswitchtime, _fStepLength, and dynamics and collision constraints
                 dReal upperbound = 2 * mergewaypoints::ComputeRampsDuration(ramps);
                 dReal stepsize = 0.1;
-                bool docheck = true;
                 // Disable usePerturbation for this particular stage
-                bool saveUsePerturbation = _bUsePerturbation;
-                _bUsePerturbation = false;
+                int options = 0xffff;
                 // Reset all ramps
                 FOREACH(itramp, ramps) {
                     itramp->modified = true;
                 }
                 mergewaypoints::PrintRamps(ramps,_parameters,false);
                 // Try first easy solution
-                bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker);
+                bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker,options);
                 if(!res) {
                     RAVELOG_DEBUG("First or last two ramps could not be fixed, try something more general...\n");
-                    res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                    res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,options);
                 }
-                _bUsePerturbation = saveUsePerturbation;
                 // Reset all ramps
                 FOREACH(itramp, ramps2) {
                     itramp->modified = false;
@@ -249,6 +241,7 @@ public:
                 // and guarantees that that two waypoints are at least _parameters->minswitchtime away
                 // Note that this should never fail if initial traj is collision-free
                 // and if dynamics is always satisfied at zero velocity
+
                 SetMilestones(ramps, path,checker);
             }
 
@@ -263,10 +256,9 @@ public:
             // Sanity check before any shortcutting
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE("Sanity check before starting shortcutting...\n");
-                bool saveUsePerturbation = _bUsePerturbation;
-                _bUsePerturbation = false;
+                int options = 0xffff;
                 FOREACHC(itramp,ramps){
-                    if(!checker.Check(*itramp)) {
+                    if(!checker.Check(*itramp,options)) {
 
                         string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
                         RAVELOG_WARN(str(boost::format("Original traj invalid, writing to %s")%filename));
@@ -276,7 +268,6 @@ public:
                         throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
                     }
                 }
-                _bUsePerturbation = saveUsePerturbation;
             }
 
             // Reset all ramps
@@ -328,10 +319,10 @@ public:
                 //////////////////////  Further merge if possible ////////////////////////
                 //////////////////////////////////////////////////////////////////////////
 
-                bool docheck = true;
+                int options = 0xffff;
                 dReal upperbound = totaltime * 1.05;
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
-                bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,docheck);
+                bool resmerge = mergewaypoints::FurtherMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,checker,options);
                 if(resmerge) {
                     RAVELOG_DEBUG("Great, could further merge ramps!!\n");
                     size_t nbrampsbefore = mergewaypoints::CountUnitaryRamps(ramps);
@@ -403,13 +394,12 @@ public:
             // TODO ramps are unitary so don't have to track switch points
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
-                if(true) {
+                if(_parameters->verifyinitialpath) {
                     // part of original trajectory which might not have been processed with perturbations, so ignore them
-                    _bUsePerturbation = false;
-                    if( !checker.Check(*itrampnd)) {
+                    int options = 0xffff; // no perturbation
+                    if( !checker.Check(*itrampnd,options)) {
                         throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
                     }
-                    _bUsePerturbation = true; // re-enable
                     _progress._iteration+=1;
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return PS_Interrupted;
@@ -455,43 +445,28 @@ public:
     }
 
 
-    // inline bool SolveMinTimeWithConstraints(const ParabolicRamp::Vector& x0,const ParabolicRamp::Vector& dx0,const ParabolicRamp::Vector& x1,const ParabolicRamp::Vector& dx1, dReal curtime, ParabolicRamp::RampFeasibilityChecker& check, bool docheck, std::list<ParabolicRamp::ParabolicRampND>& rampsout)
-    // {
-    //     __tempramps1d.resize(0);
-    //     dReal mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, _parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, __tempramps1d, _parameters->_multidofinterp);
-    //     if(mintime < 0 || mintime > curtime ) {
-    //         return false;
-    //     }
-    //     rampsout.clear();
-    //     CombineRamps(__tempramps1d,rampsout);
-    //     bool feas=true;
-    //     if(docheck) {
-    //         FOREACH(itramp, rampsout) {
-    //             if(!check.Check(*itramp)) {
-    //                 feas=false;
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     return feas;
-    // }
-
-
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
-        bool savebUsePerturbation = _bUsePerturbation;
-        _bUsePerturbation = false;
+
         ramps.clear();
         if(x.size()==1) {
             ramps.push_back(ParabolicRamp::ParabolicRampND());
             ramps.front().SetConstant(x[0]);
         }
         else if( x.size() > 1 ) {
+            int options = 0xffff; // no perturbation
+            if(!_parameters->verifyinitialpath) {
+                RAVELOG_WARN("Initial path verification is disabled (in SetMilestones)\n");
+                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+            }
             for(size_t i=0; i+1<x.size(); i++) {
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
-                //int options  = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
-                int options = 0xffff;
                 bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check,options);
                 if( !cansetmilestone ) {
+                    string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+                    RAVELOG_DEBUG_FORMAT("Writing original traj to %s", filename);
+                    ofstream f(filename.c_str());
+                    f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    _inittraj->serialize(f);
                     throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d failed to pass constraints", i%(i+1), ORE_Assert);
                 }
                 dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
@@ -507,7 +482,6 @@ public:
                 }
             }
         }
-        _bUsePerturbation = savebUsePerturbation;
     }
 
     // Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
@@ -669,8 +643,8 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 dReal upperbound = currenttrajduration-fimprovetimethresh;
                 // Do not check collision during merge, check later
-                bool docheck = false;
-                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,docheck);
+                int options = 0xffff &(~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);
 
                 if(!resmerge) {
                     RAVELOG_VERBOSE("... Could not merge\n");
@@ -684,10 +658,11 @@ public:
                         RAVELOG_VERBOSE("... Duration did not significantly improve after merger\n");
                     }
                     else{
-                        // Now check for collision, only for the ramps that have been modified
+                        // Now check for collision (with perturbation), only for the ramps that have been modified
                         int itx = 0;
+                        options = 0xffff | CFO_CheckWithPerturbation;
                         FOREACH(itramp, resramps) {
-                            if(itramp->modified && (!check.Check(*itramp))) {
+                            if(itramp->modified && (!check.Check(*itramp,options))) {
                                 RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
                                 resmerge = false;
                                 break;
@@ -730,9 +705,6 @@ public:
 
     virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
-        if( _bUsePerturbation ) {
-            options |= CFO_CheckWithPerturbation;
-        }
         if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
             return false;
         }
@@ -752,9 +724,6 @@ public:
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
-        if( _bUsePerturbation ) {
-            options |= CFO_CheckWithPerturbation;
-        }
         //_parameters->_setstatefn(a);
         int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
         if( pathreturn != 0 ) {
@@ -819,8 +788,7 @@ protected:
 //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
     std::list< LinkConstraintInfo > _listCheckLinks;
-    TrajectoryBasePtr _dummytraj;
-    bool _bUsePerturbation; ///< if true, perterbs joint values a little before testing them for the constraints
+    TrajectoryBasePtr _dummytraj,_inittraj;
     bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
     PlannerProgress _progress;
 
