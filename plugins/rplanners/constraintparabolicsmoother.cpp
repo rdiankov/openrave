@@ -134,6 +134,7 @@ public:
 
             RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
 
+
             /////////////////////////////////////////////////////////////////////////
             /////////////////////////  Convert to ramps /////////////////////////////
             /////////////////////////////////////////////////////////////////////////
@@ -178,21 +179,18 @@ public:
                     itramp->modified = true;
                 }
                 mergewaypoints::PrintRamps(ramps,_parameters,false);
-                // Try first easy solution
+                // Try first fixing trajectory ends (for traj comming from previous jittering operation)
                 bool res = mergewaypoints::FixRampsEnds(ramps,ramps2, _parameters,checker,options);
                 if(!res) {
                     RAVELOG_DEBUG("First or last two ramps could not be fixed, try something more general...\n");
+                    // More general algorithm
                     res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,options);
                 }
-                // Reset all ramps
-                FOREACH(itramp, ramps2) {
-                    itramp->modified = false;
-                }
-                ramps.swap(ramps2);
                 if(!res) {
                     throw OPENRAVE_EXCEPTION_FORMAT0("Could not obtain a feasible trajectory from initial quadratic trajectory",ORE_Assert);
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
+                ramps.swap(ramps2);
             }
 
 
@@ -203,6 +201,7 @@ public:
                 ParabolicRamp::Vector q(_parameters->GetDOF());
                 vector<ParabolicRamp::Vector> path;
                 path.reserve(ptraj->GetNumWaypoints());
+                // Group waypoints that are on the same segment
                 for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
                     std::copy(vtrajpoints.begin()+i*_parameters->GetDOF(),vtrajpoints.begin()+(i+1)*_parameters->GetDOF(),q.begin());
                     if( path.size() >= 2 ) {
@@ -241,7 +240,6 @@ public:
                 // and guarantees that that two waypoints are at least _parameters->minswitchtime away
                 // Note that this should never fail if initial traj is collision-free
                 // and if dynamics is always satisfied at zero velocity
-
                 SetMilestones(ramps, path,checker);
             }
 
@@ -259,7 +257,6 @@ public:
                 int options = 0xffff;
                 FOREACHC(itramp,ramps){
                     if(!checker.Check(*itramp,options)) {
-
                         string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
                         RAVELOG_WARN(str(boost::format("Original traj invalid, writing to %s")%filename));
                         ofstream f(filename.c_str());
@@ -336,7 +333,6 @@ public:
                     totaltime = totaltime2;
                     ramps.swap(resramps);
                     mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
-
                 }
                 else{
                     RAVELOG_DEBUG("Could not further merge ramps\n");
@@ -346,9 +342,11 @@ public:
                 RAVELOG_DEBUG_FORMAT("ramps are so close (%fs), so no need to shortcut", totaltime);
             }
 
+
             ///////////////////////////////////////////////////////////////////////////
             ////////////////// Convert back to Rave Trajectory ////////////////////////
             ///////////////////////////////////////////////////////////////////////////
+
             ConfigurationSpecification newspec = posspec;
             newspec.AddDerivativeGroups(1,true);
             int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
@@ -456,7 +454,7 @@ public:
             int options = 0xffff; // no perturbation
             if(!_parameters->verifyinitialpath) {
                 RAVELOG_WARN("Initial path verification is disabled (in SetMilestones)\n");
-                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
             }
             for(size_t i=0; i+1<x.size(); i++) {
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
@@ -643,7 +641,7 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> resramps;
                 dReal upperbound = currenttrajduration-fimprovetimethresh;
                 // Do not check collision during merge, check later
-                int options = 0xffff &(~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+                int options = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);
 
                 if(!resmerge) {
@@ -687,7 +685,6 @@ public:
                     ramps = saveramps;
                 }
             } // end mergewaypoints
-
 
             //revise the timing
             rampStartTime.resize(ramps.size());
