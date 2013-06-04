@@ -452,6 +452,24 @@ public:
         return false;
     }
 
+    boost::python::list ExtractUsedBodies(PyEnvironmentBasePtr pyenv)
+    {
+        std::vector<KinBodyPtr> vusedbodies;
+        _spec.ExtractUsedBodies(openravepy::GetEnvironment(pyenv), vusedbodies);
+        boost::python::list obodies;
+        FOREACHC(itbody, vusedbodies) {
+            obodies.append(openravepy::toPyKinBody(*itbody, pyenv));
+        }
+        return obodies;
+    }
+
+    object ExtractUsedIndices(PyKinBodyPtr pybody)
+    {
+        std::vector<int> usedindices;
+        _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), usedindices);
+        return toPyArray(usedindices);
+    }
+
 //
 //    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
 //
@@ -1075,6 +1093,8 @@ void init_openravepy_global()
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
                                            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues,args("data","values","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,InsertJointValues))
+                                           .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
+                                           .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)

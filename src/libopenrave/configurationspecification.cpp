@@ -522,7 +522,35 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
 
 void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& usedindices) const
 {
-    BOOST_ASSERT(0);
+    static std::set<std::string> s_setBodyGroupNames;
+    if( s_setBodyGroupNames.size() == 0 ) {
+        s_setBodyGroupNames.insert("joint_values");
+        s_setBodyGroupNames.insert("joint_velocities");
+        s_setBodyGroupNames.insert("joint_accelerations");
+        s_setBodyGroupNames.insert("joint_torques");
+        s_setBodyGroupNames.insert("affine_transform");
+        s_setBodyGroupNames.insert("affine_velocities");
+        s_setBodyGroupNames.insert("affine_accelerations");
+    }
+
+    // have to look through all groups since groups can contain the same body
+    std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
+    std::string bodyname = body->GetName();
+    std::stringstream ss;
+    usedindices.resize(0);
+    FOREACHC(itgroup,_vgroups) {
+        ss.clear();
+        ss.str(itgroup->name);
+        std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+        if( curtokens.size() > 2 && s_setBodyGroupNames.find(curtokens.at(0)) != s_setBodyGroupNames.end() && curtokens.at(1) == bodyname) {
+            for(size_t i = 2; i < curtokens.size(); ++i) {
+                int index = boost::lexical_cast<int>(curtokens.at(i));
+                if( find(usedindices.begin(), usedindices.end(), index) == usedindices.end() ) {
+                    usedindices.push_back(index);
+                }
+            }
+        }
+    }
 }
 
 void ConfigurationSpecification::Swap(ConfigurationSpecification& spec)

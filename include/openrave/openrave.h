@@ -1229,10 +1229,10 @@ protected:
      */
     virtual void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
 
-    /** \brief extracts all the indices that the configuration maintains for a particular body (looks for joint_values groups)
+    /** \brief extracts all the unique dof indices that the configuration holds for a particular body
 
         \param[in] body the body to query for
-        \param[out] usedindices a list of the DOF indices used for the body
+        \param[out] usedindices a list of unique DOF indices targetted for the body
      */
     virtual void ExtractUsedIndices(KinBodyPtr body, std::vector<int>& usedindices) const;
 
