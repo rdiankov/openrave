@@ -26,12 +26,96 @@ namespace ParabolicRamp = ParabolicRampInternal;
 
 class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
-    struct LinkConstraintInfo
+    struct ManipConstraintInfo
     {
-        KinBody::LinkPtr plink;
-        OBB obb; // local obb of the link in the link's coordinate system
-
+        KinBody::LinkPtr plink;  // the end-effector link of the manipulator
+        std::list<Vector> checkpoints;  // the points to check for in the link coordinate system
     };
+
+
+    AABB ComputeGlobalAABB(std::list<KinBody::LinkPtr> linklist){
+        Vector vmin, vmax;
+        bool binitialized=false;
+        AABB ab;
+        FOREACHC(itlink,linklist) {
+            ab = (*itlink)->ComputeAABB();
+            if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
+                continue;
+            }
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
+            }
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
+            }
+        }
+        BOOST_ASSERT(binitialized); // the linklist must at least contain the end effector
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+        return ab;
+    }
+
+
+    void AABBtoCheckPoints(AABB ab, Transform T, std::list<Vector>& checkpoints){
+        Vector incr;
+        Transform Tinv = T.inverse();
+        checkpoints.resize(0);
+        for(int i=0; i<8; i++) {
+            incr = ab.extents;
+            switch(i) {
+            case 0:
+                break;
+            case 1:
+                incr.z = -incr.z;
+                break;
+            case 2:
+                incr.y = -incr.y;
+                break;
+            case 3:
+                incr.y = -incr.y;
+                incr.z = -incr.z;
+                break;
+            case 4:
+                incr.x = -incr.x;
+                break;
+            case 5:
+                incr.x = -incr.x;
+                incr.z = -incr.z;
+                break;
+            case 6:
+                incr.x = -incr.x;
+                incr.y = -incr.y;
+                break;
+            default:
+                incr.x = -incr.x;
+                incr.y = -incr.y;
+                incr.z = -incr.z;
+            }
+            checkpoints.push_back( Tinv*(ab.pos + incr));
+        }
+    }
+
 
 public:
     ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
@@ -66,20 +150,20 @@ public:
             _parameters->_nMaxIterations = 100;
         }
 
-        // workspace constraints on links
-        _constraintreturn.reset(new ConstraintFilterReturn());
-        _listCheckLinks.clear();
-        if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
-            // extract links from _parameters->_configurationspecification?
-            //_listCheckLinks
-            //_parameters->_configurationspecification
-        }
+        // // workspace constraints on links
+        // _constraintreturn.reset(new ConstraintFilterReturn());
+        // _listCheckManips.clear();
+        // if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
+        //     // extract links from _parameters->_configurationspecification?
+        //     //_listCheckManipss
+        //     //_parameters->_configurationspecification
+        // }
 
         // workspace constraints on manipulators
         if(_parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0) {
-            _listCheckLinks.clear();
+            _listCheckManips.clear();
             std::vector<KinBodyPtr> listUsedBodies;
-            std::set<KinBody::LinkPtr> setCheckedLinks;
+            std::set<KinBody::LinkPtr> setCheckedManips;
             _parameters->_configurationspecification.ExtractUsedBodies(GetEnv(), listUsedBodies);
             FOREACH(itbody, listUsedBodies) {
                 KinBodyPtr pbody = *itbody;
@@ -89,26 +173,48 @@ public:
                     _parameters->_configurationspecification.ExtractUsedIndices(probot, vusedindices);
                     // go through every manipulator and see if it depends on vusedindices
                     FOREACH(itmanip, probot->GetManipulators()) {
-                        if( setCheckedLinks.find((*itmanip)->GetEndEffector()) == setCheckedLinks.end() ) {
+                        KinBody::LinkPtr endeffector = (*itmanip)->GetEndEffector();
+                        if( setCheckedManips.find(endeffector) != setCheckedManips.end() ) {
                             // already checked, so don't do anything
                             continue;
                         }
+                        bool manipisaffected = false;
                         FOREACH(itdofindex, vusedindices) {
-                            if( probot->DoesDOFAffectLink(*itdofindex, (*itmanip)->GetEndEffector()->GetIndex()) ) {
-                                // add the link
-                                LinkConstraintInfo info;
-                                info.plink = (*itmanip)->GetEndEffector();
-                                // get all child links and grabbed objects below the end effector tree
-                                std::vector<KinBody::LinkPtr> vchildlinks;
-                                (*itmanip)->GetChildLinks(vchildlinks);
-                                FOREACH(itlink, vchildlinks){
-                                    // initialize info.oblocal with the bounding box of all these objects
-                                    cout << "Childindex " << (*itlink)->GetIndex() << "\n";
-                                }
-                                _listCheckLinks.push_back(info);
+                            if( probot->DoesDOFAffectLink(*itdofindex, endeffector->GetIndex()) ) {
+                                manipisaffected = true;
                             }
                         }
-                        setCheckedLinks.insert((*itmanip)->GetEndEffector());
+                        if (!manipisaffected) {
+                            // manip is not affected by trajectory, so don't do anything
+                            continue;
+                        }
+                        // Get all child links of endeffector
+                        std::vector<KinBody::LinkPtr> vchildlinks;
+                        (*itmanip)->GetChildLinks(vchildlinks);
+                        std::list<KinBody::LinkPtr> globallinklist;
+                        FOREACH(itlink,vchildlinks){
+                            globallinklist.push_back(*itlink);
+                        }
+                        //Get all bodies that the endeffector is grabbing
+                        std::vector<KinBodyPtr> grabbedbodies;
+                        probot->GetGrabbed(grabbedbodies);
+                        FOREACH(itbody,grabbedbodies){
+                            FOREACH(itlink,(*itbody)->GetLinks()){
+                                globallinklist.push_back(*itlink);
+                            }
+                        }
+                        AABB globalaabb = ComputeGlobalAABB(globallinklist);
+                        // add the manip constraints
+                        _listCheckManips.push_back(ManipConstraintInfo());
+                        _listCheckManips.back().plink = endeffector;
+                        std::list<Vector> checkpoints;
+                        AABBtoCheckPoints(globalaabb,endeffector->GetTransform(),checkpoints);
+                        FOREACH(itcp, checkpoints) {
+                            cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "]\n";
+                        }
+
+                        _listCheckManips.back().checkpoints = checkpoints;
+                        setCheckedManips.insert(endeffector);
                     }
                 }
             }
@@ -527,7 +633,7 @@ public:
         }
     }
 
-    // Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
+// Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
     bool hasbeenattempted(dReal t1,dReal t2,std::list<dReal>& t1list,std::list<dReal>& t2list,dReal shortcutinnovationthreshold){
 
         if(t1list.size()==0) {
@@ -544,7 +650,7 @@ public:
         return false;
     }
 
-    // Perform the shortcuts
+// Perform the shortcuts
     int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         int shortcuts = 0;
@@ -766,13 +872,13 @@ public:
         return true;
     }
 
-    /** \brief return true if all the links in _listCheckLinks satisfy the acceleration and velocity constraints
+/** \brief return true if all the links in _listCheckManipssatisfy the acceleration and velocity constraints
 
-       |w x (R x_i) + v| <= thresh
+   |w x (R x_i) + v| <= thresh
 
-     */
-    virtual bool _CheckConstraintLinks() const {
-        FOREACHC(itinfo, _listCheckLinks) {
+ */
+    virtual bool _CheckConstraintManips() const {
+        FOREACHC(itinfo, _listCheckManips) {
         }
         return true;
     }
@@ -842,7 +948,7 @@ protected:
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
 //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
 
-    std::list< LinkConstraintInfo > _listCheckLinks;
+    std::list< ManipConstraintInfo > _listCheckManips;
     TrajectoryBasePtr _dummytraj,_inittraj;
     bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
     PlannerProgress _progress;
