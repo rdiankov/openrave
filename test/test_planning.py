@@ -38,6 +38,11 @@ class RunPlanning(EnvironmentSetup):
                 planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
             self.RunTrajectory(robot,traj)
 
+            spec = manip.GetArmConfigurationSpecification()
+            usedbodies = spec.ExtractUsedBodies(env)
+            assert(len(usedbodies) == 1 and usedbodies[0] == robot)
+            assert(sorted(spec.ExtractUsedIndices(robot)) == sorted(manip.GetArmIndices()))
+            
     def test_ikplanning(self):
         env = self.env
         self.LoadEnv('data/lab1.env.xml')
