@@ -199,6 +199,7 @@ public:
                         std::vector<KinBodyPtr> grabbedbodies;
                         probot->GetGrabbed(grabbedbodies);
                         FOREACH(itbody,grabbedbodies){
+                            //todo: check whether the body is grabbed by current link
                             FOREACH(itlink,(*itbody)->GetLinks()){
                                 globallinklist.push_back(*itlink);
                             }
