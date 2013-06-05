@@ -65,6 +65,8 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
+
+        // workspace constraints on links
         _constraintreturn.reset(new ConstraintFilterReturn());
         _listCheckLinks.clear();
         if( _parameters->maxlinkspeed > 0 || _parameters->maxlinkaccel ) {
@@ -72,10 +74,53 @@ public:
             //_listCheckLinks
             //_parameters->_configurationspecification
         }
+
+        // workspace constraints on manipulators
+        if(_parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0) {
+            _listCheckLinks.clear();
+            std::vector<KinBodyPtr> listUsedBodies;
+            std::set<KinBody::LinkPtr> setCheckedLinks;
+            _parameters->_configurationspecification.ExtractUsedBodies(GetEnv(), listUsedBodies);
+            FOREACH(itbody, listUsedBodies) {
+                KinBodyPtr pbody = *itbody;
+                if( pbody->IsRobot() ) {
+                    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+                    std::vector<int> vusedindices;
+                    _parameters->_configurationspecification.ExtractUsedIndices(probot, vusedindices);
+                    // go through every manipulator and see if it depends on vusedindices
+                    FOREACH(itmanip, probot->GetManipulators()) {
+                        if( setCheckedLinks.find((*itmanip)->GetEndEffector()) == setCheckedLinks.end() ) {
+                            // already checked, so don't do anything
+                            continue;
+                        }
+                        FOREACH(itdofindex, vusedindices) {
+                            if( probot->DoesDOFAffectLink(*itdofindex, (*itmanip)->GetEndEffector()->GetIndex()) ) {
+                                // add the link
+                                LinkConstraintInfo info;
+                                info.plink = (*itmanip)->GetEndEffector();
+                                // get all child links and grabbed objects below the end effector tree
+                                std::vector<KinBody::LinkPtr> vchildlinks;
+                                (*itmanip)->GetChildLinks(vchildlinks);
+                                FOREACH(itlink, vchildlinks){
+                                    // initialize info.oblocal with the bounding box of all these objects
+                                    cout << "Childindex " << (*itlink)->GetIndex() << "\n";
+                                }
+                                _listCheckLinks.push_back(info);
+                            }
+                        }
+                        setCheckedLinks.insert((*itmanip)->GetEndEffector());
+                    }
+                }
+            }
+        }
+
+        // Seet seed
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
             OPENRAVE_ASSERT_FORMAT0(!!_uniformsampler, "need mt19937 space samplers", ORE_Assert);
         }
+        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+
 
         // check and update minswitchtime
         _parameters->minswitchtime = ComputeStepSizeCeiling(_parameters->minswitchtime, _parameters->_fStepLength);
@@ -83,39 +128,6 @@ public:
             _parameters->minswitchtime = max(_parameters->minswitchtime, 5*_parameters->_fStepLength);
         }
 
-        /*_listCheckLinks.clear();
-           std::list<KinBodyPtr> listUsedBodies;
-           std::set<KinBody::LinkPtr> setCheckedLinks;
-           _parameters->_configurationspecification.ExtractUsedBodies(GetEnv(), listUsedBodies);
-           FOREACH(itbody, listUsedBodies) {
-            KinBodyPtr pbody = *itbody;
-            if( pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                std::vector<int> vusedindices;
-                _parameters->_configurationspecification.ExtractUsedIndices(probot, vusedindices);
-                // go through every manipulator and see if it depends on vusedindices
-                FOREACH(itmanip, probot->GetManipulators()) {
-                    if( setCheckedLinks.find((*itmanip)->GetEndEffector()) == setCheckedLinks.end() ) {
-                        // already checked, so don't do anything
-                        continue;
-                    }
-                    FOREACH(itdofindex, vusedindices) {
-                        if( probot->DoesDOFAffectLink(*itdofindex, (*itmanip)->GetEndEffector()) ) {
-                            // add the link
-                            LinkConstraintInfo info;
-                            info.plink = (*itmanip)->GetEndEffector();
-                            // get all child links and grabbed objects below the end effector tree
-
-                            // initialize info.ablocal with the bounding box of all these objects
-                            _listCheckLinks.push_back(info);
-                        }
-                    }
-                    setCheckedLinks.insert((*itmanip)->GetEndEffector());
-                }
-            }
-           }*/
-
-        _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         return true;
     }
 
@@ -693,7 +705,20 @@ public:
                         int itx = 0;
                         options = 0xffff | CFO_CheckWithPerturbation;
                         FOREACH(itramp, resramps) {
-                            if(itramp->modified && (!check.Check(*itramp,options))) {
+                            if(!itramp->modified) {
+                                continue;
+                            }
+                            bool passed = true;
+                            if (itx==0) {
+                                passed = mergewaypoints::SpecialCheckRamp(*itramp,check,1,options);
+                            }
+                            else if (itx==(int)resramps.size()-1) {
+                                passed = mergewaypoints::SpecialCheckRamp(*itramp,check,-1,options);
+                            }
+                            else {
+                                passed = check.Check(*itramp,options);
+                            }
+                            if(!passed) {
                                 RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
                                 resmerge = false;
                                 break;

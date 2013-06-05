@@ -552,6 +552,40 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
     return true;
 }
 
+
+bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, ParabolicRamp::RampFeasibilityChecker& check, int position, int options){
+    dReal cutoff = 0.05;
+    dReal T = ramp.endTime;
+    ParabolicRamp::Vector qm,vm;
+    ParabolicRamp::ParabolicRampND ramp1, ramp2;
+    int options_noperturb = options & (~CFO_CheckWithPerturbation);
+    if(position==1 && T>=cutoff+0.001) {
+        //Beginning of traj
+        ramp.Evaluate(cutoff,qm);
+        ramp.Derivative(cutoff,vm);
+        ramp1 = ParabolicRamp::ParabolicRampND();
+        ramp2 = ParabolicRamp::ParabolicRampND();
+        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,cutoff);
+        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,T-cutoff);
+        return check.Check(ramp1,options_noperturb) && check.Check(ramp2,options);
+    }
+    else if (position==-1 && T>=cutoff+0.001) {
+        //End of traj
+        ramp.Evaluate(T-cutoff,qm);
+        ramp.Derivative(T-cutoff,vm);
+        ramp1 = ParabolicRamp::ParabolicRampND();
+        ramp2 = ParabolicRamp::ParabolicRampND();
+        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T-cutoff);
+        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,cutoff);
+        return check.Check(ramp1,options) && check.Check(ramp2,options_noperturb);
+    }
+    else{
+        return check.Check(ramp,options);
+    }
+}
+
+
+
 dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps){
     dReal res=0;
     FOREACHC(itramp,ramps){
@@ -765,6 +799,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         if(iter==2) {
             coef = 0.1;
         }
+        // if(iter>=2) {
+        //     cout << iter << "\n";
+        // }
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);
