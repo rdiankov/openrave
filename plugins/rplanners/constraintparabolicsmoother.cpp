@@ -159,8 +159,10 @@ public:
         //     //_parameters->_configurationspecification
         // }
 
-        // workspace constraints on manipulators
-        if(_parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0) {
+        _bmanipconstraints = _parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0;
+
+        // initialize workspace constraints on manipulators
+        if(_bmanipconstraints) {
             _listCheckManips.clear();
             std::vector<KinBodyPtr> listUsedBodies;
             std::set<KinBody::LinkPtr> setCheckedManips;
@@ -188,20 +190,22 @@ public:
                             // manip is not affected by trajectory, so don't do anything
                             continue;
                         }
-                        // Get all child links of endeffector
+
+                        // Insert all child links of endeffector
+                        std::list<KinBody::LinkPtr> globallinklist;
                         std::vector<KinBody::LinkPtr> vchildlinks;
                         (*itmanip)->GetChildLinks(vchildlinks);
-                        std::list<KinBody::LinkPtr> globallinklist;
                         FOREACH(itlink,vchildlinks){
                             globallinklist.push_back(*itlink);
                         }
-                        //Get all bodies that the endeffector is grabbing
+                        // Insert all links of all bodies that the endeffector is grabbing
                         std::vector<KinBodyPtr> grabbedbodies;
                         probot->GetGrabbed(grabbedbodies);
                         FOREACH(itbody,grabbedbodies){
-                            //todo: check whether the body is grabbed by current link
-                            FOREACH(itlink,(*itbody)->GetLinks()){
-                                globallinklist.push_back(*itlink);
+                            if((*itmanip)->IsGrabbing(*itbody)) {
+                                FOREACH(itlink,(*itbody)->GetLinks()){
+                                    globallinklist.push_back(*itlink);
+                                }
                             }
                         }
                         AABB globalaabb = ComputeGlobalAABB(globallinklist);
@@ -210,10 +214,9 @@ public:
                         _listCheckManips.back().plink = endeffector;
                         std::list<Vector> checkpoints;
                         AABBtoCheckPoints(globalaabb,endeffector->GetTransform(),checkpoints);
-                        FOREACH(itcp, checkpoints) {
-                            cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "]\n";
-                        }
-
+                        // FOREACH(itcp, checkpoints) {
+                        //     cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "]\n";
+                        // }
                         _listCheckManips.back().checkpoints = checkpoints;
                         setCheckedManips.insert(endeffector);
                     }
@@ -671,6 +674,7 @@ public:
 
         dReal fStepLength = _parameters->_fStepLength;
         dReal shortcutinnovationthreshold = 0;
+        dReal fimprovetimethresh = _parameters->_fStepLength;
 
         // Iterative shortcutting
         for(int iters=0; iters<numIters; iters++) {
@@ -740,12 +744,13 @@ public:
             }
 
             // no idea what a good time improvement delta  is... _parameters->_fStepLength?
-            dReal fimprovetimethresh = _parameters->_fStepLength;
             dReal newramptime = 0;
             FOREACH(itramp, intermediate) {
                 newramptime += itramp->endTime;
                 itramp->modified = true;
             }
+
+
 
             if( newramptime+fimprovetimethresh >= t2-t1 ) {
                 // reject since it didn't make significant improvement
@@ -794,6 +799,8 @@ public:
                 dReal upperbound = currenttrajduration-fimprovetimethresh;
                 // Do not check collision during merge, check later
                 int options = 0xffff & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
+
+
                 bool resmerge = mergewaypoints::IterativeMergeRamps(ramps,resramps, _parameters, upperbound, _bCheckControllerTimeStep, _uniformsampler,check,options);
 
                 if(!resmerge) {
@@ -878,8 +885,69 @@ public:
    |w x (R x_i) + v| <= thresh
 
  */
-    virtual bool _CheckConstraintManips() const {
-        FOREACHC(itinfo, _listCheckManips) {
+    // virtual bool _CheckConstraintManips() const {
+    //     FOREACHC(itinfo, _listCheckManips) {
+    //     }
+    //     return true;
+    // }
+
+
+
+    bool CheckManipConstraints(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed){
+        ParabolicRamp::ParabolicRampND ramp;
+        if(timeelapsed>g_fEpsilonLinear) {
+            ramp.SetPosVelTime(a,da,b,db,timeelapsed);
+            FOREACH(it,_constraintreturn->_configurationtimes){
+                vector<dReal> q,v,a;
+                ramp.Evaluate(*it,q);
+                ramp.Derivative(*it,v);
+                ramp.Accel(*it,a);
+                // Compute the velocity and accel of the end effector COM
+                FOREACH(itmanipinfo,_listCheckManips){
+                    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(itmanipinfo->plink->GetParent());
+                    std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
+                    Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
+                    std::vector<dReal> q0,v0;
+                    int endeffindex = itmanipinfo->plink->GetIndex();
+                    // Save initial state of the robot
+                    // This has to be more general
+                    probot->GetActiveDOFValues(q0);
+                    probot->GetActiveDOFVelocities(v0);
+                    // Set robot to new state
+                    probot->SetActiveDOFValues(q);
+                    probot->SetActiveDOFVelocities(v);
+                    probot->GetLinkVelocities(endeffvels);
+                    probot->GetLinkAccelerations(a,endeffaccs);
+                    endeffvellin = endeffvels[endeffindex].first;
+                    endeffvelang = endeffvels[endeffindex].second;
+                    endeffacclin = endeffaccs[endeffindex].first;
+                    endeffaccang = endeffaccs[endeffindex].second;
+                    Transform R = itmanipinfo->plink->GetTransform();
+                    // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
+                    FOREACH(itpoint,itmanipinfo->checkpoints){
+                        Vector point = R*(*itpoint);
+                        if(_parameters->maxmanipspeed>0) {
+                            Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                            if(sqrt(vpoint.lengthsqr3()>_parameters->maxmanipspeed)) {
+                                probot->SetActiveDOFValues(q0);
+                                probot->SetActiveDOFVelocities(v0);
+                                return false;
+                            }
+                        }
+                        if(_parameters->maxmanipaccel>0) {
+                            Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                            if(sqrt(apoint.lengthsqr3()>_parameters->maxmanipaccel)) {
+                                probot->SetActiveDOFValues(q0);
+                                probot->SetActiveDOFVelocities(v0);
+                                return false;
+                            }
+                        }
+                    }
+                    // Restore initial state of the robot
+                    probot->SetActiveDOFValues(q0);
+                    probot->SetActiveDOFVelocities(v0);
+                }
+            }
         }
         return true;
     }
@@ -887,6 +955,10 @@ public:
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         //_parameters->_setstatefn(a);
+        if(_bmanipconstraints) {
+            options = options | CFO_FillCheckedConfiguration;
+            _constraintreturn.reset(new ConstraintFilterReturn());
+        }
         int pathreturn = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
         if( pathreturn != 0 ) {
             if( pathreturn & CFO_CheckTimeBasedConstraints ) {
@@ -894,7 +966,8 @@ public:
             }
             return false;
         }
-        return true;
+        // Test for collision and/or dynamics has succeeded, now test for manip constraint
+        return !_bmanipconstraints || CheckManipConstraints(a,b,da, db, timeelapsed);
     }
 
 /*
@@ -952,6 +1025,7 @@ protected:
     std::list< ManipConstraintInfo > _listCheckManips;
     TrajectoryBasePtr _dummytraj,_inittraj;
     bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
+    bool _bmanipconstraints; /// if true, check workspace manip constraints
     PlannerProgress _progress;
 
 private:

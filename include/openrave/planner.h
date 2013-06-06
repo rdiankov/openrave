@@ -65,6 +65,7 @@ public:
     /// \brief clears the data
     inline void Clear() {
         _configurations.resize(0);
+        _configurationtimes.resize(0);
         _invalidvalues.resize(0);
         _invalidvelocities.resize(0);
         _returncode = 0;
@@ -72,6 +73,8 @@ public:
     }
 
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
+    std::vector<dReal> _configurationtimes; ///< N vector of the times where each configuration was sampled at (only valid if timeelapsed is set in the check path constraints function)
+
     std::vector<dReal> _invalidvalues, _invalidvelocities; ///< if the constraint returned with an error, contains invalid configuration where it failed
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If <= 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.

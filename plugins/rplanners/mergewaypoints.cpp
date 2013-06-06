@@ -545,7 +545,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
 // Check whether ramps satisfy constraints associated with checker
 bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::RampFeasibilityChecker& check,int options = 0xffff){
     FOREACHC(itramp,ramps){
-        if(!check.Check(*itramp,options)) {
+        if(!itramp->IsValid() || !check.Check(*itramp,options)) {
             return false;
         }
     }
@@ -724,6 +724,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.x1 = x1;
     newramp.dx0 = zero;
     newramp.dx1 = zero;
+    bool solved = false;
 
     // Iteratively timescales up until the time-related constraints are satisfied
     dReal hi = 1;
@@ -770,6 +771,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             else{
                 lo = coef;
                 resramps = tmpramps;
+                solved = true;
                 if(coef >= 1) {
                     break;
                 }
@@ -777,7 +779,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         coef = (hi+lo)/2;
     }
-    return resramps.size() > 0 && DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check,options);
+    return solved && resramps.size() > 0 && DetermineMinswitchtime(resramps) >= params->minswitchtime && CountUnitaryRamps(resramps)<=2 && CheckRamps(resramps,check,options);
 }
 
 
@@ -785,6 +787,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tmpramps1d;
     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
     dReal mintime;
+    bool solved = false;
 
     // Iteratively timescales up until the time-related constraints are met
     dReal hi = 1;
@@ -816,7 +819,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             }
             lo = coef;
         }
-        else if (mintime <0) {
+        else if (mintime <= TINY) {
             RAVELOG_VERBOSE_FORMAT("Coef %f could not Solvemintime, so stopping ComputeQuadraticRamps right away\n",coef);
             return false;
         }
@@ -834,6 +837,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             else{
                 lo = coef;
                 resramps = tmpramps;
+                solved = true;
                 if(coef>=1) {
                     break;
                 }
@@ -841,7 +845,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         }
         coef = (hi+lo)/2;
     }
-    return (ComputeRampsDuration(resramps)<= curtime) && CheckRamps(resramps,check,options);
+    return solved && resramps.size()>0 && (ComputeRampsDuration(resramps)<= curtime) && CheckRamps(resramps,check,options);
 }
 
 

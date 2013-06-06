@@ -2013,6 +2013,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 filterreturn->_fTimeWhenInvalid = timeelapsed;
                 if( options & CFO_FillCheckedConfiguration ) {
                     filterreturn->_configurations = q1;
+                    filterreturn->_configurationtimes.push_back(timeelapsed);
                 }
             }
             return nstateret;
@@ -2052,6 +2053,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         if( !!filterreturn ) {
             if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations = q1;
+                filterreturn->_configurationtimes.push_back(timeelapsed);
             }
         }
         return 0;
@@ -2061,11 +2063,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         if( (int)filterreturn->_configurations.capacity() < (1+numSteps)*params->GetDOF() ) {
             filterreturn->_configurations.reserve((1+numSteps)*params->GetDOF());
         }
+        if( (int)filterreturn->_configurationtimes.capacity() < 1+numSteps) {
+            filterreturn->_configurationtimes.reserve(1+numSteps);
+        }
     }
     if (start == 0 ) {
         int nstateret = _SetAndCheckState(params, q0, dq0, _vtempaccelconfig, maskoptions, filterreturn);
         if( options & CFO_FillCheckedConfiguration ) {
             filterreturn->_configurations.insert(filterreturn->_configurations.begin(), q0.begin(), q0.end());
+            filterreturn->_configurationtimes.insert(filterreturn->_configurationtimes.begin(), 0);
         }
         if( nstateret != 0 ) {
             if( !!filterreturn ) {
@@ -2102,12 +2108,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( !!params->_getstatefn ) {
                 params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
             }
-            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-            }
-            if( nstateret != 0 ) {
-                return nstateret;
-            }
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 timestep = fStep/fLargestStepVelocity;
             }
@@ -2124,6 +2124,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     RAVELOG_WARN("cannot take root for quadratic interpolation\n");
                     return 0x80000000;
                 }
+            }
+
+            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                filterreturn->_configurationtimes.push_back(timestep);
+            }
+            if( nstateret != 0 ) {
+                return nstateret;
             }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 _vtempconfig[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i));
@@ -2162,6 +2170,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                filterreturn->_configurationtimes.push_back(0);
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
