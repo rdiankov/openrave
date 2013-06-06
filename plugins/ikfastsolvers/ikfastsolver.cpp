@@ -704,9 +704,14 @@ private:
                 return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationXYOrientation3D: {
+                //Vector v = param.GetTranslationXYOrientation3D();
+//                IkReal eetrans[3] = {v.x, v.y,v.z};
+//                return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
+                //std::pair<Vector,dReal> p = param.GetTranslationXAxisAngleZNorm4D();
                 Vector v = param.GetTranslationXYOrientation3D();
-                IkReal eetrans[3] = {v.x, v.y,v.z};
-                return _ikfunctions->_ComputeIk(eetrans, NULL, vfree.size()>0 ? &vfree[0] : NULL, solutions);
+                IkReal eetrans[3] = {v.x, v.y,0};
+                IkReal eerot[9] = {v.z, 0, 0, 0, 0, 0, 0, 0, 0};
+                return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_TranslationLocalGlobal6D: {
                 std::pair<Vector,Vector> p = param.GetTranslationLocalGlobal6D();
