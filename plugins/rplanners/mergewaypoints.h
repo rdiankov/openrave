@@ -99,5 +99,9 @@ bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon=g_fEpsilonLinear)
 // Now set to the 1/sum(1/rampduration^2) toi penalize small ramps
 dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
+// Special treatment for the first and last ramps of a traj
+// The initial part of first ramp and the final part of last ramp are checked without perturbation
+// position=1 : first ramp, position=-1 : last ramp
+bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, ParabolicRamp::RampFeasibilityChecker& check, int position, int options);
 
 } // end namespace mergewaypoints
