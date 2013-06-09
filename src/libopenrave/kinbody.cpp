@@ -906,7 +906,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             pvalues = &vPassiveJointVelocities.at(jointindex-(int)_vecjoints.size()).at(0);
         }
 
-        if( checklimits &&(dofindex >= 0)) {
+        if( checklimits != CLA_Nothing && dofindex >= 0 ) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i) ) {
                     if( checklimits == CLA_CheckLimits ) {
@@ -1292,6 +1292,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         vector<dReal> upperlim, lowerlim;
         FOREACHC(it, _vecjoints) {
             const dReal* p = pJointValues+(*it)->GetDOFIndex();
+            if( checklimits == CLA_Nothing ) {
+                // limits should not be checked, so just copy
+                for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                    *ptempjoints++ = p[i];
+                }
+                continue;
+            }
             OPENRAVE_ASSERT_OP( (*it)->GetDOF(), <=, 3 );
             (*it)->GetLimits(lowerlim, upperlim);
             if( (*it)->GetType() == JointSpherical ) {
@@ -3866,7 +3873,7 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        KinBody::SetDOFValues(vcurrentvalues,true, std::vector<int>());
+        KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
         GetLinkTransformations(vnewtrans, vnewdofbranches);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {

@@ -1883,7 +1883,7 @@ void PyKinBody::SetDOFValues(object o)
     if( (int)values.size() != GetDOF() ) {
         throw openrave_exception("values do not equal to body degrees of freedom");
     }
-    _pbody->SetDOFValues(values,true);
+    _pbody->SetDOFValues(values,KinBody::CLA_CheckLimits);
 }
 void PyKinBody::SetTransformWithDOFValues(object otrans,object ojoints)
 {
@@ -1895,7 +1895,7 @@ void PyKinBody::SetTransformWithDOFValues(object otrans,object ojoints)
     if( (int)values.size() != GetDOF() ) {
         throw openrave_exception("values do not equal to body degrees of freedom");
     }
-    _pbody->SetDOFValues(values,ExtractTransform(otrans),true);
+    _pbody->SetDOFValues(values,ExtractTransform(otrans),KinBody::CLA_CheckLimits);
 }
 
 void PyKinBody::SetDOFValues(object o, object indices, uint32_t checklimits)
@@ -1918,7 +1918,7 @@ void PyKinBody::SetDOFValues(object o, object indices, uint32_t checklimits)
 
 void PyKinBody::SetDOFValues(object o, object indices)
 {
-    SetDOFValues(o,indices,true);
+    SetDOFValues(o,indices,KinBody::CLA_CheckLimits);
 }
 
 object PyKinBody::SubtractDOFValues(object ovalues0, object ovalues1)
