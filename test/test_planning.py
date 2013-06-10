@@ -41,7 +41,8 @@ class RunPlanning(EnvironmentSetup):
             spec = manip.GetArmConfigurationSpecification()
             usedbodies = spec.ExtractUsedBodies(env)
             assert(len(usedbodies) == 1 and usedbodies[0] == robot)
-            assert(sorted(spec.ExtractUsedIndices(robot)) == sorted(manip.GetArmIndices()))
+            useddofindices, usedconfigindices = spec.ExtractUsedIndices(robot)
+            assert(sorted(useddofindices) == sorted(manip.GetArmIndices()))
             
     def test_ikplanning(self):
         env = self.env

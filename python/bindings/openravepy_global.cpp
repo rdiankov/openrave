@@ -465,9 +465,9 @@ public:
 
     object ExtractUsedIndices(PyKinBodyPtr pybody)
     {
-        std::vector<int> usedindices;
-        _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), usedindices);
-        return toPyArray(usedindices);
+        std::vector<int> useddofindices, usedconfigindices;
+        _spec.ExtractUsedIndices(openravepy::GetKinBody(pybody), useddofindices, usedconfigindices);
+        return boost::python::make_tuple(toPyArray(useddofindices), toPyArray(usedconfigindices));
     }
 
 //

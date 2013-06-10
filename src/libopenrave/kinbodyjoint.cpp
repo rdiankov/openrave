@@ -1106,13 +1106,15 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     std::vector< std::pair<std::string, std::string> > jointnamepairs; jointnamepairs.reserve(parent->GetJoints().size());
     FOREACHC(itjoint,parent->GetJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),str(boost::format("joint%d")%(*itjoint)->GetJointIndex())));
+            std::string newname = str(boost::format("joint%d")%(*itjoint)->GetJointIndex());
+            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
         }
     }
     size_t index = parent->GetJoints().size();
     FOREACHC(itjoint,parent->GetPassiveJoints()) {
         if( (*itjoint)->GetName().size() > 0 ) {
-            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),str(boost::format("joint%d")%index)));
+            std::string newname = str(boost::format("joint%d")%index);
+            jointnamepairs.push_back(make_pair((*itjoint)->GetName(),newname));
         }
         ++index;
     }
@@ -1152,6 +1154,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         mimic->_vdofformat.push_back(dofformat);
     }
 
+    // need to set sVars to resultVars since that's what the user will be feeding with the input
     stringstream sVars;
     if( !resultVars.empty() ) {
         sVars << resultVars.at(0);

@@ -623,7 +623,15 @@ class TestKinematics(EnvironmentSetup):
             assert(transdist(ab.extents(),infobox._vGeomData) <= g_epsilon)
             assert(transdist(ab.pos(),[0,0,1.0]) <= g_epsilon)
 
-    def test_misc(self):
+    def test_jointlmits(self):
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        lowerlimit, upperlimit = robot.GetDOFLimits()
+        value = pi-0.01
+        robot.SetDOFValues([value],[0],KinBody.CheckLimitsAction.Nothing)
+        assert(abs(robot.GetDOFValues([0])[0]-value) <= g_epsilon)
+        
+    def test_misc_pr2(self):
         env=self.env
         body=env.ReadKinBodyURI('robots/pr2-beta-static.zae')
         env.Add(body)

@@ -149,7 +149,7 @@ else:
     from numpy import array
 
 from ..openravepy_ext import openrave_exception, RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix
 from . import DatabaseGenerator
 from ..misc import relpath, TSP
 import time,platform,shutil,sys
@@ -682,13 +682,24 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXY2D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXY2D
         elif self.iktype == IkParameterizationType.TranslationXYOrientation3D:
-            rawbasepos=self.manip.GetLocalToolTransform()[0:2,3]
-            rawangle=normalizeAxisRotation([0,0,1],-self.manip.GetLocalToolTransform()[0:3,0:3])[0]
-            def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
+            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            def solveFullIK_TranslationXAxisAngleZNorm4D(*args,**kwargs):
+                kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
-                kwargs['rawangle'] = rawangle
-                return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
-            solvefn=solveFullIK_TranslationXYOrientation3D
+                kwargs['rawglobaldir'] = [1.0,0.0,0.0]
+                kwargs['rawnormaldir'] = [0.0,0.0,1.0]
+                kwargs['ignoreaxis'] = 2
+                return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
+            solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
+            
+#             rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+#             rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+#             def solveFullIK_TranslationXYOrientation3D(*args,**kwargs):
+#                 kwargs['rawbasepos'] = rawbasepos
+#                 kwargs['rawbasedir'] = rawbasedir
+#                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
+#             solvefn=solveFullIK_TranslationXYOrientation3D
         elif self.iktype == IkParameterizationType.Transform6D:
             Tgripperraw=self.manip.GetLocalToolTransform()
             def solveFullIK_6D(*args,**kwargs):
@@ -801,7 +812,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 pass
             
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
-            if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D:
+            if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()
             eelink=self.manip.GetEndEffector().GetIndex()

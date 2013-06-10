@@ -268,8 +268,9 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     case IKP_TranslationXYOrientation3D: {
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
-        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
+        //dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
+        Vector vglobaldirection = t.rotate(_info._vdirection);
+        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,RaveAtan2(vglobaldirection.y,vglobaldirection.x)));
         break;
     }
     case IKP_TranslationLocalGlobal6D: {
@@ -344,8 +345,8 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         break;
     }
     case IKP_TranslationXYOrientation3D: {
-        dReal zangle = -normalizeAxisRotation(Vector(0,0,1),t.rot).first;
-        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,zangle));
+        Vector vglobaldirection = t.rotate(_info._vdirection);
+        ikp.SetTranslationXYOrientation3D(Vector(t.trans.x,t.trans.y,RaveAtan2(vglobaldirection.y,vglobaldirection.x)));
         break;
     }
     case IKP_TranslationLocalGlobal6D: {
