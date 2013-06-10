@@ -214,9 +214,11 @@ public:
                         _listCheckManips.back().plink = endeffector;
                         std::list<Vector> checkpoints;
                         AABBtoCheckPoints(globalaabb,endeffector->GetTransform(),checkpoints);
+                        // cout << "[";
                         // FOREACH(itcp, checkpoints) {
-                        //     cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "]\n";
+                        //     cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "],\n";
                         // }
+                        // cout <<"]\n";
                         _listCheckManips.back().checkpoints = checkpoints;
                         setCheckedManips.insert(endeffector);
                     }
@@ -892,69 +894,83 @@ public:
     // }
 
 
+    // Small function to deal with used indices
+    void FillNonUsedDofs(RobotBasePtr probot, std::vector<dReal>& vconfigvalues, std::vector<dReal>& vdofvalues){
+        vdofvalues.resize(probot->GetDOF());
+        std::vector<int> vuseddofindices, vconfigindices;
+        _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vconfigindices);
+        for(size_t iuseddof = 0; iuseddof < vuseddofindices.size(); ++iuseddof) {
+            vdofvalues[vuseddofindices[iuseddof]] = vconfigvalues[vconfigindices[iuseddof]];
+        }
+    }
+
 
     bool CheckManipConstraints(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed){
         ParabolicRamp::ParabolicRampND ramp;
         if(timeelapsed>g_fEpsilonLinear) {
             ramp.SetPosVelTime(a,da,b,db,timeelapsed);
+            // Compute manually the acceleration values since ramp.Accel is not trustworthy at the borders
+            vector<dReal> ac;
+            ramp.Accel(timeelapsed/2,ac);
+            bool res = true;
             FOREACH(it,_constraintreturn->_configurationtimes){
-                vector<dReal> q,v,a;
-                ramp.Evaluate(*it,q);
-                ramp.Derivative(*it,v);
-                ramp.Accel(*it,a);
+                vector<dReal> qc,vc;
+                ramp.Evaluate(*it,qc);
+                ramp.Derivative(*it,vc);
                 // Compute the velocity and accel of the end effector COM
                 FOREACH(itmanipinfo,_listCheckManips){
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(itmanipinfo->plink->GetParent());
+                    Vector gravity = probot->GetEnv()->GetPhysicsEngine()->GetGravity();
+                    vector<dReal> qfill,vfill,afill;
+                    FillNonUsedDofs(probot,qc,qfill);
+                    FillNonUsedDofs(probot,vc,vfill);
+                    FillNonUsedDofs(probot,ac,afill);
                     std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
                     Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
                     std::vector<dReal> q0,v0;
                     int endeffindex = itmanipinfo->plink->GetIndex();
-                    //ExtractUsedIndices()
-                    // Save initial state of the robot
-                    // This has to be more general
-                    // Use ExtractUsedIndices
-                    probot->GetActiveDOFValues(q0);
-                    probot->GetActiveDOFVelocities(v0);
+                    probot->GetDOFValues(q0);
+                    probot->GetDOFVelocities(v0);
                     // Set robot to new state
-                    probot->SetActiveDOFValues(q);
-                    probot->SetActiveDOFVelocities(v);
+                    probot->SetDOFValues(qfill);
+                    probot->SetDOFVelocities(vfill);
                     probot->GetLinkVelocities(endeffvels);
-                    std::vector<dReal> dofaccelerations(probot->GetDOF());
-                    // for(size_t iactive = 0; iactive = probot->GetActiveDOFIndices(); ++iactive) {
-                    //     dofaccelerations.at(probot->GetActiveDOFIndices()[iactive]) = a.at(iactive);
-                    // }
-                    probot->GetLinkAccelerations(a,endeffaccs);
+                    probot->GetLinkAccelerations(afill,endeffaccs);
                     endeffvellin = endeffvels[endeffindex].first;
                     endeffvelang = endeffvels[endeffindex].second;
-                    endeffacclin = endeffaccs[endeffindex].first;
+                    endeffacclin = endeffaccs[endeffindex].first + gravity;
                     endeffaccang = endeffaccs[endeffindex].second;
                     Transform R = itmanipinfo->plink->GetTransform();
                     // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
                     FOREACH(itpoint,itmanipinfo->checkpoints){
-                        Vector point = R*(*itpoint);
+                        Vector point = R.rot*(*itpoint);
                         if(_parameters->maxmanipspeed>0) {
                             Vector vpoint = endeffvellin + endeffvelang.cross(point);
                             if(sqrt(vpoint.lengthsqr3()>_parameters->maxmanipspeed)) {
-                                probot->SetActiveDOFValues(q0);
-                                probot->SetActiveDOFVelocities(v0);
-                                return false;
+                                res = false;
+                                break;
                             }
                         }
                         if(_parameters->maxmanipaccel>0) {
                             Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                             if(sqrt(apoint.lengthsqr3()>_parameters->maxmanipaccel)) {
-                                probot->SetActiveDOFValues(q0);
-                                probot->SetActiveDOFVelocities(v0);
-                                return false;
+                                //cout << "Accel violation: " << sqrt(apoint.lengthsqr3()) << "\n";
+                                res = false;
+                                break;
                             }
                         }
                     }
                     // Restore initial state of the robot
                     probot->SetActiveDOFValues(q0);
                     probot->SetActiveDOFVelocities(v0);
+                    if(!res) {
+                        return false;
+                    }
                 }
             }
+            return true;
         }
+        // Check config only
         return true;
     }
 

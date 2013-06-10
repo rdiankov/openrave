@@ -727,8 +727,9 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     bool solved = false;
 
     // Iteratively timescales up until the time-related constraints are satisfied
+    dReal small = 1e-6;
     dReal hi = 1;
-    dReal lo = 1e-6;
+    dReal lo = small;
     dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
     int iter = 0;
     resramps.resize(0);
@@ -738,8 +739,9 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             coef = 1;
         }
         if(iter==2) {
-            coef = 1e-6;
+            coef = small;
         }
+        //cout << "Coef: " << coef << "\n";
         std::vector<dReal> amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         amax.resize(n);
@@ -748,7 +750,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         }
         bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
         if(!res) {
-            if(coef <= 1e-6) {
+            if(coef <= small) {
                 RAVELOG_DEBUG("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
                 return false;
             }
@@ -759,7 +761,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             tmpramps.push_back(newramp);
             BreakIntoUnitaryRamps(tmpramps);
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check,options))) {
-                if(coef <= 1e-6) {
+                if(coef <= small) {
                     RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
                     // RaveSetDebugLevel(Level_Verbose);
                     // CheckRamps(tmpramps,check,options);
@@ -790,9 +792,10 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     bool solved = false;
 
     // Iteratively timescales up until the time-related constraints are met
+    dReal small = 1e-1;
     dReal hi = 1;
-    dReal lo = 0.1;
-    dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
+    dReal lo = small;
+    dReal coef = 0;  // coefficient multiplying the limits: if coef is small, traj duration will be larger
     int iter = 0;
     while(hi-lo>params->_fStepLength && iter<100) {
         iter++;
@@ -800,18 +803,18 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             coef = 1;
         }
         if(iter==2) {
-            coef = 0.1;
+            coef = small;
         }
-        // if(iter>=2) {
-        //     cout << iter << "\n";
-        // }
-        std::vector<dReal> amax;
+        //cout << "Coef: " << coef << "\n";
+        std::vector<dReal> vmax,amax;
         size_t n = params->_vConfigAccelerationLimit.size();
+        vmax.resize(n);
         amax.resize(n);
         for(size_t j=0; j<n; j++) {
+            vmax[j]=max(params->_vConfigVelocityLimit[j]*coef,max(RaveFabs(dx0[j]),RaveFabs(dx1[j])));
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
-        mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, params->_vConfigVelocityLimit, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
+        mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, vmax, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
         if(mintime > curtime) {
             if(coef>=1) {
                 RAVELOG_VERBOSE("Traj with time-scaling 1 (amax = acceleration_limit) has time duration > curtime, so stopping ComputeQuadraticRamps right away\n");
@@ -828,8 +831,8 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             CombineRamps(tmpramps1d,tmpramps);
             BreakIntoUnitaryRamps(tmpramps);
             if(!CheckRamps(tmpramps,check,options)) {
-                if(coef <= 0.1) {
-                    RAVELOG_VERBOSE("Super slow traj (amax = 0.1*acceleration_limit) failed check, so stopping ComputeQuadraticRamps right away\n");
+                if(coef <= small) {
+                    RAVELOG_VERBOSE("Super slow traj (amax = small*acceleration_limit) failed check, so stopping ComputeQuadraticRamps right away\n");
                     return false;
                 }
                 hi = coef;
