@@ -520,7 +520,7 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& usedindices) const
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     static std::set<std::string> s_setBodyGroupNames;
     if( s_setBodyGroupNames.size() == 0 ) {
@@ -537,7 +537,8 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
     std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
     std::string bodyname = body->GetName();
     std::stringstream ss;
-    usedindices.resize(0);
+    useddofindices.resize(0);
+    usedconfigindices.resize(0);
     FOREACHC(itgroup,_vgroups) {
         ss.clear();
         ss.str(itgroup->name);
@@ -545,8 +546,9 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
         if( curtokens.size() > 2 && s_setBodyGroupNames.find(curtokens.at(0)) != s_setBodyGroupNames.end() && curtokens.at(1) == bodyname) {
             for(size_t i = 2; i < curtokens.size(); ++i) {
                 int index = boost::lexical_cast<int>(curtokens.at(i));
-                if( find(usedindices.begin(), usedindices.end(), index) == usedindices.end() ) {
-                    usedindices.push_back(index);
+                if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
+                    useddofindices.push_back(index);
+                    usedconfigindices.push_back(itgroup->offset + (i-2));
                 }
             }
         }

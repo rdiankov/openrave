@@ -169,8 +169,8 @@ public:
                 KinBodyPtr pbody = *itbody;
                 if( pbody->IsRobot() ) {
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                    std::vector<int> vusedindices;
-                    _parameters->_configurationspecification.ExtractUsedIndices(probot, vusedindices);
+                    std::vector<int> vuseddofindices, vusedconfigindices;
+                    _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vusedconfigindices);
                     // go through every manipulator and see if it depends on vusedindices
                     FOREACH(itmanip, probot->GetManipulators()) {
                         KinBody::LinkPtr endeffector = (*itmanip)->GetEndEffector();
@@ -179,7 +179,7 @@ public:
                             continue;
                         }
                         bool manipisaffected = false;
-                        FOREACH(itdofindex, vusedindices) {
+                        FOREACH(itdofindex, vuseddofindices) {
                             if( probot->DoesDOFAffectLink(*itdofindex, endeffector->GetIndex()) ) {
                                 manipisaffected = true;
                             }
