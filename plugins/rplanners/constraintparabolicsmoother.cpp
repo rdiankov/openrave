@@ -909,14 +909,20 @@ public:
                     Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
                     std::vector<dReal> q0,v0;
                     int endeffindex = itmanipinfo->plink->GetIndex();
+                    //ExtractUsedIndices()
                     // Save initial state of the robot
                     // This has to be more general
+                    // Use ExtractUsedIndices
                     probot->GetActiveDOFValues(q0);
                     probot->GetActiveDOFVelocities(v0);
                     // Set robot to new state
                     probot->SetActiveDOFValues(q);
                     probot->SetActiveDOFVelocities(v);
                     probot->GetLinkVelocities(endeffvels);
+                    std::vector<dReal> dofaccelerations(probot->GetDOF());
+                    // for(size_t iactive = 0; iactive = probot->GetActiveDOFIndices(); ++iactive) {
+                    //     dofaccelerations.at(probot->GetActiveDOFIndices()[iactive]) = a.at(iactive);
+                    // }
                     probot->GetLinkAccelerations(a,endeffaccs);
                     endeffvellin = endeffvels[endeffindex].first;
                     endeffvelang = endeffvels[endeffindex].second;
