@@ -102,6 +102,8 @@ dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps)
 // Special treatment for the first and last ramps of a traj
 // The initial part of first ramp and the final part of last ramp are checked without perturbation
 // position=1 : first ramp, position=-1 : last ramp
-bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, ParabolicRamp::RampFeasibilityChecker& check, int position, int options);
+/* bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, int position, ParabolicRamp::RampFeasibilityChecker& check, int options); */
+/* bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, int position, ParabolicRamp::Vector& qref, dReal radius, ParabolicRamp::RampFeasibilityChecker& check, int options); */
 
+/* dReal dist(const ParabolicRamp::Vector& q1, const ParabolicRamp::Vector& q2); */
 } // end namespace mergewaypoints

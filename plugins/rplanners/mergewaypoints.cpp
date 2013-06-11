@@ -553,36 +553,82 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
 }
 
 
-bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, ParabolicRamp::RampFeasibilityChecker& check, int position, int options){
-    dReal cutoff = 0.05;
-    dReal T = ramp.endTime;
-    ParabolicRamp::Vector qm,vm;
-    ParabolicRamp::ParabolicRampND ramp1, ramp2;
-    int options_noperturb = options & (~CFO_CheckWithPerturbation);
-    if(position==1 && T>=cutoff+0.001) {
-        //Beginning of traj
-        ramp.Evaluate(cutoff,qm);
-        ramp.Derivative(cutoff,vm);
-        ramp1 = ParabolicRamp::ParabolicRampND();
-        ramp2 = ParabolicRamp::ParabolicRampND();
-        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,cutoff);
-        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,T-cutoff);
-        return check.Check(ramp1,options_noperturb) && check.Check(ramp2,options);
-    }
-    else if (position==-1 && T>=cutoff+0.001) {
-        //End of traj
-        ramp.Evaluate(T-cutoff,qm);
-        ramp.Derivative(T-cutoff,vm);
-        ramp1 = ParabolicRamp::ParabolicRampND();
-        ramp2 = ParabolicRamp::ParabolicRampND();
-        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T-cutoff);
-        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,cutoff);
-        return check.Check(ramp1,options) && check.Check(ramp2,options_noperturb);
-    }
-    else{
-        return check.Check(ramp,options);
-    }
-}
+// bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, int position, ParabolicRamp::RampFeasibilityChecker& check, int options){
+//     dReal cutoff = 0.2;
+//     dReal T = ramp.endTime;
+//     ParabolicRamp::Vector qm,vm;
+//     ParabolicRamp::ParabolicRampND ramp1, ramp2;
+//     int options_noperturb = options & (~CFO_CheckWithPerturbation);
+//     //Beginning of traj
+//     if(position==1) {
+//         if(T<cutoff+0.001) {
+//             return check.Check(ramp,options_noperturb);
+//         }
+//         else{
+//             ramp.Evaluate(cutoff,qm);
+//             ramp.Derivative(cutoff,vm);
+//             ramp1 = ParabolicRamp::ParabolicRampND();
+//             ramp2 = ParabolicRamp::ParabolicRampND();
+//             ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,cutoff);
+//             ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,T-cutoff);
+//             return check.Check(ramp1,options_noperturb) && check.Check(ramp2,options);
+//         }
+//     }
+//     //End of traj
+//     else if (position==-1) {
+//         if(T<cutoff+0.001) {
+//             return check.Check(ramp,options_noperturb);
+//         }
+//         else{
+//             ramp.Evaluate(T-cutoff,qm);
+//             ramp.Derivative(T-cutoff,vm);
+//             ramp1 = ParabolicRamp::ParabolicRampND();
+//             ramp2 = ParabolicRamp::ParabolicRampND();
+//             ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T-cutoff);
+//             ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,cutoff);
+//             return check.Check(ramp1,options) && check.Check(ramp2,options_noperturb);
+//         }
+//     }
+//     else{
+//         return check.Check(ramp,options);
+//     }
+// }
+
+
+// dReal dist(const ParabolicRamp::Vector& q1, const ParabolicRamp::Vector& q2){
+//     int n = q1.size();
+//     dReal d = 0;
+//     for(int i = 0; i<n; i++) {
+//         d += pow(q2[i]-q1[i],2);
+//     }
+//     return sqrt(d);
+// }
+
+
+// bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, int position, ParabolicRamp::Vector& qref, dReal radius, ParabolicRamp::RampFeasibilityChecker& check, int options){
+//     int options_noperturb = options & (~CFO_CheckWithPerturbation);
+//     //Beginning of traj
+//     if(position==1) {
+//         if(dist(ramp.x0,qref)<radius) {
+//             return check.Check(ramp,options_noperturb);
+//         }
+//         else{
+//             return check.Check(ramp,options);
+//         }
+//     }
+//     //End of traj
+//     else if (position==-1) {
+//         if(dist(ramp.x1,qref)<radius) {
+//             return check.Check(ramp,options_noperturb);
+//         }
+//         else{
+//             return check.Check(ramp,options);
+//         }
+//     }
+//     else{
+//         return check.Check(ramp,options);
+//     }
+// }
 
 
 
@@ -790,14 +836,15 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
     dReal mintime;
     bool solved = false;
+    bool debug = false;
 
     // Iteratively timescales up until the time-related constraints are met
-    dReal small = 1e-1;
+    dReal small = 1e-2;
     dReal hi = 1;
     dReal lo = small;
     dReal coef = 0;  // coefficient multiplying the limits: if coef is small, traj duration will be larger
     int iter = 0;
-    while(hi-lo>params->_fStepLength && iter<100) {
+    while(hi-lo>1e-2 && iter<100) {
         iter++;
         if(iter==1) {
             coef = 1;
@@ -805,7 +852,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         if(iter==2) {
             coef = small;
         }
-        //cout << "Coef: " << coef << "\n";
+        if(debug) {
+            cout << "Coef: " << coef << "\n";
+        }
         std::vector<dReal> vmax,amax;
         size_t n = params->_vConfigAccelerationLimit.size();
         vmax.resize(n);
@@ -816,6 +865,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         }
         mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, vmax, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
         if(mintime > curtime) {
+            if(debug) {
+                cout << "Too long \n";
+            }
             if(coef>=1) {
                 RAVELOG_VERBOSE("Traj with time-scaling 1 (amax = acceleration_limit) has time duration > curtime, so stopping ComputeQuadraticRamps right away\n");
                 return false;
@@ -823,14 +875,20 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             lo = coef;
         }
         else if (mintime <= TINY) {
+            if(debug) {
+                cout << "Could not solvemintime \n";
+            }
             RAVELOG_VERBOSE_FORMAT("Coef %f could not Solvemintime, so stopping ComputeQuadraticRamps right away\n",coef);
-            return false;
+            lo = coef;
         }
         else{
             tmpramps.resize(0);
             CombineRamps(tmpramps1d,tmpramps);
             BreakIntoUnitaryRamps(tmpramps);
             if(!CheckRamps(tmpramps,check,options)) {
+                if(debug) {
+                    cout << "Not OK\n";
+                }
                 if(coef <= small) {
                     RAVELOG_VERBOSE("Super slow traj (amax = small*acceleration_limit) failed check, so stopping ComputeQuadraticRamps right away\n");
                     return false;
@@ -840,6 +898,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             else{
                 lo = coef;
                 resramps = tmpramps;
+                if(debug) {
+                    cout << "OK\n";
+                }
                 solved = true;
                 if(coef>=1) {
                     break;

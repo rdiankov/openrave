@@ -659,6 +659,8 @@ public:
 // Perform the shortcuts
     int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
+        ParabolicRamp::Vector qstart = ramps.begin()->x0;
+        ParabolicRamp::Vector qgoal = ramps.back().x1;
         int shortcuts = 0;
         std::list<ParabolicRamp::ParabolicRampND> saveramps;
         //std::map<int, std::list<int> > mapTestedTimeRanges; // (starttime, list of end times) pairs where the end times are always > than starttime
@@ -817,22 +819,22 @@ public:
                         RAVELOG_VERBOSE("... Duration did not significantly improve after merger\n");
                     }
                     else{
-                        // Now check for collision (with perturbation), only for the ramps that have been modified
+                        // Now check for collision only for the ramps that have been modified
+                        // Perturbations are applied except for ramps that are within "radius" of start and goal config
                         int itx = 0;
-                        options = 0xffff | CFO_CheckWithPerturbation;
+                        dReal radius = 0.2;
+                        options = 0xffff;
+                        int options_perturb = options | CFO_CheckWithPerturbation;
                         FOREACH(itramp, resramps) {
                             if(!itramp->modified) {
                                 continue;
                             }
-                            bool passed = true;
-                            if (itx==0) {
-                                passed = mergewaypoints::SpecialCheckRamp(*itramp,check,1,options);
-                            }
-                            else if (itx==(int)resramps.size()-1) {
-                                passed = mergewaypoints::SpecialCheckRamp(*itramp,check,-1,options);
-                            }
-                            else {
+                            bool passed;
+                            if(_parameters->_distmetricfn(itramp->x1,qstart)<radius || _parameters->_distmetricfn(itramp->x0,qgoal)<radius) {
                                 passed = check.Check(*itramp,options);
+                            }
+                            else{
+                                passed = check.Check(*itramp,options_perturb);
                             }
                             if(!passed) {
                                 RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
