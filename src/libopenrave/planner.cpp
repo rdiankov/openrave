@@ -738,9 +738,6 @@ void PlannerBase::PlannerParameters::Validate() const
         dReal dist = _distmetricfn(vstate,vstate);
         OPENRAVE_ASSERT_OP(dist,<=,10*g_fEpsilon);
     }
-    if( !!_checkpathconstraintsfn ) {
-        _checkpathconstraintsfn(vstate,vstate,IT_OpenStart,ConfigurationListPtr());
-    }
     if( !!_checkpathvelocityconstraintsfn ) {
         _checkpathvelocityconstraintsfn(vstate,vstate,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart,0xffff,ConstraintFilterReturnPtr());
     }
