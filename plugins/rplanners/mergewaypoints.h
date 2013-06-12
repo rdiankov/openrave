@@ -99,6 +99,10 @@ bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon=g_fEpsilonLinear)
 // Now set to the 1/sum(1/rampduration^2) toi penalize small ramps
 dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps);
 
+// The parts of the ramps that are very close to qstart and qgoal are not checked with perturbations
+bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options);
+
+
 // Special treatment for the first and last ramps of a traj
 // The initial part of first ramp and the final part of last ramp are checked without perturbation
 // position=1 : first ramp, position=-1 : last ramp

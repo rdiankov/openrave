@@ -28,12 +28,17 @@ class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::Fe
 {
     struct ManipConstraintInfo
     {
-        KinBody::LinkPtr plink;  // the end-effector link of the manipulator
-        std::list<Vector> checkpoints;  // the points to check for in the link coordinate system
+        // the end-effector link of the manipulator
+        KinBody::LinkPtr plink;
+        // the points to check for in the link coordinate system
+        // for now the checked points are the vertices of the bounding box
+        // but this can be more general, e.g. the vertices of the convex hull
+        std::list<Vector> checkpoints;
     };
 
 
-    AABB ComputeGlobalAABB(std::list<KinBody::LinkPtr> linklist){
+    // Compute th AABB that encloses all the links in linklist
+    AABB ComputeEnclosingAABB(std::list<KinBody::LinkPtr> linklist){
         Vector vmin, vmax;
         bool binitialized=false;
         AABB ab;
@@ -173,7 +178,7 @@ public:
                     RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                     std::vector<int> vuseddofindices, vusedconfigindices;
                     _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vusedconfigindices);
-                    // go through every manipulator and see if it depends on vusedindices
+                    // go through every manipulator and check whether it depends on vusedindices
                     FOREACH(itmanip, probot->GetManipulators()) {
                         KinBody::LinkPtr endeffector = (*itmanip)->GetEndEffector();
                         if( setCheckedManips.find(endeffector) != setCheckedManips.end() ) {
@@ -184,6 +189,7 @@ public:
                         FOREACH(itdofindex, vuseddofindices) {
                             if( probot->DoesDOFAffectLink(*itdofindex, endeffector->GetIndex()) ) {
                                 manipisaffected = true;
+                                break;
                             }
                         }
                         if (!manipisaffected) {
@@ -208,12 +214,12 @@ public:
                                 }
                             }
                         }
-                        AABB globalaabb = ComputeGlobalAABB(globallinklist);
-                        // add the manip constraints
+                        // Compute the enclosing AABB and add its vertices to the checkpoints
+                        AABB enclosingaabb = ComputeEnclosingAABB(globallinklist);
                         _listCheckManips.push_back(ManipConstraintInfo());
                         _listCheckManips.back().plink = endeffector;
                         std::list<Vector> checkpoints;
-                        AABBtoCheckPoints(globalaabb,endeffector->GetTransform(),checkpoints);
+                        AABBtoCheckPoints(enclosingaabb,endeffector->GetTransform(),checkpoints);
                         // cout << "[";
                         // FOREACH(itcp, checkpoints) {
                         //     cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "],\n";
@@ -820,23 +826,15 @@ public:
                     }
                     else{
                         // Now check for collision only for the ramps that have been modified
-                        // Perturbations are applied except for ramps that are within "radius" of start and goal config
+                        // Perturbations are applied when a configuration is outside the "radius" of start and goal config
                         int itx = 0;
-                        dReal radius = 0.2;
+                        dReal radius = 0.1;
                         options = 0xffff;
-                        int options_perturb = options | CFO_CheckWithPerturbation;
                         FOREACH(itramp, resramps) {
                             if(!itramp->modified) {
                                 continue;
                             }
-                            bool passed;
-                            if(_parameters->_distmetricfn(itramp->x1,qstart)<radius || _parameters->_distmetricfn(itramp->x0,qgoal)<radius) {
-                                passed = check.Check(*itramp,options);
-                            }
-                            else{
-                                passed = check.Check(*itramp,options_perturb);
-                            }
-                            if(!passed) {
+                            if(!mergewaypoints::SpecialCheckRamp(*itramp,qstart,qgoal,radius,_parameters,check,options)) {
                                 RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
                                 resmerge = false;
                                 break;
@@ -896,8 +894,8 @@ public:
     // }
 
 
-    // Small function to deal with used indices
-    void FillNonUsedDofs(RobotBasePtr probot, std::vector<dReal>& vconfigvalues, std::vector<dReal>& vdofvalues){
+    // Fill non used dofs with zeros
+    void FillNonUsedDofs(RobotBasePtr probot, const std::vector<dReal>& vconfigvalues, std::vector<dReal>& vdofvalues){
         vdofvalues.resize(probot->GetDOF());
         std::vector<int> vuseddofindices, vconfigindices;
         _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vconfigindices);
@@ -909,9 +907,11 @@ public:
 
     bool CheckManipConstraints(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed){
         ParabolicRamp::ParabolicRampND ramp;
-        if(timeelapsed>g_fEpsilonLinear) {
+        if(timeelapsed<=g_fEpsilonLinear) {
+            return true;
+        }
+        else{
             ramp.SetPosVelTime(a,da,b,db,timeelapsed);
-            // Compute manually the acceleration values since ramp.Accel is not trustworthy at the borders
             vector<dReal> ac;
             ramp.Accel(timeelapsed/2,ac);
             bool res = true;
@@ -972,8 +972,6 @@ public:
             }
             return true;
         }
-        // Check config only
-        return true;
     }
 
     virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)

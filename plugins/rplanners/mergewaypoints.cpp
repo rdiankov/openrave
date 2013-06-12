@@ -553,46 +553,79 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
 }
 
 
-// bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp, int position, ParabolicRamp::RampFeasibilityChecker& check, int options){
-//     dReal cutoff = 0.2;
-//     dReal T = ramp.endTime;
-//     ParabolicRamp::Vector qm,vm;
-//     ParabolicRamp::ParabolicRampND ramp1, ramp2;
-//     int options_noperturb = options & (~CFO_CheckWithPerturbation);
-//     //Beginning of traj
-//     if(position==1) {
-//         if(T<cutoff+0.001) {
-//             return check.Check(ramp,options_noperturb);
-//         }
-//         else{
-//             ramp.Evaluate(cutoff,qm);
-//             ramp.Derivative(cutoff,vm);
-//             ramp1 = ParabolicRamp::ParabolicRampND();
-//             ramp2 = ParabolicRamp::ParabolicRampND();
-//             ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,cutoff);
-//             ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,T-cutoff);
-//             return check.Check(ramp1,options_noperturb) && check.Check(ramp2,options);
-//         }
-//     }
-//     //End of traj
-//     else if (position==-1) {
-//         if(T<cutoff+0.001) {
-//             return check.Check(ramp,options_noperturb);
-//         }
-//         else{
-//             ramp.Evaluate(T-cutoff,qm);
-//             ramp.Derivative(T-cutoff,vm);
-//             ramp1 = ParabolicRamp::ParabolicRampND();
-//             ramp2 = ParabolicRamp::ParabolicRampND();
-//             ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T-cutoff);
-//             ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,cutoff);
-//             return check.Check(ramp1,options) && check.Check(ramp2,options_noperturb);
-//         }
-//     }
-//     else{
-//         return check.Check(ramp,options);
-//     }
-// }
+bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
+
+    dReal dt = 0.01;
+    dReal RT = ramp.endTime;
+    int options_perturb = options | CFO_CheckWithPerturbation;
+    ParabolicRamp::Vector q,qm,vm;
+    ParabolicRamp::ParabolicRampND ramp1, ramp2;
+
+    //Start of ramp is close to qstart
+    if(params->_distmetricfn(ramp.x0,qstart)<radius) {
+        if(RT<dt) {
+            if(params->_distmetricfn(ramp.x1,qstart)>radius) {
+                return check.Check(ramp,options_perturb);
+            }
+            else{
+                return check.Check(ramp,options);
+            }
+        }
+        dReal T=dt;
+        while(T<=RT) {
+            ramp.Evaluate(T,q);
+            if(params->_distmetricfn(q,qstart)>radius) {
+                break;
+            }
+            T += dt;
+        }
+        if(T>ramp.endTime) {
+            return check.Check(ramp,options);
+        }
+        T -= dt;
+        if(T>0) {
+            ramp.Evaluate(T,qm);
+            ramp.Derivative(T,vm);
+            ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
+            ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,RT-T);
+            return check.Check(ramp1,options) && check.Check(ramp2,options_perturb);
+        }
+    }
+
+    //End of ramp is close to qgoal
+    if(params->_distmetricfn(ramp.x1,qgoal)<radius) {
+        if(RT<dt) {
+            if(params->_distmetricfn(ramp.x0,qgoal)>radius) {
+                return check.Check(ramp,options_perturb);
+            }
+            else{
+                return check.Check(ramp,options);
+            }
+        }
+        dReal T=RT-dt;
+        while(T>=0) {
+            ramp.Evaluate(T,q);
+            if(params->_distmetricfn(q,qgoal)>radius) {
+                break;
+            }
+            T -= dt;
+        }
+        if(T<0) {
+            return check.Check(ramp,options);
+        }
+        T += dt;
+        if (T<RT) {
+            ramp.Evaluate(T,qm);
+            ramp.Derivative(T,vm);
+            ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
+            ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,RT-T);
+            return check.Check(ramp1,options_perturb) && check.Check(ramp2,options);
+        }
+    }
+
+    // Else check the entire ramp with perturbations
+    return check.Check(ramp,options_perturb);
+}
 
 
 // dReal dist(const ParabolicRamp::Vector& q1, const ParabolicRamp::Vector& q2){
@@ -797,7 +830,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
         if(!res) {
             if(coef <= small) {
-                RAVELOG_DEBUG("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
+                RAVELOG_DEBUG("Quasi-static traj failed (solvemintime), stops ComputeLinearRamps right away\n");
                 return false;
             }
             hi = coef;
@@ -808,7 +841,10 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             BreakIntoUnitaryRamps(tmpramps);
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check,options))) {
                 if(coef <= small) {
-                    RAVELOG_WARN("Quasi-static traj failed, stops ComputeLinearRamps right away\n");
+                    RAVELOG_WARN("Quasi-static traj failed (check), stops ComputeLinearRamps right away\n");
+                    // cout << DetermineMinswitchtime(tmpramps) << " ";
+                    // cout << CountUnitaryRamps(tmpramps) << " ";
+                    // cout << CheckRamps(tmpramps,check,options) << "\n";
                     // RaveSetDebugLevel(Level_Verbose);
                     // CheckRamps(tmpramps,check,options);
                     // RaveSetDebugLevel(Level_Debug);
@@ -922,6 +958,7 @@ bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon){
     return true;
 }
 
+// Check whether ramp0 and ramp1 form a straight line in the config space
 bool FormStraightLineRamp(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::ParabolicRampND& ramp1){
     dReal dotproduct=0, x0length2=0, x1length2=0;
     for(size_t i = 0; i < ramp0.x0.size(); ++i) {
