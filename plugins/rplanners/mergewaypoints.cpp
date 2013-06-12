@@ -78,7 +78,13 @@ Interval SolveIneq(dReal a,dReal b){
     }
 }
 
-/// checks the velocity, acceleration, and joint limits
+/** Check the velocity, acceleration, and joint limits of two neighboring ramps
+   \param Ta, Tb time durations of ramp 1 and 2 respectively
+   \param q0 the configuration at the start of ramp 1
+   \param v0 the velocity at the start of ramp 1
+   \param q2 the configuration at the end of ramp 2
+   \param v2 the velocity at the end of ramp 2
+ */
 bool CheckValidity(dReal Ta,dReal Tb,const std::vector<dReal>& q0,const std::vector<dReal>& v0,const std::vector<dReal>& q2,const std::vector<dReal>& v2,std::vector<dReal>& qres,std::vector<dReal>& vres,ConstraintTrajectoryTimingParametersPtr params){
 
     vector<dReal> amax = params->_vConfigAccelerationLimit;
@@ -169,11 +175,13 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const st
     dReal Ta = alpha*T;
     dReal Tb = T-Ta;
 
+    // This checks for joint angle limits
+    // Velocity and Accel limits should be satisfied from the interval computation
     return CheckValidity(Ta,Tb,q0,v0,q3,v3,qres,vres,params);
 }
 
 
-/** Fix the time durations of 2 ramps. Assume that the ramps are unitary
+/** Fix the time durations of two neighboring ramps. Assume that the ramps are unitary
     \param rampx input ramps with x=0,1,
     \param resrampx result ramp with x=0,1
     \param Ta,Tb desired final durations
@@ -205,7 +213,7 @@ bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::P
 
 
 
-/** Merge 3 ramps into 2 ramps while respecting the continuities of joints and velocities on the borders
+/** Merge three ramps into two ramps while respecting the continuities of joints and velocities on the borders
    Assume that the ramps are unitary
     \param rampx input ramps with x=0,1,2
     \param resrampx result ramp with x=0,1
@@ -248,7 +256,7 @@ int factorial(int n){
     return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
-/*Iteratively fix the time durations of the ramps
+/** Iteratively fix the time durations of the ramps
    Note that, by construction, there is no isolated modified ramps
    \param ramps input ramps
    \param desireddurations list of desired durations
@@ -327,7 +335,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
     return true;
 }
 
-/** Iteratively merge all ramps that are shorter than minswitchtime. Does not change the global time duration
+/** Iteratively kill all ramps that are shorter than minswitchtime by merging them into neighboring ramps. Does not change the global time duration
     \param origramps input ramps
     \param ramps result ramps
     \param v3 the velocity at the end of the ramp at T2
@@ -353,7 +361,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         //printf("Iteration %d\n",itersi);
         ramps = origramps;
         itersi++;
-        // Kill all ramps that are not the first and the last. For every three ramps where the middle ramp is smaller than minswitchtime, merge the ramp that is in the middle to form two new ramps.
+        // Kill all ramps that are not the first or the last. For every three ramps where the middle ramp is smaller than minswitchtime, merge the ramp that is in the middle to form two new ramps.
         bool solved = false;
         while(true) {
             solved = true;
@@ -405,7 +413,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         if(!solved) {
             continue;
         }
-        // Handle the beginning the trajectory
+        // Handle the first ramps in the trajectory
         while(ramps.begin()->endTime<params->minswitchtime) {
             if (ramps.size()<=2) {
                 solved = false;
@@ -434,7 +442,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         if(!solved) {
             continue;
         }
-        // Handle the end the trajectory
+        // Handle the last ramps in the trajectory
         while(ramps.back().endTime < params->minswitchtime) {
             if (ramps.size()<=2) {
                 solved= false;
@@ -513,7 +521,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
         }
     }
 
-    // If dilatation is necessary but either the initial or the final trajectory is nonzero, cannot timescale
+    // If dilatation is necessary but either the initial or the final trajectory is nonzero, then cannot timescale
     if(dodilate && !(CheckIfZero(origramps.begin()->dx0, ParabolicRamp::EpsilonV) && CheckIfZero(origramps.back().dx1, ParabolicRamp::EpsilonV))) {
         return false;
     }
@@ -812,7 +820,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     dReal coef = 0;  // coefficient multiplying the acceleration limits: if coef is small, traj duration will be larger
     int iter = 0;
     resramps.resize(0);
-    while(hi-lo>1e-2 && iter<1000) {
+    while(hi-lo>1e-3 && iter<1000) {
         iter++;
         if(iter==1) {
             coef = 1;
@@ -875,12 +883,12 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     bool debug = false;
 
     // Iteratively timescales up until the time-related constraints are met
-    dReal small = 1e-2;
+    dReal small = 1e-3;
     dReal hi = 1;
     dReal lo = small;
     dReal coef = 0;  // coefficient multiplying the limits: if coef is small, traj duration will be larger
     int iter = 0;
-    while(hi-lo>1e-2 && iter<100) {
+    while(hi-lo>1e-3 && iter<100) {
         iter++;
         if(iter==1) {
             coef = 1;
@@ -896,7 +904,12 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         vmax.resize(n);
         amax.resize(n);
         for(size_t j=0; j<n; j++) {
-            vmax[j]=max(params->_vConfigVelocityLimit[j]*coef,max(RaveFabs(dx0[j]),RaveFabs(dx1[j])));
+            if(params->maxmanipspeed>0) {
+                vmax[j]=max(params->_vConfigVelocityLimit[j]*coef,max(RaveFabs(dx0[j]),RaveFabs(dx1[j])));
+            }
+            else{
+                vmax[j]=params->_vConfigVelocityLimit[j];
+            }
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
         mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, vmax, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
@@ -999,7 +1012,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         dReal tmpduration = ComputeRampsDuration(tmpramps0);
         bool canscale = ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
         if(!canscale) {
-            RAVELOG_WARN("Could not round up to controller time step\n");
+            RAVELOG_WARN("Could not round up to controller timestep\n");
             return false;
         }
         // Insert at beginning
@@ -1033,7 +1046,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
         bool canscale = mergewaypoints::ScaleRampsTime(tmpramps0,tmpramps1,ComputeStepSizeCeiling(tmpduration,params->_fStepLength*2)/tmpduration,false,params);
         if(!canscale) {
-            RAVELOG_WARN("Could not round up to controller time step\n");
+            RAVELOG_WARN("Could not round up to controller timestep\n");
             return false;
         }
         // Insert at end
@@ -1156,7 +1169,6 @@ size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd)
     for(size_t i=0; i<vswitchtimes.size(); i++) {
         ParabolicRamp::Vector q0,v0,q1,v1;
         tend = vswitchtimes[i];
-        //printf("vswitch[i] = %f\n",tend);
         //Throw away ramps that have tiny time durations
         if(tend-tbeg>TINY) {
             result++;

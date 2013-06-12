@@ -555,7 +555,8 @@ public:
             // TODO ramps are unitary so don't have to track switch points
             FOREACH(itrampnd,ramps) {
                 // double-check the current ramps
-                if(_parameters->verifyinitialpath) {
+                //                if(_parameters->verifyinitialpath) {
+                if(true) {
                     // part of original trajectory which might not have been processed with perturbations, so ignore them
                     int options = 0xffff; // no perturbation
                     if( !checker.Check(*itrampnd,options)) {
@@ -828,13 +829,13 @@ public:
                         // Now check for collision only for the ramps that have been modified
                         // Perturbations are applied when a configuration is outside the "radius" of start and goal config
                         int itx = 0;
-                        dReal radius = 0.1;
+                        dReal radius_around_endpoints = 0.1;
                         options = 0xffff;
                         FOREACH(itramp, resramps) {
                             if(!itramp->modified) {
                                 continue;
                             }
-                            if(!mergewaypoints::SpecialCheckRamp(*itramp,qstart,qgoal,radius,_parameters,check,options)) {
+                            if(!mergewaypoints::SpecialCheckRamp(*itramp,qstart,qgoal,radius_around_endpoints,_parameters,check,options)) {
                                 RAVELOG_VERBOSE_FORMAT("... Collision for ramp %d after merge\n",itx);
                                 resmerge = false;
                                 break;
@@ -944,19 +945,19 @@ public:
                     endeffaccang = endeffaccs[endeffindex].second;
                     Transform R = itmanipinfo->plink->GetTransform();
                     // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
+                    //int itx=0;
                     FOREACH(itpoint,itmanipinfo->checkpoints){
-                        Vector point = R.rot*(*itpoint);
+                        Vector point = R.rotate(*itpoint);
                         if(_parameters->maxmanipspeed>0) {
                             Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                            if(sqrt(vpoint.lengthsqr3()>_parameters->maxmanipspeed)) {
+                            if(sqrt(vpoint.lengthsqr3())>_parameters->maxmanipspeed) {
                                 res = false;
                                 break;
                             }
                         }
                         if(_parameters->maxmanipaccel>0) {
                             Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                            if(sqrt(apoint.lengthsqr3()>_parameters->maxmanipaccel)) {
-                                //cout << "Accel violation: " << sqrt(apoint.lengthsqr3()) << "\n";
+                            if(sqrt(apoint.lengthsqr3())>_parameters->maxmanipaccel) {
                                 res = false;
                                 break;
                             }
