@@ -812,6 +812,9 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.dx0 = zero;
     newramp.dx1 = zero;
     bool solved = false;
+    std::vector<dReal> amax;
+    size_t n = params->_vConfigAccelerationLimit.size();
+    amax.resize(n);
 
     // Iteratively timescales up until the time-related constraints are satisfied
     dReal small = 1e-6;
@@ -829,9 +832,6 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             coef = small;
         }
         //cout << "Coef: " << coef << "\n";
-        std::vector<dReal> amax;
-        size_t n = params->_vConfigAccelerationLimit.size();
-        amax.resize(n);
         for(size_t j=0; j<n; j++) {
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
@@ -881,6 +881,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     dReal mintime;
     bool solved = false;
     bool debug = false;
+    size_t n = params->_vConfigAccelerationLimit.size();
+    std::vector<dReal> amax, vmax = params->_vConfigVelocityLimit;
+    amax.resize(n);
 
     // Iteratively timescales up until the time-related constraints are met
     dReal small = 1e-3;
@@ -899,16 +902,9 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         if(debug) {
             cout << "Coef: " << coef << "\n";
         }
-        std::vector<dReal> vmax,amax;
-        size_t n = params->_vConfigAccelerationLimit.size();
-        vmax.resize(n);
-        amax.resize(n);
         for(size_t j=0; j<n; j++) {
             if(params->maxmanipspeed>0) {
                 vmax[j]=max(params->_vConfigVelocityLimit[j]*coef,max(RaveFabs(dx0[j]),RaveFabs(dx1[j])));
-            }
-            else{
-                vmax[j]=params->_vConfigVelocityLimit[j];
             }
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
