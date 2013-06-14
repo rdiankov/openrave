@@ -116,6 +116,35 @@ public:
     }
 };
 
+class PyMultiController : public PyControllerBase
+{
+private:
+    MultiControllerPtr _pmulticontroller;
+
+public:
+    PyMultiController(MultiControllerPtr pmulticontroller, PyEnvironmentBasePtr pyenv) : PyControllerBase(pmulticontroller, pyenv), _pmulticontroller(pmulticontroller) {
+    }
+    virtual ~PyMultiController() {
+    }
+
+    bool AttachController(PyControllerBasePtr ocontroller, object odofindices, int nControlTransformation) {
+        CHECK_POINTER(ocontroller);
+        vector<int> dofindices = ExtractArray<int>(odofindices);
+        return _pmulticontroller->AttachController(ocontroller->GetController(), dofindices, nControlTransformation);
+    }
+
+    void RemoveController(PyControllerBasePtr ocontroller) {
+        CHECK_POINTER(ocontroller);
+        _pmulticontroller->RemoveController(ocontroller->GetController());
+    }
+
+    object GetController(int dof) {
+        CHECK_POINTER(_pmulticontroller);
+        ControllerBasePtr pcontroller = _pmulticontroller->GetController(dof);
+        return object(openravepy::toPyController(pcontroller, _pyenv));
+    }
+};
+
 ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 {
     return !pycontroller ? ControllerBasePtr() : pycontroller->GetController();
@@ -124,6 +153,11 @@ ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv)
 {
     return !pcontroller ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyControllerBase(pcontroller,pyenv));
+}
+
+PyInterfaceBasePtr toPyMultiController(MultiControllerPtr pcontroller, PyEnvironmentBasePtr pyenv)
+{
+    return !pcontroller ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyMultiController(pcontroller,pyenv));
 }
 
 PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -163,6 +197,20 @@ void init_openravepy_controller()
     }
 
     def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
+}
+
+void init_openravepy_multicontroller()
+{
+    {
+        object (PyMultiController::*getcontroller)(int) = &PyMultiController::GetController;
+        class_<PyMultiController, boost::shared_ptr<PyMultiController>, bases<PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiController), no_init)
+        .def("AttachController",&PyMultiController::AttachController, args("controller","dofindices","controltransform"), DOXY_FN(MultiController,AttachController))
+        .def("RemoveController",&PyMultiController::RemoveController, args("controller"), DOXY_FN(MultiController,RemoveController))
+        .def("GetController",getcontroller, args("dof"), DOXY_FN(MultiController,GetController))
+        ;
+    }
+
+    // TODO: How do I add a Python constructor?
 }
 
 }
