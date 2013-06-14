@@ -262,12 +262,14 @@ int factorial(int n){
    \param desireddurations list of desired durations
  */
 bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::list<dReal>& desireddurations, ConstraintTrajectoryTimingParametersPtr params){
+    OPENRAVE_ASSERT_OP(ramps.size(),==,desireddurations.size());
     if( ramps.size() == 0) {
         return false;
     }
     if (ramps.size() == 1) {
         std::list<ParabolicRamp::ParabolicRampND> resramps;
         dReal coef = desireddurations.back()/ramps.back().endTime;
+        // make sure trysmart is false, or otherwise can get into infinite loop
         bool res = ScaleRampsTime(ramps,resramps,coef,false,params);
         if(res) {
             ramps.swap(resramps);
@@ -299,6 +301,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
                 }
                 continue;
             }
+            // actually this is necessary because we move forward by two ramps (see below)
             if (RaveFabs(itrampnext->endTime-*ittnext)<=TINY && !itrampnext->modified) {
                 itrampnext = itrampprev--;
                 ittnext = ittprev--;
@@ -314,6 +317,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
                 *itrampnext = resramp1;
             }
         }
+        // move forward by two ramps
         ++itrampnext;
         itrampprev = itrampnext++;
         ++ittnext;
@@ -335,7 +339,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
     return true;
 }
 
-/** Iteratively kill all ramps that are shorter than minswitchtime by merging them into neighboring ramps. Does not change the global time duration
+/** Iteratively kill all ramps that are shorter than minswitchtime by merging them into neighboring ramps. Rounds all times to the controller timestep. Does not change the global time duration too much
     \param origramps input ramps
     \param ramps result ramps
     \param v3 the velocity at the end of the ramp at T2
@@ -490,11 +494,11 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
 
 bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, std::list<ParabolicRamp::ParabolicRampND>& ramps, dReal coef, bool trysmart, ConstraintTrajectoryTimingParametersPtr params){
     ramps.resize(0);
-    bool dodilate = RaveFabs(coef-1)>TINY;
+    bool doscale = RaveFabs(coef-1)>TINY;
 
     // Try being smart by timescaling only the modified ramps
-    if(trysmart && dodilate && origramps.size()>=2) {
-        dReal durationbeforemerge = ComputeRampsDuration(origramps);
+    if(trysmart && doscale && origramps.size()>=2) {
+        dReal durationbeforescaling = ComputeRampsDuration(origramps);
         dReal durationmodifiedramps = 0;
         FOREACH(itramp,origramps){
             if(itramp->modified) {
@@ -502,7 +506,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
             }
         }
         if(durationmodifiedramps>TINY) {
-            coef = 1+ (coef-1)*durationbeforemerge/durationmodifiedramps;
+            coef = 1+ (coef-1)*durationbeforescaling/durationmodifiedramps;
             ramps = origramps;
 
             std::list<dReal> desireddurations;
@@ -521,8 +525,8 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
         }
     }
 
-    // If dilatation is necessary but either the initial or the final trajectory is nonzero, then cannot timescale
-    if(dodilate && !(CheckIfZero(origramps.begin()->dx0, ParabolicRamp::EpsilonV) && CheckIfZero(origramps.back().dx1, ParabolicRamp::EpsilonV))) {
+    // If scaling is necessary but either the initial or the final trajectory is nonzero, then return false
+    if(doscale && !(CheckIfZero(origramps.begin()->dx0, ParabolicRamp::EpsilonV) && CheckIfZero(origramps.back().dx1, ParabolicRamp::EpsilonV))) {
         return false;
     }
 
@@ -532,7 +536,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
         dReal t = itramp->endTime;
         if(t>TINY) {
             ParabolicRamp::Vector q0=itramp->x0, v0=itramp->dx0, q1=itramp->x1, v1=itramp->dx1;
-            if(dodilate) {
+            if(doscale) {
                 dReal invcoef = 1/coef;
                 FOREACH(itv,v0){
                     *itv *= invcoef;
@@ -543,7 +547,7 @@ bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, 
             }
             ramps.push_back(ParabolicRamp::ParabolicRampND());
             ramps.back().SetPosVelTime(q0,v0,q1,v1,t*coef);
-            ramps.back().modified = itramp->modified || dodilate;
+            ramps.back().modified = itramp->modified || doscale;
             BOOST_ASSERT(ramps.back().IsValid());
         }
     }
@@ -564,14 +568,14 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
 bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
 
     dReal dt = 0.01;
-    dReal RT = ramp.endTime;
+    dReal rampduration = ramp.endTime;
     int options_perturb = options | CFO_CheckWithPerturbation;
     ParabolicRamp::Vector q,qm,vm;
     ParabolicRamp::ParabolicRampND ramp1, ramp2;
 
     //Start of ramp is close to qstart
     if(params->_distmetricfn(ramp.x0,qstart)<radius) {
-        if(RT<dt) {
+        if(rampduration<dt) {
             if(params->_distmetricfn(ramp.x1,qstart)>radius) {
                 return check.Check(ramp,options_perturb);
             }
@@ -580,7 +584,7 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
             }
         }
         dReal T=dt;
-        while(T<=RT) {
+        while(T<=rampduration) {
             ramp.Evaluate(T,q);
             if(params->_distmetricfn(q,qstart)>radius) {
                 break;
@@ -590,19 +594,16 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
         if(T>ramp.endTime) {
             return check.Check(ramp,options);
         }
-        T -= dt;
-        if(T>0) {
-            ramp.Evaluate(T,qm);
-            ramp.Derivative(T,vm);
-            ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
-            ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,RT-T);
-            return check.Check(ramp1,options) && check.Check(ramp2,options_perturb);
-        }
+        ramp.Evaluate(T,qm);
+        ramp.Derivative(T,vm);
+        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
+        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,rampduration-T);
+        return check.Check(ramp1,options) && check.Check(ramp2,options_perturb);
     }
 
     //End of ramp is close to qgoal
     if(params->_distmetricfn(ramp.x1,qgoal)<radius) {
-        if(RT<dt) {
+        if(rampduration<dt) {
             if(params->_distmetricfn(ramp.x0,qgoal)>radius) {
                 return check.Check(ramp,options_perturb);
             }
@@ -610,7 +611,7 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
                 return check.Check(ramp,options);
             }
         }
-        dReal T=RT-dt;
+        dReal T=rampduration-dt;
         while(T>=0) {
             ramp.Evaluate(T,q);
             if(params->_distmetricfn(q,qgoal)>radius) {
@@ -621,14 +622,11 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
         if(T<0) {
             return check.Check(ramp,options);
         }
-        T += dt;
-        if (T<RT) {
-            ramp.Evaluate(T,qm);
-            ramp.Derivative(T,vm);
-            ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
-            ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,RT-T);
-            return check.Check(ramp1,options_perturb) && check.Check(ramp2,options);
-        }
+        ramp.Evaluate(T,qm);
+        ramp.Derivative(T,vm);
+        ramp1.SetPosVelTime(ramp.x0,ramp.dx0,qm,vm,T);
+        ramp2.SetPosVelTime(qm,vm,ramp.x1,ramp.dx1,rampduration-T);
+        return check.Check(ramp1,options_perturb) && check.Check(ramp2,options);
     }
 
     // Else check the entire ramp with perturbations
@@ -694,6 +692,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
     resramps = origramps;
     bool bHasChanged = false;
     std::list<ParabolicRamp::ParabolicRampND> ramps;
+    dReal origrampsduration = ComputeRampsDuration(origramps);
     for(int rep = 0; rep<nitersfurthermerge; rep++) {
         ramps = origramps;
         while(ramps.size()>=3) {
@@ -710,7 +709,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
             }
             dReal t0 = ComputeStepSizeCeiling(resramp0.endTime,params->_fStepLength);
             dReal t1 = ComputeStepSizeCeiling(resramp1.endTime,params->_fStepLength);
-            if(t1+t0-resramp0.endTime-resramp1.endTime+ComputeRampsDuration(ramps)>upperbound) {
+            if(t1+t0-resramp0.endTime-resramp1.endTime+ComputeRampsDuration(ramps)>upperbound*origrampsduration) {
                 break;
             }
             bool resfix = FixRamps(resramp0,resramp1,resramp0x,resramp1x,t0,t1,params);
@@ -748,7 +747,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origram
         return true;
     }
     dReal durationbeforemerge = ComputeRampsDuration(origramps);
-    dReal maxcoef = upperbound / durationbeforemerge;
+    dReal maxcoef = upperbound;
     //printf("Coef = %f\n",maxcoef);
     bool canscale = ScaleRampsTime(origramps, ramps, maxcoef, true, params);
     if(!canscale) {
@@ -813,10 +812,12 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     newramp.dx1 = zero;
     bool solved = false;
     std::vector<dReal> amax;
-    size_t n = params->_vConfigAccelerationLimit.size();
-    amax.resize(n);
+    int numdof = params->GetDOF();
+    amax.resize(numdof);
 
     // Iteratively timescales up until the time-related constraints are satisfied
+    // only scale the acceleration limits and don't touch the velocity limits
+    // the reason is so that the resulting ramps can always be accelerating without saturating the velocity. this reduces the number of ramps and makes minswitchtime guarantee simpler.
     dReal small = 1e-6;
     dReal hi = 1;
     dReal lo = small;
@@ -831,8 +832,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
         if(iter==2) {
             coef = small;
         }
-        //cout << "Coef: " << coef << "\n";
-        for(size_t j=0; j<n; j++) {
+        for(int j=0; j<numdof; j++) {
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
         bool res = newramp.SolveMinTimeLinear(amax,params->_vConfigVelocityLimit);
@@ -875,23 +875,23 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
 }
 
 
-bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal curtime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
+bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal fOriginalTrajectorySegmentTime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tmpramps1d;
     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
     dReal mintime;
     bool solved = false;
-    bool debug = false;
-    size_t n = params->_vConfigAccelerationLimit.size();
+    int numdof = params->GetDOF();
     std::vector<dReal> amax, vmax = params->_vConfigVelocityLimit;
-    amax.resize(n);
+    amax.resize(numdof);
 
     // Iteratively timescales up until the time-related constraints are met
-    dReal small = 1e-3;
+    const dReal small = 1e-3;
     dReal hi = 1;
     dReal lo = small;
     dReal coef = 0;  // coefficient multiplying the limits: if coef is small, traj duration will be larger
     int iter = 0;
-    while(hi-lo>1e-3 && iter<100) {
+    // TODO: cache max(RaveFabs(dx0[j]),RaveFabs(dx1[j]))
+    while(hi-lo>small && iter<100) {
         iter++;
         if(iter==1) {
             coef = 1;
@@ -899,30 +899,23 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         if(iter==2) {
             coef = small;
         }
-        if(debug) {
-            cout << "Coef: " << coef << "\n";
-        }
-        for(size_t j=0; j<n; j++) {
+        //RAVELOG_VERBOSE("Coef: %d\n", coef);
+        for(int j=0; j<numdof; j++) {
             if(params->maxmanipspeed>0) {
                 vmax[j]=max(params->_vConfigVelocityLimit[j]*coef,max(RaveFabs(dx0[j]),RaveFabs(dx1[j])));
             }
             amax[j]=params->_vConfigAccelerationLimit[j]*coef;
         }
         mintime = ParabolicRamp::SolveMinTimeBounded(x0,dx0,x1,dx1, amax, vmax, params->_vConfigLowerLimit, params->_vConfigUpperLimit, tmpramps1d, params->_multidofinterp);
-        if(mintime > curtime) {
-            if(debug) {
-                cout << "Too long \n";
-            }
+        if(mintime > fOriginalTrajectorySegmentTime) {
+            //RAVELOG_VERBOSE("Too long\n");
             if(coef>=1) {
-                RAVELOG_VERBOSE("Traj with time-scaling 1 (amax = acceleration_limit) has time duration > curtime, so stopping ComputeQuadraticRamps right away\n");
+                RAVELOG_VERBOSE("Traj with time-scaling 1 (amax = acceleration_limit) has time duration > fOriginalTrajectorySegmentTime, so stopping ComputeQuadraticRamps right away\n");
                 return false;
             }
             lo = coef;
         }
         else if (mintime <= TINY) {
-            if(debug) {
-                cout << "Could not solvemintime \n";
-            }
             RAVELOG_VERBOSE_FORMAT("Coef %f could not Solvemintime, so stopping ComputeQuadraticRamps right away\n",coef);
             lo = coef;
         }
@@ -931,9 +924,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             CombineRamps(tmpramps1d,tmpramps);
             BreakIntoUnitaryRamps(tmpramps);
             if(!CheckRamps(tmpramps,check,options)) {
-                if(debug) {
-                    cout << "Not OK\n";
-                }
+                //RAVELOG_VERBOSE("Not OK\n");
                 if(coef <= small) {
                     RAVELOG_VERBOSE("Super slow traj (amax = small*acceleration_limit) failed check, so stopping ComputeQuadraticRamps right away\n");
                     return false;
@@ -943,9 +934,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
             else{
                 lo = coef;
                 resramps = tmpramps;
-                if(debug) {
-                    cout << "OK\n";
-                }
+                //RAVELOG_VERBOSE("OK\n");
                 solved = true;
                 if(coef>=1) {
                     break;
@@ -954,7 +943,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
         }
         coef = (hi+lo)/2;
     }
-    return solved && resramps.size()>0 && (ComputeRampsDuration(resramps)<= curtime) && CheckRamps(resramps,check,options);
+    return solved && resramps.size()>0 && (ComputeRampsDuration(resramps)<= fOriginalTrajectorySegmentTime) && CheckRamps(resramps,check,options);
 }
 
 
@@ -967,8 +956,31 @@ bool CheckIfZero(const ParabolicRamp::Vector& v, dReal epsilon){
     return true;
 }
 
-// Check whether ramp0 and ramp1 form a straight line in the config space
-bool FormStraightLineRamp(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::ParabolicRampND& ramp1){
+/// check if the velocity dervatives are collinear with the difference of the ramp endpoints
+/// assumes ramp is unitary
+bool CheckIfRampIsStraight(const ParabolicRamp::ParabolicRampND& ramp)
+{
+    dReal dotproduct0=0,dotproduct1=0, diffclength2=0, diff0length2=0, diff1length2=0;
+    for(size_t i = 0; i < ramp.x0.size(); ++i) {
+        BOOST_ASSERT(ramp.ramps.at(i).tswitch1 <= g_fEpsilonLinear || ramp.ramps.at(i).tswitch1 >= ramp.endTime-g_fEpsilonLinear);
+        BOOST_ASSERT(ramp.ramps.at(i).tswitch2 <= g_fEpsilonLinear || ramp.ramps.at(i).tswitch2 >= ramp.endTime-g_fEpsilonLinear);
+        dReal diffc=ramp.x1.at(i) - ramp.x0.at(i);
+        dReal diff0=ramp.dx0[i];
+        dReal diff1=ramp.dx1[i];
+        diffclength2 += diffc*diffc;
+        diff0length2 += diff0*diff0;
+        diff1length2 += diff1*diff1;
+        dotproduct0 += diffc*diff0;
+        dotproduct1 += diffc*diff1;
+    }
+    return RaveFabs(dotproduct0*dotproduct0 - diff0length2*diffclength2) <= g_fEpsilonLinear && RaveFabs(dotproduct1*dotproduct1 - diff1length2*diffclength2) <= g_fEpsilonLinear;
+}
+
+// Check whether ramp0 and ramp1 are collinear. Assumes that ramp0 and ramp1 are already linear themselves.
+bool AreRampsCollinear(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::ParabolicRampND& ramp1) {
+    if( !CheckIfRampIsStraight(ramp0) || !CheckIfRampIsStraight(ramp1) ) {
+        return false;
+    }
     dReal dotproduct=0, x0length2=0, x1length2=0;
     for(size_t i = 0; i < ramp0.x0.size(); ++i) {
         dReal dx0=ramp0.x1[i]-ramp0.x0[i];
@@ -979,7 +991,6 @@ bool FormStraightLineRamp(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::P
     }
     return RaveFabs(dotproduct*dotproduct - x0length2*x1length2) <= TINY;
 }
-
 
 bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options){
     if (origramps.size()<2) {
@@ -996,7 +1007,8 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     // Check whether the first two ramps come from a jittering operation
     itramp1 = itramp0;
     itramp1++;
-    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+    // TODO should have a general function for checking if a ramp is a straight line in configuration space. Every ramp should be tested with this function.
+    if (CheckIfZero(itramp1->dx1, ParabolicRamp::EpsilonV) && AreRampsCollinear(*itramp0,*itramp1)) {
         RAVELOG_DEBUG("First two ramps probably come from a jittering operation\n");
         jittered = true;
         std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
@@ -1030,7 +1042,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
     itramp1--;
     itramp0 = itramp1;
     itramp0--;
-    if (CheckIfZero(itramp0->dx0, ParabolicRamp::EpsilonV) && FormStraightLineRamp(*itramp0,*itramp1)) {
+    if (CheckIfZero(itramp0->dx0, ParabolicRamp::EpsilonV) && AreRampsCollinear(*itramp0,*itramp1)) {
         jittered = true;
         RAVELOG_DEBUG("Last two ramps probably come from a jittering operation\n");
         std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
@@ -1082,7 +1094,7 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<
         }
     }
     else{
-        RAVELOG_WARN("This trajectory does not seem to come from a previous jittering...\n");
+        RAVELOG_VERBOSE("This trajectory does not seem to come from a previous jittering...\n");
         return false;
     }
 }

@@ -24,7 +24,7 @@ namespace mergewaypoints
 /** Iteratively merge all ramps that are shorter than minswitchtime. Determine the optimal time duration that allows to do so
     \param origramps input ramps
     \param ramps result ramps
-    \param upperbound maximum time duration to try
+    \param upperbound maximum time scale to try
     \param precision precision in the dichotomy search for the best timescaling coef
     \param iters max number of random iterations
  */
@@ -33,7 +33,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>& origra
 /** Once the ramps are all OK, further merge ramps
     \param origramps input ramps
     \param ramps result ramps
-    \param upperbound maximum time duration to try
+    \param upperbound maximum time scale to try
     \param precision precision in the dichotomy search for the best timescaling coef
     \param iters max number of random iterations
  */
@@ -55,13 +55,15 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list
  **/
 bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params,ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
-
+/// \param curtime time duration of the original trajectory segment that will be shortcutted
+/// \param x0, x1, dx0, dx1 shortcutted trajectory segment endpoints
 bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal curtime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
 /** Timescale a ramp. Assume the ramp is unitary.
     \param origramps input ramp
     \param resramps result ramp
     \param coef timescaling coefficient
+    \param trysmart if false, modify all the ramps by the constant factor. if true, then modify ramps whos modified field is true.
     \param flag
  */
 bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
