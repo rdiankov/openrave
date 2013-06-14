@@ -1658,6 +1658,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 
     openravepy::init_openravepy_collisionchecker();
     openravepy::init_openravepy_controller();
+    openravepy::init_openravepy_multicontroller();
     openravepy::init_openravepy_ikparameterization();
     openravepy::init_openravepy_iksolver();
     openravepy::init_openravepy_kinbody();

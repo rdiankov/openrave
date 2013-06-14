@@ -169,6 +169,15 @@ PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::
     return PyControllerBasePtr(new PyControllerBase(p,pyenv));
 }
 
+PyMultiControllerPtr RaveCreateMultiController(PyEnvironmentBasePtr pyenv)
+{
+    MultiControllerPtr p(new MultiController(GetEnvironment(pyenv)));
+    if( !p ) {
+        return PyMultiControllerPtr();
+    }
+    return PyMultiControllerPtr(new PyMultiController(p,pyenv));
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 
 void init_openravepy_controller()
@@ -210,7 +219,7 @@ void init_openravepy_multicontroller()
         ;
     }
 
-    // TODO: How do I add a Python constructor?
+    def("RaveCreateMultiController",openravepy::RaveCreateMultiController,args("env"),DOXY_FN1(RaveCreateMultiController));
 }
 
 }

@@ -575,6 +575,7 @@ CollisionReportPtr GetCollisionReport(PyCollisionReportPtr);
 PyCollisionReportPtr toPyCollisionReport(CollisionReportPtr, PyEnvironmentBasePtr);
 void UpdateCollisionReport(PyCollisionReportPtr, PyEnvironmentBasePtr);
 void UpdateCollisionReport(object, PyEnvironmentBasePtr);
+void init_openravepy_multicontroller();
 void init_openravepy_controller();
 ControllerBasePtr GetController(PyControllerBasePtr);
 PyInterfaceBasePtr toPyController(ControllerBasePtr, PyEnvironmentBasePtr);
