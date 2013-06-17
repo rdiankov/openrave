@@ -917,25 +917,29 @@ public:
     // }
 
 
-    // Fill non used dofs with zeros
-    void FillNonUsedDofs(RobotBasePtr probot, const std::vector<dReal>& vconfigvalues, std::vector<dReal>& vdofvalues){
-        vdofvalues.resize(probot->GetDOF());
-        std::vector<int> vuseddofindices, vconfigindices;
-        _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vconfigindices);
-        for(size_t iuseddof = 0; iuseddof < vuseddofindices.size(); ++iuseddof) {
-            vdofvalues[vuseddofindices[iuseddof]] = vconfigvalues[vconfigindices[iuseddof]];
+    /*class GravitySaver
+       {
+       public:
+        GravitySaver(EnvironmentBasePtr penv) : _penv(penv) {
+            _vgravity = penv->GetPhysicsEngine()->GetGravity();
         }
-    }
-
+        ~GravitySaver() {
+            _penv->GetPhysicsEngine()->SetGravity(_vgravity);
+        }
+        EnvironmentBasePtr _penv;
+        Vector _vgravity;
+        };*/
 
     bool CheckManipConstraints(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed){
         ParabolicRamp::ParabolicRampND ramp;
         if(timeelapsed<=g_fEpsilonLinear) {
             return true;
         }
-        else{
+        else {
+            //GravitySaver gravitysaver(GetEnv());
+            //GetEnv()->GetPhysicsEngine()->SetGravity(Vector());
             ramp.SetPosVelTime(a,da,b,db,timeelapsed);
-            vector<dReal> ac;
+            vector<dReal> ac, dofaccelerations, qfill, vfill;
             ramp.Accel(timeelapsed/2,ac);
             bool res = true;
             FOREACH(it,_constraintreturn->_configurationtimes){
@@ -944,27 +948,29 @@ public:
                 ramp.Derivative(*it,vc);
                 // Compute the velocity and accel of the end effector COM
                 FOREACH(itmanipinfo,_listCheckManips){
-                    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(itmanipinfo->plink->GetParent());
-                    Vector gravity = probot->GetEnv()->GetPhysicsEngine()->GetGravity();
-                    vector<dReal> qfill,vfill,afill;
-                    FillNonUsedDofs(probot,qc,qfill);
-                    FillNonUsedDofs(probot,vc,vfill);
-                    FillNonUsedDofs(probot,ac,afill);
+                    KinBodyPtr probot = itmanipinfo->plink->GetParent();
+                    std::vector<int> vuseddofindices, vconfigindices;
+                    _parameters->_configurationspecification.ExtractUsedIndices(probot, vuseddofindices, vconfigindices);
+                    qfill.resize(vuseddofindices.size());
+                    vfill.resize(vuseddofindices.size());
+                    for(size_t idof = 0; idof < vuseddofindices.size(); ++idof) {
+                        qfill[idof] = qc.at(vconfigindices.at(idof));
+                    }
                     std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
                     Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
-                    std::vector<dReal> q0,v0;
                     int endeffindex = itmanipinfo->plink->GetIndex();
-                    probot->GetDOFValues(q0);
-                    probot->GetDOFVelocities(v0);
+                    KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+
                     // Set robot to new state
-                    probot->SetDOFValues(qfill);
-                    probot->SetDOFVelocities(vfill);
+                    probot->SetDOFValues(qfill, KinBody::CLA_CheckLimits, vuseddofindices);
+                    probot->SetDOFVelocities(vfill, KinBody::CLA_CheckLimits, vuseddofindices);
                     probot->GetLinkVelocities(endeffvels);
-                    probot->GetLinkAccelerations(afill,endeffaccs);
-                    endeffvellin = endeffvels[endeffindex].first;
-                    endeffvelang = endeffvels[endeffindex].second;
-                    endeffacclin = endeffaccs[endeffindex].first + gravity;
-                    endeffaccang = endeffaccs[endeffindex].second;
+                    //AccelerationMapPtr externalaccelerations(new AccelerationMap());
+                    probot->GetLinkAccelerations(dofaccelerations,endeffaccs);
+                    endeffvellin = endeffvels.at(endeffindex).first;
+                    endeffvelang = endeffvels.at(endeffindex).second;
+                    endeffacclin = endeffaccs.at(endeffindex).first;
+                    endeffaccang = endeffaccs.at(endeffindex).second;
                     Transform R = itmanipinfo->plink->GetTransform();
                     // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
                     //int itx=0;
@@ -985,9 +991,6 @@ public:
                             }
                         }
                     }
-                    // Restore initial state of the robot
-                    probot->SetActiveDOFValues(q0);
-                    probot->SetActiveDOFVelocities(v0);
                     if(!res) {
                         return false;
                     }

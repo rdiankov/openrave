@@ -2104,9 +2104,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             int nstateret = 0;
             if( istep >= start ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                if( !!params->_getstatefn ) {
+                    params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+                }
+                if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                    filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                }
             }
-            if( !!params->_getstatefn ) {
-                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+            if( nstateret != 0 ) {
+                return nstateret;
             }
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 timestep = fStep/fLargestStepVelocity;

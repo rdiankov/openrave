@@ -117,6 +117,14 @@ public:
         v1.back() -= v2.back();
     }
 
+    void SubtractStates(std::vector<dReal>& q1, const std::vector<dReal>& q2)
+    {
+        BOOST_ASSERT(q1.size()==q2.size());
+        for(size_t i = 0; i < q1.size(); ++i) {
+            q1[i] -= q2[i];
+        }
+    }
+
     bool NeightState(std::vector<dReal>& v,const std::vector<dReal>& vdelta, int fromgoal)
     {
         _vprevsolution = v;
@@ -186,23 +194,23 @@ public:
         _robotdistmetric.reset(new planningutils::SimpleDistanceMetric(_probot));
         _doordistmetric.reset(new planningutils::SimpleDistanceMetric(_ptarget));
         params->_distmetricfn = boost::bind(&DoorConfiguration::ComputeDistance,shared_from_this(),_1,_2);
+        params->_diffstatefn = boost::bind(&DoorConfiguration::DiffState,shared_from_this(),_1,_2);
 
         SpaceSamplerBasePtr pconfigsampler1 = RaveCreateSpaceSampler(_probot->GetEnv(),str(boost::format("robotconfiguration %s")%_probot->GetName()));
-        _robotsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler1,boost::bind(&planningutils::SimpleDistanceMetric::Eval,_robotdistmetric,_1,_2)));
+        _robotsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler1,boost::bind(&planningutils::SimpleDistanceMetric::Eval,_robotdistmetric,_1,_2), boost::bind(&RobotBase::SubtractActiveDOFValues,_probot,_1,_2)));
         SpaceSamplerBasePtr pconfigsampler2 = RaveCreateSpaceSampler(_probot->GetEnv(),str(boost::format("robotconfiguration %s")%_ptarget->GetName()));
-        _doorsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler2,boost::bind(&planningutils::SimpleDistanceMetric::Eval,_doordistmetric,_1,_2)));
+        _doorsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler2,boost::bind(&planningutils::SimpleDistanceMetric::Eval,_doordistmetric,_1,_2), boost::bind(&DoorConfiguration::SubtractStates,shared_from_this(),_1,_2)));
         params->_samplefn = boost::bind(&DoorConfiguration::Sample,shared_from_this(),_1);
         params->_sampleneighfn.clear(); // won't be using it
 
         params->_setstatefn = boost::bind(&DoorConfiguration::SetState,shared_from_this(),_1);
         params->_getstatefn = boost::bind(&DoorConfiguration::GetState,shared_from_this(),_1);
-        params->_diffstatefn = boost::bind(&DoorConfiguration::DiffState,shared_from_this(),_1,_2);
         params->_neighstatefn = boost::bind(&DoorConfiguration::NeightState,shared_from_this(),_1,_2,_3);
 
         std::list<KinBodyPtr> listCheckCollisions;
         listCheckCollisions.push_back(_probot);
         _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
-        params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _probot, _1, _2, _3, _4);
+        params->_checkpathconstraintsfn = boost::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
 
         _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, boost::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
     }
@@ -298,14 +306,20 @@ public:
                     }
                 }
                 else {
-                    params->_getstatefn(params->vinitialconfig);
-                    params->_setstatefn(params->vinitialconfig);
-                    params->_getstatefn(params->vinitialconfig);
+                    try {
+                        params->_getstatefn(params->vinitialconfig);
+                        params->_setstatefn(params->vinitialconfig);
+                        params->_getstatefn(params->vinitialconfig);
 
-                    params->vgoalconfig = params->vinitialconfig;
-                    params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
-                    params->_setstatefn(params->vgoalconfig);
-                    params->_getstatefn(params->vgoalconfig);
+                        params->vgoalconfig = params->vinitialconfig;
+                        params->vgoalconfig.back() = RaveRandomFloat()*1.5; // in radians
+                        params->_setstatefn(params->vgoalconfig);
+                        params->_getstatefn(params->vgoalconfig);
+                    }
+                    catch(const openrave_exception& ex) {
+                        RAVELOG_WARN("initial set failed\n");
+                        continue;
+                    }
                 }
 
                 //params->_sPostProcessingPlanner = "lineartrajectoryretimer";

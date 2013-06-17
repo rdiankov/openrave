@@ -112,6 +112,8 @@ Planning
 
 * Added _nRandomGeneratorSeed to :class:`.Planner.PlannerParameters` in order to control all random seeds in the process.
 
+* Constraint parabolic smoother (:ref:`planner-constraintparabolicsmoother`) that reduces number of parabolic arcs, maintains controller timestep constraints, and bounds acceleration (thanks to Cuong Pham)
+
 Python
 ------
 

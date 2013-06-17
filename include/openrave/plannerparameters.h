@@ -536,9 +536,9 @@ public:
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
-    dReal maxlinkaccel; ///< max accel in m/s^2 that any point on the link goes. 0 means no accel limit
+    dReal maxlinkaccel; ///< max accel in m/s^2 that any point on the link goes. Gravity is always included in the acceleration computations. 0 means no accel limit
     dReal maxmanipspeed; ///< if non-zero then the timer shoulld consdier the max speed limit (m/s) of the active manipulators of the selected robots in the configuration space. 0 means no speed limit
-    dReal maxmanipaccel; ///< if non-zero then the timer shoulld consdier the max acceleration limit (m/s^2) of the active manipulators of the selected robots in the configuration space. 0 means no accel limit
+    dReal maxmanipaccel; ///< if non-zero then the timer shoulld consdier the max acceleration limit (m/s^2) of the active manipulators of the selected robots in the configuration space. Gravity is always included in the acceleration computations. 0 means no accel limit
     dReal mingripperdistance; ///< minimum distance of the hand (manipulator grippers) to any object. 0 means disabled.
     dReal velocitydistancethresh; /// threshold for dot(Direction,Velocity)/MinDistance where Direction is between the closest contact points. 0 if disabled.
 

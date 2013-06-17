@@ -2496,7 +2496,10 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     if( !bHasVelocity ) {
         vDOFVelocities.resize(0);
     }
-    _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, vgravity);
+    AccelerationMap externalaccelerations;
+    externalaccelerations[0] = make_pair(-vgravity, Vector());
+    AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
+    _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, pexternalaccelerations);
 
     // all valuess are in the global coordinate system
     // Given the velocity/acceleration of the object is on point A, to change to B do:
@@ -2606,6 +2609,10 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         vDOFVelocities.resize(0);
     }
 
+    AccelerationMap externalaccelerations;
+    externalaccelerations[0] = make_pair(-vgravity, Vector());
+    AccelerationMapPtr pexternalaccelerations(&externalaccelerations, utils::null_deleter());
+
     // all valuess are in the global coordinate system
     // try to compute as little as possible by checking what is non-zero
     Vector vbaselinear, vbaseangular;
@@ -2627,11 +2634,11 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         else {
             vLinkVelocities[2] = vLinkVelocities[0];
         }
-        _ComputeLinkAccelerations(std::vector<dReal>(), std::vector<dReal>(), vLinkVelocities[2], vLinkAccelerations[2], vgravity);
+        _ComputeLinkAccelerations(std::vector<dReal>(), std::vector<dReal>(), vLinkVelocities[2], vLinkAccelerations[2], pexternalaccelerations);
         if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1], Vector(0,0,0));
+            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1]);
             if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0], Vector(0,0,0));
+                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
@@ -2639,7 +2646,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         }
         else {
             if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0], Vector(0,0,0));
+                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
             }
         }
     }
@@ -2647,9 +2654,9 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         // no external forces
         vLinkVelocities[2] = vLinkVelocities[0];
         if( bHasVelocity ) {
-            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1], Vector(0,0,0));
+            _ComputeLinkAccelerations(vDOFVelocities, std::vector<dReal>(), vLinkVelocities[1], vLinkAccelerations[1]);
             if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0], Vector(0,0,0));
+                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
             }
             else {
                 linkaccelsimilar[0] = 1;
@@ -2657,7 +2664,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
         }
         else {
             if( vDOFAccelerations.size() > 0 ) {
-                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0], Vector(0,0,0));
+                _ComputeLinkAccelerations(std::vector<dReal>(), vDOFAccelerations, vLinkVelocities[0], vLinkAccelerations[0]);
             }
         }
     }
@@ -2770,7 +2777,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 }
 
-void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations) const
+void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
 {
     CHECK_INTERNAL_COMPUTATION;
     if( _veclinks.size() == 0 ) {
@@ -2780,7 +2787,7 @@ void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, s
         std::vector<dReal> vDOFVelocities;
         std::vector<pair<Vector, Vector> > vLinkVelocities;
         _ComputeDOFLinkVelocities(vDOFVelocities,vLinkVelocities);
-        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, GetEnv()->GetPhysicsEngine()->GetGravity());
+        _ComputeLinkAccelerations(vDOFVelocities, vDOFAccelerations, vLinkVelocities, vLinkAccelerations, externalaccelerations);
     }
 }
 
@@ -2820,7 +2827,7 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
     }
 }
 
-void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations, const Vector& vGravity) const
+void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
 {
     vLinkAccelerations.resize(_veclinks.size());
     if( _veclinks.size() == 0 ) {
@@ -2830,9 +2837,18 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     vector<dReal> vtempvalues, veval;
     boost::array<dReal,3> dummyvelocities = {{0,0,0}}, dummyaccelerations={{0,0,0}}; // dummy values for a joint
 
-    // set accelerations of first link to 0 since it isn't actuated
-    vLinkAccelerations.at(0).first = -vGravity + vLinkVelocities.at(0).second.cross(vLinkVelocities.at(0).first);
-    vLinkAccelerations.at(0).second = Vector();
+    // set accelerations of all links as if they were the base link
+    for(size_t ilink = 0; ilink < vLinkAccelerations.size(); ++ilink) {
+        vLinkAccelerations.at(ilink).first += vLinkVelocities.at(ilink).second.cross(vLinkVelocities.at(ilink).first);
+        vLinkAccelerations.at(ilink).second = Vector();
+    }
+
+    if( !!externalaccelerations ) {
+        FOREACH(itaccel, *externalaccelerations) {
+            vLinkAccelerations.at(itaccel->first).first += itaccel->second.first;
+            vLinkAccelerations.at(itaccel->first).second += itaccel->second.second;
+        }
+    }
 
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
     std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size()), vPassiveJointAccelerations(_vPassiveJoints.size());

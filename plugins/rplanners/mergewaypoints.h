@@ -43,7 +43,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
 **/
 bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
-/** If the beginning or the end of the ramps are linear segments then treat them separately
+/** If the beginning or the end of the ramps are linear segments then modify them to pass minswitchtime, controller timestep, and other constraints coming from the check object.
 **/
 bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
@@ -55,9 +55,9 @@ bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list
  **/
 bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params,ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
-/// \param curtime time duration of the original trajectory segment that will be shortcutted
+/// \param fOriginalTrajectorySegmentTime time duration of the original trajectory segment that will be shortcutted
 /// \param x0, x1, dx0, dx1 shortcutted trajectory segment endpoints
-bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal curtime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
+bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal fOriginalTrajectorySegmentTime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options = 0xffff);
 
 /** Timescale a ramp. Assume the ramp is unitary.
     \param origramps input ramp

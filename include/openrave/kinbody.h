@@ -1569,18 +1569,24 @@ private:
     /// \param[out] velocities The velocities of the link frames with respect to the world coordinate system are returned.
     virtual void GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velocities) const;
 
+    /// \brief link index and the linear and angular accelerations of the link. First is linear acceleration of the link's coordinate system, and second is the angular acceleration of this coordinate system.
+    typedef std::map<int, std::pair<Vector,Vector> > AccelerationMap;
+    typedef boost::shared_ptr<AccelerationMap> AccelerationMapPtr;
+    typedef boost::shared_ptr<AccelerationMap const> AccelerationMapConstPtr;
+
     /** \brief Returns the linear and angular accelerations for each link given the dof accelerations
 
         Computes accelerations of the link frames with respect to the world coordinate system are returned.
         The base angular velocity is used when computing accelerations.
-        The gravity vector from the physics engine is used as the  accelerations for the base link and static links.
+        If externalaccelerations is null, the gravity vector from the physics engine is used as the negative acceleration of the base link.
         The derivate is taken with respect to the world origin fixed in space (also known as spatial acceleration).
         The current angles and velocities set on the robot are used.
         Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
         \param[in] dofaccelerations the accelerations of each of the DOF
         \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
+        \param[in] externalaccelerations [optional] The external accelerations to add to each link. If this is null, will apply negative gravity to the base link.
      */
-    virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations) const;
+    virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
 
@@ -1973,7 +1979,8 @@ protected:
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
     /// \param dofvelocities if size is 0, will assume all velocities are 0
     /// \param dofaccelerations if size is 0, will assume all accelerations are 0
-    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations, const Vector& gravity) const;
+    /// \param[in] externalaccelerations [optional] The external accelerations to add to each link. If this is null, will apply negative gravity to the base link.
+    virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
