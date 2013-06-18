@@ -70,7 +70,7 @@ static const dReal g_fEpsilonWorkSpaceLimitSqr = RavePow(g_fEpsilon,0.9);
 inline dReal ComputeStepSizeCeiling(dReal T,dReal step)
 {
     dReal ratio = T/step;
-    dReal ceilratio = RaveCeil(ratio-g_fEpsilonLinear);
+    dReal ceilratio = RaveCeil(ratio-1e-8);
     return ceilratio*step;
 }
 
