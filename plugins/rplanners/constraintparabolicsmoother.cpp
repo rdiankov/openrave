@@ -411,8 +411,9 @@ public:
             }
 
             // Log before shortcutting
-            //RAVELOG_DEBUG("Ramps before shortcutting\n");
-            mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+            }
             dReal totaltime = mergewaypoints::ComputeRampsDuration(ramps);
             RAVELOG_DEBUG_FORMAT("initial ramps=%d, duration=%f, pointtolerance=%f", ramps.size()%totaltime%_parameters->_pointtolerance);
             int numshortcuts=0;
@@ -426,7 +427,7 @@ public:
                 initramps = ramps;
                 for(int rep=0; rep<_parameters->nshortcutcycles; rep++) {
                     ramps = initramps;
-                    RAVELOG_DEBUG_FORMAT("Start shortcut cycle %d\n",rep);
+                    RAVELOG_VERBOSE_FORMAT("Start shortcut cycle %d\n",rep);
                     numshortcuts = Shortcut(ramps, _parameters->_nMaxIterations,checker, this);
                     totaltime = mergewaypoints::ComputeRampsDuration(ramps);
                     if(totaltime < besttime) {
@@ -444,10 +445,11 @@ public:
 
 
                 // Log after shortcutting
-                RAVELOG_DEBUG("Ramps after shortcutting\n");
-                mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    RAVELOG_VERBOSE("Ramps after shortcutting\n");
+                    mergewaypoints::PrintRamps(ramps,_parameters,_bCheckControllerTimeStep);
+                }
                 totaltime = mergewaypoints::ComputeRampsDuration(ramps);
-
 
 
                 //////////////////////////////////////////////////////////////////////////
@@ -592,7 +594,7 @@ public:
         else if( x.size() > 1 ) {
             int options = 0xffff; // no perturbation
             if(!_parameters->verifyinitialpath) {
-                RAVELOG_WARN("Initial path verification is disabled (in SetMilestones)\n");
+                RAVELOG_VERBOSE("Initial path verification is disabled (in SetMilestones)\n");
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
             }
             for(size_t i=0; i+1<x.size(); i++) {
@@ -871,7 +873,7 @@ public:
                             }
                             shortcuts++;
                             UpdateAttemptedList(attemptedlist,tbeginmod,tendmod,durationbeforeshortcut-durationaftermerge);
-                            RAVELOG_DEBUG_FORMAT("... Duration after shortcut and merger: %f\n",durationaftermerge);
+                            RAVELOG_VERBOSE_FORMAT("... Duration after shortcut and merger: %f\n",durationaftermerge);
                         }
                     } // end collision check
                 } // end post-mergewaypoint checks
