@@ -13,7 +13,10 @@
       <body>link0</body>
       <limitsdeg>0 0</limitsdeg>
     </joint>
-    <KinBody file="schunk_manip.kinbody.xml"></KinBody>
+    <KinBody file="schunk_manip.kinbody.xml">
+      <translation>0 0 1.35</translation>
+      <RotationAxis>0 0 1 135</RotationAxis>
+    </KinBody>
     <Joint name="dummy1" type="hinge" enable="false">
       <body>link7</body>
       <body>gripper_base</body>

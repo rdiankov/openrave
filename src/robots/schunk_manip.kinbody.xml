@@ -1,7 +1,5 @@
 <KinBody name="SchunkGripperPG70">
   <Body name="gripper_base" type="dynamic">
-    <offsetfrom>link7</offsetfrom>
-    <RotationAxis>0 0 1 135</RotationAxis>
     <Geom type="box" modifiable="false">
       <Extents>0.040 0.040 0.0025</Extents>
       <Translation>0.000 0.000 0.0575</Translation>
