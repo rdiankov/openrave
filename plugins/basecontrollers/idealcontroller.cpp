@@ -259,9 +259,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
             // already sampled, so change the command times before before setting values
             // incase the below functions fail
+            bool bIsDone = _bIsDone;
             if( _fCommandTime > ptraj->GetDuration() ) {
                 _fCommandTime = ptraj->GetDuration();
-                _bIsDone = true;
+                bIsDone = true;
             }
             else {
                 _fCommandTime += _fSpeed * fTimeElapsed;
@@ -349,6 +350,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(it,listgrab) {
                 _probot->Grab(it->first,it->second);
             }
+            // set _bIsDone after all computation is done!
+            _bIsDone = bIsDone;
         }
 
         if( _vecdesired.size() > 0 ) {
