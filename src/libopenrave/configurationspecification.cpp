@@ -278,6 +278,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     else if( name.size() >= 16 && name.substr(0,16) == "joint_velocities" ) {
         derivativename = string("joint_accelerations") + name.substr(16);
     }
+    else if( name.size() >= 19 && name.substr(0,19) == "joint_accelerations" ) {
+        derivativename = string("joint_jerks") + name.substr(19);
+    }
     else if( name.size() >= 16 && name.substr(0,16) == "affine_transform" ) {
         derivativename = string("affine_velocities") + name.substr(16);
     }
@@ -295,9 +298,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 
 void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
-    static const boost::array<string,3> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations"}};
-    static const boost::array<string,3> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations"}};
-    static const boost::array<string,3> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations"}};
+    static const boost::array<string,4> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations", "joint_jerks"}};
+    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations", "affine_jerks"}};
+    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations", "ikparam_jerks"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
@@ -390,6 +393,7 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
     const boost::array<string,3> posgroups = {{"joint_values","affine_transform","ikparam_values"}};
     const boost::array<string,3> velgroups = {{"joint_velocities","affine_velocities","ikparam_velocities"}};
     const boost::array<string,3> accgroups = {{"joint_accelerations","affine_accelerations","ikparam_accelerations"}};
+    const boost::array<string,3> jerkgroups = {{"joint_jerks","affine_jerks","ikparam_jerks"}};
     const boost::array<string,3>* pgroup=NULL;
     if( timederivative == 0 ) {
         pgroup = &posgroups;
@@ -399,6 +403,9 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
     }
     else if( timederivative == 2 ) {
         pgroup = &accgroups;
+    }
+    else if( timederivative == 3 ) {
+        pgroup = &jerkgroups;
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("invalid timederivative",ORE_InvalidArguments);
@@ -527,10 +534,12 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
         s_setBodyGroupNames.insert("joint_values");
         s_setBodyGroupNames.insert("joint_velocities");
         s_setBodyGroupNames.insert("joint_accelerations");
+        s_setBodyGroupNames.insert("joint_jerks");
         s_setBodyGroupNames.insert("joint_torques");
         s_setBodyGroupNames.insert("affine_transform");
         s_setBodyGroupNames.insert("affine_velocities");
         s_setBodyGroupNames.insert("affine_accelerations");
+        s_setBodyGroupNames.insert("affine_jerks");
     }
 
     // have to look through all groups since groups can contain the same body
@@ -830,6 +839,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 0: searchname = "joint_values"; break;
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
+    case 3: searchname = "joint_jerks"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
     };
@@ -878,6 +888,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 0: searchname = "joint_values"; break;
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
+    case 3: searchname = "joint_jerks"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
     };
