@@ -152,12 +152,14 @@ ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 
 PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv)
 {
-    return !pcontroller ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyControllerBase(pcontroller,pyenv));
-}
-
-PyInterfaceBasePtr toPyMultiController(MultiControllerPtr pcontroller, PyEnvironmentBasePtr pyenv)
-{
-    return !pcontroller ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyMultiController(pcontroller,pyenv));
+    MultiControllerPtr pmulticontroller = boost::dynamic_pointer_cast<MultiController>(pcontroller);
+    if (pmulticontroller) {
+        return PyInterfaceBasePtr(new PyMultiController(pmulticontroller, pyenv));
+    } else if (pcontroller) {
+        return PyInterfaceBasePtr(new PyControllerBase(pcontroller, pyenv));
+    } else {
+        return PyInterfaceBasePtr();
+    }
 }
 
 PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -167,15 +169,6 @@ PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::
         return PyControllerBasePtr();
     }
     return PyControllerBasePtr(new PyControllerBase(p,pyenv));
-}
-
-PyMultiControllerPtr RaveCreateMultiController(PyEnvironmentBasePtr pyenv)
-{
-    MultiControllerPtr p(new MultiController(GetEnvironment(pyenv)));
-    if( !p ) {
-        return PyMultiControllerPtr();
-    }
-    return PyMultiControllerPtr(new PyMultiController(p,pyenv));
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
@@ -205,11 +198,6 @@ void init_openravepy_controller()
         ;
     }
 
-    def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
-}
-
-void init_openravepy_multicontroller()
-{
     {
         object (PyMultiController::*getcontroller)(int) = &PyMultiController::GetController;
         class_<PyMultiController, boost::shared_ptr<PyMultiController>, bases<PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiController), no_init)
@@ -219,7 +207,7 @@ void init_openravepy_multicontroller()
         ;
     }
 
-    def("RaveCreateMultiController",openravepy::RaveCreateMultiController,args("env"),DOXY_FN1(RaveCreateMultiController));
+    def("RaveCreateController",openravepy::RaveCreateController,args("env","name"),DOXY_FN1(RaveCreateController));
 }
 
 }
