@@ -64,12 +64,16 @@ Collision Checking
 C Bindings
 ----------
 
-* Added pure C bindings in the **include/openrave_c** folder with **libopenrave_c** and **libopenrave-core_c** libraries.
+* Added pure C bindings in the **include\/openrave_c** folder with **libopenrave_c** and **libopenrave-core_c** libraries.
 
 Inverse Kinematics
 ------------------
 
-* IkFast can detect aligned axes and give infinite solutions.
+* **ikfast** can detect aligned axes and give infinite solutions.
+
+* Fixed many bugs in **ikfast** for 6 DOF non-trivial kinematics.
+
+* Added many more degenerate case checking to **ikfast**.
 
 * Fixed bug in ikfastsolver.cpp that prioritizes solutions based on configuration distance.
 

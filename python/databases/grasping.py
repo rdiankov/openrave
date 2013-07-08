@@ -193,7 +193,7 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class GraspingModel(DatabaseGenerator):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
-
+    
     class GripperVisibility:
         """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
         def __init__(self,manip):
@@ -207,7 +207,7 @@ class GraspingModel(DatabaseGenerator):
                 for link in self.robot.GetLinks():
                     if link not in self.manip.GetChildLinks():
                         for geom in link.GetGeometries():
-                            self.hiddengeoms.append((geom,geom.IsDraw()))
+                            self.hiddengeoms.append((geom,geom.IsVisible()))
                             geom.SetDraw(False)
         def __exit__(self,type,value,traceback):
             with self.robot.GetEnv():
@@ -648,6 +648,7 @@ class GraspingModel(DatabaseGenerator):
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None):
         with RobotStateSaver(self.robot):
             with self.GripperVisibility(self.manip):
+                time.sleep(0.1) # wait sometime for viewer to process the visibility change
                 with self.env:
                     self.setPreshape(grasp)
                     Tgrasp = self.getGlobalGraspTransform(grasp,collisionfree=collisionfree)
@@ -655,7 +656,7 @@ class GraspingModel(DatabaseGenerator):
                         sol = self.manip.FindIKSolution(Tgrasp,IkFilterOptions.CheckEnvCollisions)
                         self.robot.SetDOFValues(sol,self.manip.GetArmIndices())
                     else:
-                        Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
+                        Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetTransform()))
                         for link in self.manip.GetChildLinks():
                             link.SetTransform(dot(Tdelta,link.GetTransform()))
                     self.env.UpdatePublishedBodies()
@@ -693,6 +694,7 @@ class GraspingModel(DatabaseGenerator):
                     print 'fragile grasp:',translationstd,maxjointvaluestd
                     mindist = 0
         return contacts,finalconfig,mindist,volume
+    
     def runGrasp(self,grasp,graspingnoise=None,translate=True,forceclosure=False,translationstepmult=None,finestep=None):
         if translationstepmult is None:
             translationstepmult = self.translationstepmult
@@ -878,10 +880,6 @@ class GraspingModel(DatabaseGenerator):
     def computePlaneApproachRays(self,center,sidex,sidey,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
         cc = RaveCreateCollisionChecker(self.env,'ode')
-        if cc is not None:
-            ccold = self.env.GetCollisionChecker()
-            self.env.SetCollisionChecker(cc)
-            cc = ccold
         try:
             with self.env:
                 ex = sqrt(sum(sidex**2))
@@ -893,7 +891,7 @@ class GraspingModel(DatabaseGenerator):
                 localpos = outer(XX.flatten(),sidex/ex)+outer(YY.flatten(),sidey/ey)
                 N = localpos.shape[0]
                 rays = c_[tile(center,(N,1))+localpos,100.0*tile(normal,(N,1))]
-                collision, info = self.env.CheckCollisionRays(rays,self.target)
+                collision, info = cc.CheckCollisionRays(rays,self.target)
                 # make sure all normals are the correct sign: pointing outward from the object)
                 newinfo = info[collision,:]
                 approachrays = zeros((0,6))
@@ -913,9 +911,7 @@ class GraspingModel(DatabaseGenerator):
                     approachrays=newapproachrays
             return approachrays
         finally:
-            # restore the collision checker
-            if cc is not None:
-                self.env.SetCollisionChecker(cc)
+            cc.DestroyEnvironment()
 
     def computeBoxApproachRays(self,delta=0.02,normalanglerange=0,directiondelta=0.4):
         return self._computeBoxApproachRays(self.env,self.target,delta=delta,normalanglerange=normalanglerange,directiondelta=directiondelta)
@@ -924,10 +920,6 @@ class GraspingModel(DatabaseGenerator):
     def _computeBoxApproachRays(env,target,delta=0.02,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
         cc = RaveCreateCollisionChecker(env,'ode')
-        if cc is not None:
-            ccold = env.GetCollisionChecker()
-            env.SetCollisionChecker(cc)
-            cc = ccold
         try:
             with target:
                 target.SetTransform(eye(4))
@@ -952,7 +944,7 @@ class GraspingModel(DatabaseGenerator):
                     localpos = outer(XX.flatten(),side[6:9]/ex)+outer(YY.flatten(),side[9:12]/ey)
                     N = localpos.shape[0]
                     rays = c_[tile(p+side[0:3],(N,1))+localpos,maxlen*tile(side[3:6],(N,1))]
-                    collision, info = env.CheckCollisionRays(rays,target)
+                    collision, info = cc.CheckCollisionRays(rays,target)
                     # make sure all normals are the correct sign: pointing outward from the object)
                     newinfo = info[collision,:]
                     if len(newinfo) > 0:
@@ -971,17 +963,11 @@ class GraspingModel(DatabaseGenerator):
                     approachrays = newapproachrays
                 return approachrays
         finally:
-            # restore the collision checker
-            if cc is not None:
-                env.SetCollisionChecker(cc)
+            cc.DestroyEnvironment()
 
     def computeSphereApproachRays(self,delta=0.1,normalanglerange=0,directiondelta=0.4):
         # ode gives the most accurate rays
         cc = RaveCreateCollisionChecker(self.env,'ode')
-        if cc is not None:
-            ccold = self.env.GetCollisionChecker()
-            self.env.SetCollisionChecker(cc)
-            cc = ccold
         try:
             with self.target:
                 self.target.SetTransform(eye(4))
@@ -990,7 +976,7 @@ class GraspingModel(DatabaseGenerator):
                 theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=delta)
                 dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
                 rays = c_[tile(ab.pos(),(len(dirs),1))-maxlen*dirs,2*maxlen*dirs]
-                collision, info = self.env.CheckCollisionRays(rays,self.target)
+                collision, info = cc.CheckCollisionRays(rays,self.target)
                 # make sure all normals are the correct sign: pointing outward from the object)
                 approachrays = info[collision,:]
                 if len(approachrays) > 0:
@@ -1008,9 +994,42 @@ class GraspingModel(DatabaseGenerator):
                     approachrays = newapproachrays
                 return approachrays
         finally:
-            # restore the collision checker
-            if cc is not None:
-                self.env.SetCollisionChecker(cc)
+            cc.DestroyEnvironment()
+
+    def ComputeCircleApproachRays(self, center, normalaxis, delta=0.1,normalanglerange=0,directiondelta=0.4):
+        """
+        :param: center is in global coordinates
+        :param: normalaxis is in global coordinates
+        """
+        cc = RaveCreateCollisionChecker(self.env,'ode')
+        try:
+            with self.target:
+                self.target.SetTransform(eye(4))
+                ab = self.target.ComputeAABB()
+                maxlen = 2*sqrt(sum(ab.extents()**2))+0.03
+                theta = arange(0,2*pi,delta)
+                Trotate = rotationMatrixFromQuat(quatRotateDirection([0,0,1], normalaxis))
+                dirs = dot(c_[cos(theta),sin(theta),zeros(len(theta))], transpose(Trotate))
+                rays = c_[tile(center,(len(dirs),1))-maxlen*dirs,2*maxlen*dirs]
+                collision, info = cc.CheckCollisionRays(rays,self.target)
+                # make sure all normals are the correct sign: pointing outward from the object)
+                approachrays = info[collision,:]
+                if len(approachrays) > 0:
+                    approachrays[sum(rays[collision,3:6]*approachrays[:,3:6],1)>0,3:6] *= -1
+                if normalanglerange > 0:
+                    theta,pfi = SpaceSamplerExtra().sampleS2(angledelta=directiondelta)
+                    dirs = c_[cos(theta),sin(theta)*cos(pfi),sin(theta)*sin(pfi)]
+                    dirs = array([dir for dir in dirs if arccos(dir[2])<=normalanglerange]) # find all dirs within normalanglerange
+                    if len(dirs) == 0:
+                        dirs = array([[0,0,1]])
+                    newapproachrays = zeros((0,6))
+                    for approachray in approachrays:
+                        R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
+                        newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
+                    approachrays = newapproachrays
+                return approachrays
+        finally:
+            cc.DestroyEnvironment()
 
     def drawContacts(self,contacts,conelength=0.03,transparency=0.5):
         angs = linspace(0,2*pi,10)
