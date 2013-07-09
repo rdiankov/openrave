@@ -2145,7 +2145,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('need 5 joints')
         
         log.info('ikfast translation direction 5d: %s',solvejointvars)
-
+        
         # if last two axes are intersecting, can divide computing position and direction
         ilinks = [i for i,Tlink in enumerate(Links) if self.has(Tlink,*solvejointvars)]
         T = self.multiplyMatrix(Links[ilinks[-2]:])
@@ -2166,7 +2166,7 @@ class IKFastSolver(AutoReloader):
             rawpolyeqs2 = [None]*len(solvejointvars)
             coupledsolutions = None
             endbranchtree2 = []
-            for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
+            for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
                 if coupledsolutions is not None:
                     break
                 for index in [2,3]:
@@ -2517,7 +2517,7 @@ class IKFastSolver(AutoReloader):
         coupledsolutions = None
         leftovervarstree = []
         origendbranchtree = endbranchtree
-        for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
+        for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
             for splitindex in [0,1]:
@@ -2699,7 +2699,6 @@ class IKFastSolver(AutoReloader):
             solution=AST.SolverSolution(extravar[0].name, jointeval=[extravar[1]],isHinge=self.isHinge(extravar[0].name))
             endbranchtree.insert(0,solution)
         
-        #from IPython.Shell import IPShellEmbed; IPShellEmbed(argv='')(local_ns=locals())                    
         try:
             tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=endbranchtree)
             tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
@@ -3090,12 +3089,19 @@ class IKFastSolver(AutoReloader):
             for i,index in enumerate(eqindices):
                 for k in range(len(allmonomsleft)):
                     A[i,k] = systemcoeffs[index][2][k]
-            det = self.det_bareis(A,*self.pvars)
-            if det == S.Zero:
-                continue
+            nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
+            if nummatrixsymbols > 10:
+                # if too many symbols, evaluate numerically
+                if not self.IsDeterminantNonZeroByEval(A):
+                    continue
+                log.info('found non-zero determinant by evaluation')
+            else:
+                det = self.det_bareis(A,*self.pvars)
+                if det == S.Zero:
+                    continue
+                solution.checkforzeros = [self.removecommonexprs(det,onlygcd=False,onlynumbers=True)]
             solution = AST.SolverMatrixInverse(A=A,Asymbols=Asymbols)
             self.usinglapack = True
-            solution.checkforzeros = [self.removecommonexprs(det,onlygcd=False,onlynumbers=True)]
             Aadj=A.adjugate() # too big to be useful for now, but can be used to see if any symbols are always 0
             break
         if solution is None:
@@ -3372,7 +3378,7 @@ class IKFastSolver(AutoReloader):
         
         if len(RightEquations) < 6:
             raise self.CannotSolveError('number of equations %d less than 6'%(len(RightEquations)))
-
+        
         # sort with respect to the number of monomials
         RightEquations.sort(lambda x, y: len(x.monoms())-len(y.monoms()))
         
@@ -4947,6 +4953,7 @@ class IKFastSolver(AutoReloader):
         
         if unknownvars is None:
             unknownvars = []
+            
         log.info('%s %s',othersolvedvars,curvars)
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
@@ -5217,13 +5224,13 @@ class IKFastSolver(AutoReloader):
                                 except PolynomialError:
                                     # checksimplezeroexpr was too complex
                                     pass
-
+                                
                                 except self.CannotSolveError,e:
                                     # this is actually a little tricky, sometimes really good solutions can have a divide that looks like:
                                     # ((0.405 + 0.331*cj2)**2 + 0.109561*sj2**2 (manusarm_left)
                                     # This will never be 0, but the solution cannot be solved. Instead of rejecting, add a condition to check if checksimplezeroexpr itself is 0 or not
                                     pass
-
+                                
                                 for s in ss:
                                     # can actually simplify Positions and possibly get a new solution!
                                     if s.jointeval is not None:
@@ -5339,11 +5346,12 @@ class IKFastSolver(AutoReloader):
             log.warn('4 levels deep in checking degenerate cases, skipping...')
             lastbranch.append(AST.SolverBreak())
             return prevbranch
-
+        
         # fill the last branch with all the zero conditions
         if hascheckzeros:
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
+            # sometimes can get the following: cj3**2*sj4**2 + cj4**2
             for isolution,(solution,var) in enumerate(usedsolutions[::-1]):
                 for checkzero in solution.checkforzeros:
                     if checkzero.has(*allvars):
@@ -5354,36 +5362,58 @@ class IKFastSolver(AutoReloader):
                     if self.codeComplexity(checkzero) > 120:
                         continue
                     
+                    possiblesubs = []
+                    ishinge = []
                     for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
                         if checkzero.has(preal):
-                            # first check if the position alone can yield a zero
-                            eq = checkzero.subs([(preal,S.Zero)]).evalf()
-                            if eq == S.Zero:
-                                cond = Abs(preal)
-                                evalcond = Abs(preal)
-                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
-                                    checkexpr = [[cond],evalcond,[(preal,S.Zero)]]
+                            possiblesubs.append([(preal,S.Zero)])
+                            ishinge.append(False)
+                    for othervar in othersolvedvars:
+                        if not self.isHinge(othervar.name):
+                            possiblesubs.append([(othervar,S.Zero)])
+                            ishinge.append(False)
+                            continue
+                        else:
+                            sothervar = Symbol('s%s'%othervar.name)
+                            cothervar = Symbol('c%s'%othervar.name)
+                            if checkzero.has(othervar,sothervar,cothervar):
+                                for value in [S.Zero,pi/2,pi,-pi/2]:
+                                    possiblesubs.append([(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()), (cothervar,cos(value).evalf()), (cos(othervar),cos(value).evalf())])
+                                    ishinge.append(True)
+                    # all possiblesubs are present in checkzero
+                    for ipossiblesub, possiblesub in enumerate(possiblesubs):
+                        eq = checkzero.subs(possiblesub).evalf()
+                        # only take the first index
+                        possiblevar,possiblevalue = possiblesub[0]
+                        cond = Abs(possiblevar-possiblevalue)
+                        if ishinge[ipossiblesub]:
+                            evalcond = Abs(fmod(possiblevar-possiblevalue+pi,2*pi)-pi)
+                        else:
+                            evalcond = cond
+                        if eq == S.Zero:
+                            if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
+                                checkexpr = [[cond],evalcond,possiblesub]
+                                flatzerosubstitutioneqs.append(checkexpr)
+                                zerosubstitutioneqs[isolution].append(checkexpr)
+                                log.info('%s=%s in %s',possiblevar, possiblevalue,checkzero)
+                            continue
+                        
+                        # try another possiblesub
+                        for ipossiblesub2, possiblesub2 in enumerate(possiblesubs[ipossiblesub+1:]):
+                            eq2 = eq.subs(possiblesub2).evalf()
+                            if eq2 == S.Zero:
+                                possiblevar2,possiblevalue2 = possiblesub2[0]
+                                cond2 = Abs(possiblevar2-possiblevalue2)
+                                if ishinge[ipossiblesub+ipossiblesub2+1]:
+                                    evalcond2 = Abs(fmod(possiblevar2-possiblevalue2+pi,2*pi)-pi) + evalcond
+                                else:
+                                    evalcond2 = cond2 + evalcond
+                                cond2 += cond
+                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond2) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond2):
+                                    checkexpr = [[cond2],evalcond2,possiblesub+possiblesub2]
                                     flatzerosubstitutioneqs.append(checkexpr)
                                     zerosubstitutioneqs[isolution].append(checkexpr)
-                                    log.info('%s=0 in %s',preal,checkzero)
-                                continue
-                            for othervar in othersolvedvars:
-                                if not self.isHinge(othervar.name):
-                                    continue
-                                sothervar = Symbol('s%s'%othervar.name)
-                                cothervar = Symbol('c%s'%othervar.name)
-                                if checkzero.has(othervar,sothervar,cothervar):
-                                    for value in [S.Zero,pi/2,pi,-pi/2]:
-                                        eq = checkzero.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf()),(preal,S.Zero)]).evalf()
-                                        if eq == S.Zero:
-                                            cond = Abs(othervar-value)+Abs(preal)
-                                            evalcond = Abs(fmod(othervar-value+pi,2*pi)-pi)+Abs(preal)
-                                            if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
-                                                checkexpr = [[cond],evalcond,[(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()),(cothervar,cos(value).evalf()),(cos(othervar),cos(value).evalf()),(preal,S.Zero),(othervar,value)]]
-                                                flatzerosubstitutioneqs.append(checkexpr)
-                                                zerosubstitutioneqs[isolution].append(checkexpr)
-                                                log.info('%s=%s,%s=0 in %s', othervar,value,preal,checkzero)
-
+                                    log.info('%s=%s,%s=%s in %s', possiblevar,possiblevalue,possiblevar2,possiblevalue2,checkzero)
         # test the solutions
         # have to take the cross product of all the zerosubstitutioneqs in order to form stronger constraints on the equations because the following condition will be executed only if all SolverCheckZeros evalute to 0
         zerobranches = []
@@ -5520,11 +5550,11 @@ class IKFastSolver(AutoReloader):
             return self.solveSingleVariable(self.sortComplexity([e.as_expr() for e in polyeqs if not e.has(varsym0.htvar)]),varsym1.var,othersolvedvars,unknownvars=[])
         except self.CannotSolveError:
             pass
-
+        
         complexity = [(self.codeComplexity(peq.as_expr()),peq) for peq in polyeqs]
         complexity.sort(key=itemgetter(0))
         polyeqs = [peq[1] for peq in complexity]
-
+        
         solutions = [None,None]
         linearsolution = None
         for ileftvar in range(2):
@@ -5603,10 +5633,10 @@ class IKFastSolver(AutoReloader):
                         equationdegrees.sort(key=itemgetter(0))
                         solutions[ileftvar] = [peq[1] for peq in equationdegrees]
                         break
-
+                    
         if linearsolution is not None:
             return [linearsolution]
-
+        
         # take the solution with the smallest degree
         pfinals = None
         ileftvar = None
@@ -6787,7 +6817,8 @@ class IKFastSolver(AutoReloader):
         return False
     
     def IsDeterminantNonZeroByEval(self, A):
-        """checks if a determinant is zero by evaluating all the possible solutions
+        """checks if a determinant is non-zero by evaluating all the possible solutions.
+        :return: True if there exist values where det(A) is not zero
         """
         N = A.shape[0]
         thresh = 0.01**N
