@@ -1026,11 +1026,11 @@ public:
                     }
                     bsuccess = false;
                     s.str("");
-                    s << "FindIKSolution: No ik solution found, i = " << i << endl << "Joint Val: ";
+                    s << "FindIKSolution: No ik solution found, i = " << i << endl << "jointvalues=[";
                     FOREACH(it, vrealsolution) {
-                        s << *it << " ";
+                        s << *it << ", ";
                     }
-                    s << endl << "Transform: " << twrist << endl;
+                    s << "]" << endl << "ikparameterization=\"" << twrist << "\"" << endl;
                     s << "raw ik command: ";
                     GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
                     FOREACH(itfree,vfreeparameters) {
@@ -1050,14 +1050,16 @@ public:
                         bsuccess = false;
                         s.str("");
                         s << "FindIKSolution: Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                          << "Original Joint Val: ";
-                        FOREACH(it, vrealsolution)
-                        s << *it << " ";
-                        s << endl << "Returned Joint Val: ";
-                        FOREACH(it, viksolution)
-                        s << *it << " ";
-                        s << endl << "in: " << twrist << endl;
-                        s << "out: " << twrist_out << endl;
+                          << "originaljointvalues=[";
+                        FOREACH(it, vrealsolution) {
+                            s << *it << ", ";
+                        }
+                        s << "]" << endl << "returnedjointvalues=[";
+                        FOREACH(it, viksolution) {
+                            s << *it << ", ";
+                        }
+                        s << "]" << endl << "ikparamin=\"" << twrist << "\"" << endl;
+                        s << "ikparamout=\"" << twrist_out << "\"" << endl;
                         s << "raw ik command: ";
                         GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
                         FOREACH(itfree,vfreeparameters_out) {

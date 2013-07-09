@@ -1514,6 +1514,7 @@ class IKFastSolver(AutoReloader):
         return complexity
     def sortComplexity(self,exprs):
         exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
+        return exprs
 
     def checkForDivideByZero(self,eq):
         """returns the equations to check for zero
@@ -1849,9 +1850,9 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        Tfinal = zeros((4,4))
-        Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = zeros((4,4))
+        self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution(jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
@@ -1877,7 +1878,7 @@ class IKFastSolver(AutoReloader):
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return AST.SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose())
+        return AST.SolverIKChainDirection3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs), jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose())
 
     def solveFullIK_Lookat3D(self,LinksRaw, jointvars, isolvejointvars,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control the lookat
@@ -1891,10 +1892,10 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        Tfinal = zeros((4,4))
-        Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
-        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = zeros((4,4))
+        self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
+        self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
             raise self.CannotSolveError('need 2 joints')
@@ -1925,7 +1926,7 @@ class IKFastSolver(AutoReloader):
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars = self.freejointvars[:],solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        chaintree = AST.SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
+        chaintree = AST.SolverIKChainLookat3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose(),Pfk=self.Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -1937,8 +1938,8 @@ class IKFastSolver(AutoReloader):
         Tfirstright = LinksRaw[-1]*Rbase
         Links = LinksRaw[:-1]
         LinksInv = [self.affineInverse(link) for link in Links]
-        Tfinal = self.multiplyMatrix(Links)
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = self.multiplyMatrix(Links)
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 3:
@@ -1950,7 +1951,7 @@ class IKFastSolver(AutoReloader):
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         tree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        return AST.SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
+        return AST.SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = self.Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
 
     def solveFullIK_TranslationLocalGlobal6D(self,LinksRaw, jointvars, isolvejointvars, Tgripperraw=eye(4)):
         Tgripper = eye(4)
@@ -1967,9 +1968,9 @@ class IKFastSolver(AutoReloader):
     def _solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, basepos,check=True):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
-        Tfinal = self.multiplyMatrix(Links)
-        Tfinal[0:3,3] = Tfinal[0:3,0:3]*basepos+Tfinal[0:3,3]
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = self.multiplyMatrix(Links)
+        self.Tfinal[0:3,3] = self.Tfinal[0:3,0:3]*basepos+self.Tfinal[0:3,3]
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 3:
@@ -1985,7 +1986,7 @@ class IKFastSolver(AutoReloader):
             self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
-        chaintree = AST.SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3], jointtree=transtree, Pfk = Tfinal[0:3,3])
+        chaintree = AST.SolverIKChainTranslation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3], jointtree=transtree, Pfk = self.Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -1995,9 +1996,9 @@ class IKFastSolver(AutoReloader):
         basepos = Matrix(2,1,[self.convertRealToRational(x) for x in rawbasepos])
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
-        Tfinal = self.multiplyMatrix(Links)
-        Tfinal[0:2,3] = Tfinal[0:2,0:2]*basepos+Tfinal[0:2,3]
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = self.multiplyMatrix(Links)
+        self.Tfinal[0:2,3] = self.Tfinal[0:2,0:2]*basepos+self.Tfinal[0:2,3]
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 2:
@@ -2034,7 +2035,7 @@ class IKFastSolver(AutoReloader):
         self.checkSolvability(AllEquations,solvejointvars,self.freejointvars)
         transtree = self.solveAllEquations(AllEquations,curvars=solvejointvars[:],othersolvedvars=self.freejointvars,solsubs = self.freevarsubs[:],endbranchtree=endbranchtree)
         transtree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,transtree)
-        chaintree = AST.SolverIKChainTranslationXY2D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:2,3], jointtree=transtree, Pfk = Tfinal[0:2,3])
+        chaintree = AST.SolverIKChainTranslationXY2D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:2,3], jointtree=transtree, Pfk = self.Tfinal[0:2,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -2052,10 +2053,10 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        Tfinal = zeros((4,4))
-        Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
-        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = zeros((4,4))
+        self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
+        self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.isHinge(var.name) for var in jointvars])]
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 4:
@@ -2091,7 +2092,7 @@ class IKFastSolver(AutoReloader):
             # build the raghavan/roth equations and solve with higher power methods
         #    pass
         tree = self.verifyAllEquations(AllEquations,solvejointvars,self.freevarsubs,tree)
-        chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3])
+        chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose(),Pfk=self.Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -2134,10 +2135,10 @@ class IKFastSolver(AutoReloader):
 
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        Tfinal = zeros((4,4))
-        Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
-        Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
-        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,Tfinal,numsolutions=4)
+        self.Tfinal = zeros((4,4))
+        self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
+        self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
 
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         if len(solvejointvars) != 5:
@@ -2208,7 +2209,7 @@ class IKFastSolver(AutoReloader):
                 endbranchtree2 += endbranchtree
                 tree = coupledsolutions
 
-        chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(self.Tee[0:3,3]-self.Tee[0,0:3].transpose()*offsetdist).subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=Tfinal[0,0:3].transpose(),Pfk=Tfinal[0:3,3],is5dray=True)
+        chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(self.Tee[0:3,3]-self.Tee[0,0:3].transpose()*offsetdist).subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose(),Pfk=self.Tfinal[0:3,3],is5dray=True)
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -2607,13 +2608,13 @@ class IKFastSolver(AutoReloader):
         
         LinksInv = [self.affineInverse(link) for link in Links]
         Tallmult = self.multiplyMatrix(Links)
-        Tfinal = zeros((4,4))
+        self.Tfinal = zeros((4,4))
         if normaldir is None:
-            Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
+            self.Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
         else:
-            Tfinal[0,0] = atan2(binormaldir.dot(Tallmult[0:3,0:3]*basedir), globaldir.dot(Tallmult[0:3,0:3]*basedir))
-        Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
-        self.testconsistentvalues = self.computeConsistentValues(jointvars,Tfinal,numsolutions=4)
+            self.Tfinal[0,0] = atan2(binormaldir.dot(Tallmult[0:3,0:3]*basedir), globaldir.dot(Tallmult[0:3,0:3]*basedir))
+        self.Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
+        self.testconsistentvalues = self.computeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         expecteddof = 4
@@ -2727,7 +2728,7 @@ class IKFastSolver(AutoReloader):
                                 raweqns.append(eq)
                     if len(raweqns) > 0:
                         try:
-                            rawsolutions=self.solveSingleVariable(raweqns,curvar,othersolvedvars,unknownvars=solvejointvars)
+                            rawsolutions=self.solveSingleVariable(self.sortComplexity(raweqns),curvar,othersolvedvars,unknownvars=solvejointvars)
                             for solution in rawsolutions:
                                 self.solutionComplexity(solution,othersolvedvars,solvejointvars)
                                 solutions.append((solution,curvar))
@@ -2807,7 +2808,7 @@ class IKFastSolver(AutoReloader):
                 tree = [firstsolution,coupledsolution]+ endbranchtree
 
         # package final solution
-        chaintree = AST.SolverIKChainAxisAngle([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), angleee=self.Tee[0,0].subs(self.freevarsubs),jointtree=tree,Pfk=Tfinal[0:3,3],anglefk=Tfinal[0,0],iktype=iktype)
+        chaintree = AST.SolverIKChainAxisAngle([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), angleee=self.Tee[0,0].subs(self.freevarsubs),jointtree=tree,Pfk=self.Tfinal[0:3,3],anglefk=self.Tfinal[0,0],iktype=iktype)
         chaintree.dictequations += self.ppsubs
         return chaintree
 
@@ -4963,7 +4964,7 @@ class IKFastSolver(AutoReloader):
                         raweqns.append(eq)
             if len(raweqns) > 0:
                 try:
-                    rawsolutions=self.solveSingleVariable(raweqns,curvar,othersolvedvars, unknownvars=curvars+unknownvars)
+                    rawsolutions=self.solveSingleVariable(self.sortComplexity(raweqns),curvar,othersolvedvars, unknownvars=curvars+unknownvars)
                     for solution in rawsolutions:
                         self.solutionComplexity(solution,othersolvedvars,curvars)
                         solutions.append((solution,curvar))
@@ -5510,13 +5511,13 @@ class IKFastSolver(AutoReloader):
                 # check if any equations are only in one variable
                 polyeq = newpolyeq                
             polyeqs.append(polyeq)
-
+            
         try:
-            return self.solveSingleVariable([e.as_expr() for e in polyeqs if not e.has(varsym1.htvar)],varsym0.var,othersolvedvars,unknownvars=[])
+            return self.solveSingleVariable(self.sortComplexity([e.as_expr() for e in polyeqs if not e.has(varsym1.htvar)]),varsym0.var,othersolvedvars,unknownvars=[])
         except self.CannotSolveError:
             pass
         try:
-            return self.solveSingleVariable([e.as_expr() for e in polyeqs if not e.has(varsym0.htvar)],varsym1.var,othersolvedvars,unknownvars=[])
+            return self.solveSingleVariable(self.sortComplexity([e.as_expr() for e in polyeqs if not e.has(varsym0.htvar)]),varsym1.var,othersolvedvars,unknownvars=[])
         except self.CannotSolveError:
             pass
 
@@ -6401,12 +6402,12 @@ class IKFastSolver(AutoReloader):
         # try single variable solution, only return if a single solution has been found
         # returning multiple solutions when only one exists can lead to wrong results.
         try:
-            rawsolutions += self.solveSingleVariable([e.as_expr().subs(varsubsinv).expand() for score,e in neweqns if not e.has(cvar1,svar1,var1)],var0,othersolvedvars,subs=allsymbols,unknownvars=unknownvars)
+            rawsolutions += self.solveSingleVariable(self.sortComplexity([e.as_expr().subs(varsubsinv).expand() for score,e in neweqns if not e.has(cvar1,svar1,var1)]),var0,othersolvedvars,subs=allsymbols,unknownvars=unknownvars)
         except self.CannotSolveError:
             pass
 
         try:
-            rawsolutions += self.solveSingleVariable([e.as_expr().subs(varsubsinv).expand() for score,e in neweqns if not e.has(cvar0,svar0,var0)],var1,othersolvedvars,subs=allsymbols,unknownvars=unknownvars)                    
+            rawsolutions += self.solveSingleVariable(self.sortComplexity([e.as_expr().subs(varsubsinv).expand() for score,e in neweqns if not e.has(cvar0,svar0,var0)]),var1,othersolvedvars,subs=allsymbols,unknownvars=unknownvars)                    
         except self.CannotSolveError:
             pass
 
