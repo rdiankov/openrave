@@ -1241,7 +1241,11 @@ class IKFastSolver(AutoReloader):
             newargs = [self.ConvertRealToRationalEquation(subeq,precision) for subeq in eq.args]
             neweq = eq.func(*newargs)
         elif eq.is_number:
-            neweq = self.convertRealToRational(eq,precision)
+            if eq.is_irrational:
+                # don't touch it since it could be pi!
+                neweq = eq
+            else:
+                neweq = self.convertRealToRational(eq,precision)
         else:
             neweq=eq
         return neweq

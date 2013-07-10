@@ -116,7 +116,7 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] <arg>"
     parser = OptionParser(usage)
     parser.add_option("-n", "--numthreads", dest="numthreads", default=multiprocessing.cpu_count(), help='the number of using core')
-    parser.add_option("-l", "--timelimit", dest="time_limit", default='800', help='time to stop test ik.')
+    parser.add_option("-l", "--timelimit", dest="time_limit", default='1200', help='time to stop test ik.')
     parser.add_option("-d", "--destdir", dest="destdir", default=None,
                       help='destination directory to save ik file results ')
     parser.add_option("-r", "--robot", dest="robot", default=None, help='Robot file path')
