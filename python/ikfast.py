@@ -2488,13 +2488,14 @@ class IKFastSolver(AutoReloader):
             for tvar in transvars:
                 solvedvarsubs += self.Variable(tvar).subs
 
-        oldglobalsymbols = self.globalsymbols[:]
+        Ree = zeros((3,3))
+        for i in range(3):
+            for j in range(3):
+                Ree[i,j] = Symbol('new_r%d%d'%(i,j))
         try:
             T1sub = T1.subs(solvedvarsubs)
-            Ree = zeros((3,3))
             for i in range(3):
                 for j in range(3):
-                    Ree[i,j] = Symbol('new_r%d%d'%(i,j))
                     self.globalsymbols.append((Ree[i,j],T1sub[i,j]))
             othersolvedvars = self.freejointvars if solveRotationFirst else transvars+self.freejointvars
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
@@ -2511,7 +2512,12 @@ class IKFastSolver(AutoReloader):
                 rottree[:] = [AST.SolverRotation(T1sub, rottree[:])]
             return solvertree
         finally:
-            self.globalsymbols = oldglobalsymbols
+            # remove the Ree global symbols
+            removesymbols = set()
+            for i in range(3):
+                for j in range(3):
+                    removesymbols.add(Ree[i,j])
+            self.globalsymbols = [g for g in self.globalsymbols if not g[0] in removesymbols]
 
     def solveFullIK_6DGeneral(self, T0links, T1links, solvejointvars, endbranchtree):
         """Solve 6D equations of a general kinematics structure.
@@ -5149,8 +5155,12 @@ class IKFastSolver(AutoReloader):
                         break
 
         nextsolutions = dict()
-        allvars = curvars+[Symbol('s%s'%v.name) for v in curvars]+[Symbol('c%s'%v.name) for v in curvars]
-        allothersolvedvars = othersolvedvars + [Symbol('s%s'%v.name) for v in othersolvedvars]+[Symbol('c%s'%v.name) for v in othersolvedvars]
+        allvars = []
+        for v in curvars:
+            allvars += self.Variable(v).vars
+        allothersolvedvars = []
+        for v in othersolvedvars:
+            allothersolvedvars += self.Variable(v).vars
         lastbranch = []
         prevbranch=lastbranch
         if currentcases is None:
@@ -5247,6 +5257,12 @@ class IKFastSolver(AutoReloader):
                                                 if isimaginary:
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
                                                     continue
+
+                                                if not eq.is_number and not eq.has(*allothersolvedvars):
+                                                    # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
+                                                    sym = self.gsymbolgen.next()
+                                                    self.globalsymbols.append((sym,eq))
+                                                    eq = sym
                                                 cond=othervar-eq.evalf()
                                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
                                                     if self.isHinge(othervar.name):
@@ -5265,6 +5281,11 @@ class IKFastSolver(AutoReloader):
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf()) + abs(sign(cothervar)-1)
                                                 else:
+                                                    if not eq.is_number and not eq.has(*allothersolvedvars):
+                                                        # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
+                                                        sym = self.gsymbolgen.next()
+                                                        self.globalsymbols.append((sym,eq))
+                                                        eq = sym
                                                     cond=abs(sothervar-eq.evalf()) + abs(sign(cothervar)-1)
                                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
                                                     if self.isHinge(othervar.name):
@@ -5300,6 +5321,11 @@ class IKFastSolver(AutoReloader):
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf()) + abs(sign(sothervar)-1)
                                                 else:
+                                                    if not eq.is_number and not eq.has(*allothersolvedvars):
+                                                        # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
+                                                        sym = self.gsymbolgen.next()
+                                                        self.globalsymbols.append((sym,eq))
+                                                        eq = sym
                                                     cond=abs(cothervar-eq.evalf()) + abs(sign(sothervar)-1)
                                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
                                                     if self.isHinge(othervar.name):

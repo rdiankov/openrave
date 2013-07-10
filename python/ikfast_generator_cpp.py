@@ -538,6 +538,10 @@ int main(int argc, char** argv)
             usedvars += ['new_pz', 'pz', 'npz']
         if usetranslation ==7:
             usedvars.append('pp')
+        # create any other global variables
+        for var, value in node.dictequations:
+            if not var.name in usedvars:
+                usedvars.append(var.name)
         code += 'IkReal ' + ','.join(usedvars) + ';\n'
         code += 'unsigned char ' + ','.join('_i%s[2], _n%s'%(var[0].name,var[0].name) for var in node.solvejointvars+node.freejointvars) + ';\n\n'
         return code
