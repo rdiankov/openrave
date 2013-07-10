@@ -741,6 +741,18 @@ class AST:
         def end(self, generator):
             return generator.endRotation(self)
 
+    class SolverFunction:
+        jointtree = None
+        name='innerfn'
+        def __init__(self, name, jointtree):
+            self.name = name
+            self.jointtree = jointtree
+            self.dictequations = []
+        def generate(self, generator):
+            return generator.generateFunction(self)
+        def end(self, generator):
+            return generator.endFunction(self)
+        
     class SolverStoreSolution:
         """Called when all the unknowns have been solved to add a solution.
         """
@@ -2554,7 +2566,7 @@ class IKFastSolver(AutoReloader):
                 
         if coupledsolutions is None:
             raise self.CannotSolveError('6D general method failed, raghavan roth equations might be too complex')
-
+        
         log.info('solved coupled variables: %s',usedvars)
         AllEquations = []
         for i in range(3):
@@ -2567,7 +2579,8 @@ class IKFastSolver(AutoReloader):
             curvars.remove(var)
             solsubs += self.Variable(var).subs
         self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-        leftovervarstree += self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
+        leftovertree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
+        leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         return coupledsolutions
 
     def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None):
@@ -5263,13 +5276,20 @@ class IKFastSolver(AutoReloader):
                                                     sym = self.gsymbolgen.next()
                                                     self.globalsymbols.append((sym,eq))
                                                     eq = sym
+                                                    sineq = self.gsymbolgen.next()
+                                                    self.globalsymbols.append((sineq,sin(eq)))
+                                                    coseq = self.gsymbolgen.next()
+                                                    self.globalsymbols.append((coseq,cos(eq)))
+                                                else:
+                                                    sineq = sin(eq).evalf()
+                                                    coseq = cos(eq).evalf()
                                                 cond=othervar-eq.evalf()
                                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
-                                                    eqs.append([[cond],evalcond,[(sothervar,sin(eq).evalf()),(sin(othervar),sin(eq).evalf()),(cothervar,cos(eq).evalf()),(cos(othervar),cos(eq).evalf()),(othervar,eq)]])
+                                                    eqs.append([[cond],evalcond,[(sothervar,sineq),(sin(othervar),sineq),(cothervar,coseq),(cos(othervar),coseq),(othervar,eq)]])
                                     elif s.jointevalsin is not None:
                                         for eq in s.jointevalsin:
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):

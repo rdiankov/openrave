@@ -1515,6 +1515,22 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         return 'continue;\n'
     def endBreak(self,node):
         return ''
+
+    def generateFunction(self, node):
+        if not node.name in self.functions:
+            code = 'inline void %s(IkSolutionListBase<IkReal>& solutions) {\n'%(node.name)
+            code += 'for(int fniter = 0; fniter < 1; ++fniter) {\n'
+            origequations = self.dictequations
+            self.resetequations()
+            code += self.indentCode(self.generateTree(node.jointtree),4)
+            code += '}\n}'
+            self.dictequations = origequations
+            self.functions[node.name] = code
+        return '%s(solutions);\n'%(node.name)
+    
+    def endFunction(self, node):
+        return ''
+
     def generateRotation(self, node):
         if not node.functionid in self.functions:
             code = 'inline void rotationfunction%d(IkSolutionListBase<IkReal>& solutions) {\n'%(node.functionid)
