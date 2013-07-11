@@ -38,7 +38,7 @@
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
-#define IKFAST_VERSION 62
+#define IKFAST_VERSION 64
 
 namespace ikfast {
 

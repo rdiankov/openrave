@@ -182,7 +182,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '63' # also in ikfast.h
+__version__ = '64' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -664,7 +664,11 @@ class AST:
             return generator.endConditionedSolution(self)
 
     class SolverBranchConds:
-        jointbranches = None
+        """
+        take certain branches depending if a set of equations evaluate to zero.
+        Each branch can also have dictequations
+        """
+        jointbranches = None # list of (checkzeroequations, branch, dictequations)
         thresh = 0.000001
         def __init__(self, jointbranches):
             self.jointbranches = jointbranches
@@ -2582,7 +2586,7 @@ class IKFastSolver(AutoReloader):
         leftovertree = self.solveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
         leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         return coupledsolutions
-
+    
     def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None):
         """Solves 3D translation + Angle with respect to X-axis
         :param rawnormaldir: the axis in the base coordinate system that will be computing a rotation about
@@ -5194,7 +5198,7 @@ class IKFastSolver(AutoReloader):
         for solution,var in usedsolutions[::-1]:
             # there are divide by zeros, so check if they can be explicitly solved for joint variables                    
             checkforzeros = []
-            eqs = []
+            localsubstitutioneqs = []
             for checkzero in solution.checkforzeros:
                 if checkzero.has(*allvars):
                     log.info('ignoring special check for zero since it has symbols %s: %s',str(allvars),str(checkzero))
@@ -5221,7 +5225,7 @@ class IKFastSolver(AutoReloader):
                                         if arg.is_Symbol:
                                             sumsquaresexprstozero.append(arg)
                             if len(sumsquaresexprstozero) > 0:
-                                eqs.append([sumsquaresexprstozero,checkzero,[(sumsquaresexpr,S.Zero) for sumsquaresexpr in sumsquaresexprstozero]])
+                                localsubstitutioneqs.append([sumsquaresexprstozero,checkzero,[(sumsquaresexpr,S.Zero) for sumsquaresexpr in sumsquaresexprstozero], []])
                     for checksimplezeroexpr in checksimplezeroexprs:
                         #if checksimplezeroexpr.has(*othersolvedvars): # cannot do this check since sjX,cjX might be used
                         for othervar in othersolvedvars:
@@ -5271,28 +5275,30 @@ class IKFastSolver(AutoReloader):
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
                                                     continue
 
+                                                dictequations = []
                                                 if not eq.is_number and not eq.has(*allothersolvedvars):
                                                     # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
                                                     sym = self.gsymbolgen.next()
-                                                    self.globalsymbols.append((sym,eq))
+                                                    dictequations.append((sym,eq))
                                                     eq = sym
                                                     sineq = self.gsymbolgen.next()
-                                                    self.globalsymbols.append((sineq,sin(eq)))
+                                                    dictequations.append((sineq,sin(eq)))
                                                     coseq = self.gsymbolgen.next()
-                                                    self.globalsymbols.append((coseq,cos(eq)))
+                                                    dictequations.append((coseq,cos(eq)))
                                                 else:
                                                     sineq = sin(eq).evalf()
                                                     coseq = cos(eq).evalf()
                                                 cond=othervar-eq.evalf()
-                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
+                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
-                                                    eqs.append([[cond],evalcond,[(sothervar,sineq),(sin(othervar),sineq),(cothervar,coseq),(cos(othervar),coseq),(othervar,eq)]])
+                                                    localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sineq),(sin(othervar),sineq),(cothervar,coseq),(cos(othervar),coseq),(othervar,eq)], dictequations])
                                     elif s.jointevalsin is not None:
                                         for eq in s.jointevalsin:
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
+                                                dictequations = []
                                                 # test when cos(othervar) > 0
                                                 # don't use asin(eq)!! since eq = (-pz**2/py**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-asin(eq).evalf()
@@ -5304,36 +5310,37 @@ class IKFastSolver(AutoReloader):
                                                     if not eq.is_number and not eq.has(*allothersolvedvars):
                                                         # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
                                                         sym = self.gsymbolgen.next()
-                                                        self.globalsymbols.append((sym,eq))
+                                                        dictequations.append((sym,eq))
                                                         eq = sym
                                                     cond=abs(sothervar-eq.evalf()) + abs(sign(cothervar)-1)
-                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
+                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        eqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,S.One),(cos(othervar),S.One),(othervar,S.One)]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,S.One),(cos(othervar),S.One),(othervar,S.One)], dictequations])
                                                     else:
-                                                        eqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())], dictequations])
                                                 # test when cos(othervar) < 0
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf()) + abs(sign(cothervar)+1)
                                                 else:
                                                     cond=abs(sothervar-eq.evalf())+abs(sign(cothervar)+1)
                                                 #cond=othervar-(pi-asin(eq).evalf())
-                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
+                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        eqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,-S.One),(cos(othervar),-S.One),(othervar,pi.evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,-S.One),(cos(othervar),-S.One),(othervar,pi.evalf())], dictequations])
                                                     else:
-                                                        eqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())], dictequations])
                                     elif s.jointevalcos is not None:
                                         for eq in s.jointevalcos:
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
+                                                dictequations = []
                                                 # test when sin(othervar) > 0
                                                 # don't use acos(eq)!! since eq = (-pz**2/px**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-acos(eq).evalf()
@@ -5347,31 +5354,31 @@ class IKFastSolver(AutoReloader):
                                                         self.globalsymbols.append((sym,eq))
                                                         eq = sym
                                                     cond=abs(cothervar-eq.evalf()) + abs(sign(sothervar)-1)
-                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
+                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        eqs.append([[cond],evalcond,[(sothervar,S.One),(sin(othervar),S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(pi/2).evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.One),(sin(othervar),S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(pi/2).evalf())], dictequations])
                                                     else:
-                                                        eqs.append([[cond],evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())], dictequations])
                                                 #cond=othervar+acos(eq).evalf()
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf()) + abs(sign(sothervar)+1)
                                                 else:
                                                     cond=abs(cothervar-eq.evalf()) + abs(sign(sothervar)+1)
-                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+eqs])),cond):
+                                                if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        eqs.append([[cond],evalcond,[(sothervar,-S.One),(sin(othervar),-S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(-pi/2).evalf())]])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-S.One),(sin(othervar),-S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(-pi/2).evalf())], dictequations])
                                                     else:
-                                                        eqs.append([[cond],evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())]])
-            flatzerosubstitutioneqs += eqs
-            zerosubstitutioneqs.append(eqs)
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())], dictequations])
+            flatzerosubstitutioneqs += localsubstitutioneqs
+            zerosubstitutioneqs.append(localsubstitutioneqs)
             if not var in nextsolutions:
                 newvars=curvars[:]
                 newvars.remove(var)
@@ -5442,7 +5449,7 @@ class IKFastSolver(AutoReloader):
                             evalcond = cond
                         if eq == S.Zero:
                             if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
-                                checkexpr = [[cond],evalcond,possiblesub]
+                                checkexpr = [[cond],evalcond,possiblesub, []]
                                 flatzerosubstitutioneqs.append(checkexpr)
                                 zerosubstitutioneqs[isolution].append(checkexpr)
                                 log.info('%s=%s in %s',possiblevar, possiblevalue,checkzero)
@@ -5460,7 +5467,7 @@ class IKFastSolver(AutoReloader):
                                     evalcond2 = cond2 + evalcond
                                 cond2 += cond
                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond2) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond2):
-                                    checkexpr = [[cond2],evalcond2,possiblesub+possiblesub2]
+                                    checkexpr = [[cond2],evalcond2,possiblesub+possiblesub2, []]
                                     flatzerosubstitutioneqs.append(checkexpr)
                                     zerosubstitutioneqs[isolution].append(checkexpr)
                                     log.info('%s=%s,%s=%s in %s', possiblevar,possiblevalue,possiblevar2,possiblevalue2,checkzero)
@@ -5477,22 +5484,25 @@ class IKFastSolver(AutoReloader):
             if len(validconditioneqs) == 0:
                 continue
             elif len(validconditioneqs) == 1:
-                cond,evalcond,othervarsubs = validconditioneqs[0]
+                cond, evalcond, othervarsubs, dictequations = validconditioneqs[0]
             elif len(validconditioneqs) > 1:
                 # merge the equations
                 cond = []
                 evalcond = S.Zero
                 othervarsubs = []
-                for subcond, subevalcond, subothervarsubs in validconditioneqs:
+                dictequations = []
+                for subcond, subevalcond, subothervarsubs, subdictequations in validconditioneqs:
                     cond += subcond
                     evalcond += abs(subevalcond)
                     othervarsubs += subothervarsubs
+                    dictequations += subdictequations
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
                 continue
             othervarsubs = [(s,self.ConvertRealToRationalEquation(v)) for s,v in othervarsubs]
             NewEquations = [eq.subs(othervarsubs) for eq in AllEquations]
             try:
+                self.globalsymbols += dictequations
                 # forcing a value, so have to check if all equations in NewEquations that do not contain
                 # unknown variables are really 0
                 extrazerochecks=[]
@@ -5510,13 +5520,17 @@ class IKFastSolver(AutoReloader):
                         newcases.add(singlecond)
                     newtree = self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
                     accumequations.append(NewEquations) # store the equations for debugging purposes
-                    zerobranches.append(([evalcond]+extrazerochecks,newtree))
+                    zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
                     self.degeneratecases.addcases(newcases)
             except self.CannotSolveError:
                 continue
-
+            finally:
+                # remove the symbols just added
+                removesymbols = set([var for var,value in dictequations])
+                self.globalsymbols = [g for g in self.globalsymbols if not g[0] in removesymbols]
+                
         if len(zerobranches) > 0:
-            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak()])])
+            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak()],[])])
             branchconds.accumequations = accumequations
             lastbranch.append(branchconds)
         else:

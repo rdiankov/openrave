@@ -390,16 +390,16 @@ inline double IKatan2(double fy, double fx) {
 }
 
 template <typename T>
-struct Atan2Value
+struct CheckValue
 {
     T value;
     bool valid;
 };
 
 template <typename T>
-inline Atan2Value<T> IKatan2WithCheck(T fy, T fx, T epsilon)
+inline CheckValue<T> IKatan2WithCheck(T fy, T fx, T epsilon)
 {
-    Atan2Value<T> ret;
+    CheckValue<T> ret;
     ret.valid = false;
     ret.value = 0;
     if( !isnan(fy) && !isnan(fx) ) {
@@ -431,10 +431,62 @@ inline double IKsign(double f) {
     return 0;
 }
 
+template <typename T>
+inline CheckValue<T> IKPowWithIntegerCheck(T f, int n)
+{
+    CheckValue<T> ret;
+    ret.valid = true;
+    if( n == 0 ) {
+        ret.value = 1.0;
+        return ret;
+    }
+    else if( n == 1 )
+    {
+        ret.value = f;
+        return ret;
+    }
+    else if( n < 0 )
+    {
+        if( f == 0 )
+        {
+            ret.valid = false;
+            ret.value = (T)1.0e30;
+            return ret;
+        }
+        if( n == -1 ) {
+            ret.value = T(1.0)/f;
+            return ret;
+        }
+    }
+
+    int num = n > 0 ? n : -n;
+    if( num == 2 ) {
+        ret.value = f*f;
+    }
+    else if( num == 3 ) {
+        ret.value = f*f*f;
+    }
+    else {
+        ret.value = 1.0;
+        while(num>0) {
+            if( num & 1 ) {
+                ret.value *= f;
+            }
+            num >>= 1;
+            f *= f;
+        }
+    }
+    
+    if( n < 0 ) {
+        ret.value = T(1.0)/ret.value;
+    }
+    return ret;
+}
+
 """%(self.version,str(datetime.datetime.now()),self.version)
         code += solvertree.generate(self)
         code += solvertree.end(self)
-
+        
         code += """
 
 /// solves the inverse kinematics equations.
@@ -583,7 +635,7 @@ int main(int argc, char** argv)
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
         code += self.getClassInit(node,IkType.Transform6D)
         code += self.GetIkFunctionPreamble(node)
@@ -605,14 +657,15 @@ int main(int argc, char** argv)
                 fcode += "r%d%d = new_r%d%d; "%(i,j,i,j)
         fcode += "px = new_px; py = new_py; pz = new_pz;\n"
         if node.dictequations is not None:
+            # be careful with dictequations since having an equation like atan2(px,py) is invalid and will force the IK to terminate.
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endChain(self, node):
@@ -638,7 +691,7 @@ int main(int argc, char** argv)
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Rotation3D,usetranslation=0)
@@ -662,10 +715,10 @@ int main(int argc, char** argv)
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainRotation3D(self, node):
@@ -702,7 +755,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         if node.uselocaltrans:
@@ -727,10 +780,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainTranslation3D(self, node):
@@ -760,7 +813,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationXY2D,userotation=0,usetranslation=3)
@@ -779,10 +832,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainTranslationXY2D(self, node):
@@ -812,7 +865,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Direction3D,userotation=1,usetranslation=0)
@@ -832,11 +885,11 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainDirection3D(self, node):
@@ -868,7 +921,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.TranslationDirection5D if node.is5dray else IkType.Ray4D,userotation=1)
@@ -896,11 +949,11 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainRay(self, node):
@@ -932,7 +985,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             code += '}\n\n'
 
         code += self.getClassInit(node,IkType.Lookat3D,userotation=0)
@@ -950,10 +1003,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n\n"
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endIKChainLookat3D(self, node):
@@ -985,7 +1038,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += self.writeEquations(lambda k: str(var),collect(expr,vars))
             for i in range(len(outputnames)):
                 fcode += self.writeEquations(lambda k: outputnames[i],reduced_exprs[i])
-            code += self.indentCode(fcode,4)
+            code += fcode
             # if gets to the end of the for loop statement, return successfully. if exits for loop, assert(0)
             code += 'return;\n}\nIKFAST_ASSERT(0);\n}\n\n'
 
@@ -1008,11 +1061,11 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for var,value in node.dictequations:
                 fcode += self.writeEquations(lambda k: var,value)
         fcode += self.generateTree(node.jointtree)
-        code += self.indentCode(fcode,4) + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
+        code += fcode + "}\nreturn solutions.GetNumSolutions()>0;\n}\n"
 
         # write other functions
         for name,functioncode in self.functions.iteritems():
-            code += self.indentCode(functioncode,4)
+            code += functioncode
         code += "};\n"
         return code
     def endSolverIKChainAxisAngle(self, node):
@@ -1190,7 +1243,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             scode,numsolutions = self.generateSolution(solversolution,declarearray=False,acceptfreevars=False)
             scode += 'numsolutions%s = %d;\n'%(name,numsolutions)
             allnumsolutions = max(allnumsolutions,numsolutions)
-            checkcode += self.indentCode(scode,4)
+            checkcode += scode
             checkcode += '\n} else\n'
         checkcode += '{\n    continue;\n}\n'  # if got here, then current solution branch is not good, so skip
         checkcode += '}\n'*len(node.solversolutions)
@@ -1200,7 +1253,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += 'IkReal %sarray[%d], c%sarray[%d], s%sarray[%d];\n'%(name,allnumsolutions,name,allnumsolutions,name,allnumsolutions)
         code += 'bool %svalid[%d]={false};\n'%(name,allnumsolutions)
         code += '_n%s = %d;\n'%(name,allnumsolutions)
-        code += self.indentCode(checkcode,4)
+        code += checkcode
         if allnumsolutions > 1:
             if allnumsolutions >= 256:
                 log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
@@ -1256,7 +1309,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         fcode += 'c%sarray[numsolutions] = IKcos(%sarray[numsolutions]);\n'%(name,name)
         fcode += 'numsolutions++;\n'
         fcode += '}\n'
-        code += self.indentCode(fcode,4)
+        code += fcode
         code += '}\n'
 
         allnumsolutions = D*len(node.jointeval)
@@ -1278,7 +1331,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += ' || '
                 fcode += 'IKabs(%sevalpoly[%d]) < %.16f '%(name,i,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
-            code += self.indentCode(fcode,4)
+            code += fcode
         if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
             fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckfornonzeros)
             fcode += 'if( '
@@ -1287,7 +1340,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += ' || '
                 fcode += 'IKabs(%sevalpoly[%d]) > %.16f '%(name,i,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
-            code += self.indentCode(fcode,4)
+            code += fcode
         if node.postcheckforrange is not None and len(node.postcheckforrange) > 0:
             fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckforrange)
             fcode += 'if( '
@@ -1296,7 +1349,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     fcode += ' || '
                 fcode += ' (%sevalpoly[%d] < %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
-            code += self.indentCode(fcode,4)
+            code += fcode
 
         # passed all tests
         code += '_i%s[0] = i%s; _i%s[1] = -1;\n'%(name,name,name)
@@ -1370,7 +1423,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
 #         fcode += '}\n'
 #         fcode += 'if( valid ) { numsolutions++; }\n'
         fcode += '}\n'
-        code.write(self.indentCode(fcode,4))
+        code.write(fcode)
         
         code.write('bool %svalid[%d]={%s};\n'%(firstname,node.rootmaxdim,','.join(['true']*node.rootmaxdim)))
         code.write('_n%s = %d;\n'%(firstname,node.rootmaxdim))
@@ -1442,34 +1495,49 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
 
     def generateBranchConds(self, node):
         origequations = self.copyequations()
-        code = '{\n'
+        code = cStringIO.StringIO()
+        code.write('{\n')
         numevals = None
-        for branch in node.jointbranches:
-            if branch[0] is not None:
-                if numevals is None or numevals < len(branch[0]):
-                    numevals=len(branch[0])
+        for checkzeroequations, branch, dictequations in node.jointbranches:
+            if checkzeroequations is not None:
+                if numevals is None or numevals < len(checkzeroequations):
+                    numevals=len(checkzeroequations)
         if numevals is not None:
-            code += 'IkReal evalcond[%d];\n'%numevals
-        for branch in node.jointbranches:
+            code.write('IkReal evalcond[%d];\n'%numevals)
+        for checkzeroequations, branch, extradictequations in node.jointbranches:
             self.dictequations = self.copyequations(origequations)
-            if branch[0] is None:
-                branchcode = 'if( 1 )\n{\n'
+
+            # writing the equations for the branch could force the system to call "continue" if out-of-bounds computations are detected.
+            # therefore surround each different branch in a do/while statement
+            code.write('bool bgotonextstatement = true;\n')
+            code.write('do\n{\n')
+            for var,value in extradictequations:
+                code.write('IkReal %s;\n'%var)
+                self.WriteEquations2(lambda k: var, value, code)
+                
+            if checkzeroequations is None:
+                code.write('if( 1 )\n')
             else:
-                branchcode = self.writeEquations(lambda x: 'evalcond[%d]'%x,branch[0])
-                branchcode += 'if( '
-                for i in range(len(branch[0])):
+                self.WriteEquations2(lambda x: 'evalcond[%d]'%x, checkzeroequations, code)
+                code.write('if( ')
+                for i in range(len(checkzeroequations)):
                     if i != 0:
-                        branchcode += ' && '
-                    branchcode += 'IKabs(evalcond[%d]) < %.16f '%(i,node.thresh)
-                branchcode += ' )\n{\n'
-            for n in branch[1]:
-                branchcode += n.generate(self)
-            for n in reversed(branch[1]):
-                branchcode += n.end(self)
-            code += self.indentCode(branchcode,4)+'\n} else\n{\n'
-        code += '}\n'*(len(node.jointbranches)+1)
+                        code.write(' && ')
+                    code.write('IKabs(evalcond[%d]) < %.16f '%(i,node.thresh))
+                code.write(' )\n')
+            code.write('{\n')
+            code.write('bgotonextstatement=false;\n')
+            for n in branch:
+                code.write(n.generate(self))
+            for n in reversed(branch):
+                code.write(n.end(self))
+            code.write('\n}\n')
+            code.write('} while(0);\n')
+            code.write('if( bgotonextstatement )\n{\n')
+        code.write('}\n'*(len(node.jointbranches)+1))
         self.dictequations = origequations
-        return code
+        return code.getvalue()
+
     def endBranchConds(self, node):
         return ''
     def generateCheckZeros(self, node):
@@ -1491,14 +1559,14 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 code += 'IKabs(%seval[%d]) < %.16f '%(name,i,node.thresh)
             code += ' )\n{\n'
             self.dictequations = self.copyequations(origequations)
-            code += self.indentCode(self.generateTree(node.zerobranch),4)
+            code += self.generateTree(node.zerobranch)
             code += '\n} else\n'
         code += '{\n'
         self.dictequations = self.copyequations(origequations)
-        code += self.indentCode(self.generateTree(node.nonzerobranch),4)
+        code += self.generateTree(node.nonzerobranch)
         code += '\n}\n'
         self.dictequations = origequations
-        return '{\n' + self.indentCode(code,4) + '\n}\n'
+        return '{\n' + code + '\n}\n'
     def endCheckZeros(self, node):
         return ''
     def generateFreeParameter(self, node):
@@ -1522,7 +1590,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code += 'for(int fniter = 0; fniter < 1; ++fniter) {\n'
             origequations = self.dictequations
             self.resetequations()
-            code += self.indentCode(self.generateTree(node.jointtree),4)
+            code += self.generateTree(node.jointtree)
             code += '}\n}'
             self.dictequations = origequations
             self.functions[node.name] = code
@@ -1543,8 +1611,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 for j in range(3):
                     listequations.append(node.T[i,j])
                     names.append(Symbol('new_r%d%d'%(i,j)))
-            code += self.indentCode(self.writeEquations(lambda i: names[i],listequations),4)
-            code += self.indentCode(self.generateTree(node.jointtree),4)
+            code += self.writeEquations(lambda i: names[i],listequations)
+            code += self.generateTree(node.jointtree)
             code += '}\n}'
             self.dictequations = origequations
             self.functions[node.functionid] = code
@@ -1619,15 +1687,23 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         return code
 
     def writeEquations(self, varnamefn, allexprs):
+        code = cStringIO.StringIO()
+        self.WriteEquations2(varnamefn, allexprs, code)
+        return code.getvalue()
+    
+    def WriteEquations2(self, varnamefn, allexprs, code=None):
+        if code is None:
+            code = cStringIO.StringIO()
+            
         if not hasattr(allexprs,'__iter__') and not hasattr(allexprs,'__array__'):
             allexprs = [allexprs]
-        code = ''
         if using_swiginac and isinstance(allexprs,list):
             if len(allexprs) == 0:
-                return ''
+                return code
             
             if isinstance(allexprs[0],swiginac.basic):
-                return self._writeGinacEquations(varnamefn, allexprs)
+                code.write(self._writeGinacEquations(varnamefn, allexprs))
+                return code
             
         # calling cse on many long expressions will freeze it, so try to divide the problem
         complexity = [expr.count_ops() for expr in allexprs]
@@ -1638,7 +1714,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             curcomplexity += complexity[i]
             exprs.append(expr)
             if curcomplexity > complexitythresh or i == len(allexprs)-1:
-                code += self._writeEquations(varnamefn,exprs,i+1-len(exprs))
+                self._WriteEquations(varnamefn, exprs, i+1-len(exprs), code)
                 exprs = []
                 curcomplexity = 0
         assert(len(exprs)==0)
@@ -1648,7 +1724,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         allcode = cStringIO.StringIO()
         for i,expr in enumerate(allexprs):
             print '%d/%d'%(i,len(allexprs))
-            code,sepcodelist = self._writeGinacExprCode(expr)
+            code,sepcodelist = self._WriteGinacExprCode(expr)
             for sepcode in sepcodelist:
                 allcode.write(sepcode)
             allcode.write(str(varnamefn(i)))
@@ -1657,8 +1733,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             allcode.write(';\n')
         return allcode.getvalue()
     
-    def _writeEquations(self, varnamefn, exprs,ioffset):
-        code = ''
+    def _WriteEquations(self, varnamefn, exprs, ioffset, code=None):
+        if code is None:
+            code = cStringIO.StringIO()
         replacements,reduced_exprs = customcse(exprs,symbols=self.symbolgen)
         N = len(self.dictequations[0])
         for rep in replacements:
@@ -1670,7 +1747,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 for i in range(N):
                     if self.dictequations[1][i] is not None and comparerep-self.dictequations[1][i]==S.Zero:
                         #self.dictequations.append((rep[0],self.dictequations[0][i][0],self.dictequations[1][i]))
-                        code += 'IkReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0])
+                        code.write('IkReal %s=%s;\n'%(rep[0],self.dictequations[0][i][0]))
                         found = True
                         break
             else:
@@ -1678,143 +1755,201 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             if not found:
                 self.dictequations[0].append(rep)
                 self.dictequations[1].append(comparerep)
-                code2,sepcode2 = self.writeExprCode(rep[1])
-                code += sepcode2+'IkReal %s=%s;\n'%(rep[0],code2)
+                code2,sepcodelist2 = self._WriteExprCode(rep[1])
+                for sepcode in sepcodelist2:
+                    code.write(sepcode)
+                code.write('IkReal %s='%rep[0])
+                code.write(code2.getvalue())
+                code.write(';\n')
         for i,rexpr in enumerate(reduced_exprs):
-            code2,sepcode2 = self.writeExprCode(rexpr)
-            code += sepcode2+'%s=%s;\n'%(varnamefn(i+ioffset), code2)
+            code2,sepcodelist2 = self._WriteExprCode(rexpr)
+            for sepcode in sepcodelist2:
+                code.write(sepcode)
+            code.write('%s='%varnamefn(i+ioffset))
+            code.write(code2.getvalue())
+            code.write(';\n')
         return code
 
-    def writeExprCode(self, expr):
+    def _WriteExprCode(self, expr, code=None):
         # go through all arguments and chop them
-        code = ''
-        sepcode = ''
+        if code is None:
+            code = cStringIO.StringIO()
         if expr.is_Function:
             if expr.func == Abs:
-                code += 'IKabs('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
+                code.write('IKabs(')
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
             elif expr.func == sign:
-                code += 'IKsign('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
+                code.write('IKsign(')
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
             elif expr.func == acos:
-                code += 'IKacos('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
-                sepcode += 'if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code2)
+                code.write('IKacos(')
+                pos0 = code.tell()
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
+                pos1 = code.tell()
+                code.seek(pos0)
+                exprbase = code.read(pos1-pos0)
+                code.seek(pos1)
+                sepcodelist.append('if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(exprbase,exprbase))
             elif expr.func == asin:
-                code += 'IKasin('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
-                sepcode += 'if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code2)
+                code.write('IKasin(')
+                pos0 = code.tell()
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
+                pos1 = code.tell()
+                code.seek(pos0)
+                exprbase = code.read(pos1-pos0)
+                code.seek(pos1)
+                sepcodelist.append('if( (%s) < -1-IKFAST_SINCOS_THRESH || (%s) > 1+IKFAST_SINCOS_THRESH )\n    continue;\n'%(exprbase,exprbase))
             elif expr.func == atan2check:
-                code += 'IKatan2('
+                code.write('IKatan2(')
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2+', '
-                code3,sepcode2 = self.writeExprCode(expr.args[1])
-                code += code3
-                sepcode += sepcode2
-                sepcode += 'if( IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(%s)+IKsqr(%s)-1) <= IKFAST_SINCOS_THRESH )\n    continue;\n'%(code2,code3,code2,code3)
+                pos0 = code.tell()
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
+                pos1 = code.tell()
+                code.seek(pos0)
+                exprbase0 = code.read(pos1-pos0)
+                code.seek(pos1)
+                code.write(', ')
+                pos0 = code.tell()
+                code3,sepcodelist2 = self._WriteExprCode(expr.args[1],code)
+                sepcodelist += sepcodelist2
+                pos1 = code.tell()
+                code.seek(pos0)
+                exprbase1 = code.read(pos1-pos0)
+                code.seek(pos1)
+                sepcodelist.append('if( IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(%s) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(%s)+IKsqr(%s)-1) <= IKFAST_SINCOS_THRESH )\n    continue;\n'%(exprbase0,exprbase1,exprbase0,exprbase1))
             elif expr.func == atan2:
                 # check for divides by 0 in arguments, this could give two possible solutions?!?
                 # if common arguments is nan! solution is lost!
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code3,sepcode2 = self.writeExprCode(expr.args[1])
-                sepcode += sepcode2
                 # use IKatan2WithCheck in order to make it robust against NaNs
                 iktansymbol = self.symbolgen.next()
-                sepcode += 'Atan2Value<IkReal> %(sym)s = IKatan2WithCheck(%(fy)s,%(fx)s,IKFAST_ATAN2_MAGTHRESH);\nif( !%(sym)s.valid ) {\n    continue;\n}\n'%{'sym':iktansymbol, 'fy':code2, 'fx':code3}
-                code += '%s.value'%iktansymbol
-                return code,sepcode
+                
+                code2 = cStringIO.StringIO()
+                code2.write('CheckValue<IkReal> %s = IKatan2WithCheck('%iktansymbol)
+                code3,sepcodelist = self._WriteExprCode(expr.args[0], code2)
+                code2.write(',')
+                code4,sepcodelist2 = self._WriteExprCode(expr.args[1], code2)
+                code2.write(',IKFAST_ATAN2_MAGTHRESH);\nif( !%s.valid ) {\n    continue;\n}\n'%iktansymbol)
+                sepcodelist += sepcodelist2
+                sepcodelist.append(code2.getvalue())
+                
+                code.write('%s.value'%iktansymbol)
+                return code,sepcodelist
             
             elif expr.func == sin:
-#                 if expr.args[0].is_Symbol and expr.args[0].name[0] == 'j':
-#                     # probably already have initialized
-#                     code += '(s%s'%expr.args[0].name
-#                 else:
-                code += 'IKsin('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
+                code.write('IKsin(')
+                code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
             elif expr.func == cos:
-#                 if expr.args[0].is_Symbol and expr.args[0].name[0] == 'j':
-#                     # probably already have initialized
-#                     code += '(c%s'%expr.args[0].name
-#                 else:
-                code += 'IKcos('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2
+                code.write('IKcos(')
+                code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
             elif expr.func == fmod:
-                code += 'IKfmod('
-                code2,sepcode = self.writeExprCode(expr.args[0])
-                code += code2+', '
-                code3,sepcode2 = self.writeExprCode(expr.args[1])
-                code += code3
-                sepcode += sepcode2
+                code.write('IKfmod(')
+                code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
+                code.write(', ')
+                code3,sepcodelist2 = self._WriteExprCode(expr.args[1], code)
+                sepcodelist += sepcodelist2
             else:
-                code += expr.func.__name__ + '('
+                code.write(expr.func.__name__)
+                code.write('(')
+                sepcodelist = []
                 for arg in expr.args:
-                    code2,sepcode2 = self.writeExprCode(arg)
-                    code += code2
-                    sepcode += sepcode2
+                    code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                    sepcodelist += sepcodelist2
                     if not arg == expr.args[-1]:
-                        code += ','
-            return code + ')',sepcode
+                        code.write(',')
+            code.write(')')
+            return code,sepcodelist
+        
         elif expr.is_number:
             expreval = expr.evalf()
             assert(expreval.is_real)
-            return 'IkReal('+self.strprinter.doprint(expreval)+')',sepcode
+            code.write('IkReal(')
+            code.write(self.strprinter.doprint(expreval))
+            code.write(')')
+            return code, []
+        
         elif expr.is_Mul:
-            code += '('
+            sepcodelist = []
+            code.write('(')
             for arg in expr.args:
-                code2,sepcode2 = self.writeExprCode(arg)
-                code += '('+code2+')'
-                sepcode += sepcode2
+                code.write('(')
+                code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                code.write(')')
+                sepcodelist += sepcodelist2
                 if not arg == expr.args[-1]:
-                    code += '*'
-            return code + ')',sepcode
+                    code.write('*')
+            code.write(')')
+            return code, sepcodelist
+        
         elif expr.is_Pow:
-            exprbase,sepcode = self.writeExprCode(expr.base)
             if expr.exp.is_number:
-                if expr.exp.is_integer and expr.exp.evalf() > 0:
-                    code += '('+exprbase+')'
-                    for i in range(1,expr.exp.evalf()):
-                        code += '*('+exprbase+')'
-                    return code,sepcode
-                elif expr.exp-0.5 == S.Zero:
-                    sepcode += 'if( (%s) < (IkReal)-0.00001 )\n    continue;\n'%exprbase
-                    return 'IKsqrt('+exprbase+')',sepcode
-                elif expr.exp+1 == S.Zero:
-                    # check if exprbase is 0
-                    return '((IKabs('+exprbase+') != 0)?((IkReal)1/('+exprbase+')):(IkReal)1.0e30)',sepcode
-                elif expr.exp.is_integer and expr.exp.evalf() < 0:
-                    # check if exprbase is 0
-                    fcode = '('+exprbase+')'
-                    for i in range(1,-expr.exp.evalf()):
-                        fcode += '*('+exprbase+')'
-                    return '((IKabs('+exprbase+') != 0)?((IkReal)1/('+fcode+')):(IkReal)1.0e30)',sepcode
-                elif expr.exp < 0:
-                    # check if exprbase is 0
-                    return '((IKabs('+exprbase+') != 0)?(pow(' + exprbase + ',' + str(expr.exp.evalf()) + ')):(IkReal)1.0e30)',sepcode
+                if expr.exp.is_integer:
+                    # use IKPowWithIntegerCheck in order to make it robust
+                    ikpowsymbol = self.symbolgen.next()
                     
-            exprexp,sepcode2 = self.writeExprCode(expr.exp)
-            sepcode += sepcode2
-            return 'pow(' + exprbase + ',' + exprexp + ')',sepcode
+                    code2 = cStringIO.StringIO()
+                    code2.write('CheckValue<IkReal> %s = IKPowWithIntegerCheck('%ikpowsymbol)
+                    code3,sepcodelist = self._WriteExprCode(expr.base, code2)
+                    code2.write(',')
+                    code2.write(self.strprinter.doprint(expr.exp.evalf()))
+                    code2.write(');\nif( !%s.valid ) {\n    continue;\n}\n'%ikpowsymbol)
+                    sepcodelist.append(code2.getvalue())
+                    
+                    code.write('%s.value'%ikpowsymbol)
+                    return code,sepcodelist
+                
+                elif expr.exp-0.5 == S.Zero:
+                    code.write('IKsqrt(')
+                    pos0 = code.tell()
+                    code2,sepcodelist = self._WriteExprCode(expr.base,code)
+                    pos1 = code.tell()
+                    code.seek(pos0)
+                    exprbase = code.read(pos1-pos0)
+                    code.seek(pos1)
+                    sepcodelist.append('if( (%s) < (IkReal)-0.00001 )\n    continue;\n'%exprbase)
+                    code.write(')')
+                    return code, sepcodelist
+                
+                elif expr.exp < 0:
+                    # use IKPowWithIntegerCheck in order to make it robust
+                    # check if exprbase is 0
+                    ikpowsymbol = self.symbolgen.next()
+                    
+                    code2 = cStringIO.StringIO()
+                    code2.write('IkReal %s = ')
+                    code3,sepcodelist = self._WriteExprCode(expr.base, code2)
+                    code2.write(';\nif( IKabs(%s) == 0 ) {\n    continue;\n}\n'%ikpowsymbol)
+                    sepcodelist.append(code2.getvalue())
+                    
+                    code.write('pow(%s,%s)'%(ikpowsymbol, self.strprinter.doprint(expr.exp.evalf())))
+                    return code,sepcodelist
+                
+            # do the most general pow function
+            code.write('pow(')
+            code2,sepcodelist = self._WriteExprCode(expr.base, code)
+            code.write(',')
+            code3,sepcodelist2 = self._WriteExprCode(expr.exp, code)
+            sepcodelist += sepcodelist2
+            code.write(')')
+            return code, sepcodelist
+        
         elif expr.is_Add:
-            code += '('
+            code.write('(')
+            sepcodelist = []
             for arg in expr.args:
-                code2,sepcode2 = self.writeExprCode(arg)
-                code += '('+code2+')'
-                sepcode += sepcode2
+                code.write('(')
+                code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                code.write(')')
+                sepcodelist += sepcodelist2
                 if not arg == expr.args[-1]:
-                    code += '+'
-            return code + ')',sepcode
+                    code.write('+')
+            code.write(')')
+            return code, sepcodelist
+        
+        code.write(self.strprinter.doprint(expr.evalf()))
+        return code,[]
 
-        return self.strprinter.doprint(expr.evalf()),sepcode
-
-    def _writeGinacExprCode(self, expr, code=None):
+    def _WriteGinacExprCode(self, expr, code=None):
         """writes with ginac expression
         """
         # go through all arguments and chop them
@@ -1831,7 +1966,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code.write('(')
             for iarg in range(expr.nops()):
                 code.write('(')
-                code2,sepcode2 = self._writeGinacExprCode(expr.op(iarg),code)
+                code2,sepcode2 = self._WriteGinacExprCode(expr.op(iarg),code)
                 code.write(')')
                 sepcodelist += sepcode2
                 if iarg+1 < expr.nops():
@@ -1845,7 +1980,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 if exp.is_integer() and exp.eval() > 0:
                     code.write('(')
                     pos0 = code.tell()
-                    code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+                    code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
                     pos1 = code.tell()
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
@@ -1860,7 +1995,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 elif exp.evalf()-0.5 == 0:
                     code.write('IKsqrt(')
                     pos0 = code.tell()
-                    code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+                    code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
                     pos1 = code.tell()
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
@@ -1873,7 +2008,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     # check if exprbase is 0
                     code.write('((IKabs(')
                     pos0 = code.tell()
-                    code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+                    code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
                     pos1 = code.tell()
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
@@ -1886,7 +2021,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 elif exp.is_integer() and exp.eval() < 0:
                     code.write('((IKabs(')
                     pos0 = code.tell()
-                    code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+                    code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
                     pos1 = code.tell()
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
@@ -1907,7 +2042,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     # check if exprbase is 0
                     code.write('((IKabs(')
                     pos0 = code.tell()
-                    code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+                    code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
                     pos1 = code.tell()
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
@@ -1920,10 +2055,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     return code,sepcodelist
                     
             code.write('pow(')
-            code2,sepcodelist = self._writeGinacExprCode(expr.op(0),code)
+            code2,sepcodelist = self._WriteGinacExprCode(expr.op(0),code)
             code.write(',')
-            code2,sepcode2 = self._writeGinacExprCode(exp,code)
-            sepcodelist += sepcode2
+            code2,sepcodelist2 = self._WriteGinacExprCode(exp,code)
+            sepcodelist += sepcodelist2
             code.write(')')
             return code,sepcodelist
         
@@ -1932,7 +2067,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code.write('(')
             for iarg in range(expr.nops()):
                 code.write('(')
-                code2,sepcode2 = self._writeGinacExprCode(expr.op(iarg),code)
+                code2,sepcode2 = self._WriteGinacExprCode(expr.op(iarg),code)
                 sepcodelist += sepcode2
                 code.write(')')
                 if iarg+1 < expr.nops():
@@ -1943,23 +2078,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code.write(self.strprinter.doprint(expr.evalf()))
         return code,[]
     
-    def indentCode(self, code, numspaces):
-        # actually a lot of time can be wasted in this phase...
-        if True:
-            return code
-        numspaces /= 4
-        try:
-            return re.sub('\n','\n'+' '*numspaces,s)
-        except:
-            lcode = list(code)
-            locations = [i for i in range(len(lcode)-1) if lcode[i]=='\n']
-            locations.reverse()
-            insertcode = [' ' for i in range(numspaces)]
-            for loc in locations:
-                lcode[loc+1:0] = insertcode
-            lcode[:0] = insertcode
-            return ''.join(lcode)
-
     def using_polyroots(self, deg):
         name = 'polyroots%d'%deg
         if not name in self.functions:
