@@ -186,6 +186,13 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                     graspables.append([gmodel,dests])
         return graspables
 
+    def GetGraspable(self,name):
+        for graspable in self.graspables:
+            if graspable[0].target.GetName() == name:
+                return graspable
+            
+        return None
+    
     def randomizeObjects(self):
         for graspable in self.graspables:
             target = graspable[0].target

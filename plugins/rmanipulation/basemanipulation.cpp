@@ -282,6 +282,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
 
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
         if( !starteematrix ) {
             planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
             robot->GetActiveDOFValues(params->vinitialconfig);
