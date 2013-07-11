@@ -22,6 +22,22 @@
 
 #include <openrave/config.h>
 
+// Now we use the generic helper definitions above to define OPENRAVE_C_API and OPENRAVE_C_LOCAL.
+// OPENRAVE_C_API is used for the public API symbols. It either DLL imports or DLL exports (or does nothing for static build)
+// OPENRAVE_C_LOCAL is used for non-api symbols.
+#if defined(OPENRAVE_C_DLL) // defined if OpenRAVE is compiled as a DLL
+  #ifdef OPENRAVE_C_DLL_EXPORTS // defined if we are building the OpenRAVE DLL (instead of using it)
+    #define OPENRAVE_C_API OPENRAVE_HELPER_DLL_EXPORT
+  #else
+    #define OPENRAVE_C_API OPENRAVE_HELPER_DLL_IMPORT
+  #endif // OPENRAVE_DLL_EXPORTS
+  #define OPENRAVE_C_LOCAL OPENRAVE_HELPER_DLL_LOCAL
+#else // OPENRAVE_DLL is not defined: this means OpenRAVE is a static lib.
+  #define OPENRAVE_C_API
+  #define OPENRAVE_C_LOCAL
+#endif // OPENRAVE_DLL
+
+
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double OpenRAVEReal;
 #define g_fEpsilon 1e-15
@@ -46,37 +62,37 @@ enum DebugLevel {
 };
 
 /// \brief Calls \ref RaveSetDebugLevel
-OPENRAVE_API void ORCSetDebugLevel(int level);
+OPENRAVE_C_API void ORCSetDebugLevel(int level);
 
 /// \brief Calls \ref RaveInitialize
-OPENRAVE_API void ORCInitialize(bool bLoadAllPlugins=true, int level=Level_Info);
+OPENRAVE_C_API void ORCInitialize(bool bLoadAllPlugins=true, int level=Level_Info);
 
 /// \brief Calls \ref RaveDestroy
-OPENRAVE_API void ORCDestroy();
+OPENRAVE_C_API void ORCDestroy();
 
 /// \brief Calls \ref RaveCreateKinBody
-OPENRAVE_API void* ORCCreateKinBody(void* env, const char* name);
+OPENRAVE_C_API void* ORCCreateKinBody(void* env, const char* name);
 
 /// \brief Creates a new \ref OpenRAVE::TriMesh object and copies the vertex/index data.
 ///
 /// Have to call ORCTriMeshDestroy afterwards.
 /// \param vertex a numvertices*3 real array
 /// \param index a numtriangles*3 int array for every triangle
-OPENRAVE_API void* ORCCreateTriMesh(OpenRAVEReal* vertices, int numvertices, OpenRAVEReal* indices, int numtriangles);
+OPENRAVE_C_API void* ORCCreateTriMesh(OpenRAVEReal* vertices, int numvertices, OpenRAVEReal* indices, int numtriangles);
 
 /// \brief frees the trimesh data returned from \ref ORCTriMeshCreate
-OPENRAVE_API void ORCTriMeshDestroy(void* trimesh);
+OPENRAVE_C_API void ORCTriMeshDestroy(void* trimesh);
 
 /// \name \ref EnvironmentBase methods
 //@{
 
 /// \brief Calls \ref EnvironmentBase::Destroy
-OPENRAVE_API void ORCEnvironmentDestroy(void* env);
+OPENRAVE_C_API void ORCEnvironmentDestroy(void* env);
 
-OPENRAVE_API bool ORCEnvironmentLoad(void* env, const char* filename);
+OPENRAVE_C_API bool ORCEnvironmentLoad(void* env, const char* filename);
 
 /// \brief Calls \ref EnvironmentBase::GetKinBody
-OPENRAVE_API void* ORCEnvironmentGetKinBody(void* env, const char* name);
+OPENRAVE_C_API void* ORCEnvironmentGetKinBody(void* env, const char* name);
 
 /// \brief Calls \ref EnvironmentBase::GetBodies
 ///
@@ -85,7 +101,7 @@ OPENRAVE_API void* ORCEnvironmentGetKinBody(void* env, const char* name);
 /// \brief env pointer to environment
 /// \brief bodies a pre-allocated list of body pointers to fill
 /// \return number of bodies
-OPENRAVE_API int ORCEnvironmentGetBodies(void* env, void** bodies);
+OPENRAVE_C_API int ORCEnvironmentGetBodies(void* env, void** bodies);
 
 /// \brief Calls \ref EnvironmentBase::GetRobots
 ///
@@ -94,34 +110,34 @@ OPENRAVE_API int ORCEnvironmentGetBodies(void* env, void** bodies);
 /// \brief env pointer to environment
 /// \brief robots a pre-allocated list of robot pointers to fill
 /// \return number of robots
-OPENRAVE_API int ORCEnvironmentGetRobots(void* env, void** robots);
+OPENRAVE_C_API int ORCEnvironmentGetRobots(void* env, void** robots);
 
 /// \brief Calls \ref EnvironmentBase::Add
 ///
 /// \param pinterface can be body, robot, sensor, etc (any type derived from InterfaceBase)
-OPENRAVE_API void ORCEnvironmentAdd(void* env, void* pinterface);
+OPENRAVE_C_API void ORCEnvironmentAdd(void* env, void* pinterface);
 
 /// \brief Calls \ref EnvironmentBase::AddModule
-OPENRAVE_API int ORCEnvironmentAddModule(void* env, void* module, const char* args);
+OPENRAVE_C_API int ORCEnvironmentAddModule(void* env, void* module, const char* args);
 
 /// \brief Calls \ref EnvironmentBase::Remove
-OPENRAVE_API void ORCEnvironmentRemove(void* env, void* pinterface);
+OPENRAVE_C_API void ORCEnvironmentRemove(void* env, void* pinterface);
 
 /// \brief Calls \ref EnvironmentBase::GetSimulationTime
-OPENRAVE_API unsigned long long ORCEnvironmentGetSimulationTime(void* env);
+OPENRAVE_C_API unsigned long long ORCEnvironmentGetSimulationTime(void* env);
 
 /// \brief Return the global environment mutex used to protect environment information access in multi-threaded environments.
 ///
 /// Accessing environment body information and adding/removing bodies
 /// or changing any type of scene property should have the environment lock acquired. Once the environment
 /// is locked, the user is guaranteed that nnothing will change in the environment.
-OPENRAVE_API void ORCEnvironmentLock(void* env);
+OPENRAVE_C_API void ORCEnvironmentLock(void* env);
 
 /// \brief unlock an already locked mutex
-OPENRAVE_API void ORCEnvironmentUnlock(void* env);
+OPENRAVE_C_API void ORCEnvironmentUnlock(void* env);
 
 /// \brief Starts a viewer thread for the current environment
-OPENRAVE_API bool ORCEnvironmentSetViewer(void* env, const char* viewername);
+OPENRAVE_C_API bool ORCEnvironmentSetViewer(void* env, const char* viewername);
 
 //@}
 
@@ -129,13 +145,13 @@ OPENRAVE_API bool ORCEnvironmentSetViewer(void* env, const char* viewername);
 //@{
 
 /// \brief release the interfaces like robots, modules, etc.
-OPENRAVE_API void ORCInterfaceRelease(void* pinterface);
+OPENRAVE_C_API void ORCInterfaceRelease(void* pinterface);
 
 /// \brief Calls \ref InterfaceBase::SendCommand
 ///
 /// If command failed, will return NULL string.
 /// \return The output string. It has to be released with free() by the user.
-OPENRAVE_API char* ORCInterfaceSendCommand(void* pinterface, const char* command);
+OPENRAVE_C_API char* ORCInterfaceSendCommand(void* pinterface, const char* command);
 
 //@}
 
@@ -143,23 +159,23 @@ OPENRAVE_API char* ORCInterfaceSendCommand(void* pinterface, const char* command
 //@{
 
 /// \brief Calls \ref KinBody::GetName
-OPENRAVE_API const char* ORCBodyGetName(void* body);
+OPENRAVE_C_API const char* ORCBodyGetName(void* body);
 
 /// \brief Calls \ref KinBody::SetName
-OPENRAVE_API void ORCBodySetName(void* body, const char* name);
+OPENRAVE_C_API void ORCBodySetName(void* body, const char* name);
 
 /// \brief Calls \ref KinBody::GetDOF
-OPENRAVE_API int ORCBodyGetDOF(void* body);
+OPENRAVE_C_API int ORCBodyGetDOF(void* body);
 
 /// \brief Calls \ref KinBody::GetDOFValues
 ///
 /// \param[out] values fills the already initialized array of DOF values
-OPENRAVE_API void ORCBodyGetDOFValues(void* body, OpenRAVEReal* values);
+OPENRAVE_C_API void ORCBodyGetDOFValues(void* body, OpenRAVEReal* values);
 
 /// \brief Calls \ref KinBody::SetDOFValues
 ///
 /// \param[in] values uses this array to set the DOF values.
-OPENRAVE_API void ORCBodySetDOFValues(void* body, const OpenRAVEReal* values);
+OPENRAVE_C_API void ORCBodySetDOFValues(void* body, const OpenRAVEReal* values);
 
 /// \brief Calls \ref KinBody::GetLinks
 ///
@@ -168,32 +184,32 @@ OPENRAVE_API void ORCBodySetDOFValues(void* body, const OpenRAVEReal* values);
 /// \brief env pointer to environment
 /// \brief links a pre-allocated list of link pointers to fill
 /// \return number of links
-OPENRAVE_API int ORCBodyGetLinks(void* body, void** links);
+OPENRAVE_C_API int ORCBodyGetLinks(void* body, void** links);
 
 /// \brief Calls \ref KinBody::SetTransform
 ///
 /// \param[in] pose 7 values of the quaternion (4) and translation (3) of the world pose of the transform.
-OPENRAVE_API void ORCBodySetTransform(void* body, const OpenRAVEReal* pose);
+OPENRAVE_C_API void ORCBodySetTransform(void* body, const OpenRAVEReal* pose);
 
 /// \brief Calls \ref KinBody::SetTransform
 ///
 /// \param[in] matrix column-order, row-major 3x4 matrix of the body world transform
-OPENRAVE_API void ORCBodySetTransformMatrix(void* body, const OpenRAVEReal* matrix);
+OPENRAVE_C_API void ORCBodySetTransformMatrix(void* body, const OpenRAVEReal* matrix);
 
 /// \brief Calls \ref KinBody::GetTransform
 ///
 /// \param[out] pose 7 values of the quaternion (4) and translation (3) of the world pose of the transform.
-OPENRAVE_API void ORCBodyGetTransform(void* body, OpenRAVEReal* pose);
+OPENRAVE_C_API void ORCBodyGetTransform(void* body, OpenRAVEReal* pose);
 
 /// \brief Calls \ref KinBody::GetTransform
 ///
 /// \param[out] matrix column-order, row-major 3x4 matrix of the body world transform
-OPENRAVE_API void ORCBodyGetTransformMatrix(void* body, OpenRAVEReal* matrix);
+OPENRAVE_C_API void ORCBodyGetTransformMatrix(void* body, OpenRAVEReal* matrix);
 
 /// \brief Calls \ref KinBody::InitFromTrimesh
 ///
 /// \param trimesh returned from ORCTriMeshCreate()
-OPENRAVE_API bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible);
+OPENRAVE_C_API bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible);
 
 //@}
 
@@ -207,10 +223,10 @@ OPENRAVE_API bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible
 /// \brief env pointer to environment
 /// \brief geometries a pre-allocated list of link pointers to fill
 /// \return number of geometries
-OPENRAVE_API int ORCBodyLinkGetGeometries(void* link, void** geometries);
+OPENRAVE_C_API int ORCBodyLinkGetGeometries(void* link, void** geometries);
 
 /// \brief release the body's link
-OPENRAVE_API void ORCBodyLinkRelease(void* link);
+OPENRAVE_C_API void ORCBodyLinkRelease(void* link);
 
 //@}
 
@@ -218,16 +234,16 @@ OPENRAVE_API void ORCBodyLinkRelease(void* link);
 //@{
 
 /// \brief Calls \ref KinBody::Link::Geometry::SetDiffuseColor
-OPENRAVE_API void ORCBodyGeometrySetDiffuseColor(void* geometry, float red, float green, float blue);
+OPENRAVE_C_API void ORCBodyGeometrySetDiffuseColor(void* geometry, float red, float green, float blue);
 
 //@}
 
-OPENRAVE_API const char* ORCRobotGetName(void* robot);
+OPENRAVE_C_API const char* ORCRobotGetName(void* robot);
 
 /// \brief Calls \ref RaveCreateModule
 ///
 /// Have to release the module pointer with \ref ORCModuleRelease
-OPENRAVE_API void* ORCModuleCreate(void* env, const char* modulename);
+OPENRAVE_C_API void* ORCModuleCreate(void* env, const char* modulename);
 
 #ifdef __cplusplus
 }

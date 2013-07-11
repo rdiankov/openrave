@@ -14,22 +14,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_CORE_H
-#define OPENRAVE_CORE_H
+#ifndef OPENRAVE_C_CORE_H
+#define OPENRAVE_C_CORE_H
 
 // public OpenRAVE header
 #include <openrave_c/openrave_c.h>
 
-#if defined(OPENRAVE_CORE_DLL)
-  #ifdef OPENRAVE_CORE_DLL_EXPORTS
-    #define OPENRAVE_CORE_API OPENRAVE_HELPER_DLL_EXPORT
+#if defined(OPENRAVE_C_CORE_DLL)
+  #ifdef OPENRAVE_C_CORE_DLL_EXPORTS
+    #define OPENRAVE_C_CORE_API OPENRAVE_HELPER_DLL_EXPORT
   #else
-    #define OPENRAVE_CORE_API OPENRAVE_HELPER_DLL_IMPORT
+    #define OPENRAVE_C_CORE_API OPENRAVE_HELPER_DLL_IMPORT
   #endif
-  #define OPENRAVE_CORE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
+  #define OPENRAVE_C_CORE_LOCAL OPENRAVE_HELPER_DLL_LOCAL
 #else
-  #define OPENRAVE_CORE_API
-  #define OPENRAVE_CORE_LOCAL
+  #define OPENRAVE_C_CORE_API
+  #define OPENRAVE_C_CORE_LOCAL
 #endif
 
 #ifdef __cplusplus
@@ -38,10 +38,10 @@ extern "C" {
 
 /// \brief Creates an OpenRAVE environment.
 /// \param bLoadAllPlugins passed into \ref RaveInitialize
-OPENRAVE_CORE_API void* ORCEnvironmentCreate();
+OPENRAVE_C_CORE_API void* ORCEnvironmentCreate();
 
 /// \brief releases the environment pointer returned from ORCEnvironmentCreate
-OPENRAVE_CORE_API void ORCEnvironmentRelease(void*);
+OPENRAVE_C_CORE_API void ORCEnvironmentRelease(void*);
 
 #ifdef __cplusplus
 }

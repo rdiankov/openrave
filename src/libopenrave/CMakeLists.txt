@@ -49,7 +49,7 @@ if( OPT_CBINDINGS )
     SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
     VERSION ${OPENRAVE_VERSION}
     CLEAN_DIRECT_OUTPUT 1
-    COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL"
+    COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL -DOPENRAVE_C_DLL -DOPENRAVE_C_DLL_EXPORTS"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
   target_link_libraries(libopenrave_c libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
   if( MSVC )

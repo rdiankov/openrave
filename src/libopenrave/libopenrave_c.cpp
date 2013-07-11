@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "openrave_c/openrave_c.h"
 #include "libopenrave.h"
 
 #include <boost/thread/condition.hpp>
@@ -68,7 +69,7 @@ extern "C" {
 
 void ORCSetDebugLevel(int level)
 {
-    RaveSetDebugLevel((DebugLevel)level);
+    RaveSetDebugLevel((OpenRAVE::DebugLevel)level);
 }
 
 void ORCInitialize(bool bLoadAllPlugins, int level)
