@@ -1,0 +1,34 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="OpenRAVE/Body.cs">
+    <Files>
+      <File FileName="OpenRAVE/Support.cs" Line="56" Column="29" />
+      <File FileName="OpenRAVE/Context.cs" Line="25" Column="1" />
+      <File FileName="OpenRAVE/Body.cs" Line="140" Column="1" />
+      <File FileName="OpenRAVE/TriMesh.cs" Line="6" Column="1" />
+      <File FileName="OpenRAVE/Module.cs" Line="1" Column="1" />
+      <File FileName="OpenRAVE/Robot.cs" Line="6" Column="1" />
+      <File FileName="OpenRAVE/Environment.cs" Line="45" Column="58" />
+      <File FileName="rrtplanning/Main.cs" Line="24" Column="15" />
+      <File FileName="customgeometry/Main.cs" Line="44" Column="48" />
+      <File FileName="bodyfunctions/Main.cs" Line="33" Column="77" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State expanded="True" selected="True">
+          <Node name="bodyfunctions" expanded="True" />
+          <Node name="customgeometry" expanded="True" />
+          <Node name="OpenRAVE" expanded="True" />
+          <Node name="rrtplanning" expanded="True" />
+        </State>
+      </Pad>
+      <Pad Id="ClassPad">
+        <State expanded="True" selected="True" />
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
