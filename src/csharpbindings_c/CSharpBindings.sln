@@ -33,6 +33,6 @@ Global
 		{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = rrtplanning\rrtplanning.csproj
+		StartupItem = bodyfunctions\bodyfunctions.csproj
 	EndGlobalSection
 EndGlobal

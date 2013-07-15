@@ -24,6 +24,12 @@ namespace OpenRAVE
 		[DllImport("libopenrave0.9_c")]
 		private static extern void ORCEnvironmentDestroy(IntPtr env);
 
+		[DllImport("libopenrave0.9_c", CharSet = CharSet.Ansi)]
+		private static extern IntPtr ORCCreateKinBody(IntPtr env, string name);
+
+		[DllImport("libopenrave0.9_c", CharSet = CharSet.Ansi)]
+		private static extern IntPtr ORCEnvironmentGetKinBody(IntPtr env, string name);
+		
 		[DllImport("libopenrave0.9_c")]
 		private static extern int ORCEnvironmentGetBodies(IntPtr env, IntPtr[] bodies);
 		
@@ -69,12 +75,12 @@ namespace OpenRAVE
 
 		public Body CreateBody(string name)
 		{
-			return Body.Create(ptr, name);
+			return new Body(ORCCreateKinBody(ptr, name));
 		}
 
 		public Body GetBody(string name)
 		{
-			return Body.Get(ptr, name);
+			return new Body(ORCEnvironmentGetKinBody(ptr, name));
 		}		
 		
 		public int BodyCount

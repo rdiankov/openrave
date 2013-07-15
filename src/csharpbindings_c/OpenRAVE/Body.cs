@@ -80,12 +80,6 @@ namespace OpenRAVE
 	/// </summary>
 	public class Body : InterfaceBase
 	{
-		[DllImport("libopenrave0.9_c", CharSet = CharSet.Ansi)]
-		private static extern IntPtr ORCCreateKinBody(IntPtr env, string name);
-
-		[DllImport("libopenrave0.9_c", CharSet = CharSet.Ansi)]
-		private static extern IntPtr ORCEnvironmentGetKinBody(IntPtr env, string name);
-		
 		[DllImport("libopenrave0.9_c")]
 		private static extern IntPtr ORCBodyGetName(IntPtr body);
 		
@@ -142,16 +136,6 @@ namespace OpenRAVE
 		private static extern bool ORCBodyInitFromTrimesh(IntPtr body, IntPtr trimesh, bool visible);
 				
 		internal Body(IntPtr ptr) : base(ptr) {}
-		
-		internal static Body Create(IntPtr env, string name)
-		{
-			return new Body(ORCCreateKinBody(env, name));
-		}
-		
-		internal static Body Get(IntPtr env, string name)
-		{
-			return new Body(ORCEnvironmentGetKinBody(env, name));
-		}
 		
 		public string Name
 		{
