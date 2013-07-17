@@ -285,6 +285,11 @@ public:
         _param.MultiplyTransform(ExtractTransform(otrans));
     }
 
+    void MultiplyTransformRight(object otrans)
+    {
+        _param.MultiplyTransformRight(ExtractTransform(otrans));
+    }
+
     string __repr__() {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -451,6 +456,7 @@ void init_openravepy_ikparameterization()
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
                                    .def("Transform",&PyIkParameterization::Transform,"Returns a new parameterization with transformed by the transformation T (T * ik)")
                                    .def("MultiplyTransform",&PyIkParameterization::MultiplyTransform,DOXY_FN(IkParameterization,MultiplyTransform))
+                                   .def("MultiplyTransformRight",&PyIkParameterization::MultiplyTransformRight,DOXY_FN(IkParameterization,MultiplyTransformRight))
                                    .def("GetValues",&PyIkParameterization::GetValues, DOXY_FN(IkParameterization,GetValues))
                                    .def("SetValues",&PyIkParameterization::SetValues, args("values","type"), DOXY_FN(IkParameterization,SetValues))
                                    .def("GetCustomDataMap",&PyIkParameterization::GetCustomDataMap, DOXY_FN(IkParameterization,GetCustomDataMap))
