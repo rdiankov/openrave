@@ -182,7 +182,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '64' # also in ikfast.h
+__version__ = '65' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -5527,10 +5527,13 @@ class IKFastSolver(AutoReloader):
                     newcases = set(currentcases)
                     for singlecond in cond:
                         newcases.add(singlecond)
-                    newtree = self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
-                    accumequations.append(NewEquations) # store the equations for debugging purposes
-                    zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
-                    self.degeneratecases.addcases(newcases)
+                    if not self.degeneratecases.hascases(newcases):
+                        newtree = self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
+                        accumequations.append(NewEquations) # store the equations for debugging purposes
+                        zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
+                        self.degeneratecases.addcases(newcases)
+                    else:
+                        log.warn('already has handled cases %r', newcases)                        
             except self.CannotSolveError:
                 continue
             finally:
@@ -6023,7 +6026,7 @@ class IKFastSolver(AutoReloader):
         # check to see that LC is non-zero for at least one solution
         if pfinal.LC().evalf() == S.Zero or all([pfinal.LC().subs(subs).subs(self.globalsymbols).subs(testconsistentvalue).evalf()==S.Zero for testconsistentvalue in self.testconsistentvalues]):
             return None
-
+        
         # sanity check that polynomial can produce a solution and is not actually very small values
         found = False
         LCnormalized, common = self.removecommonexprs(pfinal.LC(),returncommon=True,onlygcd=False,onlynumbers=True)

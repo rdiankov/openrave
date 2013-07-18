@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 64 generated on 2013-07-12 00:31:06.332341
+/// ikfast version 65 generated on 2013-07-18 15:07:44.751998
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==64);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==65);
 
 #include <cmath>
 #include <vector>
