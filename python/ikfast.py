@@ -1704,7 +1704,7 @@ class IKFastSolver(AutoReloader):
             
         if not found:
             raise self.IKFeasibilityError(AllEquations,checkvars)
-                
+        
     def writeIkSolver(self,chaintree,lang=None):
         """write the ast into a specific langauge, prioritize c++
         """
@@ -1715,7 +1715,7 @@ class IKFastSolver(AutoReloader):
                 lang = CodeGenerators.keys()[0]
         log.info('generating %s code...'%lang)
         return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__).generate(chaintree)
-
+    
     def generateIkSolver(self, baselink, eelink, freeindices=None,solvefn=None):
         if solvefn is None:
             solvefn = IKFastSolver.solveFullIK_6D
@@ -5288,7 +5288,7 @@ class IKFastSolver(AutoReloader):
                                                 else:
                                                     sineq = sin(eq).evalf()
                                                     coseq = cos(eq).evalf()
-                                                cond=othervar-eq.evalf()
+                                                cond=Abs(othervar-eq.evalf())
                                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.isHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
@@ -5410,6 +5410,7 @@ class IKFastSolver(AutoReloader):
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             # sometimes can get the following: cj3**2*sj4**2 + cj4**2
             for isolution,(solution,var) in enumerate(usedsolutions[::-1]):
+                localsubstitutioneqs = []
                 for checkzero in solution.checkforzeros:
                     if checkzero.has(*allvars):
                         log.info('ignoring special check for zero 2 since it has symbols %s: %s',str(allvars), str(checkzero))
@@ -5442,7 +5443,7 @@ class IKFastSolver(AutoReloader):
                         eq = checkzero.subs(possiblesub).evalf()
                         # only take the first index
                         possiblevar,possiblevalue = possiblesub[0]
-                        cond = Abs(possiblevar-possiblevalue)
+                        cond = Abs(possiblevar-possiblevalue.evalf())
                         if ishinge[ipossiblesub]:
                             evalcond = Abs(fmod(possiblevar-possiblevalue+pi,2*pi)-pi)
                         else:
@@ -5451,7 +5452,7 @@ class IKFastSolver(AutoReloader):
                             if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
                                 checkexpr = [[cond],evalcond,possiblesub, []]
                                 flatzerosubstitutioneqs.append(checkexpr)
-                                zerosubstitutioneqs[isolution].append(checkexpr)
+                                localsubstitutioneqs.append(checkexpr)
                                 log.info('%s=%s in %s',possiblevar, possiblevalue,checkzero)
                             continue
                         
@@ -5460,7 +5461,7 @@ class IKFastSolver(AutoReloader):
                             eq2 = eq.subs(possiblesub2).evalf()
                             if eq2 == S.Zero:
                                 possiblevar2,possiblevalue2 = possiblesub2[0]
-                                cond2 = Abs(possiblevar2-possiblevalue2)
+                                cond2 = Abs(possiblevar2-possiblevalue2.evalf())
                                 if ishinge[ipossiblesub+ipossiblesub2+1]:
                                     evalcond2 = Abs(fmod(possiblevar2-possiblevalue2+pi,2*pi)-pi) + evalcond
                                 else:
@@ -5469,8 +5470,9 @@ class IKFastSolver(AutoReloader):
                                 if self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),-cond2) and self.isExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond2):
                                     checkexpr = [[cond2],evalcond2,possiblesub+possiblesub2, []]
                                     flatzerosubstitutioneqs.append(checkexpr)
-                                    zerosubstitutioneqs[isolution].append(checkexpr)
+                                    localsubstitutioneqs.append(checkexpr)
                                     log.info('%s=%s,%s=%s in %s', possiblevar,possiblevalue,possiblevar2,possiblevalue2,checkzero)
+                zerosubstitutioneqs.append(localsubstitutioneqs)
         # test the solutions
         # have to take the cross product of all the zerosubstitutioneqs in order to form stronger constraints on the equations because the following condition will be executed only if all SolverCheckZeros evalute to 0
         zerobranches = []
@@ -5481,21 +5483,28 @@ class IKFastSolver(AutoReloader):
                 conditioneqs.append(None)
         for conditioneqs in self.sequence_cross_product(*zerosubstitutioneqs):
             validconditioneqs = [c for c in conditioneqs if c is not None]
-            if len(validconditioneqs) == 0:
-                continue
-            elif len(validconditioneqs) == 1:
-                cond, evalcond, othervarsubs, dictequations = validconditioneqs[0]
-            elif len(validconditioneqs) > 1:
-                # merge the equations
+            if len(validconditioneqs) > 1:
+                # merge the equations, be careful not to merge equations constraining the same variable
                 cond = []
                 evalcond = S.Zero
                 othervarsubs = []
                 dictequations = []
+                duplicatesub = False
                 for subcond, subevalcond, subothervarsubs, subdictequations in validconditioneqs:
                     cond += subcond
                     evalcond += abs(subevalcond)
-                    othervarsubs += subothervarsubs
+                    for subothervarsub in subothervarsubs:
+                        if subothervarsub[0] in [sym for sym,value in othervarsubs]:
+                            # variable is duplicated
+                            duplicatesub = True
+                            break
+                        othervarsubs.append(subothervarsub)
+                    if duplicatesub:
+                        break
                     dictequations += subdictequations
+                if not duplicatesub:
+                    flatzerosubstitutioneqs.append([cond,evalcond,othervarsubs,dictequations])
+        for cond, evalcond, othervarsubs, dictequations in flatzerosubstitutioneqs:
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
                 continue
