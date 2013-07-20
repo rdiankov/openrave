@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRAVE", "OpenRAVE\OpenRAVE.csproj", "{81C23008-E12A-43BF-99DC-6B2B6E5384A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rrtplanning", "rrtplanning\rrtplanning.csproj", "{367512B4-2447-4737-984A-056F6B1408FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "customgeometry", "customgeometry\customgeometry.csproj", "{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bodyfunctions", "bodyfunctions\bodyfunctions.csproj", "{2EF7A2B7-3520-4371-97E3-34445A7D3217}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2EF7A2B7-3520-4371-97E3-34445A7D3217}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EF7A2B7-3520-4371-97E3-34445A7D3217}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EF7A2B7-3520-4371-97E3-34445A7D3217}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EF7A2B7-3520-4371-97E3-34445A7D3217}.Release|Any CPU.Build.0 = Release|Any CPU
+		{367512B4-2447-4737-984A-056F6B1408FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{367512B4-2447-4737-984A-056F6B1408FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{367512B4-2447-4737-984A-056F6B1408FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{367512B4-2447-4737-984A-056F6B1408FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81C23008-E12A-43BF-99DC-6B2B6E5384A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81C23008-E12A-43BF-99DC-6B2B6E5384A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81C23008-E12A-43BF-99DC-6B2B6E5384A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81C23008-E12A-43BF-99DC-6B2B6E5384A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF54ECF6-A0AF-4CCA-BC81-5EF5C88FF54A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = bodyfunctions\bodyfunctions.csproj
+	EndGlobalSection
+EndGlobal
