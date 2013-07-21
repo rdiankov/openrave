@@ -30,10 +30,8 @@ namespace OpenRAVE {
 class OPENRAVE_API ControllerBase : public InterfaceBase
 {
 public:
-    ControllerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Controller, penv) {
-    }
-    virtual ~ControllerBase() {
-    }
+    ControllerBase(EnvironmentBasePtr penv);
+    virtual ~ControllerBase();
 
     /// \brief return the static interface type this class points to (used for safe casting)
     static inline InterfaceType GetInterfaceTypeStatic() {
@@ -116,64 +114,33 @@ private:
 
 /** \brief controller that manage multiple controllers, allows users to easily set multiple controllers for one robot.
 
-    The class also make sure individual controllers do not have colliding DOF. It ignores the
+    The class also make sure individual controllers do not have colliding DOF.
+    - Init() removes all controllers and is <b>[multi-thread safe]</b>
+    - IsDone() returns true only if all controllers return true
+    - GetTime() return the maximum time
  */
-class OPENRAVE_API MultiController : public ControllerBase
+class OPENRAVE_API MultiControllerBase : public ControllerBase
 {
 public:
-    MultiController(EnvironmentBasePtr penv);
-    virtual ~MultiController();
-
-    /// \brief removes all controllers. <b>[multi-thread safe]</b>
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation);
-    virtual const std::vector<int>& GetControlDOFIndices() const;
-    virtual int IsControlTransformation() const;
-    virtual RobotBasePtr GetRobot() const;
+    MultiControllerBase(EnvironmentBasePtr penv);
+    virtual ~MultiControllerBase();
 
     /// \brief initializes and adds a controller, must be called after being initialized. <b>[multi-thread safe]</b>
     ///
     /// \param controller the controller to init
     /// \param dofindices robot dof indices to control
     /// \throw openrave_exception if the controller dofs interfere with current set dofs, will throw an exception
-    virtual bool AttachController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation);
+    virtual bool AttachController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation) = 0;
 
     /// \brief removes a controller from being managed. <b>[multi-thread safe]</b>
-    virtual void RemoveController(ControllerBasePtr controller);
+    virtual void RemoveController(ControllerBasePtr controller) = 0;
 
     /// \brief gets the controller responsible for dof (in the robot). If dof < 0, returns the transform controller. <b>[multi-thread safe]</b>
-    virtual ControllerBasePtr GetController(int dof) const;
-
-    virtual void Reset(int options=0);
-    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans=TransformConstPtr());
-    virtual bool SetPath(TrajectoryBaseConstPtr ptraj);
-    virtual void SimulationStep(dReal fTimeElapsed);
-
-    /// \brief returns true only if all controllers return true
-    virtual bool IsDone();
-
-    /// \brief return the maximum time
-    virtual dReal GetTime() const;
-
-    virtual void GetVelocity(std::vector<dReal>& vel) const;
-
-    /// get torque/current/strain values
-    /// \param torque [out] - returns the current torque/current/strain exerted by each of the dofs from outside forces.
-    /// The feedforward and friction terms should be subtracted out already
-    virtual void GetTorque(std::vector<dReal>& torque) const;
-
-protected:
-    RobotBasePtr _probot;
-    std::vector<int> _dofindices, _dofreverseindices;
-    int _nControlTransformation;
-    std::list<ControllerBasePtr> _listcontrollers;
-    std::vector<ControllerBasePtr> _vcontrollersbydofs;
-    ControllerBasePtr _ptransformcontroller;
-    TrajectoryBasePtr _ptraj;
-    mutable boost::mutex _mutex;
+    virtual ControllerBasePtr GetController(int dof) const = 0;
 };
 
-typedef boost::shared_ptr<MultiController> MultiControllerPtr;
-typedef boost::shared_ptr<MultiController const> MultiControllerConstPtr;
+typedef boost::shared_ptr<MultiControllerBase> MultiControllerBasePtr;
+typedef boost::shared_ptr<MultiControllerBase const> MultiControllerBaseConstPtr;
 
 } // end namespace OpenRAVE
 

@@ -1000,8 +1000,12 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             Vector gv = tdelta.rotate(tlocalvelocity.trans*pvalues[0]);
             velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans) + gv, wparent + gw);
         }
+        else if( pjoint->GetType() == JointSpherical ) {
+            Vector gw = tdelta.rotate(Vector(pvalues[0],pvalues[1],pvalues[2]));
+            velocities.at(childindex) = make_pair(vparent + wparent.cross(xyzdelta) + gw.cross(tchild.trans-tdelta.trans), wparent + gw);
+        }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("joint %s not supported for querying velocities",pjoint->GetType(),ORE_Assert);
+            throw OPENRAVE_EXCEPTION_FORMAT("joint 0x%x not supported for querying velocities",pjoint->GetType(),ORE_Assert);
 //                //todo
 //                Transform tjoint;
 //                for(int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis) {

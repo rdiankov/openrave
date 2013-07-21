@@ -80,14 +80,14 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
   endif()
 endif()
 
-# include OpenCV examples
-find_package(OpenCV)
-if( OpenCV_FOUND )
-  include_directories(${OpenCV_INCLUDE_DIRS})
-  link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${OpenCV_LIB_DIR})
-  build_openrave_executable(opencvsaving)
-  target_link_libraries(opencvsaving ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${OpenCV_LIBS})
-endif()
+# include OpenCV examples, doesn't compile with latest OpenCV?
+#find_package(OpenCV)
+#if( OpenCV_FOUND )
+#  include_directories(${OpenCV_INCLUDE_DIRS})
+#  link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${OpenCV_LIB_DIR})
+#  build_openrave_executable(opencvsaving)
+#  target_link_libraries(opencvsaving ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${OpenCV_LIBS})
+#endif()
 
 # include qt4 examples
 find_package(Qt4 COMPONENTS QtCore QtGui)

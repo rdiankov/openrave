@@ -1044,6 +1044,25 @@ ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::strin
     return RaveGlobal::instance()->GetDatabase()->CreateController(penv, name);
 }
 
+MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& rawname)
+{
+    std::string name;
+    if( rawname == "" ) {
+        name = "genericmulticontroller";
+    }
+    else {
+        name = rawname;
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+    }
+    // TODO remove hack once MultiController is a registered interface
+    ControllerBasePtr pcontroller = RaveGlobal::instance()->GetDatabase()->CreateController(env, name);
+    if( name == "genericmulticontroller" ) {
+        return boost::static_pointer_cast<MultiControllerBase>(pcontroller);
+    }
+    // don't support anything else
+    return MultiControllerBasePtr();
+}
+
 ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
 {
     return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);

@@ -43,7 +43,7 @@ public:
         {
             EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
-            MultiControllerPtr multi(new MultiController(penv));
+            MultiControllerBasePtr multi = RaveCreateMultiController(penv);
             vector<int> dofindices(probot->GetDOF());
             for(int i = 0; i < probot->GetDOF(); ++i) {
                 dofindices[i] = i;

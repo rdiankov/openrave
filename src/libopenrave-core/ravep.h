@@ -103,7 +103,7 @@ class ColladaWriter;
 bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
 
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
-MultiControllerPtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput);
+MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
 CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
