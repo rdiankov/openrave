@@ -116,6 +116,35 @@ public:
     }
 };
 
+class PyMultiController : public PyControllerBase
+{
+private:
+    MultiControllerPtr _pmulticontroller;
+
+public:
+    PyMultiController(MultiControllerPtr pmulticontroller, PyEnvironmentBasePtr pyenv) : PyControllerBase(pmulticontroller, pyenv), _pmulticontroller(pmulticontroller) {
+    }
+    virtual ~PyMultiController() {
+    }
+
+    bool AttachController(PyControllerBasePtr ocontroller, object odofindices, int nControlTransformation) {
+        CHECK_POINTER(ocontroller);
+        vector<int> dofindices = ExtractArray<int>(odofindices);
+        return _pmulticontroller->AttachController(ocontroller->GetController(), dofindices, nControlTransformation);
+    }
+
+    void RemoveController(PyControllerBasePtr ocontroller) {
+        CHECK_POINTER(ocontroller);
+        _pmulticontroller->RemoveController(ocontroller->GetController());
+    }
+
+    object GetController(int dof) {
+        CHECK_POINTER(_pmulticontroller);
+        ControllerBasePtr pcontroller = _pmulticontroller->GetController(dof);
+        return object(openravepy::toPyController(pcontroller, _pyenv));
+    }
+};
+
 ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 {
     return !pycontroller ? ControllerBasePtr() : pycontroller->GetController();
@@ -123,7 +152,14 @@ ControllerBasePtr GetController(PyControllerBasePtr pycontroller)
 
 PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBasePtr pyenv)
 {
-    return !pcontroller ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyControllerBase(pcontroller,pyenv));
+    MultiControllerPtr pmulticontroller = boost::dynamic_pointer_cast<MultiController>(pcontroller);
+    if (pmulticontroller) {
+        return PyInterfaceBasePtr(new PyMultiController(pmulticontroller, pyenv));
+    } else if (pcontroller) {
+        return PyInterfaceBasePtr(new PyControllerBase(pcontroller, pyenv));
+    } else {
+        return PyInterfaceBasePtr();
+    }
 }
 
 PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -159,6 +195,15 @@ void init_openravepy_controller()
         .def("GetTime",&PyControllerBase::GetTime, DOXY_FN(ControllerBase,GetTime))
         .def("GetVelocity",&PyControllerBase::GetVelocity, DOXY_FN(ControllerBase,GetVelocity))
         .def("GetTorque",&PyControllerBase::GetTorque, DOXY_FN(ControllerBase,GetTorque))
+        ;
+    }
+
+    {
+        object (PyMultiController::*getcontroller)(int) = &PyMultiController::GetController;
+        class_<PyMultiController, boost::shared_ptr<PyMultiController>, bases<PyInterfaceBase> >("MultiController", DOXY_CLASS(MultiController), no_init)
+        .def("AttachController",&PyMultiController::AttachController, args("controller","dofindices","controltransform"), DOXY_FN(MultiController,AttachController))
+        .def("RemoveController",&PyMultiController::RemoveController, args("controller"), DOXY_FN(MultiController,RemoveController))
+        .def("GetController",getcontroller, args("dof"), DOXY_FN(MultiController,GetController))
         ;
     }
 
