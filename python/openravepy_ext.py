@@ -126,11 +126,14 @@ class runtime_error(Exception):
             return super(runtime_error,self).__getattribute__(attr)
 
 class planning_error(Exception):
-    def __init__(self,parameter=''):
+    def __init__(self,parameter=u''):
         self.parameter = parameter
+    def __unicode__(self):
+        return u'openrave planning_error: %s'%self.parameter
+    
     def __str__(self):
-        return 'openrave planning_error: '+repr(self.parameter)
-
+        return unicode(self).encode('utf-8')
+    
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
     Return the transformed the quaternions along with the angle around the z-axis eliminated.
