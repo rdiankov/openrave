@@ -3739,6 +3739,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('new monoms is %d>%d'%(len(allmonoms), len(neweqs_full)))
 
         # the equations are ginac objects
+        getsubs = None
         dictequations = []
         preprocesssolutiontree = []
         localsymbolmap = {}
