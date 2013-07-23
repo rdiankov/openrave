@@ -129,13 +129,19 @@ class planning_error(Exception):
     def __init__(self,parameter=u''):
         self.parameter = unicode(parameter)
     def __unicode__(self):
-        return u'openrave planning_error: %s'%self.parameter
+        return u'Planning Error: %s'%self.parameter
     
     def __str__(self):
         return unicode(self).encode('utf-8')
     
     def __repr__(self):
-        return '<planning_error(unicode("%s","utf-8"))>'%self.parameter.encode('utf-8')
+        return '<planning_error(%r)>'%self.parameter
+    
+    def __eq__(self, r):
+        return self.parameter == r.parameter
+    
+    def __ne__(self, r):
+        return self.parameter != r.parameter
 
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
