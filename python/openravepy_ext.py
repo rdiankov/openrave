@@ -125,23 +125,38 @@ class runtime_error(Exception):
         except AttributeError:
             return super(runtime_error,self).__getattribute__(attr)
 
-class planning_error(Exception):
-    def __init__(self,parameter=u''):
+class PlanningError(Exception):
+    def __init__(self,parameter=u'', recoverySuggestions=None):
+        """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
+        """
         self.parameter = unicode(parameter)
+        if recoverySuggestions is None:
+            self.recoverySuggestions = []
+        else:
+            self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
     def __unicode__(self):
-        return u'Planning Error: %s'%self.parameter
-    
+        s = u'<h3>Planning Error</h3>\n<p>Problem: %s</p>'%self.parameter
+        if len(self.recoverySuggestions) > 0:
+            s += u'\n<p>Recovery Suggestions:</p>\n<ul>'
+            for suggestion in self.recoverySuggestions:
+                s += u'<li>%s</li>\n'%unicode(suggestion)
+            s += u'</ul>\n'
+        return s
+        
     def __str__(self):
         return unicode(self).encode('utf-8')
     
     def __repr__(self):
-        return '<planning_error(%r)>'%self.parameter
+        return '<openravepy.PlanningError(%r,%r)>'%(self.parameter,self.recoverySuggestions)
     
     def __eq__(self, r):
-        return self.parameter == r.parameter
+        return self.parameter == r.parameter and self.recoverySuggestions == r.recoverySuggestions
     
     def __ne__(self, r):
-        return self.parameter != r.parameter
+        return self.parameter != r.parameter or self.recoverySuggestions != r.recoverySuggestions
+
+# deprecated
+planning_error = PlanningError
 
 def normalizeZRotation(qarray):
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
