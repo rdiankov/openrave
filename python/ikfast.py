@@ -6441,36 +6441,36 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('not enough equations')
         
         # try to solve one variable in terms of the others
+        solvevariables = []
         for polyeq in polyeqs:
-            solveSymbol = None
-            solvesubs = None
             if polyeq.degree(0) == 1 and polyeq.degree(1) == 0:
                 chingeSolutions = solve(polyeq,chingeSymbol)
-                solvesubs = [(chingeSymbol,chingeSolutions[0])]
-                solveSymbol = prismaticSymbol
+                solvevariables.append((prismaticSymbol,[(chingeSymbol,chingeSolutions[0])]))
             elif polyeq.degree(0) == 0 and polyeq.degree(1) == 1:
                 shingeSolutions = solve(polyeq,shingeSymbol)
-                solvesubs = [(shingeSymbol,shingeSolutions[0])]
-                solveSymbol = prismaticSymbol
+                solvevariables.append((prismaticSymbol,[(shingeSymbol,shingeSolutions[0])]))
             elif polyeq.degree(2) == 1:
                 prismaticSolutions = solve(polyeq,prismaticSymbol)
-                solvesubs = [(prismaticSymbol,prismaticSolutions[0])]
-                solveSymbol = hingeSymbol
-            if solveSymbol is not None:
-                # have a solution for one variable, so substitute it in and see if the equations become solvable with one variable
-                reducedeqs = []
-                for polyeq2 in polyeqs:
-                    eqnew = simplify(polyeq2.as_expr().subs(solvesubs))
-                    if eqnew != S.Zero:
-                        reducedeqs.append(eqnew)
-                self.sortComplexity(reducedeqs)
-                try:
-                    rawsolutions = self.solveSingleVariable(reducedeqs,solveSymbol,othersolvedvars, unknownvars=unknownvars)
-                    if len(rawsolutions) > 0:
-                        return rawsolutions
-                    
-                except self.CannotSolveError:
-                    pass
+                solvevariables.append((hingeSymbol,[(prismaticSymbol,prismaticSolutions[0])]))
+        
+        # prioritize solving the hingeSymbol out
+        for solveSymbol in [hingeSymbol,prismaticSymbol]:
+            for solveSymbol2, solvesubs in solvevariables:
+                if solveSymbol == solveSymbol2:
+                    # have a solution for one variable, so substitute it in and see if the equations become solvable with one variable
+                    reducedeqs = []
+                    for polyeq2 in polyeqs:
+                        eqnew = simplify(polyeq2.as_expr().subs(solvesubs))
+                        if eqnew != S.Zero:
+                            reducedeqs.append(eqnew)
+                    self.sortComplexity(reducedeqs)
+                    try:
+                        rawsolutions = self.solveSingleVariable(reducedeqs,solveSymbol,othersolvedvars, unknownvars=unknownvars)
+                        if len(rawsolutions) > 0:
+                            return rawsolutions
+
+                    except self.CannotSolveError:
+                        pass
                 
         raise self.CannotSolveError(u'SolvePrismaticHingePairVariables: failed to find variable with degree 1')
         
