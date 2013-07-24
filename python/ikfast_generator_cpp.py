@@ -168,7 +168,7 @@ class CodeGenerator(AutoReloader):
     """
     def __init__(self,kinematicshash='',version='0'):
         self.symbolgen = cse_main.numbered_symbols('x')
-        self.strprinter = printing.StrPrinter()
+        self.strprinter = printing.StrPrinter({'full_prec':False})
         self.freevars = None # list of free variables in the solution
         self.freevardependencies = None # list of variables depending on the free variables
         self.functions = dict()
@@ -1838,7 +1838,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 code3,sepcodelist = self._WriteExprCode(expr.args[0], code2)
                 code2.write(',')
                 code4,sepcodelist2 = self._WriteExprCode(expr.args[1], code2)
-                code2.write(',IKFAST_ATAN2_MAGTHRESH);\nif( !%s.valid ) {\n    continue;\n}\n'%iktansymbol)
+                code2.write(',IKFAST_ATAN2_MAGTHRESH);\nif(!%s.valid){\ncontinue;\n}\n'%iktansymbol)
                 sepcodelist += sepcodelist2
                 sepcodelist.append(code2.getvalue())
                 
@@ -1872,19 +1872,20 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         elif expr.is_number:
             expreval = expr.evalf()
             assert(expreval.is_real)
-            code.write('IkReal(')
             code.write(self.strprinter.doprint(expreval))
-            code.write(')')
             return code, []
         
         elif expr.is_Mul:
             sepcodelist = []
             code.write('(')
             for arg in expr.args:
-                code.write('(')
-                code2,sepcodelist2 = self._WriteExprCode(arg, code)
-                code.write(')')
-                sepcodelist += sepcodelist2
+                if arg.is_Symbol:
+                    code.write(str(arg))
+                else:
+                    code.write('(')
+                    code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                    code.write(')')
+                    sepcodelist += sepcodelist2
                 if not arg == expr.args[-1]:
                     code.write('*')
             code.write(')')
@@ -1892,21 +1893,43 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         
         elif expr.is_Pow:
             if expr.exp.is_number:
-                if expr.exp.is_integer:
+                if expr.exp.is_integer and expr.exp > 0:
+                    if expr.base.is_Symbol:
+                        # simple, can use the symbol as is
+                        exprbasestr = str(expr.base)
+                        code.write(exprbasestr)
+                        for i in range(1,int(expr.exp)):
+                            code.write('*')
+                            code.write(exprbasestr)
+                        return code, []
+                    else:
+                        # need to create a new symbol
+                        ikpowsymbol = self.symbolgen.next()
+                        code2 = cStringIO.StringIO()
+                        code2.write('IkReal ')
+                        code2.write(str(ikpowsymbol))
+                        code2.write('=')
+                        code3,sepcodelist = self._WriteExprCode(expr.base, code2)
+                        code2.write(';\n')
+                        sepcodelist.append(code2.getvalue())
+                        code.write(str(ikpowsymbol))
+                        for i in range(1,int(expr.exp)):
+                            code.write('*')
+                            code.write(str(ikpowsymbol))
+                        return code,sepcodelist
+                elif expr.exp.is_integer:
                     # use IKPowWithIntegerCheck in order to make it robust
                     ikpowsymbol = self.symbolgen.next()
-                    
                     code2 = cStringIO.StringIO()
-                    code2.write('CheckValue<IkReal> %s = IKPowWithIntegerCheck('%ikpowsymbol)
+                    code2.write('CheckValue<IkReal> %s=IKPowWithIntegerCheck('%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
                     code2.write(',')
-                    code2.write(self.strprinter.doprint(expr.exp.evalf()))
-                    code2.write(');\nif( !%s.valid ) {\n    continue;\n}\n'%ikpowsymbol)
+                    code2.write(str(int(expr.exp)))
+                    code2.write(');\nif(!%s.valid){\ncontinue;\n}\n'%ikpowsymbol)
                     sepcodelist.append(code2.getvalue())
-                    
                     code.write('%s.value'%ikpowsymbol)
                     return code,sepcodelist
-                
+                    
                 elif expr.exp-0.5 == S.Zero:
                     code.write('IKsqrt(')
                     pos0 = code.tell()
@@ -1915,7 +1938,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     code.seek(pos0)
                     exprbase = code.read(pos1-pos0)
                     code.seek(pos1)
-                    sepcodelist.append('if( (%s) < (IkReal)-0.00001 )\n    continue;\n'%exprbase)
+                    sepcodelist.append('if((%s) < -0.00001)\ncontinue;\n'%exprbase)
                     code.write(')')
                     return code, sepcodelist
                 
@@ -1923,13 +1946,11 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     # use IKPowWithIntegerCheck in order to make it robust
                     # check if exprbase is 0
                     ikpowsymbol = self.symbolgen.next()
-                    
                     code2 = cStringIO.StringIO()
                     code2.write('IkReal %s = ')
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
-                    code2.write(';\nif( IKabs(%s) == 0 ) {\n    continue;\n}\n'%ikpowsymbol)
-                    sepcodelist.append(code2.getvalue())
-                    
+                    code2.write(';\nif(IKabs(%s)==0){\ncontinue;\n}\n'%ikpowsymbol)
+                    sepcodelist.append(code2.getvalue())                    
                     code.write('pow(%s,%s)'%(ikpowsymbol, self.strprinter.doprint(expr.exp.evalf())))
                     return code,sepcodelist
                 
@@ -1946,10 +1967,13 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             code.write('(')
             sepcodelist = []
             for arg in expr.args:
-                code.write('(')
-                code2,sepcodelist2 = self._WriteExprCode(arg, code)
-                code.write(')')
-                sepcodelist += sepcodelist2
+                if arg.is_Symbol:
+                    code.write(str(arg))
+                else:
+                    code.write('(')
+                    code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                    code.write(')')
+                    sepcodelist += sepcodelist2
                 if not arg == expr.args[-1]:
                     code.write('+')
             code.write(')')

@@ -854,6 +854,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 log.warn(e)
 
         if self.ikfeasibility is None:
+            log.info('compiling ik file to %s',output_filename)
             if outputlang == 'cpp':
                 # compile the code and create the shared object
                 compiler,compile_flags = self.getcompiler()
