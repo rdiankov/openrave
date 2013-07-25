@@ -182,7 +182,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '66' # also in ikfast.h
+__version__ = '67' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -1840,6 +1840,8 @@ class IKFastSolver(AutoReloader):
         return retnum
 
     def ComputeConsistentValues(self,jointvars,T,numsolutions=1,subs=None):
+        """computes a set of substitutions that satisfy the IK equations 
+        """
         possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
         possibleanglescos = [S.One, S.Zero, Rational(4,5), Rational(3,5), Rational(12,13), Rational(5,13)]
         possibleanglessin = [S.Zero, S.One, Rational(3,5), Rational(4,5), Rational(5,13), Rational(12,13)]
@@ -4854,6 +4856,7 @@ class IKFastSolver(AutoReloader):
         - lengths of rows and colums are 1
         - dot products of combinations of rows/columns are 0
         - cross products of combinations of rows/columns yield the left over row/column
+        :param othervars: optional list of the unknown variables inside the equations. Help simplify depending on the terms of these variables
         """
         if othervars is not None:
             peq = Poly(eq,*othervars)
@@ -5019,6 +5022,61 @@ class IKFastSolver(AutoReloader):
             return [AST.SolverCheckZeros(None,extrazerochecks,tree,[AST.SolverBreak()],anycondition=False)]
         return tree
 
+    def PropagateSolvedConstants(self, AllEquations, othersolvedvars, unknownvars, constantSymbols=None):
+        """
+        Sometimes equations can be like "npz", or "pp-1", which means npz=0 and pp=1. Check for these constraints and apply them to the rest of the equations
+        Return a new set of equations
+        :param constantSymbols: the variables to try to propagage, if None will use self.pvars
+        """
+        if constantSymbols is not None:
+            constantSymbols = list(constantSymbols)
+        else:
+            constantSymbols = list(self.pvars)
+        for othersolvedvar in othersolvedvars:
+            constantSymbols.append(othersolvedvar)
+            if self.IsHinge(othersolvedvar.name):
+                constantSymbols.append(cos(othersolvedvar))
+                constantSymbols.append(sin(othersolvedvar))
+        newsubsdict = {}
+        for eq in AllEquations:
+            if not eq.has(*unknownvars) and eq.has(*constantSymbols):        
+                reducedeq = self.simplifyTransform(eq)
+                for constantSymbol in constantSymbols:
+                    if eq.has(constantSymbol):
+                        try:
+                            peq = Poly(eq,constantSymbol)
+                            if peq.degree(0) == 1:
+                                # equation is only degree 1 in the variable, and doesn't have any solvevars multiplied with it
+                                newsolution = solve(peq,constantSymbol)[0]
+                                if constantSymbol in newsubsdict:
+                                    if self.codeComplexity(newsolution) < self.codeComplexity(newsubsdict[constantSymbol]):
+                                        newsubsdict[constantSymbol] = newsolution
+                                else:
+                                    newsubsdict[constantSymbol] = newsolution
+                        except PolynomialError:
+                            pass
+                        
+        # first substitute everything that doesn't have othersolvedvar or unknownvars
+        numberSubstitutions = []
+        otherSubstitutions = []
+        for var, value in newsubsdict.iteritems():
+            if not value.has(*constantSymbols):
+                numberSubstitutions.append((var,value))
+            else:
+                otherSubstitutions.append((var,value))
+        NewEquations = []
+        for eq in AllEquations:
+            if eq.has(*unknownvars):
+                neweq = eq.subs(numberSubstitutions).expand()
+                if neweq != S.Zero:
+                    neweq2 = neweq.subs(otherSubstitutions).expand()
+                    if self.codeComplexity(neweq2) < self.codeComplexity(neweq):
+                        if neweq2 != S.Zero:
+                            NewEquations.append(neweq2)
+                    else:
+                        NewEquations.append(neweq)
+        return NewEquations
+    
     def solveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None):
         if len(curvars) == 0:
             return endbranchtree
@@ -5027,6 +5085,7 @@ class IKFastSolver(AutoReloader):
             unknownvars = []
             
         log.info('%s %s',othersolvedvars,curvars)
+        
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         solinvsubs = [(f[1],f[0]) for f in solsubs]
@@ -5573,6 +5632,7 @@ class IKFastSolver(AutoReloader):
                 continue
             othervarsubs = [(s,self.ConvertRealToRationalEquation(v)) for s,v in othervarsubs]
             NewEquations = [eq.subs(othervarsubs) for eq in AllEquations]
+            NewEquationsClean = self.PropagateSolvedConstants(NewEquations, othersolvedvars, curvars)
             try:
                 self.globalsymbols += dictequations
                 # forcing a value, so have to check if all equations in NewEquations that do not contain
@@ -5591,8 +5651,17 @@ class IKFastSolver(AutoReloader):
                     for singlecond in cond:
                         newcases.add(singlecond)
                     if not self.degeneratecases.hascases(newcases):
-                        newtree = self.solveAllEquations(NewEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
-                        accumequations.append(NewEquations) # store the equations for debugging purposes
+                        if len(NewEquationsClean) > 0:
+                            newtree = self.solveAllEquations(NewEquationsClean,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
+                            accumequations.append(NewEquationsClean) # store the equations for debugging purposes
+                        else:
+                            log.info('there are no new equations, so most likely the following variables can be freely determined: %r', curvars)
+                            # unfortunately cannot add as a FreeVariable since all the left over variables will have complex dependencies
+                            # therefore, iterate a couple of jointevals
+                            newtree = []
+                            for curvar in curvars:
+                                newtree.append(AST.SolverSolution(curvar.name, jointeval=[S.Zero,pi/2,pi,-pi/2], isHinge=self.IsHinge(curvar.name)))
+                            newtree += endbranchtree
                         zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
                         self.degeneratecases.addcases(newcases)
                     else:
@@ -5725,7 +5794,7 @@ class IKFastSolver(AutoReloader):
                             for j,c in eq.terms():
                                 totalcomplexity += self.codeComplexity(c.expand())
                                 Mall[i,j[0]] = c
-                        if degree >= 4 and totalcomplexity > 8000:
+                        if degree >= 4 and totalcomplexity > 5000:
                             # the determinant will never finish otherwise
                             continue
                         # det_bareis freezes when there are huge fractions

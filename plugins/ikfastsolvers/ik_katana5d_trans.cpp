@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 66 generated on 2013-07-25 00:06:03.425810
+/// ikfast version 67 generated on 2013-07-25 16:09:10.125086
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==66);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==67);
 
 #include <cmath>
 #include <vector>
@@ -338,7 +338,7 @@ IKFAST_API int GetIkType() { return 0x33000003; }
 
 class IKSolver {
 public:
-IkReal j0,cj0,sj0,htj0,j1,cj1,sj1,htj1,j2,cj2,sj2,htj2,j3,cj3,sj3,htj3,j4,cj4,sj4,htj4,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
+IkReal j0,cj0,sj0,htj0,j0mul,j1,cj1,sj1,htj1,j1mul,j2,cj2,sj2,htj2,j2mul,j3,cj3,sj3,htj3,j4,cj4,sj4,htj4,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 unsigned char _ij0[2], _nj0,_ij1[2], _nj1,_ij2[2], _nj2,_ij3[2], _nj3,_ij4[2], _nj4;
 
 bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {

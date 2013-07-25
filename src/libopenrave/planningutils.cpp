@@ -1105,35 +1105,38 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
     ConfigurationSpecification spec = robot->GetActiveConfigurationSpecification();
-    vector<dReal> jitteredvalues;
-
+    std::vector<dReal> jitteredvalues;
     if( waypointindex == 0 ) {
         traj->GetWaypoint(waypointindex,jitteredvalues, spec);
+        robot->SubtractActiveDOFValues(jitteredvalues, dofvalues);
         dReal diff = 0;
         for(size_t i = 0; i < dofvalues.size(); ++i) {
-            dReal d = (dofvalues[i]-jitteredvalues[i]);
-            diff += d*d;
+            diff += jitteredvalues[i]*jitteredvalues[i];
         }
-        diff = sqrt(diff);
-        RAVELOG_DEBUG_FORMAT("Jitter distance (init) = %f", diff);
+        if( diff <= g_fEpsilon ) {
+            // not that much has changed
+            return;
+        }
+        RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (init) = %f", diff);
         traj->Remove(waypointindex,waypointindex+1);
     }
     else if( waypointindex == (int)traj->GetNumWaypoints() ) {
         traj->GetWaypoint(waypointindex-1,jitteredvalues, spec);
+        robot->SubtractActiveDOFValues(jitteredvalues, dofvalues);
         dReal diff = 0;
         for(size_t i = 0; i < dofvalues.size(); ++i) {
-            dReal d = (dofvalues[i]-jitteredvalues[i]);
-            diff += d*d;
+            diff += jitteredvalues[i]*jitteredvalues[i];
         }
-        diff = sqrt(diff);
-        RAVELOG_DEBUG_FORMAT("Jitter distance (goal) = %f", diff);
+        if( diff <= g_fEpsilon ) {
+            // not that much has changed
+            return;
+        }
+        RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (goal) = %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
-        waypointindex--;
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
-    // Run Insertwaypoint
     InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 

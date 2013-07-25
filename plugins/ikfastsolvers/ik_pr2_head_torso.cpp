@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 66 generated on 2013-07-24 23:56:16.354431
+/// ikfast version 67 generated on 2013-07-25 16:00:15.077619
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==66);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==67);
 
 #include <cmath>
 #include <vector>
@@ -328,7 +328,7 @@ IKFAST_API int GetIkType() { return 0x23000006; }
 
 class IKSolver {
 public:
-IkReal j13,cj13,sj13,htj13,j14,cj14,sj14,htj14,j12,cj12,sj12,htj12,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
+IkReal j13,cj13,sj13,htj13,j13mul,j14,cj14,sj14,htj14,j14mul,j12,cj12,sj12,htj12,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 unsigned char _ij13[2], _nj13,_ij14[2], _nj14,_ij12[2], _nj12;
 
 bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {

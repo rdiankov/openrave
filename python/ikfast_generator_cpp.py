@@ -574,6 +574,8 @@ int main(int argc, char** argv)
         usedvars = []
         for var in node.solvejointvars:
             usedvars += [var[0].name,'c'+var[0].name,'s'+var[0].name,'ht'+var[0].name]
+            # if the variable becomes free need the multiplier
+            usedvars.append('%smul'%var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
             usedvars += [name,'c'+name,'s'+name,'ht'+name]
@@ -1102,7 +1104,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                             if m is not None:
                                 self.freevardependencies.append((freevar,name))
                                 assert(len(node.jointeval)==1)
-                                code.write('IkReal ')
                                 self.WriteEquations2(lambda i: '%smul'%name, m[a], code=code)
                                 self.WriteEquations2(lambda i: name, m[b],code=code)
                                 node.HasFreeVar = True
