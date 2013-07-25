@@ -576,7 +576,6 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
     return true;
 }
 
-
 bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
 
@@ -604,7 +603,7 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
             }
             T += dt;
         }
-        if(T>ramp.endTime) {
+        if(T>=ramp.endTime-g_fEpsilonLinear) {
             return check.Check(ramp,options);
         }
         ramp.Evaluate(T,qm);
@@ -632,7 +631,7 @@ bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const Parabolic
             }
             T -= dt;
         }
-        if(T<0) {
+        if(T<=g_fEpsilonLinear) {
             return check.Check(ramp,options);
         }
         ramp.Evaluate(T,qm);
