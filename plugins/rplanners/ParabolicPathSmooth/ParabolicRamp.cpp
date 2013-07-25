@@ -1527,6 +1527,9 @@ Real PLPRamp::CalcMinTimeVariableV(Real endTime,Real a,Real vmax) const
 // Set a ramp with desired position, velocity and time duration (added on 2013/04/24)
 void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t)
 {
+    if( t <= 0 ) {
+        PARABOLICWARN("invalid time %f", t);
+    }
     PARABOLIC_RAMP_ASSERT(t > 0);
     x0 = _x0;
     dx0 = _dx0;
