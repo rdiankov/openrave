@@ -355,7 +355,6 @@ public:
                         }
                         dReal ferror = RaveFabs(dotproduct * dotproduct - x0length2*x1length2);
                         if( ferror < 100*ParabolicRamp::EpsilonX*ParabolicRamp::EpsilonX ) {
-                            RAVELOG_DEBUG_FORMAT("error: %.15f", ferror);
                             path.back() = q;
                             continue;
                         }
