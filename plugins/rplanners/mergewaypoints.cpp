@@ -867,9 +867,6 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
             if(!(DetermineMinswitchtime(tmpramps)>=params->minswitchtime && CountUnitaryRamps(tmpramps)<=2 && CheckRamps(tmpramps,check,options))) {
                 if(coef <= small) {
                     RAVELOG_WARN("Quasi-static traj failed (check), stops ComputeLinearRamps right away\n");
-                    // cout << DetermineMinswitchtime(tmpramps) << " ";
-                    // cout << CountUnitaryRamps(tmpramps) << " ";
-                    // cout << CheckRamps(tmpramps,check,options) << "\n";
                     // RaveSetDebugLevel(Level_Verbose);
                     // CheckRamps(tmpramps,check,options);
                     // RaveSetDebugLevel(Level_Debug);

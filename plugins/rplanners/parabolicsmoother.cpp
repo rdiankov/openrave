@@ -112,7 +112,7 @@ public:
                     x0length2 += dx0*dx0;
                     x1length2 += dx1*dx1;
                 }
-                if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 1e-8 ) {
+                if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 100*ParabolicRamp::EpsilonX*ParabolicRamp::EpsilonX ) {
                     path.back() = q;
                     continue;
                 }

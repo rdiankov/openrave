@@ -128,6 +128,10 @@ public:
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
+        // always a step length!
+        if( _parameters->_fStepLength <= g_fEpsilonLinear ) {
+            _parameters->_fStepLength = 0.001;
+        }
 
         // // workspace constraints on links
         // _constraintreturn.reset(new ConstraintFilterReturn());
@@ -194,11 +198,6 @@ public:
                         _listCheckManips.back().plink = endeffector;
                         std::list<Vector> checkpoints;
                         AABBtoCheckPoints(enclosingaabb,endeffector->GetTransform(),checkpoints);
-                        // cout << "[";
-                        // FOREACH(itcp, checkpoints) {
-                        //     cout << "["<< itcp->x << "," << itcp->y << "," << itcp->z << "],\n";
-                        // }
-                        // cout <<"]\n";
                         _listCheckManips.back().checkpoints = checkpoints;
                         setCheckedManips.insert(endeffector);
                     }
@@ -354,7 +353,9 @@ public:
                             x0length2 += dx0*dx0;
                             x1length2 += dx1*dx1;
                         }
-                        if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) < 1e-8 ) {
+                        dReal ferror = RaveFabs(dotproduct * dotproduct - x0length2*x1length2);
+                        if( ferror < 100*ParabolicRamp::EpsilonX*ParabolicRamp::EpsilonX ) {
+                            RAVELOG_DEBUG_FORMAT("error: %.15f", ferror);
                             path.back() = q;
                             continue;
                         }
@@ -393,15 +394,17 @@ public:
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 RAVELOG_VERBOSE("Sanity check before starting shortcutting...\n");
                 int options = 0xffff;
+                int iramp = 0;
                 FOREACHC(itramp,ramps){
                     if(!checker.Check(*itramp,options)) {
                         string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                        RAVELOG_WARN(str(boost::format("Original traj invalid, writing to %s")%filename));
+                        RAVELOG_WARN(str(boost::format("Ramp %d/%d of original traj invalid, writing to %s")%iramp%ramps.size()%filename));
                         ofstream f(filename.c_str());
                         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                         ptraj->serialize(f);
                         throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
                     }
+                    ++iramp;
                 }
             }
 
@@ -606,7 +609,7 @@ public:
                     ofstream f(filename.c_str());
                     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                     _inittraj->serialize(f);
-                    throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d failed to pass constraints", i%(i+1), ORE_Assert);
+                    throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d (of %d) failed to pass constraints", i%(i+1)%x.size(), ORE_Assert);
                 }
                 dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
                 if( tmpduration > 0 ) {
