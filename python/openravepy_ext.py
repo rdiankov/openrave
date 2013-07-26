@@ -135,7 +135,7 @@ class PlanningError(Exception):
         else:
             self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
     def __unicode__(self):
-        s = u'<h3>Planning Error</h3>\n<p>Problem: %s</p>'%self.parameter
+        s = u'<h3>Planning Error</h3>\n<p>%s</p>'%self.parameter
         if len(self.recoverySuggestions) > 0:
             s += u'\n<p>Recovery Suggestions:</p>\n<ul>'
             for suggestion in self.recoverySuggestions:
