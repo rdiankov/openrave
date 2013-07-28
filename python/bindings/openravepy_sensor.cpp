@@ -282,45 +282,11 @@ public:
         return _psensor->Configure(command,blocking);
     }
 
-    boost::shared_ptr<PySensorData> GetSensorData()
+    bool SimulationStep(dReal timeelapsed)
     {
-        return GetSensorData(SensorBase::ST_Invalid);
+        return _psensor->SimulationStep(timeelapsed);
     }
-    boost::shared_ptr<PySensorData> GetSensorData(SensorBase::SensorType type)
-    {
-        SensorBase::SensorDataPtr psensordata;
-        if( _mapsensordata.find(type) == _mapsensordata.end() ) {
-            psensordata = _psensor->CreateSensorData(type);
-            _mapsensordata[type] = psensordata;
-        }
-        else {
-            psensordata = _mapsensordata[type];
-        }
-        if( !_psensor->GetSensorData(psensordata) ) {
-            throw openrave_exception("SensorData failed");
-        }
-        switch(psensordata->GetType()) {
-        case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));
-        case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata)));
-        case SensorBase::ST_JointEncoder:
-            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(psensordata)));
-        case SensorBase::ST_Force6D:
-            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(psensordata)));
-        case SensorBase::ST_IMU:
-            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata)));
-        case SensorBase::ST_Odometry:
-            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
-        case SensorBase::ST_Tactile:
-            return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata)));
-        case SensorBase::ST_Actuator:
-            return boost::shared_ptr<PySensorData>(new PyActuatorSensorData(boost::static_pointer_cast<SensorBase::ActuatorGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::ActuatorSensorData>(psensordata)));
-        case SensorBase::ST_Invalid:
-            break;
-        }
-        throw openrave_exception(boost::str(boost::format("unknown sensor data type %d\n")%psensordata->GetType()));
-    }
+
     boost::shared_ptr<PySensorData> GetSensorGeometry(SensorBase::SensorType type)
     {
         switch(type) {
@@ -346,6 +312,59 @@ public:
         throw openrave_exception(boost::str(boost::format("unknown sensor data type %d\n")%type));
     }
 
+    boost::shared_ptr<PySensorData> CreateSensorData(SensorBase::SensorType type)
+    {
+        return ConvertToPySensorData(_psensor->CreateSensorData(type));
+    }
+
+    boost::shared_ptr<PySensorData> GetSensorData()
+    {
+        return GetSensorData(SensorBase::ST_Invalid);
+    }
+    boost::shared_ptr<PySensorData> GetSensorData(SensorBase::SensorType type)
+    {
+        SensorBase::SensorDataPtr psensordata;
+        if( _mapsensordata.find(type) == _mapsensordata.end() ) {
+            psensordata = _psensor->CreateSensorData(type);
+            _mapsensordata[type] = psensordata;
+        }
+        else {
+            psensordata = _mapsensordata[type];
+        }
+        if( !_psensor->GetSensorData(psensordata) ) {
+            throw openrave_exception("SensorData failed");
+        }
+        return ConvertToPySensorData(psensordata);
+    }
+
+    boost::shared_ptr<PySensorData> ConvertToPySensorData(SensorBase::SensorDataPtr psensordata)
+    {
+        if( !psensordata ) {
+            return boost::shared_ptr<PySensorData>();
+        }
+        switch(psensordata->GetType()) {
+        case SensorBase::ST_Laser:
+            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));
+        case SensorBase::ST_Camera:
+            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata)));
+        case SensorBase::ST_JointEncoder:
+            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(psensordata)));
+        case SensorBase::ST_Force6D:
+            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(psensordata)));
+        case SensorBase::ST_IMU:
+            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata)));
+        case SensorBase::ST_Odometry:
+            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
+        case SensorBase::ST_Tactile:
+            return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata)));
+        case SensorBase::ST_Actuator:
+            return boost::shared_ptr<PySensorData>(new PyActuatorSensorData(boost::static_pointer_cast<SensorBase::ActuatorGeomData>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::ActuatorSensorData>(psensordata)));
+        case SensorBase::ST_Invalid:
+            break;
+        }
+        throw openrave_exception(boost::str(boost::format("unknown sensor data type %d\n")%psensordata->GetType()));
+    }
+
     bool Supports(SensorBase::SensorType type) {
         return _psensor->Supports(type);
     }
@@ -359,6 +378,11 @@ public:
 
     object GetName() {
         return ConvertStringToUnicode(_psensor->GetName());
+    }
+
+    void SetName(const std::string& name)
+    {
+        return _psensor->SetName(name);
     }
 
     virtual string __repr__() {
@@ -408,12 +432,15 @@ void init_openravepy_sensor()
         boost::shared_ptr<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
         scope sensor = class_<PySensorBase, boost::shared_ptr<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
                        .def("Configure",&PySensorBase::Configure, Configure_overloads(args("command","blocking"), DOXY_FN(SensorBase,Configure)))
+                       .def("SimulationStep",&PySensorBase::SimulationStep, args("timeelapsed"), DOXY_FN(SensorBase,SimulationStep))
                        .def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData))
                        .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
+                       .def("CreateSensorData",&PySensorBase::CreateSensorData, DOXY_FN(SensorBase,CreateSensorData))
                        .def("GetSensorGeometry",&PySensorBase::GetSensorGeometry,DOXY_FN(SensorBase,GetSensorGeometry))
                        .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
                        .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
                        .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
+                       .def("SetName",&PySensorBase::SetName, DOXY_FN(SensorBase,SetName))
                        .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
                        .def("__str__",&PySensorBase::__str__)
                        .def("__unicode__",&PySensorBase::__unicode__)
