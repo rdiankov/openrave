@@ -2686,6 +2686,9 @@ class IKFastSolver(AutoReloader):
             self.Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
         else:
             self.Tfinal[0,0] = atan2(binormaldir.dot(Tallmult[0:3,0:3]*basedir), globaldir.dot(Tallmult[0:3,0:3]*basedir))
+        if self.Tfinal[0,0] == nan:
+            raise self.CannotSolveError('cannot solve 4D axis angle IK. Most likely manipulator direction is aligned with the rotation axis')
+        
         self.Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         
