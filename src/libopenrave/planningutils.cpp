@@ -244,7 +244,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
         return -1;
     }
 
-    FOREACH(itsampler, parameters->_listInternalSamplers) {
+    FOREACHC(itsampler, parameters->_listInternalSamplers) {
         (*itsampler)->SetSeed(parameters->_nRandomGeneratorSeed);
     }
     // reset the samplers with the seed, possibly there's some way to cache?

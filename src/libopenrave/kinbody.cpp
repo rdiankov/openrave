@@ -2831,7 +2831,7 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
     }
 }
 
-void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
+void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities, const std::vector<dReal>& vDOFAccelerations, const std::vector< std::pair<Vector, Vector> >& vLinkVelocities, std::vector<std::pair<Vector,Vector> >& vLinkAccelerations, AccelerationMapConstPtr pexternalaccelerations) const
 {
     vLinkAccelerations.resize(_veclinks.size());
     if( _veclinks.size() == 0 ) {
@@ -2847,8 +2847,8 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
         vLinkAccelerations.at(ilink).second = Vector();
     }
 
-    if( !!externalaccelerations ) {
-        FOREACH(itaccel, *externalaccelerations) {
+    if( !!pexternalaccelerations ) {
+        FOREACHC(itaccel, *pexternalaccelerations) {
             vLinkAccelerations.at(itaccel->first).first += itaccel->second.first;
             vLinkAccelerations.at(itaccel->first).second += itaccel->second.second;
         }
