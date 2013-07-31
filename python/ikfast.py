@@ -2687,7 +2687,7 @@ class IKFastSolver(AutoReloader):
         else:
             self.Tfinal[0,0] = atan2(binormaldir.dot(Tallmult[0:3,0:3]*basedir), globaldir.dot(Tallmult[0:3,0:3]*basedir))
         self.Tfinal[0:3,3] = Tallmult[0:3,0:3]*basepos+Tallmult[0:3,3]
-        self.testconsistentvalues = self.computeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
+        self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         
         solvejointvars = [jointvars[i] for i in isolvejointvars]
         expecteddof = 4
