@@ -5958,7 +5958,7 @@ class IKFastSolver(AutoReloader):
         return lambda eq: self.trigsimp(eq.subs(varsubsinv),vars).subs(varsubs)
                 
     def solveVariablesLinearly(self,polyeqs,othersolvedvars,maxsolvabledegree=4):
-        log.debug('solveVariablesLinearly for %s: othersolvedvars=%s',polyeqs[0].gens,othersolvedvars)
+        log.debug('solvevariables=%r, othersolvedvars=%r',polyeqs[0].gens,othersolvedvars)
         nummonoms = [len(peq.monoms())-int(peq.TC()!=S.Zero) for peq in polyeqs]
         mindegree = __builtin__.min(nummonoms)
         maxdegree = min(__builtin__.max(nummonoms),len(polyeqs))
