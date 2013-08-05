@@ -235,7 +235,7 @@ if __name__ == "__main__":
                 findex = offset
                 break
         if findex is None:
-            raise ValueError('ik has failures: %r'%args[offset])
+            raise ValueError('ik has failures: %r\n%r'%(args[offset], sorted_results))
         
         findices.append(findex)
 

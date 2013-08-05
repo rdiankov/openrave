@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 67 generated on 2013-07-25 16:00:17.135953
+/// ikfast version 68 generated on 2013-08-05 17:14:13.579687
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==67);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==68);
 
 #include <cmath>
 #include <vector>
@@ -404,10 +404,11 @@ if( j13valid[iij13] && IKabs(cj13array[ij13]-cj13array[iij13]) < IKFAST_SOLUTION
 j13 = j13array[ij13]; cj13 = cj13array[ij13]; sj13 = sj13array[ij13];
 
 {
-IkReal dummyeval[1];
+IkReal dummyeval[2];
 IkReal x11=sj13*sj13;
 dummyeval[0]=((((4.53333333333333)*cj13*sj13))+(((-151.111111111111)*py*sj13))+(cj13*cj13)+(((1111.11111111111)*x11*(pz*pz)))+(((-66.6666666666667)*cj13*py))+(((5.13777777777778)*x11))+(((1111.11111111111)*(py*py))));
-if( IKabs(dummyeval[0]) < 0.0000010000000000  )
+dummyeval[1]=((IKabs((pz*sj13)))+(IKabs(((((-0.068)*sj13))+py+(((-0.03)*cj13))))));
+if( IKabs(dummyeval[0]) < 0.0000010000000000  || IKabs(dummyeval[1]) < 0.0000010000000000  )
 {
 {
 IkReal dummyeval[1];

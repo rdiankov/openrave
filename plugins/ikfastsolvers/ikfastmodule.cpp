@@ -1109,14 +1109,15 @@ public:
                             vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                              << "Original Joint Val: ";
+                              << "Original Joint Val=[";
                             FOREACH(it, vrealsolution) {
-                                s << *it << " ";
+                                s << *it << ", ";
                             }
-                            s << endl << "Returned Joint Val: ";
-                            FOREACH(it, *itsol)
-                            s << *it << " ";
-                            s << endl << "in: " << twrist << endl;
+                            s << "]" << endl << "Returned Joint Val=[";
+                            FOREACH(it, *itsol) {
+                                s << *it << ", ";
+                            }
+                            s << "]" << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl;
                             s << "raw ik command: ";
                             GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
@@ -1165,15 +1166,15 @@ public:
                             FOREACH(it, vfreeparameters) {
                                 s << *it << " ";
                             }
-                            s << endl << "Original Joint Val: ";
+                            s << endl << "Original Joint Val=[";
                             FOREACH(it, vrealsolution) {
-                                s << *it << " ";
+                                s << *it << ", ";
                             }
-                            s << endl << "Returned Joint Val: ";
+                            s << "]" << endl << "Returned Joint Val=[";
                             FOREACH(it, viksolution) {
-                                s << *it << " ";
+                                s << *it << ", ";
                             }
-                            s << endl << "in: " << twrist << endl;
+                            s << "]" << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl << endl;
                             RAVELOG_ERROR(s.str());
                             ++i;

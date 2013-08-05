@@ -1788,6 +1788,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             if expr.func == Abs:
                 code.write('IKabs(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
+            elif expr.func == conjugate:
+                # because we're not dealing with imaginary, this is just the regular number
+                code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
+                return code,sepcodelist
             elif expr.func == sign:
                 code.write('IKsign(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0],code)
@@ -1845,7 +1849,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 
                 code.write('%s.value'%iktansymbol)
                 return code,sepcodelist
-            
             elif expr.func == sin:
                 code.write('IKsin(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
