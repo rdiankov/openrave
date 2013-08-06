@@ -1564,8 +1564,10 @@ class IKFastSolver(AutoReloader):
                             oldeq = neweq
                         substitutedargs.append(oldeq)
                     if self.codeComplexity(substitutedargs[0]) < 20 and self.codeComplexity(substitutedargs[1]) < 20:
-                        log.info('adding atan2(%r, %r) all zeros check', substitutedargs[0], substitutedargs[1])
-                        checkforzeros.append(abs(substitutedargs[0])+abs(substitutedargs[1]))
+                        if not substitutedargs[0].is_number or substitutedargs[0] == S.Zero:
+                            if not substitutedargs[1].is_number or substitutedargs[1] == S.Zero:
+                                log.info('adding atan2(%r, %r) all zeros check', substitutedargs[0], substitutedargs[1])
+                                checkforzeros.append(abs(substitutedargs[0])+abs(substitutedargs[1]))
                 for arg in eq.args:
                     checkforzeros += self.checkForDivideByZero(arg)
             elif eq.is_Add:

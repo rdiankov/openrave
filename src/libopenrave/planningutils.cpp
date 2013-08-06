@@ -1133,6 +1133,7 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         }
         RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (goal) = %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
+        waypointindex -= 1; // have to reduce by one for InsertActiveDOFWaypointWithRetiming
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
@@ -1181,7 +1182,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         }
     }
     else {
-        throw OPENRAVE_EXCEPTION_FORMAT0("do no support inserting waypoints in middle of trajectories yet",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT("do no support inserting waypoint at %d in middle of trajectory (size=%d)", waypointindex%traj->GetNumWaypoints(), ORE_InvalidArguments);
     }
 
     TrajectoryBasePtr trajinitial = RaveCreateTrajectory(traj->GetEnv(),traj->GetXMLId());
