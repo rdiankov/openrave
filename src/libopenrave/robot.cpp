@@ -1622,17 +1622,30 @@ int RobotBase::GetActiveManipulatorIndex() const
     return -1;
 }
 
-RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo)
+RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::ManipulatorInfo& manipinfo, bool removeduplicate)
 {
     OPENRAVE_ASSERT_OP(manipinfo._name.size(),>,0);
-    FOREACH(itmanip,_vecManipulators) {
-        if( (*itmanip)->GetName() == manipinfo._name ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);
+    int iremoveindex = -1;
+    for(int imanip = 0; imanip < _vecManipulators.size(); ++imanip) {
+        if( _vecManipulators[imanip]->GetName() == manipinfo._name ) {
+            if( removeduplicate ) {
+                iremoveindex = imanip;
+                break;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);
+            }
         }
     }
     ManipulatorPtr newmanip(new Manipulator(shared_robot(),manipinfo));
     newmanip->_ComputeInternalInformation();
-    _vecManipulators.push_back(newmanip);
+    if( iremoveindex >= 0 ) {
+        // replace the old one
+        _vecManipulators[iremoveindex] = newmanip;
+    }
+    else {
+        _vecManipulators.push_back(newmanip);
+    }
     __hashrobotstructure.resize(0);
     return newmanip;
 }

@@ -686,8 +686,8 @@ private:
     /// Will copy the information of this manipulator object into a new manipulator and initialize it with the robot.
     /// Will change the robot structure hash..
     /// \return the new manipulator attached to the robot
-    /// \throw openrave_exception If there exists a manipulator with the same name, will throw an exception
-    virtual ManipulatorPtr AddManipulator(const ManipulatorInfo& manipinfo);
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
+    virtual ManipulatorPtr AddManipulator(const ManipulatorInfo& manipinfo, bool removeduplicate=false);
 
     /// \brief removes a manipulator from the robot list.
     ///

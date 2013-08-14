@@ -690,8 +690,6 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _setstatefn = boost::bind(CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _getstatefn = boost::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _neighstatefn = boost::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
-    boost::shared_ptr<LineCollisionConstraint> pcollision(new LineCollisionConstraint(listCheckCollisions,true));
-    _checkpathconstraintsfn = boost::bind(&LineCollisionConstraint::Check,pcollision,PlannerParametersWeakPtr(shared_parameters()), _1, _2, _3, _4);
     _vConfigLowerLimit.swap(vConfigLowerLimit);
     _vConfigUpperLimit.swap(vConfigUpperLimit);
     _vConfigVelocityLimit.swap(vConfigVelocityLimit);
@@ -699,6 +697,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _vConfigResolution.swap(vConfigResolution);
     _configurationspecification = spec;
     _getstatefn(vinitialconfig);
+    // have to do this last, disable timed constraints for default
+    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 }
 
 void PlannerBase::PlannerParameters::Validate() const

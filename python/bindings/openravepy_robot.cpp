@@ -809,8 +809,8 @@ public:
         RAVELOG_WARN("GetActiveManipulatorIndex is deprecated\n");
         return _probot->GetActiveManipulatorIndex();
     }
-    PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo) {
-        return _GetManipulator(_probot->AddManipulator(*pmanipinfo->GetManipulatorInfo()));
+    PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo, bool removeduplicate=false) {
+        return _GetManipulator(_probot->AddManipulator(*pmanipinfo->GetManipulatorInfo(), removeduplicate));
     }
     void RemoveManipulator(PyManipulatorPtr pmanip) {
         _probot->RemoveManipulator(pmanip->GetManipulator());
@@ -1358,6 +1358,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionsFree_overloads, FindIKSolu
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetArmConfigurationSpecification_overloads, GetArmConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateRobotStateSaver_overloads, CreateRobotStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDOFValues, 1,2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddManipulator_overloads, AddManipulator, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 
@@ -1403,7 +1404,7 @@ void init_openravepy_robot()
                       .def("SetActiveManipulator",setactivemanipulator2,args("manipname"), DOXY_FN(RobotBase,SetActiveManipulator "const std::string"))
                       .def("SetActiveManipulator",setactivemanipulator3,args("manip"), "Set the active manipulator given a pointer")
                       .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator))
-                      .def("AddManipulator",&PyRobotBase::AddManipulator, args("manip"), DOXY_FN(RobotBase,AddManipulator))
+                      .def("AddManipulator",&PyRobotBase::AddManipulator, AddManipulator_overloads(args("manip", "removeduplicate"), DOXY_FN(RobotBase,AddManipulator)))
                       .def("RemoveManipulator",&PyRobotBase::RemoveManipulator, args("manip"), DOXY_FN(RobotBase,RemoveManipulator))
                       .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex, DOXY_FN(RobotBase,GetActiveManipulatorIndex))
                       .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors))
