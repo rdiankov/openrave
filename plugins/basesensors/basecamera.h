@@ -16,6 +16,8 @@
 #ifndef OPENRAVE_BASECAMERA_H
 #define OPENRAVE_BASECAMERA_H
 
+#include <boost/lexical_cast.hpp>
+
 class BaseCameraSensor : public SensorBase
 {
 protected:
@@ -64,6 +66,9 @@ public:
             }
             else if( name == "distortion_model" ) {
                 ss >> _psensor->_pgeom->KK.distortion_model;
+            }
+            else if( name == "distortion_coeffs" ) {
+                _psensor->_pgeom->KK.distortion_coeffs = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
             }
             else if( name == "image_dimensions" ) {
                 ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;
@@ -328,6 +333,37 @@ public:
         _bRenderData = r->_bRenderData;
         _bPower = r->_bPower;
         _Reset();
+    }
+
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const
+    {
+        AttributesList atts;
+        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        ss << _pgeom->KK.fx << " 0 " << _pgeom->KK.cx << " 0 " << _pgeom->KK.fx << " " << _pgeom->KK.cy;
+        writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
+        ss.str("");
+        ss << _pgeom->KK.focal_length;
+        writer->AddChild("focal_length",atts)->SetCharData(ss.str());
+        if( _pgeom->KK.distortion_model.size() > 0 ) {
+            writer->AddChild("distortion_model",atts)->SetCharData(_pgeom->KK.distortion_model);
+            if( _pgeom->KK.distortion_coeffs.size() > 0 ) {
+                ss.str("");
+                FOREACHC(it, _pgeom->KK.distortion_coeffs) {
+                    ss << *it << " ";
+                }
+                writer->AddChild("distortion_coeffs",atts)->SetCharData(ss.str());
+            }
+        }
+        ss.str("");
+        ss << _pgeom->width << " " << _pgeom->height << " " << _numchannels;
+        writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
+        writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(1/framerate));
+        if( _channelformat.size() > 0 ) {
+            writer->AddChild("format",atts)->SetCharData(_channelformat);
+        }
+        ss.str("");
+        ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
+        writer->AddChild("color",atts)->SetCharData(ss.str());
     }
 
 protected:

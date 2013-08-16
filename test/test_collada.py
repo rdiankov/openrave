@@ -30,7 +30,7 @@ class TestCOLLADA(EnvironmentSetup):
                 env.Save('test.zae')
                 robot1=self.LoadRobot('test.zae')
                 misc.CompareBodies(robot0,robot1,epsilon=g_epsilon)
-
+                
             # test if collada can store current joint values
             env.Reset()
             robot0=self.LoadRobot(g_robotfiles[0])
@@ -50,7 +50,7 @@ class TestCOLLADA(EnvironmentSetup):
             robot1=env.GetRobot(oldname)
             # for now have to use this precision until collada-dom can store doubles
             assert(transdist(robot0.GetDOFValues(),robot1.GetDOFValues()) <= robot0.GetDOF()*1e-4 )
-
+            
     def test_colladascene_simple(self):
         self.log.info('test that collada simple import/export')
         env=self.env
@@ -93,7 +93,7 @@ class TestCOLLADA(EnvironmentSetup):
             ab2 = g2.ComputeAABB(eye(4))
             assert(transdist(ab.pos(), ab2.pos()) <= g_epsilon)
             assert(transdist(ab.extents(), ab2.extents()) <= g_epsilon)
-
+            
     def test_colladascenes(self):
         self.log.info('test that collada import/export works for scenes with multiple objects')
         env=self.env
@@ -119,7 +119,7 @@ class TestCOLLADA(EnvironmentSetup):
         open('test_colladascenes.env.xml','w').write(xmldata)
         with env:
             with env2:
-                for name in ['test_colladascenes.env.xml','data/lab1.env.xml']:
+                for name in ['test_colladascenes.env.xml','data/lab1.env.xml', 'data/camera.robot.xml']:
                     env.Reset()
                     env.Load(name)
                     env.Save('test_colladascenes_new.dae',Environment.SelectionOptions.Everything)
@@ -492,3 +492,6 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Load('test_external_extrainfo2.dae')
         robot2=env2.GetRobots()[0]
         misc.CompareBodies(robot,robot2)
+
+    def test_sensors(self):
+        

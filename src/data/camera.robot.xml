@@ -1,0 +1,22 @@
+<!-- example of a camera that is attached as a robot -->
+<Robot name="ceilingcamera">
+  <KinBody>
+    <Body name="base" type="static">
+      <Geom type="box">
+        <extents>0.015 0.015 0.02</extents>
+        <translation>0 0 -0.02</translation>
+        <diffusecolor>0 0 1</diffusecolor>
+      </Geom>
+    </Body>
+  </KinBody>
+  <AttachedSensor name="camera">
+    <link>base</link>
+    <sensor type="BaseCamera">
+      <KK>2000 2000 320 240</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 0.5 1</color>
+    </sensor>
+  </AttachedSensor>
+</Robot>

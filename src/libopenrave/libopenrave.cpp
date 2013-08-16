@@ -1962,6 +1962,11 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
+void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
+}
+
 CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
 {
     _oldoptions = p->GetCollisionOptions();

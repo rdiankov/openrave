@@ -77,7 +77,7 @@ Grasp set generation:
 
 .. code-block:: bash
 
-  openrave.py --database grasping --robot=robots/kuka-youbot.zae --manipulatordirection="0 1 0" --target=thinbox.kinbody.xml
+  openrave.py --database grasping --robot=robots/kuka-youbot.zae --manipulatordirection="0 1 0" --target=data/thinbox.kinbody.xml
 
 Then execute:
 

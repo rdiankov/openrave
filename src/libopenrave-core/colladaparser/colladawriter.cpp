@@ -672,7 +672,7 @@ private:
                 _WriteManipulators(probot, articulated_system_motion, vlinksids);
             }
             if( IsForceWrite("sensor") ) {
-                RAVELOG_WARN("do not support sensor writing\n");
+                _WriteAttachedSensors(probot, articulated_system_motion, vlinksids);
             }
         }
         if( IsForceWrite("jointlimit") ) {
@@ -954,43 +954,15 @@ private:
 
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            std::vector<std::string> vlinksids(kmout->vlinksids.size());
+            for(size_t i = 0; i < vlinksids.size(); ++i) {
+                vlinksids[i] = kmodelid + kmout->vlinksids.at(i);
+            }
             if( IsWrite("manipulator") ) {
-                std::vector<std::string> vlinksids(kmout->vlinksids.size());
-                for(size_t i = 0; i < vlinksids.size(); ++i) {
-                    vlinksids[i] = kmodelid + kmout->vlinksids.at(i);
-                }
                 _WriteManipulators(probot, articulated_system_motion, vlinksids);
             }
-
             if( IsWrite("sensor") ) {
-                //            if (probot->GetAttachedSensors().size() > 0)
-                //            {
-                //                domExtraRef extra   =   daeSafeCast<domExtra>(askinematics->add(COLLADA_ELEMENT_EXTRA));
-                //                extra->setType("sensors");
-                //                domTechniqueRef tech    =   daeSafeCast<domTechnique>(extra->add(COLLADA_ELEMENT_TECHNIQUE));
-                //                tech->setProfile("OpenRAVE");
-                //
-                //                    for (size_t i = 0; i < probot->GetAttachedSensors().size();i++)
-                //                    {
-                //                        string  strsensor   =   string("sensor")+toString(i)+string("_")+probot->GetName();
-                //                        string  strurl      =   string("#") + strsensor;
-                //                        RobotBase::AttachedSensorPtr  asensor = probot->GetAttachedSensors().at(i);
-                //
-                //                        //  Instance of sensor into 'articulated_system'
-                //                        domInstance_sensorRef   isensor =   daeSafeCast<domInstance_sensor>(tech->add(COLLADA_ELEMENT_INSTANCE_SENSOR));
-                //                        isensor->setId(asensor->GetName().c_str());
-                //                        isensor->setLink(asensor->GetAttachingLink()->GetName().c_str());
-                //                        isensor->setUrl(strurl.c_str());
-                //
-                //                        //  Sensor definition into 'library_sensors'
-                //                        domSensorRef    sensor  =   daeSafeCast<domSensor>(_sensorsLib->add(COLLADA_ELEMENT_SENSOR));
-                //                        sensor->setType(asensor->GetSensor()->GetXMLId().c_str());
-                //                        sensor->setId(strsensor.c_str());
-                //                        sensor->setName(strsensor.c_str());
-                //
-                //                        RAVELOG_VERBOSE("Plugin Name: %s\n",asensor->GetSensor()->GetXMLId().c_str());
-                //                    }
-                //            }
+                _WriteAttachedSensors(probot, articulated_system_motion, vlinksids);
             }
         }
 
@@ -1934,7 +1906,8 @@ private:
         }
     }
 
-    void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksids) {
+    void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksids)
+    {
         FOREACHC(itmanip, probot->GetManipulators()) {
             domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
             pextra->setName((*itmanip)->GetName().c_str());
@@ -1976,6 +1949,41 @@ private:
             //            <iksolver type="Translation3D">
             //              <free_axis axis="jointname4"/>
             //            </iksolver>
+        }
+    }
+
+    void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksids)
+    {
+        if (probot->GetAttachedSensors().size() > 0) {
+            size_t sensorindex = 0;
+            FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
+                domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
+                pextra->setName((*itattachedsensor)->GetName().c_str());
+                pextra->setType("attach_sensor");
+                domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                ptec->setProfile("OpenRAVE");
+                daeElementRef frame_origin = ptec->add("frame_origin");
+                frame_origin->setAttribute("link",vlinksids.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
+                _WriteTransformation(frame_origin,(*itattachedsensor)->GetRelativeTransform());
+
+                SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
+                if( !!popenravesensor ) {
+                    string strsensor = str(boost::format("robot%d_sensor%d")%probot->GetEnvironmentId()%sensorindex);
+                    string strurl = string("#") + strsensor;
+                    //  Sensor definition into 'library_sensors'
+                    daeElementRef domsensor = _sensorsLib->add("sensor");
+                    domsensor->setAttribute("id", strsensor.c_str());
+                    domsensor->setAttribute("name", strsensor.c_str());
+                    domsensor->setAttribute("type", popenravesensor->GetXMLId().c_str());
+                    BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(domsensor));
+                    popenravesensor->Serialize(extrawriter,0);
+
+                    // instantiate it in the attached esnsors
+                    daeElementRef isensor = ptec->add("instance_sensor");
+                    isensor->setAttribute("url", strurl.c_str());
+                }
+                sensorindex++;
+            }
         }
     }
 

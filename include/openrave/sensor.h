@@ -367,6 +367,9 @@ public:
         _name = newname;
     }
 
+    /// \brief serialize the sensor geometry and other attributes.
+    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+
 protected:
     std::string _name;     ///< name of the sensor
 

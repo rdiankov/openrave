@@ -112,6 +112,9 @@ class ReachabilityModel(DatabaseGenerator):
             poses[:,4:] *= self.itransmult
             return neighs,dists,kball
 
+    xyzdelta = None # the sampling discretization of the XYZ space
+    reachabilitystats = None # Nx8 array of all the poses that are reachable. The first 7 columns are the quaternion and translation, the last column is the number of IK solutions present
+    reachability3d = None # a KxKxK voxelized map that repsents the density of solutions for each XYZ point. The higher the density, the more rotations the arm can be solved for. Use xyzdelta to from 3D point to voxel index.
     def __init__(self,robot):
         DatabaseGenerator.__init__(self,robot=robot)
         self.ikmodel = inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.Transform6D)

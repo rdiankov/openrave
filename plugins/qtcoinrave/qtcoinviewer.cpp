@@ -341,7 +341,12 @@ QtCoinViewer::~QtCoinViewer()
 
         list<EnvMessagePtr>::iterator itmsg;
         FORIT(itmsg, _listMessages) {
-            (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
+            try {
+                (*itmsg)->viewerexecute(); // have to execute instead of deleteing since there can be threads waiting
+            }
+            catch(const boost::bad_weak_ptr& ex) {
+                // most likely viewer
+            }
         }
         _listMessages.clear();
     }
@@ -473,7 +478,10 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_SetSize(_width, _height);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !!pviewer ) {
+            pviewer->_SetSize(_width, _height);
+        }
         EnvMessage::viewerexecute();
     }
 
@@ -500,7 +508,10 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_Move(_x, _y);
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !!pviewer ) {
+            pviewer->_Move(_x, _y);
+        }
         EnvMessage::viewerexecute();
     }
 
@@ -527,7 +538,10 @@ public:
     }
 
     virtual void viewerexecute() {
-        QtCoinViewerPtr(_pviewer)->_SetName(_title.c_str());
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !!pviewer ) {
+            pviewer->_SetName(_title.c_str());
+        }
         EnvMessage::viewerexecute();
     }
 
