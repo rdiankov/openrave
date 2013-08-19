@@ -1626,7 +1626,7 @@ RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::Manipulator
 {
     OPENRAVE_ASSERT_OP(manipinfo._name.size(),>,0);
     int iremoveindex = -1;
-    for(int imanip = 0; imanip < _vecManipulators.size(); ++imanip) {
+    for(int imanip = 0; imanip < (int)_vecManipulators.size(); ++imanip) {
         if( _vecManipulators[imanip]->GetName() == manipinfo._name ) {
             if( removeduplicate ) {
                 iremoveindex = imanip;
