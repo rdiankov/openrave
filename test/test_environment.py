@@ -244,3 +244,21 @@ class TestEnvironment(EnvironmentSetup):
         finally:
             os.chdir(oldcwd)
     
+
+    def test_trylock(self):
+        env=self.env
+        log=self.log
+        def OtherThread(env, log):
+            log.info('OtherThread started')
+            with env:
+                time.sleep(5)
+            log.info('OtherThread ended')
+        t=threading.Thread(target=OtherThread,args=(env,log))
+        t.start()
+        time.sleep(1)
+        # should be locked by thread
+        assert(not env.Lock(1.0))
+        t.join()
+        # thread is done, so should be able to lock
+        assert(env.Lock(1.0))
+        env.Unlock()

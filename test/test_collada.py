@@ -492,6 +492,3 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Load('test_external_extrainfo2.dae')
         robot2=env2.GetRobots()[0]
         misc.CompareBodies(robot,robot2)
-
-    def test_sensors(self):
-        

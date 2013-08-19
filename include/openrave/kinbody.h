@@ -135,7 +135,8 @@ public:
 
         /// \brief filename for collision data (optional)
         ///
-        /// If the value is "__norenderif__:x", then the viewer should not render the object if it supports *.x files where"x" is the file extension.
+        /// This is for record keeping only and geometry does not get automatically loaded to _meshcollision.
+        /// The user should call _meshcollision = *env->ReadTrimeshURI(_filenamecollision) by themselves.
         std::string _filenamecollision;
 
         Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender

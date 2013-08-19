@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openravepy_int.h"
 
+#include <openrave/utils.h>
+
 namespace openravepy
 {
 
@@ -925,10 +927,38 @@ public:
 #endif
     }
 
-    void Lock(float timeout)
+    bool TryLock()
     {
-        RAVELOG_WARN("Environment.Lock timeout is ignored\n");
-        Lock();
+        bool bSuccess = false;
+        Py_BEGIN_ALLOW_THREADS;
+#if BOOST_VERSION < 103500
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        if( !!lockenv->try_lock() ) {
+            bSuccess = true;
+            _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        }
+#else
+        if( _penv->GetMutex().try_lock() ) {
+            bSuccess = true;
+        }
+#endif
+        Py_END_ALLOW_THREADS;
+        return bSuccess;
+    }
+
+
+
+    bool Lock(float timeout)
+    {
+        uint64_t nTimeoutMicroseconds = timeout*1000000;
+        uint64_t basetime = OpenRAVE::utils::GetMicroTime();
+        while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
+            if( TryLock() ) {
+                return true;
+            }
+            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        }
+        return false;
     }
 
     void __enter__()
@@ -1479,7 +1509,7 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
         bool (PyEnvironmentBase::*pcolyr)(boost::shared_ptr<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
         void (PyEnvironmentBase::*Lock1)() = &PyEnvironmentBase::Lock;
-        void (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
+        bool (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
 
         object (PyEnvironmentBase::*drawplane1)(object, object, const boost::multi_array<float,2>&) = &PyEnvironmentBase::drawplane;
         object (PyEnvironmentBase::*drawplane2)(object, object, const boost::multi_array<float,3>&) = &PyEnvironmentBase::drawplane;
@@ -1597,8 +1627,9 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
                     .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
                     .def("IsSimulationRunning",&PyEnvironmentBase::IsSimulationRunning, DOXY_FN(EnvironmentBase,IsSimulationRunning))
                     .def("Lock",Lock1,"Locks the environment mutex.")
-                    //.def("Lock",Lock2,args("timeout"), "Locks the environment mutex with a timeout.")
+                    .def("Lock",Lock2,args("timeout"), "Locks the environment mutex with a timeout.")
                     .def("Unlock",&PyEnvironmentBase::Unlock,"Unlocks the environment mutex.")
+                    .def("TryLock",&PyEnvironmentBase::TryLock,"Tries to locks the environment mutex, returns false if it failed.")
                     .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
                     .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
                     .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
