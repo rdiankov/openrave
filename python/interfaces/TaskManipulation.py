@@ -34,7 +34,16 @@ class TaskManipulation:
             self.args += ' graspername %s '%graspername
         env.Add(self.prob,True,self.args)
     def  __del__(self):
-        self.prob.GetEnv().Remove(self.prob)
+        # need to lock the environment since Remove locks it
+        env = self.prob.GetEnv()
+        if env.Lock(1.0):
+            try:
+                env.Remove(self.prob)
+            finally:
+                env.Unlock()
+        else:
+            log.warn('failed to lock environment for TaskManipulation.__del__!')
+            
     def clone(self,envother):
         """Clones the interface into another environment
         """
