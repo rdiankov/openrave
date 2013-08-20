@@ -204,7 +204,7 @@ class VisibilityModel(DatabaseGenerator):
             preshapes = array(())
         self.generate(preshapes=preshapes,sphere=sphere,conedirangles=conedirangles)
         self.save()
-    def generate(self,preshapes,sphere=None,conedirangles=None):
+    def generate(self,preshapes,sphere=None,conedirangles=None,localtransforms=None):
         self.preshapes=preshapes
         self.preprocess()
         self.sensorname = self.attachedsensor.GetName()
@@ -227,6 +227,8 @@ class VisibilityModel(DatabaseGenerator):
                     extentsfile = os.path.join(RaveGetHomeDirectory(),'kinbody.'+self.target.GetKinematicsGeometryHash(),'visibility.txt')
                     if sphere is None and os.path.isfile(extentsfile):
                         self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(extents=loadtxt(extentsfile,float),conedirangles=conedirangles)
+                    elif localtransforms is not None:
+                        self.visibilitytransforms = self.visualprob.ProcessVisibilityExtents(transforms=localtransforms)
                     else:
                         if sphere is None:
                             sphere = [3,0.1,0.15,0.2,0.25,0.3]
@@ -243,31 +245,36 @@ class VisibilityModel(DatabaseGenerator):
     def showtransforms(self,options=None):
         pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
-        with RobotStateSaver(self.robot):
-            # disable all non-child links
-            for link in self.robot.GetLinks():
-                link.Enable(link in self.manip.GetChildLinks())
-            with self.GripperVisibility(self.manip):
-                for i,pose in enumerate(self.visibilitytransforms):
-                    with self.env:
-                        if len(self.preshapes) > 0:
-                            self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
-                        Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
-                        Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
-                        Tgrasp = dot(Tcamera,Trelative)
-                        Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
-                        for link in self.manip.GetChildLinks():
-                            link.SetTransform(dot(Tdelta,link.GetTransform()))
-                        visibility = self.visualprob.ComputeVisibility()
-                        self.env.UpdatePublishedBodies()
-                    msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)
-                    if options is not None and options.showimage:
-                        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
-                        I=self.getCameraImage()
-                        print(msg)
-                        pilutil.imshow(I)
-                    else:
-                        raw_input(msg)
+        try:
+            with RobotStateSaver(self.robot):
+                # disable all non-child links
+                for link in self.robot.GetLinks():
+                    link.Enable(link in self.manip.GetChildLinks())
+                with self.GripperVisibility(self.manip):
+                    for i,pose in enumerate(self.visibilitytransforms):
+                        with self.env:
+                            if len(self.preshapes) > 0:
+                                self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
+                            Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
+                            Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
+                            Tgrasp = dot(Tcamera,Trelative)
+                            Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
+                            for link in self.manip.GetChildLinks():
+                                link.SetTransform(dot(Tdelta,link.GetTransform()))
+                            visibility = self.visualprob.ComputeVisibility()
+                            self.env.UpdatePublishedBodies()
+                        msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)
+                        if options is not None and options.showimage:
+                            pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                            I=self.getCameraImage()
+                            print(msg)
+                            pilutil.imshow(I)
+                        else:
+                            raw_input(msg)
+        finally:
+            # have to destroy the plot handle
+            h = None
+            
     def show(self,options=None):
         if self.env.GetViewer() is None:
             self.env.SetViewer('qtcoin')
