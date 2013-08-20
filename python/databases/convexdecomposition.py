@@ -196,6 +196,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return False
         
         self._CloseDatabase()
+        f = None
         try:
             f=h5py.File(filename,'r')
             if f['version'].value != self.getversion():
