@@ -85,6 +85,7 @@ public:
     Vector tol;
     DistanceCheckerBase* distance;
     int maxiters;
+    int constraintsmask;
 };
 
 

@@ -267,7 +267,7 @@ public:
                 *it *= _parameters->_pointtolerance;
             }
             ParabolicRamp::RampFeasibilityChecker checker(this,tol);
-
+            checker.constraintsmask = CFO_CheckEnvCollisions|CFO_CheckSelfCollisions|CFO_CheckTimeBasedConstraints|CFO_CheckUserConstraints;
             RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
 
 
@@ -485,85 +485,19 @@ public:
             }
 
 
-            ///////////////////////////////////////////////////////////////////////////
-            ////////////////// Convert back to Rave Trajectory ////////////////////////
-            ///////////////////////////////////////////////////////////////////////////
+            PlannerStatus status = ConvertRampsToOpenRAVETrajectory(ramps, &checker, ptraj->GetXMLId());
+            if( status == PS_Interrupted ) {
+                return PS_Interrupted;
+            }
 
-            ConfigurationSpecification newspec = posspec;
-            newspec.AddDerivativeGroups(1,true);
-            int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
-
-            if( ramps.size() == 0 ) {
+            if( _dummytraj->GetNumWaypoints() == 0 ) {
                 // most likely a trajectory with the same start and end points were given, so return a similar trajectory
                 // get the first point
                 vtrajpoints.resize(posspec.GetDOF());
                 ptraj->GetWaypoint(0,vtrajpoints,posspec);
-                ptraj->Init(newspec);
-                ptraj->Insert(0, vtrajpoints, posspec);
-                return PS_HasSolution;
+                _dummytraj->Insert(0, vtrajpoints, posspec);
             }
-
-            int timeoffset=-1;
-            FOREACH(itgroup,newspec._vgroups) {
-                if( itgroup->name == "deltatime" ) {
-                    timeoffset = itgroup->offset;
-                }
-                else if( velspec.FindCompatibleGroup(*itgroup) != velspec._vgroups.end() ) {
-                    itgroup->interpolation = "linear";
-                }
-                else if( posspec.FindCompatibleGroup(*itgroup) != posspec._vgroups.end() ) {
-                    itgroup->interpolation = "quadratic";
-                }
-            }
-
-            // have to write to another trajectory
-            if( !_dummytraj || _dummytraj->GetXMLId() != ptraj->GetXMLId() ) {
-                _dummytraj = RaveCreateTrajectory(GetEnv(), ptraj->GetXMLId());
-            }
-            _dummytraj->Init(newspec);
-
-
-            // separate all the acceleration switches into individual points
-            vtrajpoints.resize(newspec.GetDOF());
-            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,ramps.front().x0.begin(),posspec,1,GetEnv(),true);
-            ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,ramps.front().dx0.begin(),velspec,1,GetEnv(),false);
-            vtrajpoints.at(waypointoffset) = 1;
-            vtrajpoints.at(timeoffset) = 0;
-            _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
-            ParabolicRamp::Vector vconfig;
-            // TODO ramps are unitary so don't have to track switch points
-            FOREACH(itrampnd,ramps) {
-                // double-check the current ramps
-                //                if(_parameters->verifyinitialpath) {
-                if(true) {
-                    // part of original trajectory which might not have been processed with perturbations, so ignore them
-                    int options = 0xffff; // no perturbation
-                    if( !checker.Check(*itrampnd,options)) {
-                        throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
-                    }
-                    _progress._iteration+=1;
-                    if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                        return PS_Interrupted;
-                    }
-                }
-
-                if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-g_fEpsilonLinear ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
-                }
-                if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-g_fEpsilonLinear ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
-                }
-
-                vtrajpoints.resize(newspec.GetDOF());
-                vector<dReal>::iterator ittargetdata = vtrajpoints.begin();
-                ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->x1.begin(),posspec,1,GetEnv(),true);
-                ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->dx1.begin(),velspec,1,GetEnv(),false);
-                *(ittargetdata+timeoffset) = itrampnd->endTime;
-                *(ittargetdata+waypointoffset) = 1;
-                ittargetdata += newspec.GetDOF();
-                _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
-            }
-
+            OPENRAVE_ASSERT_OP(status, ==, PS_HasSolution);
             OPENRAVE_ASSERT_OP(RaveFabs(totaltime-_dummytraj->GetDuration()),<,0.001);
             RAVELOG_DEBUG_FORMAT("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", numshortcuts%ramps.size()%_dummytraj->GetNumWaypoints()%totaltime);
             ptraj->Swap(_dummytraj);
@@ -585,6 +519,81 @@ public:
         return PS_HasSolution;
     }
 
+    /// \brief converts ramps to an openrave trajectory structure. If return is PS_HasSolution, _dummytraj has the converted result
+    PlannerStatus ConvertRampsToOpenRAVETrajectory(const std::list<ParabolicRamp::ParabolicRampND>& ramps, ParabolicRamp::RampFeasibilityChecker* pchecker, const std::string& sTrajectoryXMLId=std::string())
+    {
+        const ConfigurationSpecification& posspec = _parameters->_configurationspecification;
+        ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
+        ConfigurationSpecification newspec = _parameters->_configurationspecification;
+        newspec.AddDerivativeGroups(1,true);
+        int waypointoffset = newspec.AddGroup("iswaypoint", 1, "next");
+
+        int timeoffset=-1;
+        FOREACH(itgroup,newspec._vgroups) {
+            if( itgroup->name == "deltatime" ) {
+                timeoffset = itgroup->offset;
+            }
+            else if( velspec.FindCompatibleGroup(*itgroup) != velspec._vgroups.end() ) {
+                itgroup->interpolation = "linear";
+            }
+            else if( posspec.FindCompatibleGroup(*itgroup) != posspec._vgroups.end() ) {
+                itgroup->interpolation = "quadratic";
+            }
+        }
+
+        // have to write to another trajectory
+        if( !_dummytraj || (sTrajectoryXMLId.size() > 0 && _dummytraj->GetXMLId() != sTrajectoryXMLId) ) {
+            _dummytraj = RaveCreateTrajectory(GetEnv(), sTrajectoryXMLId);
+        }
+        _dummytraj->Init(newspec);
+
+        if( ramps.size() == 0 ) {
+            return PS_HasSolution;
+        }
+
+        // separate all the acceleration switches into individual points
+        _vtrajpointscache.resize(newspec.GetDOF());
+        ConfigurationSpecification::ConvertData(_vtrajpointscache.begin(),newspec,ramps.front().x0.begin(),posspec,1,GetEnv(),true);
+        ConfigurationSpecification::ConvertData(_vtrajpointscache.begin(),newspec,ramps.front().dx0.begin(),velspec,1,GetEnv(),false);
+        _vtrajpointscache.at(waypointoffset) = 1;
+        _vtrajpointscache.at(timeoffset) = 0;
+        _dummytraj->Insert(_dummytraj->GetNumWaypoints(),_vtrajpointscache);
+        ParabolicRamp::Vector vconfig;
+        // TODO ramps are unitary so don't have to track switch points
+        FOREACH(itrampnd,ramps) {
+            // double-check the current ramps
+            //                if(_parameters->verifyinitialpath) {
+            if(!!pchecker) {
+                // part of original trajectory which might not have been processed with perturbations, so ignore them
+                int options = 0xffff; // no perturbation
+                if( !pchecker->Check(*itrampnd,options)) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
+                }
+                _progress._iteration+=1;
+                if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                    return PS_Interrupted;
+                }
+            }
+
+            if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-g_fEpsilonLinear ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
+            }
+            if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-g_fEpsilonLinear ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
+            }
+
+            _vtrajpointscache.resize(newspec.GetDOF());
+            vector<dReal>::iterator ittargetdata = _vtrajpointscache.begin();
+            ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->x1.begin(),posspec,1,GetEnv(),true);
+            ConfigurationSpecification::ConvertData(ittargetdata,newspec,itrampnd->dx1.begin(),velspec,1,GetEnv(),false);
+            *(ittargetdata+timeoffset) = itrampnd->endTime;
+            *(ittargetdata+waypointoffset) = 1;
+            ittargetdata += newspec.GetDOF();
+            _dummytraj->Insert(_dummytraj->GetNumWaypoints(),_vtrajpointscache);
+        }
+
+        return PS_HasSolution;
+    }
 
     void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
 
@@ -681,7 +690,7 @@ public:
 
 
     // Perform the shortcuts
-    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng)
+    int Shortcut(std::list<ParabolicRamp::ParabolicRampND>&ramps, int numIters, ParabolicRamp::RampFeasibilityChecker& check, ParabolicRamp::RandomNumberGeneratorBase* rng)
     {
         ParabolicRamp::Vector qstart = ramps.begin()->x0;
         ParabolicRamp::Vector qgoal = ramps.back().x1;
@@ -722,12 +731,22 @@ public:
                 t2 = floor(t2/fStepLength+0.5)*fStepLength;
                 // check whether the shortcut is close to a previously attempted shortcut
                 if(HasBeenAttempted(t1,t2,attemptedlist,shortcutinnovationthreshold)) {
-                    RAVELOG_VERBOSE_FORMAT("Iter %d: Shortcut (%f,%f) already attempted\n",iters%t1%t2);
+                    RAVELOG_VERBOSE_FORMAT("Iter %d: Shortcut (%f,%f) already attempted, ramps=%d\n",iters%t1%t2%ramps.size());
                     rejected++;
                     continue;
                 }
                 else{
-                    RAVELOG_VERBOSE_FORMAT("Iter %d: Attempt shortcut (%f,%f)...\n",iters%t1%t2);
+                    RAVELOG_VERBOSE_FORMAT("Iter %d: Attempt shortcut (%f,%f), ramps=%d...\n",iters%t1%t2%ramps.size());
+//                    if( ramps.size() <= 10 && iters < 50 ) {
+//                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//                            ConvertRampsToOpenRAVETrajectory(ramps, NULL);
+//                            string filename = str(boost::format("%s/smoothingiter%d.xml")%RaveGetHomeDirectory()%iters);
+//                            RAVELOG_VERBOSE_FORMAT("writing current ramps to %s", filename);
+//                            ofstream f(filename.c_str());
+//                            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//                            _dummytraj->serialize(f);
+//                        }
+//                    }
                     attemptedlist.push_back(std::make_pair(t1,t2));
                 }
             }
@@ -1072,7 +1091,8 @@ protected:
     CollisionCheckerBasePtr _distancechecker;
     ConstraintFilterReturnPtr _constraintreturn;
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
-//boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
+    //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
+    std::vector<dReal> _vtrajpointscache;
 
     std::list< ManipConstraintInfo > _listCheckManips;
     TrajectoryBasePtr _dummytraj,_inittraj;

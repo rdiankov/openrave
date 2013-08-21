@@ -519,7 +519,6 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
     for(size_t i = 0; i < tol.size(); ++i) {
         PARABOLIC_RAMP_ASSERT(tol[i] > 0);
     }
-    ramp.constraintchecked = 1;
     if(!space->ConfigFeasible(ramp.x0, ramp.dx0, options)) {
         return false;
     }
@@ -618,17 +617,21 @@ bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const V
 }
 
 RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const Vector& _tol)
-    : feas(_feas),tol(_tol),distance(NULL),maxiters(0)
+    : feas(_feas),tol(_tol),distance(NULL),maxiters(0), constraintsmask(0)
 {
 }
 
 RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,DistanceCheckerBase* _distance,int _maxiters)
-    : feas(_feas),tol(0),distance(_distance),maxiters(_maxiters)
+    : feas(_feas),tol(0),distance(_distance),maxiters(_maxiters), constraintsmask(0)
 {
 }
 
 bool RampFeasibilityChecker::Check(const ParabolicRampND& x,int options)
 {
+    // only set constraintchecked if all necessary constraints are checked
+    if( (options & constraintsmask) == constraintsmask ) {
+        x.constraintchecked = 1;
+    }
     if(distance) {
         return CheckRamp(x,feas,distance,maxiters,options);
     }

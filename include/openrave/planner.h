@@ -29,8 +29,8 @@ namespace OpenRAVE {
 /// By default, the lower 16 bits are set while the upper 16bits are zero.
 enum ConstraintFilterOptions
 {
-    CFO_CheckEnvCollisions=1, ///< will check environment collisions with the robot (not checked by default)
-    CFO_CheckSelfCollisions=2, ///< will not check the self-collision of the robot (checked by default). This also ignores the end effector collisions.
+    CFO_CheckEnvCollisions=1, ///< will check environment collisions with the robot (checked by default)
+    CFO_CheckSelfCollisions=2, ///< will check the self-collision of the robot (checked by default).
     CFO_CheckTimeBasedConstraints=4, ///< checks any constraints that are depending on velocity. For example workspace accel constraints or dynamics.
     CFO_BreakOnFirstValidation=0x8, ///< if set, will break as soon as any constraint is violated (even if more than one are violated, the return code will only show one constraint breaking)
     CFO_CheckUserConstraints=0x00008000, ///< user-defined functions which don't fit any of the above descriptions

@@ -352,6 +352,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
+            if( bIsDone ) {
+                // trajectory is done, so reset it so that the controller doesn't continously set the dof values (which can get annoying)
+                _ptraj.reset();
+            }
         }
 
         if( _vecdesired.size() > 0 ) {

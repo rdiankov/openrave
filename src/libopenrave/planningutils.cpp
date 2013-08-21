@@ -435,22 +435,43 @@ public:
 
             if( trajectory->GetDuration() > 0 && samplingstep > 0 ) {
                 // use sampling and check segment constraints
+                // have to make sure that sampling interval doesn't include a waypoint. otherwise interpolation could become inconsistent!
+                std::vector<dReal> vabstimes, vsampletimes;
+                vabstimes.reserve(trajectory->GetNumWaypoints() + (trajectory->GetDuration()/samplingstep) + 1);
+                ConfigurationSpecification deltatimespec;
+                deltatimespec.AddDeltaTimeGroup();
+                trajectory->GetWaypoints(0, trajectory->GetNumWaypoints(), vabstimes, deltatimespec);
+                dReal totaltime = 0;
+                FOREACH(ittime, vabstimes) {
+                    totaltime += *ittime;
+                    *ittime = totaltime;
+                }
+                for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
+                    vabstimes.push_back(ftime);
+                }
+                vsampletimes.resize(vabstimes.size());
+                std::merge(vabstimes.begin(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.end(), vsampletimes.begin());
                 std::vector<dReal> vprevdata, vprevdatavel;
                 ConstraintFilterReturnPtr filterreturn(new ConstraintFilterReturn());
                 trajectory->Sample(vprevdata,0,_parameters->_configurationspecification);
                 trajectory->Sample(vprevdatavel,0,velspec);
-                for(dReal ftime = 0; ftime < trajectory->GetDuration(); ftime += samplingstep ) {
+                std::vector<dReal>::iterator itprevtime = vsampletimes.begin();
+                for(std::vector<dReal>::iterator itsampletime = vsampletimes.begin()+1; itsampletime != vsampletimes.end(); ++itsampletime) {
+                    if (*itsampletime < *itprevtime + 1e-5 ) {
+                        continue;
+                    }
                     filterreturn->Clear();
-                    trajectory->Sample(vdata,ftime+samplingstep,_parameters->_configurationspecification);
-                    trajectory->Sample(vdatavel,ftime+samplingstep,velspec);
+                    trajectory->Sample(vdata,*itsampletime,_parameters->_configurationspecification);
+                    trajectory->Sample(vdatavel,*itsampletime,velspec);
+                    dReal deltatime = *itsampletime - *itprevtime;
                     vdiff = vdata;
                     _parameters->_diffstatefn(vdiff,vprevdata);
                     for(size_t i = 0; i < _parameters->_vConfigVelocityLimit.size(); ++i) {
-                        dReal velthresh = _parameters->_vConfigVelocityLimit.at(i)*samplingstep+fthresh;
-                        OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
+                        dReal velthresh = _parameters->_vConfigVelocityLimit.at(i)*deltatime+fthresh;
+                        OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",*itprevtime%*itsampletime%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
-                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, samplingstep, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s",ftime%(ftime+samplingstep)%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
+                    if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s",*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
                     OPENRAVE_ASSERT_OP(filterreturn->_configurations.size()%_parameters->GetDOF(),==,0);
                     std::vector<dReal>::iterator itprevconfig = filterreturn->_configurations.begin();
@@ -464,17 +485,20 @@ public:
                         _parameters->_setstatefn(vprevconfig);
                         vector<dReal> vtemp = vprevconfig;
                         if( !_parameters->_neighstatefn(vtemp,deltaq,0) ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s",ftime%(ftime+samplingstep)%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
+                            throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s",*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                         }
                         else {
                             dReal fprevdist = _parameters->_distmetricfn(vprevconfig,vtemp);
                             dReal fcurdist = _parameters->_distmetricfn(vcurconfig,vtemp);
-                            OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",ftime%(ftime+samplingstep)%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
+                            if( fprevdist > g_fEpsilonLinear ) {
+                                OPENRAVE_ASSERT_OP_FORMAT(fprevdist, >, fcurdist, "time %fs-%fs, neightstatefn returned a configuration closer to the previous configuration %f than the expected current %f, wrote trajectory to %s",*itprevtime%*itsampletime%fprevdist%fcurdist%DumpTrajectory(trajectory), ORE_InconsistentConstraints);
+                            }
                         }
                         itprevconfig=itcurconfig;
                     }
-                    vprevdata=vdata;
-                    vprevdatavel=vdatavel;
+                    vprevdata.swap(vdata);
+                    vprevdatavel.swap(vdatavel);
+                    itprevtime = itsampletime;
                 }
             }
             else {
@@ -2144,7 +2168,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
-                _vtempconfig[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i));
+                dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
 
