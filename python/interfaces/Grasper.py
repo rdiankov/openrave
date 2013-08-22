@@ -19,6 +19,9 @@ from ..openravepy_ext import planning_error
 from numpy import *
 from copy import copy as shallowcopy
 
+import logging
+log = logging.getLogger('openravepy.interfaces.Grasper')
+
 class Grasper:
     """Interface wrapper for :ref:`module-grasper`
     """

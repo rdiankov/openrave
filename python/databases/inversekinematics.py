@@ -247,10 +247,16 @@ class InverseKinematicsModel(DatabaseGenerator):
 
     def  __del__(self):
         if self.ikfastproblem is not None:
-            try:
-                self.env.Remove(self.ikfastproblem)
-            except openrave_exception, e:
-                log.debug('__del__ %s',e)
+            # need to lock the environment since Remove locks it
+            if self.env.Lock(1.0):
+                try:
+                    self.env.Remove(self.ikfastproblem)
+                finally:
+                    self.env.Unlock()
+            else:
+                log.warn('failed to lock environment for InverseKinematicsModel.__del__!')
+        DatabaseGenerator.__del__(self)
+        
     def clone(self,envother):
         clone = DatabaseGenerator.clone(self,envother)
         clone.ikfastproblem = RaveCreateModule(envother,'ikfast')

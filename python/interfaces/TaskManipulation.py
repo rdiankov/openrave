@@ -18,6 +18,10 @@ from ..openravepy_ext import planning_error
 
 from numpy import *
 from copy import copy as shallowcopy
+
+import logging
+log = logging.getLogger('openravepy.interfaces.TaskManipulation')
+
 class TaskManipulation:
     """Interface wrapper for :ref:`module-taskmanipulation`
     """

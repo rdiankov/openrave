@@ -19,6 +19,9 @@ from ..openravepy_ext import planning_error
 import numpy
 from copy import copy as shallowcopy
 
+import logging
+log = logging.getLogger('openravepy.interfaces.VisualFeedback')
+
 class VisualFeedback:
     """Interface wrapper for :ref:`module-visualfeedback`
     """
