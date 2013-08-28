@@ -98,6 +98,33 @@ public:
         return toPyArray(values);
     }
 
+    // similar to GetWaypoints except returns a 2D array, one row for every waypoint
+    object GetWaypoints2D(size_t startindex, size_t endindex) const
+    {
+        vector<dReal> values;
+        _ptrajectory->GetWaypoints(startindex,endindex,values);
+        int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+        npy_intp dims[] = { values.size()/numdof, numdof };
+        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        if( values.size() > 0 ) {
+            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+        }
+        return static_cast<numeric::array>(handle<>(pypos));
+    }
+
+    object GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
+    {
+        vector<dReal> values;
+        ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+        _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
+        npy_intp dims[] = { values.size()/spec.GetDOF(), spec.GetDOF() };
+        PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        if( values.size() > 0 ) {
+            memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
+        }
+        return static_cast<numeric::array>(handle<>(pypos));
+    }
+
     object GetWaypoint(int index) const
     {
         vector<dReal> values;
@@ -193,6 +220,8 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*Sample2)(dReal, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::Sample;
     object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints;
+    object (PyTrajectoryBase::*GetWaypoints2D1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints2D;
+    object (PyTrajectoryBase::*GetWaypoints2D2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints2D;
     object (PyTrajectoryBase::*GetWaypoint1)(int) const = &PyTrajectoryBase::GetWaypoint;
     object (PyTrajectoryBase::*GetWaypoint2)(int,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoint;
     class_<PyTrajectoryBase, boost::shared_ptr<PyTrajectoryBase>, bases<PyInterfaceBase> >("Trajectory", DOXY_CLASS(TrajectoryBase), no_init)
@@ -208,6 +237,8 @@ void init_openravepy_trajectory()
     .def("GetNumWaypoints",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,GetNumWaypoints))
     .def("GetWaypoints",GetWaypoints1,args("startindex","endindex"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector"))
     .def("GetWaypoints",GetWaypoints2,args("startindex","endindex","spec"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector, const ConfigurationSpecification&"))
+    .def("GetWaypoints2D",GetWaypoints2D1,args("startindex","endindex"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector"))
+    .def("GetWaypoints2D",GetWaypoints2D2,args("startindex","endindex","spec"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector, const ConfigurationSpecification&"))
     .def("GetWaypoint",GetWaypoint1,args("index"),DOXY_FN(TrajectoryBase, GetWaypoint "int; std::vector"))
     .def("GetWaypoint",GetWaypoint2,args("index","spec"),DOXY_FN(TrajectoryBase, GetWaypoint "int; std::vector; const ConfigurationSpecification"))
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
