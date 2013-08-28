@@ -817,6 +817,9 @@ public:
     object GetKinBody(const string &name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
+        if( !pbody ) {
+            return object();
+        }
         if( pbody->IsRobot() ) {
             return object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),shared_from_this()));
         }
