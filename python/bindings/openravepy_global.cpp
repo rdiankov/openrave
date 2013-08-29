@@ -458,7 +458,12 @@ public:
         _spec.ExtractUsedBodies(openravepy::GetEnvironment(pyenv), vusedbodies);
         boost::python::list obodies;
         FOREACHC(itbody, vusedbodies) {
-            obodies.append(openravepy::toPyKinBody(*itbody, pyenv));
+            if( (*itbody)->IsRobot() ) {
+                obodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody), pyenv));
+            }
+            else {
+                obodies.append(openravepy::toPyKinBody(*itbody, pyenv));
+            }
         }
         return obodies;
     }
