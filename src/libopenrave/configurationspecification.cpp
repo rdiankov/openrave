@@ -521,7 +521,9 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
             ss >> type >> bodyname;
             KinBodyPtr pbody = env->GetKinBody(bodyname);
             if( !!pbody ) {
-                usedbodies.push_back(pbody);
+                if( find(usedbodies.begin(), usedbodies.end(), pbody) == usedbodies.end() ) {
+                    usedbodies.push_back(pbody);
+                }
             }
         }
     }
