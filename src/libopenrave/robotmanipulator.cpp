@@ -49,6 +49,11 @@ RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<Robot
 //    }
 }
 
+int RobotBase::Manipulator::GetArmDOF() const
+{
+    return static_cast<int>(__varmdofindices.size());
+}
+
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
     _info._sIkSolverXMLId.resize(0);
@@ -637,7 +642,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     }
     RobotBasePtr probot = GetRobot();
     IkSolverBasePtr pIkSolver = GetIkSolver();
-    OPENRAVE_ASSERT_OP_FORMAT((int)GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
     OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
     BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
@@ -688,7 +693,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
     }
     RobotBasePtr probot = GetRobot();
     IkSolverBasePtr pIkSolver = GetIkSolver();
-    OPENRAVE_ASSERT_OP_FORMAT((int)GetArmIndices().size(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
     OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
     BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
