@@ -989,11 +989,21 @@ private:
                 }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
-                if( !!report.plink1 && !!report.plink2 ) {
-                    RAVELOG_VERBOSE(str(boost::format("IKFastSolver: collision %s:%s with %s:%s\n")%report.plink1->GetParent()->GetName()%report.plink1->GetName()%report.plink2->GetParent()->GetName()%report.plink2->GetName()));
-                }
-                else {
-                    RAVELOG_VERBOSE("ik collision, no link\n");
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "ikfast collision " << report.__str__() << " colvalues=[";
+                    std::vector<dReal> vallvalues;
+                    probot->GetDOFValues(vallvalues);
+                    for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                        if( i > 0 ) {
+                            ss << "," << vallvalues[i];
+                        }
+                        else {
+                            ss << vallvalues[i];
+                        }
+                    }
+                    ss << "]";
+                    RAVELOG_VERBOSE(ss.str());
                 }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision);
             }

@@ -65,8 +65,6 @@ public:
     bool SolveMinTime2(Real amax,Real vmax,Real tLowerBound);
     /// Solves for minimum acceleration given end time and velocity bounds
     bool SolveMinAccel(Real endTime,Real vmax);
-    /// Same, but if fails, returns the minimum time > endTime
-    Real SolveMinAccel2(Real endTime,Real vmax);
     /// Solves for the minimum-time braking trajectory starting from x0,dx0
     void SolveBraking(Real amax);
     /// Solves for the ramp given max the exact time
@@ -177,7 +175,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
 /// Returns true if successful.
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
-/// if 0 - SolveAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
+/// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
 bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps

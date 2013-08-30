@@ -71,7 +71,7 @@ inline Real MaxBBLInfDistance(const Vector& x,const Vector& bmin,const Vector& b
     return d;
 }
 
-inline bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vector& dx1, const Vector& accMax,const Vector& velMax,const Vector& xMin,const Vector& xMax,DynamicPath& out, int multidofinterp)
+bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vector& dx1, const Vector& accMax,const Vector& velMax,const Vector& xMin,const Vector& xMax,DynamicPath& out, int multidofinterp)
 {
     if(xMin.empty()) {
         out.ramps.resize(1);
