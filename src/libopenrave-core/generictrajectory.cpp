@@ -22,7 +22,7 @@
 namespace OpenRAVE {
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
-static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.55); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
+static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.5); // should be 0.6...perhaps this is related to parabolic smoother epsilons?
 
 class GenericTrajectory : public TrajectoryBase
 {
