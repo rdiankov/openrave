@@ -142,6 +142,14 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("what is deriv of %s?",posinterpolation,ORE_InvalidArguments);
         }
 
+//        {
+//            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+//            RAVELOG_WARN(str(boost::format("writing original trajectory to %s")%filename));
+//            ofstream f(filename.c_str());
+//            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//            ptraj->serialize(f);
+//        }
+
         if( numpoints > 1 ) {
             // get the diff states
             vector<dReal> vprev(oldspec.GetDOF()), vnext(oldspec.GetDOF());
