@@ -136,6 +136,19 @@ public:
      */
     virtual bool SendCommand(std::ostream& os, std::istream& is);
 
+    /// \biref Similar to \ref SendCommand except the inputs and outputs are a string
+    ///
+    /// This function should not be overridden by the user, therefore it isn't virtual.
+    /// It is is slower than \ref SendCommand since it has to cast the strings to stringstreams.
+    inline bool SendCommand(std::string& output, const std::string& input) {
+        std::stringstream soutput, sinput(input);
+        bool bSuccess = SendCommand(soutput, sinput);
+        if( bSuccess ) {
+            output = soutput.str();
+        }
+        return bSuccess;
+    }
+
     /** \brief serializes the interface
 
         The readable interfaces are also serialized within the tag, for example:
