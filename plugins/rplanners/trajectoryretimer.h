@@ -342,7 +342,7 @@ public:
                     FOREACH(itfn,listwritefns) {
                         // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
                         if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
-                            RAVELOG_DEBUG(str(boost::format("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.")%i%numpoints%(*(itdata+_timeoffset))));
+                            RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.", i%numpoints%(*(itdata+_timeoffset)));
                             return PS_Failed;
                         }
                     }
