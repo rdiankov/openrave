@@ -471,6 +471,9 @@ public:
                         OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(vdiff.at(i)), <=, velthresh, "time %fs-%fs, dof %d traveled %f, but maxvelocity only allows %f, wrote trajectory to %s",*itprevtime%*itsampletime%i%RaveFabs(vdiff.at(i))%velthresh%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
                     if( _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn) != 0 ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            _parameters->CheckPathAllConstraints(vprevdata,vdata,vprevdatavel, vdatavel, deltatime, IT_Closed, 0xffff|CFO_FillCheckedConfiguration, filterreturn);
+                        }
                         throw OPENRAVE_EXCEPTION_FORMAT("time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s",*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                     }
                     OPENRAVE_ASSERT_OP(filterreturn->_configurations.size()%_parameters->GetDOF(),==,0);

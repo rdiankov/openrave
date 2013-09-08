@@ -1368,19 +1368,42 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     OPENRAVE_ASSERT_FORMAT(!!pbody, "robot %s invalid bod to grab",GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent() == shared_kinbody(), "robot %s grabbing link needs to be part of robot",GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"robot %s cannot grab itself",GetName(), ORE_InvalidArguments);
-    if( IsGrabbing(pbody) ) {
-        RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
+
+    // if grabbing, check if the transforms are different. If they are, then update the transform
+    GrabbedPtr pPreviousGrabbed;
+    FOREACHC(itgrabbed, _vGrabbedBodies) {
+        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+        if( KinBodyConstPtr(pgrabbed->_pgrabbedbody) == pbody ) {
+            pPreviousGrabbed = pgrabbed;
+            break;
+        }
+    }
+
+    Transform t = plink->GetTransform();
+    Transform tbody = pbody->GetTransform();
+    // new body velocity is measured from robot link
+    std::pair<Vector, Vector> velocity = plink->GetVelocity();
+    velocity.first += velocity.second.cross(tbody.trans - t.trans);
+
+    if( !!pPreviousGrabbed ) {
+        dReal disterror = TransformDistance2(t*pPreviousGrabbed->_troot, tbody);
+        if( pPreviousGrabbed->_plinkrobot == plink && disterror <= g_fEpsilonLinear ) {
+            // links and transforms are the same, so no worries
+            return true;
+        }
+        RAVELOG_VERBOSE_FORMAT("Robot %s: body %s already grabbed, but transforms differ by %f \n", GetName()%pbody->GetName()%disterror);
+        _RemoveAttachedBody(pbody);
+        CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
+        pPreviousGrabbed->_plinkrobot = plink;
+        pPreviousGrabbed->_troot = t.inverse() * tbody;
+        pPreviousGrabbed->_ProcessCollidingLinks(pPreviousGrabbed->_setRobotLinksToIgnore);
+        pbody->SetVelocity(velocity.first, velocity.second);
         return true;
     }
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,plink));
-    Transform t = plink->GetTransform();
-    Transform tbody = pbody->GetTransform();
     pgrabbed->_troot = t.inverse() * tbody;
     pgrabbed->_ProcessCollidingLinks(std::set<int>());
-    // set velocity
-    std::pair<Vector, Vector> velocity = plink->GetVelocity();
-    velocity.first += velocity.second.cross(tbody.trans - t.trans);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);

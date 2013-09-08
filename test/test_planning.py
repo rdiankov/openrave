@@ -26,6 +26,12 @@ class RunPlanning(EnvironmentSetup):
             self.LoadEnv('data/hironxtable.env.xml')
             robot = env.GetRobots()[0]
             manip = robot.SetActiveManipulator('leftarm_torso')
+            # need the linkstatistics model or else robot will get into collision
+            lmodel=databases.linkstatistics.LinkStatisticsModel(robot)
+            if not lmodel.load():
+                lmodel.autogenerate()
+            lmodel.setRobotWeights()
+            lmodel.setRobotResolutions(xyzdelta=0.002)
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetActiveDOFs(manip.GetArmIndices())
             goal = robot.GetActiveDOFValues()
