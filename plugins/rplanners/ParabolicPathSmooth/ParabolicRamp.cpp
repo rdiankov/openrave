@@ -3501,6 +3501,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         Real bmin,bmax;
         ramps[i][0].Bounds(bmin,bmax);
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
+            PARABOLIC_RAMP_PLOG("ramp index %d failed due to boundary constraints (%.15e, %.15e)\n", i, bmin, bmax);
             return -1;
         }
         if(ramps[i][0].ttotal > endTime) {

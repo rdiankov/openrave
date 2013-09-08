@@ -58,6 +58,15 @@ protected:
         return g;
     }
 
+    void ResetCachedGroupInfo(GroupInfoPtr g)
+    {
+        // remove all the points
+        ParabolicGroupInfoPtr parabolicgroup = boost::dynamic_pointer_cast<ParabolicGroupInfo>(g);
+        if( parabolicgroup->ptraj->GetNumWaypoints() > 0 ) {
+            parabolicgroup->ptraj->Remove(0, parabolicgroup->ptraj->GetNumWaypoints());
+        }
+    }
+
     bool _SupportInterpolation() {
         if( _parameters->_interpolation.size() == 0 ) {
             _parameters->_interpolation = "quadratic";

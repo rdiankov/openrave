@@ -48,6 +48,9 @@ public:
         params->Validate();
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
+        // reset the cache
+        _cachedoldspec = ConfigurationSpecification();
+        _cachednewspec = ConfigurationSpecification();
         return _InitPlan();
     }
 
@@ -92,8 +95,7 @@ public:
             return PS_Failed;
         }
         size_t numpoints = ptraj->GetNumWaypoints();
-        const ConfigurationSpecification& oldspec = _parameters->_configurationspecification;
-        ConfigurationSpecification velspec = oldspec.ConvertToVelocitySpecification();
+        ConfigurationSpecification velspec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
         if( _parameters->_hasvelocities ) {
             // check that all velocity groups are there
             FOREACH(itgroup,velspec._vgroups) {
@@ -104,43 +106,32 @@ public:
             }
         }
 
-        ConfigurationSpecification newspec = oldspec;
+        ConfigurationSpecification newspec = _parameters->_configurationspecification;
         newspec.AddDerivativeGroups(1,true);
-        vector<dReal> vdiffdata, data;
-        ptraj->GetWaypoints(0,numpoints,vdiffdata,oldspec);
+        ptraj->GetWaypoints(0,numpoints,_vdiffdata, _parameters->_configurationspecification);
         // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks
-        for(size_t i = 0; i < vdiffdata.size(); i += oldspec.GetDOF()) {
-            for(int j = 0; j < oldspec.GetDOF(); ++j) {
+        for(size_t i = 0; i < _vdiffdata.size(); i += _parameters->GetDOF()) {
+            for(int j = 0; j < _parameters->GetDOF(); ++j) {
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
-                if( vdiffdata.at(i+j) < lower ) {
-                    if( vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                if( _vdiffdata.at(i+j) < lower ) {
+                    if( _vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)",(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
                     }
-                    vdiffdata.at(i+j) = lower;
+                    _vdiffdata.at(i+j) = lower;
                 }
-                else if( vdiffdata.at(i+j) > upper ) {
-                    if( vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)",(i/oldspec.GetDOF())%j%vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                else if( _vdiffdata.at(i+j) > upper ) {
+                    if( _vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)",(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
                     }
-                    vdiffdata.at(i+j) = upper;
+                    _vdiffdata.at(i+j) = upper;
                 }
             }
         }
 
-        data.resize(numpoints*newspec.GetDOF(),0);
-        ConfigurationSpecification::ConvertData(data.begin(),newspec,vdiffdata.begin(),oldspec,numpoints,GetEnv());
+        _vdata.resize(numpoints*newspec.GetDOF());
+        std::fill(_vdata.begin(), _vdata.end(), 0);
+        ConfigurationSpecification::ConvertData(_vdata.begin(), newspec, _vdiffdata.begin(), _parameters->_configurationspecification, numpoints, GetEnv());
         int degree = 1;
-        string posinterpolation = _parameters->_interpolation;
-        string velinterpolation;
-        if( posinterpolation == "quadratic" ) {
-            velinterpolation = "linear";
-        }
-        else if( posinterpolation == "linear" ) {
-            velinterpolation = "next";
-        }
-        else {
-            throw OPENRAVE_EXCEPTION_FORMAT("what is deriv of %s?",posinterpolation,ORE_InvalidArguments);
-        }
 
 //        {
 //            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
@@ -151,154 +142,174 @@ public:
 //        }
 
         if( numpoints > 1 ) {
-            // get the diff states
-            vector<dReal> vprev(oldspec.GetDOF()), vnext(oldspec.GetDOF());
-            std::copy(vdiffdata.end()-oldspec.GetDOF(),vdiffdata.end(),vnext.begin());
-            for(size_t i = numpoints-1; i > 0; --i) {
-                std::copy(vdiffdata.begin()+(i-1)*oldspec.GetDOF(),vdiffdata.begin()+(i)*oldspec.GetDOF(),vprev.begin());
-                _parameters->_diffstatefn(vnext,vprev);
-                std::copy(vnext.begin(),vnext.end(),vdiffdata.begin()+i*oldspec.GetDOF());
-                vnext = vprev;
-            }
-
             // analyze the configuration space and set the necessary converters
-            _listgroupinfo.clear();
-            list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > listmintimefns;
-            list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listvelocityfns;
-            list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > listcheckvelocityfns;
-            list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > listwritefns;
-            const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
-            for(size_t i = 0; i < newspec._vgroups.size(); ++i) {
-                ConfigurationSpecification::Group& gpos = newspec._vgroups[i];
-                size_t igrouptype;
-                for(igrouptype = 0; igrouptype < supportedgroups.size(); ++igrouptype) {
-                    if( gpos.name.size() >= supportedgroups[igrouptype].size() && gpos.name.substr(0,supportedgroups[igrouptype].size()) == supportedgroups[igrouptype] ) {
-                        break;
+            const string& posinterpolation = _parameters->_interpolation;
+            if( _cachedoldspec != _parameters->_configurationspecification || posinterpolation != _cachedposinterpolation ) {
+                _listgroupinfo.clear();
+                _listmintimefns.clear();
+                _listvelocityfns.clear();
+                _listcheckvelocityfns.clear();
+                _listwritefns.clear();
+                _cachednewspec = newspec;
+                _cachedoldspec = _parameters->_configurationspecification;
+                _cachedposinterpolation = posinterpolation;
+                string velinterpolation;
+                if( posinterpolation == "quadratic" ) {
+                    velinterpolation = "linear";
+                }
+                else if( posinterpolation == "linear" ) {
+                    velinterpolation = "next";
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT("what is deriv of %s?",posinterpolation,ORE_InvalidArguments);
+                }
+                const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
+                for(size_t i = 0; i < _cachednewspec._vgroups.size(); ++i) {
+                    ConfigurationSpecification::Group& gpos = _cachednewspec._vgroups[i];
+                    size_t igrouptype;
+                    for(igrouptype = 0; igrouptype < supportedgroups.size(); ++igrouptype) {
+                        if( gpos.name.size() >= supportedgroups[igrouptype].size() && gpos.name.substr(0,supportedgroups[igrouptype].size()) == supportedgroups[igrouptype] ) {
+                            break;
+                        }
                     }
-                }
-                if( igrouptype >= supportedgroups.size() ) {
-                    continue;
-                }
-
-                // group is supported
-                std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = oldspec.FindCompatibleGroup(gpos);
-                BOOST_ASSERT(itgroup != oldspec._vgroups.end());
-                int orgposoffset = itgroup->offset;
-                BOOST_ASSERT(orgposoffset+gpos.dof <= _parameters->GetDOF());
-                std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = newspec._vgroups.begin()+(newspec.FindTimeDerivativeGroup(gpos)-newspec._vgroups.begin());
-                BOOST_ASSERT(itvelgroup != newspec._vgroups.end());
-                _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
-                _listgroupinfo.back()->orgposoffset = orgposoffset;
-                _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
-                _listgroupinfo.back()->_vConfigAccelerationLimit = std::vector<dReal>(_parameters->_vConfigAccelerationLimit.begin()+itgroup->offset, _parameters->_vConfigAccelerationLimit.begin()+itgroup->offset+itgroup->dof);
-                _listgroupinfo.back()->_vConfigLowerLimit = std::vector<dReal>(_parameters->_vConfigLowerLimit.begin()+itgroup->offset, _parameters->_vConfigLowerLimit.begin()+itgroup->offset+itgroup->dof);
-                _listgroupinfo.back()->_vConfigUpperLimit = std::vector<dReal>(_parameters->_vConfigUpperLimit.begin()+itgroup->offset, _parameters->_vConfigUpperLimit.begin()+itgroup->offset+itgroup->dof);
-
-                itgroup = oldspec.FindCompatibleGroup(*itvelgroup);
-                if( itgroup != oldspec._vgroups.end() ) {
-                    // velocity is optional
-                    _listgroupinfo.back()->orgveloffset = itgroup->offset;
-                }
-
-                stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
-                string bodyname;
-                int affinedofs=0;
-                IkParameterizationType iktype=IKP_None;
-                if( igrouptype == 1 ) {
-                    ss >> bodyname >> affinedofs;
-                }
-                else if( igrouptype == 2 ) {
-                    int niktype=0;
-                    ss >> niktype;
-                    iktype = static_cast<IkParameterizationType>(niktype);
-                }
-
-                {
-                    // if _parameters->_hastimestamps, then use this for double checking that times are feasible
-                    if( igrouptype == 0 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
+                    if( igrouptype >= supportedgroups.size() ) {
+                        continue;
                     }
-                    else if( igrouptype == 1 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
+
+                    // group is supported
+                    std::vector<ConfigurationSpecification::Group>::const_iterator itgroup = _cachedoldspec.FindCompatibleGroup(gpos);
+                    BOOST_ASSERT(itgroup != _cachedoldspec._vgroups.end());
+                    int orgposoffset = itgroup->offset;
+                    BOOST_ASSERT(orgposoffset+gpos.dof <= _parameters->GetDOF());
+                    std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = _cachednewspec._vgroups.begin()+(_cachednewspec.FindTimeDerivativeGroup(gpos)-_cachednewspec._vgroups.begin());
+                    BOOST_ASSERT(itvelgroup != _cachednewspec._vgroups.end());
+                    _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
+                    _listgroupinfo.back()->orgposoffset = orgposoffset;
+                    _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
+                    _listgroupinfo.back()->_vConfigAccelerationLimit = std::vector<dReal>(_parameters->_vConfigAccelerationLimit.begin()+itgroup->offset, _parameters->_vConfigAccelerationLimit.begin()+itgroup->offset+itgroup->dof);
+                    _listgroupinfo.back()->_vConfigLowerLimit = std::vector<dReal>(_parameters->_vConfigLowerLimit.begin()+itgroup->offset, _parameters->_vConfigLowerLimit.begin()+itgroup->offset+itgroup->dof);
+                    _listgroupinfo.back()->_vConfigUpperLimit = std::vector<dReal>(_parameters->_vConfigUpperLimit.begin()+itgroup->offset, _parameters->_vConfigUpperLimit.begin()+itgroup->offset+itgroup->dof);
+
+                    itgroup = _cachedoldspec.FindCompatibleGroup(*itvelgroup);
+                    if( itgroup != _cachedoldspec._vgroups.end() ) {
+                        // velocity is optional
+                        _listgroupinfo.back()->orgveloffset = itgroup->offset;
+                    }
+
+                    stringstream ss(gpos.name.substr(supportedgroups[igrouptype].size()));
+                    string bodyname;
+                    int affinedofs=0;
+                    IkParameterizationType iktype=IKP_None;
+                    if( igrouptype == 1 ) {
+                        ss >> bodyname >> affinedofs;
                     }
                     else if( igrouptype == 2 ) {
-                        listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
+                        int niktype=0;
+                        ss >> niktype;
+                        iktype = static_cast<IkParameterizationType>(niktype);
                     }
-                }
 
-                if( igrouptype == 0 ) {
-                    if( _parameters->_hasvelocities ) {
-                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2));
+                    {
+                        // if _parameters->_hastimestamps, then use this for double checking that times are feasible
+                        if( igrouptype == 0 ) {
+                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
+                        }
+                        else if( igrouptype == 1 ) {
+                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
+                        }
+                        else if( igrouptype == 2 ) {
+                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
+                        }
                     }
-                    else {
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
-                    }
-                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
-                }
-                else if( igrouptype == 1 ) {
-                    if( _parameters->_hasvelocities ) {
-                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2));
-                    }
-                    else {
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
-                    }
-                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
-                }
-                else if( igrouptype == 2 ) {
-                    if( _parameters->_hasvelocities ) {
-                        listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2));
-                    }
-                    else {
-                        listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
-                    }
-                    listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
-                }
 
-                gpos.interpolation = posinterpolation;
-                itvelgroup->interpolation = velinterpolation;
+                    if( igrouptype == 0 ) {
+                        if( _parameters->_hasvelocities ) {
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2));
+                        }
+                        else {
+                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                        }
+                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                    }
+                    else if( igrouptype == 1 ) {
+                        if( _parameters->_hasvelocities ) {
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2));
+                        }
+                        else {
+                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                        }
+                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                    }
+                    else if( igrouptype == 2 ) {
+                        if( _parameters->_hasvelocities ) {
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2));
+                        }
+                        else {
+                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                        }
+                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                    }
+
+                    gpos.interpolation = posinterpolation;
+                    itvelgroup->interpolation = velinterpolation;
+                }
+                // compute the timestamps and velocities
+                _timeoffset = -1;
+                FOREACH(itgroup,_cachednewspec._vgroups) {
+                    if( itgroup->name == "deltatime" ) {
+                        _timeoffset = itgroup->offset;
+                    }
+                }
+            }
+            else {
+                FOREACH(it, _listgroupinfo) {
+                    ResetCachedGroupInfo(*it);
+                }
             }
 
-            // compute the timestamps and velocities
-            _timeoffset = -1;
-            FOREACH(itgroup,newspec._vgroups) {
-                if( itgroup->name == "deltatime" ) {
-                    _timeoffset = itgroup->offset;
-                }
-            }
 
-            int dof = newspec.GetDOF();
-            std::vector<dReal>::iterator itdata = data.begin();
-            data.at(_timeoffset) = 0;
+            int dof = _cachednewspec.GetDOF();
+            std::vector<dReal>::iterator itdata = _vdata.begin();
+            _vdata.at(_timeoffset) = 0;
             // set velocities to 0
             FOREACH(it, _listgroupinfo) {
                 int offset = (*it)->gvel.offset;
                 for(int j = 0; j < (*it)->gvel.dof; ++j) {
-                    data.at(offset+j) = 0; // initial
-                    data.at(data.size()-dof+offset+j) = 0; // end
+                    _vdata.at(offset+j) = 0; // initial
+                    _vdata.at(_vdata.size()-dof+offset+j) = 0; // end
                 }
             }
 
+            // get the diff states
+            vector<dReal>& vprev = _vtempdata0; vprev.resize(_cachedoldspec.GetDOF());
+            vector<dReal>& vnext = _vtempdata1; vnext.resize(_cachedoldspec.GetDOF());
+            std::copy(_vdiffdata.end()-_cachedoldspec.GetDOF(),_vdiffdata.end(),vnext.begin());
+            for(size_t i = numpoints-1; i > 0; --i) {
+                std::copy(_vdiffdata.begin()+(i-1)*_cachedoldspec.GetDOF(),_vdiffdata.begin()+(i)*_cachedoldspec.GetDOF(),vprev.begin());
+                _parameters->_diffstatefn(vnext,vprev);
+                std::copy(vnext.begin(),vnext.end(),_vdiffdata.begin()+i*_cachedoldspec.GetDOF());
+                vnext = vprev;
+            }
+
             if( _parameters->_hastimestamps ) {
-                vector<dReal> vdeltatimes;
-                ptraj->GetWaypoints(0,numpoints,vdeltatimes,*itoldgrouptime);
-                ConfigurationSpecification::ConvertData(data.begin(),newspec,vdeltatimes.begin(),*itoldgrouptime,numpoints,GetEnv(),false);
+                ptraj->GetWaypoints(0, numpoints, _vtempdata0,*itoldgrouptime);
+                ConfigurationSpecification::ConvertData(_vdata.begin(), _cachednewspec, _vtempdata0.begin(), *itoldgrouptime, numpoints, GetEnv(), false);
             }
             if( _parameters->_hasvelocities ) {
-                vector<dReal> vvelocities;
-                ptraj->GetWaypoints(0,numpoints,vvelocities,velspec);
-                ConfigurationSpecification::ConvertData(data.begin(),newspec,vvelocities.begin(),velspec,numpoints,GetEnv(),false);
+                ptraj->GetWaypoints(0,numpoints,_vtempdata0,velspec);
+                ConfigurationSpecification::ConvertData(_vdata.begin(),_cachednewspec,_vtempdata0.begin(),velspec,numpoints,GetEnv(),false);
             }
             try {
-                std::vector<dReal>::iterator itorgdiff = vdiffdata.begin()+oldspec.GetDOF();
+                std::vector<dReal>::iterator itorgdiff = _vdiffdata.begin()+_cachedoldspec.GetDOF();
                 std::vector<dReal>::iterator itdataprev = itdata;
                 itdata += dof;
-                for(size_t i = 1; i < numpoints; ++i, itdata += dof, itorgdiff += oldspec.GetDOF()) {
+                for(size_t i = 1; i < numpoints; ++i, itdata += dof, itorgdiff += _cachedoldspec.GetDOF()) {
                     dReal mintime = 0;
                     bool bUseEndVelocity = i+1==numpoints;
-                    FOREACH(itmin,listmintimefns) {
+                    FOREACH(itmin,_listmintimefns) {
                         dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
                         if( fgrouptime < 0 ) {
-                            RAVELOG_DEBUG(str(boost::format("point %d/%d has uncomputable minimum time, possibly due to boundary constraints")%i%numpoints));
+                            RAVELOG_VERBOSE_FORMAT("point %d/%d has uncomputable minimum time, possibly due to boundary constraints", i%numpoints);
                             return PS_Failed;
                         }
 
@@ -325,7 +336,7 @@ public:
                         *(itdata+_timeoffset) = mintime;
                     }
                     if( _parameters->_hasvelocities ) {
-                        FOREACH(itfn,listcheckvelocityfns) {
+                        FOREACH(itfn,_listcheckvelocityfns) {
                             if( !(*itfn)(itdataprev, itdata) ) {
                                 RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
                                 return PS_Failed;
@@ -334,12 +345,12 @@ public:
                     }
                     else {
                         // given the mintime, fill the velocities
-                        FOREACH(itfn,listvelocityfns) {
+                        FOREACH(itfn,_listvelocityfns) {
                             (*itfn)(itorgdiff, itdataprev, itdata);
                         }
                     }
 
-                    FOREACH(itfn,listwritefns) {
+                    FOREACH(itfn,_listwritefns) {
                         // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
                         if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
                             RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.", i%numpoints%(*(itdata+_timeoffset)));
@@ -360,12 +371,12 @@ public:
         }
         else {
             // one point, but still need to set interpolation
-            FOREACH(itgroup,newspec._vgroups) {
-                itgroup->interpolation = posinterpolation;
+            FOREACH(itgroup,_cachednewspec._vgroups) {
+                itgroup->interpolation = _parameters->_interpolation;
             }
         }
 
-        _WriteTrajectory(ptraj,newspec, data);
+        _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
         RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return PS_HasSolution;
@@ -374,8 +385,12 @@ public:
 protected:
     // method to be overriden by individual timing types
 
+    /// \brief createa s group info
     virtual GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
         return GroupInfoPtr(new GroupInfo(degree, gpos, gvel));
+    }
+    /// \brief resets any cached data in the group info
+    virtual void ResetCachedGroupInfo(GroupInfoPtr g) {
     }
 
     virtual bool _SupportInterpolation() = 0;
@@ -412,9 +427,19 @@ protected:
     }
 
     TrajectoryTimingParametersPtr _parameters;
+
+    // caching
+    ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for
+    std::string _cachedposinterpolation;
+    std::list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > _listmintimefns;
+    std::list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listvelocityfns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listcheckvelocityfns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > _listwritefns;
     std::vector<dReal> _vimaxvel, _vimaxaccel;
+    std::vector<dReal> _vdiffdata, _vdata;
     int _timeoffset;
     std::list<GroupInfoPtr> _listgroupinfo;
+    vector<dReal> _vtempdata0, _vtempdata1;
 };
 
 #endif
