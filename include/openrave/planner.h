@@ -210,7 +210,7 @@ private:
 
             The simplest and most fundamental constraint is linearly interpolating the positions and velocities and checking constraints at each discrete point.
 
-            success = _checkpathvelocityconstraintsfn(q0, q1, dq0, dq1, timeelapsed, interval, options, configurations)
+            errorcode = _checkpathvelocityconstraintsfn(q0, q1, dq0, dq1, timeelapsed, interval, options, configurations)
 
             When called, q0 and dq0 is guaranteed to be set on the robot.
             The function returns true if the path to q1 satisfies all the constraints of the planner.
@@ -225,7 +225,7 @@ private:
             \param interval Specifies whether to check the end points of the interval for constraints
             \param options a mask of ConstraintFilterOptions
             \param filterreturn Optional argument that will hold the output information of the filter.
-            \return \ref ConstraintFilterReturn::_returncode
+            \return \ref ConstraintFilterReturn::_returncode, which a combination of ConstraintFilterOptions
          */
         typedef boost::function<int (const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr)> CheckPathVelocityConstraintFn;
         CheckPathVelocityConstraintFn _checkpathvelocityconstraintsfn;

@@ -266,6 +266,9 @@ protected:
                     pbody->_vecjoints.resize(node->mFramePivot->mJointIndex);
                 }
 
+
+                pjoint->_info._mapIntParameters["xfilejointindex"].resize(1);
+                pjoint->_info._mapIntParameters["xfilejointindex"][0] = node->mFramePivot->mJointIndex;
                 string orgjointname = str(boost::format("%sj%d")%_prefix%node->mFramePivot->mJointIndex);
                 // prioritize joints with orgjointname when putting into _vecjoints. The only reason to do this is to maintain consistency between expected joint values.
 

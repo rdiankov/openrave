@@ -90,6 +90,15 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
                         samples[inum+i+2] = axisangle[2];
                     }
                 }
+                else if( _affinequat >= 0 && (int)i >= _affinequat && (int)i < _affinequat+3 ) {
+                    if( (int)i == _affinequat ) {
+                        Vector quat = _SampleQuaternion();
+                        samples[inum+i+0] = quat[0];
+                        samples[inum+i+1] = quat[1];
+                        samples[inum+i+2] = quat[2];
+                        samples[inum+i+3] = quat[3];
+                    }
+                }
                 else {
                     samples[inum+i] = _lower[i] + samples[inum+i]*_range[i];
                 }
@@ -160,6 +169,9 @@ protected:
         }
         if( _probot->GetAffineDOF() & DOF_Rotation3D) {
             _affinerot3d = _probot->GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(_probot->GetAffineDOF(),DOF_Rotation3D);
+        }
+        if( _probot->GetAffineDOF() & DOF_RotationQuat) {
+            _affinequat = _probot->GetActiveDOFIndices().size()+RaveGetIndexFromAffineDOF(_probot->GetAffineDOF(),DOF_RotationQuat);
         }
 
         if( _lower.size() > 0 ) {

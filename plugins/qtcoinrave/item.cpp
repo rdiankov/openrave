@@ -308,7 +308,7 @@ void KinBodyItem::Load()
     _bReload = false;
     _bDrawStateChanged = false;
 
-    string name = _pchain->GetName() + string(".wrl");
+    string name = _pchain->GetName() + string("_save.wrl");
     //SaveToVRML(_ivGeom,name.c_str());
 }
 
