@@ -367,8 +367,13 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
     _veclinks.reserve(linkinfos.size());
+    set<std::string> setusednames;
     FOREACHC(itlinkinfo, linkinfos) {
         LinkInfoConstPtr rawinfo = *itlinkinfo;
+        if( setusednames.find(rawinfo->_name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("link %s is declared more than once", rawinfo->_name, ORE_InvalidArguments);
+        }
+        setusednames.insert(rawinfo->_name);
         LinkPtr plink(new Link(shared_kinbody()));
         plink->_info = *rawinfo;
         LinkInfo& info = plink->_info;
@@ -384,9 +389,14 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         }
         _veclinks.push_back(plink);
     }
+    setusednames.clear();
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
+        if( setusednames.find(rawinfo->_name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("joint %s is declared more than once", rawinfo->_name, ORE_InvalidArguments);
+        }
+        setusednames.insert(rawinfo->_name);
         JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->_type));
         pjoint->_info = *rawinfo;
         JointInfo& info = pjoint->_info;
