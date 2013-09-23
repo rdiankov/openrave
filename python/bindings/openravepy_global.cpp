@@ -480,6 +480,15 @@ public:
 //
 //    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
+    boost::python::list GetGroups()
+    {
+        boost::python::list ogroups;
+        FOREACHC(itgroup, _spec._vgroups) {
+            ogroups.append(*itgroup);
+        }
+        return ogroups;
+    }
+
     bool __eq__(PyConfigurationSpecificationPtr p) {
         return !!p && _spec==p->_spec;
     }
@@ -1100,6 +1109,7 @@ void init_openravepy_global()
                                            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues,args("data","values","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,InsertJointValues))
                                            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
                                            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
+                                           .def("GetGroups", &PyConfigurationSpecification::GetGroups, args("env"), "returns a list of the groups")
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
                                            .def("__add__",&PyConfigurationSpecification::__add__)

@@ -205,7 +205,7 @@ if __name__ == "__main__":
                     api_version = '0.10'
                 elif IPython.__version__.startswith("0.11"):
                     api_version = '0.11'
-
+                    
                 # start ipython in a separate thread
                 def ipythonthreadfn(env):
                     try:
@@ -218,13 +218,14 @@ if __name__ == "__main__":
                             ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__,exit_msg = 'Leaving Interpreter and closing program.')
                             ipshell(local_ns=locals())
                         else:
-                            from IPython.config.loader import Config
-                            cfg = Config()
-                            cfg.InteractiveShellEmbed.local_ns = locals()
-                            cfg.InteractiveShellEmbed.global_ns = globals()
-                            IPython.embed(config=cfg, banner2 = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__)
-                            from IPython.frontend.terminal.embed import InteractiveShellEmbed
-                            ipshell = InteractiveShellEmbed(config=cfg)
+                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+#                             from IPython.config.loader import Config
+#                             cfg = Config()
+#                             cfg.InteractiveShellEmbed.local_ns = locals()
+#                             cfg.InteractiveShellEmbed.global_ns = globals()
+#                             #IPython.embed(config=cfg, banner2 = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__)
+#                             from IPython.frontend.terminal.embed import InteractiveShellEmbed
+#                             ipshell = InteractiveShellEmbed(config=cfg)
                     finally:
                         # ipython exited. if viewer is valid, then exit the viewer also
                         if viewer is not None:

@@ -366,6 +366,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _SetDOFValues(_vecdesired, 0);
             }
             _bIsDone = true;
+            // don't need to set it anymore
+            _vecdesired.resize(0);
         }
     }
 
