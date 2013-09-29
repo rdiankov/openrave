@@ -303,6 +303,11 @@ public:
         return oreturns;
     }
 
+    int GetIkParameterizationIndex(int index)
+    {
+        return _sampler->GetIkParameterizationIndex(index);
+    }
+
     OpenRAVE::planningutils::ManipulatorIKGoalSamplerPtr _sampler;
 };
 
@@ -387,6 +392,7 @@ void InitPlanningUtils()
         .def(init<object, object, optional<int, int, dReal, bool, int> >(args("manip", "parameterizations", "nummaxsamples", "nummaxtries", "jitter","searchfreeparameters","ikfilteroptions")))
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("maxsamples", "maxchecksamples", "releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
+        .def("GetIkParameterizationIndex", &planningutils::PyManipulatorIKGoalSampler::GetIkParameterizationIndex, args("index"), DOXY_FN(planningutils::ManipulatorIKGoalSampler, GetIkParameterizationIndex))
         ;
 
         class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >("ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother), no_init)

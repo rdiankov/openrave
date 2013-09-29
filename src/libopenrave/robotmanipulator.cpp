@@ -54,6 +54,11 @@ int RobotBase::Manipulator::GetArmDOF() const
     return static_cast<int>(__varmdofindices.size());
 }
 
+int RobotBase::Manipulator::GetGripperDOF() const
+{
+    return static_cast<int>(__vgripperdofindices.size());
+}
+
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
     _info._sIkSolverXMLId.resize(0);
@@ -147,6 +152,17 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 
     return false;
 }
+
+void RobotBase::Manipulator::GetArmDOFValues(std::vector<dReal>& v) const
+{
+    GetRobot()->GetDOFValues(v, __varmdofindices);
+}
+
+void RobotBase::Manipulator::GetGripperDOFValues(std::vector<dReal>& v) const
+{
+    GetRobot()->GetDOFValues(v, __vgripperdofindices);
+}
+
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
 {

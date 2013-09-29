@@ -144,6 +144,9 @@ public:
         /// \brief returns the number of DOF for the arm indices. Equivalent to GetArmIndices().size()
         virtual int GetArmDOF() const;
 
+        /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
+        virtual int GetGripperDOF() const;
+
         /// \brief return the normal direction to move joints to 'close' the hand
         virtual const std::vector<dReal>& GetClosingDirection() const {
             return _info._vClosingDirection;
@@ -163,6 +166,16 @@ public:
         virtual Vector GetDirection() const {
             return GetLocalToolDirection();
         }
+
+        /// \brief returns the current values of the manipulator arm.
+        ///
+        /// Aquivalent to GetRobot()->GetDOFValues(v, GetArmIndices())
+        virtual void GetArmDOFValues(std::vector<dReal>& v) const;
+
+        /// \brief returns the current values of the manipulator gripper
+        ///
+        /// Aquivalent to GetRobot()->GetDOFValues(v, GetGripperIndices())
+        virtual void GetGripperDOFValues(std::vector<dReal>& v) const;
 
         /// \brief Find a close solution to the current robot's joint values.
         ///
