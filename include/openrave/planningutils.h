@@ -496,6 +496,8 @@ public:
     dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1);
 protected:
     RobotBasePtr _robot;
+//    int _activeaffine;
+//    std::vector<int> _vdofindices;
     std::vector<dReal> weights2;
 };
 

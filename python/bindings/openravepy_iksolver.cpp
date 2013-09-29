@@ -85,23 +85,27 @@ protected:
         catch(...) {
             errmsg = boost::str(boost::format("exception occured in python custom filter callback of iksolver %s: %s")%pIkSolver->GetXMLId()%GetPyErrorString());
         }
+        IkReturn ikfr(IKRA_Success);
+        if( res == object() ) {
+            ikfr._action = IKRA_Reject;
+        }
+        else {
+            if( !openravepy::ExtractIkReturn(res,ikfr) ) {
+                extract<IkReturnAction> ikfra(res);
+                if( ikfra.check() ) {
+                    ikfr._action = (IkReturnAction)ikfra;
+                }
+                else {
+                    errmsg = "failed to convert return type of filter to IkReturn";
+                }
+            }
+        }
+
         PyGILState_Release(gstate);
         if( errmsg.size() > 0 ) {
             throw openrave_exception(errmsg,ORE_Assert);
         }
-        if( res == object() ) {
-            return IKRA_Reject;
-        }
-        IkReturn ikfr(IKRA_Success);
-        if( openravepy::ExtractIkReturn(res,ikfr) ) {
-            return ikfr;
-        }
-        extract<IkReturnAction> ikfra(res);
-        if( ikfra.check() ) {
-            ikfr._action = (IkReturnAction)ikfra;
-            return ikfr;
-        }
-        throw openrave_exception("failed to convert return type of filter to IkReturn",ORE_Assert);
+        return ikfr;
     }
 
 public:

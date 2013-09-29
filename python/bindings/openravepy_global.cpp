@@ -430,6 +430,9 @@ public:
         vector<int> vindices = ExtractArray<int>(oindices);
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         std::vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
+        OPENRAVE_ASSERT_OP(vvalues.size(),==,vindices.size());
+        OPENRAVE_ASSERT_OP(vdata.size(),>=,vvalues.size());
+        OPENRAVE_ASSERT_OP(vdata.size(),==,_spec.GetDOF());
         if( !_spec.InsertJointValues(vdata.begin(), vvalues.begin(), openravepy::GetKinBody(pybody), vindices, timederivative) ) {
             return false;
         }

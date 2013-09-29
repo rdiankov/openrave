@@ -167,7 +167,7 @@ public:
     void SetTransformWithDOFValues(object otrans,object ojoints);
     void SetDOFValues(object o, object indices, uint32_t checklimits);
     void SetDOFValues(object o, object indices);
-    object SubtractDOFValues(object ovalues0, object ovalues1);
+    object SubtractDOFValues(object ovalues0, object ovalues1, object oindices=object());
     void SetDOFTorques(object otorques, bool bAdd);
     object ComputeJacobianTranslation(int index, object oposition, object oindices=object());
     object ComputeJacobianAxisAngle(int index, object oindices=object());
