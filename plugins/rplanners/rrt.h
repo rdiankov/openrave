@@ -269,7 +269,7 @@ Some python code to display data::\n\
 
         SpatialTreeBase* TreeA = &_treeForward;
         SpatialTreeBase* TreeB = &_treeBackward;
-        int iConnectedA, iConnectedB;
+        int iConnectedA=-1, iConnectedB=-1;
         int iter = 0;
 
         list<GOALPATH> listgoalpaths;
@@ -277,7 +277,7 @@ Some python code to display data::\n\
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
         while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSE("iter: %d\n", iter);
+            RAVELOG_VERBOSE_FORMAT("iter=%d, Aind=%d, Bind=%d", iter%iConnectedA%iConnectedB);
             ++iter;
 
             if( !!_parameters->_samplegoalfn ) {
