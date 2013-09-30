@@ -20,8 +20,10 @@ class LinearSmoother : public PlannerBase
 public:
     LinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nPath optimizer using linear shortcuts assuming robot has no constraints and _neighstatefn is just regular addition. Should be faster than shortcut_linear";
+        __description = ":Interface Author: Rosen Diankov\n\nPath optimizer using linear shortcuts assuming robot has no constraints and _neighstatefn is just regular addition. Should be faster than shortcut_linear.\n\nIf passing 0 or 1 to the constructor, can enable/disable single-dof smoothing.";
         _linearretimer = RaveCreatePlanner(GetEnv(), "LinearTrajectoryRetimer");
+        _bUseSingleDOFSmoothing = true;
+        sinput >> _bUseSingleDOFSmoothing;
     }
     virtual ~LinearSmoother() {
     }
@@ -95,10 +97,16 @@ public:
         }
 
         if( listpath.size() > 1 ) {
-            dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*9/10);
-            RAVELOG_DEBUG(str(boost::format("path optimizing first stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
-            dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*1/10);
-            RAVELOG_DEBUG(str(boost::format("path optimizing second stage - dist %f->%f computation time=%fs\n")%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+            if( _bUseSingleDOFSmoothing ) {
+                dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*9/10);
+                RAVELOG_DEBUG(str(boost::format("path optimizing first stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+                dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*1/10);
+                RAVELOG_DEBUG(str(boost::format("path optimizing second stage - dist %f->%f computation time=%fs\n")%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+            }
+            else {
+                dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations);
+                RAVELOG_DEBUG(str(boost::format("path optimizing stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+            }
         }
         else {
             // trajectory contains similar points, so at least add another point and send to the next post-processing stage
@@ -419,6 +427,7 @@ protected:
     SpaceSamplerBasePtr _puniformsampler;
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
+    bool _bUseSingleDOFSmoothing;
 };
 
 PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) {
