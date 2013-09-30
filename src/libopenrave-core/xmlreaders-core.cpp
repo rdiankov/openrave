@@ -792,6 +792,7 @@ public:
         _vScaleGeometry = Vector(1,1,1);
         bool bStaticSet = false;
         bool bStatic = false;
+        bool bIsEnabled = true;
         string linkname, linkfilename;
 
         FOREACHC(itatt,atts) {
@@ -825,6 +826,9 @@ public:
                 }
                 _vScaleGeometry *= v;
             }
+            else if( itatt->first == "enable" ) {
+                bIsEnabled = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+            }
         }
 
         // if not appending to a body and plink pointer valid, append to it instead
@@ -844,6 +848,7 @@ public:
         if( bStaticSet ) {
             _plink->_info._bStatic = bStatic;
         }
+        _plink->_info._bIsEnabled = bIsEnabled;
     }
     virtual ~LinkXMLReader() {
     }
