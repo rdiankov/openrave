@@ -197,6 +197,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
 
+    _cachedLocalToolTransform = None # manip.GetLocalToolTransform() that the ik was built with
+    _cachedLocalToolDirection = None # manip.GetLocalToolDirection() that the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
         """
         :param robot: if not None, will use the robot's active manipulator
@@ -244,7 +246,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         self.forceikfast = forceikfast
         self.ikfeasibility = None # if not None, ik is NOT feasibile and contains the error message
         self.statistics = dict()
-
+        
     def  __del__(self):
         if self.ikfastproblem is not None:
             # need to lock the environment since Remove locks it
@@ -265,6 +267,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.has():
             clone.setrobot(self.freeinc)
         return clone
+    
     def has(self):
         return self.iksolver is not None and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype)
     

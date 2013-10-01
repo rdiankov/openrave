@@ -34,6 +34,12 @@ protected:
         }
     }
 
+    virtual bool _InitPlan()
+    {
+        _parameters->_hasvelocities = false; // do not support user velocities
+        return TrajectoryRetimer::_InitPlan();
+    }
+
     dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity)
     {
         dReal bestmintime = 0;
