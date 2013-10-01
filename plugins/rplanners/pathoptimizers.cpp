@@ -172,6 +172,7 @@ protected:
 
             if( newtotaldistance > totaldistance-0.1*parameters->_fStepLength ) {
                 // new path is not that good, so reject
+                nrejected++;
                 continue;
             }
 
