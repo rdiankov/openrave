@@ -116,6 +116,7 @@ public:
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
+
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
             PlannerStatus status = _linearretimer->PlanPath(ptraj);
