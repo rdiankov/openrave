@@ -53,7 +53,11 @@ public:
             _parameters->_fStepLength = 0.04;
         }
         _linearretimer->InitPlan(RobotBasePtr(), _parameters);
-        return true;
+        _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        if( !!_puniformsampler ) {
+            _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        }
+        return !!_puniformsampler;
     }
 
     virtual PlannerParametersConstPtr GetParameters() const {
@@ -114,8 +118,8 @@ protected:
             --iiter;
 
             // pick a random node on the listpath, and a random jump ahead
-            int endIndex = 2+(RaveRandomInt()%((int)listpath.size()-2));
-            int startIndex = RaveRandomInt()%(endIndex-1);
+            uint32_t endIndex = 2+(_puniformsampler->SampleSequenceOneUInt32()%((uint32_t)listpath.size()-2));
+            uint32_t startIndex = _puniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
 
             itstartnode = listpath.begin();
             advance(itstartnode, startIndex);
@@ -249,6 +253,7 @@ protected:
     }
 
     TrajectoryTimingParametersPtr _parameters;
+    SpaceSamplerBasePtr _puniformsampler;
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
