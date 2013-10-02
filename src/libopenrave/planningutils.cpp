@@ -204,7 +204,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 try {
                     parameters->_setstatefn(curdof);
                 }
-                catch(const openrave_exception& ex) {
+                catch(const std::exception& ex) {
                     // state failed to set, this could mean the initial state is just really bad, so resume jittering
                     bCollision = true;
                     break;
@@ -294,7 +294,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 try {
                     parameters->_setstatefn(newdof);
                 }
-                catch(const openrave_exception& ex) {
+                catch(const std::exception& ex) {
                     bConstraintFailed = true;
                     break;
                 }
@@ -344,7 +344,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 try {
                     parameters->_setstatefn(newdof);
                 }
-                catch(const openrave_exception& ex) {
+                catch(const std::exception& ex) {
                     // get another state
                     continue;
                 }
@@ -364,7 +364,13 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                     }
                 }
             }
-            parameters->_setstatefn(newdof);
+            try {
+                parameters->_setstatefn(newdof);
+            }
+            catch(const std::exception& ex) {
+                // get another state
+                continue;
+            }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 parameters->_getstatefn(newdof);
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
