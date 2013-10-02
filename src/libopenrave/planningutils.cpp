@@ -282,7 +282,15 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             }
             if( bConstraint ) {
                 newdof = curdof;
-                parameters->_setstatefn(newdof);
+                // unfortunately _setstatefn might throw an exept if a bad state is requested. therefore, catch the exception.
+                // ideally setstatefn would have a return value.
+                try {
+                    parameters->_setstatefn(newdof);
+                }
+                catch(const openrave_exception& ex) {
+                    bConstraintFailed = true;
+                    break;
+                }
                 if( !parameters->_neighstatefn(newdof,deltadof2,0) ) {
                     if( *itperturbation != 0 ) {
                         RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
@@ -326,7 +334,13 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             // have to restore to non-perturbed configuration!
             if( bConstraint ) {
                 newdof = curdof;
-                parameters->_setstatefn(newdof);
+                try {
+                    parameters->_setstatefn(newdof);
+                }
+                catch(const openrave_exception& ex) {
+                    // get another state
+                    continue;
+                }
                 if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
                     RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
                     continue;
