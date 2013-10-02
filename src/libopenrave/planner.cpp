@@ -747,7 +747,7 @@ void PlannerBase::PlannerParameters::Validate() const
         vector<dReal> vzeros(vstate.size());
         _neighstatefn(vstate2,vzeros,0);
         dReal dist = _distmetricfn(vstate,vstate2);
-        OPENRAVE_ASSERT_OP(dist,<=,100*g_fEpsilon);
+        OPENRAVE_ASSERT_OP(dist,<=,1000*g_fEpsilon);
     }
     if( !!_diffstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2=vstate;
