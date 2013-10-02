@@ -197,8 +197,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
 
-    _cachedLocalToolTransform = None # manip.GetLocalToolTransform() that the ik was built with
-    _cachedLocalToolDirection = None # manip.GetLocalToolDirection() that the ik was built with
+    _cachedKinematicsHash = None # manip.GetKinematicsStructureHash() when the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
         """
         :param robot: if not None, will use the robot's active manipulator
@@ -906,6 +905,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                             pass
             else:
                 log.warn('cannot continue further if outputlang %s is not cpp',outputlang)
+                
+        self._cachedKinematicsHash = self.manip.GetKinematicsStructureHash()
         
     def perftiming(self,num):
         with self.env:
