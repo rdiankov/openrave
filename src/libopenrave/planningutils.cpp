@@ -201,7 +201,14 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             }
             newdof = curdof;
             if( !parameters->_neighstatefn(newdof,deltadof,0) ) {
-                parameters->_setstatefn(curdof);
+                try {
+                    parameters->_setstatefn(curdof);
+                }
+                catch(const openrave_exception& ex) {
+                    // state failed to set, this could mean the initial state is just really bad, so resume jittering
+                    bCollision = true;
+                    break;
+                }
                 return -1;
             }
         }
