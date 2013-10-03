@@ -76,6 +76,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
         _pbody->GetDOFVelocityLimits(_vMaxVelocities);
         _pbody->GetDOFAccelerationLimits(_vMaxAccelerations);
     }
+    if( _options & Save_JointWeights ) {
+        _pbody->GetDOFWeights(_vDOFWeights);
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -125,6 +128,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     if( _options & Save_LinkVelocities ) {
         pbody->SetLinkVelocities(_vLinkVelocities);
+    }
+    if( _options & Save_JointWeights ) {
+        _pbody->SetDOFWeights(_vDOFWeights);
     }
 }
 

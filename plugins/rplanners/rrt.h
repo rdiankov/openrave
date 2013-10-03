@@ -277,7 +277,7 @@ Some python code to display data::\n\
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
         while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSE_FORMAT("iter=%d, Aind=%d, Bind=%d", iter%iConnectedA%iConnectedB);
+            RAVELOG_VERBOSE_FORMAT("iter=%d, Aind=%d, Bind=%d", (iter/3)%iConnectedA%iConnectedB);
             ++iter;
 
             if( !!_parameters->_samplegoalfn ) {
@@ -407,7 +407,7 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points, computation time=%fs\n")%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+        RAVELOG_DEBUG_FORMAT("plan success, iters=%d, path=%d points, computation time=%fs\n", progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(_robot,ptraj);
     }
 
