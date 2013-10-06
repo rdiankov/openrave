@@ -125,7 +125,10 @@ public:
         bool bSuccess = false;
 
         // prioritize the grasps and go through each one
-        _parameters->_setstatefn(_parameters->vinitialconfig);
+        if( _parameters->SetStateValues(_parameters->vinitialconfig) ) {
+            RAVELOG_ERROR("failed to set initial state\n");
+            return PS_Failed;
+        }
         Transform tcurgrasp = _pmanip->GetTransform();
 
         Transform tobject = _parameters->_ptarget->GetTransform();
@@ -205,7 +208,10 @@ private:
         vector<dReal> qbest, q(_robot->GetActiveDOF()),qgoaldir;
         listpath.clear();
 
-        _parameters->_setstatefn(_parameters->vinitialconfig);
+        if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
+            RAVELOG_ERROR("failed to set initial state\n");
+            return false;
+        }
 
         if( g.bChecked ) {
             if( g.fgoaldist < 0 )

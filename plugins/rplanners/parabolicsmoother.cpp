@@ -149,7 +149,7 @@ public:
             }
 
             int numshortcuts=0;
-            if( !!parameters->_setstatefn ) {
+            if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
             }

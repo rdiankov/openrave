@@ -57,10 +57,13 @@ public:
             template <class T>
             bool operator()( const pair<T,dReal>& a, const pair<T,dReal>& b ) const {
                 // always put the grasps with computed iksolutions first
-                if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) )
-                    return a.second > b.second;                                                                                                                                                                                                                                                                                                                                                        // minimum on top of stack
-                else
+                if( (a.first->iksolutions.size() > 0) == (b.first->iksolutions.size() > 0) ) {
+                    // minimum on top of stack
+                    return a.second > b.second;
+                }
+                else {
                     return a.first->iksolutions.size() == 0;
+                }
             }
         };
 
@@ -107,13 +110,14 @@ public:
             _robot->GetDOFWeights(_vRobotWeights);
         }
 
-        virtual void SetState(const vector<dReal>& pstate)
+        virtual int SetState(const vector<dReal>& pstate, int options=0)
         {
             _robot->SetActiveDOFValues(vector<dReal>(pstate.begin(),pstate.begin()+_robot->GetActiveDOF()));
             vector<dReal>::const_iterator ittarget = pstate.begin()+_robot->GetActiveDOF();
             for(size_t i = 0; i < _vtargetjoints.size(); ++i)
                 vtargvalues[_vtargetjoints[i]] = *ittarget++;
             ptarget->SetDOFValues(vtargvalues);
+            return 0;
         }
 
         virtual void GetState(vector<dReal>& pstate)
@@ -154,9 +158,12 @@ public:
 
             // first make sure the end is free
             if (bCheckEnd) {
-                SetState(pQ1);
-                if (_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
+                if( SetState(pQ1, 0) != 0 ) {
+                    return false;
+                }
+                if (_robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() ) {
                     return true;
+                }
             }
 
             // compute  the discretization
@@ -178,10 +185,12 @@ public:
             // NOTE: this does not check the end config, and may or may
             // not check the start based on the value of 'start'
             for (int f = start; f < numSteps; f++) {
-                for (i = 0; i < GetDOF(); i++)
+                for (i = 0; i < GetDOF(); i++) {
                     v[i] = pQ0[i] + (_jointIncrement[i] * f);
-
-                SetState(v);
+                }
+                if( SetState(v, 0) != 0 ) {
+                    return false;
+                }
                 if( _robot->GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) || _robot->CheckSelfCollision() )
                     return true;
             }
@@ -1212,7 +1221,7 @@ private:
             params->_samplefn = boost::bind(&ConstrainedTaskData::Sample,taskdata,_1);
             params->_sampleneighfn = boost::bind(&ConstrainedTaskData::SampleNeigh,taskdata,_1,_2,_3);
             params->_distmetricfn = boost::bind(&ConstrainedTaskData::DistMetric,taskdata,_1,_2);
-            params->_setstatefn = boost::bind(&ConstrainedTaskData::SetState,taskdata,_1);
+            params->_setstatevaluesfn = boost::bind(&ConstrainedTaskData::SetState,taskdata,_1,_2);
             params->_getstatefn = boost::bind(&ConstrainedTaskData::GetState,taskdata,_1);
 
             params->_vConfigLowerLimit = taskdata->GetLower();

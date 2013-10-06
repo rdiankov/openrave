@@ -416,7 +416,6 @@ protected:
                 anew[i] = a[i] + *itperturbation * parameters->_vConfigResolution.at(i);
                 bnew[i] = b[i] + *itperturbation * parameters->_vConfigResolution.at(i);
             }
-            //parameters->_setstatefn(anew);
             if( parameters->CheckPathAllConstraints(anew,bnew,std::vector<dReal>(), std::vector<dReal>(), 0, interval) != 0 ) {
                 return false;
             }

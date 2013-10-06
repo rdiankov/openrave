@@ -150,7 +150,7 @@ public:
             }
 
             int numshortcuts=0;
-            if( !!parameters->_setstatefn ) {
+            if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 numshortcuts = Shortcut(dynamicpath, parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
             }
@@ -358,10 +358,14 @@ public:
             u1 = ParabolicRamp::Min(u1,ramps[i1].endTime);
             u2 = ParabolicRamp::Min(u2,ramps[i2].endTime);
             ramps[i1].Evaluate(u1,x0);
-            _parameters->_setstatefn(x0);
+            if( _parameters->SetStateValues(x0) != 0 ) {
+                continue;
+            }
             _parameters->_getstatefn(x0);
             ramps[i2].Evaluate(u2,x1);
-            _parameters->_setstatefn(x1);
+            if( _parameters->SetStateValues(x1) != 0 ) {
+                continue;
+            }
             _parameters->_getstatefn(x1);
             ramps[i1].Derivative(u1,dx0);
             ramps[i2].Derivative(u2,dx1);
@@ -382,7 +386,10 @@ public:
                 if( i > 0 ) {
                     intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1;
                 }
-                _parameters->_setstatefn(intermediate.ramps[i].x1);
+                if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
+                    feas=false;
+                    break;
+                }
                 _parameters->_getstatefn(intermediate.ramps[i].x1);
                 // have to resolve for the ramp since the positions might have changed?
 //                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {

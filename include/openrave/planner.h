@@ -36,6 +36,7 @@ enum ConstraintFilterOptions
     CFO_CheckUserConstraints=0x00008000, ///< user-defined functions which don't fit any of the above descriptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
     CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations
+    CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
 };
 
@@ -109,7 +110,7 @@ public:
         PlannerParameters();
         virtual ~PlannerParameters();
 
-        /// \brief saves and restores the state using PlannerParameters::_setstatefn and PlannerParameters::_getstatefn
+        /// \brief saves and restores the state using PlannerParameters::_setstatevaluesfn and PlannerParameters::_getstatefn
         class OPENRAVE_API StateSaver
         {
 public:
@@ -152,7 +153,7 @@ private:
             - _distmetricfn - weights used for distance metric are retrieved at this time and stored
             - _samplefn
             - _sampleneighfn
-            - _setstatefn
+            - _setstatevaluesfn
             - _getstatefn
             - _neighstatefn
             - _checkpathconstraintsfn
@@ -169,7 +170,7 @@ private:
 
         /// \brief veriries that the configuration space and all parameters are consistent
         ///
-        /// Assumes at minimum that  _setstatefn and _getstatefn are set. Correct environment should be
+        /// Assumes at minimum that  _setstatevaluesfn and _getstatefn are set. Correct environment should be
         /// locked when this function is called since _getstatefn will be called.
         /// \throw openrave_exception If not consistent, will throw an exception
         virtual void Validate() const;
@@ -279,9 +280,24 @@ private:
         typedef boost::function<bool (std::vector<dReal>&, const std::vector<dReal>&, dReal)> SampleNeighFn;
         SampleNeighFn _sampleneighfn;
 
-        /// \brief Sets the state of the robot. Default is active robot joints (mandatory).
+        /// \deprecated (13/10/06)
         typedef boost::function<void (const std::vector<dReal>&)> SetStateFn;
-        SetStateFn _setstatefn;
+        SetStateFn _setstatefn RAVE_DEPRECATED;
+
+        /** \brief Sets the state values of the robot. Default is active robot joints (mandatory).
+
+            int ret = _setstatevalues(values, options)
+
+            \param values the array of values to set on the configuration space
+            \param options user-defined options. default is 0
+            \return If ret == 0, values were set with no problems. Otherwise a non-zero error code is returned.
+         */
+        typedef boost::function<int (const std::vector<dReal>&, int options)> SetStateValuesFn;
+        SetStateValuesFn _setstatevaluesfn;
+
+        /// \brief  calls _setstatevaluesfn. if it doesn't exist, tries calling the deprecated _setstatefn
+        int SetStateValues(const std::vector<dReal>& values, int options=0) const;
+
         /// \brief Gets the state of the robot. Default is active robot joints (mandatory).
         typedef boost::function<void (std::vector<dReal>&)> GetStateFn;
         GetStateFn _getstatefn;

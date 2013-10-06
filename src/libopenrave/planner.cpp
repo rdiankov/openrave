@@ -81,7 +81,6 @@ bool AddStatesWithLimitCheck(std::vector<dReal>& q, const std::vector<dReal>& qd
 
 PlannerBase::PlannerParameters::StateSaver::StateSaver(PlannerParametersPtr params) : _params(params)
 {
-    BOOST_ASSERT(!!_params->_setstatefn);
     _params->_getstatefn(_values);
     OPENRAVE_ASSERT_OP((int)_values.size(),==,_params->GetDOF());
 }
@@ -98,7 +97,8 @@ void PlannerBase::PlannerParameters::StateSaver::Restore()
 
 void PlannerBase::PlannerParameters::StateSaver::_Restore()
 {
-    _params->_setstatefn(_values);
+    int ret = _params->SetStateValues(_values, 0);
+    BOOST_ASSERT(ret==0);
 }
 
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
@@ -147,6 +147,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _samplegoalfn = r._samplegoalfn;
     _sampleinitialfn = r._sampleinitialfn;
     _setstatefn = r._setstatefn;
+    _setstatevaluesfn = r._setstatevaluesfn;
     _getstatefn = r._getstatefn;
     _diffstatefn = r._diffstatefn;
     _neighstatefn = r._neighstatefn;
@@ -179,6 +180,19 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
 void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
 {
     *this = *r;
+}
+
+int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& values, int options) const
+{
+    if( !!_setstatevaluesfn ) {
+        return _setstatevaluesfn(values, options);
+    }
+    if( !!_setstatefn ) {
+        RAVELOG_VERBOSE("Using deprecated PlannerParameters::_setstatefn, please set _setstatevaluesfn instead");
+        _setstatefn(values);
+        return 0;
+    }
+    throw openrave_exception("need to set PlannerParameters::_setstatevaluesfn");
 }
 
 bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
@@ -367,6 +381,27 @@ std::ostream& operator<<(std::ostream& O, const PlannerBase::PlannerParameters& 
     return O;
 }
 
+int SetActiveDOFValuesParameters(RobotBasePtr probot, const std::vector<dReal>& values, int options)
+{
+    // should setstatefn check limits?
+    probot->SetActiveDOFValues(values, KinBody::CLA_CheckLimits);
+    return 0;
+}
+
+int SetDOFValuesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& values, const std::vector<int>& vindices, int options)
+{
+    // should setstatefn check limits?
+    pbody->SetDOFValues(values, KinBody::CLA_CheckLimits, vindices);
+    return 0;
+}
+
+int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& velocities, const std::vector<int>& vindices, int options)
+{
+    // should setstatefn check limits?
+    pbody->SetDOFVelocities(velocities, KinBody::CLA_CheckLimits, vindices);
+    return 0;
+}
+
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
     // check if any of the links affected by the dofs beside the base link are static
@@ -388,8 +423,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
     _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
     _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
-    // should setstatefn check limits?
-    _setstatefn = boost::bind(&RobotBase::SetActiveDOFValues,robot,_1, KinBody::CLA_CheckLimits);
+    _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
     _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
 
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
@@ -523,10 +557,10 @@ bool _CallSampleNeighFns(const std::vector< std::pair<PlannerBase::PlannerParame
     }
 }
 
-void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v)
+int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options)
 {
     if( vfunctions.size() == 1 ) {
-        return vfunctions.at(0).first(v);
+        return vfunctions.at(0).first(v, options);
     }
     else {
         std::vector<dReal> vtemp; vtemp.reserve(nMaxDOFForGroup);
@@ -535,10 +569,14 @@ void CallSetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
         FOREACHC(itfn, vfunctions) {
             vtemp.resize(itfn->second);
             std::copy(itsrc,itsrc+itfn->second,vtemp.begin());
-            itfn->first(vtemp);
+            int ret = itfn->first(vtemp, options);
+            if( ret != 0 ) {
+                return ret;
+            }
             itsrc += itfn->second;
         }
     }
+    return 0;
 }
 
 void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v)
@@ -593,7 +631,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     std::vector< std::pair<DistMetricFn, int> > distmetricfns(spec._vgroups.size());
     std::vector< std::pair<SampleFn, int> > samplefns(spec._vgroups.size());
     std::vector< std::pair<SampleNeighFn, int> > sampleneighfns(spec._vgroups.size());
-    std::vector< std::pair<SetStateFn, int> > setstatefns(spec._vgroups.size());
+    std::vector< std::pair<SetStateValuesFn, int> > setstatevaluesfns(spec._vgroups.size());
     std::vector< std::pair<GetStateFn, int> > getstatefns(spec._vgroups.size());
     std::vector< std::pair<NeighStateFn, int> > neighstatefns(spec._vgroups.size());
     std::vector<dReal> vConfigLowerLimit(spec.GetDOF()), vConfigUpperLimit(spec.GetDOF()), vConfigVelocityLimit(spec.GetDOF()), vConfigAccelerationLimit(spec.GetDOF()), vConfigResolution(spec.GetDOF()), v0, v1;
@@ -651,9 +689,8 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             samplefns[isavegroup].second = g.dof;
             sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
             sampleneighfns[isavegroup].second = g.dof;
-            void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
-            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
-            setstatefns[isavegroup].second = g.dof;
+            setstatevaluesfns[isavegroup].first = boost::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
+            setstatevaluesfns[isavegroup].second = g.dof;
             getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
             neighstatefns[isavegroup].second = g.dof;
@@ -687,7 +724,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _distmetricfn = boost::bind(_CallDistMetricFns,distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
     _samplefn = boost::bind(_CallSampleFns,samplefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _sampleneighfn = boost::bind(_CallSampleNeighFns,sampleneighfns, distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2, _3);
-    _setstatefn = boost::bind(CallSetStateFns,setstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _setstatevaluesfn = boost::bind(CallSetStateValuesFns,setstatevaluesfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
     _getstatefn = boost::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
     _neighstatefn = boost::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
     _vConfigLowerLimit.swap(vConfigLowerLimit);
@@ -725,7 +762,7 @@ void PlannerBase::PlannerParameters::Validate() const
         _getstatefn(vstate);
         OPENRAVE_ASSERT_OP(vstate.size(),==,(size_t)GetDOF());
     }
-    if( !!_setstatefn ) {
+    if( !!_setstatevaluesfn ) {
         // need to save/restore state before calling this function?
         //_setstatefn();
     }

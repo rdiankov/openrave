@@ -936,7 +936,7 @@ bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator it
     \param[in] vaxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
     \param[in] if true will normalize rotations, should set to false if extracting velocity data
  */
-void SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+int SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis, int options)
 {
     Transform t;
     if( affinedofs != DOF_Transform ) {
@@ -944,6 +944,7 @@ void SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBo
     }
     RaveGetTransformFromAffineDOFValues(t,values.begin(),affinedofs, vaxis, true);
     pbody->SetTransform(t);
+    return 0;
 }
 
 void GetAffineDOFValuesFromBodyTransform(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
@@ -952,7 +953,7 @@ void GetAffineDOFValuesFromBodyTransform(std::vector<dReal>& values, KinBodyPtr 
     RaveGetAffineDOFValuesFromTransform(values.begin(), pbody->GetTransform(), affinedofs, vaxis);
 }
 
-void SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+int SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis, int options)
 {
     Vector linearvel, angularvel;
     Vector quatrotation;
@@ -964,6 +965,7 @@ void SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, Ki
     }
     RaveGetVelocityFromAffineDOFVelocities(linearvel, angularvel, values.begin(), affinedofs, vaxis, quatrotation);
     pbody->SetVelocity(linearvel, angularvel);
+    return 0;
 }
 
 void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
@@ -982,7 +984,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
 {
     boost::shared_ptr<SetConfigurationStateFn> fn;
     Validate();
-    std::vector< std::pair<SetConfigurationStateFn, int> > setstatefns(_vgroups.size());
+    std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> > setstatefns(_vgroups.size());
     string bodyname;
     stringstream ss, ssout;
     // order the groups depending on offset
@@ -1007,8 +1009,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( dofindices.size() == 0 ) {
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
-            void (KinBody::*setdofvaluesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFValues;
-            setstatefns[isavegroup].first = boost::bind(setdofvaluesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
+            setstatefns[isavegroup].first = boost::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
@@ -1021,8 +1022,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( dofindices.size() == 0 ) {
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
-            void (KinBody::*setdofvelocitiesptr)(const std::vector<dReal>&, uint32_t, const std::vector<int>&) = &KinBody::SetDOFVelocities;
-            setstatefns[isavegroup].first = boost::bind(setdofvelocitiesptr, pbody, _1, KinBody::CLA_CheckLimits, dofindices);
+            setstatefns[isavegroup].first = boost::bind(SetDOFVelocitiesIndicesParameters, pbody, _1, dofindices, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
@@ -1036,7 +1036,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            setstatefns[isavegroup].first = boost::bind(SetBodyTransformFromAffineDOFValues, _1, pbody, affinedofs, vaxis);
+            setstatefns[isavegroup].first = boost::bind(SetBodyTransformFromAffineDOFValues, _1, pbody, affinedofs, vaxis, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
@@ -1050,7 +1050,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            setstatefns[isavegroup].first = boost::bind(SetBodyVelocityFromAffineDOFVelocities, _1, pbody, affinedofs, vaxis);
+            setstatefns[isavegroup].first = boost::bind(SetBodyVelocityFromAffineDOFVelocities, _1, pbody, affinedofs, vaxis, _2);
             setstatefns[isavegroup].second = g.dof;
         }
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
@@ -1059,7 +1059,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
         }
     }
-    fn.reset(new SetConfigurationStateFn(boost::bind(CallSetStateFns,setstatefns, GetDOF(), nMaxDOFForGroup, _1)));
+    fn.reset(new SetConfigurationStateFn(boost::bind(CallSetStateValuesFns, setstatefns, GetDOF(), nMaxDOFForGroup, _1,0)));
     return fn;
 }
 

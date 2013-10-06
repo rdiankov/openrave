@@ -252,9 +252,9 @@ public:
         uint32_t basetime = utils::GetMilliTime();
 
         ConfigurationSpecification posspec = _parameters->_configurationspecification;
-        _setstatefn = posspec.GetSetFn(GetEnv());
+        //_setstatefn = posspec.GetSetFn(GetEnv());
         ConfigurationSpecification velspec = posspec.ConvertToVelocitySpecification();
-        _setvelstatefn = velspec.GetSetFn(GetEnv());
+        //_setvelstatefn = velspec.GetSetFn(GetEnv());
         ConfigurationSpecification timespec;
         timespec.AddDeltaTimeGroup();
 
@@ -1092,7 +1092,7 @@ protected:
     RobotBasePtr _probot;
     CollisionCheckerBasePtr _distancechecker;
     ConstraintFilterReturnPtr _constraintreturn;
-    boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
+    //boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setstatefn, _setvelstatefn;
     //boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> _getstatefn, _getvelstatefn;
     std::vector<dReal> _vtrajpointscache;
 

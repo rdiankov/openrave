@@ -70,7 +70,10 @@ Planner Parameters\n\
             boost::array<std::vector<dReal>*,2> testvalues = { { &parameters->_vConfigLowerLimit,&parameters->_vConfigUpperLimit}};
             vector<dReal> dummyvalues;
             for(size_t i = 0; i < testvalues.size(); ++i) {
-                parameters->_setstatefn(*testvalues[i]);
+                if( parameters->SetStateValues(*testvalues[i]) != 0 ) {
+                    RAVELOG_ERROR("failed to set state values\n");
+                    return false;
+                }
                 Transform tstate = _manip->GetTransform();
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
@@ -103,10 +106,12 @@ Planner Parameters\n\
                 RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
                 return false;
             }
-            parameters->_setstatefn(parameters->vinitialconfig);
+            if( parameters->SetStateValues(parameters->vinitialconfig) ) {
+                RAVELOG_WARN("initial state cannot be set\n");
+                return false;
+            }
             //            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
-            //                RAVELOG_WARN("initial state rejected by constraint fn\n");
-            //                return false;
+
             //            }
         }
 
@@ -217,7 +222,10 @@ Planner Parameters\n\
         _vprevsolution.resize(0);
         _tbaseinv = _manip->GetBase()->GetTransform().inverse();
         if( (int)_parameters->vinitialconfig.size() == _parameters->GetDOF() ) {
-            _parameters->_setstatefn(_parameters->vinitialconfig);
+            if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
+                RAVELOG_ERROR("failed to set initial state\n");
+                return PS_Failed;
+            }
             _SetPreviousSolution(_parameters->vinitialconfig,false);
             poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig,_parameters->_configurationspecification);
         }
@@ -260,7 +268,10 @@ Planner Parameters\n\
             }
 
             poutputtraj->Insert(poutputtraj->GetNumWaypoints(),vsolution,_parameters->_configurationspecification);
-            _parameters->_setstatefn(vsolution);
+            if( _parameters->SetStateValues(vsolution) ) {
+                RAVELOG_ERROR("failed to set state\n");
+                return PS_Failed;
+            }
             _SetPreviousSolution(vsolution);
         }
 

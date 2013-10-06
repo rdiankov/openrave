@@ -1243,7 +1243,7 @@ protected:
     /// \brief swaps the data between the two configuration specifications as efficiently as possible
     virtual void Swap(ConfigurationSpecification& spec);
 
-    typedef boost::function<void (const std::vector<dReal>&)> SetConfigurationStateFn;
+    typedef boost::function<int (const std::vector<dReal>&)> SetConfigurationStateFn;
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 
     /// \brief return a function to set the states of the configuration in the environment

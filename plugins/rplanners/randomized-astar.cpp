@@ -326,7 +326,9 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
             return PS_Failed;
         }
 
-        _parameters->_setstatefn(_parameters->vinitialconfig);
+        if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
+            return PS_Failed;
+        }
         pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
 
         vector<dReal> tempconfig(GetDOF());
@@ -366,7 +368,9 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
                     if ( _parameters->CheckPathAllConstraints(pcurrent->q, _vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                         continue;
                     }
-                    _parameters->_setstatefn(_vSampleConfig);
+                    if( _parameters->SetStateValues(_vSampleConfig) != 0 ) {
+                        continue;
+                    }
                     break;
                 }
                 if( sample >= _parameters->nMaxSampleTries ) {

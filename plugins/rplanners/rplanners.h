@@ -183,12 +183,10 @@ public:
             for(int i = 0; i < _dof; ++i) {
                 _vDeltaConfig[i] *= fdist;
             }
-            // unfortunately _setstatefn might throw an exept if a bad state is requested. therefore, catch the exception.
-            // ideally setstatefn would have a return value.
-            try {
-                params->_setstatefn(_vNewConfig);
-            }
-            catch(const openrave_exception& ex) {
+            if( params->SetStateValues(_vNewConfig) != 0 ) {
+                if(bHasAdded) {
+                    return ET_Sucess;
+                }
                 return ET_Failed;
             }
             if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal) ) {
