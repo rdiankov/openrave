@@ -238,7 +238,7 @@ Some python code to display data::\n\
             _parameters->_nMaxIterations = 10000;
         }
 
-        RAVELOG_DEBUG("BirrtPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG_FORMAT("BiRRT Planner Initialized, initial=%d, goal=%d", _nNumInitialConfigurations%_vecGoals.size());
         return true;
     }
 

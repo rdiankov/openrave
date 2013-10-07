@@ -154,6 +154,9 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             else if( cmd == "graspername" ) {
                 ss >> graspername;
             }
+            else if( cmd == "nograsper" ) {
+                graspername = "";
+            }
 
             if( ss.fail() || !ss ) {
                 break;
@@ -174,9 +177,14 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         }
         RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
 
-        _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
-        if( !_pGrasperPlanner ) {
-            RAVELOG_WARN(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
+        if( graspername.size() > 0 ) {
+            _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
+            if( !_pGrasperPlanner ) {
+                RAVELOG_WARN(str(boost::format("Failed to create a grasper planner %s\n")%graspername));
+            }
+        }
+        else {
+            _pGrasperPlanner.reset();
         }
         _robot = GetEnv()->GetRobot(_strRobotName);
         return 0;

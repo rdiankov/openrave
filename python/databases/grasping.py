@@ -252,8 +252,9 @@ class GraspingModel(DatabaseGenerator):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
         self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
         self.grasps = []
-    def load(self):
-        filename = self.getfilename(True)
+    def load(self, filename=None):
+        if filename is None:
+            filename = self.getfilename(True)
         if len(filename) == 0:
             return None
         try:
