@@ -301,6 +301,7 @@ class GraspingModel(DatabaseGenerator):
                                 if childjoint.GetFirstAttached() == childlink or childjoint.GetSecondAttached() == childlink:
                                     vertices = r_[vertices,[childjoint.GetAnchor()-joint.GetAnchor()]]
                         self.jointmaxlengths[i] = sqrt(numpy.max(sum(vertices**2,1)-dot(vertices,joint.GetAxis(0))**2)) if len(vertices) > 0 else 0
+                        
     def autogenerateparams(self,options=None):
         friction = None
         preshapes = None
