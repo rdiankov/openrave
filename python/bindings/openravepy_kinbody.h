@@ -149,7 +149,7 @@ public:
     void SetDOFVelocities(object odofvelocities);
     void SetDOFVelocities(object odofvelocities, uint32_t checklimits=KinBody::CLA_CheckLimits, object oindices = object());
     object GetLinkVelocities() const;
-    object GetLinkAccelerations(object odofaccelerations) const;
+    object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
     object ComputeAABB();
     void Enable(bool bEnable);
     bool IsEnabled() const;

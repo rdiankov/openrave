@@ -93,6 +93,8 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
         RegisterCommand("SetMinimumGoalPaths",boost::bind(&TaskManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
+        RegisterCommand("SetRobot",boost::bind(&TaskManipulation::SetRobotCommand,this,_1,_2),
+                        "Sets the robot.");
 #ifdef HAVE_BOOST_REGEX
         RegisterCommand("SwitchModels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
                         "Switches between thin and fat models for planning.");
@@ -195,6 +197,13 @@ Task-based manipulation planning involving target objects. A lot of the algorith
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
+    }
+
+    bool SetRobotCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _strRobotName;
+        _robot = GetEnv()->GetRobot(_strRobotName);
+        return !!_robot;
     }
 
     bool CreateSystem(ostream& sout, istream& sinput)

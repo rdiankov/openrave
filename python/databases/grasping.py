@@ -618,7 +618,7 @@ class GraspingModel(DatabaseGenerator):
                     if options.graspindex is not None:
                         print 'showing grasp %d'%options.graspindex
                         grasps = [self.grasps[options.graspindex]]
-                        delay=10000000
+                        delay=None
                     else:
                         #self.orderGrasps()
                         #self.save()

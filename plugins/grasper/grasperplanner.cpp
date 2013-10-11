@@ -327,7 +327,7 @@ public:
                 if( pZ != NULL ) {
                     *pZ += v.z;
                 }
-                _robot->SetActiveDOFValues(dofvals);
+                _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
                 if( (!_parameters->targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot))) || (!!_parameters->targetbody && GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(_parameters->targetbody))) ) {
                     RAVELOG_DEBUG("grasp in collision from standoff, moving back\n");
                     if( pX != NULL ) {
@@ -339,7 +339,7 @@ public:
                     if( pZ != NULL ) {
                         *pZ -= v.z;
                     }
-                    _robot->SetActiveDOFValues(dofvals);
+                    _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
                 }
                 // check that anything that should be avoided is not hit
                 ct = 0;
@@ -422,7 +422,7 @@ public:
                 }
 
                 dofvals[ifing] += vclosingdir[ifing] * step_size;
-                _robot->SetActiveDOFValues(dofvals,true);
+                _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
                 _robot->GetActiveDOFValues(dofvals);
                 ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
                 if( ct&CT_CollisionMask ) {
@@ -601,7 +601,7 @@ protected:
             if( pZ != NULL ) {
                 *pZ += v.z;
             }
-            _robot->SetActiveDOFValues(dofvals);
+            _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
             bMoved = true;
 
             // check if robot is already past all objects
@@ -637,7 +637,7 @@ protected:
             if( pZ != NULL ) {
                 *pZ += v.z;
             }
-            _robot->SetActiveDOFValues(dofvals);
+            _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
 
             if(_parameters->breturntrajectory) {
                 ptraj->Insert(ptraj->GetNumWaypoints(),dofvals, _robot->GetActiveConfigurationSpecification());

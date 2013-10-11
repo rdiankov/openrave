@@ -1755,14 +1755,28 @@ object PyKinBody::GetLinkVelocities() const
     return static_cast<numeric::array>(handle<>(pyvel));
 }
 
-object PyKinBody::GetLinkAccelerations(object odofaccelerations) const
+object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations=object()) const
 {
     if( _pbody->GetLinks().size() == 0 ) {
         return numeric::array(boost::python::list());
     }
     vector<dReal> vDOFAccelerations = ExtractArray<dReal>(odofaccelerations);
+    KinBody::AccelerationMapPtr pmapExternalAccelerations;
+    if( !(oexternalaccelerations == object()) ) {
+        //externalaccelerations
+        pmapExternalAccelerations.reset(new KinBody::AccelerationMap());
+        boost::python::dict odict = (boost::python::dict)oexternalaccelerations;
+        boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
+        vector<dReal> v;
+        for (int i = 0; i < boost::python::len(iterkeys); i++) {
+            int linkindex = boost::python::extract<int>(iterkeys[i]);
+            object olinkaccelerations = odict[iterkeys[i]];
+            OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
+            (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(boost::python::extract<dReal>(olinkaccelerations[0]),boost::python::extract<dReal>(olinkaccelerations[1]),boost::python::extract<dReal>(olinkaccelerations[2])),Vector(boost::python::extract<dReal>(olinkaccelerations[3]),boost::python::extract<dReal>(olinkaccelerations[4]),boost::python::extract<dReal>(olinkaccelerations[5])));
+        }
+    }
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
-    _pbody->GetLinkAccelerations(vDOFAccelerations,vLinkAccelerations);
+    _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
     npy_intp dims[] = { vLinkAccelerations.size(),6};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -2477,6 +2491,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatPar
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIntParameters_overloads, GetIntParameters, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetStringParameters_overloads, GetStringParameters, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckSelfCollision_overloads, CheckSelfCollision, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkAccelerations_overloads, GetLinkAccelerations, 1, 2)
 
 void init_openravepy_kinbody()
 {
@@ -2590,7 +2605,7 @@ void init_openravepy_kinbody()
                         .def("SetDOFVelocities",setdofvelocities3, args("dofvelocities","checklimits","indices"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; uint32_t; const std::vector"))
                         .def("SetDOFVelocities",setdofvelocities4, args("dofvelocities","linear","angular","checklimits"), DOXY_FN(KinBody,SetDOFVelocities "const std::vector; const Vector; const Vector; uint32_t"))
                         .def("GetLinkVelocities",&PyKinBody::GetLinkVelocities, DOXY_FN(KinBody,GetLinkVelocities))
-                        .def("GetLinkAccelerations",&PyKinBody::GetLinkAccelerations, DOXY_FN(KinBody,GetLinkAccelerations))
+                        .def("GetLinkAccelerations",&PyKinBody::GetLinkAccelerations, GetLinkAccelerations_overloads(args("dofaccelerations", "externalaccelerations"), DOXY_FN(KinBody,GetLinkAccelerations)))
                         .def("GetLinkEnableStates",&PyKinBody::GetLinkEnableStates, DOXY_FN(KinBody,GetLinkEnableStates))
                         .def("SetLinkEnableStates",&PyKinBody::SetLinkEnableStates, DOXY_FN(KinBody,SetLinkEnableStates))
                         .def("ComputeAABB",&PyKinBody::ComputeAABB, DOXY_FN(KinBody,ComputeAABB))
