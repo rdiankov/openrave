@@ -31,7 +31,9 @@ public:
         int degree;
         const ConfigurationSpecification::Group& gpos, &gvel;
         int orgposoffset, orgveloffset;
-        vector<dReal> _vConfigVelocityLimit, _vConfigAccelerationLimit, _vConfigLowerLimit, _vConfigUpperLimit;
+        std::vector<dReal> _vConfigVelocityLimit, _vConfigAccelerationLimit, _vConfigLowerLimit, _vConfigUpperLimit;
+        // optional
+        std::vector<dReal> _vConfigJerkLimit;
     };
     typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
     typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
