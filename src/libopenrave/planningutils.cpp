@@ -102,7 +102,11 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
                 }
             }
             robot->SetActiveDOFValues(newdof,KinBody::CLA_CheckLimitsSilent);
-            if(robot->CheckSelfCollision() || robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
+            if(robot->CheckSelfCollision() ) {
+                bCollision = true;
+                break;
+            }
+            if( robot->GetEnv()->CheckCollision(KinBodyConstPtr(robot)) ) {
                 bCollision = true;
                 break;
             }
