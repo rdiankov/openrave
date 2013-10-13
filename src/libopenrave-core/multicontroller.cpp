@@ -141,15 +141,8 @@ public:
     {
         boost::mutex::scoped_lock lock(_mutex);
         bool bsuccess = true;
-        if( !ptraj ) {
-            FOREACH(itcontroller,_listcontrollers) {
-                bsuccess &= (*itcontroller)->SetPath(TrajectoryBaseConstPtr());
-            }
-        }
-        else {
-            if( !_ptraj ||(_ptraj->GetXMLId() != ptraj->GetXMLId())) {
-                _ptraj = RaveCreateTrajectory(ptraj->GetEnv(),ptraj->GetXMLId());
-            }
+        FOREACH(itcontroller,_listcontrollers) {
+            bsuccess &= (*itcontroller)->SetPath(ptraj);
         }
         return bsuccess;
     }
