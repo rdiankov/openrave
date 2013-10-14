@@ -79,6 +79,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_JointWeights ) {
         _pbody->GetDOFWeights(_vDOFWeights);
     }
+    if( _options & Save_JointLimits ) {
+        _pbody->GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
+    }
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -104,6 +107,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( pbody->GetEnvironmentId() == 0 ) {
         RAVELOG_WARN(str(boost::format("body %s not added to environment, skipping restore")%pbody->GetName()));
         return;
+    }
+    if( _options & Save_JointLimits ) {
+        _pbody->SetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
