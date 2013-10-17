@@ -495,11 +495,13 @@ private:
     void _ReportError(const std::string& s)
     {
         if( !!_ptraj ) {
-            string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
-            ofstream f(filename.c_str());
-            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-            _ptraj->serialize(f);
-            RAVELOG_DEBUG(str(boost::format("trajectory dumped to %s")%filename));
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+                ofstream f(filename.c_str());
+                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+                _ptraj->serialize(f);
+                RAVELOG_DEBUG(str(boost::format("trajectory dumped to %s")%filename));
+            }
         }
         if( _bThrowExceptions ) {
             throw openrave_exception(s,ORE_Assert);
