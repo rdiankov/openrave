@@ -500,7 +500,7 @@ private:
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
                 _ptraj->serialize(f);
-                RAVELOG_DEBUG(str(boost::format("trajectory dumped to %s")%filename));
+                RAVELOG_VERBOSE(str(boost::format("trajectory dumped to %s")%filename));
             }
         }
         if( _bThrowExceptions ) {
