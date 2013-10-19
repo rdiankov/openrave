@@ -342,6 +342,12 @@ class TestTrajectory(EnvironmentSetup):
         ret=activeretimer.PlanPath(traj,False)
         assert(ret == PlannerStatus.HasSolution)
         assert( abs(traj.GetDuration()-0.910222222222) < g_epsilon)
+
+        activeretimer = planningutils.ActiveDOFTrajectoryRetimer(robot, plannername='CubicTrajectoryRetimer',plannerparameters='<_fsteplength>%.15e</_fsteplength>'%controller_timestep)
+        RaveSetDebugLevel(DebugLevel.Verbose)
+        ret=activeretimer.PlanPath(traj,False)
+        assert(ret == PlannerStatus.HasSolution)
+        assert( abs(traj.GetDuration()-0.910222222222) < g_epsilon)
         
     def test_ikparamretiming(self):
         self.log.info('retime workspace ikparam')

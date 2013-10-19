@@ -856,6 +856,12 @@ protected:
                     if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions) ) {
                         listDests.push_back(tDestEndEffector);
                     }
+                    else if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "failed dest IkParameterization('" << tDestEndEffector << "')";
+                        RAVELOG_VERBOSE(ss.str());
+
+                    }
                 }
                 else {
                     listDests.push_back(tDestEndEffector);

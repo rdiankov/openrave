@@ -110,6 +110,11 @@ public:
 
         ConfigurationSpecification newspec = _parameters->_configurationspecification;
         newspec.AddDerivativeGroups(1,true);
+        bool bWritingAcceleration = false;
+        if( _parameters->_interpolation == "cubic" || _parameters->_interpolation == "quadric" || _parameters->_interpolation == "quintic" ) {
+            newspec.AddDerivativeGroups(2,true);
+            bWritingAcceleration = true;
+        }
         ptraj->GetWaypoints(0,numpoints,_vdiffdata, _parameters->_configurationspecification);
         // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks
         for(size_t i = 0; i < _vdiffdata.size(); i += _parameters->GetDOF()) {
@@ -155,16 +160,7 @@ public:
                 _cachednewspec = newspec;
                 _cachedoldspec = _parameters->_configurationspecification;
                 _cachedposinterpolation = posinterpolation;
-                string velinterpolation;
-                if( posinterpolation == "quadratic" ) {
-                    velinterpolation = "linear";
-                }
-                else if( posinterpolation == "linear" ) {
-                    velinterpolation = "next";
-                }
-                else {
-                    throw OPENRAVE_EXCEPTION_FORMAT("what is deriv of %s?",posinterpolation,ORE_InvalidArguments);
-                }
+                string velinterpolation = ConfigurationSpecification::GetInterpolationDerivative(posinterpolation);
                 const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
                 for(size_t i = 0; i < _cachednewspec._vgroups.size(); ++i) {
                     ConfigurationSpecification::Group& gpos = _cachednewspec._vgroups[i];
@@ -185,7 +181,7 @@ public:
                     BOOST_ASSERT(orgposoffset+gpos.dof <= _parameters->GetDOF());
                     std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = _cachednewspec._vgroups.begin()+(_cachednewspec.FindTimeDerivativeGroup(gpos)-_cachednewspec._vgroups.begin());
                     BOOST_ASSERT(itvelgroup != _cachednewspec._vgroups.end());
-                    _listgroupinfo.push_back(CreateGroupInfo(degree,gpos,*itvelgroup));
+                    _listgroupinfo.push_back(CreateGroupInfo(degree, _cachednewspec, gpos, *itvelgroup));
                     _listgroupinfo.back()->orgposoffset = orgposoffset;
                     _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
                     _listgroupinfo.back()->_vConfigAccelerationLimit = std::vector<dReal>(_parameters->_vConfigAccelerationLimit.begin()+itgroup->offset, _parameters->_vConfigAccelerationLimit.begin()+itgroup->offset+itgroup->dof);
@@ -388,7 +384,7 @@ protected:
     // method to be overriden by individual timing types
 
     /// \brief createa s group info
-    virtual GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
+    virtual GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification& spec, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
         return GroupInfoPtr(new GroupInfo(degree, gpos, gvel));
     }
     /// \brief resets any cached data in the group info
@@ -401,7 +397,7 @@ protected:
     virtual bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual bool _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
 
@@ -410,7 +406,7 @@ protected:
     virtual bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
 
@@ -419,7 +415,7 @@ protected:
     virtual bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
-    virtual bool _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    virtual bool _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
 
@@ -436,7 +432,7 @@ protected:
     std::list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > _listmintimefns;
     std::list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listvelocityfns;
     std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listcheckvelocityfns;
-    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator) > > _listwritefns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listwritefns;
     std::vector<dReal> _vimaxvel, _vimaxaccel;
     std::vector<dReal> _vdiffdata, _vdata;
     int _timeoffset;

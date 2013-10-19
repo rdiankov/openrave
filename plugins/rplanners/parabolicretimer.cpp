@@ -46,7 +46,7 @@ public:
     }
 
 protected:
-    GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
+    GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification& origspec, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
         ParabolicGroupInfoPtr g(new ParabolicGroupInfo(degree, gpos, gvel));
         ConfigurationSpecification spec;
         g->posindex = spec.AddGroup(gpos.name, gpos.dof, "quadratic");
@@ -134,7 +134,7 @@ protected:
         return true;
     }
 
-    bool _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             _v0pos.resize(info->gpos.dof);
@@ -259,7 +259,7 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesAffine not implemented", ORE_NotImplemented);
     }
 
-    bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
 
@@ -445,7 +445,7 @@ protected:
         return true;
     }
 
-    bool _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata) {
+    bool _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             dReal deltatime = *(itdata+_timeoffset);

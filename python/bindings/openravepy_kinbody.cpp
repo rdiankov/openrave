@@ -466,6 +466,9 @@ public:
         object GetTransform() {
             return ReturnTransform(_pgeometry->GetTransform());
         }
+        object GetTransformPose() {
+            return toPyArray(_pgeometry->GetTransform());
+        }
         dReal GetSphereRadius() const {
             return _pgeometry->GetSphereRadius();
         }
@@ -576,6 +579,9 @@ public:
     }
     object GetTransform() const {
         return ReturnTransform(_plink->GetTransform());
+    }
+    object GetTransformPose() const {
+        return toPyArray(_plink->GetTransform());
     }
 
     object GetCOMOffset() const {
@@ -1632,6 +1638,10 @@ object PyKinBody::GetTransform() const {
     return ReturnTransform(_pbody->GetTransform());
 }
 
+object PyKinBody::GetTransformPose() const {
+    return toPyArray(_pbody->GetTransform());
+}
+
 object PyKinBody::GetLinkTransformations(bool returndofbranches) const
 {
     boost::python::list otransforms;
@@ -2594,6 +2604,7 @@ void init_openravepy_kinbody()
                         .def("GetJoint",&PyKinBody::GetJoint,args("name"), DOXY_FN(KinBody,GetJoint))
                         .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
                         .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
+                        .def("GetTransformPose",&PyKinBody::GetTransformPose, DOXY_FN(KinBody,GetTransform))
                         .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, GetLinkTransformations_overloads(args("returndofbranches"), DOXY_FN(KinBody,GetLinkTransformations)))
                         .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
                         .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,SetLinkTransformations_overloads(args("transforms","dofbranches"), DOXY_FN(KinBody,SetLinkTransformations)))
@@ -2779,6 +2790,7 @@ void init_openravepy_kinbody()
                          .def("ComputeAABB",&PyLink::ComputeAABB, DOXY_FN(KinBody::Link,ComputeAABB))
                          .def("ComputeLocalAABB",&PyLink::ComputeLocalAABB, DOXY_FN(KinBody::Link,ComputeLocalAABB))
                          .def("GetTransform",&PyLink::GetTransform, DOXY_FN(KinBody::Link,GetTransform))
+                         .def("GetTransformPose",&PyLink::GetTransformPose, DOXY_FN(KinBody::Link,GetTransform))
                          .def("GetCOMOffset",&PyLink::GetCOMOffset, DOXY_FN(KinBody::Link,GetCOMOffset))
                          .def("GetLocalCOM",&PyLink::GetLocalCOM, DOXY_FN(KinBody::Link,GetLocalCOM))
                          .def("GetGlobalCOM",&PyLink::GetGlobalCOM, DOXY_FN(KinBody::Link,GetGlobalCOM))
@@ -2838,6 +2850,7 @@ void init_openravepy_kinbody()
                                  .def("IsModifiable",&PyLink::PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
                                  .def("GetType",&PyLink::PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
                                  .def("GetTransform",&PyLink::PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))
+                                 .def("GetTransformPose",&PyLink::PyGeometry::GetTransformPose, DOXY_FN(KinBody::Link::Geometry,GetTransform))
                                  .def("GetSphereRadius",&PyLink::PyGeometry::GetSphereRadius, DOXY_FN(KinBody::Link::Geometry,GetSphereRadius))
                                  .def("GetCylinderRadius",&PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
                                  .def("GetCylinderHeight",&PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))

@@ -138,6 +138,7 @@ public:
     object GetJoint(const std::string& jointname) const;
     object GetJointFromDOFIndex(int dofindex) const;
     object GetTransform() const;
+    object GetTransformPose() const;
     object GetLinkTransformations(bool returndofbranches=false) const;
     void SetLinkTransformations(object transforms, object odofbranches=object());
     void SetLinkVelocities(object ovelocities);
