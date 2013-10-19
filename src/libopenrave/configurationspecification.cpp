@@ -290,6 +290,50 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     else if( name.size() >= 14 && name.substr(0,14) == "ikparam_values" ) {
         derivativename = string("ikparam_velocities") + name.substr(14);
     }
+    else if( name.size() >= 18 && name.substr(0,18) == "ikparam_velocities" ) {
+        derivativename = string("ikparam_accelerations") + name.substr(18);
+    }
+    else {
+        return _vgroups.end();
+    }
+    return FindCompatibleGroup(derivativename,exactmatch);
+}
+
+std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindTimeIntegralGroup(const ConfigurationSpecification::Group& g, bool exactmatch) const
+{
+    std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = FindTimeIntegralGroup(g.name,exactmatch);
+    if( itcompatgroup != _vgroups.end() ) {
+        if( itcompatgroup->dof != g.dof ) {
+            return _vgroups.end();
+        }
+    }
+    return itcompatgroup;
+}
+
+std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpecification::FindTimeIntegralGroup(const std::string& name, bool exactmatch) const
+{
+    string derivativename;
+    if( name.size() >= 16 && name.substr(0,16) == "joint_velocities" ) {
+        derivativename = string("joint_values") + name.substr(16);
+    }
+    else if( name.size() >= 19 && name.substr(0,19) == "joint_accelerations" ) {
+        derivativename = string("joint_velocities") + name.substr(19);
+    }
+    if( name.size() >= 11 && name.substr(0,11) == "joint_jerks" ) {
+        derivativename = string("joint_accelerations") + name.substr(11);
+    }
+    else if( name.size() >= 17 && name.substr(0,17) == "affine_velocities" ) {
+        derivativename = string("affine_transform") + name.substr(17);
+    }
+    else if( name.size() >= 20 && name.substr(0,20) == "affine_accelerations" ) {
+        derivativename = string("affine_velocities") + name.substr(20);
+    }
+    else if( name.size() >= 18 && name.substr(0,18) == "ikparam_velocities" ) {
+        derivativename = string("ikparam_values") + name.substr(18);
+    }
+    else if( name.size() >= 21 && name.substr(0,21) == "ikparam_accelerations" ) {
+        derivativename = string("ikparam_velocities") + name.substr(21);
+    }
     else {
         return _vgroups.end();
     }

@@ -1083,6 +1083,24 @@ protected:
      */
     virtual std::vector<Group>::const_iterator FindTimeDerivativeGroup(const std::string& name, bool exactmatch=false) const;
 
+    /** \brief Return the most compatible group that represents the time-integral data of the group.
+
+        For example given a 'joint_velocities' group, this will return the closest 'joint_values' group.
+        \param g the group to query, only the Group::name and Group::dof values are used
+        \param exactmatch if true, will only return groups whose name exactly matches with g.name
+        \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+     */
+    virtual std::vector<Group>::const_iterator FindTimeIntegralGroup(const Group& g, bool exactmatch=false) const;
+
+    /** \brief Return the most compatible group that represents the time-integral data of the group.
+
+        For example given a 'joint_velocities' group, this will return the closest 'joint_values' group.
+        \param name the name of the group to query
+        \param exactmatch if true, will only return groups whose name exactly matches with g.name
+        \return an iterator part of _vgroups that represents the most compatible group. If no group is found, will return _vgroups.end()
+     */
+    virtual std::vector<Group>::const_iterator FindTimeIntegralGroup(const std::string& name, bool exactmatch=false) const;
+
     /** \brief adds velocity, acceleration, etc groups for every position group.
 
         If the derivative groups already exist, they are checked for and/or modified. Note that the configuration space

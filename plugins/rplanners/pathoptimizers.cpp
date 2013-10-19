@@ -125,7 +125,7 @@ protected:
             advance(itstartnode, startIndex);
             itendnode = itstartnode;
             dReal totaldistance = 0;
-            for(int j = 0; j < endIndex-startIndex; ++j) {
+            for(uint32_t j = 0; j < endIndex-startIndex; ++j) {
                 ++itendnode;
                 totaldistance += itendnode->second;
             }

@@ -109,12 +109,13 @@ public:
         }
 
         ConfigurationSpecification newspec = _parameters->_configurationspecification;
-        newspec.AddDerivativeGroups(1,true);
+        newspec.AddDerivativeGroups(1,false);
         bool bWritingAcceleration = false;
-        if( _parameters->_interpolation == "cubic" || _parameters->_interpolation == "quadric" || _parameters->_interpolation == "quintic" ) {
-            newspec.AddDerivativeGroups(2,true);
+        if( _parameters->_interpolation == "quadric" || _parameters->_interpolation == "quintic" ) {
+            newspec.AddDerivativeGroups(2,false);
             bWritingAcceleration = true;
         }
+        newspec.AddDeltaTimeGroup();
         ptraj->GetWaypoints(0,numpoints,_vdiffdata, _parameters->_configurationspecification);
         // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks
         for(size_t i = 0; i < _vdiffdata.size(); i += _parameters->GetDOF()) {
@@ -161,6 +162,7 @@ public:
                 _cachedoldspec = _parameters->_configurationspecification;
                 _cachedposinterpolation = posinterpolation;
                 string velinterpolation = ConfigurationSpecification::GetInterpolationDerivative(posinterpolation);
+                string accelinterpolation = ConfigurationSpecification::GetInterpolationDerivative(velinterpolation);
                 const boost::array<std::string,3> supportedgroups = {{"joint_values", "affine_transform", "ikparam_values"}};
                 for(size_t i = 0; i < _cachednewspec._vgroups.size(); ++i) {
                     ConfigurationSpecification::Group& gpos = _cachednewspec._vgroups[i];
@@ -181,6 +183,7 @@ public:
                     BOOST_ASSERT(orgposoffset+gpos.dof <= _parameters->GetDOF());
                     std::vector<ConfigurationSpecification::Group>::iterator itvelgroup = _cachednewspec._vgroups.begin()+(_cachednewspec.FindTimeDerivativeGroup(gpos)-_cachednewspec._vgroups.begin());
                     BOOST_ASSERT(itvelgroup != _cachednewspec._vgroups.end());
+                    std::vector<ConfigurationSpecification::Group>::const_iterator itaccelgroupc = _cachednewspec.FindTimeDerivativeGroup(*itvelgroup);
                     _listgroupinfo.push_back(CreateGroupInfo(degree, _cachednewspec, gpos, *itvelgroup));
                     _listgroupinfo.back()->orgposoffset = orgposoffset;
                     _listgroupinfo.back()->_vConfigVelocityLimit = std::vector<dReal>(_parameters->_vConfigVelocityLimit.begin()+itgroup->offset, _parameters->_vConfigVelocityLimit.begin()+itgroup->offset+itgroup->dof);
@@ -250,6 +253,9 @@ public:
 
                     gpos.interpolation = posinterpolation;
                     itvelgroup->interpolation = velinterpolation;
+                    if( itaccelgroupc != _cachednewspec._vgroups.end() ) {
+                        _cachednewspec._vgroups.at(itaccelgroupc-_cachednewspec._vgroups.begin()).interpolation = accelinterpolation;
+                    }
                 }
                 // compute the timestamps and velocities
                 _timeoffset = -1;

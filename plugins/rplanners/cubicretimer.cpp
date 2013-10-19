@@ -39,7 +39,7 @@ public:
         CubicGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : GroupInfo(degree, gpos, gvel) {
         }
 
-        ConfigurationSpecification::Group gaccel;
+        //ConfigurationSpecification::Group gaccel;
     };
     typedef boost::shared_ptr<CubicGroupInfo> CubicGroupInfoPtr;
     typedef boost::shared_ptr<CubicGroupInfo const> CubicGroupInfoConstPtr;
@@ -58,10 +58,10 @@ public:
 protected:
     GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification& spec, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
         CubicGroupInfoPtr g(new CubicGroupInfo(degree, gpos, gvel));
-        if( gvel.name.size() >= 16 && gvel.name.substr(0,16) == std::string("joint_velocities") ) {
-            std::string accelname = std::string("joint_accelerations ") + gvel.name.substr(16);
-            g->gaccel = spec.GetGroupFromName(accelname);
-        }
+//        if( gvel.name.size() >= 16 && gvel.name.substr(0,16) == std::string("joint_velocities") ) {
+//            std::string accelname = std::string("joint_accelerations") + gvel.name.substr(16);
+//            g->gaccel = spec.GetGroupFromName(accelname);
+//        }
         return g;
     }
 
@@ -232,10 +232,8 @@ protected:
             dReal v1 = *(itdata+info->gvel.offset+i);
             dReal c3 = (v1 + v0 - 2*px*ideltatime)*ideltatime2;
             dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
-
-            // check velocity limits a1*t + a0 = 0
-            dReal a1 = 6*c3, a0 = 2*c2;
-            *(itdata+info->gaccel.offset+i) = a0 + deltatime*a1;
+//            dReal a1 = 6*c3, a0 = 2*c2;
+//            *(itdata+info->gaccel.offset+i) = a0 + deltatime*a1;
         }
         return true;
     }
