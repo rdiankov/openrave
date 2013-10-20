@@ -108,9 +108,7 @@ public:
         dynamicpath._multidofinterp = _parameters->_multidofinterp;
         dynamicpath.SetJointLimits(parameters->_vConfigLowerLimit,parameters->_vConfigUpperLimit);
 
-        vector<ParabolicRamp::Vector> path;
         ParabolicRamp::Vector q(_parameters->GetDOF());
-        path.reserve(ptraj->GetNumWaypoints());
         vector<dReal> vtrajpoints;
         if (_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
             RAVELOG_VERBOSE("Initial traj is piecewise quadratic\n");
@@ -119,18 +117,34 @@ public:
             ptraj->GetWaypoint(0,x0,posspec);
             ptraj->GetWaypoint(0,dx0,velspec);
             dynamicpath.ramps.resize(ptraj->GetNumWaypoints()-1);
+            size_t iramp = 0;
             for(size_t i=0; i+1<ptraj->GetNumWaypoints(); i++) {
                 ptraj->GetWaypoint(i+1,ramptime,timespec);
                 if (ramptime.at(0) > g_fEpsilonLinear) {
                     ptraj->GetWaypoint(i+1,x1,posspec);
                     ptraj->GetWaypoint(i+1,dx1,velspec);
-                    dynamicpath.ramps[i].SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
+                    dynamicpath.ramps[iramp].SetPosVelTime(x0,dx0,x1,dx1,ramptime.at(0));
                     x0.swap(x1);
                     dx0.swap(dx1);
+                    iramp += 1;
                 }
+//                else {
+//                    RAVELOG_WARN("there is no ramp time, so making a linear ramp\n");
+//                    dynamicpath.ramps[i].x0 = x0;
+//                    dynamicpath.ramps[i].dx0 = dx0;
+//                    ptraj->GetWaypoint(i+1,dynamicpath.ramps[i].x1,posspec);
+//                    ptraj->GetWaypoint(i+1,dynamicpath.ramps[i].dx1,velspec);
+//                    bool res=dynamicpath.ramps[i].SolveMinTimeLinear(_parameters->_vConfigAccelerationLimit, _parameters->_vConfigVelocityLimit);
+//                    PARABOLIC_RAMP_ASSERT(res && dynamicpath.ramps[i].IsValid());
+//                    x0 = dynamicpath.ramps[i].x1;
+//                    dx0 = dynamicpath.ramps[i].dx0;
+//                }
             }
+            dynamicpath.ramps.resize(iramp);
         }
         else {
+            vector<ParabolicRamp::Vector> path;
+            path.reserve(ptraj->GetNumWaypoints());
             // linear piecewise trajectory
             ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,_parameters->_configurationspecification);
             for(size_t i = 0; i < ptraj->GetNumWaypoints(); ++i) {
@@ -169,7 +183,7 @@ public:
 
         try {
             _bUsePerturbation = true;
-            RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d")%path.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%_parameters->_multidofinterp));
+            RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d")%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%_parameters->_multidofinterp));
             ParabolicRamp::Vector tol = parameters->_vConfigResolution;
             FOREACH(it,tol) {
                 *it *= parameters->_pointtolerance;

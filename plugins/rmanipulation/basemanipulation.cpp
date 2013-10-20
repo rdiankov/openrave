@@ -360,6 +360,7 @@ protected:
         params->_nMaxIterations = 4000;     // max iterations before failure
         dReal jitter = 0.04;
         int usedynamicsconstraints=0;
+        std::vector<dReal> vinitialconfig;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -387,6 +388,14 @@ protected:
                     dReal f=0;
                     sinput >> f;
                     params->vgoalconfig.push_back(f);
+                }
+            }
+            else if( cmd == "initialconfigs" ) {
+                size_t num=0;
+                sinput >> num;
+                vinitialconfig.resize(num*robot->GetActiveDOF());
+                FOREACH(itvalue, vinitialconfig) {
+                    sinput >> *itvalue;
                 }
             }
             else if( cmd == "outputtraj" ) {
@@ -438,6 +447,10 @@ protected:
         }
         RobotBase::RobotStateSaver saver(robot);
         params->SetRobotActiveJoints(robot);
+        if( vinitialconfig.size() > 0 ) {
+            params->vinitialconfig.swap(vinitialconfig);
+        }
+
         if( usedynamicsconstraints ) {
             // use dynamics constraints, so remove the old path constraint function
             params->_checkpathconstraintsfn.clear();
@@ -586,6 +599,7 @@ protected:
         dReal jitterikparam = 0;
         dReal goalsampleprob = 0.1;
         int nGoalMaxTries=10;
+        std::vector<dReal> vinitialconfig;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -721,6 +735,14 @@ protected:
             else if( cmd == "goalmaxtries" ) {
                 sinput >> nGoalMaxTries;
             }
+            else if( cmd == "initialconfigs" ) {
+                size_t num=0;
+                sinput >> num;
+                vinitialconfig.resize(num*pmanip->GetArmIndices().size());
+                FOREACH(itvalue, vinitialconfig) {
+                    sinput >> *itvalue;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -736,6 +758,9 @@ protected:
         RobotBase::RobotStateSaver saver(robot);
         robot->SetActiveDOFs(pmanip->GetArmIndices(), affinedofs);
         params->SetRobotActiveJoints(robot);
+        if( vinitialconfig.size() > 0 ) {
+            params->vinitialconfig.swap(vinitialconfig);
+        }
         if( _sPostProcessingParameters.size() > 0 ) {
             params->_sPostProcessingParameters = _sPostProcessingParameters;
         }
