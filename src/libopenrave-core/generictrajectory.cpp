@@ -193,6 +193,8 @@ public:
                         _vgroupinterpolators[i](index-1,deltatime,data);
                     }
                 }
+                // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                data.at(_timeoffset) = deltatime;
             }
         }
     }
@@ -256,6 +258,24 @@ public:
         if( startindex < endindex ) {
             ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.begin()+startindex*_spec.GetDOF(),_spec,endindex-startindex,GetEnv());
         }
+    }
+
+    size_t GetFirstWaypointIndexAfterTime(dReal time) const
+    {
+        BOOST_ASSERT(_bInit);
+        BOOST_ASSERT(_timeoffset>=0);
+        _ComputeInternal();
+        if( _vaccumtime.size() == 0 ) {
+            return 0;
+        }
+        if( time < _vaccumtime.at(0) ) {
+            return 0;
+        }
+        if( time >= _vaccumtime.at(_vaccumtime.size()-1) ) {
+            return GetNumWaypoints();
+        }
+        std::vector<dReal>::const_iterator itaccum = std::lower_bound(_vaccumtime.begin(), _vaccumtime.end(), time);
+        return itaccum-_vaccumtime.begin();
     }
 
     dReal GetDuration() const
@@ -747,10 +767,10 @@ protected:
     std::vector<int> _vderivoffsets; ///< for every group that relies on other info to compute its position, this will point to the derivative offset. -1 if invalid and not needed, -2 if invalid and needed
     std::vector<int> _vintegraloffsets; ///< for every group that relies on other info to compute its position, this will point to the integral offset (ie the position for a velocity group). -1 if invalid and not needed, -2 if invalid and needed
     int _timeoffset;
-    bool _bInit;
 
     std::vector<dReal> _vtrajdata;
     mutable std::vector<dReal> _vaccumtime, _vdeltainvtime;
+    bool _bInit;
     mutable bool _bChanged; ///< if true, then _ComputeInternal() has to be called in order to compute _vaccumtime and _vdeltainvtime
     mutable bool _bSamplingVerified; ///< if false, then _VerifySampling() has not be called yet to verify that all points can be sampled.
 };

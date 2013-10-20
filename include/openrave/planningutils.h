@@ -314,7 +314,20 @@ OPENRAVE_API void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxde
 /// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
-OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr traj);
+OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr traj);
+
+/// \brief returns a new trajectory with the order of the waypoints and times reversed.
+///
+/// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
+OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr traj);
+
+/// \brief segment the trajectory given the start and end points.
+///
+/// this is an in-memory operation
+/// \param traj the trajectory to segment
+/// \param starttime the start time of the segment
+/// \param endtime the end time of the segment
+OPENRAVE_API void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime);
 
 /// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
 ///

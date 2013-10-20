@@ -54,6 +54,11 @@ object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
     return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
+object pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
+{
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+}
+
 void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
 {
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
@@ -173,6 +178,11 @@ void pyExtendActiveDOFWaypoint(int index, object odofvalues, object odofvelociti
 void pyInsertWaypointWithSmoothing(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
 {
     OpenRAVE::planningutils::InsertWaypointWithSmoothing(index,ExtractArray<dReal>(odofvalues),ExtractArray<dReal>(odofvelocities),openravepy::GetTrajectory(pytraj),fmaxvelmult,fmaxaccelmult,plannername);
+}
+
+void pySegmentTrajectory(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endtime)
+{
+    OpenRAVE::planningutils::SegmentTrajectory(openravepy::GetTrajectory(pytraj), starttime, endtime);
 }
 
 object pyMergeTrajectories(object pytrajectories)
@@ -365,6 +375,8 @@ void InitPlanningUtils()
                   .staticmethod("ExtendActiveDOFWaypoint")
                   .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(args("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername"),DOXY_FN1(InsertWaypointWithSmoothing)))
                   .staticmethod("InsertWaypointWithSmoothing")
+                  .def("SegmentTrajectory",planningutils::pySegmentTrajectory,args("trajectory"),DOXY_FN1(SegmentTrajectory))
+                  .staticmethod("SegmentTrajectory")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
                   .def("GetDHParameters",planningutils::pyGetDHParameters,args("body"),DOXY_FN1(GetDHParameters))

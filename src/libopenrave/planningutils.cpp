@@ -1600,7 +1600,7 @@ void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv)
     traj->Insert(0,data);
 }
 
-TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
+TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
 {
     vector<dReal> sourcedata;
     size_t numpoints = sourcetraj->GetNumWaypoints();
@@ -1656,6 +1656,33 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     traj->Insert(0,targetdata);
     traj->SetDescription(sourcetraj->GetDescription());
     return traj;
+}
+
+TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr sourcetraj)
+{
+    // might need to change to in-memory reverse...
+    return GetReverseTrajectory(sourcetraj);
+}
+
+void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
+{
+    std::vector<dReal> values;
+    if( endtime < traj->GetDuration() ) {
+        size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
+        if( endindex < traj->GetNumWaypoints() ) {
+            traj->Sample(values, endtime);
+            traj->Insert(endindex, values, true);
+            traj->Remove(endindex+1, traj->GetNumWaypoints());
+        }
+    }
+    if( starttime > 0 ) {
+        size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+        if( startindex > 0 ) {
+            traj->Sample(values, startindex);
+            traj->Insert(startindex-1, values, true);
+            traj->Remove(0, startindex-1);
+        }
+    }
 }
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)

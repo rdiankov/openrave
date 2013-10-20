@@ -139,10 +139,14 @@ public:
         return toPyArray(values);
     }
 
+    size_t GetFirstWaypointIndexAfterTime(dReal time) const
+    {
+        return _ptrajectory->GetFirstWaypointIndexAfterTime(time);
+    }
+
     dReal GetDuration() const {
         return _ptrajectory->GetDuration();
     }
-
 
     PyTrajectoryBasePtr deserialize(const string& s)
     {
@@ -241,6 +245,7 @@ void init_openravepy_trajectory()
     .def("GetWaypoints2D",GetWaypoints2D2,args("startindex","endindex","spec"),DOXY_FN(TrajectoryBase, GetWaypoints "size_t; size_t; std::vector, const ConfigurationSpecification&"))
     .def("GetWaypoint",GetWaypoint1,args("index"),DOXY_FN(TrajectoryBase, GetWaypoint "int; std::vector"))
     .def("GetWaypoint",GetWaypoint2,args("index","spec"),DOXY_FN(TrajectoryBase, GetWaypoint "int; std::vector; const ConfigurationSpecification"))
+    .def("GetFirstWaypointIndexAfterTime",&PyTrajectoryBase::GetFirstWaypointIndexAfterTime, DOXY_FN(TrajectoryBase, GetFirstWaypointIndexAfterTime))
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(args("options"),DOXY_FN(TrajectoryBase,serialize)))
     .def("deserialize",&PyTrajectoryBase::deserialize,args("data"),DOXY_FN(TrajectoryBase,deserialize))

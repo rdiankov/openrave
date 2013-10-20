@@ -130,6 +130,12 @@ public:
         GetWaypoints(index,index+1,data,spec);
     }
 
+    /// \brief returns the nearest waypoint index that is before the designated time.
+    ///
+    /// If time is before the first waypoint's time, then will return 0. If time >= GetDuration(), will return GetNumWaypoints()
+    /// If trajectory doesn't have time or is not initialized, will throw an exception
+    virtual size_t GetFirstWaypointIndexAfterTime(dReal time) const = 0;
+
     /// \brief return the duration of the trajectory in seconds
     virtual dReal GetDuration() const = 0;
 

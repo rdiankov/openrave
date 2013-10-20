@@ -15,10 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
-#ifdef HAVE_BOOST_REGEX
-#include <boost/regex.hpp>
-#endif
-
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -95,10 +91,6 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "Sets _minimumgoalpaths for all planner parameters.");
         RegisterCommand("SetRobot",boost::bind(&TaskManipulation::SetRobotCommand,this,_1,_2),
                         "Sets the robot.");
-#ifdef HAVE_BOOST_REGEX
-        RegisterCommand("SwitchModels",boost::bind(&TaskManipulation::SwitchModels,this,_1,_2),
-                        "Switches between thin and fat models for planning.");
-#endif
         _fMaxVelMult=1;
         _minimumgoalpaths=1;
     }
@@ -118,7 +110,6 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual void Reset()
     {
-        _listSwitchModels.clear();
         ModuleBase::Reset();
         listsystems.clear();
         // recreate the planners since they store state
@@ -327,6 +318,35 @@ protected:
         return true;
     }
 
+    /// \brief restores the empty geometry group
+    class GeometryGroupSaver
+    {
+public:
+        GeometryGroupSaver(KinBodyPtr pbody, const std::string& sPaddedGeometryGroup) : _pbody(pbody), _sPaddedGeometryGroup(sPaddedGeometryGroup), _bPadded(false) {
+        }
+        ~GeometryGroupSaver() {
+            SwitchRegular();
+        }
+        void SwitchPadded() {
+            if( !_bPadded && _sPaddedGeometryGroup.size() > 0 ) {
+                RAVELOG_DEBUG("switching to padded robot\n");
+                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup);
+                _bPadded = true;
+            }
+        }
+        void SwitchRegular() {
+            if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
+                RAVELOG_DEBUG("switching to regular robot\n");
+                _pbody->SetLinkGeometriesFromGroup(std::string());
+                _bPadded = false;
+            }
+        }
+protected:
+        KinBodyPtr _pbody;
+        std::string _sPaddedGeometryGroup;
+        bool _bPadded;
+    };
+
     bool GraspPlanning(ostream& sout, istream& sinput)
     {
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
@@ -350,6 +370,7 @@ protected:
         bool bQuitAfterFirstRun = false;
         dReal jitter = 0.03;
         int nJitterIterations = 5000;
+        std::string sPaddedGeometryGroup; // the padded geometry group for the robot that will be switched when planning
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
@@ -393,6 +414,9 @@ protected:
             }
             else if( cmd == "igraspdir" ) {
                 sinput >> iGraspDir;
+            }
+            else if( cmd == "paddedgeometrygroup" ) {
+                sinput >> sPaddedGeometryGroup;
             }
             else if( cmd == "igrasppos" ) {
                 sinput >> iGraspPos;
@@ -506,8 +530,8 @@ protected:
         _robot->GetActiveDOFLimits(vHandLowerLimits,vHandUpperLimits);
         _robot->GetDOFValues(vCurRobotValues);
 
-        SwitchModelState switchstate(shared_problem());
-        _UpdateSwitchModels(true,true);
+        GeometryGroupSaver geometrypadder(KinBodyPtr(_robot), sPaddedGeometryGroup);
+        geometrypadder.SwitchPadded();
 
         // check if robot is in collision with padded models
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) ) {
@@ -587,7 +611,7 @@ protected:
 
             if(( listGraspGoals.size() > 0) &&( iCountdown-- <= 0) ) {
                 // start planning
-                _UpdateSwitchModels(true,false);
+                geometrypadder.SwitchPadded();
 
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = utils::GetMicroTime();
@@ -628,7 +652,8 @@ protected:
                 continue;
             }
 
-            _UpdateSwitchModels(false,false);
+            // reset the padded models since will be solving for IK and checking grasps
+            geometrypadder.SwitchRegular();
 
             IkParameterization tGoalEndEffector;
             // set the goal preshape
@@ -794,7 +819,9 @@ protected:
                     continue;
                 }
 
-                _UpdateSwitchModels(true,true);     // switch to fat models
+                // switch to padded models
+                geometrypadder.SwitchPadded();
+
                 if( fGraspApproachOffset > 0 ) {
                     Transform tsmalloffset;
                     // now test at the approach point (with offset)
@@ -827,8 +854,8 @@ protected:
                 _robot->SetActiveDOFValues(vFinalGripperValues, true);
             }
 
-            //while (getchar() != '\n') usleep(1000);
-            _UpdateSwitchModels(false,false);     // should test destination with thin models
+            // should test destination with original models
+            geometrypadder.SwitchRegular();
 
             list< IkParameterization > listDests;
             if( bRandomDests ) {
@@ -880,7 +907,7 @@ protected:
             }
 
             // finally start planning
-            _UpdateSwitchModels(true,false);
+            geometrypadder.SwitchPadded();
 
             if( pmanip->GetGripperIndices().size() > 0 && itpreshapetraj == mapPreshapeTrajectories.end() ) {
                 // not present in map, so look for correct one
@@ -959,7 +986,8 @@ protected:
             nSearchTime += utils::GetMicroTime() - basestart;
         }
 
-        _UpdateSwitchModels(false,false);
+        // turn off padding since will be performing the final trajectory stiching
+        geometrypadder.SwitchRegular();
 
         if( !ptraj ) {
             return false;     // couldn't not find any grasps
@@ -1429,118 +1457,6 @@ protected:
         return true;
     }
 
-    class SwitchModelContainer
-    {
-public:
-        SwitchModelContainer(KinBodyPtr pbody, const string &fatfilename) : _pbody(pbody) {
-            RAVELOG_VERBOSE(str(boost::format("register %s body with %s fatfile\n")%pbody->GetName()%fatfilename));
-            _pbodyfat = pbody->GetEnv()->ReadKinBodyURI(fatfilename);
-            // validate the fat body
-            BOOST_ASSERT(pbody->GetLinks().size()==_pbodyfat->GetLinks().size());
-            _bFat=false;
-        }
-        virtual ~SwitchModelContainer() {
-            Switch(false);
-        }
-
-        void Switch(bool bSwitchToFat)
-        {
-            if( _bFat != bSwitchToFat ) {
-                RAVELOG_DEBUG(str(boost::format("switching %s to fat: %d\n")%_pbody->GetName()%(int)bSwitchToFat));
-                FOREACHC(itlink,_pbody->GetLinks()) {
-                    KinBody::LinkPtr pswitchlink = _pbodyfat->GetLink((*itlink)->GetName());
-                    (*itlink)->SwapGeometries(pswitchlink);
-                }
-                _bFat = bSwitchToFat;
-            }
-        }
-
-        KinBodyPtr GetBody() const {
-            return _pbody;
-        }
-        bool IsFat() const {
-            return _bFat;
-        }
-private:
-        KinBodyPtr _pbody, _pbodyfat;
-        bool _bFat;
-    };
-
-    class SwitchModelState
-    {
-public:
-        SwitchModelState(boost::shared_ptr<TaskManipulation> ptask) : _ptask(ptask) {
-            _bFat = false;
-            FOREACH(it, _ptask->_listSwitchModels) {
-                if( (*it)->IsFat() ) {
-                    _bFat = true;
-                    break;
-                }
-            }
-        }
-        virtual ~SwitchModelState() {
-            _ptask->_UpdateSwitchModels(_bFat);
-        }
-private:
-        boost::shared_ptr<TaskManipulation> _ptask;
-        bool _bFat;
-    };
-
-    typedef boost::shared_ptr<SwitchModelContainer> SwitchModelContainerPtr;
-
-    bool SwitchModels(ostream& sout, istream& sinput)
-    {
-        int doswitch=-1;
-        string cmd;
-        bool bUpdateBodies=true;
-        while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput )
-                break;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            if( cmd == "register" ) {
-                string pattern, fatfilename;
-                sinput >> pattern >> fatfilename;
-                if( !!sinput ) {
-                    _listSwitchModelPatterns.push_back(make_pair(pattern,fatfilename));
-                }
-            }
-            else if( cmd == "unregister" ) {
-                string pattern;
-                sinput >> pattern;
-                list<pair<string,string> >::iterator it;
-                FORIT(it,_listSwitchModelPatterns) {
-                    if( it->first == pattern )
-                        it = _listSwitchModelPatterns.erase(it);
-                    else
-                        ++it;
-                }
-            }
-            else if( cmd == "update" )
-                sinput >> bUpdateBodies;
-            else if( cmd == "switchtofat" )
-                sinput >> doswitch;
-            else if( cmd == "clearpatterns" )
-                _listSwitchModelPatterns.clear();
-            else if( cmd == "clearmodels" )
-                _listSwitchModels.clear();
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
-        }
-
-        if( doswitch >= 0 )
-            _UpdateSwitchModels(doswitch>0,bUpdateBodies);
-        return true;
-    }
-
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() {
         return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
@@ -1658,7 +1574,7 @@ protected:
         return ptraj;
     }
 
-    /// grasps using the list of grasp goals. Removes all the goals that the planner planned with
+    /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
     TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories)
     {
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
@@ -1780,57 +1696,6 @@ protected:
         return IKRA_Success;
     }
 
-    void _UpdateSwitchModels(bool bSwitchToFat, bool bUpdateBodies=true)
-    {
-        if( bSwitchToFat && bUpdateBodies ) {
-            // update model list
-            string strcmd,strname;
-#ifdef HAVE_BOOST_REGEX
-            boost::regex re;
-#endif
-
-            vector<KinBodyPtr>::const_iterator itbody;
-            list<SwitchModelContainerPtr>::iterator itmodel;
-            vector<KinBodyPtr> vbodies;
-            GetEnv()->GetBodies(vbodies);
-            FORIT(itbody, vbodies) {
-                FORIT(itmodel,_listSwitchModels) {
-                    if( (*itmodel)->GetBody() == *itbody ) {
-                        break;
-                    }
-                }
-                if( itmodel != _listSwitchModels.end() ) {
-                    continue;
-                }
-                FOREACH(itpattern, _listSwitchModelPatterns) {
-                    bool bMatches=false;
-#ifdef HAVE_BOOST_REGEX
-                    try {
-                        re.assign(itpattern->first, boost::regex_constants::icase);
-                    }
-                    catch (boost::regex_error& e) {
-                        RAVELOG_ERROR(str(boost::format("%s is not a valid regular expression: %s")%itpattern->first%e.what()));
-                        continue;
-                    }
-
-                    // convert
-                    bMatches = boost::regex_match((*itbody)->GetName().c_str(), re);
-#else
-                    RAVELOG_DEBUG(str(boost::format("boost regex not enabled, cannot parse %s\n")%itpattern->first));
-                    bMatches = (*itbody)->GetName() == itpattern->first;
-#endif
-                    if( bMatches ) {
-                        _listSwitchModels.push_back(SwitchModelContainerPtr(new SwitchModelContainer(*itbody,itpattern->second)));
-                    }
-                }
-            }
-        }
-
-        FOREACH(it,_listSwitchModels) {
-            (*it)->Switch(bSwitchToFat);
-        }
-    }
-
     bool SetMinimumGoalPathsCommand(ostream& sout, istream& sinput)
     {
         sinput >> _minimumgoalpaths;
@@ -1843,12 +1708,9 @@ protected:
     dReal _fMaxVelMult;
     list<SensorSystemBasePtr > listsystems;
     PlannerBasePtr _pRRTPlanner, _pGrasperPlanner;
-    list<pair<string,string> > _listSwitchModelPatterns;
-    list<SwitchModelContainerPtr> _listSwitchModels;
     TrajectoryBasePtr _phandtraj;
     vector<dReal> _vFinalGripperValues;
     int _minimumgoalpaths;
-    friend class SwitchModelState;
 };
 
 ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {
