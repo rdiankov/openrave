@@ -193,6 +193,7 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class GraspingModel(DatabaseGenerator):
     """Holds all functions/data related to a grasp between a robot hand and a target"""
+    graspsetname = u'default' # the name of the grasp set. this allows applications another way to differentiate what grasp parameters their set was generated with
     
     class GripperVisibility:
         """When 'entered' will hide all the non-gripper links in order to facilitate visiblity of the gripper"""
@@ -247,7 +248,8 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 7
+        return 8
+    
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
         self.grasper = interfaces.Grasper(self.robot,friction=friction,avoidlinks=avoidlinks,plannername=plannername)
@@ -260,6 +262,8 @@ class GraspingModel(DatabaseGenerator):
         try:
             modelversion,params = pickle.load(open(filename, 'r'))
             if modelversion == self.getversion():
+                self.grasps,self.graspindices,friction,linknames,plannername,self.translationstepmult,self.finestep,self.graspsetname = params
+            elif modelversion == 7:
                 self.grasps,self.graspindices,friction,linknames,plannername,self.translationstepmult,self.finestep = params
             elif modelversion == 6:
                 self.grasps,self.graspindices,friction,linknames,plannername = params
@@ -277,11 +281,11 @@ class GraspingModel(DatabaseGenerator):
         return False
 
     def save(self):
-        DatabaseGenerator.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername,self.translationstepmult,self.finestep))
+        DatabaseGenerator.save(self,(self.grasps,self.graspindices,self.grasper.friction,[link.GetName() for link in self.grasper.avoidlinks],self.grasper.plannername,self.translationstepmult,self.finestep,self.graspsetname))
     def getfilename(self,read=False):
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'graspset.' + self.manip.GetStructureHash() + '.' + self.target.GetKinematicsGeometryHash()+'.pp'),read)
 
-        return DatabaseGenerator.getfilename(self,read,)
+        #return DatabaseGenerator.getfilename(self,read,)
     def preprocess(self):
         with self.env:
             self.jointmaxlengths = zeros(len(self.robot.GetJoints()))

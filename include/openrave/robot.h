@@ -747,6 +747,9 @@ private:
 
     virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
+    /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
+    virtual void SetNonCollidingConfiguration();
+
     //@}
 
     /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's

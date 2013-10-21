@@ -1345,6 +1345,12 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
     return _setNonAdjacentLinks.at(adjacentoptions);
 }
 
+void RobotBase::SetNonCollidingConfiguration()
+{
+    KinBody::SetNonCollidingConfiguration();
+    RegrabAll();
+}
+
 bool RobotBase::Grab(KinBodyPtr pbody)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
