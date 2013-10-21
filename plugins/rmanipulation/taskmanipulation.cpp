@@ -371,6 +371,7 @@ protected:
         dReal jitter = 0.03;
         int nJitterIterations = 5000;
         std::string sPaddedGeometryGroup; // the padded geometry group for the robot that will be switched when planning
+        dReal fPadding = 0; // the padding that the sPaddedGeometryGroup is configured with
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
@@ -415,8 +416,8 @@ protected:
             else if( cmd == "igraspdir" ) {
                 sinput >> iGraspDir;
             }
-            else if( cmd == "paddedgeometrygroup" ) {
-                sinput >> sPaddedGeometryGroup;
+            else if( cmd == "paddedgeometryinfo" ) {
+                sinput >> sPaddedGeometryGroup >> fPadding;
             }
             else if( cmd == "igrasppos" ) {
                 sinput >> iGraspPos;
@@ -615,7 +616,7 @@ protected:
 
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = utils::GetMicroTime();
-                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories);
+                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
                 nSearchTime += utils::GetMicroTime() - basestart;
 
                 if( !!ptraj || bQuitAfterFirstRun ) {
@@ -819,8 +820,8 @@ protected:
                     continue;
                 }
 
-                // switch to padded models
-                geometrypadder.SwitchPadded();
+                // switch to reguar models?
+                geometrypadder.SwitchRegular();
 
                 if( fGraspApproachOffset > 0 ) {
                     Transform tsmalloffset;
@@ -965,7 +966,7 @@ protected:
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = utils::GetMicroTime();
-                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
+                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
                 nSearchTime += utils::GetMicroTime() - basestart;
                 if( bQuitAfterFirstRun ) {
                     break;
@@ -977,12 +978,13 @@ protected:
             }
         }
 
+        geometrypadder.SwitchPadded();
         // if there's left over goal positions, start planning
         while( !ptraj && listGraspGoals.size() > 0 ) {
             //TODO have to update ptrajToPreshape
             RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
             uint64_t basestart = utils::GetMicroTime();
-            ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories);
+            ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
             nSearchTime += utils::GetMicroTime() - basestart;
         }
 
@@ -1465,7 +1467,126 @@ protected:
         return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations)
+    /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
+    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories, GeometryGroupSaver& geometrypadder, dReal fPadding)
+    {
+        RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
+        TrajectoryBasePtr ptraj;
+
+        // set all teh goals, be careful! not all goals have the same preshape!!!
+        if( listGraspGoals.size() == 0 ) {
+            return ptraj;
+        }
+        RobotBase::RobotStateSaver _saver(_robot);
+
+        // set back to the initial hand joints
+        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
+        vector<dReal> vpreshape = listGraspGoals.front().vpreshape;
+
+        _robot->SetActiveDOFValues(vpreshape,true);
+
+        list<GRASPGOAL>::iterator itgoals = listGraspGoals.begin();
+        list<GRASPGOAL> listgraspsused;
+
+        // take the first grasp
+        listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
+
+        while(itgoals != listGraspGoals.end()) {
+            size_t ipreshape=0;
+            for(ipreshape = 0; ipreshape < vpreshape.size(); ++ipreshape) {
+                if( RaveFabs(vpreshape[ipreshape] - itgoals->vpreshape[ipreshape]) > 2.0*GRASPTHRESH2 ) {
+                    break;
+                }
+            }
+
+            if( ipreshape == vpreshape.size() ) {
+                // accept
+                listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
+            }
+            else {
+                ++itgoals;
+            }
+        }
+
+        uint64_t tbase = utils::GetMicroTime();
+
+        PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
+        if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
+            if( itpreshapetraj->second->GetNumWaypoints() > 0 ) {
+                vector<dReal> vconfig;
+                _robot->GetConfigurationValues(vconfig);
+                itpreshapetraj->second->GetWaypoint(-1,vconfig,_robot->GetConfigurationSpecification());
+                _robot->SetConfigurationValues(vconfig.begin(),true);
+            }
+        }
+        else {
+            RAVELOG_WARN("no preshape trajectory!");
+        }
+
+        std::list<IkParameterization> listgoals;
+        FOREACH(itgoal, listgraspsused) {
+            listgoals.push_back(itgoal->tgrasp);
+        }
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals, 20, 100);
+
+        int nGoalIndex = -1;
+        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations, fPadding);
+        if (!!ptraj) {
+            int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
+            BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
+            list<GRASPGOAL>::iterator it = listgraspsused.begin();
+            advance(it,nGraspIndex);
+            goalfound = *it;
+
+            // have to check that the goal is accurate, otherwise have to insert a new waypoint (or extend waypoint?)
+            std::vector<dReal> vplannedgoal;
+            ptraj->GetWaypoint(-1, vplannedgoal, pmanip->GetArmConfigurationSpecification());
+            _robot->SetDOFValues(vplannedgoal, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            IkParameterization plannedikparam = pmanip->GetIkParameterization(goalfound.tgrasp.GetType());
+            dReal ferror2 = goalfound.tgrasp.ComputeDistanceSqr(plannedikparam);
+            if( ferror2 >= dReal(1e-6) ) {
+                RAVELOG_DEBUG_FORMAT("planned goal is jittered, error=%f, solving for closest ik solution", RaveSqrt(ferror2));
+                geometrypadder.SwitchRegular();
+                // need to look at all ik solutions since there's no other way of getting closest one
+                if( pmanip->FindIKSolutions(goalfound.tgrasp, _vcachedsolutions, IKFO_CheckEnvCollisions) ) {
+                    // find the best
+                    size_t bestindex = 0;
+                    dReal bestdist=1e30;
+                    std::vector<dReal> vtest;
+                    for(size_t isolution = 0; isolution < _vcachedsolutions.size(); ++isolution) {
+                        vtest = _vcachedsolutions[isolution];
+                        _robot->SubtractDOFValues(vtest, vplannedgoal, pmanip->GetArmIndices());
+                        dReal fdist = 0;
+                        FOREACHC(itvalue, vtest) {
+                            fdist += RaveFabs(*itvalue);
+                        }
+                        if( fdist < bestdist ) {
+                            bestdist = fdist;
+                            bestindex = isolution;
+                        }
+                    }
+                    if( bestdist < 0.4 ) {
+                        RAVELOG_DEBUG_FORMAT("found solution with abs dist %f, extending trajectory to it...", bestdist);
+                        // extend the waypoint rather than insert in order to keep velocity
+                        _robot->SetActiveDOFs(pmanip->GetArmIndices());
+                        planningutils::ExtendActiveDOFWaypoint(ptraj->GetNumWaypoints(), _vcachedsolutions.at(bestindex), std::vector<dReal>(), ptraj, _robot);
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("found solution with abs dist %f, this is too big so ignoring", bestdist);
+                    }
+                }
+                else {
+                    RAVELOG_WARN("could not find closer goal!!\n");
+                }
+            }
+
+            RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(utils::GetMicroTime()-tbase)/1000);
+        }
+
+        return ptraj;
+    }
+
+    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding)
     {
         int nSeedIkSolutions = 8;
         int nJitterIterations = 5000;
@@ -1497,6 +1618,7 @@ protected:
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
         goalsampler.SetSamplingProb(1);
+        goalsampler.SetJitter(fPadding*1.5);
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
@@ -1508,6 +1630,7 @@ protected:
         }
 
         if( params->vgoalconfig.size() == 0 ) {
+            RAVELOG_WARN("failed to find any goals, possibly need to jitter?\n");
             return ptraj;
         }
 
@@ -1574,82 +1697,6 @@ protected:
         return ptraj;
     }
 
-    /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
-    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories)
-    {
-        RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        TrajectoryBasePtr ptraj;
-
-        // set all teh goals, be careful! not all goals have the same preshape!!!
-        if( listGraspGoals.size() == 0 ) {
-            return ptraj;
-        }
-        RobotBase::RobotStateSaver _saver(_robot);
-
-        // set back to the initial hand joints
-        _robot->SetActiveDOFs(pmanip->GetGripperIndices());
-        vector<dReal> vpreshape = listGraspGoals.front().vpreshape;
-
-        _robot->SetActiveDOFValues(vpreshape,true);
-
-        list<GRASPGOAL>::iterator itgoals = listGraspGoals.begin();
-        list<GRASPGOAL> listgraspsused;
-
-        // take the first grasp
-        listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
-
-        while(itgoals != listGraspGoals.end()) {
-            size_t ipreshape=0;
-            for(ipreshape = 0; ipreshape < vpreshape.size(); ++ipreshape) {
-                if( RaveFabs(vpreshape[ipreshape] - itgoals->vpreshape[ipreshape]) > 2.0*GRASPTHRESH2 ) {
-                    break;
-                }
-            }
-
-            if( ipreshape == vpreshape.size() ) {
-                // accept
-                listgraspsused.splice(listgraspsused.end(), listGraspGoals, itgoals++);
-            }
-            else {
-                ++itgoals;
-            }
-        }
-
-        uint64_t tbase = utils::GetMicroTime();
-
-        PRESHAPETRAJMAP::iterator itpreshapetraj = mapPreshapeTrajectories.find(vpreshape);
-        if( itpreshapetraj != mapPreshapeTrajectories.end() ) {
-            if( itpreshapetraj->second->GetNumWaypoints() > 0 ) {
-                vector<dReal> vconfig;
-                _robot->GetConfigurationValues(vconfig);
-                itpreshapetraj->second->GetWaypoint(-1,vconfig,_robot->GetConfigurationSpecification());
-                _robot->SetConfigurationValues(vconfig.begin(),true);
-            }
-        }
-        else {
-            RAVELOG_WARN("no preshape trajectory!");
-        }
-
-        std::list<IkParameterization> listgoals;
-        FOREACH(itgoal, listgraspsused) {
-            listgoals.push_back(itgoal->tgrasp);
-        }
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals);
-
-        int nGoalIndex = -1;
-        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations);
-        if (!!ptraj) {
-            int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
-            BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
-            list<GRASPGOAL>::iterator it = listgraspsused.begin();
-            advance(it,nGraspIndex);
-            goalfound = *it;
-            RAVELOG_DEBUG("total planning time %d ms\n", (uint32_t)(utils::GetMicroTime()-tbase)/1000);
-        }
-
-        return ptraj;
-    }
-
     IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
@@ -1710,6 +1757,7 @@ protected:
     PlannerBasePtr _pRRTPlanner, _pGrasperPlanner;
     TrajectoryBasePtr _phandtraj;
     vector<dReal> _vFinalGripperValues;
+    std::vector< std::vector<dReal> > _vcachedsolutions;
     int _minimumgoalpaths;
 };
 

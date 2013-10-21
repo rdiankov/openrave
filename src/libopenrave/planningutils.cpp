@@ -2399,7 +2399,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         }
         return ikreturnlocal;
     }
-
+    IkReturnPtr ikreturnjittered;
     for(int itry = 0; itry < _nummaxtries; ++itry ) {
         if( _listsamples.size() == 0 ) {
             return IkReturnPtr();
@@ -2423,7 +2423,6 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                     if( _fjittermaxdist > 0 ) {
                         // try jittering the end effector out
                         RAVELOG_VERBOSE("starting jitter transform...\n");
-
                         // randomly add small offset to the ik until it stops being in collision
                         Transform tjitter;
                         // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
@@ -2439,9 +2438,19 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
                                     if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
-                                        ikparam = ikparamjittered;
-                                        bcollision = false;
-                                        break;
+                                        // make sure at least one ik solution exists...
+                                        if( !ikreturnjittered ) {
+                                            ikreturnjittered.reset(new IkReturn(IKRA_Success));
+                                        }
+                                        bool biksuccess = _pmanip->FindIKSolution(ikparamjittered, _ikfilteroptions, ikreturnjittered);
+                                        if( biksuccess ) {
+                                            ikparam = ikparamjittered;
+                                            bcollision = false;
+                                            break;
+                                        }
+                                        else {
+                                            RAVELOG_VERBOSE_FORMAT("jitter succed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
+                                        }
                                     }
                                 }
                                 catch(const std::exception& ex) {
@@ -2455,7 +2464,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
 
                         if( bcollision ) {
                             // try random samples, most likely will fail...
-                            int nMaxIterations = 10;
+                            int nMaxIterations = 100;
                             std::vector<dReal> xyzsamples(3);
                             for(int iiter = 0; iiter < nMaxIterations; ++iiter) {
                                 _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
@@ -2463,9 +2472,18 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
                                     if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
-                                        ikparam = ikparamjittered;
-                                        bcollision = false;
-                                        break;
+                                        if( !ikreturnjittered ) {
+                                            ikreturnjittered.reset(new IkReturn(IKRA_Success));
+                                        }
+                                        bool biksuccess = _pmanip->FindIKSolution(ikparamjittered, _ikfilteroptions, ikreturnjittered);
+                                        if( biksuccess ) {
+                                            ikparam = ikparamjittered;
+                                            bcollision = false;
+                                            break;
+                                        }
+                                        else {
+                                            RAVELOG_VERBOSE_FORMAT("jitter succed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
+                                        }
                                     }
                                 }
                                 catch(const std::exception& ex) {
