@@ -89,6 +89,8 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
         RegisterCommand("SetMinimumGoalPaths",boost::bind(&TaskManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
+        RegisterCommand("SetPostProcessing",boost::bind(&TaskManipulation::SetPostProcessingCommand,this,_1,_2),
+                        "Sets post processing parameters.");
         RegisterCommand("SetRobot",boost::bind(&TaskManipulation::SetRobotCommand,this,_1,_2),
                         "Sets the robot.");
         _fMaxVelMult=1;
@@ -1608,6 +1610,9 @@ protected:
 
         RRTParametersPtr params(new RRTParameters());
         params->_minimumgoalpaths = _minimumgoalpaths;
+        if( _sPostProcessingParameters.size() > 0 ) {
+            params->_sPostProcessingParameters = _sPostProcessingParameters;
+        }
         _robot->SetActiveDOFs(activejoints);
         params->SetRobotActiveJoints(_robot);
         //params->_sPathOptimizationPlanner = ""; // no smoothing
@@ -1750,6 +1755,14 @@ protected:
         return !!sinput;
     }
 
+    bool SetPostProcessingCommand(ostream& sout, istream& sinput)
+    {
+        if( !getline(sinput, _sPostProcessingParameters) ) {
+            return false;
+        }
+        return !!sinput;
+    }
+
     string _strRobotName;     ///< name of the active robot
     RobotBasePtr _robot;
     dReal _fMaxVelMult;
@@ -1758,6 +1771,7 @@ protected:
     TrajectoryBasePtr _phandtraj;
     vector<dReal> _vFinalGripperValues;
     std::vector< std::vector<dReal> > _vcachedsolutions;
+    std::string _sPostProcessingParameters;
     int _minimumgoalpaths;
 };
 
