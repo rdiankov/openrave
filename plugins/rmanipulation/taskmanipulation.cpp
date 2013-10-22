@@ -374,6 +374,7 @@ protected:
         int nJitterIterations = 5000;
         std::string sPaddedGeometryGroup; // the padded geometry group for the robot that will be switched when planning
         dReal fPadding = 0; // the padding that the sPaddedGeometryGroup is configured with
+        dReal fRRTStepLength = 0; // if > 0, then user set
 
         // indices into the grasp table
         int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
@@ -426,6 +427,9 @@ protected:
             }
             else if( cmd == "imanipulatordirection" ) {
                 sinput >> imanipulatordirection;
+            }
+            else if( cmd == "steplength" ) {
+                sinput >> fRRTStepLength;
             }
             else if( cmd == "igrasproll" ) {
                 sinput >> iGraspRoll;
@@ -618,7 +622,7 @@ protected:
 
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = utils::GetMicroTime();
-                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
+                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedIkSolutions, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding, fRRTStepLength);
                 nSearchTime += utils::GetMicroTime() - basestart;
 
                 if( !!ptraj || bQuitAfterFirstRun ) {
@@ -968,7 +972,7 @@ protected:
             if( (int)listGraspGoals.size() >= nMaxSeedGrasps ) {
                 RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
                 uint64_t basestart = utils::GetMicroTime();
-                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
+                ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding, fRRTStepLength);
                 nSearchTime += utils::GetMicroTime() - basestart;
                 if( bQuitAfterFirstRun ) {
                     break;
@@ -986,7 +990,7 @@ protected:
             //TODO have to update ptrajToPreshape
             RAVELOG_VERBOSE(str(boost::format("planning grasps %d\n")%listGraspGoals.size()));
             uint64_t basestart = utils::GetMicroTime();
-            ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding);
+            ptraj = _PlanGrasp(listGraspGoals, nMaxSeedGrasps, goalFound, nMaxIterations,mapPreshapeTrajectories, geometrypadder, fPadding, fRRTStepLength);
             nSearchTime += utils::GetMicroTime() - basestart;
         }
 
@@ -1470,7 +1474,7 @@ protected:
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
-    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories, GeometryGroupSaver& geometrypadder, dReal fPadding)
+    TrajectoryBasePtr _PlanGrasp(list<GRASPGOAL>&listGraspGoals, int nSeedIkSolutions, GRASPGOAL& goalfound, int nMaxIterations,PRESHAPETRAJMAP& mapPreshapeTrajectories, GeometryGroupSaver& geometrypadder, dReal fPadding, dReal fRRTStepLength)
     {
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         TrajectoryBasePtr ptraj;
@@ -1532,7 +1536,7 @@ protected:
         planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals, 20, 100);
 
         int nGoalIndex = -1;
-        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations, fPadding);
+        ptraj = _MoveArm(pmanip->GetArmIndices(), goalsampler, nGoalIndex, nMaxIterations, fPadding, fRRTStepLength);
         if (!!ptraj) {
             int nGraspIndex = goalsampler.GetIkParameterizationIndex(nGoalIndex);
             BOOST_ASSERT( nGraspIndex >= 0 && nGraspIndex < (int)listgraspsused.size() );
@@ -1588,7 +1592,7 @@ protected:
         return ptraj;
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding)
+    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding, dReal fRRTStepLength)
     {
         int nSeedIkSolutions = 8;
         int nJitterIterations = 5000;
@@ -1615,6 +1619,9 @@ protected:
         }
         _robot->SetActiveDOFs(activejoints);
         params->SetRobotActiveJoints(_robot);
+        if( fRRTStepLength > 0 ) {
+            params->_fStepLength = fRRTStepLength;
+        }
         //params->_sPathOptimizationPlanner = ""; // no smoothing
 
         _robot->GetActiveDOFValues(params->vinitialconfig);

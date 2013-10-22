@@ -60,7 +60,7 @@ class TaskManipulation:
         clone.robot = envother.GetRobot(self.robot.GetName())
         envother.Add(clone.prob,True,clone.args)
         return clone
-    def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None,paddedgeometryinfo=None):
+    def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None,paddedgeometryinfo=None,steplength=None):
         """See :ref:`module-taskmanipulation-graspplanning`
 
         If gmodel is specified, then do not have to fill graspindices, grasps, target, grasptranslationstepmult, graspfinestep
@@ -113,6 +113,8 @@ class TaskManipulation:
             cmd.write('randomgrasps %d '%randomgrasps)
         if randomdests is not None:
             cmd.write('randomdests %d '%randomdests)
+        if steplength is not None:
+            cmd.write('steplength %.15e '%steplength)
         if execute is not None:
             cmd.write('execute %d '%execute)
         if paddedgeometryinfo is not None:
