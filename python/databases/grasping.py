@@ -233,7 +233,7 @@ class GraspingModel(DatabaseGenerator):
         self.translationstepmult = None
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4}
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -711,7 +711,7 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
-            return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')], roll=grasp[self.graspindices.get('igrasproll')], position=grasp[self.graspindices.get('igrasppos')], standoff=grasp[self.graspindices.get('igraspstandoff')], manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')], target=self.target,graspingnoise = graspingnoise, forceclosure=forceclosure, execute=False, outputfinal=True,translationstepmult=translationstepmult,finestep=finestep)
+            return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')], roll=grasp[self.graspindices.get('igrasproll')], position=grasp[self.graspindices.get('igrasppos')], standoff=grasp[self.graspindices.get('igraspstandoff')], manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')], target=self.target,graspingnoise = graspingnoise, forceclosure=forceclosure, execute=False, outputfinal=True,translationstepmult=translationstepmult,finestep=finestep, vintersectplane=grasp[self.graspindices.get('vintersectplane')])
     def runGraspFromTrans(self,grasp):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
         with self.robot:

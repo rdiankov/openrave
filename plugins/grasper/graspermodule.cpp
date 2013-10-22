@@ -209,6 +209,9 @@ public:
                 // initialization
                 sinput >> params->fgraspingnoise;
             }
+            else if( cmd == "vintersectplane" ) {
+                sinput >> params->vintersectplane;
+            }
             else if( cmd == "roll" ) {
                 // grasp
                 sinput >> params->ftargetroll;

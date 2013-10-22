@@ -278,6 +278,7 @@ public:
         _vXMLParameters.push_back("ffinestep");
         _vXMLParameters.push_back("ftranslationstepmult");
         _vXMLParameters.push_back("fgraspingnoise");
+        _vXMLParameters.push_back("vintersectplane");
         _bProcessingGrasp = false;
     }
 
@@ -297,8 +298,9 @@ public:
     dReal fcoarsestep;      ///< step for coarse planning (in radians)
     dReal ffinestep;     ///< step for fine planning (in radians), THIS STEP MUST BE VERY SMALL OR THE COLLISION CHECKER GIVES WILDLY BOGUS RESULTS
     dReal ftranslationstepmult;     ///< multiplication factor for translational movements of the hand or joints
-
     dReal fgraspingnoise;     ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
+    Vector vintersectplane; ///< if norm > 0, then the manipulator transform has to be on the plane for grabbing to work. This is mutually exclusive from the standoff.
+
 protected:
     EnvironmentBasePtr _penv;     ///< environment target belongs to
     bool _bProcessingGrasp;
@@ -328,6 +330,7 @@ protected:
         O << "<ffinestep>" << ffinestep << "</ffinestep>" << std::endl;
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
         O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
+        O << "<vintersectplane>" << vintersectplane << "</vintersectplane>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -349,7 +352,7 @@ protected:
             return PE_Support;
         }
 
-        static boost::array<std::string,16> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise"}};
+        static boost::array<std::string,17> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane"}};
         _bProcessingGrasp = find(tags.begin(),tags.end(),name) != tags.end();
         return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
@@ -409,6 +412,9 @@ protected:
             }
             else if( name == "ftranslationstepmult" ) {
                 _ss >> ftranslationstepmult;
+            }
+            else if( name == "vintersectplane" ) {
+                _ss >> vintersectplane;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
