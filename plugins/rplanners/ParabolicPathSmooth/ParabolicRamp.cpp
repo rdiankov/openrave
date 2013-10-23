@@ -2390,13 +2390,14 @@ bool ParabolicRamp1D::IsValid() const
         return false;
     }
 
+    // increate the epsilons just a little here
     Real t2mT = tswitch2 - ttotal;
     if(tswitch1 != tswitch2) {
-        if(!FuzzyEquals(a1*tswitch1 + dx0,v,EpsilonV)) {
+        if(!FuzzyEquals(a1*tswitch1 + dx0,v,2*EpsilonV)) {
             PARABOLICWARN("Ramp has incorrect switch 1 speed: %.15e vs %.15e\n",a1*tswitch1 + dx0,v);
             return false;
         }
-        if(!FuzzyEquals(a2*t2mT + dx1,v,EpsilonV)) {
+        if(!FuzzyEquals(a2*t2mT + dx1,v,2*EpsilonV)) {
             PARABOLICWARN("Ramp has incorrect switch 2 speed: %.15e vs %.15e\n",a2*t2mT + dx1,v);
             return false;
         }
@@ -2404,7 +2405,7 @@ bool ParabolicRamp1D::IsValid() const
     //check switch2
     Real xswitch = x0 + 0.5*a1*Sqr(tswitch1) + dx0*tswitch1;
     Real xswitch2 = xswitch + (tswitch2-tswitch1)*v;
-    if(!FuzzyEquals(xswitch2,x1 + 0.5*a2*Sqr(t2mT) + dx1*t2mT,EpsilonX)) {
+    if(!FuzzyEquals(xswitch2,x1 + 0.5*a2*Sqr(t2mT) + dx1*t2mT,2*EpsilonX)) {
         PARABOLICWARN("Ramp has incorrect switch 2 position: %.15e vs %.15e\n",xswitch2,x1 + 0.5*a2*Sqr(t2mT) + dx1*t2mT);
         PARABOLIC_RAMP_PLOG("Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
         PARABOLIC_RAMP_PLOG("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a1,v,a2);
