@@ -193,7 +193,7 @@ protected:
         BOOST_ASSERT(!!node);
         Transform tnode = transparent * ExtractTransform(node->mTrafoMatrix);
 
-        RAVELOG_VERBOSE(str(boost::format("node=%s, parent=%s, children=%d, meshes=%d, pivot=%d")%node->mName%(!node->mParent ? string() : node->mParent->mName)%node->mChildren.size()%node->mMeshes.size()%(!!node->mFramePivot)));
+        RAVELOG_VERBOSE_FORMAT("level=%d, node=%s, parent=%s, children=%d, meshes=%d, pivot=%d", level%node->mName%(!node->mParent ? string() : node->mParent->mName)%node->mChildren.size()%node->mMeshes.size()%(!!node->mFramePivot));
 
         Transform tflipyz;
         if( _bFlipYZ ) {
@@ -223,7 +223,7 @@ protected:
             }
             else {
                 if( node->mFramePivot->mType != 0 ) {
-                    RAVELOG_WARN(str(boost::format("unknown joint %s type %d")%node->mName%node->mFramePivot->mType));
+                    RAVELOG_WARN_FORMAT("level=%d unknown joint %s type %d", level%node->mName%node->mFramePivot->mType);
                 }
                 pjoint.reset();
             }
@@ -237,6 +237,7 @@ protected:
                 pchildlink->_info._bIsEnabled = true;
                 pchildlink->_index = pbody->_veclinks.size();
                 pbody->_veclinks.push_back(pchildlink);
+                RAVELOG_VERBOSE_FORMAT("level=%d adding child xlink %s", level%pchildlink->_info._name);
             }
 
             if( !!pjoint ) {
@@ -251,12 +252,20 @@ protected:
                 pjoint->_info._name = _prefix+node->mFramePivot->mName;
                 pjoint->_info._bIsCircular[0] = false;
                 std::vector<Vector> vaxes(1);
-                Transform t = plink->_info._t.inverse()*tflipyz*tpivot;
+                Transform t = tflipyz*tpivot;
+                if( !!plink ) {
+                    t = plink->_info._t.inverse()*t;
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("parent link is not specified for joint %s, so taking first link", pjoint->_info._name);
+                    plink = pbody->GetLinks().at(0);
+                }
                 Vector vmotiondirection = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
                 vaxes[0] = t.rotate(vmotiondirection);
                 if( _bFlipYZ ) {
                     // flip z here makes things right....
                     if( node->mFramePivot->mType == 1 ) {
+                        RAVELOG_DEBUG_FORMAT("flipping zvalue for joint %s", pjoint->_info._name);
                         vaxes[0].z *= -1;
                     }
                 }
@@ -280,7 +289,7 @@ protected:
                 else {
                     // add the joint (make sure motion direction is unit)
                     if( RaveFabs(vaxes[0].lengthsqr3()-1) > 0.0001 ) {
-                        RAVELOG_WARN(str(boost::format("joint %s motion axis is not unit: %f %f %f\n")%pjoint->_info._name%vmotiondirection.x%vmotiondirection.y%vmotiondirection.z));
+                        RAVELOG_WARN_FORMAT("level=%d joint %s motion axis is not unit: %f %f %f", level%pjoint->_info._name%vmotiondirection.x%vmotiondirection.y%vmotiondirection.z);
                     }
                 }
 
@@ -310,6 +319,7 @@ protected:
                 plink->_info._bIsEnabled = true;
                 plink->_index = pbody->_veclinks.size();
                 pbody->_veclinks.push_back(plink);
+                RAVELOG_VERBOSE_FORMAT("level=%d adding xlink %s", level%plink->_info._name);
             }
 
             KinBody::GeometryInfo g;

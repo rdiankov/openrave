@@ -339,7 +339,7 @@ public:
         void SwitchRegular() {
             if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to regular robot\n");
-                _pbody->SetLinkGeometriesFromGroup(std::string());
+                _pbody->SetLinkGeometriesFromGroup("self");
                 _bPadded = false;
             }
         }
