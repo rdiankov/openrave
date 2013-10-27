@@ -201,7 +201,8 @@ protected:
         }
 
         if( !!node->mFramePivot ) {
-            Transform tpivot = tnode*ExtractTransform(node->mFramePivot->mPivotMatrix);
+            Transform tlocalpivot = ExtractTransform(node->mFramePivot->mPivotMatrix);
+            Transform tpivot = tnode*tlocalpivot;
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
             // support mimic joints, so have to look at mJointIndex!
             if( node->mFramePivot->mType == 1 ) {
@@ -252,7 +253,7 @@ protected:
                 pjoint->_info._name = _prefix+node->mFramePivot->mName;
                 pjoint->_info._bIsCircular[0] = false;
                 std::vector<Vector> vaxes(1);
-                Transform t = tflipyz*tpivot;
+                Transform t = tflipyz*tnode; // i guess we don't apply the pivot for the joint axis...?
                 if( !!plink ) {
                     t = plink->_info._t.inverse()*t;
                 }
@@ -270,7 +271,7 @@ protected:
                     }
                 }
                 std::vector<dReal> vcurrentvalues;
-                pjoint->_ComputeInternalInformation(plink,pchildlink,t.trans,vaxes,vcurrentvalues);
+                pjoint->_ComputeInternalInformation(plink,pchildlink, (t*tlocalpivot).trans,vaxes,vcurrentvalues);
                 if( node->mFramePivot->mJointIndex > pbody->_vecjoints.size() ) {
                     pbody->_vecjoints.resize(node->mFramePivot->mJointIndex);
                 }

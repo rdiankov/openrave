@@ -10,7 +10,7 @@ Geometric Conventions
 
 * Internal matrices are in column-order, row-major format. If this is confusing, check out this guide. This means affine matrix representation is using the standard math way. All matrices are serialized in column-major format, this is to make it simpler for Octave/Matlab to convert between matrices. Note that python expects row-major matrices, which require transposition when passed around the two interfaces.
 
-* Quaternions, the preferred way of representing rotations, are defined with the scalar value as the first component. For example [w x y z] or [cos sin*axis].
+* Quaternions, the preferred way of representing rotations, are defined with the scalar value as the first component. For example [cos(angle/2), sin(angle/2)*axis]. When accessing it through a Vector, Vector::x will correspond to the scalar component.
 
 * A pose is an affine transformation specified as a quaternion and translation. It serializes into 7 values, the first 4 being the quaternion.
 
