@@ -887,12 +887,19 @@ protected:
                 }
 
                 if( !nMobileAffine ) {
-                    if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions) ) {
+                    bool bSuccess = pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions);
+                    if( bSuccess ) {
                         listDests.push_back(tDestEndEffector);
                     }
-                    else if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "failed dest IkParameterization('" << tDestEndEffector << "')";
+                        if( bSuccess ) {
+                            ss << "succeeded ";
+                        }
+                        else {
+                            ss << "failed ";
+                        }
+                        ss << "dest IkParameterization('" << tDestEndEffector << "')";
                         RAVELOG_VERBOSE(ss.str());
 
                     }

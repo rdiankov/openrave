@@ -2440,11 +2440,12 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                         // randomly add small offset to the ik until it stops being in collision
                         Transform tjitter;
                         // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
+                        int N = 4;
+                        dReal delta = _fjittermaxdist/N;
                         for(int iaxis = 2; iaxis >= 0; --iaxis) {
                             tjitter.trans = Vector();
-                            dReal delta = 0.25;
-                            for(int iiter = 2; iiter < 10; ++iiter) {
-                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(iiter/2);
+                            for(int iiter = 0; iiter < 2*N; ++iiter) {
+                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(1+iiter/2);
                                 if( iiter & 1 ) {
                                     // revert sign
                                     tjitter.trans[iaxis] = -tjitter.trans[iaxis];
@@ -2480,9 +2481,10 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                             // try random samples, most likely will fail...
                             int nMaxIterations = 100;
                             std::vector<dReal> xyzsamples(3);
-                            for(int iiter = 0; iiter < nMaxIterations; ++iiter) {
+                            dReal delta = (_fjittermaxdist*2)/nMaxIterations;
+                            for(int iiter = 1; iiter <= nMaxIterations; ++iiter) {
                                 _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
+                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
                                     if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
