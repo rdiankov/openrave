@@ -1599,12 +1599,11 @@ protected:
         return ptraj;
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding, dReal fRRTStepLength)
+    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding, dReal fRRTStepLength, int nMaxTries = 1)
     {
         int nSeedIkSolutions = 8;
         int nJitterIterations = 5000;
         dReal jitter = 0.03;
-        int nMaxTries = 3;
         dReal fGoalSamplingProb = 0.05;
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
@@ -1662,9 +1661,16 @@ protected:
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
         switch( planningutils::JitterActiveDOF(_robot,nJitterIterations,jitter) ) {
-        case 0:
-            RAVELOG_WARN("jitter failed for initial\n");
+        case 0: {
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "jitter failed for initial=[";
+            FOREACHC(it, params->vinitialconfig) {
+                ss << *it << ", ";
+            }
+            ss << "]";
+            RAVELOG_WARN(ss.str());
             return TrajectoryBasePtr();
+        }
         case 1:
             RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
             vinsertconfiguration = params->vinitialconfig;
