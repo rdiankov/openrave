@@ -432,7 +432,7 @@ public:
         std::vector<dReal> vvalues = ExtractArray<dReal>(ovalues);
         OPENRAVE_ASSERT_OP(vvalues.size(),==,vindices.size());
         OPENRAVE_ASSERT_OP(vdata.size(),>=,vvalues.size());
-        OPENRAVE_ASSERT_OP(vdata.size(),==,_spec.GetDOF());
+        OPENRAVE_ASSERT_OP((int)vdata.size(),==,_spec.GetDOF());
         if( !_spec.InsertJointValues(vdata.begin(), vvalues.begin(), openravepy::GetKinBody(pybody), vindices, timederivative) ) {
             return false;
         }
@@ -481,7 +481,14 @@ public:
 //
 //    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv);
 //
-//    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+    // source spec is the current configurationspecification spec
+    object ConvertData(PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv, bool filluninitialized = true)
+    {
+        std::vector<dReal> vtargetdata(pytargetspec->_spec.GetDOF()*numpoints,0);
+        std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
+        ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), filluninitialized);
+        return toPyArray(vtargetdata);
+    }
 
     boost::python::list GetGroups()
     {
@@ -1112,6 +1119,7 @@ void init_openravepy_global()
                                            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues,args("data","values","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,InsertJointValues))
                                            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
                                            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
+                                           .def("ConvertData", &PyConfigurationSpecification::ConvertData, args("targetspec", "sourcedata", "numpoints", "env", "filluninitialized"), DOXY_FN(ConfigurationSpecification, ConvertData))
                                            .def("GetGroups", &PyConfigurationSpecification::GetGroups, args("env"), "returns a list of the groups")
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)
