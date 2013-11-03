@@ -181,6 +181,13 @@ public:
             dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
         }
 
+        if( !_parameters->verifyinitialpath ) {
+            // disable verification
+            FOREACH(itramp, dynamicpath.ramps) {
+                itramp->constraintchecked = 1;
+            }
+        }
+
         try {
             _bUsePerturbation = true;
             RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d")%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%_parameters->_multidofinterp));
