@@ -274,6 +274,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 for ig,geom in enumerate(geometries):
                     if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
                         trimesh = geom.GetCollisionMesh()
+                        if len(trimesh.indices) == 0:
+                            geom.InitCollisionMesh()
+                            trimesh = geom.GetCollisionMesh()
                         if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
                             log.info(u'computing hull for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
                             orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]

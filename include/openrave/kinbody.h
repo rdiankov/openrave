@@ -277,6 +277,8 @@ public:
                 return _info;
             }
 
+            virtual bool InitCollisionMesh(float fTessellation=1);
+
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
             virtual void serialize(std::ostream& o, int options) const;
