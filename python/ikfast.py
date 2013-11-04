@@ -182,7 +182,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '68' # also in ikfast.h
+__version__ = '69' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -4190,6 +4190,7 @@ class IKFastSolver(AutoReloader):
                     AllEquations.append(neweq0.subs(self.invsubs).expand())
                     AllEquations.append(neweq1.subs(self.invsubs).expand())
             self.sortComplexity(AllEquations)
+            #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
             for ivar in range(3):
                 try:
                     unknownvars = usedvars[:]
@@ -5143,7 +5144,14 @@ class IKFastSolver(AutoReloader):
                         solutions.append((solution,curvar))
                 except self.CannotSolveError:
                     pass
-        
+                
+#         if len(curvars) == 1 and curvars[0].name == 'j0':
+#             log.info('test sol')
+#             from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+            
+#         if len(solutions) == 1 and len(othersolvedvars) == 2 and curvars[0].name == 'j0' and len(AllEquations) == 4:
+#             
+
         # only return here if a solution was found that perfectly determines the unknown
         # otherwise, the pairwise solver could come up with something..
         # There is still a problem with this: (bertold robot)
@@ -5713,6 +5721,9 @@ class IKFastSolver(AutoReloader):
             branchconds.accumequations = accumequations
             lastbranch.append(branchconds)
         else:
+#             if solutions[0][1].name == 'j0':
+#                 #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+#                 assert(0)
             lastbranch.append(AST.SolverBreak())
 
         return prevbranch
@@ -6244,6 +6255,7 @@ class IKFastSolver(AutoReloader):
         
 
         # prioritize finding a solution when var is alone
+        returnfirstsolutions = []
         for eq in eqns:
             symbolgen = cse_main.numbered_symbols('const')
             eqnew, symbols = self.groupTerms(eq.subs(varsym.subs), vars, symbolgen)
@@ -6260,15 +6272,26 @@ class IKFastSolver(AutoReloader):
                 tempsolutions = solve(eqnew,var)
                 jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    return [AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name))]
+                    # check if any solutions don't have divide by zero problems
+                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                    hasdividebyzero = any([len(self.checkForDivideByZero(s))>0 for s in jointsolutions])
+                    if not hasdividebyzero:
+                        return returnfirstsolutions
             
             numvar = self.countVariables(eqnew,varsym.htvar)
             if Poly(eqnew,varsym.htvar).TC() != S.Zero and numvar >= 1 and numvar <= 2:
                 tempsolutions = solve(eqnew,varsym.htvar)
                 jointsolutions = [2*atan(self.trigsimp(s.subs(symbols),othersolvedvars)) for s in tempsolutions]
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    return [AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name))]
+                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                    hasdividebyzero = any([len(self.checkForDivideByZero(s))>0 for s in jointsolutions])
+                    if not hasdividebyzero:
+                        return returnfirstsolutions
                 
+        if len(returnfirstsolutions) > 0:
+            # already computed some solutions, so return them, note that this means that all solutions have a divide-by-zero condition
+            return returnfirstsolutions
+        
         solutions = []
         if len(eqns) > 1:
             neweqns = []

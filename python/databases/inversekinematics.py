@@ -1048,9 +1048,17 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()
             try:
-                robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
-                env.Add(robot)
-                manip = None if options.manipname is None else robot.GetManipulator(options.manipname)
+                #robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
+                #env.Add(robot)
+                env.Load(options.robot,{'skipgeometry':'1'})
+                manip = None
+                if options.manipname is None:
+                    robot = env.GetRobots()[0]
+                else:
+                    for robot in env.GetRobots():
+                        manip = robot.GetManipulator(options.manipname)
+                        if manip is not None:
+                            break
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices,manip=manip)
                 if not ikmodel.load(freeinc=options.freeinc):
                     raise ValueError('failed to load ik')
