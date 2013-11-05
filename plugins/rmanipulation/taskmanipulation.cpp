@@ -1636,7 +1636,7 @@ protected:
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
         goalsampler.SetSamplingProb(1);
-        goalsampler.SetJitter(fPadding*1.5);
+        goalsampler.SetJitter(fPadding*2.5);
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
