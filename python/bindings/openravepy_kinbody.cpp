@@ -1074,12 +1074,20 @@ class PyKinBodyStateSaver
     KinBody::KinBodyStateSaver _state;
 public:
     PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
+        // python should not support restoring on destruction since there's garbage collection
+        _state.SetRestoreOnDestructor(false);
     }
     PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody(),pyGetIntFromPy(options,0)) {
+        // python should not support restoring on destruction since there's garbage collection
+        _state.SetRestoreOnDestructor(false);
     }
     PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(pbody) {
+        // python should not support restoring on destruction since there's garbage collection
+        _state.SetRestoreOnDestructor(false);
     }
     PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options, 0)) {
+        // python should not support restoring on destruction since there's garbage collection
+        _state.SetRestoreOnDestructor(false);
     }
     virtual ~PyKinBodyStateSaver() {
         _state.Release();

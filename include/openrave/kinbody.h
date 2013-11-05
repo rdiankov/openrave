@@ -1266,6 +1266,9 @@ public:
         ///
         /// After this call, it will still be possible to use \ref Restore.
         virtual void Release();
+
+        /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
+        virtual void SetRestoreOnDestructor(bool restore);
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
@@ -1274,6 +1277,7 @@ protected:
         std::vector<int> _vdofbranches;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
+        bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
     };

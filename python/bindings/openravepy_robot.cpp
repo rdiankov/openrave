@@ -724,12 +724,21 @@ public:
         RobotBase::RobotStateSaver _state;
 public:
         PyRobotStateSaver(PyRobotBasePtr pyrobot) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot()) {
+            // python should not support restoring on destruction since there's garbage collection
+            _state.SetRestoreOnDestructor(false);
+
         }
         PyRobotStateSaver(PyRobotBasePtr pyrobot, object options) : _pyenv(pyrobot->GetEnv()), _state(pyrobot->GetRobot(),pyGetIntFromPy(options,0)) {
+            // python should not support restoring on destruction since there's garbage collection
+            _state.SetRestoreOnDestructor(false);
         }
         PyRobotStateSaver(RobotBasePtr probot, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(probot) {
+            // python should not support restoring on destruction since there's garbage collection
+            _state.SetRestoreOnDestructor(false);
         }
         PyRobotStateSaver(RobotBasePtr probot, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(probot,pyGetIntFromPy(options,0)) {
+            // python should not support restoring on destruction since there's garbage collection
+            _state.SetRestoreOnDestructor(false);
         }
         virtual ~PyRobotStateSaver() {
         }

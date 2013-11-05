@@ -132,7 +132,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _RestoreRobot(_probot);
+    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentId() != 0 ) {
+        _RestoreRobot(_probot);
+    }
 }
 
 void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)

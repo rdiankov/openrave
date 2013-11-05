@@ -58,7 +58,7 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody)
+KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
         _pbody->GetLinkTransformations(_vLinkTransforms, _vdofbranches);
@@ -86,7 +86,9 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
 {
-    _RestoreKinBody(_pbody);
+    if( _bRestoreOnDestructor && !!_pbody && _pbody->GetEnvironmentId() != 0 ) {
+        _RestoreKinBody(_pbody);
+    }
 }
 
 void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
@@ -97,6 +99,11 @@ void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
 void KinBody::KinBodyStateSaver::Release()
 {
     _pbody.reset();
+}
+
+void KinBody::KinBodyStateSaver::SetRestoreOnDestructor(bool restore)
+{
+    _bRestoreOnDestructor = restore;
 }
 
 void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbody)
@@ -113,6 +120,17 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
+//        if( IS_DEBUGLEVEL(Level_Warn) ) {
+//            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//            ss << "restoring kinbody " << pbody->GetName() << " to values=[";
+//            std::vector<dReal> values;
+//            pbody->GetDOFValues(values);
+//            FOREACH(it,values) {
+//                ss << *it << ", ";
+//            }
+//            ss << "]";
+//            RAVELOG_WARN(ss.str());
+//        }
     }
     if( _options & Save_LinkEnable ) {
         // should first enable before calling the parameter callbacks
