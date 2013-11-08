@@ -46,18 +46,122 @@ public:
         return boost::dynamic_pointer_cast<BulletPhysicsEngine const>(shared_from_this());
     }
 
+class PhysicsPropertiesXMLReader : public BaseXMLReader
+    {
 public:
+        PhysicsPropertiesXMLReader(boost::shared_ptr<BulletPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+        }
+
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
+                    return PE_Support;
+                }
+                return PE_Ignore;
+            }
+
+            if( find(GetTags().begin(),GetTags().end(),name) == GetTags().end() ) {
+                return PE_Pass;
+            }
+            _ss.str("");
+            return PE_Support;
+        }
+
+        virtual bool endElement(const std::string& name)
+        {
+            if( name == "bulletproperties" )
+                return true;
+	    else if( name == "solver_iterations" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_solver_iterations;
+            }
+            else if( name == "margin_depth" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_margin_depth;
+            }
+             else if( name == "linear_damping" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_linear_damping;
+            }
+             else if( name == "rotation_damping" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_rotation_damping;
+            }
+             else if( name == "global_friction" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_global_friction;
+            }
+             else if( name == "global_contact_force_mixing" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_global_contact_force_mixing;
+            }
+            else if( name == "global_restitution" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_global_restitution;
+            }
+            else if( name == "gravity" ) {
+                Vector v;
+                _ss >> v.x >> v.y >> v.z;
+                if( !!_ss ) {
+                    _physics->SetGravity(v);
+                }
+            }
+            else {
+                RAVELOG_ERROR("unknown field %s\n", name.c_str());
+            }
+
+            if( !_ss ) {
+                RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+            }
+
+            return false;
+        }
+
+        virtual void characters(const std::string& ch)
+        {
+            if( !!_pcurreader ) {
+                _pcurreader->characters(ch);
+            }
+            else {
+                _ss.clear();
+                _ss << ch;
+            }
+        }
+
+        static const boost::array<string, 11>& GetTags() {
+        static const boost::array<string, 11> tags = {{"solver_iterations","margin_depth","linear_damping","rotation_damping",
+        "global_contact_force_mixing","global_friction","global_restitution","gravity" }};
+            return tags;
+        }
+
+protected:
+        BaseXMLReaderPtr _pcurreader;
+        boost::shared_ptr<BulletPhysicsEngine> _physics;
+        stringstream _ss;
+    };
+
+public:
+
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    {
+     return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
+    }
 
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
     {
+	stringstream ss;
         __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-        _solver_iterations = 100;
+        FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
+            ss << "**" << *it << "**, ";
+        }
+        ss << "\n\n";
+       /* _solver_iterations = 100;
         _margin_depth = 0.0001;
         _linear_damping = 0.2;
         _rotation_damping = 0.9;
         _global_contact_force_mixing = 0;
         _global_friction = 0.4;
-        _global_restitution = 0.2;
+        _global_restitution = 0.2;*/
     }
 
     virtual bool InitEnvironment()
@@ -356,6 +460,15 @@ public:
         //_dynamicsWorld->clearForces();
     }
 
+// xml variables
+    btScalar _global_friction;
+    btScalar _margin_depth;
+    btScalar _linear_damping, _rotation_damping;
+    btScalar _global_contact_force_mixing;
+    btScalar _global_restitution;
+    Vector _gravity;
+    int _solver_iterations;
+
 private:
     static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
     {
@@ -374,13 +487,8 @@ private:
     }
 
     int _options;
-    Vector _gravity;
-    btScalar _global_friction;
-    int _solver_iterations;
-    btScalar _margin_depth;
-    btScalar _linear_damping, _rotation_damping;
-    btScalar _global_contact_force_mixing;
-    btScalar _global_restitution;
+  
+
 
     boost::shared_ptr<BulletSpace> _space;
     boost::shared_ptr<btDiscreteDynamicsWorld> _dynamicsWorld;
@@ -394,8 +502,7 @@ private:
     CollisionReportPtr _report;
 };
 
-
-PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
+/*PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
 {
     return PhysicsEngineBasePtr(new BulletPhysicsEngine(penv,sinput));
-}
+}*/
