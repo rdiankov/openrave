@@ -60,7 +60,7 @@ class TaskManipulation:
         clone.robot = envother.GetRobot(self.robot.GetName())
         envother.Add(clone.prob,True,clone.args)
         return clone
-    def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None,paddedgeometryinfo=None,steplength=None):
+    def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None,paddedgeometryinfo=None,steplength=None,releasegil=False):
         """See :ref:`module-taskmanipulation-graspplanning`
 
         If gmodel is specified, then do not have to fill graspindices, grasps, target, grasptranslationstepmult, graspfinestep
@@ -121,7 +121,7 @@ class TaskManipulation:
             cmd.write('paddedgeometryinfo %s %f '%tuple(paddedgeometryinfo))
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd.write('outputtraj ')
-        res = self.prob.SendCommand(cmd.getvalue())
+        res = self.prob.SendCommand(cmd.getvalue(),releasegil=releasegil)
         if res is None:
             raise planning_error()
         resvalues = res.split()
