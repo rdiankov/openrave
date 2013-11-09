@@ -155,13 +155,13 @@ public:
             ss << "**" << *it << "**, ";
         }
         ss << "\n\n";
-       /* _solver_iterations = 100;
+        _solver_iterations = 100;
         _margin_depth = 0.0001;
         _linear_damping = 0.2;
         _rotation_damping = 0.9;
         _global_contact_force_mixing = 0;
         _global_friction = 0.4;
-        _global_restitution = 0.2;*/
+        _global_restitution = 0.2;
     }
 
     virtual bool InitEnvironment()
@@ -504,7 +504,7 @@ private:
     CollisionReportPtr _report;
 };
 
-/*PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
+PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
 {
     return PhysicsEngineBasePtr(new BulletPhysicsEngine(penv,sinput));
-}*/
+}
