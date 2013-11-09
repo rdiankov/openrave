@@ -413,7 +413,10 @@ private:
     {
         return btVector3(v.x,v.y,v.z);
     }
-
+    bool IsInitialized() {
+       		// return !!_world;
+		return _worlddynamics;
+    }
 
 
 private:

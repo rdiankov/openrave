@@ -432,7 +432,9 @@ public:
     virtual void SetGravity(const Vector& gravity)
     {
         _gravity = gravity;
-        _dynamicsWorld->setGravity(btVector3(_gravity.x,_gravity.y,_gravity.z));
+        if( !!_space && _space->IsInitialized() ) {
+             _dynamicsWorld->setGravity(btVector3(_gravity.x,_gravity.y,_gravity.z));
+        }
     }
 
     virtual Vector GetGravity()
