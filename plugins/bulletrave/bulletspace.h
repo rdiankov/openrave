@@ -59,7 +59,7 @@ public:
             virtual void setWorldTransform(const btTransform& centerOfMassWorldTrans)
             {
                 //m_graphicsWorldTrans = centerOfMassWorldTrans * m_centerOfMassOffset;
-                RAVELOG_INFO(plink->GetName());
+                //RAVELOG_INFO(plink->GetName());
                 plink->SetTransform(GetTransform(centerOfMassWorldTrans)*tlocal.inverse());
             }
 
