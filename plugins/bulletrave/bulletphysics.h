@@ -466,11 +466,11 @@ public:
     }
 
 // xml variables
-    double _global_friction;
+    btScalar _global_friction;
     btScalar _margin_depth;
     btScalar _linear_damping, _rotation_damping;
     btScalar _global_contact_force_mixing;
-    double _global_restitution;
+    btScalar _global_restitution;
     Vector _gravity;
     int _solver_iterations;
 
