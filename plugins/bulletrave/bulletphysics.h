@@ -98,6 +98,7 @@ public:
             else if( name == "global_restitution" ) {
                 // read all the float values into a vector
                 _ss >> _physics->_global_restitution;
+                
             }
             else if( name == "gravity" ) {
                 Vector v;
@@ -128,8 +129,8 @@ public:
             }
         }
 
-        static const boost::array<string, 11>& GetTags() {
-        static const boost::array<string, 11> tags = {{"solver_iterations","margin_depth","linear_damping","rotation_damping",
+        static const boost::array<string, 8>& GetTags() {
+        static const boost::array<string, 8> tags = {{"solver_iterations","margin_depth","linear_damping","rotation_damping",
         "global_contact_force_mixing","global_friction","global_restitution","gravity" }};
             return tags;
         }
@@ -151,10 +152,7 @@ public:
     {
 	stringstream ss;
         __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-        FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
-            ss << "**" << *it << "**, ";
-        }
-        ss << "\n\n";
+
         _solver_iterations = 100;
         _margin_depth = 0.0001;
         _linear_damping = 0.2;
@@ -162,6 +160,11 @@ public:
         _global_contact_force_mixing = 0;
         _global_friction = 0.4;
         _global_restitution = 0.2;
+
+        FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
+            ss << "**" << *it << "**, ";
+        }
+        ss << "\n\n";
     }
 
     virtual bool InitEnvironment()
@@ -463,11 +466,11 @@ public:
     }
 
 // xml variables
-    btScalar _global_friction;
+    double _global_friction;
     btScalar _margin_depth;
     btScalar _linear_damping, _rotation_damping;
     btScalar _global_contact_force_mixing;
-    btScalar _global_restitution;
+    double _global_restitution;
     Vector _gravity;
     int _solver_iterations;
 
