@@ -23,19 +23,46 @@ public:
         }
         virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
         {
-            KinBodyPtr pbody0 = plink0->GetParent();
-            KinBodyPtr pbody1 = plink1->GetParent();
-            if( pbody0->IsAttached(pbody1) ) {
-                return false;
-            }
-            if( pbody0 != pbody1 ) {
-                return true;
-            }
+		bool flag_of_collision;
+                KinBodyPtr pbody0 = plink0->GetParent();
+                KinBodyPtr pbody1 = plink1->GetParent();
 
-            // check if links are in adjacency list
-            int index0 = min(plink0->GetIndex(), plink1->GetIndex());
-            int index1 = max(plink0->GetIndex(), plink1->GetIndex());
-            return pbody0->GetNonAdjacentLinks(KinBody::AO_Enabled).count(index0|(index1<<16))>0;
+                if( pbody0 == pbody1 ) {
+              
+              // Read all the Adjacent link pairs from the robot and check if the 2 links 
+              // you are about to compare, are in a pair inside the Adjacent link pair list
+              FOREACHC(it,pbody0->GetAdjacentLinks()){
+                 
+                  //  The comparision is done bite retrieval process
+                  //  list of pairs  -->  [(a,b),(a',b'),(a'',b''),.....]
+                  /*   And we compare,  a with link0's Index and b with link1's Index 
+                                        a' with link0's Index and b' with link1's Index
+                                                        ...
+                      so we try to find if the link0 and link1 form a pair inside the Adjacent 
+                      link pair list, in order to avoid collision ---
+                  */
+                 if (((int)((*it)&0xffff) == plink0->GetIndex()) && ((int)((*it)>>16) == plink1->GetIndex())){
+                   flag_of_collision = false;
+                   break;
+                  }
+                 // the same condition as above but checking the inverse of the pair (a,b)'= (b,a)
+                 else if( ((int)((*it)&0xffff) == plink1->GetIndex()) && ((int)((*it)>>16) == plink0->GetIndex())){
+                   flag_of_collision = false;
+                   break;
+                 }
+                 // otherwise we return true because collision check should be done
+                 else {
+                   flag_of_collision = true;
+                 }
+                 }
+               }
+            else {
+               // If they are from different entities then collision check has to be performed
+               flag_of_collision = true;
+               
+             }
+             return flag_of_collision;
+
         }
     };
 
@@ -142,40 +169,46 @@ protected:
     };
 
 public:
-
+    
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-     return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
+    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
     }
 
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
     {
-	stringstream ss;
-        __description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-
-        _solver_iterations = 100;
-        _margin_depth = 0.0001;
-        _linear_damping = 0.2;
-        _rotation_damping = 0.9;
-        _global_contact_force_mixing = 0;
-        _global_friction = 0.4;
-        _global_restitution = 0.2;
-
+	stringstream ss;        
+	__description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
+        _solver_iterations = 5;
+        _margin_depth = 0.001;
+        _linear_damping = 0.1;
+        _rotation_damping = 0.5;
+       
+        _global_contact_force_mixing = 0.3;
+        _global_friction = 0.5;
+        _global_restitution = 0.2 ;
+        
+        _super_damp = 0.3; 
+        _super_damp2 = 0.9;
+          
         FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
             ss << "**" << *it << "**, ";
         }
         ss << "\n\n";
+         
+	
+        /* relative links -->   http://bulletphysics.org/Bullet/BulletFull/btContactSolverInfo_8h_source.html
+                          -->   http://bulletphysics.org/Bullet/BulletFull/btDiscreteDynamicsWorld_8cpp_source.html#l01353   
+          about parameters of the contact solver....!      
+        */
     }
 
     virtual bool InitEnvironment()
     {
-        RAVELOG_VERBOSE("init bullet physics environment\n");
+         RAVELOG_VERBOSE("init bullet physics environment\n");
         _space->SetSynchronizationCallback(boost::bind(&BulletPhysicsEngine::_SyncCallback, shared_physics(),_1));
 
         _broadphase.reset(new btDbvtBroadphase());
-        //btVector3 worldMin(-1000,-1000,-1000);
-        //btVector3 worldMax(1000,1000,1000);
-        //_broadphase.reset(new btAxisSweep3(worldMin,worldMax));
 
         // allowes configuration of collision detection
         _collisionConfiguration.reset(new btDefaultCollisionConfiguration());
@@ -184,24 +217,47 @@ public:
         //_dispatcher = new btOpenraveDispatcher::btOpenraveDispatcher(_collisionConfiguration);
         _dispatcher.reset(new btCollisionDispatcher(_collisionConfiguration.get()));
         _solver.reset(new btSequentialImpulseConstraintSolver());
-
+        
         // btContinuousDynamicsWorld gives a segfault for some reason
         _dynamicsWorld.reset(new btDiscreteDynamicsWorld(_dispatcher.get(),_broadphase.get(),_solver.get(),_collisionConfiguration.get()));
+        
+        // Critical point when you introduce the hand in the simulation
+        // the PhysicsFilterCallback() is derived from the OpenRAVEFilterCallback which is in the file bulletspace.h
         _filterCallback.reset(new PhysicsFilterCallback());
         _dynamicsWorld->getPairCache()->setOverlapFilterCallback(_filterCallback.get());
+        
 
         btContactSolverInfo& solverInfo = _dynamicsWorld->getSolverInfo();
-        RAVELOG_DEBUG(str(boost::format("bullet dynamics: m_numIterations=%d, m_globalCfm=%e")%_solver_iterations%_global_contact_force_mixing));
+        RAVELOG_DEBUG(str(boost::format("bullet dynamics: m_numIterations=%d, m_globalCfm=%f")%_solver_iterations%_global_contact_force_mixing));
+        
         solverInfo.m_numIterations = _solver_iterations;
         solverInfo.m_globalCfm = _global_contact_force_mixing;
+        
+        solverInfo.m_erp = _super_damp; 
+        solverInfo.m_erp2 = _super_damp2;
+        //solverInfo. m_splitImpulsePenetrationThreshold = 0.5;
+        
+        solverInfo.m_solverMode |= SOLVER_SIMD | SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION |SOLVER_USE_2_FRICTION_DIRECTIONS; //SOLVER_ENABLE_FRICTION_DIRECTION_CACHING ;
+        
+	//solverInfo.m_solverMode |=    SOLVER_FRICTION_SEPARATE  |SOLVER_USE_2_FRICTION_DIRECTIONS;
+	
 
+	//solverInfo.m_solverMode |=  SOLVER_SIMD | SOLVER_FRICTION_SEPARATE  |SOLVER_DISABLE_VELOCITY_DEPENDENT_FRICTION_DIRECTION | SOLVER_RANDMIZE_ORDER SOLVER_USE_2_FRICTION_DIRECTIONS;
+	
+	// The 2 friction direction are not good at all for collision points with flat surfaces ....
+	// Because the the is no rotational friction at all... 
+
+	//solverInfo.m_restingContactRestitutionThreshold = 1e10;
+	//solverInfo.m_splitImpulse = 1; 
+	//solverInfo.m_splitImpulsePenetrationThreshold = 0.2;
         if(!_space->InitEnvironment(_dynamicsWorld)) {
             return false;
         }
-
+        
+       
         vector<KinBodyPtr> vbodies;
-        GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
+        GetEnv()->GetBodies(vbodies); 
+        FOREACHC(itbody, vbodies) { 
             InitKinBody(*itbody);
         }
         SetGravity(_gravity);
@@ -227,24 +283,65 @@ public:
         _listcallbacks.clear();
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody)
+     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         if( !_dynamicsWorld ) {
             return false;
         }
         BulletSpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
         pbody->SetUserData("bulletphysics", pinfo);
-        if( !!pinfo ) {
-            FOREACH(itlink,pinfo->vlinks) {
-                (*itlink)->_rigidbody->setDamping(0.05, 0.85);
-                (*itlink)->_rigidbody->setDeactivationTime(0.8);
-                (*itlink)->_rigidbody->setSleepingThresholds(1.6, 2.5);
-                (*itlink)->_rigidbody->setFriction(_global_friction);
-                (*itlink)->_rigidbody->setRestitution(_global_restitution);
+       {
+            
+                if (pbody->IsRobot()){
+                
+                FOREACHC(po, pbody->GetLinks()) {
+                     FOREACH(itlink,pinfo->vlinks) { 
+                        /*-- The following lines are used in order to keep the robot(hand)
+                          -- awake, so we can command the joints with torques anytime we 
+                          -- need. 
+                          <<This is a very usefull mechanism (available in all physics engines) 
+                          to keep the CPU load low. It is called "deactivation" or "sleeping".
+                          It make kinbodies sleep(do not move), when the are not in dynamic 
+                          states(situation,instance)>>
+                        */
+                        (*itlink)->_rigidbody->setActivationState(DISABLE_DEACTIVATION);
+                        (*itlink)->_rigidbody->forceActivationState(DISABLE_DEACTIVATION);
+                        (*itlink)->_rigidbody->setFriction(0.9);
+                        (*itlink)->_rigidbody->setRestitution(0.35); 
+                        // A small hack for standalone grippers
+                        if (((*itlink)->plink->GetName())=="rpalm"){
+                          
+                          (*itlink)->_rigidbody->setMassProps(1.20,  btVector3(0, 0, 0)); 
+                         
+                        } 
+                   }
+                 
+                }
+              }
+              else{
+                //do nothing
+              }
+                
+              FOREACHC(po, pbody->GetLinks()) {
+                  if ((*po)->IsStatic() ){
+                    FOREACH(itlink,pinfo->vlinks) { 
+                      (*itlink)->_rigidbody->setFriction(0.5);
+                      (*itlink)->_rigidbody->setRestitution(0.8);  //0.65
+                    }
+                  }
+                  else{
+                      FOREACH(itlink,pinfo->vlinks) { 
+                        (*itlink)->_rigidbody->setFriction(_global_friction);
+                        (*itlink)->_rigidbody->setRestitution(_global_restitution);
+                        (*itlink)->_rigidbody->setDamping(_linear_damping,_rotation_damping);
+                  
+                  }
+             }
             }
         }
         return !!pinfo;
     }
+
 
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
@@ -365,27 +462,43 @@ public:
         return true;
     }
 
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
+      virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
     {
+       
         boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
+        btVector3 t;
+        t.setX(pTorques.at(0));
+        t.setY(pTorques.at(1));
+        t.setZ(pTorques.at(2));
+
+        
         std::vector<btScalar> vtorques(pTorques.size());
         std::copy(pTorques.begin(),pTorques.end(),vtorques.begin());
         btRigidBody& bodyA = joint->getRigidBodyA();
         btRigidBody& bodyB = joint->getRigidBodyB();
-        switch(joint->getConstraintType()) {
+        
+       switch(joint->getConstraintType()) {
+        
+        case D6_CONSTRAINT_TYPE:{
+          
+            boost::shared_ptr<btGeneric6DofConstraint> d6joint = boost::dynamic_pointer_cast<btGeneric6DofConstraint>(joint);
+            btTransform transB = bodyB.getWorldTransform();
+            btTransform jointTransB = d6joint->getFrameOffsetB();
+            btMatrix3x3 torqueB = transB.getBasis();
+            btVector3 trorque_vect = torqueB * t;
+            bodyB.applyTorque(trorque_vect);
+            break;
+        }
+          
         case HINGE_CONSTRAINT_TYPE: {
             boost::shared_ptr<btHingeConstraint> hingejoint = boost::dynamic_pointer_cast<btHingeConstraint>(joint);
-            btTransform transA = bodyA.getCenterOfMassTransform();
-            btTransform transB = bodyB.getCenterOfMassTransform();
-            btTransform jointTransA = hingejoint->getAFrame();
+            btTransform transB = bodyB.getWorldTransform();
             btTransform jointTransB = hingejoint->getBFrame();
-            btVector3 torqueA = jointTransA.getBasis().transpose().getRow(2);
-            btVector3 torqueB = jointTransB.getBasis().transpose().getRow(2);
-            torqueA = vtorques.at(0)*torqueA;
-            torqueB = -vtorques.at(0)*torqueB;
-            bodyA.applyTorque(torqueA);
-            bodyB.applyTorque(torqueB);
+            transB = transB * jointTransB;
+            btMatrix3x3 torqueB = transB.getBasis();
+            btVector3 trorque_vect = torqueB * t;
+            bodyB.applyTorque(trorque_vect);
             break;
         }
         case SLIDER_CONSTRAINT_TYPE: {
@@ -408,18 +521,45 @@ public:
         return true;
     }
 
-    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
+   virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
+      
         boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
-        btVector3 _Force(force[0], force[1], force[2]);
+        
+        btVector3 _axis(force[0], force[1], force[2]);
+        
         btVector3 _Position(position[0], position[1], position[2]);
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        if( !bAdd ) {
-            rigidbody->clearForces();
+        
+        rigidbody->clearForces();
+        
+        if( bAdd ) {
+            // -- In case of pure translation of the body ---------------
+            btTransform position_of_base = rigidbody->getCenterOfMassTransform(); 
+            btVector3 position_what = position_of_base.getOrigin();
+            
+            btVector3 pp(position_what[0] + position[0],position_what[1] + position[1],position_what[2] + position[2]); 
+           
+            position_of_base.setOrigin(pp);
+            rigidbody->proceedToTransform(position_of_base); 
         }
-        rigidbody->applyForce(_Force,_Position);
+        else{
+            //In case of pure rotation of the body
+            btTransform rotation_of_base = rigidbody->getCenterOfMassTransform(); 
+            
+            btQuaternion qua_temp; 
+            btQuaternion qua = rigidbody->getOrientation();
+            qua_temp.setRotation(_axis,position[0]); // create the relative quaternion around which we need to rotate
+            qua = qua_temp*qua;
+            
+            rotation_of_base.setRotation(qua);
+            rigidbody->proceedToTransform(rotation_of_base); 
+        }
+        
+        //rigidbody->applyForce(_Force,_Position);
         return true;
     }
+
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
         btVector3 _Torque(torque[0], torque[1], torque[2]);
@@ -435,6 +575,7 @@ public:
     virtual void SetGravity(const Vector& gravity)
     {
         _gravity = gravity;
+        //behaviour similar to ODE
         if( !!_space && _space->IsInitialized() ) {
              _dynamicsWorld->setGravity(btVector3(_gravity.x,_gravity.y,_gravity.z));
         }
@@ -448,9 +589,9 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed)
     {
         _space->Synchronize();
-        int maxSubSteps = 2;
+        int maxSubSteps = 0;  // --> reduced sub steps
         //_dynamicsWorld->applyGravity();
-        _dynamicsWorld->stepSimulation(fTimeElapsed,maxSubSteps);
+        _dynamicsWorld->stepSimulation(0.005,maxSubSteps); //-> reduced elapse time
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -465,14 +606,17 @@ public:
         //_dynamicsWorld->clearForces();
     }
 
-// xml variables
+//xml parameters has to be public
+
+    Vector _gravity;
     btScalar _global_friction;
+    int _solver_iterations;
     btScalar _margin_depth;
     btScalar _linear_damping, _rotation_damping;
     btScalar _global_contact_force_mixing;
     btScalar _global_restitution;
-    Vector _gravity;
-    int _solver_iterations;
+    btScalar _super_damp;
+    btScalar _super_damp2;
 
 private:
     static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
@@ -492,9 +636,6 @@ private:
     }
 
     int _options;
-  
-
-
     boost::shared_ptr<BulletSpace> _space;
     boost::shared_ptr<btDiscreteDynamicsWorld> _dynamicsWorld;
     boost::shared_ptr<btDefaultCollisionConfiguration> _collisionConfiguration;
@@ -506,6 +647,7 @@ private:
     std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     CollisionReportPtr _report;
 };
+
 
 PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
 {
