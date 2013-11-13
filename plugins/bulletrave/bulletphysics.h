@@ -127,6 +127,16 @@ public:
                 _ss >> _physics->_global_restitution;
                 
             }
+            else if( name == "erp" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_super_damp;
+                
+            }
+             else if( name == "erp2" ) {
+                // read all the float values into a vector
+                _ss >> _physics->_super_damp2;
+                
+            }
             else if( name == "gravity" ) {
                 Vector v;
                 _ss >> v.x >> v.y >> v.z;
