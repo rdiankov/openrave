@@ -124,6 +124,13 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed) {
     }
 
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        PhysicsEngineBase::Clone(preference,cloningoptions);
+        boost::shared_ptr<GenericPhysicsEngine const> r = boost::dynamic_pointer_cast<GenericPhysicsEngine const>(preference);
+        _vgravity = r->_vgravity;
+    }
+
 private:
     Vector _vgravity;
 };
