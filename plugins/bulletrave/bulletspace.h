@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Contributors: 2010 Nick Hillier, Katrina Monkley CSIRO Autonomous Systems Lab, 2010-2011 Max Argus
+// 		 2013 Theodoros Stouraitis and Praveen Ramanujam
+
 #ifndef OPENRAVE_BULLET_SPACE
 #define OPENRAVE_BULLET_SPACE
 
