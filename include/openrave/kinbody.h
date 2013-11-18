@@ -1297,32 +1297,44 @@ private:
     ///
     /// \param boxes the array of aligned bounding boxes that will comprise of the body
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of an array of oriented bounding boxes.
     ///
     /// \param boxes the array of oriented bounding boxes that will comprise of the body
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of an array of spheres
     ///
     /// \param spheres the XYZ position of the spheres with the W coordinate representing the individual radius
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of a triangle mesh surface
     ///
     /// \param trimesh the triangle mesh
     /// \param visible if true, will be rendered in the scene
-    virtual bool InitFromTrimesh(const TriMesh& trimesh, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromTrimesh(const TriMesh& trimesh, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of a list of geometries
     ///
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
-    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries);
-    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
+    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
+
+    /// \brief initializes an complex kinematics body with links and joints
+    ///
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
+    /// \param uri the new URI to set for the interface
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
@@ -1331,12 +1343,6 @@ private:
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
     virtual void SetLinkGeometriesFromGroup(const std::string& name);
-
-    /// \brief initializes an complex kinematics body with links and joints
-    ///
-    /// \param linkinfos information for all the links. Links will be created in this order
-    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
-    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {

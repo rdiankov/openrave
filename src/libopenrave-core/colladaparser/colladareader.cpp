@@ -863,7 +863,7 @@ public:
             _mapJointSids.clear();
         }
         if( pbody->__struri.size() == 0 ) {
-            pbody->__struri = ias->getUrl().str();
+            pbody->__struri = cdom::uriToFilePath(ias->getUrl().str());
         }
 
         // set the name
@@ -1086,7 +1086,7 @@ public:
             _mapJointSids.clear();
         }
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = ikm->getUrl().str();
+            pkinbody->__struri = cdom::uriToFilePath(ikm->getUrl().str());
         }
 
         // check if kmodel has asset/subject, if yes, then set it to the description
@@ -1147,7 +1147,7 @@ public:
         _mapJointSids.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = daeURI(*_dae).str();
+            pkinbody->__struri = cdom::uriToFilePath(daeURI(*_dae).str());
         }
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {

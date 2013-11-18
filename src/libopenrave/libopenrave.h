@@ -133,8 +133,6 @@ static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 static const dReal g_fEpsilonEvalJointLimit = RavePow(g_fEpsilon,0.7);
 
-OPENRAVE_API bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
-
 template <typename T>
 class TransformSaver
 {

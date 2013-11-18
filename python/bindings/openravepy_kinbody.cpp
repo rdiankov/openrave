@@ -1194,7 +1194,7 @@ KinBodyPtr PyKinBody::GetBody()
     return _pbody;
 }
 
-bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw)
+bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
 {
     if( vboxes.shape()[1] != 6 ) {
         throw openrave_exception("boxes needs to be a Nx6 vector\n");
@@ -1204,9 +1204,9 @@ bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bD
         vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
         vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
     }
-    return _pbody->InitFromBoxes(vaabbs,bDraw);
+    return _pbody->InitFromBoxes(vaabbs,bDraw,uri);
 }
-bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw)
+bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw, const std::string& uri)
 {
     if( vspheres.shape()[1] != 4 ) {
         throw openrave_exception("spheres needs to be a Nx4 vector\n");
@@ -1215,21 +1215,21 @@ bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, boo
     for(size_t i = 0; i < vvspheres.size(); ++i) {
         vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
     }
-    return _pbody->InitFromSpheres(vvspheres,bDraw);
+    return _pbody->InitFromSpheres(vvspheres,bDraw,uri);
 }
 
-bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw)
+bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw, const std::string& uri)
 {
     TriMesh mesh;
     if( ExtractTriMesh(pytrimesh,mesh) ) {
-        return _pbody->InitFromTrimesh(mesh,bDraw);
+        return _pbody->InitFromTrimesh(mesh,bDraw,uri);
     }
     else {
         throw openrave_exception("bad trimesh");
     }
 }
 
-bool PyKinBody::InitFromGeometries(object ogeometries)
+bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
 {
     std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometries));
     for(size_t i = 0; i < geometries.size(); ++i) {
@@ -1239,7 +1239,16 @@ bool PyKinBody::InitFromGeometries(object ogeometries)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
-    return _pbody->InitFromGeometries(geometries);
+    return _pbody->InitFromGeometries(geometries, uri);
+}
+
+bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& uri)
+{
+    std::vector<KinBody::LinkInfoConstPtr> vlinkinfos;
+    _ParseLinkInfos(olinkinfos, vlinkinfos);
+    std::vector<KinBody::JointInfoConstPtr> vjointinfos;
+    _ParseJointInfos(ojointinfos, vjointinfos);
+    return _pbody->Init(vlinkinfos, vjointinfos, uri);
 }
 
 void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
@@ -1269,15 +1278,6 @@ void PyKinBody::_ParseJointInfos(object ojointinfos, std::vector<KinBody::JointI
         }
         vjointinfos[i] = pyjoint->GetJointInfo();
     }
-}
-
-bool PyKinBody::Init(object olinkinfos, object ojointinfos)
-{
-    std::vector<KinBody::LinkInfoConstPtr> vlinkinfos;
-    _ParseLinkInfos(olinkinfos, vlinkinfos);
-    std::vector<KinBody::JointInfoConstPtr> vjointinfos;
-    _ParseJointInfos(ojointinfos, vjointinfos);
-    return _pbody->Init(vlinkinfos, vjointinfos);
 }
 
 void PyKinBody::SetName(const std::string& name)
@@ -2515,6 +2515,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetStringParameters_overloads, GetStringP
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckSelfCollision_overloads, CheckSelfCollision, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkAccelerations_overloads, GetLinkAccelerations, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitCollisionMesh_overloads, InitCollisionMesh, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromBoxes_overloads, InitFromBoxes, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSpheres, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
 
 void init_openravepy_kinbody()
 {
@@ -2569,12 +2574,12 @@ void init_openravepy_kinbody()
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
-                        .def("InitFromBoxes",&PyKinBody::InitFromBoxes,args("boxes","draw"), sInitFromBoxesDoc.c_str())
-                        .def("InitFromSpheres",&PyKinBody::InitFromSpheres,args("spherex","draw"), DOXY_FN(KinBody,InitFromSpheres))
-                        .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,args("trimesh","draw"), DOXY_FN(KinBody,InitFromTrimesh))
-                        .def("InitFromGeometries",&PyKinBody::InitFromGeometries,args("geometries"), DOXY_FN(KinBody,InitFromGeometries))
+                        .def("InitFromBoxes",&PyKinBody::InitFromBoxes,InitFromBoxes_overloads(args("boxes","draw","uri"), sInitFromBoxesDoc.c_str()))
+                        .def("InitFromSpheres",&PyKinBody::InitFromSpheres,InitFromSpheres_overloads(args("spherex","draw","uri"), DOXY_FN(KinBody,InitFromSpheres)))
+                        .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,InitFromTrimesh_overloads(args("trimesh","draw","uri"), DOXY_FN(KinBody,InitFromTrimesh)))
+                        .def("InitFromGeometries",&PyKinBody::InitFromGeometries,InitFromGeometries_overloads(args("geometries", "uri"), DOXY_FN(KinBody,InitFromGeometries)))
+                        .def("Init",&PyKinBody::Init,Init_overloads(args("linkinfos","jointinfos","uri"), DOXY_FN(KinBody,Init)))
                         .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, args("name"), DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
-                        .def("Init",&PyKinBody::Init,args("linkinfos","jointinfos"), DOXY_FN(KinBody,Init))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))

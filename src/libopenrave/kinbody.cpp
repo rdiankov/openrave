@@ -211,7 +211,7 @@ void KinBody::Destroy()
     _ResetInternalCollisionCache();
 }
 
-bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
+bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
@@ -244,10 +244,11 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible)
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    __struri = uri;
     return true;
 }
 
-bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
+bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
@@ -285,10 +286,11 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible)
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    __struri = uri;
     return true;
 }
 
-bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
+bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
@@ -313,10 +315,11 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible)
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    __struri = uri;
     return true;
 }
 
-bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible)
+bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
@@ -334,19 +337,20 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible)
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
     _veclinks.push_back(plink);
+    __struri = uri;
     return true;
 }
 
-bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries)
+bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
 {
     std::vector<GeometryInfoConstPtr> newgeometries; newgeometries.reserve(geometries.size());
     FOREACHC(it, geometries) {
         newgeometries.push_back(GeometryInfoConstPtr(&(*it), utils::null_deleter()));
     }
-    return InitFromGeometries(newgeometries);
+    return InitFromGeometries(newgeometries, uri);
 }
 
-bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries)
+bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(geometries.size(),>,0);
@@ -362,6 +366,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
     _veclinks.push_back(plink);
+    __struri = uri;
     return true;
 }
 
@@ -391,7 +396,7 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     _ResetInternalCollisionCache();
 }
 
-bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos)
+bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
@@ -462,6 +467,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             _vPassiveJoints.push_back(pjoint);
         }
     }
+    __struri = uri;
     return true;
 }
 

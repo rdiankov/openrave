@@ -2733,6 +2733,13 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
  */
 OPENRAVE_API std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir="");
 
+/** \brief Given the absolute filename, return the relative path from one of the OPENRAVE_DATA directories.
+
+    Will check if filename is inside one of the OPENRAVE_DATA directories, and set newfilename to the relative path.
+    \return true if inside a OPENRAVE_DATA directory.
+ */
+OPENRAVE_API bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
+
 /// \brief Sets the default data access options for cad resources/robot files
 ///
 /// Controls how files are processed in functions like \ref RaveFindLocalFile

@@ -95,12 +95,12 @@ public:
     PyKinBody(const PyKinBody& r);
     virtual ~PyKinBody();
     KinBodyPtr GetBody();
-    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw);
-    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw);
-    bool InitFromTrimesh(object pytrimesh, bool bDraw);
-    bool InitFromGeometries(object ogeometries);
+    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromTrimesh(object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromGeometries(object ogeometries, const std::string& uri=std::string());
+    bool Init(object olinkinfos, object ojointinfos, const std::string& uri=std::string());
     void SetLinkGeometriesFromGroup(const std::string& geomname);
-    bool Init(object olinkinfos, object ojointinfos);
     void SetName(const std::string& name);
     object GetName() const;
     int GetDOF() const;

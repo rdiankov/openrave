@@ -106,7 +106,9 @@ public:
         SetUserData(std::string(),data);
     }
 
-    /// \brief the URI used to load the interface (sometimes this is not possible if the definition lies inside an environment file). <b>[multi-thread safe]</b>
+    /// \brief the URI used to load the interface. <b>[multi-thread safe]</b>
+    ///
+    /// Sometimes the URI could hold special markers like "#" like in COLLADA files in order to target objects insides a particular file.
     virtual const std::string& GetURI() const {
         return __struri;
     }
@@ -196,6 +198,7 @@ public:
 
     virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
+    std::string __struri; ///< \see GetURI
 
     virtual boost::shared_mutex& GetInterfaceMutex() const {
         return _mutexInterface;
@@ -212,7 +215,6 @@ private:
     mutable boost::shared_mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     InterfaceType __type; ///< \see GetInterfaceType
     UserDataPtr __plugin; ///< handle to plugin that controls the executable code. As long as this plugin pointer is present, module will not be unloaded.
-    std::string __struri; ///< \see GetURI
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv

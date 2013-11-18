@@ -776,7 +776,7 @@ public:
     virtual ~PyRobotBase() {
     }
 
-    bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos) {
+    bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri=std::string()) {
         std::vector<KinBody::LinkInfoConstPtr> vlinkinfos;
         _ParseLinkInfos(olinkinfos, vlinkinfos);
         std::vector<KinBody::JointInfoConstPtr> vjointinfos;
@@ -797,7 +797,7 @@ public:
             }
             vattachedsensorinfos[i] = pyattachedsensor->GetAttachedSensorInfo();
         }
-        return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos);
+        return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos, uri);
     }
 
     object GetManipulators()
@@ -1401,6 +1401,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetActiveDOFValues_overloads, SetActiveDO
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddManipulator_overloads, AddManipulator, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
 
 void init_openravepy_robot()
 {
@@ -1434,9 +1435,9 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*initrobot)(object, object, object, object) = &PyRobotBase::Init;
+        bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
         scope robot = class_<PyRobotBase, boost::shared_ptr<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
-                      .def("Init", initrobot, args("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos"), DOXY_FN(RobotBase, Init))
+                      .def("Init", initrobot, Init_overloads(args("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri"), DOXY_FN(RobotBase, Init)))
                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulators",GetManipulators2,args("manipname"), DOXY_FN(RobotBase,GetManipulators))
                       .def("GetManipulator",&PyRobotBase::GetManipulator,args("manipname"), "Return the manipulator whose name matches")
