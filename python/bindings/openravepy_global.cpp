@@ -688,6 +688,16 @@ void pyRaveSetDataAccess(object oaccess)
     OpenRAVE::RaveSetDataAccess(pyGetIntFromPy(oaccess, Level_Info));
 }
 
+// return None if nothing found
+object pyRaveInvertFileLookup(const std::string& filename)
+{
+    std::string newfilename;
+    if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
+        return boost::python::object(newfilename);
+    }
+    return boost::python::object();
+}
+
 object RaveGetPluginInfo()
 {
     boost::python::list plugins;
@@ -1155,6 +1165,7 @@ void init_openravepy_global()
     def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess,args("accessoptions"), DOXY_FN1(RaveSetDataAccess));
     def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess,DOXY_FN1(RaveGetDataAccess));
     def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(args("filename","curdir"), DOXY_FN1(RaveFindLocalFile)));
+    def("RaveInvertFileLookup",openravepy::pyRaveInvertFileLookup,args("filename"), DOXY_FN1(RaveInvertFileLookup));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));
     def("RaveFindDatabaseFile",OpenRAVE::RaveFindDatabaseFile,DOXY_FN1(RaveFindDatabaseFile));
     def("RaveLogFatal",openravepy::raveLogFatal,args("log"),"Send a fatal log to the openrave system");

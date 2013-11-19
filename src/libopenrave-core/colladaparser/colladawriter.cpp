@@ -547,16 +547,15 @@ private:
     daeURI _ComputeExternalURI(const daeURI& uri)
     {
         // check if it comes from same document
-        if( uri.getReferencedDocument() == _doc ) {
-            return uri;
-        }
-        if( _vForceResolveOpenRAVEScheme.size() > 0 && uri.scheme() == "file" ) {
-            // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
-            std::string filename;
-            if( RaveInvertFileLookup(filename,uri.path()) ) {
-                daeURI newuri(*_dae);
-                newuri.set(_vForceResolveOpenRAVEScheme, "", string("/")+filename, uri.query(), uri.fragment());
-                return newuri;
+        daeURI newuri(*_dae);
+        if( uri.getReferencedDocument() != _doc ) {
+            if( _vForceResolveOpenRAVEScheme.size() > 0 && uri.scheme() == "file" ) {
+                // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
+                std::string filename;
+                if( RaveInvertFileLookup(filename,cdom::uriToFilePath(uri.path())) ) {
+                    newuri.set(_vForceResolveOpenRAVEScheme, "", string("/")+filename, uri.query(), uri.fragment());
+                    return newuri;
+                }
             }
         }
         return uri;

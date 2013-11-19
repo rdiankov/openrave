@@ -58,16 +58,17 @@ public:
             daeDocument* doc = dae->getDatabase()->getDocument(docuri.c_str(), true);
             if( !doc ) {
                 if( uri.scheme() == _scheme ) {
-                    if( uri.path().size() == 0 ) {
+                    std::string uriNativePath = cdom::uriToFilePath(uri.path());
+                    if( uriNativePath.size() == 0 ) {
                         return NULL;
                     }
                     // remove first slash because we need relative file
                     std::string docurifull="file:";
-                    if( uri.path().at(0) == '/' ) {
-                        docurifull += RaveFindLocalFile(uri.path().substr(1), "/");
+                    if( uriNativePath.at(0) == '/' ) {
+                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath.substr(1), "/"));
                     }
                     else {
-                        docurifull += RaveFindLocalFile(uri.path(), "/");
+                        docurifull += cdom::nativePathToUri(RaveFindLocalFile(uriNativePath, "/"));
                     }
                     if( docurifull.size() == 5 ) {
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
@@ -76,6 +77,7 @@ public:
                     domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
                     if( !!proxy ) {
                         if( !!_preader ) {
+                            // have to convert the first element back to URI with %20 since that's what other functions input
                             _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
                         }
                         doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
