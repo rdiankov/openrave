@@ -896,8 +896,14 @@ public:
     object GetInternalHierarchyLeftTransform() {
         return ReturnTransform(_pjoint->GetInternalHierarchyLeftTransform());
     }
+    object GetInternalHierarchyLeftTransformPose() {
+        return toPyArray(_pjoint->GetInternalHierarchyLeftTransform());
+    }
     object GetInternalHierarchyRightTransform() {
         return ReturnTransform(_pjoint->GetInternalHierarchyRightTransform());
+    }
+    object GetInternalHierarchyRightTransformPose() {
+        return toPyArray(_pjoint->GetInternalHierarchyRightTransform());
     }
 
     object GetLimits() const {
@@ -2920,7 +2926,9 @@ void init_openravepy_kinbody()
                           .def("GetHierarchyChildLink", &PyJoint::GetHierarchyChildLink, DOXY_FN(KinBody::Joint,GetHierarchyChildLink))
                           .def("GetInternalHierarchyAxis", &PyJoint::GetInternalHierarchyAxis,args("axis"), DOXY_FN(KinBody::Joint,GetInternalHierarchyAxis))
                           .def("GetInternalHierarchyLeftTransform",&PyJoint::GetInternalHierarchyLeftTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyLeftTransform))
+                          .def("GetInternalHierarchyLeftTransformPose",&PyJoint::GetInternalHierarchyLeftTransformPose, DOXY_FN(KinBody::Joint,GetInternalHierarchyLeftTransform))
                           .def("GetInternalHierarchyRightTransform",&PyJoint::GetInternalHierarchyRightTransform, DOXY_FN(KinBody::Joint,GetInternalHierarchyRightTransform))
+                          .def("GetInternalHierarchyRightTransformPose",&PyJoint::GetInternalHierarchyRightTransformPose, DOXY_FN(KinBody::Joint,GetInternalHierarchyRightTransform))
                           .def("GetLimits", &PyJoint::GetLimits, DOXY_FN(KinBody::Joint,GetLimits))
                           .def("GetVelocityLimits", &PyJoint::GetVelocityLimits, DOXY_FN(KinBody::Joint,GetVelocityLimits))
                           .def("GetAccelerationLimits", &PyJoint::GetAccelerationLimits, DOXY_FN(KinBody::Joint,GetAccelerationLimits))
