@@ -321,7 +321,7 @@ public:
                         (*itlink)->_rigidbody->setFriction(0.9);
                         (*itlink)->_rigidbody->setRestitution(0.35); 
                         
-                        } 
+                        
                    }
                  
                 }

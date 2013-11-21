@@ -143,7 +143,8 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the
+                                                                                                                   //     values needs to be changed. There will be an XML interface for fmargin.
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -235,11 +236,12 @@ private:
             if( _bPhysics ) {
                 // set the mass and inertia and extract the eigenvectors of the tensor
                 btVector3 localInertia = GetBtVector((*itlink)->GetPrincipalMomentsOfInertia());
-		// -> bullet expects static objects to have zero mass                
-		if((*itlink)->IsStatic()){
-			(*itlink)->SetMass(0);
-		}
+		
                 dReal mass = (*itlink)->GetMass();
+                // -> bullet expects static objects to have zero mass                
+		if((*itlink)->IsStatic()){
+			mass = 0;
+		}
                 if( mass < 0 ) {
                     RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass));
                     mass = 1e-7;
@@ -427,7 +429,7 @@ private:
     }
     bool IsInitialized() {
        		// return !!_world;
-		return _worlddynamics;
+		return !!_worlddynamics;
     }
 
 
