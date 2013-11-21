@@ -320,11 +320,7 @@ public:
                         (*itlink)->_rigidbody->forceActivationState(DISABLE_DEACTIVATION);
                         (*itlink)->_rigidbody->setFriction(0.9);
                         (*itlink)->_rigidbody->setRestitution(0.35); 
-                        // A small hack for standalone grippers
-                        if (((*itlink)->plink->GetName())=="rpalm"){
-                          
-                          (*itlink)->_rigidbody->setMassProps(1.20,  btVector3(0, 0, 0)); 
-                         
+                        
                         } 
                    }
                  
@@ -603,7 +599,7 @@ public:
         _space->Synchronize();
         int maxSubSteps = 0;  // --> reduced sub steps
         //_dynamicsWorld->applyGravity();
-        _dynamicsWorld->stepSimulation(0.005,maxSubSteps); //-> reduced elapse time
+        _dynamicsWorld->stepSimulation(fTimeElapsed,maxSubSteps); //-> reduced elapse time
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
