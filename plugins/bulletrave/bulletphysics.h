@@ -599,7 +599,7 @@ public:
         _space->Synchronize();
         int maxSubSteps = 0;  // --> reduced sub steps
         //_dynamicsWorld->applyGravity();
-        _dynamicsWorld->stepSimulation(0.005,maxSubSteps); //-> reduced elapse time
+        _dynamicsWorld->stepSimulation(fTimeElapsed,maxSubSteps); //-> reduced elapse time
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
