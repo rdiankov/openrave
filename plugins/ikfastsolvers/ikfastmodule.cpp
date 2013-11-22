@@ -67,6 +67,9 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
+#include <boost/numeric/ublas/matrix.hpp>
+#include <boost/numeric/ublas/lu.hpp>
+
 #include "next_combination.h"
 
 #define LOAD_IKFUNCTION(fnname) { \
