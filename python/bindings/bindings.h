@@ -50,8 +50,15 @@
 #include <string>
 #include <stdexcept>
 
+// apparently there's a problem with higher versions of C++
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <typeinfo>
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
+#else
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
+#endif
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
