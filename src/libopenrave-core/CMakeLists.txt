@@ -31,6 +31,7 @@ if( ASSIMP_FOUND )
   message(STATUS "Geometry Parsing: Using Open Asset Import Library ${ASSIMP_VERSION}")
 
   if( ZLIB_FOUND )
+    include_directories(${ZLIB_INCLUDE_DIR})
     set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_HAS_ZLIB")
     set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${ZLIB_LIBRARIES})
   endif()
