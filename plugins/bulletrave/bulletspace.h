@@ -143,8 +143,8 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the
-                                                                                                                   //     values needs to be changed. There will be an XML interface for fmargin.
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too small. For the collision interface the
+                                                                                                                   //     value needs to be changed. There will be an updates XML interface for setting fmargin.
     {
         // create all ode bodies and joints
         if( !pinfo ) {
