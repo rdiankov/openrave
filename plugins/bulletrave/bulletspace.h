@@ -143,8 +143,7 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too small. For the collision interface the
-                                                                                                                   //     value needs to be changed. There will be an updates XML interface for setting fmargin.
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -160,7 +159,7 @@ private:
 
             btCompoundShape* pshapeparent = new btCompoundShape();
             link->shape.reset(pshapeparent);
-            pshapeparent->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
+            pshapeparent->setMargin(fmargin);     // need to set margin very small for collision : 0.000001
 
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
