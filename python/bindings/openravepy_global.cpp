@@ -693,7 +693,7 @@ object pyRaveInvertFileLookup(const std::string& filename)
 {
     std::string newfilename;
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
-        return boost::python::object(newfilename);
+        return ConvertStringToUnicode(newfilename);
     }
     return boost::python::object();
 }
