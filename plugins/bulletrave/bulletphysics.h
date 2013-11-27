@@ -217,6 +217,61 @@ public:
     }
     bool SetBodyForce(ostream& sout, istream& sinput)
     {
+	KinBody::LinkPtr plink;
+        Vector _force;
+        Vector _position; 
+        bool _bAdd;
+        string linkname;
+        string cmd;
+       	
+        while(!sinput.eof()) {
+            sinput >> cmd;
+            if( !sinput ) {
+                break;
+            }
+            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+            if( cmd == "link" ) {
+                sinput >> linkname;
+            }
+            else if( cmd == "force" ) {
+                sinput >> _force;
+            }
+            else if( cmd == "position" ) {
+                sinput >> _position;
+            }
+	    else if( cmd == "direction" ) {
+                sinput >> _bAdd;
+            }
+            if( sinput.fail() || !sinput ) {
+                break;
+            }
+        }
+	boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
+        btVector3 _axis(_force[0], _force[1], _force[2]);
+        btVector3 _Position(_position[0], _position[1], _position[2]);
+        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        rigidbody->clearForces();
+        
+        if( _bAdd ) {
+            // -- In case of pure translation of the body ---------------
+            btTransform position_of_base = rigidbody->getCenterOfMassTransform(); 
+            btVector3 position_what = position_of_base.getOrigin();
+            btVector3 pp(position_what[0] + _position[0],position_what[1] + _position[1],position_what[2] + _position[2]); 
+            position_of_base.setOrigin(pp);
+            rigidbody->proceedToTransform(position_of_base); 
+        }
+        else{
+            // -- In case of pure rotation of the body ---------------
+            btTransform rotation_of_base = rigidbody->getCenterOfMassTransform(); 
+            btQuaternion qua_temp; 
+            btQuaternion qua = rigidbody->getOrientation();
+            qua_temp.setRotation(_axis,_position[0]); // create the relative quaternion around which we need to rotate
+            qua = qua_temp*qua;
+            
+            rotation_of_base.setRotation(qua);
+            rigidbody->proceedToTransform(rotation_of_base); 
+        }
+        sout << true;
 	return true;
 	
     }
