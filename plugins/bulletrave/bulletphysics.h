@@ -191,7 +191,7 @@ public:
     {
 	stringstream ss;        
 	__description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-           RegisterCommand("LoadModel",boost::bind(&BulletPhysicsEngine::SetBodyForce,this,_1,_2),"Returns the triangle mesh given a model filename");
+           RegisterCommand("SetBodyForce",boost::bind(&BulletPhysicsEngine::SetBodyForce,this,_1,_2),"Sets the force to a body at a given position. Set badd to 0 for pure rotation and 1 for pure translation.");
         _solver_iterations = 5;
         _margin_depth = 0.001;
         _linear_damping = 0.1;
@@ -246,10 +246,23 @@ public:
                 break;
             }
         }
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+	BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
+            FOREACH(itlink, pinfo->vlinks) {
+		if((*itlink)->plink->GetName()==linkname){
+			plink = (*itlink)->plink;
+                        break;
+		}
+	    }
+	
+	}
 	boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         btVector3 _axis(_force[0], _force[1], _force[2]);
         btVector3 _Position(_position[0], _position[1], _position[2]);
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        
         rigidbody->clearForces();
         
         if( _bAdd ) {
