@@ -191,6 +191,7 @@ public:
     {
 	stringstream ss;        
 	__description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
+           RegisterCommand("LoadModel",boost::bind(&BulletPhysicsEngine::SetBodyForce,this,_1,_2),"Returns the triangle mesh given a model filename");
         _solver_iterations = 5;
         _margin_depth = 0.001;
         _linear_damping = 0.1;
@@ -214,7 +215,11 @@ public:
           about parameters of the contact solver....!      
         */
     }
-
+    bool SetBodyForce(ostream& sout, istream& sinput)
+    {
+	return true;
+	
+    }
     virtual bool InitEnvironment()
     {
          RAVELOG_VERBOSE("init bullet physics environment\n");
