@@ -215,6 +215,8 @@ public:
           about parameters of the contact solver....!      
         */
     }
+    /* This function is registered as a command to transform the static links of robots.
+       The application can be seen when one wants to use a stand alone gripper with enabled physics and wants to move the base of the gripper */
     bool SetStaticBodyTransform(ostream& sout, istream& sinput)
     // bool SetStaticBodyTransform(KinBody::LinkPtr plink, const Vector& translation, const Vector& axisofrot,const dReal& angleofrot)
     {
