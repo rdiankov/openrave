@@ -223,8 +223,7 @@ public:
         bool _bAdd;
         string linkname;
         string cmd;
-       	
-        while(!sinput.eof()) {
+       	while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
                 break;
@@ -232,12 +231,26 @@ public:
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
             if( cmd == "link" ) {
                 sinput >> linkname;
+              
             }
             else if( cmd == "force" ) {
-                sinput >> _force;
+                for(size_t i = 0; i < 3; i++) {
+                sinput >> _force[i];
+                  if( !sinput ) {
+                    RAVELOG_WARN("Force needs to have three values\n");
+                    return false;
+                  }
+            	}
             }
             else if( cmd == "position" ) {
-                sinput >> _position;
+                for(size_t i = 0; i < 3; i++) {
+                sinput >> _position[i];
+                if( !sinput ) {
+                    RAVELOG_WARN("Position needs to have three values\n");
+                    return false;
+                }
+              }
+              
             }
 	    else if( cmd == "direction" ) {
                 sinput >> _bAdd;
@@ -247,13 +260,17 @@ public:
             }
         }
         vector<KinBodyPtr> vbodies;
+        bool _foundlink = false;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
 	BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             FOREACH(itlink, pinfo->vlinks) {
-		if((*itlink)->plink->GetName()==linkname){
+                if((*itlink)->plink->GetName()==linkname){
 			plink = (*itlink)->plink;
-                        break;
+                        _foundlink = true;
+		}
+	        if (_foundlink){
+			break;
 		}
 	    }
 	
@@ -268,10 +285,10 @@ public:
         if( _bAdd ) {
             // -- In case of pure translation of the body ---------------
             btTransform position_of_base = rigidbody->getCenterOfMassTransform(); 
-            btVector3 position_what = position_of_base.getOrigin();
-            btVector3 pp(position_what[0] + _position[0],position_what[1] + _position[1],position_what[2] + _position[2]); 
-            position_of_base.setOrigin(pp);
-            rigidbody->proceedToTransform(position_of_base); 
+             btVector3 position_what = position_of_base.getOrigin();
+             btVector3 pp(position_what[0] + _Position[0],position_what[1] + _Position[1],position_what[2] + _Position[2]); 
+             position_of_base.setOrigin(pp);
+             rigidbody->proceedToTransform(position_of_base); 
         }
         else{
             // -- In case of pure rotation of the body ---------------
@@ -647,7 +664,7 @@ public:
         _space->Synchronize();
         int maxSubSteps = 0;  // --> reduced sub steps
         //_dynamicsWorld->applyGravity();
-        _dynamicsWorld->stepSimulation(fTimeElapsed,maxSubSteps); //-> reduced elapse time
+        _dynamicsWorld->stepSimulation(0.005,maxSubSteps); //-> reduced elapse time
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
