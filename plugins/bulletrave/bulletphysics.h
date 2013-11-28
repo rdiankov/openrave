@@ -191,7 +191,7 @@ public:
     {
 	stringstream ss;        
 	__description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
-           RegisterCommand("SetBodyForce",boost::bind(&BulletPhysicsEngine::SetBodyForce,this,_1,_2),"Sets the force to a body at a given position. Set badd to 0 for pure rotation and 1 for pure translation.");
+        RegisterCommand("SetStaticBodyTransform",boost::bind(&BulletPhysicsEngine::SetStaticBodyTransform,this,_1,_2),"Sets the transformation of a static body manually, not allowed to use for dynamic bodies and it should be used with caution even for static bodies because it can cause instabilities in physics engine.");
         _solver_iterations = 5;
         _margin_depth = 0.001;
         _linear_damping = 0.1;
@@ -215,12 +215,13 @@ public:
           about parameters of the contact solver....!      
         */
     }
-    bool SetBodyForce(ostream& sout, istream& sinput)
+    bool SetStaticBodyTransform(ostream& sout, istream& sinput)
+    // bool SetStaticBodyTransform(KinBody::LinkPtr plink, const Vector& translation, const Vector& axisofrot,const dReal& angleofrot)
     {
 	KinBody::LinkPtr plink;
-        Vector _force;
-        Vector _position; 
-        bool _bAdd;
+        Vector _rotation;
+        Vector _translation; 
+        dReal _angle;
         string linkname;
         string cmd;
        	while(!sinput.eof()) {
@@ -233,28 +234,29 @@ public:
                 sinput >> linkname;
               
             }
-            else if( cmd == "force" ) {
+            else if( cmd == "translation" ) {
                 for(size_t i = 0; i < 3; i++) {
-                sinput >> _force[i];
+                sinput >> _translation[i];
                   if( !sinput ) {
-                    RAVELOG_WARN("Force needs to have three values\n");
+                    RAVELOG_WARN("Translation needs to have three values\n");
                     return false;
                   }
             	}
-            }
-            else if( cmd == "position" ) {
+              }
+            else if( cmd == "axisofrot" ) {
                 for(size_t i = 0; i < 3; i++) {
-                sinput >> _position[i];
+                sinput >> _rotation[i];
                 if( !sinput ) {
-                    RAVELOG_WARN("Position needs to have three values\n");
+                    RAVELOG_WARN("Axis of Rotation needs to have three values\n");
                     return false;
                 }
               }
               
             }
-	    else if( cmd == "direction" ) {
-                sinput >> _bAdd;
+	    else if( cmd == "angleofrot" ) {
+                sinput >> _angle;
             }
+          
             if( sinput.fail() || !sinput ) {
                 break;
             }
@@ -266,8 +268,10 @@ public:
 	BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             FOREACH(itlink, pinfo->vlinks) {
                 if((*itlink)->plink->GetName()==linkname){
+                       if ((*itlink)->plink->IsStatic() ){
 			plink = (*itlink)->plink;
                         _foundlink = true;
+                     }
 		}
 	        if (_foundlink){
 			break;
@@ -276,31 +280,26 @@ public:
 	
 	}
 	boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
-        btVector3 _axis(_force[0], _force[1], _force[2]);
-        btVector3 _Position(_position[0], _position[1], _position[2]);
+        btVector3 _axis(_rotation[0], _rotation[1], _rotation[2]);
+        btVector3 _Position(_translation[0], _translation[1], _translation[2]);
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         
         rigidbody->clearForces();
-        
-        if( _bAdd ) {
-            // -- In case of pure translation of the body ---------------
-            btTransform position_of_base = rigidbody->getCenterOfMassTransform(); 
-             btVector3 position_what = position_of_base.getOrigin();
-             btVector3 pp(position_what[0] + _Position[0],position_what[1] + _Position[1],position_what[2] + _Position[2]); 
-             position_of_base.setOrigin(pp);
-             rigidbody->proceedToTransform(position_of_base); 
-        }
-        else{
-            // -- In case of pure rotation of the body ---------------
-            btTransform rotation_of_base = rigidbody->getCenterOfMassTransform(); 
-            btQuaternion qua_temp; 
-            btQuaternion qua = rigidbody->getOrientation();
-            qua_temp.setRotation(_axis,_position[0]); // create the relative quaternion around which we need to rotate
-            qua = qua_temp*qua;
+        // -- In case of pure translation of the body ---------------
+    	btTransform _transform = rigidbody->getCenterOfMassTransform(); 
+     	btVector3 position_what = _transform.getOrigin();
+     	btVector3 pp(position_what[0] + _Position[0],position_what[1] + _Position[1],position_what[2] + _Position[2]); 
+     	_transform.setOrigin(pp);
+     	
+        // -- In case of pure rotation of the body ---------------
+         btQuaternion qua_temp; 
+         btQuaternion qua = rigidbody->getOrientation();
+         qua_temp.setRotation(_axis,_angle); // create the relative quaternion around which we need to rotate
+         qua = qua_temp*qua;
             
-            rotation_of_base.setRotation(qua);
-            rigidbody->proceedToTransform(rotation_of_base); 
-        }
+          _transform.setRotation(qua);
+          rigidbody->proceedToTransform(_transform); 
+        
         sout << true;
 	return true;
 	
