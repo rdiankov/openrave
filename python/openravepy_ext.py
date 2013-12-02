@@ -245,12 +245,26 @@ def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
-def transformPoints(T,points):
+def TransformPoints(T,points):
     """Transforms a Nxk array of points by an affine matrix"""
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
-def transformInversePoints(T,points):
+transformPoints = TransformPoints # deprecated
+
+def TransformInversePoints(T,points):
     """Transforms a Nxk array of points by the inverse of an affine matrix"""
     kminus = T.shape[1]-1
     return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
+
+transformInversePoints = TransformInversePoints # deprecated
+
+def ComputePoseArrayDistSqr(pose0, posearray, quatweight=1.0):
+    """computes the squared distance between pose0 and all poses in posearray
+    """
+    pose0tiled = tile(pose0, (len(posearray),1))
+    diff2 = numpy.abs(pose0tiled - posearray)**2
+    qdists0 = numpy.sum(pose0tiled[:,0:4], 1)
+    qdists1 = numpy.sum((pose0tiled[:,0:4]-posearray[:,0:4])**2, 1)
+    return minimum(qdists0, qdists1)*quatweight + numpy.sum(diff2[:, 4:7], 1)
+

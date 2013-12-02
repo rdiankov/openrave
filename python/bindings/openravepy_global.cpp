@@ -693,7 +693,7 @@ object pyRaveInvertFileLookup(const std::string& filename)
 {
     std::string newfilename;
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
-        return boost::python::object(newfilename);
+        return ConvertStringToUnicode(newfilename);
     }
     return boost::python::object();
 }
@@ -912,12 +912,12 @@ object normalizeAxisRotation(object axis, object quat)
     return boost::python::make_tuple(res.first,toPyVector4(res.second));
 }
 
-object quatMultiply(object oquat1, object oquat2)
+object MultiplyQuat(object oquat1, object oquat2)
 {
     return toPyVector4(OpenRAVE::geometry::quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
 }
 
-object quatInverse(object oquat)
+object InvertQuat(object oquat)
 {
     return toPyVector4(OpenRAVE::geometry::quatInverse(ExtractVector4(oquat)));
 }
@@ -941,9 +941,19 @@ object poseTransformPoints(object opose, object opoints)
     return static_cast<numeric::array>(handle<>(pytrans));
 }
 
-object transformLookat(object olookat, object ocamerapos, object ocameraup)
+object TransformLookat(object olookat, object ocamerapos, object ocameraup)
 {
     return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
+}
+
+dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
+{
+    Transform t0 = ExtractTransformType<dReal>(opose0);
+    Transform t1 = ExtractTransformType<dReal>(opose1);
+    dReal e1 = (t0.rot-t1.rot).lengthsqr4();
+    dReal e2 = (t0.rot+t1.rot).lengthsqr4();
+    dReal e = e1 < e2 ? e1 : e2;
+    return (t0.trans-t1.trans).lengthsqr3() + quatweight*e;
 }
 
 string matrixSerialization(object o)
@@ -964,6 +974,7 @@ string poseSerialization(object o)
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(ComputePoseDistSqr_overloads, openravepy::ComputePoseDistSqr, 2, 3)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineConfigurationSpecification_overloads, openravepy::pyRaveGetAffineConfigurationSpecification, 1, 3)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineDOFValuesFromTransform_overloads, openravepy::pyRaveGetAffineDOFValuesFromTransform, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
@@ -971,6 +982,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigur
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractJointValues_overloads, PyConfigurationSpecification::ExtractJointValues, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(RemoveGroups_overloads, PyConfigurationSpecification::RemoveGroups, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Serialize_overloads, Serialize, 0, 1)
+
 
 void init_openravepy_global()
 {
@@ -1227,16 +1239,20 @@ void init_openravepy_global()
     def("InvertPoses",openravepy::InvertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
     def("InvertPose",openravepy::InvertPose,args("pose"), "Inverts a 7-element pose where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param pose: 7-element array");
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"), DOXY_FN1(quatRotateDirection));
-    def("quatMult",openravepy::quatMultiply,args("quat0","quat1"),DOXY_FN1(quatMultiply));
-    def("quatMultiply",openravepy::quatMultiply,args("quat0","quat1"),DOXY_FN1(quatMultiply));
-    def("quatInverse",openravepy::quatInverse,args("quat"),DOXY_FN1(quatInverse));
+    def("MultiplyQuat",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("quatMult",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("quatMultiply",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
+    def("InvertQuat",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
+    def("quatInverse",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
     def("MultiplyPose",openravepy::MultiplyPose,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
     def("poseTransformPoints",openravepy::poseTransformPoints,args("pose","points"),"left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
-    def("transformLookat",openravepy::transformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+    def("TransformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
+    def("transformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
     def("matrixSerialization",openravepy::matrixSerialization,args("transform"),"Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
     def("poseSerialization",openravepy::poseSerialization, args("pose"), "Serializes a transformation into a string representing a quaternion with translation.\n\n:param pose: 7 values\n");
     def("openravepyCompilerVersion",openravepy::openravepyCompilerVersion,"Returns the compiler version that openravepy_int was compiled with");
     def("normalizeAxisRotation",openravepy::normalizeAxisRotation,args("axis","quat"),DOXY_FN1(normalizeAxisRotation));
+    def("ComputePoseDistSqr", openravepy::ComputePoseDistSqr, ComputePoseDistSqr_overloads(args("pose0", "pose1", "quatweight")));
 
     // deprecated
     def("invertPoses",openravepy::InvertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
