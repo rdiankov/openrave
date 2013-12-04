@@ -174,6 +174,7 @@ public:
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_vf->_target->GetTransform());
             }
+            _ikreturn.reset(new IkReturn(IKRA_Success));
         }
         virtual ~VisibilityConstraintFunction() {
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
@@ -184,7 +185,7 @@ public:
             Transform ttarget = _vf->_target->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
             if( !InConvexHull(tcamera) ) {
-                RAVELOG_DEBUG("box not in camera vision hull (shouldn't happen due to preprocessing\n");
+                RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
             if( IsOccluded(tcamera) ) {
@@ -206,26 +207,27 @@ public:
         /// If camera is not attached to robot, assume target is movable and takes in target position.
         bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample)
         {
-            Transform tcamera, ttarget;
+            Transform tCameraInTarget, ttarget;
             if( _vf->_robot != _vf->_sensorrobot ) {
                 ttarget = t;
-                tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
+                tCameraInTarget = ttarget.inverse()*_vf->_psensor->GetTransform();
             }
             else {
                 ttarget = _vf->_target->GetTransform();
-                tcamera = ttarget.inverse()*t;
+                tCameraInTarget = ttarget.inverse()*t;
             }
-            if( !InConvexHull(tcamera) ) {
+            if( !InConvexHull(tCameraInTarget) ) {
                 RAVELOG_DEBUG("box not in camera vision hull: %s\n");
                 return false;
             }
 
             // object is inside, find an ik solution
             Transform tgoalee = t*_vf->_ttogripper;
-            if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
-                RAVELOG_VERBOSE("no valid ik\n");
+            if( !_vf->_pmanip->FindIKSolution(tgoalee,IKFO_CheckEnvCollisions, _ikreturn) ) {
+                RAVELOG_VERBOSE_FORMAT("no valid ik 0x%.8x", _ikreturn->_action);
                 return false;
             }
+            _vsolution.swap(_ikreturn->_vsolution); // for now swap until this->_vsolution is removed
 
             // convert the solution into active dofs
             _vf->_robot->GetActiveDOFValues(pNewSample);
@@ -236,17 +238,17 @@ public:
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
 
-            return !IsOccluded(tcamera);
+            return !IsOccluded(tCameraInTarget);
         }
 
-        /// \param tcamera in target coordinate system
+        /// \param tCameraInTarget in target coordinate system
         /// \param mindist Minimum distance to keep from the plane (should be non-negative)
-        bool InConvexHull(const TransformMatrix& tcamera, dReal mindist=0)
+        bool InConvexHull(const TransformMatrix& tCameraInTarget, dReal mindist=0)
         {
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
-                _vconvexplanes3d[i] = tcamera.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = -tcamera.trans.dot3(_vconvexplanes3d[i]) - mindist;
+                _vconvexplanes3d[i] = tCameraInTarget.rotate(_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = -tCameraInTarget.trans.dot3(_vconvexplanes3d[i]) - mindist;
             }
             FOREACH(itobb,_vTargetOBBs) {
                 if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
@@ -258,18 +260,18 @@ public:
 
         /// check if any part of the environment or robot is in front of the camera blocking the object
         /// sample object's surface and shoot rays
-        /// \param tcameras in target coordinate system
-        bool IsOccluded(const TransformMatrix& tcamera)
+        /// \param tCameraInTarget in target coordinate system
+        bool IsOccluded(const TransformMatrix& tCameraInTarget)
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target,KinBody::Save_LinkEnable);
-            TransformMatrix tcamerainv = tcamera.inverse();
+            TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);
-            Transform tworldcamera = ttarget*tcamera;
+            Transform tworldcamera = ttarget*tCameraInTarget;
             _ptargetbox->Enable(true);
             _vf->_target->Enable(false);
             FOREACH(itobb,_vTargetOBBs) {
-                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
+                OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     return true;
@@ -347,6 +349,7 @@ private:
 
         vector<OBB> _vTargetOBBs;         // object links local AABBs
         vector<dReal> _vsolution;
+        IkReturnPtr _ikreturn;
         CollisionReportPtr _report;
         AABB _abTarget;         // target aabb
         vector<Vector> _vconvexplanes3d;
