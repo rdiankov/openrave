@@ -216,6 +216,13 @@ public:
         _dataviewer.reset();
     }
 
+    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
+    {
+        OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
+        *_pgeom = *boost::static_pointer_cast<CameraGeomData const>(pgeometry);
+        _Reset();
+    }
+
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;

@@ -108,6 +108,9 @@ public:
 template <typename T>
 inline std::vector<T> ExtractArray(const object& o)
 {
+    if( o == object() ) {
+        return std::vector<T>();
+    }
     std::vector<T> v(len(o));
     for(size_t i = 0; i < v.size(); ++i) {
         v[i] = extract<T>(o[i]);

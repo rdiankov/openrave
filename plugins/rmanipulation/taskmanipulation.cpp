@@ -882,7 +882,13 @@ protected:
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
-                    RAVELOG_VERBOSE(str(boost::format("target collision at dest %d: %s")%vdestpermuation[idestperm]%report->__str__()));
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << str(boost::format("target collision at dest %d, %s, pose=")%vdestpermuation[idestperm]%report->__str__());
+                        ss << transDestTarget;
+                        ss << std::endl;
+                        RAVELOG_VERBOSE(ss.str());
+                    }
                     continue;
                 }
 

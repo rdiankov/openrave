@@ -183,7 +183,7 @@ public:
 public:
         virtual ~SensorGeometry() {
         }
-        virtual SensorType GetType() = 0;
+        virtual SensorType GetType() const = 0;
     };
     typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
     typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
@@ -194,7 +194,7 @@ public:
         LaserGeomData() : min_range(0), max_range(0), time_increment(0), time_scan(0) {
             min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0;
         }
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Laser;
         }
         boost::array<dReal,2> min_angle;         ///< Start for the laser scan [rad].
@@ -209,7 +209,7 @@ public:
 public:
         CameraGeomData() : width(0), height(0) {
         }
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Camera;
         }
         CameraIntrinsics KK;         ///< intrinsic matrix
@@ -220,7 +220,7 @@ public:
 public:
         JointEncoderGeomData() : resolution(0) {
         }
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_JointEncoder;
         }
         std::vector<dReal> resolution;         ///< the delta value of one encoder tick
@@ -228,14 +228,14 @@ public:
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Force6D;
         }
     };
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_IMU;
         }
         dReal time_measurement;         ///< time between measurements
@@ -243,7 +243,7 @@ public:
     class OPENRAVE_API OdometryGeomData : public SensorGeometry
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Odometry;
         }
         std::string targetid;         ///< id of the target whose odometry/pose messages are being published for
@@ -252,7 +252,7 @@ public:
     class OPENRAVE_API TactileGeomData : public SensorGeometry
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Tactile;
         }
 
@@ -273,7 +273,7 @@ public:
     class OPENRAVE_API ActuatorGeomData : public SensorGeometry
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() const {
             return ST_Actuator;
         }
         dReal maxtorque;         ///< Maximum possible torque actuator can apply (on output side). This includes the actuator's rotor, if one exists.
@@ -327,6 +327,9 @@ public:
     /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns a data structure
     /// \return sensor geometry pointer, use delete to destroy it
     virtual SensorGeometryPtr GetSensorGeometry(SensorType type=ST_Invalid) = 0;
+
+    /// \brief Sets a new geometry for the sensor
+    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Creates the sensor data to be specifically used by this class
     /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns a data structure

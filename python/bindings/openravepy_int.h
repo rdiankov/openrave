@@ -555,6 +555,19 @@ public:
     }
 };
 
+class PySensorGeometry
+{
+public:
+    virtual ~PySensorGeometry() {
+    }
+    virtual SensorBase::SensorType GetType()=0;
+    virtual SensorBase::SensorGeometryPtr GetGeometry()=0;
+};
+
+typedef boost::shared_ptr<PySensorGeometry> PySensorGeometryPtr;
+
+PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr);
+
 bool ExtractIkReturn(object o, IkReturn& ikfr);
 object toPyIkReturn(const IkReturn& ret);
 

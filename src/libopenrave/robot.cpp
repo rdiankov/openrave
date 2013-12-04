@@ -58,6 +58,21 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     }
 }
 
+RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::AttachedSensorInfo& info)
+{
+    _name = info._name;
+    _probot = probot;
+    pattachedlink = probot->GetLink(info._linkname);
+    trelative = info._trelative;
+    psensor = RaveCreateSensor(probot->GetEnv(), info._sensorname);
+    if( !!psensor ) {
+        if(!!info._sensorgeometry) {
+            psensor->SetSensorGeometry(info._sensorgeometry);
+        }
+        pdata = psensor->CreateSensorData();
+    }
+}
+
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
@@ -1693,6 +1708,44 @@ void RobotBase::RemoveManipulator(ManipulatorPtr manip)
             return;
         }
     }
+}
+
+RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::AttachedSensorInfo& attachedsensorinfo, bool removeduplicate)
+{
+    OPENRAVE_ASSERT_OP(attachedsensorinfo._name.size(),>,0);
+    int iremoveindex = -1;
+    for(int iasensor = 0; iasensor < (int)_vecSensors.size(); ++iasensor) {
+        if( _vecSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
+            if( removeduplicate ) {
+                iremoveindex = iasensor;
+                break;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("attached sensor with name %s already exists",attachedsensorinfo._name,ORE_InvalidArguments);
+            }
+        }
+    }
+    AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),attachedsensorinfo));
+    //newattachedsensor->_ComputeInternalInformation();
+    if( iremoveindex >= 0 ) {
+        // replace the old one
+        _vecSensors[iremoveindex] = newattachedsensor;
+    }
+    else {
+        _vecSensors.push_back(newattachedsensor);
+    }
+    __hashrobotstructure.resize(0);
+    return newattachedsensor;
+}
+
+RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& name) const
+{
+    FOREACHC(itsensor, _vecSensors) {
+        if( (*itsensor)->GetName() == name ) {
+            return *itsensor;
+        }
+    }
+    return RobotBase::AttachedSensorPtr();
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.

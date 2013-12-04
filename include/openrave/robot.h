@@ -396,6 +396,7 @@ public:
 public:
         AttachedSensor(RobotBasePtr probot);
         AttachedSensor(RobotBasePtr probot, const AttachedSensor &sensor, int cloningoptions);
+        AttachedSensor(RobotBasePtr probot, const AttachedSensorInfo& info);
         virtual ~AttachedSensor();
 
         virtual SensorBasePtr GetSensor() const {
@@ -699,7 +700,6 @@ private:
 
     /// \brief adds a manipulator the list
     ///
-    /// Will copy the information of this manipulator object into a new manipulator and initialize it with the robot.
     /// Will change the robot structure hash..
     /// \return the new manipulator attached to the robot
     /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
@@ -713,6 +713,16 @@ private:
 
     /// \deprecated (12/07/23)
     virtual int GetActiveManipulatorIndex() const RAVE_DEPRECATED;
+
+    /// \brief attaches a sensor to a link the list
+    ///
+    /// Will change the robot structure hash.
+    /// \return the new attached sensor
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
+    virtual AttachedSensorPtr AddAttachedSensor(const AttachedSensorInfo& attachedsensorinfo, bool removeduplicate=false);
+
+    /// \brief Returns an attached sensor from its name. If no sensor is with that name is present, returns empty pointer.
+    virtual AttachedSensorPtr GetAttachedSensor(const std::string& name) const;
 
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
