@@ -112,7 +112,7 @@ class VisibilityModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None):
+    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None):
         """Starts a visibility model using a robot, a sensor, and a target
 
         The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
@@ -122,7 +122,7 @@ class VisibilityModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
-        self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult)
+        self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult,ignoresensorcollision=ignoresensorcollision)
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname

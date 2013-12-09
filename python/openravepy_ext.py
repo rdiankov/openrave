@@ -124,7 +124,7 @@ class runtime_error(Exception):
             return getattr(my_pimpl, attr)
         except AttributeError:
             return super(runtime_error,self).__getattribute__(attr)
-
+        
 class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
@@ -134,13 +134,14 @@ class PlanningError(Exception):
             self.recoverySuggestions = []
         else:
             self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
+            
     def __unicode__(self):
-        s = u'<h3>Planning Error</h3>\n<p>%s</p>'%self.parameter
+        s = u'Planning Error\n%s'%self.parameter
         if len(self.recoverySuggestions) > 0:
-            s += u'\n<p>Recovery Suggestions:</p>\n<ul>'
+            s += u'\nRecovery Suggestions:\n'
             for suggestion in self.recoverySuggestions:
-                s += u'<li>%s</li>\n'%unicode(suggestion)
-            s += u'</ul>\n'
+                s += u'- %s\n'%unicode(suggestion)
+            s += u'\n'
         return s
         
     def __str__(self):
@@ -154,7 +155,7 @@ class PlanningError(Exception):
     
     def __ne__(self, r):
         return self.parameter != r.parameter or self.recoverySuggestions != r.recoverySuggestions
-
+    
 # deprecated
 planning_error = PlanningError
 
