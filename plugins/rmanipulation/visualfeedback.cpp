@@ -180,9 +180,9 @@ public:
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
-                _ptargetbox->InitFromBoxes(vboxes,false);
+                _ptargetbox->InitFromBoxes(vboxes,true);
                 _ptargetbox->SetName("__visualfeedbacktest__");
-                _ptargetbox->GetEnv()->Add(_ptargetbox,true);
+                _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_vf->_target->GetTransform());
             }
@@ -345,8 +345,13 @@ private:
             //            vpoints[1] = _report.contacts[0].pos;
             //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
             if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
-                Vector v = _report->contacts.at(0).pos;
-                RAVELOG_VERBOSE(str(boost::format("bad collision: %s: %f %f %f\n")%_report->__str__()%v.x%v.y%v.z));
+                if( _report->contacts.size() > 0 ) {
+                    Vector v = _report->contacts.at(0).pos;
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%v.x%v.y%v.z);
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s", _report->__str__());
+                }
             }
             return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
         }
