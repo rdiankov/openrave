@@ -216,7 +216,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 for geom,isdraw,tr in self.hiddengeoms:
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
-
+                    
     _cachedKinematicsHash = None # manip.GetKinematicsStructureHash() when the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
         """

@@ -2119,10 +2119,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 filterreturn->_returncode = nstateret;
                 filterreturn->_invalidvalues = q1;
                 filterreturn->_invalidvelocities = dq1;
-                filterreturn->_fTimeWhenInvalid = timeelapsed;
+                filterreturn->_fTimeWhenInvalid = timeelapsed > 0 ? timeelapsed : dReal(1.0);
                 if( options & CFO_FillCheckedConfiguration ) {
                     filterreturn->_configurations = q1;
-                    filterreturn->_configurationtimes.push_back(timeelapsed);
+                    filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
                 }
             }
             return nstateret;
@@ -2162,7 +2162,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         if( !!filterreturn ) {
             if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations = q1;
-                filterreturn->_configurationtimes.push_back(timeelapsed);
+                filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
             }
         }
         return 0;
@@ -2246,6 +2246,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 filterreturn->_configurationtimes.push_back(timestep);
             }
             if( nstateret != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = nstateret;
+                    filterreturn->_invalidvalues = _vtempconfig;
+                    filterreturn->_invalidvelocities = _vtempvelconfig;
+                    filterreturn->_fTimeWhenInvalid = timestep;
+                }
                 return nstateret;
             }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
@@ -2285,14 +2291,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                filterreturn->_configurationtimes.push_back(0);
+                filterreturn->_configurationtimes.push_back(f*fisteps);
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = nstateret;
                     filterreturn->_invalidvalues = _vtempconfig;
                     filterreturn->_invalidvelocities = _vtempvelconfig;
-                    filterreturn->_fTimeWhenInvalid = 0;
+                    filterreturn->_fTimeWhenInvalid = f*fisteps;
                 }
                 return nstateret;
             }
