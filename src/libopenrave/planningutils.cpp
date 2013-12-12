@@ -1159,7 +1159,7 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
@@ -1175,7 +1175,7 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         }
         if( diff <= g_fEpsilon ) {
             // not that much has changed
-            return;
+            return waypointindex;
         }
         RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (init) = %f", diff);
         traj->Remove(waypointindex,waypointindex+1);
@@ -1189,7 +1189,7 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         }
         if( diff <= g_fEpsilon ) {
             // not that much has changed
-            return;
+            return waypointindex;
         }
         RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (goal) = %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
@@ -1198,10 +1198,10 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
-    InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
+    return InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 
-void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -1250,7 +1250,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
 
-
     std::string newplannername = plannername;
 
     if( newplannername.size() == 0 ) {
@@ -1278,15 +1277,16 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
     // retiming is done, now merge the two trajectories
+    size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();
     size_t targetdof = vtargetvalues.size();
-    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    vtargetvalues.resize(targetdof*nInitialNumWaypoints);
     for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
         std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
     }
-    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+    trajinitial->GetWaypoints(0, nInitialNumWaypoints, vwaypointstart);
 
     // copy to the target values while preserving other data
-    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), nInitialNumWaypoints, traj->GetEnv(), false);
 
     if( waypointindex == 0 ) {
         // have to insert the first N-1 and overwrite the Nth
@@ -1303,9 +1303,10 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
         traj->Insert(waypointindex,vtargetvalues,false);
     }
+    return waypointindex+nInitialNumWaypoints-1;
 }
 
-void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
+size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
@@ -1323,10 +1324,10 @@ void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, cons
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
     // Run Insertwaypoint
-    InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
+    return InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
 }
 
-void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
     PlannerBase::PlannerParametersConstPtr parameters = planner->GetParameters();
     BOOST_ASSERT((int)dofvalues.size()==parameters->GetDOF());
@@ -1367,15 +1368,16 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
     }
 
     // retiming is done, now merge the two trajectories
+    size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();
     size_t targetdof = vtargetvalues.size();
-    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    vtargetvalues.resize(targetdof*nInitialNumWaypoints);
     for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
         std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
     }
-    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+    trajinitial->GetWaypoints(0, nInitialNumWaypoints, vwaypointstart);
 
     // copy to the target values while preserving other data
-    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), nInitialNumWaypoints, traj->GetEnv(), false);
 
     if( waypointindex == 0 ) {
         // have to insert the first N-1 and overwrite the Nth
@@ -1392,9 +1394,10 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
         vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
         traj->Insert(waypointindex,vtargetvalues,false);
     }
+    return waypointindex+nInitialNumWaypoints-1;
 }
 
-void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
@@ -1418,7 +1421,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     return InsertWaypointWithSmoothing(index, dofvalues, dofvelocities, traj, planner);
 }
 
-void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
     if( index != (int)traj->GetNumWaypoints() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("InsertWaypointWithSmoothing only supports adding waypoints at the end",ORE_InvalidArguments);
@@ -1529,6 +1532,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
     dReal fNewDuration = traj->GetDuration();
     OPENRAVE_ASSERT_OP( RaveFabs(fNewDuration-fBestDuration), <=, 0.001 );
+    return iBestInsertionWaypoint+pBestTrajectory->GetNumWaypoints();
 }
 
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)

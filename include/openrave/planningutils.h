@@ -59,16 +59,18 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
 
 /** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space matches the positional data of the trajectory.
 
-    \param index the waypoint index of the trajectory
     Useful when appending jittered points to the trajectory.
+    \param index the waypoint index of the trajectory
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space is just the active DOF of the robot.
 
     Useful when appending jittered points to the trajectory.
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -263,8 +265,9 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param robot use the robot's active dofs to initialize the trajectory space
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -274,8 +277,9 @@ OPENRAVE_API void InsertActiveDOFWaypointWithRetiming(int index, const std::vect
     \param dofvelocities the velocities that the inserted point should start with
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner initialized planner that will do the retiming. \ref PlannerBase::InitPlan should already be called.
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /** \brief Insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -285,8 +289,9 @@ OPENRAVE_API void InsertWaypointWithRetiming(int index, const std::vector<dReal>
     \param dofvelocities the velocities that the inserted point should start with
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory smoother.
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -296,8 +301,9 @@ OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal
     \param dofvelocities the velocities that the inserted point should start with
     \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     \param planner the initialized planner to use for smoothing. \ref PlannerBase::InitPlan should already be called on it. The planner parameters should be initialized to ignore timestamps. Optionally they could be initialized to accept velocities.
+    \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
 
 /// \brief convert the trajectory and all its points to a new specification
 OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification &spec);
