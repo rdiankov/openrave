@@ -1093,7 +1093,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             equations = []
             names = []
             for i,expr in enumerate(node.jointeval):
-                if acceptfreevars:
+                if acceptfreevars and self.freevars is not None:
                     m = None
                     for freevar in self.freevars:
                         if expr.has(Symbol(freevar)):
@@ -1277,6 +1277,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
 
     def generatePolynomialRoots(self, node):
         D=node.poly.degree(0)
+        if D == 0:
+            log.warn('polynomial %s is of degree 0!', node.poly)
+            return 'continue; // poly is 0\n'
         polyroots=self.using_polyroots(D)
         name = node.jointname
         polyvar = node.poly.gens[0].name
@@ -1510,7 +1513,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         for checkzeroequations, branch, extradictequations in node.jointbranches:
             #log.info('generateBranchConds(%d) %s', len(node.jointbranches), checkzeroequations)
             self.dictequations = self.copyequations(origequations)
-
+            
             # writing the equations for the branch could force the system to call "continue" if out-of-bounds computations are detected.
             # therefore surround each different branch in a do/while statement
             code.write('bool bgotonextstatement = true;\n')
@@ -1589,7 +1592,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         self.freevardependencies.pop()
         return ''
     def generateBreak(self,node):
-        return 'continue;\n'
+        return 'continue; // %s\n'%node.comment
     def endBreak(self,node):
         return ''
 
@@ -1951,7 +1954,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     # check if exprbase is 0
                     ikpowsymbol = self.symbolgen.next()
                     code2 = cStringIO.StringIO()
-                    code2.write('IkReal %s = ')
+                    code2.write('IkReal %s = '%ikpowsymbol)
                     code3,sepcodelist = self._WriteExprCode(expr.base, code2)
                     code2.write(';\nif(IKabs(%s)==0){\ncontinue;\n}\n'%ikpowsymbol)
                     sepcodelist.append(code2.getvalue())                    
@@ -1980,6 +1983,22 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                     sepcodelist += sepcodelist2
                 if not arg == expr.args[-1]:
                     code.write('+')
+            code.write(')')
+            return code, sepcodelist
+
+        elif hasattr(expr, 'is_Sub') and expr.is_Sub: # for cse.Sub
+            code.write('(')
+            sepcodelist = []
+            for arg in expr.args:
+                if arg.is_Symbol:
+                    code.write(str(arg))
+                else:
+                    code.write('(')
+                    code2,sepcodelist2 = self._WriteExprCode(arg, code)
+                    code.write(')')
+                    sepcodelist += sepcodelist2
+                if not arg == expr.args[-1]:
+                    code.write('-')
             code.write(')')
             return code, sepcodelist
         
