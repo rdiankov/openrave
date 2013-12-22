@@ -945,7 +945,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.robot.SetActiveManipulator(self.manip)
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
-            cmd = 'DebugIK sampledegeneratecases 0 robot %s '%self.robot.GetName()
+            cmd = 'DebugIK sampledegeneratecases 0.2 robot %s '%self.robot.GetName()
             if iktests.isdigit():
                 assert(int(iktests) > 0)
                 cmd += 'numtests %d '%int(iktests)
