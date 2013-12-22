@@ -1423,6 +1423,17 @@ std::string get_openrave_exception_repr(openrave_exception* p)
     return boost::str(boost::format("<openrave_exception('%s',ErrorCode.%s)>")%p->message()%GetErrorCodeString(p->GetCode()));
 }
 
+object get_std_runtime_error_unicode(std::runtime_error* p)
+{
+    std::string s(p->what());
+    return ConvertStringToUnicode(s);
+}
+
+std::string get_std_runtime_error_repr(std::runtime_error* p)
+{
+    return boost::str(boost::format("<std_exception('%s')>")%p->what());
+}
+
 }
 
 BOOST_PYTHON_MODULE(openravepy_int)
@@ -1453,7 +1464,16 @@ BOOST_PYTHON_MODULE(openravepy_int)
     .def( "__repr__", get_openrave_exception_repr)
     ;
     exception_translator<openrave_exception>();
+    class_< std::runtime_error >( "_std_runtime_error_", no_init)
+    .def( init<const std::string&>() )
+    .def( init<const std::runtime_error&>() )
+    .def( "message", &std::runtime_error::what)
+    .def( "__str__", &std::runtime_error::what)
+    .def( "__unicode__", get_std_runtime_error_unicode)
+    .def( "__repr__", get_std_runtime_error_repr)
+    ;
     exception_translator<std::runtime_error>();
+    //exception_translator<std::exception>();
     exception_translator<boost::bad_function_call>();
 
     class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));

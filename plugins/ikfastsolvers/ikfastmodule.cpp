@@ -934,7 +934,7 @@ public:
                         }
                         else {
                             for(int j = 0; j < (int)vrealsolution.size(); j++) {
-                                if( RaveRandomFloat() > sampledegeneratecases ) {
+                                if( RaveRandomFloat() >= sampledegeneratecases ) {
                                     int dof = pmanip->GetArmIndices().at(j);
                                     if( robot->GetJointFromDOFIndex(dof)->IsCircular(dof-robot->GetJointFromDOFIndex(dof)->GetDOFIndex()) ) {
                                         vrealsolution[j] = -PI + 2*PI*RaveRandomFloat();
@@ -1112,7 +1112,7 @@ public:
                             vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
                             s << "FindIKSolutions: Incorrect IK, i = " << i << " error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                              << "Original Joint Val=[";
+                              << "originalJointValues=[";
                             FOREACH(it, vrealsolution) {
                                 s << *it << ", ";
                             }
@@ -1147,6 +1147,13 @@ public:
                         continue;
                     }
                     if( !bfoundinput ) {
+                        s.str("");
+                        s << "FindIKSolutions: expected ik solution not found." << std::endl << "originalJointValues=[";
+                        FOREACH(it, vrealsolution) {
+                            s << *it << ", ";
+                        }
+                        s << "]" << std::endl;
+                        RAVELOG_VERBOSE(s.str());
                         vnofullsolutions.push_back(make_pair(twrist,vfreeparameters_real));
                     }
                 }
@@ -1169,7 +1176,7 @@ public:
                             FOREACH(it, vfreeparameters) {
                                 s << *it << " ";
                             }
-                            s << endl << "Original Joint Val=[";
+                            s << endl << "originalJointValues=[";
                             FOREACH(it, vrealsolution) {
                                 s << *it << ", ";
                             }
@@ -1214,15 +1221,15 @@ public:
                             vwrongsolutions.push_back(make_pair(twrist,vfreeparameters_out));
                             s.str("");
                             s << "FindIKSolutions (freeparams): Incorrect IK, i = " << i <<" error: " << RaveSqrt(twrist.ComputeDistanceSqr(twrist_out)) << endl
-                              << "Original Joint Val: ";
+                              << "originalJointValues=[";
                             FOREACH(it, vrealsolution) {
-                                s << *it << " ";
+                                s << *it << ", ";
                             }
-                            s << endl << "Returned Joint Val: ";
+                            s << endl << "]" << endl << "; returnedJointValues=[";
                             FOREACH(it, *itsol) {
-                                s << *it << " ";
+                                s << *it << ", ";
                             }
-                            s << endl << "in: " << twrist << endl;
+                            s << endl << "]" << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl;
                             s << "raw ik command: ";
                             GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);

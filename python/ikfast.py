@@ -421,6 +421,10 @@ class AST:
     class SolverBase(object):
         def GetChildrenOfType(self, classinstance):
             return []
+        def GetZeroThreshold(self):
+            """returns the threshold to use to check for zeros
+            """
+            return None
         
     class SolverSolution(SolverBase):
         """Contains equations for evaluating one unknown variable. The variable can have multiple solutions, and the solution is only valid if every equation in checkforzeros is non-zero
@@ -497,7 +501,9 @@ class AST:
             return self.presetcheckforzeros
         def getEquationsUsed(self):
             return self.equationsused
-        
+        def GetZeroThreshold(self):
+            return self.thresh
+
     class SolverPolynomialRoots(SolverBase):
         """find all roots of the polynomial and plug it into jointeval. poly should be Poly
         """
@@ -511,7 +517,7 @@ class AST:
         postcheckfornonzeros = None # fail if nonzero
         postcheckforrange = None # checks that value is within [-1,1]
         dictequations = None
-        thresh = 1e-7
+        thresh = 1e-8
         isHinge = True
         FeasibleIsZeros = False
         AddHalfTanValue = False
@@ -555,10 +561,17 @@ class AST:
                 valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointeval])
             return valid
         def getPresetCheckForZeros(self):
-            return [self.poly.LC()] # make sure highest coefficient is not 0!
+            # make sure that all the coefficients containing higher-order variables are not 0
+            zeroeq = S.Zero
+            for monom, coeff in self.poly.terms():
+                if monom[0] > 0:
+                    zeroeq += abs(coeff.subs(self.dictequations))
+            return [zeroeq]#self.poly.LC()]
         def getEquationsUsed(self):
             return self.equationsused
-    
+        def GetZeroThreshold(self):
+            return self.thresh
+
     class SolverCoeffFunction(SolverBase):
         """Evaluate a set of coefficients and pass them to a custom function which will then return all possible values of the specified variables in jointnames.
         """
@@ -675,7 +688,9 @@ class AST:
                     nodes.append(childnode)
                 nodes += childnode.GetChildrenOfType(classinstance)
             return nodes
-        
+        def GetZeroThreshold(self):
+            return self.thresh
+
     class SolverBranchConds(SolverBase):
         """
         take certain branches depending if a set of equations evaluate to zero.
@@ -697,7 +712,9 @@ class AST:
                         nodes.append(childnode)
                     nodes += childnode.GetChildrenOfType(classinstance)
             return nodes
-        
+        def GetZeroThreshold(self):
+            return self.thresh
+
     class SolverCheckZeros(SolverBase):
         jointname = None
         jointcheckeqs = None # only used for evaluation
@@ -707,12 +724,15 @@ class AST:
         dictequations=None
         thresh=None # a threshold of 1e-6 breaks hiro ik
         equationsused = None
-        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.000001,anycondition=True):
+        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=None,anycondition=True):
             self.jointname = jointname
             self.jointcheckeqs = jointcheckeqs
             self.zerobranch = zerobranch
             self.nonzerobranch = nonzerobranch
-            self.thresh = thresh
+            if thresh is None:
+                self.thresh = 0.000001
+            else:
+                self.thresh = thresh
             self.anycondition = anycondition
             self.dictequations = []
         def generate(self, generator):
@@ -748,7 +768,8 @@ class AST:
                     nodes.append(childnode)
                 nodes += childnode.GetChildrenOfType(classinstance)
             return nodes
-
+        def GetZeroThreshold(self):
+            return self.thresh
     class SolverFreeParameter(SolverBase):
         jointname = None
         jointtree = None
@@ -1255,8 +1276,10 @@ class IKFastSolver(AutoReloader):
                 assert(not self.hascases(newcases))
                 self.handleddegeneratecases.append(newcases)
         def addcases(self,currentcases):
-            assert(not self.hascases(currentcases))
-            self.handleddegeneratecases.append(currentcases)
+            if not self.hascases(currentcases):
+                self.handleddegeneratecases.append(currentcases)
+            else:
+                log.warn('case already added') # sometimes this can happen, but it isn't a bug, just bad bookkeeping
         def RemoveCases(self, currentcases):
             for i, handledcases in enumerate(self.handleddegeneratecases):
                 if handledcases == currentcases:
@@ -1283,6 +1306,8 @@ class IKFastSolver(AutoReloader):
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
         self.maxcasedepth = 3 # the maximum depth of special/degenerate cases to process before system gives up
+        self.globalsymbols = [] # global symbols for substitutions
+        self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
         self._dodebug = False
         if precision is None:
             self.precision=8
@@ -2006,6 +2031,7 @@ class IKFastSolver(AutoReloader):
 
         self.gsymbolgen = cse_main.numbered_symbols('gconst')
         self.globalsymbols = []
+        self._scopecounter = 0
 
         # before passing to the solver, set big numbers to constant variables, this will greatly reduce computation times
 #         numbersubs = []
@@ -4394,7 +4420,7 @@ class IKFastSolver(AutoReloader):
                         neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
                     AllEquations.append(neweq0.subs(self.invsubs).expand())
                     AllEquations.append(neweq1.subs(self.invsubs).expand())
-            AllEquations += AllEquationsExtra
+            #AllEquations += AllEquationsExtra
             self.sortComplexity(AllEquations)
             unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
             for ivar in range(3):
@@ -5330,7 +5356,8 @@ class IKFastSolver(AutoReloader):
         if unknownvars is None:
             unknownvars = []
             
-        log.info('%s %s',othersolvedvars,curvars)
+        self._scopecounter+=1
+        log.info('c=%d, %s %s',self._scopecounter, othersolvedvars,curvars)
         
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
@@ -5500,6 +5527,8 @@ class IKFastSolver(AutoReloader):
     def AddSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree, currentcases=None, currentcasesubs=None, unknownvars=None):
         """Take the least complex solution of a set of solutions and resume solving
         """
+        self._scopecounter += 1
+        scopecounter = int(self._scopecounter)
         solutions = [s for s in solutions if s[0].score < oo and s[0].checkValidSolution()] # remove infinite scores
         if len(solutions) == 0:
             raise self.CannotSolveError('no valid solutions')
@@ -5778,7 +5807,7 @@ class IKFastSolver(AutoReloader):
                 self.degeneratecases = olddegeneratecases
             if len(checkforzeros) > 0:
                 hascheckzeros = True                
-                solvercheckzeros = AST.SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.thresh)
+                solvercheckzeros = AST.SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.GetZeroThreshold())
                 # have to transfer the dictionary!
                 solvercheckzeros.dictequations = originalGlobalSymbols + solution.dictequations
                 solvercheckzeros.equationsused = AllEquations
@@ -5791,7 +5820,7 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('failed to add solution!')
         
         if len(currentcases) >= self.maxcasedepth:
-            log.warn('%d levels deep in checking degenerate cases, skipping...: %r', self.maxcasedepth, AllEquations)
+            log.warn('c=%d, %d levels deep in checking degenerate cases, skipping...: %r', scopecounter, self.maxcasedepth, AllEquations)
             lastbranch.append(AST.SolverBreak('%d cases reached'%self.maxcasedepth, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
             return prevbranch
         
@@ -5854,7 +5883,7 @@ class IKFastSolver(AutoReloader):
                             evalcond = cond
                         if eq == S.Zero:
                             if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
-                                log.info('adding case %s=%s in %s',possiblevar, possiblevalue,checkzero)
+                                log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
                                 # if the variable is 1 and part of the rotation matrix, can deduce other variables
                                 if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
                                     row1 = int(possiblevar.name[-2])
@@ -5960,6 +5989,7 @@ class IKFastSolver(AutoReloader):
                         newcases.add(singlecond)
                     newcasesubs = currentcasesubs+othervarsubs
                     if not self.degeneratecases.hascases(newcases):
+                        log.info('c=%d, starting newcases: %r', scopecounter, newcases)
                         if len(NewEquationsClean) > 0:
                             self.globalsymbols = []
                             zerosymbols = []
@@ -5985,6 +6015,7 @@ class IKFastSolver(AutoReloader):
                                 newtree.append(AST.SolverSolution(curvar.name, jointeval=[S.Zero,pi/2,pi,-pi/2], isHinge=self.IsHinge(curvar.name)))
                             newtree += endbranchtree
                         zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
+                        log.info('c=%d, adding newcases: %r', scopecounter, newcases)
                         self.degeneratecases.addcases(newcases)
                     else:
                         log.warn('already has handled cases %r', newcases)                        
@@ -6270,6 +6301,7 @@ class IKFastSolver(AutoReloader):
         solution.postcheckfornonzeros = [peq.as_expr() for peq in pfinals[1:]]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
+        solution.thresh = 1e-9 # depending on the degree, can expect small coefficients to be still valid
         solution.AddHalfTanValue = True
         return [solution]
 
