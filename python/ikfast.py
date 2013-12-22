@@ -1305,7 +1305,7 @@ class IKFastSolver(AutoReloader):
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
-        self.maxcasedepth = 3 # the maximum depth of special/degenerate cases to process before system gives up
+        self.maxcasedepth = 4 # the maximum depth of special/degenerate cases to process before system gives up
         self.globalsymbols = [] # global symbols for substitutions
         self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
         self._dodebug = False
