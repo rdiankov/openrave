@@ -643,13 +643,13 @@ private:
                 TransformMatrix t = param.GetTransform6D();
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-                //                stringstream ss; ss << "./ik " << std::setprecision(16);
-                //                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
-                //                FOREACH(itfree,vfree) {
-                //                    ss << *itfree << " ";
-                //                }
-                //                ss << endl;
-                //RAVELOG_INFO(ss.str());
+//                stringstream ss; ss << "./ik " << std::setprecision(16);
+//                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+//                FOREACH(itfree,vfree) {
+//                    ss << *itfree << " ";
+//                }
+//                ss << endl;
+//                RAVELOG_INFO(ss.str());
                 return _ikfunctions->_ComputeIk(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions);
             }
             case IKP_Rotation3D: {
