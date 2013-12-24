@@ -2587,7 +2587,7 @@ class IKFastSolver(AutoReloader):
                                     break
         if tree is None:
             linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
-            for T0links, T1links in linklist[2:]:
+            for T0links, T1links in linklist:
                 try:
                     # if T1links[-1] doesn't have any symbols, put it over to T0links
                     if not self.has(T1links[-1], *solvejointvars):
@@ -2833,7 +2833,7 @@ class IKFastSolver(AutoReloader):
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
-            for splitindex in [1,0]:#0,1]:
+            for splitindex in [0, 1]:
                 if rawpolyeqs2[splitindex] is None:
                     if splitindex == 0:
                         # invert, this seems to always give simpler solutions, so prioritize it
@@ -4427,7 +4427,7 @@ class IKFastSolver(AutoReloader):
                 if eq.has(*usedvars) and not eq.has(*unusedvars):
                     AllEquations.append(eq)
             self.sortComplexity(AllEquations)
-
+            
             # first try to solve all the variables at once
             try:
                 solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree)
@@ -5509,7 +5509,7 @@ class IKFastSolver(AutoReloader):
                 solutions.append((solution,Symbol(solution.jointname)))
             if len(rawsolutions) > 0: # solving a pair is rare, so any solution will do
                 break
-            
+                        
         # take the least complex solution and go on
         if len(solutions) > 0:
             return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
@@ -5531,7 +5531,7 @@ class IKFastSolver(AutoReloader):
                     solutions.append((solution,curvar))
                 except self.CannotSolveError:
                     pass
-                
+               
         if len(solutions) > 0:
             return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
         
@@ -5980,6 +5980,7 @@ class IKFastSolver(AutoReloader):
                                             rc = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col1))
                                             rd = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col2))
                                             checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
                                             checkexpr[2].append((rc**2, S.One-ra**2))
                                             checkexpr[2].append((rc, -rb))
                                             checkexpr[2].append((rd, ra))
@@ -6000,6 +6001,7 @@ class IKFastSolver(AutoReloader):
                                             rc = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, maxcol))
                                             rd = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, maxcol))
                                             checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
                                             checkexpr[2].append((rc**2, S.One-ra**2))
                                             checkexpr[2].append((rc, -rb))
                                             checkexpr[2].append((rd, ra))
@@ -6113,7 +6115,7 @@ class IKFastSolver(AutoReloader):
             branchconds.accumequations = accumequations
             lastbranch.append(branchconds)
         else:            
-            #GuessValuesAndSolveEquations
+            # add GuessValuesAndSolveEquations?
             lastbranch.append(AST.SolverBreak('no branches %r'%curvars, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
             
         return prevbranch
@@ -6127,8 +6129,8 @@ class IKFastSolver(AutoReloader):
             curvar = hingevariables[0]
             leftovervars = list(curvars)
             leftovervars.remove(curvar)
-            jointevals = []
             newtree = [AST.SolverConditionedSolution([])]
+            zerovalues = []
             for jointeval in [S.Zero,pi/2,pi,-pi/2]:
                 checkzeroequations = []
                 NewEquations = []
@@ -6156,12 +6158,23 @@ class IKFastSolver(AutoReloader):
                         break
                 if not cansolve:
                     continue
-                solution = AST.SolverSolution(curvar.name, jointeval=jointevals, isHinge=self.IsHinge(curvar.name))
-                solution.checkforzeros = checkzeroequations
+                if len(checkzeroequations) > 0:
+                    solution = AST.SolverSolution(curvar.name, jointeval=[jointeval], isHinge=self.IsHinge(curvar.name))
+                    solution.checkforzeros = checkzeroequations
+                    solution.FeasibleIsZeros = True
+                    newtree[0].solversolutions.append(solution)
+                else:
+                    zerovalues.append(jointeval)
+            if len(zerovalues) > 0:
+                # prioritize these solutions since they don't come with any extra checks
+                solution = AST.SolverSolution(curvar.name, jointeval=zerovalues, isHinge=self.IsHinge(curvar.name))
                 solution.FeasibleIsZeros = True
-                newtree[0].solversolutions.append(solution)
-            if len(newtree[0].solversolutions) > 0:
-                log.info('c=%d, think there is a free variable, but cannot solve relationship, so setting variable %s to %r', scopecounter, curvar, jointevals)
+                newtree = [solution]
+            elif len(newtree[0].solversolutions) == 0:
+                # nothing found so remove the condition node
+                newtree = []
+            if len(newtree) > 0:
+                log.warn('c=%d, think there is a free variable, but cannot solve relationship, so setting variable %s', scopecounter, curvar)
                 newtree += self.SolveAllEquations(AllEquations, leftovervars, othersolvedvars+[curvar], solsubs+self.Variable(curvar).subs, endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
                 return newtree
             
@@ -6413,14 +6426,22 @@ class IKFastSolver(AutoReloader):
                     det = Poly(S.Zero,leftvar)
                     for eq in eqadds:
                         det += eq
-#                     if len(Mall) == 2:
-#                         log.info('attempting to simplify determinant...')
-#                         newdet = Poly(S.Zero,leftvar)
-#                         for m,c in det.terms():
-#                             newc = self.trigsimp(c.subs(dictequations),othersolvedvars)
-#                             newdet += newc*leftvar**m[0]
-#                         dictequations = []
-#                         det = newdet
+                    if len(Mall) <= 3:
+                        # need to simplify further since self.globalsymbols can have important substitutions that can yield the entire determinant to zero
+                        log.info('attempting to simplify determinant...')
+                        newdet = Poly(S.Zero,leftvar)
+                        for m,c in det.terms():
+                            origComplexity = self.codeComplexity(c)
+                            # 100 is a guess
+                            if origComplexity < 100:
+                                neweq = c.subs(dictequations)
+                                if self.codeComplexity(neweq) < 100:
+                                    neweq = self._SubstituteGlobalSymbols(neweq).expand()
+                                    newComplexity = self.codeComplexity(neweq)
+                                    if newComplexity < origComplexity:
+                                        c = neweq
+                            newdet += c*leftvar**m[0]
+                        det = newdet
                     if det.degree(0) <= 0:
                         continue
                     pfinals = [det]

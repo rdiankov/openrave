@@ -1221,7 +1221,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         allnumsolutions = 0
         AddHalfTanValue = False
         checkcode = ''
-        checkcode += self.WriteDictEquations(node.dictequations)
+        checkcode += self.WriteDictEquations(node.dictequations).getvalue()
         for solversolution in node.solversolutions:
             if len(solversolution.checkforzeros) > 0:
                 if solversolution.AddHalfTanValue:
@@ -1240,6 +1240,10 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             scode += 'numsolutions%s = %d;\n'%(name,numsolutions)
             allnumsolutions = max(allnumsolutions,numsolutions)
             checkcode += scode
+            if len(solversolution.checkforzeros) == 0:
+                # can never go to the other clauses anyway...
+                checkcode += '\n}\n'
+                break
             checkcode += '\n} else\n'
         checkcode += '{\n    continue;\n}\n'  # if got here, then current solution branch is not good, so skip
         checkcode += '}\n'*len(node.solversolutions)
