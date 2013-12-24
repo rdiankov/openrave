@@ -80,7 +80,7 @@ except ImportError:
     using_swiginac = False
 
 import logging
-log = logging.getLogger('ikfast')
+log = logging.getLogger('openravepy.ikfast')
 
 from sympy.core import function # for sympy 0.7.1+
 class fmod(function.Function):
@@ -175,6 +175,7 @@ class CodeGenerator(AutoReloader):
         self.kinematicshash=kinematicshash
         self.resetequations() # dictionary of symbols already written
         self._globalvariables = {} # a set of global variables already written
+        self._solutioncounter = 0
         self.version=version
 
     def resetequations(self):
@@ -599,6 +600,7 @@ int main(int argc, char** argv)
                 usedvars.append(var.name)
         code += 'IkReal ' + ','.join(usedvars) + ';\n'
         self._globalvariables = set(usedvars)
+        self._solutioncounter = 0
         code += 'unsigned char ' + ','.join('_i%s[2], _n%s'%(var[0].name,var[0].name) for var in node.solvejointvars+node.freejointvars) + ';\n\n'
         return code
 
@@ -646,7 +648,7 @@ int main(int argc, char** argv)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]);\n'%(name,i,name,i,name,i)
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]), ht%d=tan(pfree[%d]*0.5);\n'%(name,i,name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = eerot[%d*3+%d];\n"%(i,j,i,j)
@@ -1075,6 +1077,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         numsolutions = 0
         eqcode = cStringIO.StringIO()
         name = node.jointname
+        self._solutioncounter += 1
+        log.info('c=%d var=%s', self._solutioncounter, name)
         node.HasFreeVar = False
         allnumsolutions = 0
         #log.info('generateSolution %s (%d)', name, len(node.dictequations))
@@ -1289,6 +1293,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             numevals = max(numevals,len(node.postcheckfornonzeros))
         if node.postcheckforrange is not None:
             numevals = max(numevals,len(node.postcheckforrange))
+        if node.postcheckforNumDenom is not None:
+            numevals = max(numevals,len(node.postcheckforNumDenom)*2)
         if numevals > 0:
             code += 'IkReal %sevalpoly[%d];\n'%(name,numevals)
         code += self.WriteDictEquations(node.dictequations).getvalue()
@@ -1333,7 +1339,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckforzeros)):
                 if i != 0:
                     fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) < %.16f '%(name,i,node.thresh)
+                fcode += 'IKabs(%sevalpoly[%d]) <= %.16f '%(name,i,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
         if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
@@ -1351,7 +1357,20 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckforrange)):
                 if i != 0:
                     fcode += ' || '
-                fcode += ' (%sevalpoly[%d] < %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
+                fcode += ' (%sevalpoly[%d] <= %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
+            fcode += ' )\n{\n    continue;\n}\n'
+            code += fcode
+        if node.postcheckforNumDenom is not None and len(node.postcheckforNumDenom) > 0:
+            allequations = []
+            for A, B in node.postcheckforNumDenom:
+                allequations.append(A)
+                allequations.append(B)
+            fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),allequations)
+            fcode += 'if( '
+            for i in range(len(node.postcheckforNumDenom)):
+                if i != 0:
+                    fcode += ' || '
+                fcode += ' (IKabs(%sevalpoly[%d]) <= %.16f && IKabs(%sevalpoly[%d]) > %.16f) '%(name,2*i,node.thresh,name,2*i+1,node.thresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
 
@@ -1646,6 +1665,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     def endDirection(self, node):
         return ''
     def generateStoreSolution(self, node):
+        self._solutioncounter += 1
+        log.info('c=%d, store solution', self._solutioncounter)
         code = cStringIO.StringIO()
         if node.checkgreaterzero is not None and len(node.checkgreaterzero) > 0:
             origequations = self.copyequations()
@@ -2338,7 +2359,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             complex<IkReal> newroot=roots[i];
             int n = 1;
             for(int j = i+1; j < %(deg)d; ++j) {
-                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
+                // care about error in real much more than imaginary
+                if( abs(real(roots[i])-real(roots[j])) < tolsqrt && abs(imag(roots[i])-imag(roots[j])) < 0.002 ) {
                     newroot += roots[j];
                     n += 1;
                     visited[j] = true;
