@@ -3725,7 +3725,7 @@ class IKFastSolver(AutoReloader):
         
         return numsymbolcoeffs, _computereducedequations
 
-    def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree):
+    def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree, AllEquationsExtra=None):
         """Solves the IK equations using eigenvalues/eigenvectors of a 12x12 quadratic eigenvalue problem. Method explained in
         
         Dinesh Manocha and J.F. Canny. "Efficient inverse kinematics for general 6R manipulators", IEEE Transactions on Robotics and Automation, Volume 10, Issue 5, Oct 1994.
@@ -4940,7 +4940,7 @@ class IKFastSolver(AutoReloader):
             othereq *= (1+htvars[i]**2)**maxdenom[i]
         return eqnew, othereq, htvarsubsinv
     
-    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree):
+    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree, AllEquationsExtra=None):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables [Kohli1993]_. Takes in the 14 raghavan/roth equations.
         
         .. [Kohli1993] Dilip Kohli and M. Osvatic, "Inverse Kinematics of General 6R and 5R,P Serial Manipulators", Journal of Mechanical Design, Volume 115, Issue 4, Dec 1993.
