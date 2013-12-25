@@ -16,6 +16,7 @@
 #include "qtcoin.h"
 
 #include <Inventor/elements/SoGLCacheContextElement.h>
+#include <Inventor/actions/SoToVRML2Action.h>
 #include <Inventor/actions/SoWriteAction.h>
 #include <Inventor/nodes/SoComplexity.h>
 #include <Inventor/nodes/SoCoordinate3.h>
@@ -31,6 +32,7 @@
 #include <Inventor/misc/SoGLImage.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/SoPickedPoint.h>
+#include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
 #if QT_VERSION >= 0x040000 // check for qt4
 #include <QtOpenGL/QGLWidget>
@@ -174,6 +176,8 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("Resize",boost::bind(&QtCoinViewer::_CommandResize,this,_1,_2),
                     "Accepts width x height to resize internal video frame");
+    RegisterCommand("SaveBodyLinkToVRML",boost::bind(&QtCoinViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
+                    "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -3509,4 +3513,57 @@ UserDataPtr QtCoinViewer::RegisterViewerThreadCallback(const ViewerThreadCallbac
     ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
     return pdata;
+}
+
+
+bool QtCoinViewer::_SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput)
+{
+    string bodyname, filename;
+    int linkindex=-1;
+    sinput >> bodyname >> linkindex;
+    if (!getline(sinput, filename) ) {
+        RAVELOG_WARN("failed to get filename\n");
+        return false;
+    }
+    boost::trim(filename);
+
+    KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+    if( !pbody ) {
+        RAVELOG_WARN_FORMAT("could not find body %s", bodyname);
+        return false;
+    }
+
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    boost::mutex::scoped_lock lock2(g_mutexsoqt);
+
+    if( _mapbodies.find(pbody) == _mapbodies.end() ) {
+        RAVELOG_WARN_FORMAT("couldn't find body %s in viewer list", bodyname);
+        return false;
+    }
+
+    KinBodyItemPtr pitem = _mapbodies[pbody];
+    SoNode* psep;
+    if( linkindex >= 0 && linkindex < (int)pbody->GetLinks().size() ) {
+        psep = pitem->GetIvLink(linkindex);
+    }
+    else {
+        psep = pitem->GetIvGeom();
+    }
+
+    psep->ref();
+    SoToVRML2Action tovrml2;
+    tovrml2.apply(psep);
+    SoVRMLGroup *newroot = tovrml2.getVRML2SceneGraph();
+    newroot->ref();
+    psep->unref();
+
+    SoOutput out;
+    out.openFile(filename.c_str());
+    out.setHeaderString("#VRML V2.0 utf8");
+    SoWriteAction wa(&out);
+    wa.apply(newroot);
+    out.closeFile();
+    newroot->unref();
+    RAVELOG_VERBOSE_FORMAT("saved body %s to file %s", pbody->GetName()%filename);
+    return true;
 }
