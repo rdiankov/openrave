@@ -59,6 +59,13 @@ int RobotBase::Manipulator::GetGripperDOF() const
     return static_cast<int>(__vgripperdofindices.size());
 }
 
+void RobotBase::Manipulator::SetClosingDirection(const std::vector<dReal>& closingdirection)
+{
+    OPENRAVE_ASSERT_OP((int)closingdirection.size(),==,GetGripperDOF());
+    _info._vClosingDirection = closingdirection;
+    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+}
+
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
     _info._sIkSolverXMLId.resize(0);

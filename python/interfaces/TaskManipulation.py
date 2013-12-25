@@ -93,7 +93,7 @@ class TaskManipulation:
             cmd.write('graspfinestep %.15e '%graspfinestep)
         if destposes is not None and len(destposes) > 0:
             if len(destposes[0]) == 7: # pose
-                cmd.write('posedests %d '%len(destposes))
+                cmd.write('destposes %d '%len(destposes))
                 for pose in destposes:
                     cmd.write(poseSerialization(pose))
                     cmd.write(' ')

@@ -467,7 +467,7 @@ protected:
                     *ittrans = m;
                 }
             }
-            else if( cmd == "posedests" ) {
+            else if( cmd == "destposes" || cmd == "posedests" ) {
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
                 FOREACH(ittrans, vObjDestinations) {

@@ -139,6 +139,10 @@ public:
         void SetLocalToolTransform(object otrans) {
             _pmanip->SetLocalToolTransform(ExtractTransform(otrans));
         }
+        void SetClosingDirection(object oclosingdirection)
+        {
+            _pmanip->SetClosingDirection(ExtractArray<dReal>(oclosingdirection));
+        }
         object GetGripperJoints() {
             RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
             return toPyArray(_pmanip->GetGripperIndices());
@@ -1596,6 +1600,7 @@ void init_openravepy_robot()
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("GetLocalToolTransform",&PyRobotBase::PyManipulator::GetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("SetLocalToolTransform",&PyRobotBase::PyManipulator::SetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,SetLocalToolTransform))
+        .def("SetClosingDirection",&PyRobotBase::PyManipulator::SetClosingDirection, DOXY_FN(RobotBase::Manipulator,SetClosingDirection))
         .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints, DOXY_FN(RobotBase::Manipulator,GetArmIndices))

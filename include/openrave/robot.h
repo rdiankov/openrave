@@ -147,10 +147,13 @@ public:
         /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
         virtual int GetGripperDOF() const;
 
-        /// \brief return the normal direction to move joints to 'close' the hand
+        /// \brief return the normal gripper direction to move joints to close/chuck the hand
         virtual const std::vector<dReal>& GetClosingDirection() const {
             return _info._vClosingDirection;
         }
+
+        /// \brief sets the normal gripper direction to move joints to close/chuck the hand
+        virtual void SetClosingDirection(const std::vector<dReal>& closingdirection);
 
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///
