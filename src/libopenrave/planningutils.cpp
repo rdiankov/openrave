@@ -1705,6 +1705,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
 {
+    // merge both deltatime and iswaypoint groups
     TrajectoryBasePtr presulttraj;
     if( listtrajectories.size() == 0 ) {
         return presulttraj;
@@ -1771,7 +1772,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
                 (*ittraj)->Sample(vtemp,vtimes[i],spec);
                 vnewdata.insert(vnewdata.end(),vtemp.begin(),vtemp.end());
                 if( waypointoffset >= 0 ) {
-                    vwaypoints[i] += vtemp[waypointoffset];
+                    vwaypoints[i] += vtemp[itwaypointgroup->offset]; // have to use the final spec's offset
                 }
             }
         }
@@ -1781,7 +1782,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
                 (*ittraj)->Sample(vtemp,vtimes[i]);
                 vpointdata.insert(vpointdata.end(),vtemp.begin(),vtemp.end());
                 if( waypointoffset >= 0 ) {
-                    vwaypoints[i] += vtemp[waypointoffset];
+                    vwaypoints[i] += vtemp[itwaypointgroup->offset]; // have to use the final spec's offset
                 }
             }
             ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);

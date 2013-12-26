@@ -609,7 +609,7 @@ protected:
         if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
             // if 5D, have to set a filter
             ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
-            fApproachOffset = 0; // cannot approach
+            //fApproachOffset = 0; // cannot approach?
         }
 
         for(int igraspperm = 0; igraspperm < (int)vgrasppermuation.size(); ++igraspperm) {
@@ -1739,9 +1739,10 @@ protected:
                 RAVELOG_DEBUG("grasper planner CheckEndEffectorCollision\n");
                 return IKRA_Reject;
             }
+            return IKRA_Success;
         }
 
-        if( pmanip->GetGripperIndices().size() > 0 ) {
+        if( pmanip->GetGripperIndices().size() > 0 && !!_pGrasperPlanner) {
             RobotBase::RobotStateSaver saver(_robot);
             _robot->SetActiveDOFs(pmanip->GetGripperIndices());
             if( !_phandtraj ) {
