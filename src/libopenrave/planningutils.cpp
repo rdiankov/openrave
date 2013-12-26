@@ -2434,20 +2434,27 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
+        int numRedundantSamplesForEEChecking = 0;
+        if( (int)_pmanip->GetArmIndices().size() > itsample->_ikparam.GetDOF() ) {
+            numRedundantSamplesForEEChecking = 40;
+        }
+        bool bCheckEndEffector = true; //itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
         if( _ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions ) {
             // use requested end effector to be always ignored
             bCheckEndEffector = false;
         }
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
-        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
+        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) { //!(_ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+            // because a goal can be colliding, have to always go in this loop and check if the end effector
+            // could be jittered.
+            // if bCheckEndEffector is true, then should call CheckEndEffectorCollision to quickly prune samples; otherwise, have to rely on calling FindIKSolution
             try {
-                if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
+                if( _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking) ) {
                     bool bcollision=true;
                     if( _fjittermaxdist > 0 ) {
                         // try jittering the end effector out
-                        RAVELOG_VERBOSE("starting jitter transform...\n");
+                        RAVELOG_VERBOSE_FORMAT("starting jitter transform %f...", _fjittermaxdist);
                         // randomly add small offset to the ik until it stops being in collision
                         Transform tjitter;
                         // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
@@ -2463,7 +2470,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 }
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking) ) {
                                         // make sure at least one ik solution exists...
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
@@ -2498,7 +2505,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking) ) {
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
                                         }

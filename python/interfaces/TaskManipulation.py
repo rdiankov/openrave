@@ -175,7 +175,7 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
-            cmd += 'outputfinal'
+            cmd += 'outputfinal '
         if translationstepmult is not None:
             cmd += 'translationstepmult %.15e '%translationstepmult
         if finestep is not None:
@@ -211,7 +211,7 @@ class TaskManipulation:
         if (outputtraj is not None and outputtraj) or (outputtrajobj is not None and outputtrajobj):
             cmd += 'outputtraj '
         if outputfinal:
-            cmd += 'outputfinal'
+            cmd += 'outputfinal '
         if coarsestep is not None:
             cmd += 'coarsestep %.15e '%coarsestep
         if translationstepmult is not None:

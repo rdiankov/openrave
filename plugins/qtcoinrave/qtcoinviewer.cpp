@@ -2814,7 +2814,7 @@ void QtCoinViewer::UpdateFromModel()
                                 break;
                         }
                         if( !lockenv ) {
-                            RAVELOG_VERBOSE("couldn't acquire viewer lock\n");
+                            //RAVELOG_VERBOSE("couldn't acquire viewer lock\n");
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }

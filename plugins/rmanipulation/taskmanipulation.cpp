@@ -1650,6 +1650,7 @@ protected:
                 --nSeedIkSolutions;
             }
             else {
+                RAVELOG_VERBOSE("could not sample goal\n");
                 --nSeedIkSolutions;
             }
         }
@@ -1729,16 +1730,30 @@ protected:
         return ptraj;
     }
 
-    IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
+    IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
             return IKRA_Success;
         }
         if( ikparam.GetType() != IKP_Transform6D ) {
             // only check end effector if not trasform 6d
-            if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform(), _report) ) {
-                RAVELOG_DEBUG_FORMAT("grasper planner CheckEndEffectorCollision: %s", _report->__str__());
-                return IKRA_Reject;
+            if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), _report) ) {
+                // if any of the collisions is the target
+                if( (!!_report->plink1 && _report->plink1->GetParent() == ptarget) || (!!_report->plink2 && _report->plink2->GetParent() == ptarget) ) {
+                    // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
+                }
+                else {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "grasper planner CheckEndEffectorCollision: " << _report->__str__() << ", manipvalues=[";
+                        FOREACHC(it, vsolution) {
+                            ss << *it << ", ";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE(ss.str());
+                    }
+                    return IKRA_Reject;
+                }
             }
             return IKRA_Success;
         }

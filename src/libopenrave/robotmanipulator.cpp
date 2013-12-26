@@ -658,12 +658,29 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
     return false;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
         return CheckEndEffectorCollision(ikparam.GetTransform6D(),report);
     }
     RobotBasePtr probot = GetRobot();
+    if( numredundantsamples > 0 ) {
+        if( ikparam.GetType() == IKP_TranslationDirection5D ) {
+            Transform tStartEE;
+            tStartEE.rot = quatRotateDirection(_info._vdirection, ikparam.GetTranslationDirection5D().dir);
+            tStartEE.trans = ikparam.GetTranslationDirection5D().pos;
+            Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
+            for(int i = 0; i < numredundantsamples; ++i) {
+                if( CheckEndEffectorCollision(tStartEE,report) ) {
+                    return true;
+                }
+                tStartEE.rot = quatMultiply(tStartEE.rot, qdelta);
+            }
+            return false;
+        }
+        RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+    }
+
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
