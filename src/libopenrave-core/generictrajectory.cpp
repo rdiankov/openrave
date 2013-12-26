@@ -730,7 +730,7 @@ protected:
 
     void _ValidateQuadratic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        if( deltatime > 0 ) {
+        if( deltatime > g_fEpsilon ) {
             size_t offset = ipoint*_spec.GetDOF();
             int derivoffset = _vderivoffsets[g.offset];
             for(int i = 0; i < g.dof; ++i) {

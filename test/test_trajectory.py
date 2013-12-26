@@ -32,14 +32,15 @@ class TestTrajectory(EnvironmentSetup):
         Tgoal2[2,3] += 0.2
         traj2=basemanip.MoveToHandPosition(matrices=[Tgoal2],execute=False,outputtrajobj=True)
         traj3=planningutils.MergeTrajectories([traj1,traj2])
-
+        samplepoints = [traj3.Sample(t) for t in arange(0,mergedtraj.GetDuration(),0.001)]
+        
         with robot:
             dofvalues=traj3.GetConfigurationSpecification().ExtractJointValues(traj3.GetWaypoint(-1),robot,range(robot.GetDOF()),0)
             robot.SetDOFValues(dofvalues)
             assert( transdist(manip1.GetTransform(),Tgoal1) <= g_epsilon)
             assert( transdist(manip2.GetTransform(),Tgoal2) <= g_epsilon)
             assert( abs(traj3.GetDuration() - max(traj1.GetDuration(),traj2.GetDuration())) <= g_epsilon )
-
+            
     def test_merging2(self):
         env=self.env
         trajdata0 = '''<trajectory>
@@ -74,7 +75,9 @@ class TestTrajectory(EnvironmentSetup):
         iswaypointindex = spec.FindCompatibleGroup('iswaypoint',True).offset
         for i in range(mergedtraj.GetNumWaypoints()):
             assert( abs(mergedtraj.GetWaypoint(i)[iswaypointindex]-1) < 1e-7 )
-            
+        
+        samplepoints = [mergedtraj.Sample(t) for t in arange(0,mergedtraj.GetDuration(),0.001)]
+    
     def test_grabbing(self):
         env = self.env
         with env:

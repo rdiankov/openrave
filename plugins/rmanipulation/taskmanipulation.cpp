@@ -95,6 +95,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "Sets the robot.");
         _fMaxVelMult=1;
         _minimumgoalpaths=1;
+        _report.reset(new CollisionReport());
     }
     virtual ~TaskManipulation()
     {
@@ -1735,8 +1736,8 @@ protected:
         }
         if( ikparam.GetType() != IKP_Transform6D ) {
             // only check end effector if not trasform 6d
-            if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
-                RAVELOG_DEBUG("grasper planner CheckEndEffectorCollision\n");
+            if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform(), _report) ) {
+                RAVELOG_DEBUG_FORMAT("grasper planner CheckEndEffectorCollision: %s", _report->__str__());
                 return IKRA_Reject;
             }
             return IKRA_Success;
@@ -1800,6 +1801,7 @@ protected:
     std::vector< std::vector<dReal> > _vcachedsolutions;
     std::string _sPostProcessingParameters;
     int _minimumgoalpaths;
+    CollisionReportPtr _report;
 };
 
 ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {
