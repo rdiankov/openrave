@@ -1267,7 +1267,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         int ran = RaveRandomInt()%10000;
         string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
-        RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
+        RAVELOG_VERBOSE_FORMAT("Writing before retime traj to %s", filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         trajinitial->serialize(f);
@@ -2482,7 +2482,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                             break;
                                         }
                                         else {
-                                            RAVELOG_VERBOSE_FORMAT("jitter succed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
+                                            RAVELOG_VERBOSE_FORMAT("jitter succeed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
                                         }
                                     }
                                 }

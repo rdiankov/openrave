@@ -671,12 +671,12 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
             tStartEE.trans = ikparam.GetTranslationDirection5D().pos;
             Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
             for(int i = 0; i < numredundantsamples; ++i) {
-                if( CheckEndEffectorCollision(tStartEE,report) ) {
-                    return true;
+                if( !CheckEndEffectorCollision(tStartEE,report) ) {
+                    return false;
                 }
                 tStartEE.rot = quatMultiply(tStartEE.rot, qdelta);
             }
-            return false;
+            return true;
         }
         RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
     }
