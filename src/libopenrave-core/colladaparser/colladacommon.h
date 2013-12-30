@@ -122,6 +122,8 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaXMLReadable::Binding)
 
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
+bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
+bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
@@ -141,6 +143,18 @@ namespace OpenRAVE
 {
 
 inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+    return false;
+}
+
+inline bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+    return false;
+}
+
+inline bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;

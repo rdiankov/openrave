@@ -492,3 +492,25 @@ class TestCOLLADA(EnvironmentSetup):
         env2.Load('test_external_extrainfo2.dae')
         robot2=env2.GetRobots()[0]
         misc.CompareBodies(robot,robot2)
+
+    def test_individualuri(self):
+        self.log.info('test loading individual objects from larget collada file')
+        env=self.env
+        env.Load('data/lab1.env.xml')
+        env.Save('test_individualuri.dae')
+        
+        env2 = Environment()
+        env2.Load('test_individualuri.dae')
+        
+        env3 = Environment()
+        
+        for body2 in env2.GetBodies():
+            print 'opening ', body2.GetURI()
+            if body2.IsRobot():
+                body3 = env3.ReadRobotURI(body2.GetURI())
+            else:
+                body3 = env3.ReadKinBodyURI(body2.GetURI())
+            env3.Add(body3)
+            assert(body2.GetName()==body3.GetName())
+            misc.CompareBodies(body2,body3,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=False,comparephysics=True,computeadjacent=True,epsilon=1e-10)
+            

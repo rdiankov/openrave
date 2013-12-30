@@ -259,6 +259,7 @@ public:
         _InitPreOpen(atts);
         _bOpeningZAE = uristr.find(".zae") == uristr.size()-4;
         daeURI urioriginal(*_dae, uristr);
+        urioriginal.fragment(std::string()); // have to set the fragment to empty!
         std::string uriresolved;
 
         if( find(_vOpenRAVESchemeAliases.begin(),_vOpenRAVESchemeAliases.end(),urioriginal.scheme()) != _vOpenRAVESchemeAliases.end() ) {
@@ -277,7 +278,7 @@ public:
                 return false;
             }
         }
-        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : uristr));
+        _dom = daeSafeCast<domCOLLADA>(_dae->open(uriresolved.size() > 0 ? uriresolved : urioriginal.str()));
         if( !_dom ) {
             return false;
         }
@@ -623,15 +624,16 @@ public:
         pbody->SetDOFValues(values);
     }
 
-    /// \extract the first possible robot in the scene
-    bool Extract(RobotBasePtr& probot)
+    /// \extract robot from the scene
+    ///
+    /// \param instanceArticulatdSystemId If not empty, will extract the first articulated_system whose id matches instanceArticulatdSystemId. If empty, will extract the first articulated system found.
+    bool Extract(RobotBasePtr& probot, const std::string& instanceArticulatdSystemId=std::string())
     {
         std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
             return false;
         }
-
         _setInitialLinks.clear();
         _setInitialJoints.clear();
         _setInitialManipulators.clear();
@@ -666,6 +668,12 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
+                if( instanceArticulatdSystemId.size() > 0 ) {
+                    xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                        continue;
+                    }
+                }
                 KinBodyPtr pbody=probot;
                 std::list<daeElementRef> listInstanceScope;
                 if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings, listInstanceScope) && !!pbody ) {
@@ -682,12 +690,20 @@ public:
             }
         }
 
-        KinBodyPtr pbody = probot;
-        FOREACH(it, listPossibleBodies) {
-            std::list<daeElementRef> listInstanceScope;
-            if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
-                bSuccess = true;
-                break;
+        if( !bSuccess ) {
+            KinBodyPtr pbody = probot;
+            FOREACH(it, listPossibleBodies) {
+                if( instanceArticulatdSystemId.size() > 0 ) {
+                    xsAnyURI articulatedSystemURI = it->first->getUrl();
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                        continue;
+                    }
+                }
+                std::list<daeElementRef> listInstanceScope;
+                if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
+                    bSuccess = true;
+                    break;
+                }
             }
         }
 
@@ -715,7 +731,10 @@ public:
         return bSuccess;
     }
 
-    bool Extract(KinBodyPtr& pbody)
+    /// \extract a kinbody from the scene
+    ///
+    /// \param instanceArticulatdSystemId If not empty, will extract the first articulated_system whose id matches instanceArticulatdSystemId. If empty, will extract the first articulated system found.
+    bool Extract(KinBodyPtr& pbody, const std::string& instanceArticulatdSystemId=std::string())
     {
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
@@ -746,6 +765,12 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
+                if( instanceArticulatdSystemId.size() > 0 ) {
+                    xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                        continue;
+                    }
+                }
                 std::list<daeElementRef> listInstanceScope;
                 if( ExtractArticulatedSystem(pbody, kscene->getInstance_articulated_system_array()[ias], *bindings, listInstanceScope) && !!pbody ) {
                     bSuccess = true;
@@ -760,6 +785,12 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
+            if( instanceArticulatdSystemId.size() > 0 ) {
+                xsAnyURI articulatedSystemURI = it->first->getUrl();
+                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                    continue;
+                }
+            }
             std::list<daeElementRef> listInstanceScope;
             if( ExtractKinematicsModel(pbody, it->first, *it->second, listInstanceScope) && !!pbody ) {
                 bSuccess = true;
@@ -865,7 +896,7 @@ public:
             _mapJointSids.clear();
         }
         if( pbody->__struri.size() == 0 ) {
-            pbody->__struri = cdom::uriToFilePath(ias->getUrl().str());
+            pbody->__struri = ias->getUrl().str();
         }
 
         // set the name
@@ -1088,7 +1119,7 @@ public:
             _mapJointSids.clear();
         }
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = cdom::uriToFilePath(ikm->getUrl().str());
+            pkinbody->__struri = ikm->getUrl().str();
         }
 
         // check if kmodel has asset/subject, if yes, then set it to the description
@@ -1149,7 +1180,7 @@ public:
         _mapJointSids.clear();
         KinBodyPtr pkinbody = RaveCreateKinBody(_penv);
         if( pkinbody->__struri.size() == 0 ) {
-            pkinbody->__struri = cdom::uriToFilePath(daeURI(*_dae).str());
+            pkinbody->__struri = daeURI(*_dae).str();
         }
         string name = !pdomnode->getName() ? "" : _ConvertToOpenRAVEName(pdomnode->getName());
         if( name.size() == 0 ) {
@@ -4423,7 +4454,33 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const A
     return reader.Extract();
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
+bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaReader reader(penv);
+    if (!reader.InitFromURI(uri,atts)) {
+        return false;
+    }
+    // have to extract the fragment
+    std::string scheme, authority, path, query, fragment;
+    cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
+    return reader.Extract(pbody, fragment);
+}
+
+bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaReader reader(penv);
+    if (!reader.InitFromURI(uri,atts)) {
+        return false;
+    }
+    // have to extract the fragment
+    std::string scheme, authority, path, query, fragment;
+    cdom::parseUriRef(uri, scheme, authority, path, query, fragment);
+    return reader.Extract(probot, fragment);
+}
+
+bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);

@@ -552,6 +552,23 @@ endif ()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
+# always include libpcrecpp since we need it for URL parsing
+pkg_check_modules(libpcrecpp libpcrecpp)
+if( libpcrecpp_FOUND )
+  set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
+  check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+  set(CMAKE_REQUIRED_INCLUDES)
+  if( NOT HAVE_PCRECPP_H )
+    set(libpcrecpp_FOUND 0)
+  endif()
+endif()
+
+if( NOT libpcrecpp_FOUND )
+  message(STATUS "System pcre not found, using local from sources")
+  # include the local pcre
+  add_subdirectory(3rdparty/pcre-8.02)
+endif()
+
 if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
@@ -583,22 +600,6 @@ if( OPT_COLLADA )
     endif()
   else()
     if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-      pkg_check_modules(libpcrecpp libpcrecpp)
-      if( libpcrecpp_FOUND )
-        set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
-        check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-        set(CMAKE_REQUIRED_INCLUDES)
-        if( NOT HAVE_PCRECPP_H )
-          set(libpcrecpp_FOUND 0)
-        endif()
-      endif()
-
-      if( NOT libpcrecpp_FOUND )
-        message(STATUS "System pcre not found, using local from sources")
-        # include the local pcre
-        add_subdirectory(3rdparty/pcre-8.02)
-      endif()
-
       add_subdirectory(3rdparty/collada-2.4.0)
     else()
       set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})

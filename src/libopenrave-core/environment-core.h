@@ -23,6 +23,8 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
+#include <pcrecpp.h>
+
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
             throw openrave_exception(str(boost::format("Interface %s:%s is from a different environment")%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
@@ -402,12 +404,17 @@ public:
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
-        if( _IsColladaFile(filename) ) {
+        if( _IsColladaURI(filename) ) {
+            if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
+                return true;
+            }
+        }
+        else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 return true;
             }
         }
-        if( _IsXFile(filename) ) {
+        else if( _IsXFile(filename) ) {
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
@@ -1052,7 +1059,12 @@ public:
             }
         }
 
-        if( _IsColladaFile(filename) ) {
+        if( _IsColladaURI(filename) ) {
+            if( !RaveParseColladaURI(shared_from_this(), robot, filename, atts) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
@@ -1180,7 +1192,12 @@ public:
             }
         }
 
-        if( _IsColladaFile(filename) ) {
+        if( _IsColladaURI(filename) ) {
+            if( !RaveParseColladaURI(shared_from_this(), body, filename, atts) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
@@ -1317,42 +1334,55 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        if( (type == PT_KinBody ||type == PT_Robot ) && _IsColladaFile(filename) ) {
-            if( type == PT_KinBody ) {
-                BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
-                KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
-                    return InterfaceBasePtr();
-                }
-                pinterface = pbody;
-            }
-            else if( type == PT_Robot ) {
-                BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
-                    return InterfaceBasePtr();
-                }
-                pinterface = probot;
-            }
-            else {
-                return InterfaceBasePtr();
-            }
-            pinterface->__struri = filename;
+        bool bIsColladaURI=false, bIsColladaFile=false, bIsXFile = false;
+        if( _IsColladaURI(filename) ) {
+            bIsColladaURI = true;
         }
-        if( (type == PT_KinBody ||type == PT_Robot ) && _IsXFile(filename) ) {
+        else if( _IsColladaFile(filename) ) {
+            bIsColladaFile = true;
+        }
+        else if( _IsXFile(filename) ) {
+            bIsXFile = true;
+        }
+
+        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsColladaFile||bIsXFile) ) {
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
-                    return InterfaceBasePtr();
+                if( bIsColladaURI ) {
+                    if( !RaveParseColladaURI(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsColladaFile ) {
+                    if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsXFile ) {
+                    if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
                 }
                 pinterface = pbody;
             }
             else if( type == PT_Robot ) {
                 BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
-                    return InterfaceBasePtr();
+                if( bIsColladaURI ) {
+                    if( !RaveParseColladaURI(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsColladaFile ) {
+                    if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsXFile ) {
+                    if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
                 }
                 pinterface = probot;
             }
@@ -2221,6 +2251,16 @@ protected:
         }
         return lockenv;
     }
+
+    static bool _IsColladaURI(const std::string& uri)
+    {
+        string scheme, authority, path, query, fragment;
+        string s1, s3, s6, s8;
+        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        return bmatch && _IsColladaFile(path); //scheme.size() > 0;
+    }
+
     static bool _IsColladaFile(const std::string& filename)
     {
         size_t len = filename.size();

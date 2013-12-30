@@ -1448,7 +1448,11 @@ private:
             string rigidsid = str(boost::format("rigid%d")%(*itlink)->GetIndex());
             pmout->vrigidbodysids.push_back(rigidsid);
             rigid_body->setSid(rigidsid.c_str());
-            rigid_body->setName((*itlink)->GetName().c_str());
+            std::string linkname = (*itlink)->GetName();
+            if( linkname.size() == 0 ) {
+                linkname = str(boost::format("_dummylink%d_")%(*itlink)->GetIndex());
+            }
+            rigid_body->setName(linkname.c_str());
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             domTargetable_floatRef mass = daeSafeCast<domTargetable_float>(ptec->add(COLLADA_ELEMENT_MASS));
             mass->setValue((*itlink)->GetMass());
@@ -1702,10 +1706,12 @@ private:
         LINKOUTPUT out;
         string linksid = _GetLinkSid(plink);
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
-        if( plink->GetName().size() == 0 ) {
-            RAVELOG_WARN(str(boost::format("body %s link %d has empty name!")%plink->GetParent()->GetName()%plink->GetIndex()));
+        std::string linkname = plink->GetName();
+        if( linkname.size() == 0 ) {
+            linkname = str(boost::format("_dummylink%d_")%plink->GetIndex());
+            RAVELOG_WARN_FORMAT("body %s link %d has empty name, so setting to %s!", plink->GetParent()->GetName()%plink->GetIndex()%linkname);
         }
-        pdomlink->setName(plink->GetName().c_str());
+        pdomlink->setName(linkname.c_str());
         pdomlink->setSid(linksid.c_str());
 
         domNodeRef pnode;
@@ -1715,7 +1721,7 @@ private:
             pnode->setId( nodeid.c_str() );
             string nodesid = _GetNodeSid(plink);
             pnode->setSid(nodesid.c_str());
-            pnode->setName(plink->GetName().c_str());
+            pnode->setName(linkname.c_str());
 
             if( IsWrite("geometry") ) {
                 int igeom = 0;
