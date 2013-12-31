@@ -378,7 +378,7 @@ protected:
         dReal fRRTStepLength = 0; // if > 0, then user set
 
         // indices into the grasp table
-        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
+        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1, iGraspFinalFingers=-1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
         int iGraspTransformNoCol = -1;
         int iStartCountdown = 40;
@@ -428,6 +428,9 @@ protected:
             }
             else if( cmd == "imanipulatordirection" ) {
                 sinput >> imanipulatordirection;
+            }
+            else if( cmd == "igraspfinalfingers" ) {
+                sinput >> iGraspFinalFingers;
             }
             else if( cmd == "steplength" ) {
                 sinput >> fRRTStepLength;
