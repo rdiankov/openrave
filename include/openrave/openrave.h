@@ -2202,6 +2202,12 @@ public:
         return iknew;
     }
 
+    inline void Swap(IkParameterization& r) {
+        std::swap(_transform, r._transform);
+        std::swap(_type, r._type);
+        _mapCustomData.swap(r._mapCustomData);
+    }
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;
