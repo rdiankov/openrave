@@ -47,7 +47,11 @@ public:
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("SetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
-                        "Specify two values. First is the default free increment for revolute joint and second is the number of segment to divide free prismatic joints. ");
+                        "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
+        RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
+                        "returns the free increments for all the free joints.");
+        RegisterCommand("GetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_GetFreeIncrementsCommand,this,_1,_2),
+                        "returns the free increments for all the free joints.");
         RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IkReal>::_GetSolutionIndicesCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered. if large-range joints wrap around, (index>>16) holds the index. So (index&0xffff) is unique to robot link pose, while (index>>16) describes the repetition.");
         RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IkReal>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
@@ -87,6 +91,22 @@ public:
         }
         //RAVELOG_VERBOSE(str(boost::format("SetFreeIncrements: %f %f %f %f")%fFreeIncRevolute%fFreeIncPrismaticNum%_fFreeIncRevolute%_fFreeIncPrismaticNum));
         return !!sinput;
+    }
+
+    bool _GetFreeIndicesCommand(ostream& sout, istream& sinput)
+    {
+        FOREACHC(it, _vfreeparams) {
+            sout << *it << " ";
+        }
+        return true;
+    }
+
+    bool _GetFreeIncrementsCommand(ostream& sout, istream& sinput)
+    {
+        FOREACHC(it, _vFreeInc) {
+            sout << *it << " ";
+        }
+        return true;
     }
 
     bool _GetSolutionIndicesCommand(ostream& sout, istream& sinput)
@@ -565,8 +585,37 @@ protected:
     virtual RobotBase::ManipulatorPtr GetManipulator() const {
         return RobotBase::ManipulatorPtr(_pmanip);
     }
+    
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        IkSolverBase::Clone(preference, cloningoptions);
+        boost::shared_ptr< IkFastSolver<dReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<dReal> const>(preference);
+        _vfreeparams = r->_vfreeparams;
+        _vfreerevolute = r->_vfreerevolute;
+        _vjointrevolute = r->_vjointrevolute;
+        _vfreeparamscales = r->_vfreeparamscales;
+        _vFreeInc = r->_vFreeInc;
+        _fFreeIncRevolute = r->_fFreeIncRevolute;
+        _fFreeIncPrismaticNum = r->_fFreeIncPrismaticNum;
+        _nTotalDOF = r->_nTotalDOF;
+        //?
+        //_ikfunctions = r->_ikfunctions;
+        //_cblimits;
+        //_vchildlinks, _vindependentlinks
+        //_resource
+        
+        _ikthreshold = r->_ikthreshold;
+        _kinematicshash = r->_kinematicshash;
+        _qlower = r->_qlower;
+        _qupper = r->_qupper;
+        _qmid = r->_qmid;
+        _qbigrangeindices = r->_qbigrangeindices;
+        _qbigrangemaxsols = r->_qbigrangemaxsols;
+        _qbigrangemaxcumprod = r->_qbigrangemaxcumprod;
+        _iktype = r->_iktype;
+    }
 
-private:
+protected:
     IkReturnAction ComposeSolution(const std::vector<int>& vfreeparams, vector<IkReal>& vfree, int freeindex, const vector<dReal>& q0, const boost::function<IkReturnAction()>& fn, const std::vector<dReal>& vFreeInc)
     {
         if( freeindex >= (int)vfreeparams.size()) {
@@ -1369,7 +1418,7 @@ private:
     }
 
     RobotBase::ManipulatorWeakPtr _pmanip;
-    std::vector<int> _vfreeparams;
+    std::vector<int> _vfreeparams; ///< the indices into _pmanip->GetArmIndices() for the free indices of this IK
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;
     UserDataPtr _cblimits;
