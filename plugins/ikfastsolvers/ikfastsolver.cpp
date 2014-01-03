@@ -46,10 +46,12 @@ public:
         _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
-        RegisterCommand("SetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
+        RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
         RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
                         "returns the free increments for all the free joints.");
+        RegisterCommand("SetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
+                        "sets the free increments for all the free joints");
         RegisterCommand("GetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_GetFreeIncrementsCommand,this,_1,_2),
                         "returns the free increments for all the free joints.");
         RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IkReal>::_GetSolutionIndicesCommand,this,_1,_2),
@@ -76,7 +78,7 @@ public:
         return !!sinput;
     }
 
-    bool _SetFreeIncrementsCommand(ostream& sout, istream& sinput)
+    bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
     {
         dReal fFreeIncRevolute=0.1, fFreeIncPrismaticNum=100;
         sinput >> fFreeIncRevolute >> fFreeIncPrismaticNum >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
@@ -90,6 +92,17 @@ public:
             }
         }
         //RAVELOG_VERBOSE(str(boost::format("SetFreeIncrements: %f %f %f %f")%fFreeIncRevolute%fFreeIncPrismaticNum%_fFreeIncRevolute%_fFreeIncPrismaticNum));
+        return !!sinput;
+    }
+
+    bool _SetFreeIncrementsCommand(ostream& sout, istream& sinput)
+    {
+        if( _vFreeInc.size() == 0 ) {
+            return true;
+        }
+        FOREACHC(it, _vFreeInc) {
+            sinput >> *it;
+        }
         return !!sinput;
     }
 
@@ -124,12 +137,12 @@ public:
         return true;
     }
 
-    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn) {
+    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn, int minpriority, int maxpriority) {
         // have to convert to the manipulator's base coordinate system
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         std::vector<dReal> vsolution;
         pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
-        return _CallFilters(vsolution, pmanip, param, ikreturn);
+        return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
     virtual void SetJointLimits()
@@ -867,6 +880,7 @@ protected:
         }
 
         int allres = IKRA_Reject;
+        IkParameterization paramnewglobal; // needs to be initialized by _ValidateSolutionSingle so we get most accurate result back
         FOREACH(itindex,vsolutionorder) {
             const ikfast::IkSolution<IkReal>& iksol = dynamic_cast<const ikfast::IkSolution<IkReal>& >(solutions.GetSolution(*itindex));
             IkReturnAction res;
@@ -874,11 +888,11 @@ protected:
                 // have to search over all the free parameters of the solution!
                 vsolfree.resize(iksol.GetFree().size());
                 std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
-                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck)), vFreeInc);
+                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck), boost::ref(paramnewglobal)), vFreeInc);
             }
             else {
                 vsolfree.resize(0);
-                res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, bestsolution, param, stateCheck);
+                res = _ValidateSolutionSingle(iksol, textra, sol, vravesol, bestsolution, param, stateCheck, paramnewglobal);
             }
             allres |= res;
             if( res & IKRA_Quit ) {
@@ -897,13 +911,15 @@ protected:
             if( !!ikreturn ) {
                 *ikreturn = *bestsolution.ikreturn;
             }
+            _CallFinishCallbacks(bestsolution.ikreturn, pmanip, paramnewglobal);
             return bestsolution.ikreturn->_action;
         }
         return static_cast<IkReturnAction>(allres);
     }
 
-    // validate a solution
-    IkReturnAction _ValidateSolutionSingle(const ikfast::IkSolution<IkReal>& iksol, boost::tuple<const vector<IkReal>&, const vector<dReal>&,int>& freeq0check, std::vector<IkReal>& sol, std::vector<dReal>& vravesol, SolutionInfo& bestsolution, const IkParameterization& param, StateCheckEndEffector& stateCheck)
+    /// validate a solution
+    /// \param paramnewglobal[out] 
+    IkReturnAction _ValidateSolutionSingle(const ikfast::IkSolution<IkReal>& iksol, boost::tuple<const vector<IkReal>&, const vector<dReal>&, int>& freeq0check, std::vector<IkReal>& sol, std::vector<dReal>& vravesol, SolutionInfo& bestsolution, const IkParameterization& param, StateCheckEndEffector& stateCheck, IkParameterization& paramnewglobal)
     {
         const vector<IkReal>& vfree = boost::get<0>(freeq0check);
         //BOOST_ASSERT(sol.size()== iksol.basesol.size() && vfree.size() == iksol.GetFree().size());
@@ -955,7 +971,7 @@ protected:
             vravesols.push_back(make_pair(vravesol,0));
         }
 
-        IkParameterization paramnewglobal, paramnew;
+        IkParameterization paramnew;
 
         int retactionall = IKRA_Reject;
         if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
@@ -1014,13 +1030,13 @@ protected:
         }
 
         CollisionReport report;
+        CollisionReportPtr ptempreport;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
+        }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             // check for self collisions
             stateCheck.SetSelfCollisionState();
-            CollisionReportPtr ptempreport;
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
-            }
             if( probot->CheckSelfCollision(ptempreport) ) {
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
@@ -1037,7 +1053,7 @@ protected:
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
             }
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), boost::shared_ptr<CollisionReport>(&report,utils::null_deleter())) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), ptempreport) ) {
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "ikfast collision " << report.__str__() << " colvalues=[";
@@ -1152,7 +1168,7 @@ protected:
         // check for self collisions
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
-
+        
         IkParameterization paramnewglobal, paramnew;
 
         int retactionall = IKRA_Reject;
@@ -1210,12 +1226,12 @@ protected:
         }
 
         CollisionReport report;
+        CollisionReportPtr ptempreport;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
+        }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
-            CollisionReportPtr ptempreport;
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
-            }
             if( probot->CheckSelfCollision(ptempreport) ) {
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
@@ -1231,7 +1247,23 @@ protected:
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
             }
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot)) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), ptempreport) ) {
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "ikfast collision " << report.__str__() << " colvalues=[";
+                    std::vector<dReal> vallvalues;
+                    probot->GetDOFValues(vallvalues);
+                    for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                        if( i > 0 ) {
+                            ss << "," << vallvalues[i];
+                        }
+                        else {
+                            ss << vallvalues[i];
+                        }
+                    }
+                    ss << "]";
+                    RAVELOG_VERBOSE(ss.str());
+                }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision);
             }
         }
@@ -1250,7 +1282,9 @@ protected:
             return static_cast<IkReturnAction>(retactionall); // signals to continue
         }
 
-
+        FOREACH(itlocalikreturn, listlocalikreturns) {
+            _CallFinishCallbacks(*itlocalikreturn, pmanip, paramnewglobal);
+        }
         vikreturns.insert(vikreturns.end(),listlocalikreturns.begin(),listlocalikreturns.end());
         return static_cast<IkReturnAction>(retactionall); // signals to continue
     }

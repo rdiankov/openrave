@@ -680,6 +680,7 @@ typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
+typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 
 class BaseXMLReader;
@@ -695,7 +696,9 @@ enum CloningOptions {
     Clone_Viewer = 2, ///< clone the viewer type, although figures won't be copied, new viewer does try to match views
     Clone_Simulation = 4, ///< clone the physics engine and simulation state (ie, timesteps, gravity)
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
-    Clone_Sensors = 16, ///< if specified, will clone the sensors attached to the robot and added to the environment
+    Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
+    Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_All = 0xffffffff,
 };
 
 /// base class for readable interfaces

@@ -364,7 +364,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         freeincvalue = self.freeinc[0]
                 except TypeError:
                     freeincvalue = float(self.freeinc)
-                self.manip.GetIkSolver().SendCommand('SetFreeIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+                self.manip.GetIkSolver().SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8))
             return success
         return self.has()
     

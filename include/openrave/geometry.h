@@ -1053,6 +1053,28 @@ RaveVector<T> quatRotate(const RaveVector<T>& q, const RaveVector<T>& t)
     return v;
 }
 
+/// \brief extracts the x, y, or z axes (column vectors of the rotation matrix) from a quaterion
+///
+/// \param axis the axis to extract. 0 for x, 1 for y, and 2 for z.
+/// \ingroup affine_math
+/// \param
+template <typename T>
+RaveVector<T> ExtractAxisFromQuat(const RaveVector<T>& q, int axis)
+{
+    if( axis == 0 ) {
+        return RaveVector<T>(1 - 2 * (q.z * q.z + q.w * q.w), 2 * (q.y * q.z + q.w * q.x), 2 * (q.y * q.w - q.z * q.x));
+    }
+    else if( axis == 1 ) {
+        return RaveVector<T>(2 * (q.y * q.z - q.w * q.x), 1 - 2 * (q.y * q.y + q.w * q.w), 2 * (q.z * q.w + q.y * q.x));
+    }
+    else if( axis == 2 ) {
+        return RaveVector<T>(2 * (q.y * q.w + q.z * q.x), 2 * (q.z * q.w - q.y * q.x), 1 - 2 * (q.y * q.y + q.z * q.z));
+    }
+    else {
+        MATH_ASSERT(0);
+    }
+    return RaveVector<T>();
+}
 
 /// \brief Return the minimal quaternion that orients sourcedir to targetdir
 ///
