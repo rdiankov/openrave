@@ -67,7 +67,7 @@ public:
         _bVisible = true;
         _bModifiable = true;
     }
-    PyGeometryInfo(const KinBody::GeometryInfo info) {
+    PyGeometryInfo(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
@@ -668,6 +668,15 @@ public:
     void SetGeometriesFromGroup(const std::string& name)
     {
         _plink->SetGeometriesFromGroup(name);
+    }
+
+    object GetGeometriesFromGroup(const std::string& name)
+    {
+        boost::python::list ogeometryinfos;
+        FOREACHC(itinfo, _plink->GetGeometriesFromGroup(name)) {
+            ogeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itinfo)));
+        }
+        return ogeometryinfos;
     }
 
     void SetGroupGeometries(const std::string& name, object ogeometryinfos)
@@ -2846,6 +2855,7 @@ void init_openravepy_kinbody()
                          .def("GetGeometries",&PyLink::GetGeometries, DOXY_FN(KinBody::Link,GetGeometries))
                          .def("InitGeometries",&PyLink::InitGeometries, args("geometries"), DOXY_FN(KinBody::Link,InitGeometries))
                          .def("SetGeometriesFromGroup",&PyLink::SetGeometriesFromGroup, args("name"), DOXY_FN(KinBody::Link,SetGeometriesFromGroup))
+                         .def("GetGeometriesFromGroup",&PyLink::GetGeometriesFromGroup, args("name"), DOXY_FN(KinBody::Link,GetGeometriesFromGroup))
                          .def("SetGroupGeometries",&PyLink::SetGroupGeometries, args("geometries"), DOXY_FN(KinBody::Link,SetGroupGeometries))
                          .def("GetGroupNumGeometries",&PyLink::GetGroupNumGeometries, args("geometries"), DOXY_FN(KinBody::Link,GetGroupNumGeometries))
                          .def("GetRigidlyAttachedLinks",&PyLink::GetRigidlyAttachedLinks, DOXY_FN(KinBody::Link,GetRigidlyAttachedLinks))
