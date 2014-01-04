@@ -2053,7 +2053,7 @@ protected:
                     _listSensors.push_back(pnewsensor);
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone sensor %s: %s", (*itsensor)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone sensor %: %s", (*itsensor)->GetName()%ex.what());
                 }
             }
         }

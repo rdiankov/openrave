@@ -1868,6 +1868,18 @@ void PyKinBody::SetDOFWeights(object o)
     _pbody->SetDOFWeights(values);
 }
 
+void PyKinBody::SetDOFResolutions(object o)
+{
+    if( _pbody->GetDOF() == 0 ) {
+        return;
+    }
+    vector<dReal> values = ExtractArray<dReal>(o);
+    if( (int)values.size() != GetDOF() ) {
+        throw openrave_exception("values do not equal to body degrees of freedom");
+    }
+    _pbody->SetDOFResolutions(values);
+}
+
 void PyKinBody::SetDOFLimits(object olower, object oupper)
 {
     if( _pbody->GetDOF() == 0 ) {
@@ -2607,6 +2619,7 @@ void init_openravepy_kinbody()
                         .def("GetDOFWeights",getdofweights1, DOXY_FN(KinBody,GetDOFWeights))
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
                         .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
+                        .def("SetDOFResolutions",&PyKinBody::SetDOFResolutions, args("resolutions"), DOXY_FN(KinBody,SetDOFResolutions))
                         .def("SetDOFLimits",&PyKinBody::SetDOFLimits, args("lower","upper"), DOXY_FN(KinBody,SetDOFLimits))
                         .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
                         .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))

@@ -1427,6 +1427,11 @@ private:
     /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
     virtual void SetDOFWeights(const std::vector<dReal>& weights, const std::vector<int>& dofindices = std::vector<int>());
 
+    /// \brief sets dof resolutoins
+    ///
+    /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
+    virtual void SetDOFResolutions(const std::vector<dReal>& resolutions, const std::vector<int>& dofindices = std::vector<int>());
+
     /// \brief \see GetDOFLimits
     virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
 

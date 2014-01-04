@@ -737,6 +737,29 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
     _ParametersChanged(Prop_JointProperties);
 }
 
+void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<int>& dofindices)
+{
+    if( dofindices.size() == 0 ) {
+        OPENRAVE_ASSERT_OP((int)v.size(),>=,GetDOF());
+        for(int i = 0; i < GetDOF(); ++i) {
+            OPENRAVE_ASSERT_OP_FORMAT(v[i], >, 0, "dof %d resolution %f has to be >= 0", i%v[i], ORE_InvalidArguments);
+        }
+        std::vector<dReal>::const_iterator itv = v.begin();
+        FOREACHC(it, _vDOFOrderedJoints) {
+            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vresolution.begin());
+            itv += (*it)->GetDOF();
+        }
+    }
+    else {
+        OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
+            pjoint->_info._vresolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+        }
+    }
+    _ParametersChanged(Prop_JointProperties);
+}
+
 void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper)
 {
     OPENRAVE_ASSERT_OP((int)lower.size(),==,GetDOF());

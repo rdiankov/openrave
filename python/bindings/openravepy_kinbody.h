@@ -160,6 +160,7 @@ public:
     bool IsDOFPrismatic(int dofindex) const;
     void SetTransform(object transform);
     void SetDOFWeights(object o);
+    void SetDOFResolutions(object o);
     void SetDOFLimits(object olower, object oupper);
     void SetDOFVelocityLimits(object o);
     void SetDOFAccelerationLimits(object o);
