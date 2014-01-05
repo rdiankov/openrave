@@ -1976,7 +1976,9 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     options &= _filtermask;
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
-            _PrintOnFailure("pre usercheckfn failed");
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure("pre usercheckfn failed");
+            }
             return CFO_CheckUserConstraints;
         }
     }
@@ -2010,7 +2012,9 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
                     int index = it->first;
                     dReal fmaxtorque = it->second;
                     if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
-                        _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                        }
                         return CFO_CheckTimeBasedConstraints;
                     }
                 }
@@ -2019,17 +2023,23 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( (options&CFO_CheckEnvCollisions) && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            _PrintOnFailure(std::string("collision failed ")+_report->__str__());
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure(std::string("collision failed ")+_report->__str__());
+            }
             return CFO_CheckEnvCollisions;
         }
         if( (options&CFO_CheckSelfCollisions) && (*itbody)->CheckSelfCollision(_report) ) {
-            _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
+            }
             return CFO_CheckSelfCollisions;
         }
     }
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
-            _PrintOnFailure("post usercheckfn failed");
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure("post usercheckfn failed");
+            }
             return CFO_CheckUserConstraints;
         }
     }
