@@ -1540,7 +1540,11 @@ public:
             }
         }
         else {
-            RAVELOG_WARN(str(boost::format("failed to find rigid_body info for link %s")%plink->_info._name));
+            std::string nodeid;
+            if( !!pdomnode->getId() ) {
+                nodeid = pdomnode->getId();
+            }
+            RAVELOG_WARN(str(boost::format("failed to find rigid_body info for link %s:%s, nodeid=%s")%plink->GetParent()->GetName()%plink->GetName()%nodeid));
         }
 
         if (!pdomlink) {

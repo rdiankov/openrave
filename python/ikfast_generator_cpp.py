@@ -648,7 +648,7 @@ int main(int argc, char** argv)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]), ht%d=tan(pfree[%d]*0.5);\n'%(name,i,name,i,name,i,name,i)
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]), ht%s=tan(pfree[%d]*0.5);\n'%(name,i,name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = eerot[%d*3+%d];\n"%(i,j,i,j)
