@@ -2301,7 +2301,7 @@ protected:
         string s1, s3, s6, s8;
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
         bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && _IsColladaFile(path); //scheme.size() > 0;
+        return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
     }
 
     static bool _IsColladaFile(const std::string& filename)

@@ -94,7 +94,7 @@ public:
     std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs;
     std::list<AxisBinding> _bindingPassiveAxesSIDs;
-    std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node)
+    std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
 };
 
 typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;

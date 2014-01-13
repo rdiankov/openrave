@@ -192,7 +192,7 @@ public:
     {
         KinBodyPtr pbody; ///< the body written for
         domPhysics_modelRef pmodel;
-        std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices
+        std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices (and openrave link indices)
     };
 
     struct kinematics_model_output
@@ -243,7 +243,7 @@ public:
     {
         KinBodyPtr pbody; ///< the body written for
         domInstance_articulated_systemRef ias;
-        boost::shared_ptr<instance_physics_model_output> ipmout;
+        boost::shared_ptr<instance_physics_model_output> ipmout; // this needs to be an array to support full spec
         std::vector<axis_sids> vaxissids;
         std::vector<std::string > vlinksids;
         std::vector<std::pair<std::string,std::string> > vkinematicsbindings;
@@ -746,21 +746,26 @@ private:
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
                 ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%pbody->GetEnvironmentId()).c_str());
+                ipmout->pmout.reset(new physics_model_output()); // need a physics model output in case this is a robot and is grabbing links
+                ipmout->pmout->pbody = pbody;
+                ipmout->pmout->vrigidbodysids.resize(pbody->GetLinks().size());
+                ipmout->pmout->pmodel; // need to initialize?
 
                 // only write the links that are in this model
-                FOREACH(itlink,pcolladainfo->_bindingLinkSIDs) {
-                    if( itlink->index == imodel ) {
+                for(size_t ilink = 0; ilink < pcolladainfo->_bindingLinkSIDs.size(); ++ilink) {
+                    ColladaXMLReadable::Binding& linkbinding = pcolladainfo->_bindingLinkSIDs[ilink];
+                    if( linkbinding.index == imodel ) {
                         domInstance_rigid_bodyRef pirb = daeSafeCast<domInstance_rigid_body>(ipmout->ipm->add(COLLADA_ELEMENT_INSTANCE_RIGID_BODY));
-                        pirb->setBody(itlink->pmodel.c_str());
-                        pirb->setSid(itlink->pmodel.c_str());
-
+                        pirb->setBody(linkbinding.pmodel.c_str());
+                        pirb->setSid(linkbinding.pmodel.c_str());
+                        ipmout->pmout->vrigidbodysids.at(ilink) = linkbinding.pmodel;
                         if( IsWrite("visual") ) {
-                            size_t fragmentindex = itlink->vmodel.find_last_of('#');
+                            size_t fragmentindex = linkbinding.vmodel.find_last_of('#');
                             if( fragmentindex != std::string::npos ) {
-                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid)));
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,linkbinding.vmodel.substr(fragmentindex)+string(".")+nodeid)));
                             }
                             else {
-                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel)));
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,linkbinding.vmodel)));
                             }
                         }
                     }
@@ -1867,6 +1872,10 @@ private:
             if( (*itias)->pbody->IsRobot() ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>((*itias)->pbody);
                 probot->GetGrabbed(vGrabbedBodies);
+                if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
+                    RAVELOG_DEBUG_FORMAT("physics info is not written to robot %s, so cannot write any grabbed bodies", probot->GetName());
+                    continue;
+                }
                 FOREACHC(itgrabbed,vGrabbedBodies) {
                     boost::shared_ptr<instance_articulated_system_output> grabbedias;
                     FOREACHC(itias2,listModelDatabase) {
