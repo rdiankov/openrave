@@ -6289,6 +6289,10 @@ class IKFastSolver(AutoReloader):
                     dictequations += subdictequations
                 if not duplicatesub:
                     flatzerosubstitutioneqs.append([cond,evalcond,othervarsubs,dictequations])
+        if self._iktype == 'transform6d' or self._iktype == 'rotation3d':
+            trysubstitutions = self.ppsubs+self.npxyzsubs+self.rxpsubs
+        else:
+            trysubstitutions = self.ppsubs
         for cond, evalcond, othervarsubs, dictequations in flatzerosubstitutioneqs:
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
@@ -6321,7 +6325,7 @@ class IKFastSolver(AutoReloader):
                             for casesub in newcasesubs:
                                 self._AddToGlobalSymbols(casesub[0], casesub[1])
                             extradictequations = []
-                            for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
+                            for s,v in trysubstitutions:
                                 neweq = v.subs(newcasesubs)
                                 if neweq != v:
                                     # should we make sure we're not adding it a second time?
