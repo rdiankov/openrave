@@ -283,7 +283,9 @@ public:
                             }
                         }
                         if( !bSuccess ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("original ramp %d is in collision!", irampindex, ORE_Assert);
+                            RAVELOG_WARN_FORMAT("original ramp %d is in collision!", irampindex);
+                            _DumpTrajectory(ptraj, Level_Verbose);
+                            return PS_Failed;
                         }
                     }
                     _bUsePerturbation = true; // re-enable
@@ -335,19 +337,11 @@ public:
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
-                ofstream f(filename.c_str());
-                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                ptraj->serialize(f);
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
-            }
+            _DumpTrajectory(ptraj, Level_Verbose);
+            RAVELOG_WARN_FORMAT("parabolic planner failed: %s", ex.what());
             return PS_Failed;
         }
-        RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+        RAVELOG_DEBUG_FORMAT("path optimizing - computation time=%fs\n", (0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
