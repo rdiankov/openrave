@@ -519,6 +519,18 @@ public:
         return PS_HasSolution;
     }
 
+    std::string _DumpTrajectory(TrajectoryBasePtr ptraj)
+    {
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
+            ofstream f(filename.c_str());
+            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ptraj->serialize(f);
+            return filename;
+        }
+        return std::string();
+    }
+
     /// \brief converts ramps to an openrave trajectory structure. If return is PS_HasSolution, _dummytraj has the converted result
     PlannerStatus ConvertRampsToOpenRAVETrajectory(const std::list<ParabolicRamp::ParabolicRampND>& ramps, ParabolicRamp::RampFeasibilityChecker* pchecker, const std::string& sTrajectoryXMLId=std::string())
     {

@@ -6114,11 +6114,14 @@ class IKFastSolver(AutoReloader):
         # fill the last branch with all the zero conditions
         if hascheckzeros:
             # count the number of rotation symbols seen in the current cases
-            rotsymbols = set(self.Tee[:3,:3]).union([Symbol('new_r00'), Symbol('new_r01'), Symbol('new_r02'), Symbol('new_r10'), Symbol('new_r11'), Symbol('new_r12'), Symbol('new_r20'), Symbol('new_r21'), Symbol('new_r22')])
             numRotSymbolsInCases = 0
-            for var, eq in currentcasesubs:
-                if var in rotsymbols:
-                    numRotSymbolsInCases += 1
+            if self._iktype == 'transform6d' or self._iktype == 'rotation3d':
+                rotsymbols = set(self.Tee[:3,:3]).union([Symbol('new_r00'), Symbol('new_r01'), Symbol('new_r02'), Symbol('new_r10'), Symbol('new_r11'), Symbol('new_r12'), Symbol('new_r20'), Symbol('new_r21'), Symbol('new_r22')])
+                for var, eq in currentcasesubs:
+                    if var in rotsymbols:
+                        numRotSymbolsInCases += 1
+            else:
+                rotsymbols = []
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             # sometimes can get the following: cj3**2*sj4**2 + cj4**2
