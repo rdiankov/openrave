@@ -31,7 +31,7 @@ if platform.startswith('win') or system().lower() == 'windows':
 else:
     try:
         openravepy_currentversion = loadstable(__openravepy_version__)
-    except NameError:
+    except (NameError, AttributeError):
         openravepy_currentversion = loadlatest()
 
 if openravepy_currentversion is not None:
