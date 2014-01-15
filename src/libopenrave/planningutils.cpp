@@ -2640,5 +2640,353 @@ void ManipulatorIKGoalSampler::SetJitter(dReal maxdist)
     _fjittermaxdist = maxdist;
 }
 
+
+ConfigurationJitterer::ConfigurationJitterer(EnvironmentBasePtr penv, PlannerBase::PlannerParametersConstPtr parameters, int maxiterations, dReal maxjitter, dReal perturbation, dReal linkdistthresh2)
+{
+    _penv = penv;
+    //compute AABBs
+    vector<KinBodyPtr> vgrabbed;
+    parameters->_configurationspecification.ExtractUsedBodies(_penv,_vusedbodies);
+    vector<OBB> linkOBBs;
+    vector<Transform> origtransforms;
+
+    //get links
+    for(size_t i = 0; i < _vusedbodies.size(); ++i) {
+        FOREACHC(itlink, _vusedbodies[i]->GetLinks()) {
+            _vLinks.push_back(*itlink);
+        }
+        if( _vusedbodies[i]->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_vusedbodies[i]);        
+            FOREACHC(itgrabbed, vgrabbed) {
+                FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
+                    _vLinks.push_back(*itlink2);
+                }
+            }
+        }
+    }
+
+    //compute AABBs and OBBs for links
+    _vOriginalTransforms.resize(_vLinks.size());
+    _vLinkAABBs.resize(_vLinks.size());
+    _vLinkOBBs.resize(_vLinks.size());
+    for(size_t i = 0; i < _vLinks.size(); ++i){
+        _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
+        _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
+        _vLinkOBBs[i] = geometry::OBBFromAABB(_vLinkAABBs[i], _vOriginalTransforms[i]);
+    }
+    
+    _maxjitter = maxjitter;
+    _perturbation = perturbation;
+    _maxiterations = maxiterations;
+    _linkdistthresh2 = linkdistthresh2;
+}
+
+void ConfigurationJitterer::SetManipulatorBias(RobotBase::ManipulatorConstPtr pmanip, const Vector& vbiasdirection)
+{
+    _pmanip = pmanip;
+    _vbiasdirection = vbiasdirection;
+}
+
+int ConfigurationJitterer::Jitter()
+{
+    std::vector<dReal> curdof, newdof, deltadof, deltadof2, zerodof;
+    _parameters->_getstatefn(curdof);
+    newdof.resize(curdof.size());
+    deltadof.resize(curdof.size(),0);
+    zerodof.resize(curdof.size(),0);
+    CollisionReport report;
+    CollisionReportPtr preport(&report,utils::null_deleter());
+    bool bCollision = false;
+    bool bConstraint = !!_parameters->_neighstatefn;    
+    vector<AABB> newLinkAABBs;
+
+    // create savers for all the used bodies
+    std::vector<KinBody::KinBodyStateSaverPtr> vsavers(_vusedbodies.size());
+    for(size_t i = 0; i < _vusedbodies.size(); ++i) {
+        vsavers[i].reset(new KinBody::KinBodyStateSaver(_vusedbodies[i], KinBody::Save_LinkTransformation));
+    }
+    
+    // have to test with perturbations since very small changes in angles can produce collision inconsistencies
+    std::vector<dReal> _perturbations;
+    if( _perturbation > 0 ) {
+        _perturbations.resize(3,0);
+        _perturbations[1] = _perturbation;
+        _perturbations[2] = -_perturbation;
+    }
+    else {
+        _perturbations.resize(1,0);
+    }
+    FOREACH(itperturbation,_perturbations) {
+        if( bConstraint ) {
+            FOREACH(it,deltadof) {
+                *it = *itperturbation;
+            }
+            newdof = curdof;
+            if( !_parameters->_neighstatefn(newdof,deltadof,0) ) {
+                int setret = _parameters->SetStateValues(curdof, 0);
+                if( setret != 0 ) {
+                    // state failed to set, this could mean the initial state is just really bad, so resume jittering
+                    bCollision = true;
+                    break;
+                }
+                // do not restore since already did that with SetStateValues
+                FOREACH(itsaver, vsavers) {
+                    (*itsaver)->Release();
+                }
+                return -1;
+            }
+        }
+        else {
+            for(size_t i = 0; i < newdof.size(); ++i) {
+                newdof[i] = curdof[i]+*itperturbation;
+                if( newdof[i] > _parameters->_vConfigUpperLimit.at(i) ) {
+                    newdof[i] = _parameters->_vConfigUpperLimit.at(i);
+                }
+                else if( newdof[i] < _parameters->_vConfigLowerLimit.at(i) ) {
+                    newdof[i] = _parameters->_vConfigLowerLimit.at(i);
+                }
+            }
+        }
+
+        // don't need to set state since CheckPathAllConstraints does it
+        if( _parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
+            bCollision = true;
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << "constraints failed, ";
+                for(size_t i = 0; i < newdof.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << newdof[i];
+                    }
+                    else {
+                        ss << "colvalues=[" << newdof[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+            break;
+        }
+    }
+
+    if( !bCollision || _maxjitter <= 0 ) {
+        return -1;
+    }
+
+    FOREACHC(itsampler, _parameters->_listInternalSamplers) {
+        (*itsampler)->SetSeed(_parameters->_nRandomGeneratorSeed);
+    }
+
+    // reset the samplers with the seed, possibly there's some way to cache?
+    std::vector<dReal> vLimitOneThird(_parameters->_vConfigLowerLimit.size()), vLimitTwoThirds(_parameters->_vConfigLowerLimit.size());
+    for(size_t i = 0; i < vLimitOneThird.size(); ++i) {
+        vLimitOneThird[i] = (2*_parameters->_vConfigLowerLimit[i] + _parameters->_vConfigUpperLimit[i])/3.0;
+        vLimitTwoThirds[i] = (_parameters->_vConfigLowerLimit[i] + 2*_parameters->_vConfigUpperLimit[i])/3.0;
+    }
+    deltadof2.resize(curdof.size(),0);
+    dReal imaxiterations = 1.0/dReal(_maxiterations);
+    for(int iter = 0; iter < _maxiterations; ++iter) {
+        // ramp of the jitter as iterations increase
+        dReal jitter = _maxjitter;
+        if( iter < _maxiterations/2 ) {
+            jitter = _maxjitter*dReal(iter)*(2.0*imaxiterations);
+        }
+
+        // candidate jitter
+        _parameters->_samplefn(deltadof);
+        // check which third the sampled dof is in
+        for(size_t j = 0; j < newdof.size(); ++j) {
+            if( deltadof[j] < vLimitOneThird[j] ) {
+                deltadof[j] = -jitter;
+            }
+            else if( deltadof[j] > vLimitTwoThirds[j] ) {
+                deltadof[j] = jitter;
+            }
+            else {
+                deltadof[j] = 0;
+            }
+        }
+
+
+        bCollision = false;
+        bool bConstraintFailed = false;
+        FOREACH(itperturbation,_perturbations) {
+            for(size_t j = 0; j < deltadof.size(); ++j) {
+                deltadof2[j] = deltadof[j] + *itperturbation;
+            }
+            if( bConstraint ) {
+                newdof = curdof;
+                if( _parameters->SetStateValues(newdof, 0) != 0 ) {
+                    bConstraintFailed = true;
+                    break;
+                }
+                if( !_parameters->_neighstatefn(newdof,deltadof2,0) ) {
+                    if( *itperturbation != 0 ) {
+                        RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
+                    }
+                    bConstraintFailed = true;
+                    break;
+                }
+            }
+            else {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    newdof[j] = curdof[j] + deltadof2[j];
+                    if( newdof[j] > _parameters->_vConfigUpperLimit.at(j) ) {
+                        newdof[j] = _parameters->_vConfigUpperLimit.at(j);
+                    }
+                    else if( newdof[j] < _parameters->_vConfigLowerLimit.at(j) ) {
+                        newdof[j] = _parameters->_vConfigLowerLimit.at(j);
+                    }
+                }
+            }
+
+            //AABB trans for candidates 
+            //setting for trans
+            if( _parameters->SetStateValues(newdof, 0) != 0 ) {
+                // get another state
+                continue;
+            }
+            
+            bool bsuccess = true;
+            // get distance between aabbs
+            for (size_t x = 0; x < _vLinkAABBs.size(); ++x)
+            {
+                Transform tnewlink = _vLinks[x]->GetTransform();
+                Transform toldlink = _vOriginalTransforms[x];
+                dReal fMaxTransDistance2 = (tnewlink*_vLinkAABBs[x].pos - toldlink*_vLinkAABBs[x].pos).lengthsqr3();
+                if( fMaxTransDistance2 > _linkdistthresh2 ) {
+                    // bad
+                    bsuccess = false;
+                    break;
+                }
+
+                dReal fMaxRotDistance = 0;
+                if( fMaxRotDistance*fMaxRotDistance > _linkdistthresh2 ) {
+                    // bad
+                    bsuccess = false;
+                    break;
+                }
+
+                if( fMaxTransDistance2 > (_linkdistthresh2 - fMaxRotDistance)*(_linkdistthresh2 - fMaxRotDistance) ) {
+                    // bad
+                    bsuccess = false;
+                    break;
+                }                    
+
+                // TODO
+                /*Vector vmin = _vLinkAABBs[x].pos - _vLinkAABBs[x].extents;
+                Vector vmax = _vLinkAABBs[x].pos + _vLinkAABBs[x].extents;
+
+                Vector nvmin = newLinkAABBs[x].pos - newLinkAABBs[x].extents;
+                Vector nvmax = newLinkAABBs[x].pos + newLinkAABBs[x].extents;
+
+                dReal distance = 0;
+                for (size_t j = 0; j < 3; ++j)
+                {
+                    if (vmin[j] > nvmax[j])
+                    {
+                        dReal delta = nvmax[j] - vmin[j];
+                        distance += delta * delta;
+                    }
+                    else if (nvmin[j] > vmax[j])
+                    {
+                        dReal delta = vmax[j] - nvmin[j];
+                        distance += delta * delta;
+                    }
+                }*/
+
+                RAVELOG_INFO("dist %f thresh %d\n",fMaxTransDistance2, bsuccess);
+            }
+
+
+
+            //set back to original state
+            if( _parameters->SetStateValues(curdof, 0) != 0 ) {
+                // get another state
+                continue;
+            }
+
+            // don't need to set state since CheckPathAllConstraints does it
+            if( _parameters->CheckPathAllConstraints(newdof,newdof,zerodof,zerodof,0,IT_OpenStart) != 0 ) {
+                bCollision = true;
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "constraints failed, ";
+                    for(size_t i = 0; i < newdof.size(); ++i ) {
+                        if( i > 0 ) {
+                            ss << "," << newdof[i];
+                        }
+                        else {
+                            ss << "colvalues=[" << newdof[i];
+                        }
+                    }
+                    ss << "]";
+                    RAVELOG_VERBOSE(ss.str());
+                }
+                break;
+            }
+        }
+        if( !bCollision && !bConstraintFailed ) {
+            // have to restore to non-perturbed configuration!
+            if( bConstraint ) {
+                newdof = curdof;
+                if( _parameters->SetStateValues(newdof, 0) != 0 ) {
+                    // get another state
+                    continue;
+                }
+                if( !_parameters->_neighstatefn(newdof,deltadof,0) ) {
+                    RAVELOG_WARN("neighstatefn failed, but previously succeeded\n");
+                    continue;
+                }
+            }
+            else {
+                for(size_t j = 0; j < deltadof.size(); ++j) {
+                    newdof[j] = curdof[j] + deltadof[j];
+                    if( newdof[j] > _parameters->_vConfigUpperLimit.at(j) ) {
+                        newdof[j] = _parameters->_vConfigUpperLimit.at(j);
+                    }
+                    else if( newdof[j] < _parameters->_vConfigLowerLimit.at(j) ) {
+                        newdof[j] = _parameters->_vConfigLowerLimit.at(j);
+                    }
+                }
+            }
+            if( _parameters->SetStateValues(newdof, 0) != 0 ) {
+                // get another state
+                continue;
+            }
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _parameters->_getstatefn(newdof);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                for(size_t i = 0; i < newdof.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << newdof[i];
+                    }
+                    else {
+                        ss << "jitteredvalues=[" << newdof[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
+
+            // have to release the savers so they do not restore
+            FOREACH(itsaver, vsavers) {
+                (*itsaver)->Release();
+            }
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/*~ConfigurationJitterer::ConfigurationJitterer()
+{
+}
+
+int ConfigurationJitterer::Jitter()
+{
+}*/
+
 } // planningutils
 } // OpenRAVE
