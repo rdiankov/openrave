@@ -1521,13 +1521,13 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     }
     // splice in the new trajectory. pBestTrajectory's first waypoint matches traj's iBestInsertionWaypoint
     traj->Remove(iBestInsertionWaypoint+1,traj->GetNumWaypoints());
-//    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
-//    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
-//    for(size_t i = 0; i < vprevpoint.size(); ++i) {
-//        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
-//            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
-//        }
-//    }
+    //    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
+    //    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
+    //    for(size_t i = 0; i < vprevpoint.size(); ++i) {
+    //        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
+    //            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
+    //        }
+    //    }
     pBestTrajectory->GetWaypoints(1,pBestTrajectory->GetNumWaypoints(),vwaypoint,traj->GetConfigurationSpecification());
     traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
     dReal fNewDuration = traj->GetDuration();
@@ -1862,11 +1862,11 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         Vector zquat = quatFromAxisAngle(Vector(0,0,1),itdh->theta);
         Vector xquat = quatFromAxisAngle(Vector(1,0,0),itdh->alpha);
         bool bflip = false;
-//        if( itdh->a < -g_fEpsilon ) {
-//            // cannot have -a since a lot of formats specify a as positive
-//            bflip = true;
-//        }
-//        else {
+        //        if( itdh->a < -g_fEpsilon ) {
+        //            // cannot have -a since a lot of formats specify a as positive
+        //            bflip = true;
+        //        }
+        //        else {
         Vector worldrotquat = quatMultiply(itdh->transform.rot, quatMultiply(zquat, xquat));
         // always try to have the x-axis pointed positively towards x
         // (worldrotquat * (1,0,0))[0] < 0
@@ -2641,8 +2641,9 @@ void ManipulatorIKGoalSampler::SetJitter(dReal maxdist)
 }
 
 
-ConfigurationJitterer::ConfigurationJitterer(EnvironmentBasePtr penv, PlannerBase::PlannerParametersConstPtr parameters, int maxiterations, dReal maxjitter, dReal perturbation, dReal linkdistthresh2)
+ConfigurationJitterer::ConfigurationJitterer(EnvironmentBasePtr penv, PlannerBase::PlannerParametersConstPtr parameters, int maxiterations, dReal maxjitter, dReal perturbation, dReal linkdistthresh)
 {
+    _bUseNeighborFn = true;
     _penv = penv;
     //compute AABBs
     vector<KinBodyPtr> vgrabbed;
@@ -2652,33 +2653,41 @@ ConfigurationJitterer::ConfigurationJitterer(EnvironmentBasePtr penv, PlannerBas
 
     //get links
     for(size_t i = 0; i < _vusedbodies.size(); ++i) {
+        RAVELOG_DEBUG_FORMAT("Body: %s\n", _vusedbodies[i]->GetName());
         FOREACHC(itlink, _vusedbodies[i]->GetLinks()) {
             _vLinks.push_back(*itlink);
+            RAVELOG_DEBUG_FORMAT("Adding used link: %s\n", (*itlink)->GetName());
         }
         if( _vusedbodies[i]->IsRobot() ) {
-            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_vusedbodies[i]);        
+            RAVELOG_DEBUG_FORMAT("Body %s is Robot\n", _vusedbodies[i]->GetName());
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_vusedbodies[i]);
             FOREACHC(itgrabbed, vgrabbed) {
+                RAVELOG_DEBUG_FORMAT("Grabbed body: %s\n", (*itgrabbed)->GetName());
                 FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
+                    RAVELOG_DEBUG_FORMAT("Adding grabbed link: %s\n", (*itgrabbed)->GetName());
                     _vLinks.push_back(*itlink2);
                 }
             }
         }
     }
 
+
     //compute AABBs and OBBs for links
     _vOriginalTransforms.resize(_vLinks.size());
     _vLinkAABBs.resize(_vLinks.size());
-    _vLinkOBBs.resize(_vLinks.size());
-    for(size_t i = 0; i < _vLinks.size(); ++i){
+    for(size_t i = 0; i < _vLinks.size(); ++i) {
         _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
         _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
-        _vLinkOBBs[i] = geometry::OBBFromAABB(_vLinkAABBs[i], _vOriginalTransforms[i]);
+        RAVELOG_DEBUG_FORMAT("%s AABB extents %f %f %f pos %f %f %f\n", _vLinks[i]->GetName()%_vLinkAABBs[i].extents.x%_vLinkAABBs[i].extents.y%_vLinkAABBs[i].extents.z%_vLinkAABBs[i].pos.x%_vLinkAABBs[i].pos.y%_vLinkAABBs[i].pos.z);
     }
-    
+
+    _parameters = parameters;
     _maxjitter = maxjitter;
     _perturbation = perturbation;
     _maxiterations = maxiterations;
-    _linkdistthresh2 = linkdistthresh2;
+    _linkdistthresh2 = linkdistthresh*linkdistthresh;
+    RAVELOG_DEBUG_FORMAT("maxiter %d perturbation %f distthresh %f maxjitter: %f\n", _maxiterations%_perturbation%_linkdistthresh2%_maxjitter);
+
 }
 
 void ConfigurationJitterer::SetManipulatorBias(RobotBase::ManipulatorConstPtr pmanip, const Vector& vbiasdirection)
@@ -2687,9 +2696,17 @@ void ConfigurationJitterer::SetManipulatorBias(RobotBase::ManipulatorConstPtr pm
     _vbiasdirection = vbiasdirection;
 }
 
+void ConfigurationJitterer::SetUseNeighborFunction(bool useneighfn)
+{
+    _bUseNeighborFn = useneighfn;
+}
+
 int ConfigurationJitterer::Jitter()
 {
+
+    std::vector<dReal> jacobian;
     std::vector<dReal> curdof, newdof, deltadof, deltadof2, zerodof;
+    Vector newdir;
     _parameters->_getstatefn(curdof);
     newdof.resize(curdof.size());
     deltadof.resize(curdof.size(),0);
@@ -2697,15 +2714,16 @@ int ConfigurationJitterer::Jitter()
     CollisionReport report;
     CollisionReportPtr preport(&report,utils::null_deleter());
     bool bCollision = false;
-    bool bConstraint = !!_parameters->_neighstatefn;    
+    bool bConstraint = _bUseNeighborFn && !!_parameters->_neighstatefn;
     vector<AABB> newLinkAABBs;
+    //dReal fJitterDist = 0;
 
     // create savers for all the used bodies
     std::vector<KinBody::KinBodyStateSaverPtr> vsavers(_vusedbodies.size());
     for(size_t i = 0; i < _vusedbodies.size(); ++i) {
         vsavers[i].reset(new KinBody::KinBodyStateSaver(_vusedbodies[i], KinBody::Save_LinkTransformation));
     }
-    
+
     // have to test with perturbations since very small changes in angles can produce collision inconsistencies
     std::vector<dReal> _perturbations;
     if( _perturbation > 0 ) {
@@ -2730,9 +2748,9 @@ int ConfigurationJitterer::Jitter()
                     break;
                 }
                 // do not restore since already did that with SetStateValues
-                FOREACH(itsaver, vsavers) {
-                    (*itsaver)->Release();
-                }
+                //FOREACH(itsaver, vsavers) {
+                //(*itsaver)->Release();
+                //}
                 return -1;
             }
         }
@@ -2770,11 +2788,18 @@ int ConfigurationJitterer::Jitter()
     }
 
     if( !bCollision || _maxjitter <= 0 ) {
+        // have to restore to initial non-perturbed configuration!
+        if( _parameters->SetStateValues(curdof, 0) != 0 ) {
+            RAVELOG_WARN("failed to restore old values\n");
+        }
+        RAVELOG_DEBUG("bCollision %d maxjitter %f\n",bCollision, _maxjitter);
         return -1;
     }
 
     FOREACHC(itsampler, _parameters->_listInternalSamplers) {
-        (*itsampler)->SetSeed(_parameters->_nRandomGeneratorSeed);
+        int tSeed = time(NULL);
+        (*itsampler)->SetSeed(tSeed);
+        RAVELOG_DEBUG("seeding with %d\n",tSeed); //_parameters->_nRandomGeneratorSeed);
     }
 
     // reset the samplers with the seed, possibly there's some way to cache?
@@ -2792,6 +2817,46 @@ int ConfigurationJitterer::Jitter()
             jitter = _maxjitter*dReal(iter)*(2.0*imaxiterations);
         }
 
+
+        // Use biased sampler every other iteration
+        // if !!_pmanip, bias a new sample depending on the workspace _vbiasdirection. From there subtract it from curdof and compute deltadof.
+        if (1) //!!_pmanip)
+        {
+            RAVELOG_DEBUG_FORMAT("manipulator %s does not have ik solver set\n",_pmanip->GetName());
+
+            RAVELOG_DEBUG_FORMAT("Jacobian %d\n",1);
+            _pmanip->CalculateAngularVelocityJacobian(jacobian);
+            RAVELOG_DEBUG_FORMAT("done %d\n",1);
+            for (int i =0; i < jacobian.size(); ++i) {
+                RAVELOG_DEBUG_FORMAT("%f \n",jacobian[i]);
+            }
+
+            //boost::numeric::ublas::matrix<dReal> J, Jt, JJt;
+            //ublas::matrix<dReal, boost::numeric::ublas::column_major > U(6, 6), Vt(6,6);
+            //ublas::vector<dReal> S(6);
+            /*J.resize(6,_pmanip->GetArmIndices().size());
+
+               _pmanip->CalculateAngularVelocityJacobian(vjacobian);
+               size_t armdof = _pmanip->GetArmIndices().size();
+               for(size_t j = 0; j < armdof; ++j) {
+                J(0,j) = vjacobian[j];
+                J(1,j) = vjacobian[armdof+j];
+                J(2,j) = vjacobian[2*armdof+j];
+               }
+               _pmanip->CalculateJacobian(vjacobian);
+               for(size_t j = 0; j < armdof; ++j) {
+                J(3+0,j) = vjacobian[j];
+                J(3+1,j) = vjacobian[armdof+j];
+                J(3+2,j) = vjacobian[2*armdof+j];
+               }
+               // pseudo inverse of jacobian
+               Jt = ublas::trans(J);
+               JJt = ublas::prod(J,Jt);
+               //boost::numeric::bindings::lapack::gesvd(JJt, S, U, Vt);
+               dReal jdeterminant = RaveFabs(determinant(JJt));*/
+
+        }
+
         // candidate jitter
         _parameters->_samplefn(deltadof);
         // check which third the sampled dof is in
@@ -2806,6 +2871,7 @@ int ConfigurationJitterer::Jitter()
                 deltadof[j] = 0;
             }
         }
+
 
 
         bCollision = false;
@@ -2840,69 +2906,58 @@ int ConfigurationJitterer::Jitter()
                 }
             }
 
-            //AABB trans for candidates 
             //setting for trans
             if( _parameters->SetStateValues(newdof, 0) != 0 ) {
                 // get another state
                 continue;
             }
-            
+
             bool bsuccess = true;
             // get distance between aabbs
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _fjitterresult = 0;
+            }
             for (size_t x = 0; x < _vLinkAABBs.size(); ++x)
             {
                 Transform tnewlink = _vLinks[x]->GetTransform();
                 Transform toldlink = _vOriginalTransforms[x];
                 dReal fMaxTransDistance2 = (tnewlink*_vLinkAABBs[x].pos - toldlink*_vLinkAABBs[x].pos).lengthsqr3();
-                if( fMaxTransDistance2 > _linkdistthresh2 ) {
-                    // bad
+                if (fMaxTransDistance2 > _linkdistthresh2) {
                     bsuccess = false;
+                    RAVELOG_DEBUG_FORMAT("Thresh violated %f > %f\n",fMaxTransDistance2%_linkdistthresh2);
                     break;
                 }
 
-                dReal fMaxRotDistance = 0;
-                if( fMaxRotDistance*fMaxRotDistance > _linkdistthresh2 ) {
-                    // bad
-                    bsuccess = false;
-                    break;
-                }
+                _fjitterresult = fMaxTransDistance2;
 
-                if( fMaxTransDistance2 > (_linkdistthresh2 - fMaxRotDistance)*(_linkdistthresh2 - fMaxRotDistance) ) {
-                    // bad
-                    bsuccess = false;
-                    break;
-                }                    
+                // TODO Add Rot Distance
+                /*if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                   // more statics gather stuff
+                   }*/
 
-                // TODO
-                /*Vector vmin = _vLinkAABBs[x].pos - _vLinkAABBs[x].extents;
-                Vector vmax = _vLinkAABBs[x].pos + _vLinkAABBs[x].extents;
+                /*dReal fMaxRotDistance = 0;
+                   if( fMaxRotDistance*fMaxRotDistance > _linkdistthresh2 ) {
+                   // bad
+                   bsuccess = false;
+                   break;
+                   }
 
-                Vector nvmin = newLinkAABBs[x].pos - newLinkAABBs[x].extents;
-                Vector nvmax = newLinkAABBs[x].pos + newLinkAABBs[x].extents;
+                   if( fMaxDist > (_linkdistthresh2 - fMaxRotDistance)*(_linkdistthresh2 - fMaxRotDistance) ) {
+                   // bad
+                   bsuccess = false;
+                   break;
+                   }*/
 
-                dReal distance = 0;
-                for (size_t j = 0; j < 3; ++j)
-                {
-                    if (vmin[j] > nvmax[j])
-                    {
-                        dReal delta = nvmax[j] - vmin[j];
-                        distance += delta * delta;
-                    }
-                    else if (nvmin[j] > vmax[j])
-                    {
-                        dReal delta = vmax[j] - nvmin[j];
-                        distance += delta * delta;
-                    }
-                }*/
-
-                RAVELOG_INFO("dist %f thresh %d\n",fMaxTransDistance2, bsuccess);
             }
 
-
-
-            //set back to original state
-            if( _parameters->SetStateValues(curdof, 0) != 0 ) {
-                // get another state
+            if( !bsuccess ) {
+                bConstraintFailed = true;
+                // TODO don't set back ?
+                if( _parameters->SetStateValues(curdof, 0) != 0 ) {
+                    RAVELOG_DEBUG("Not able to set back to original state\n");
+                    // get another state
+                    continue;
+                }
                 continue;
             }
 
@@ -2979,14 +3034,6 @@ int ConfigurationJitterer::Jitter()
 
     return 0;
 }
-
-/*~ConfigurationJitterer::ConfigurationJitterer()
-{
-}
-
-int ConfigurationJitterer::Jitter()
-{
-}*/
 
 } // planningutils
 } // OpenRAVE
