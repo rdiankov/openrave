@@ -1669,22 +1669,22 @@ object PyKinBody::GetTransformPose() const {
     return toPyArray(_pbody->GetTransform());
 }
 
-object PyKinBody::GetLinkTransformations(bool returndofbranches) const
+object PyKinBody::GetLinkTransformations(bool returndoflastvlaues) const
 {
     boost::python::list otransforms;
     vector<Transform> vtransforms;
-    std::vector<int> vdofbranches;
-    _pbody->GetLinkTransformations(vtransforms,vdofbranches);
+    std::vector<dReal> vdoflastsetvalues;
+    _pbody->GetLinkTransformations(vtransforms, vdoflastsetvalues);
     FOREACHC(it, vtransforms) {
         otransforms.append(ReturnTransform(*it));
     }
-    if( returndofbranches ) {
-        return boost::python::make_tuple(otransforms, toPyArray(vdofbranches));
+    if( returndoflastvlaues ) {
+        return boost::python::make_tuple(otransforms, toPyArray(vdoflastsetvalues));
     }
     return otransforms;
 }
 
-void PyKinBody::SetLinkTransformations(object transforms, object odofbranches)
+void PyKinBody::SetLinkTransformations(object transforms, object odoflastvalues)
 {
     size_t numtransforms = len(transforms);
     if( numtransforms != _pbody->GetLinks().size() ) {
@@ -1694,11 +1694,11 @@ void PyKinBody::SetLinkTransformations(object transforms, object odofbranches)
     for(size_t i = 0; i < numtransforms; ++i) {
         vtransforms[i] = ExtractTransform(transforms[i]);
     }
-    if( odofbranches == object() ) {
+    if( odoflastvalues == object() ) {
         _pbody->SetLinkTransformations(vtransforms);
     }
     else {
-        _pbody->SetLinkTransformations(vtransforms, ExtractArray<int>(odofbranches));
+        _pbody->SetLinkTransformations(vtransforms, ExtractArray<dReal>(odoflastvalues));
     }
 }
 
@@ -2651,9 +2651,9 @@ void init_openravepy_kinbody()
                         .def("GetJointFromDOFIndex",&PyKinBody::GetJointFromDOFIndex,args("dofindex"), DOXY_FN(KinBody,GetJointFromDOFIndex))
                         .def("GetTransform",&PyKinBody::GetTransform, DOXY_FN(KinBody,GetTransform))
                         .def("GetTransformPose",&PyKinBody::GetTransformPose, DOXY_FN(KinBody,GetTransform))
-                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, GetLinkTransformations_overloads(args("returndofbranches"), DOXY_FN(KinBody,GetLinkTransformations)))
+                        .def("GetLinkTransformations",&PyKinBody::GetLinkTransformations, GetLinkTransformations_overloads(args("returndoflastvlaues"), DOXY_FN(KinBody,GetLinkTransformations)))
                         .def("GetBodyTransformations",&PyKinBody::GetLinkTransformations, DOXY_FN(KinBody,GetLinkTransformations))
-                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,SetLinkTransformations_overloads(args("transforms","dofbranches"), DOXY_FN(KinBody,SetLinkTransformations)))
+                        .def("SetLinkTransformations",&PyKinBody::SetLinkTransformations,SetLinkTransformations_overloads(args("transforms","doflastsetvalues"), DOXY_FN(KinBody,SetLinkTransformations)))
                         .def("SetBodyTransformations",&PyKinBody::SetLinkTransformations,args("transforms"), DOXY_FN(KinBody,SetLinkTransformations))
                         .def("SetLinkVelocities",&PyKinBody::SetLinkVelocities,args("velocities"), DOXY_FN(KinBody,SetLinkVelocities))
                         .def("SetVelocity",&PyKinBody::SetVelocity, args("linear","angular"), DOXY_FN(KinBody,SetVelocity "const Vector; const Vector"))

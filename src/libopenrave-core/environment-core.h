@@ -1740,12 +1740,12 @@ public:
             _vPublishedBodies.reserve(_vecbodies.size());
         }
 
-        std::vector<int> vdofbranches;
+        std::vector<dReal> vdoflastsetvalues;
         FOREACH(itbody, _vecbodies) {
             _vPublishedBodies.push_back(KinBody::BodyState());
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;
-            (*itbody)->GetLinkTransformations(state.vectrans, vdofbranches);
+            (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
             (*itbody)->GetDOFValues(state.jointvalues);
             state.strname =(*itbody)->GetName();
             state.environmentid = (*itbody)->GetEnvironmentId();
