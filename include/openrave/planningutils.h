@@ -596,63 +596,6 @@ protected:
 
 typedef boost::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
 
-/// \brief If the current configuration does not satisfy constraints, then jitters it using a \ref PlannerBase::PlannerParameters structure
-class OPENRAVE_API ConfigurationJitterer
-{
-public:
-    /**
-        \param parameters The planner parameters used to define the configuration space to jitter. The following fields are required: _getstatefn, _setstatefn, _vConfigUpperLimit, _vConfigLowerLimit, _checkpathvelocityconstraintsfn, _diffstatefn, _nRandomGeneratorSeed, _samplefn. The following are used and optional : _neighstatefn (used for constraining on manifolds)
-        \param maxiterations number of different configurations to test
-        \param maxjitter The max deviation of a dof value to jitter. value +- maxjitter
-        \param perturbation Test with perturbations since very small changes in angles can produce collision inconsistencies
-     */
-    ConfigurationJitterer(EnvironmentBasePtr penv, PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5, dReal linkdistthresh=0.01);
-    virtual ~ConfigurationJitterer(){
-    }
-
-    /// \brief sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction
-    void SetManipulatorBias(RobotBase::ManipulatorConstPtr pmanip, const Vector& vbiasdirection);
-
-    /// \brief jitters the current configuration and sets a new configuration on the environment
-    ///
-    /// \return Return 0 if jitter failed and constraints are not satisfied. -1 if constraints are originally satisfied. 1 if jitter succeeded, configuration is different, and constraints are satisfied.
-    int Jitter();
-
-    /// \brief if set to true, then will use _parameters->neightstatefn for computing the next configuration. Otherwise will use simple addition.
-    ///
-    /// Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
-    void SetUseNeighborFunction(bool buseneighfn);
-
-    /// get other result parameters
-    //dReal GetResultWorkspaceLinkDistance();
-    dReal GetResultJitterDist() {
-        return _fjitterresult;
-    }
-
-protected:
-    // caches
-    EnvironmentBasePtr _penv;
-    PlannerBase::PlannerParametersConstPtr _parameters;
-    std::vector<KinBody::LinkPtr> _vLinks;
-    std::vector<AABB> _vLinkAABBs; ///< indexed according to _vLinks
-    std::vector<Transform> _vOriginalTransforms; ///< indexed according to _vLinks
-    std::vector<KinBodyPtr> _vusedbodies;
-    bool _bUseNeighborFn;
-    int _maxiterations;
-    dReal _maxjitter;
-    dReal _perturbation;
-    dReal _linkdistthresh2;
-
-    // for caching results
-    dReal _fjitterresult;
-
-    // for biasing
-    RobotBase::ManipulatorConstPtr _pmanip;
-    Vector _vbiasdirection;
-};
-
-typedef boost::shared_ptr<ConfigurationJitterer> ConfigurationJittererPtr;
-
 } // planningutils
 } // OpenRAVE
 

@@ -328,44 +328,10 @@ public:
 
 typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSamplerPtr;
 
-class PyConfigurationJitterer
-{
-public:
-    PyConfigurationJitterer(PyEnvironmentBasePtr pyenv, object pyplannerparameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5, dReal linkdistthresh=0.01)
-    {
-        _jitterer.reset(new OpenRAVE::planningutils::ConfigurationJitterer(openravepy::GetEnvironment(pyenv), openravepy::GetPlannerParametersConst(pyplannerparameters), maxiterations, maxjitter, perturbation, linkdistthresh));
-
-    }
-    virtual ~PyConfigurationJitterer()
-    {
-    }
-
-    void SetManipulatorBias(object manip, object biasdir)
-    {
-    }
-
-    dReal Jitter()
-    {
-        return _jitterer->Jitter();
-    }
-
-    void SetUseNeighborFunction(bool useneighfn)
-    {
-        _jitterer->SetUseNeighborFunction(useneighfn);
-    }
-
-    OpenRAVE::planningutils::ConfigurationJittererPtr _jitterer;
-
-};
-
-typedef boost::shared_ptr<PyConfigurationJitterer> PyConfigurationJittererPtr;
 
 } // end namespace planningutils
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 3)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ConfigurationJitterer_overloads, planningutils::PyConfigurationJitterer::ConfigurationJitterer, 2, 6)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetManipulatorBias_overloads, planningutils::PyConfigurationJitterer::SetManipulatorBias, 2, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetUseNeighborFunction_overloads, planningutils::PyConfigurationJitterer::SetUseNeighborFunction, 1, 1)
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(JitterCurrentConfiguration_overloads, planningutils::pyJitterCurrentConfiguration, 1, 4);
 BOOST_PYTHON_FUNCTION_OVERLOADS(JitterTransform_overloads, planningutils::pyJitterTransform, 2, 3);
@@ -448,12 +414,6 @@ void InitPlanningUtils()
         .def("Sample",&planningutils::PyManipulatorIKGoalSampler::Sample, Sample_overloads(args("ikreturn","releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, Sample)))
         .def("SampleAll",&planningutils::PyManipulatorIKGoalSampler::SampleAll, SampleAll_overloads(args("maxsamples", "maxchecksamples", "releasegil"),DOXY_FN(planningutils::ManipulatorIKGoalSampler, SampleAll)))
         .def("GetIkParameterizationIndex", &planningutils::PyManipulatorIKGoalSampler::GetIkParameterizationIndex, args("index"), DOXY_FN(planningutils::ManipulatorIKGoalSampler, GetIkParameterizationIndex))
-        ;
-        class_<planningutils::PyConfigurationJitterer, planningutils::PyConfigurationJittererPtr >("ConfigurationJitterer", DOXY_CLASS(planningutils::ConfigurationJitterer), no_init)
-        .def(init<PyEnvironmentBasePtr, object, optional<int, dReal, dReal, dReal> >(args("penv", "parameters", "maxiterations", "maxjitter", "perturbation", "linkdistthresh")))
-        .def("SetManipulatorBias",&planningutils::PyConfigurationJitterer::SetManipulatorBias, SetManipulatorBias_overloads(args("manip","biasdirection"),DOXY_FN(planningutils::ConfigurationJitterer, SetManipulatorBias)))
-        .def("SetUseNeighborFunction",&planningutils::PyConfigurationJitterer::SetUseNeighborFunction, SetUseNeighborFunction_overloads(args("useneighfn"),DOXY_FN(planningutils::ConfigurationJitterer, SetUseNeighborFunction)))
-        .def("Jitter",&planningutils::PyConfigurationJitterer::Jitter, DOXY_FN(planningutils::ConfigurationJitterer, Jitter))
         ;
 
         class_<planningutils::PyActiveDOFTrajectorySmoother, planningutils::PyActiveDOFTrajectorySmootherPtr >("ActiveDOFTrajectorySmoother", DOXY_CLASS(planningutils::ActiveDOFTrajectorySmoother), no_init)
