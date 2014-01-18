@@ -1131,7 +1131,7 @@ protected:
         /// \brief Return the velocity of the specified joint axis only.
         virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
-        boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
+        boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
 
 private:
         /// Sensitive variables that should not be modified.
@@ -1274,7 +1274,7 @@ protected:
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
-        std::vector<int> _vdofbranches;
+        std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
         bool _bRestoreOnDestructor;
@@ -1546,7 +1546,10 @@ private:
     /// \brief get the transformations of all the links and the dof branches at once.
     ///
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const;
+    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
+
+    /// \deprecated (14/05/26)
+    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const RAVE_DEPRECATED;
 
     /// \deprecated (11/05/26)
     virtual void GetBodyTransformations(std::vector<Transform>& transforms) const RAVE_DEPRECATED {
@@ -1667,7 +1670,17 @@ private:
     /// \brief sets the transformations of all the links and dof branches at once.
     ///
     /// Using dof branches allows the full joint state to be recovered
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
+
+    /// \deprecated (14/01/15)
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches) RAVE_DEPRECATED
+    {
+        std::vector<dReal> doflastsetvalues(dofbranches.size());
+        for(size_t i = 0; i < dofbranches.size(); ++i) {
+            doflastsetvalues[i] = dofbranches[i]*2*PI;
+        }
+        SetLinkTransformations(transforms, doflastsetvalues);
+    }
 
     /// \deprecated (11/05/26)
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED {

@@ -61,7 +61,7 @@ typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
-        _pbody->GetLinkTransformations(_vLinkTransforms, _vdofbranches);
+        _pbody->GetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
     }
     if( _options & Save_LinkEnable ) {
         _vEnabledLinks.resize(_pbody->GetLinks().size());
@@ -119,7 +119,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         _pbody->SetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
     if( _options & Save_LinkTransformation ) {
-        pbody->SetLinkTransformations(_vLinkTransforms, _vdofbranches);
+        pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
 //        if( IS_DEBUGLEVEL(Level_Warn) ) {
 //            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
 //            ss << "restoring kinbody " << pbody->GetName() << " to values=[";
@@ -1146,7 +1146,7 @@ void KinBody::GetLinkVelocities(std::vector<std::pair<Vector,Vector> >& velociti
 void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-        RAVELOG_VERBOSE("GetLinkTransformations should be called with dofbranches\n");
+        RAVELOG_VERBOSE("GetLinkTransformations should be called with doflastsetvalues\n");
     }
     vtrans.resize(_veclinks.size());
     vector<Transform>::iterator it;
@@ -1156,29 +1156,44 @@ void KinBody::GetLinkTransformations(vector<Transform>& vtrans) const
     }
 }
 
-void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
+void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const
 {
-    vtrans.resize(_veclinks.size());
+    transforms.resize(_veclinks.size());
     vector<Transform>::iterator it;
     vector<LinkPtr>::const_iterator itlink;
-    for(it = vtrans.begin(), itlink = _veclinks.begin(); it != vtrans.end(); ++it, ++itlink) {
+    for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
         *it = (*itlink)->GetTransform();
     }
 
-    dofbranches.resize(0);
-    if( (int)dofbranches.capacity() < GetDOF() ) {
-        dofbranches.reserve(GetDOF());
+    doflastsetvalues.resize(0);
+    if( (int)doflastsetvalues.capacity() < GetDOF() ) {
+        doflastsetvalues.reserve(GetDOF());
     }
     FOREACHC(it, _vDOFOrderedJoints) {
-        int toadd = (*it)->GetDOFIndex()-(int)dofbranches.size();
+        int toadd = (*it)->GetDOFIndex()-(int)doflastsetvalues.size();
         if( toadd > 0 ) {
-            dofbranches.insert(dofbranches.end(),toadd,0);
+            doflastsetvalues.insert(doflastsetvalues.end(),toadd,0);
         }
         else if( toadd < 0 ) {
             throw OPENRAVE_EXCEPTION_FORMAT("dof indices mismatch joint %s, toadd=%d", (*it)->GetName()%toadd, ORE_InvalidState);
         }
         for(int i = 0; i < (*it)->GetDOF(); ++i) {
-            dofbranches.push_back((*it)->_dofbranches[i]);
+            doflastsetvalues.push_back((*it)->_doflastsetvalues[i]);
+        }
+    }
+}
+
+void KinBody::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& dofbranches) const
+{
+    std::vector<dReal> vdoflastsetvalues;
+    GetLinkTransformations(vtrans, vdoflastsetvalues);
+    dofbranches.resize(vdoflastsetvalues.size());
+    for(size_t idof = 0; idof < vdoflastsetvalues.size(); ++idof) {
+        if( IsDOFRevolute(idof) ) {
+            dofbranches[idof] = CountCircularBranches(vdoflastsetvalues[idof]-GetJointFromDOFIndex(idof)->GetWrapOffset(0));
+        }
+        else {
+            dofbranches[idof] = 0;
         }
     }
 }
@@ -1265,10 +1280,10 @@ Vector KinBody::GetCenterOfMass() const
 void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
-        RAVELOG_WARN("SetLinkTransformations should be called with dofbranches, setting all branches to 0\n");
+        RAVELOG_WARN("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
     }
     else {
-        RAVELOG_DEBUG("SetLinkTransformations should be called with dofbranches, setting all branches to 0\n");
+        RAVELOG_DEBUG("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
     }
     OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "not enough links %d<%d", vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
@@ -1278,13 +1293,13 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
     }
     FOREACH(itjoint,_vecjoints) {
         for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-            (*itjoint)->_dofbranches[i] = 0;
+            (*itjoint)->_doflastsetvalues[i] = (*itjoint)->GetValue(i);
         }
     }
     _nUpdateStampId++;
 }
 
-void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
+void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
     OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "not enough links %d<%d", transforms.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
@@ -1294,7 +1309,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, c
     }
     FOREACH(itjoint,_vecjoints) {
         for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-            (*itjoint)->_dofbranches[i] = dofbranches.at((*itjoint)->GetDOFIndex()+i);
+            (*itjoint)->_doflastsetvalues[i] = doflastsetvalues.at((*itjoint)->GetDOFIndex()+i);
         }
     }
     _nUpdateStampId++;
@@ -1599,8 +1614,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 Transform tsecond;
                 tsecond.rot = quatFromAxisAngle(tfirst.rotate(pjoint->GetInternalHierarchyAxis(1)), pvalues[1]);
                 tjoint = tsecond * tfirst;
-                pjoint->_dofbranches[0] = CountCircularBranches(pvalues[0]-pjoint->GetWrapOffset(0));
-                pjoint->_dofbranches[1] = CountCircularBranches(pvalues[1]-pjoint->GetWrapOffset(1));
+                pjoint->_doflastsetvalues[0] = pvalues[0];
+                pjoint->_doflastsetvalues[1] = pvalues[1];
                 break;
             }
             case JointSpherical: {
@@ -1624,7 +1639,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 if( !pjoint->_info._trajfollow->GetConfigurationSpecification().ExtractTransform(tjoint,vdata.begin(),KinBodyConstPtr()) ) {
                     RAVELOG_WARN(str(boost::format("trajectory sampling for joint %s failed")%pjoint->GetName()));
                 }
-                pjoint->_dofbranches[0] = 0;
+                pjoint->_doflastsetvalues[0] = 0;
                 break;
             }
             default:
@@ -1635,7 +1650,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         else {
             if( pjoint->GetType() == JointRevolute ) {
                 tjoint.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(0), pvalues[0]);
-                pjoint->_dofbranches[0] = CountCircularBranches(pvalues[0]-pjoint->GetWrapOffset(0));
+                pjoint->_doflastsetvalues[0] = pvalues[0];
             }
             else if( pjoint->GetType() == JointPrismatic ) {
                 tjoint.trans = pjoint->GetInternalHierarchyAxis(0) * pvalues[0];
@@ -1645,7 +1660,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     Transform tdelta;
                     if( pjoint->IsRevolute(iaxis) ) {
                         tdelta.rot = quatFromAxisAngle(pjoint->GetInternalHierarchyAxis(iaxis), pvalues[iaxis]);
-                        pjoint->_dofbranches[iaxis] = CountCircularBranches(pvalues[iaxis]-pjoint->GetWrapOffset(iaxis));
+                        pjoint->_doflastsetvalues[iaxis] = pvalues[iaxis];
                     }
                     else {
                         tdelta.trans = pjoint->GetInternalHierarchyAxis(iaxis) * pvalues[iaxis];
@@ -3957,21 +3972,21 @@ void KinBody::_ComputeInternalInformation()
     // because of mimic joints, need to call SetDOFValues at least once, also use this to check for links that are off
     {
         vector<Transform> vprevtrans, vnewtrans;
-        vector<int> vprevdofbranches, vnewdofbranches;
-        GetLinkTransformations(vprevtrans, vprevdofbranches);
+        vector<dReal> vprevdoflastsetvalues, vnewdoflastsetvalues;
+        GetLinkTransformations(vprevtrans, vprevdoflastsetvalues);
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
         KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
-        GetLinkTransformations(vnewtrans, vnewdofbranches);
+        GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
                 RAVELOG_VERBOSE(str(boost::format("link %d has different transformation after SetDOFValues (error=%f), this could be due to mimic joint equations kicking into effect.")%_veclinks.at(i)->GetName()%TransformDistanceFast(vprevtrans[i],vnewtrans[i])));
             }
         }
         for(int i = 0; i < GetDOF(); ++i) {
-            if( vprevdofbranches.at(i) != vnewdofbranches.at(i) ) {
-                RAVELOG_VERBOSE(str(boost::format("dof %d has different branches after SetDOFValues %d!=%d, this could be due to mimic joint equations kicking into effect.")%i%vprevdofbranches.at(i)%vnewdofbranches.at(i)));
+            if( vprevdoflastsetvalues.at(i) != vnewdoflastsetvalues.at(i) ) {
+                RAVELOG_VERBOSE(str(boost::format("dof %d has different values after SetDOFValues %d!=%d, this could be due to mimic joint equations kicking into effect.")%i%vprevdoflastsetvalues.at(i)%vnewdoflastsetvalues.at(i)));
             }
         }
         _vInitialLinkTransformations = vnewtrans;
@@ -4173,8 +4188,8 @@ int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 void KinBody::SetNonCollidingConfiguration()
 {
     _ResetInternalCollisionCache();
-    vector<int> vdofbranches;
-    GetLinkTransformations(_vInitialLinkTransformations, vdofbranches);
+    vector<int> vdoflastsetvalues;
+    GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
 }
 
 void KinBody::_ResetInternalCollisionCache()
@@ -4191,7 +4206,7 @@ const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     {
 public:
         TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) {
-            _pbody->GetLinkTransformations(vcurtrans, _vdofbranches);
+            _pbody->GetLinkTransformations(vcurtrans, _vdoflastsetvalues);
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
@@ -4199,14 +4214,14 @@ public:
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
-                    _pbody->_vecjoints[i]->_dofbranches[j] = _vdofbranches.at(_pbody->_vecjoints[i]->GetDOFIndex()+j);
+                    _pbody->_vecjoints[i]->_doflastsetvalues[j] = _vdoflastsetvalues.at(_pbody->_vecjoints[i]->GetDOFIndex()+j);
                 }
             }
         }
 private:
         KinBodyConstPtr _pbody;
         std::vector<Transform> vcurtrans;
-        std::vector<int> _vdofbranches;
+        std::vector<dReal> _vdoflastsetvalues;
     };
 
     CHECK_INTERNAL_COMPUTATION;

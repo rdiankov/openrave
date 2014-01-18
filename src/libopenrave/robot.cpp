@@ -331,6 +331,13 @@ void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms)
     _UpdateAttachedSensors();
 }
 
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
+{
+    KinBody::SetLinkTransformations(transforms,doflastsetvalues);
+    _UpdateGrabbedBodies();
+    _UpdateAttachedSensors();
+}
+
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
 {
     KinBody::SetLinkTransformations(transforms,dofbranches);

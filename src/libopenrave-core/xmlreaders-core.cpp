@@ -1969,8 +1969,8 @@ public:
             rootjpoffset = (int)_pchain->GetPassiveJoints().size();
             //RAVELOG_INFO(str(boost::format("links: %d, prefix: %s: %x\n")%_pchain->GetLinks().size()%_prefix%this));
             // reisze _vTransforms to be the same size as the initial number of links
-            std::vector<int> dofbranches;
-            _pchain->GetLinkTransformations(_vTransforms,dofbranches);
+            std::vector<dReal> doflastsetvalues;
+            _pchain->GetLinkTransformations(_vTransforms, doflastsetvalues);
         }
     }
 
@@ -2135,8 +2135,8 @@ public:
                 else if( xmlname == "kinbody" ) {
                     // most likely new transforms were added, so update
                     _CheckInterface();
-                    std::vector<int> dofbranches;
-                    _pchain->GetLinkTransformations(_vTransforms,dofbranches);
+                    std::vector<dReal> doflastsetvalues;
+                    _pchain->GetLinkTransformations(_vTransforms, doflastsetvalues);
                 }
                 else
                     RAVELOG_INFOA(str(boost::format("releasing unknown tag %s\n")%xmlname));

@@ -207,13 +207,23 @@ public:
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
 public:
-        CameraGeomData() : width(0), height(0) {
+        CameraGeomData() : width(0), height(0), KK(intrinsics) {
         }
         virtual SensorType GetType() const {
             return ST_Camera;
         }
-        CameraIntrinsics KK;         ///< intrinsic matrix
+
+        // need this because of the deprecated KK
+        virtual CameraGeomData& operator=(const CameraGeomData& r) {
+            intrinsics = r.intrinsics;
+            width = r.width;
+            height = r.height;
+            return *this;
+        }
+        
+        CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
+        CameraIntrinsics& KK;         ///< \deprecated (14/01/15)
     };
     class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
     {

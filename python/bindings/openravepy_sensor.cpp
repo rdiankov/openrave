@@ -67,7 +67,7 @@ public:
         width = 0;
         height = 0;
     }
-    PyCameraGeomData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : KK(pgeom->KK)
+    PyCameraGeomData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : intrinsics(pgeom->intrinsics)
     {
         width = pgeom->width;
         height = pgeom->height;
@@ -81,11 +81,11 @@ public:
         boost::shared_ptr<SensorBase::CameraGeomData> geom(new SensorBase::CameraGeomData());
         geom->width = width;
         geom->height = height;
-        geom->KK = KK.GetCameraIntrinsics();
+        geom->intrinsics = intrinsics.GetCameraIntrinsics();
         return geom;
     }
 
-    PyCameraIntrinsics KK;
+    PyCameraIntrinsics intrinsics;
     int width, height;
 };
 
@@ -135,7 +135,7 @@ public:
     class PyCameraSensorData : public PySensorData
     {
 public:
-        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->KK)
+        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->intrinsics)
         {
             if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
                 throw openrave_exception("bad image data");
@@ -148,7 +148,6 @@ public:
                 }
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
-            KK = intrinsics.K;
         }
         PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : PySensorData(SensorBase::ST_Camera)
         {
@@ -159,7 +158,7 @@ public:
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
             {
-                numeric::array arr(boost::python::make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
+                numeric::array arr(boost::python::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));
                 arr.resize(3,3);
                 KK = arr;
             }
@@ -526,6 +525,7 @@ void init_openravepy_sensor()
         .def_readonly("transform",&PySensorBase::PyCameraSensorData::transform)
         .def_readonly("imagedata",&PySensorBase::PyCameraSensorData::imagedata)
         .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
+        .def_readonly("intrinsics",&PySensorBase::PyCameraSensorData::intrinsics)
         ;
         class_<PySensorBase::PyJointEncoderSensorData, boost::shared_ptr<PySensorBase::PyJointEncoderSensorData>, bases<PySensorBase::PySensorData> >("JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData),no_init)
         .def_readonly("encoderValues",&PySensorBase::PyJointEncoderSensorData::encoderValues)
@@ -610,9 +610,10 @@ void init_openravepy_sensor()
     .def("GetType",boost::python::pure_virtual(&PySensorGeometry::GetType))
     ;
     class_<PyCameraGeomData, boost::shared_ptr<PyCameraGeomData>, bases<PySensorGeometry> >("CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
-    .def_readwrite("KK",&PyCameraGeomData::KK)
+    .def_readwrite("intrinsics",&PyCameraGeomData::intrinsics)
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
+    .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
     ;
 
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));

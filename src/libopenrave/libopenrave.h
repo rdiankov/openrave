@@ -235,6 +235,19 @@ inline int CountCircularBranches(dReal angle)
     return 0;
 }
 
+/// returns a value=angle+2*PI*N such that value is closest to testvalue
+inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
+{
+    int n = static_cast<int>((testvalue-angle)/PI);
+    if( n > 1 ) {
+        return angle + static_cast<dReal>((n+1)/2)*2*PI;
+    }
+    else if( n < -1 ) {
+        return angle + static_cast<dReal>((n-1)/2)*2*PI;
+    }
+    return angle;
+}
+
 inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();

@@ -106,7 +106,7 @@ OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
 KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
 {
     _parent = parent;
-    FOREACH(it,_dofbranches) {
+    FOREACH(it,_doflastsetvalues) {
         *it = 0;
     }
     for(size_t i = 0; i < _vaxes.size(); ++i) {
@@ -212,13 +212,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
             vec3 = _vaxes[0].cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
-            if( f < -PI ) {
-                f += 2*PI;
-            }
-            else if( f > PI ) {
-                f -= 2*PI;
-            }
-            pValues.push_back(_info._voffsets[0]+f+(_dofbranches[0]*2*PI));
+            pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]));
             vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -229,7 +223,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(_info._voffsets[1]+f+(_dofbranches[1]*2*PI));
+            pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]));
             break;
         }
         case KinBody::JointSpherical: {
@@ -276,7 +270,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                pValues.push_back(_info._voffsets[i]+f+(_dofbranches[i]*2*PI));
+                pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]));
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
@@ -310,7 +304,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _info._voffsets[0]+f+(_dofbranches[0]*2*PI);
+                return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
             }
             else if( iaxis == 1 ) {
                 vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
@@ -323,7 +317,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return _info._voffsets[1]+f+(_dofbranches[1]*2*PI);
+                return GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]);
             }
             break;
         }
@@ -401,7 +395,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            return _info._voffsets[0]+f+(_dofbranches[0]*2*PI);
+            return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
         }
 
         // chain of revolute and prismatic joints
@@ -428,7 +422,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     f -= 2*PI;
                 }
                 if( i == iaxis ) {
-                    return _info._voffsets[i]+f+(_dofbranches[i]*2*PI);
+                    return GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]);
                 }
             }
             else { // prismatic

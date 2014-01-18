@@ -139,8 +139,8 @@ public:
     object GetJointFromDOFIndex(int dofindex) const;
     object GetTransform() const;
     object GetTransformPose() const;
-    object GetLinkTransformations(bool returndofbranches=false) const;
-    void SetLinkTransformations(object transforms, object odofbranches=object());
+    object GetLinkTransformations(bool returndoflastvlaues=false) const;
+    void SetLinkTransformations(object transforms, object odoflastvalues=object());
     void SetLinkVelocities(object ovelocities);
     object GetLinkEnableStates() const;
     void SetLinkEnableStates(object oenablestates);
