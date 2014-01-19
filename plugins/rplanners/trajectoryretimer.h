@@ -97,6 +97,10 @@ public:
             return PS_Failed;
         }
         size_t numpoints = ptraj->GetNumWaypoints();
+        if( numpoints == 0 ) {
+            // there's nothing to retime...
+            return PS_Failed;
+        }
         ConfigurationSpecification velspec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
         if( _parameters->_hasvelocities ) {
             // check that all velocity groups are there
