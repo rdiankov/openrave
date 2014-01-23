@@ -876,7 +876,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))
                 except ImportError,e:
-                    log.warn(e)                    
+                    log.warn(e)
+                    
+                log.info(u'successfully generated c++ ik in %fs, file=%s', self.statistics['generationtime'], sourcefilename)
             except self.ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
                 log.warn(e)
