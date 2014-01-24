@@ -1383,9 +1383,15 @@ class IKFastSolver(AutoReloader):
         M[3,3] = S.One
         return M
 
-    def numpyMatrixToSympy(self,T):
+    def GetMatrixFromNumpy(self,T):
+        return Matrix(4,4,[x for x in T.flat])
+    
+    def RoundMatrix(self, T):
+        """given a sympy matrix, will round the matrix and snap all its values to 15, 30, 45, 60, and 90 degrees.
+        """
         if axisAngleFromRotationMatrix is not None:
-            axisangle = axisAngleFromRotationMatrix(T)
+            Teval = T.evalf()
+            axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], [Teval[1,0], Teval[1,1], Teval[1,2]], [Teval[2,0], Teval[2,1], Teval[2,2]]])
             angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
             axisangle /= angle
             if abs(angle) < 10**(-self.precision):
@@ -1417,7 +1423,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     # could not simplify further
                     #assert(0)
-                    return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
+                    return self.normalizeRotation(T)
                 
                 M = self.GetMatrixFromQuat(quat)
             for i in range(3):
@@ -1511,12 +1517,12 @@ class IKFastSolver(AutoReloader):
                     raise self.CannotSolveError('chain %s:%s contains a joint with no name!'%(chainlinks[0].GetName(),chainlinks[-1].GetName()))
                 
                 if chainjoints[i].GetHierarchyParentLink() == chainlinks[i]:
-                    TLeftjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform())
-                    TRightjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform())
+                    TLeftjoint = self.GetMatrixFromNumpy(joint.GetInternalHierarchyLeftTransform())
+                    TRightjoint = self.GetMatrixFromNumpy(joint.GetInternalHierarchyRightTransform())
                     axissign = S.One
                 else:
-                    TLeftjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
-                    TRightjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
+                    TLeftjoint = self.affineInverse(self.GetMatrixFromNumpy(joint.GetInternalHierarchyRightTransform()))
+                    TRightjoint = self.affineInverse(self.GetMatrixFromNumpy(joint.GetInternalHierarchyLeftTransform()))
                     axissign = -S.One
                 if joint.IsStatic():
                     Tright = self.affineSimplify(Tright * TLeftjoint * TRightjoint)
@@ -1554,12 +1560,12 @@ class IKFastSolver(AutoReloader):
                         if angle > 0:
                             axisangle /= angle
                         log.debug('rotation angle of Links[%d]: %f, axis=[%f,%f,%f]', len(Links), (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
-                    Links.append(Tright * TLeftjoint)
+                    Links.append(self.RoundMatrix(Tright * TLeftjoint))
                     for Tj in Tjoints:
                         jointinds.append(len(Links))
                         Links.append(Tj)
                     Tright = TRightjoint
-            Links.append(Tright)
+            Links.append(self.RoundMatrix(Tright))
         
         # before returning the final links, try to push as much translation components
         # outwards to both ends. Sometimes these components can get in the way of detecting
@@ -1578,7 +1584,7 @@ class IKFastSolver(AutoReloader):
             Links[iright+1] = Ttrans * Links[iright+1]
             Links[iright-1] = Links[iright-1] * self.affineInverse(Ttrans)
             log.info("moved translation %s to right end",Ttrans[0:3,3].transpose())
-        
+            
         if len(jointinds) > 1:
             ileft = jointinds[0]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
@@ -1589,7 +1595,7 @@ class IKFastSolver(AutoReloader):
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
             log.info("moved translation %s to left end",Ttrans[0:3,3].transpose())
-
+            
         if len(jointinds) > 3: # last 3 axes always have to be intersecting, move the translation of the first axis to the left
             ileft = jointinds[-3]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
@@ -1600,7 +1606,7 @@ class IKFastSolver(AutoReloader):
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
             log.info("moved translation on intersecting axis %s to left",Ttrans[0:3,3].transpose())
-
+            
         return Links, jointvars
     
     def countVariables(self,expr,var):
@@ -2043,6 +2049,8 @@ class IKFastSolver(AutoReloader):
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
         chainjoints = self.kinbody.GetChain(baselink,eelink,returnjoints=True)
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
+        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        
         for T in LinksRaw:
             log.info('[' + ','.join(['[%s, %s, %s, %s]'%(T[i,0],T[i,1],T[i,2],T[i,3]) for i in range(3)]) + ']')
             
@@ -4659,7 +4667,11 @@ class IKFastSolver(AutoReloader):
         for eq in reducedeqs:
             complexity = self.codeComplexity(eq)
             if complexity > 4000:
+                raise self.CannotSolveError('equation way too complex (%d), looking for another solution'%complexity)
+            
+            if complexity > 4000:
                 log.info('equation way too complex (%d), so try breaking it down', complexity)
+                # don't support this yet...
                 eq2 = eq.expand()
                 assert(eq2.is_Add)
                 log.info('equation has %d additions', len(eq2.args))
@@ -4679,7 +4691,7 @@ class IKFastSolver(AutoReloader):
                 for itest, testpolyeq in enumerate(testpolyeqs):
                     log.info('adding equation %d', itest)
                     newpeq = Poly(S.Zero, *othersymbols)
-                    for monom, coeff in polyterms.iteritems():
+                    for monom, coeff in newpeq.iteritems():
                         sym = self.gsymbolgen.next()
                         dictequations.append((sym,coeff))
                         newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
