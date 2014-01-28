@@ -623,6 +623,12 @@ private:
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(pcolladainfo->_bindingAxesSIDs[idof].kmodelaxissidref.c_str());
+
+                std::string sparamrefvalue = str(boost::format("ias_extern_param%d_value")%idof);
+                domKinematics_newparamRef paramvalue = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
+                paramvalue->setSid(sparamrefvalue.c_str());
+                paramvalue->add(COLLADA_TYPE_FLOAT)->setCharData(boost::lexical_cast<std::string>(vjointvalues.at(idof)));
+                
                 std::string sidref = str(boost::format("%s/%s")%_GetNodeId(pbody)%pcolladainfo->_bindingAxesSIDs[idof].nodesid);
                 if( ias != ias_external ) {
                     BOOST_ASSERT(!!articulated_system_motion);
@@ -635,6 +641,7 @@ private:
                 iasout->vaxissids.at(idof).jointnodesid = sidref;
                 iasout->vaxissids.at(idof).axissid = sparamref;
                 iasout->vaxissids.at(idof).value = vjointvalues.at(idof);
+                iasout->vaxissids.at(idof).valuesid = sparamrefvalue;
             }
             size_t index = pcolladainfo->_bindingAxesSIDs.size();
             FOREACH(itpassive,pcolladainfo->_bindingPassiveAxesSIDs) {

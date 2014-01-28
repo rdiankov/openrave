@@ -825,7 +825,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.freeinc is None:
             self.freeinc = self.getDefaultFreeIncrements(0.1,0.01)
         
-        log.info('Generating inverse kinematics for manip %s: %s %s (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices)
+        log.info('Generating inverse kinematics for manip %s: %s %s, precision=%d (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices, precision)
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename = self.getsourcefilename(False,outputlang)
@@ -876,7 +876,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))
                 except ImportError,e:
-                    log.warn(e)                    
+                    log.warn(e)
+                    
+                log.info(u'successfully generated c++ ik in %fs, file=%s', self.statistics['generationtime'], sourcefilename)
             except self.ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
                 log.warn(e)

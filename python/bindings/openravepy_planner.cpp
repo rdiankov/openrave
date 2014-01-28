@@ -86,6 +86,10 @@ public:
             _paramswrite->_sExtraParameters = s;
         }
 
+        void SetRandomGeneratorSeed(uint32_t seed) {
+            _paramswrite->_nRandomGeneratorSeed = seed;
+        }
+
         void SetGoalConfig(object o)
         {
             _paramswrite->vgoalconfig = ExtractArray<dReal>(o);
@@ -297,6 +301,7 @@ void init_openravepy_planner()
         .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, args("env","spec"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
         .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
+        .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))

@@ -1541,7 +1541,7 @@ public:
         }
         else {
             std::string nodeid;
-            if( !!pdomnode->getId() ) {
+            if( !!pdomnode && !!pdomnode->getId() ) {
                 nodeid = pdomnode->getId();
             }
             RAVELOG_WARN(str(boost::format("failed to find rigid_body info for link %s:%s, nodeid=%s")%plink->GetParent()->GetName()%plink->GetName()%nodeid));
@@ -3470,7 +3470,11 @@ private:
             for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
                 domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());
-                domNodeRef nodephysicsoffset = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
+                domNodeRef nodephysicsoffset;
+                // don't bother getting the node parent if ID is empty, since it will generate warning message
+                if( ipmodel->getParent().id().size() ) {
+                    nodephysicsoffset = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
+                }
                 std::list<ModelBinding>::iterator itmodelbindings = _FindParentModel(nodephysicsoffset,bindings.listModelBindings);
                 if( itmodelbindings == bindings.listModelBindings.end() ) {
                     itmodelbindings = _FindChildModel(nodephysicsoffset,bindings.listModelBindings);

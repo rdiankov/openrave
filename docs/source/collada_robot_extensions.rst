@@ -323,7 +323,7 @@ Describes robot whose physics model SID is **pmodel1_inst** grabbing with its **
   <instance_physics_scene url="#pscene">
     <extra type="dynamic_rigid_constraints">
       <technique profile="OpenRAVE">
-        <rigid_constraint>
+        <rigid_constraint sid="grab0">
           <ref_attachment rigid_body="pmodel1_inst/rigid_hand"/>
           <attachment rigid_body="pmodel2_inst/rigid0"/>
           <technique profile="OpenRAVE">
