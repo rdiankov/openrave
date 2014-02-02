@@ -2027,12 +2027,18 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( (options&CFO_CheckEnvCollisions) && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+            if( (options & CFO_FillCollisionReport) && !!filterreturn ) {
+                filterreturn->_report = *_report;
+            }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 _PrintOnFailure(std::string("collision failed ")+_report->__str__());
             }
             return CFO_CheckEnvCollisions;
         }
         if( (options&CFO_CheckSelfCollisions) && (*itbody)->CheckSelfCollision(_report) ) {
+            if( (options & CFO_FillCollisionReport) && !!filterreturn ) {
+                filterreturn->_report = *_report;
+            }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
             }
@@ -2179,10 +2185,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if( totalsteps == 0 && start > 0 ) {
         if( !!filterreturn ) {
-            if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
-                filterreturn->_configurations = q1;
-                filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
+            if( bCheckEnd ) {
+                if(options & CFO_FillCheckedConfiguration) {
+                    filterreturn->_configurations = q1;
+                    filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
+                }
             }
+
         }
         return 0;
     }
