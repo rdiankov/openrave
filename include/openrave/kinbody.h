@@ -74,6 +74,7 @@ public:
         Prop_RobotManipulatorName = 0x00200000, ///< [robot only] the manipulator name
         Prop_RobotManipulatorSolver = 0x00400000,
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
+        Prop_RobotGrabbed = 0x01000000, ///< [robot only] if grabbed bodies changed
     };
 
     /// \brief used for specifying the type of limit checking and the messages associated with it

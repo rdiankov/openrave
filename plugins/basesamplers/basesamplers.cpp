@@ -20,6 +20,10 @@
 #include "robotconfiguration.h"
 #include "bodyconfiguration.h"
 
+namespace basesamplers {
+    //SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
+}
+
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
@@ -36,6 +40,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "bodyconfiguration" ) {
             return InterfaceBasePtr(new BodyConfigurationSampler(penv,sinput));
         }
+//        else if( interfacename == "configurationjitterer" ) {
+//            return basesamplers::CreateConfigurationJitterer(penv,sinput);
+//        }
         break;
     default:
         break;
@@ -49,6 +56,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_SpaceSampler].push_back("Halton");
     info.interfacenames[PT_SpaceSampler].push_back("RobotConfiguration");
     info.interfacenames[PT_SpaceSampler].push_back("BodyConfiguration");
+    info.interfacenames[PT_SpaceSampler].push_back("ConfigurationJitterer");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

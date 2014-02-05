@@ -1,4 +1,6 @@
 include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS}) # needed since plugins include openrave/openrave.h
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include) # for plugin-specific common files
+
 set(PLUGIN_LINK_FLAGS "")
 
 if(APPLE)
@@ -9,6 +11,11 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXXj OR COMPILER_IS_CLANG)
   set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS} -fPIC")
 else()
   set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
+endif()
+
+find_package(LAPACK)
+if( LAPACK_FOUND )
+  set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_HAS_LAPACK")
 endif()
 
 set(PLUGINS_BASE ${COMPONENT_PREFIX}plugins-base)

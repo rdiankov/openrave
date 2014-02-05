@@ -1109,7 +1109,16 @@ public:
     }
 
     object GetBody() const {
-        return object(toPyKinBody(_state.GetBody(),_pyenv));
+        KinBodyPtr pbody = _state.GetBody();
+        if( !pbody ) {
+            return object();
+        }
+        if( pbody->IsRobot() ) {
+            return object(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pbody),_pyenv));
+        }
+        else {
+            return object(openravepy::toPyKinBody(pbody,_pyenv));
+        }
     }
 
     void Restore(PyKinBodyPtr pybody=PyKinBodyPtr()) {
