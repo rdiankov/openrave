@@ -13,9 +13,15 @@ else()
   set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
 endif()
 
-find_package(LAPACK)
+
+check_library_exists(lapack cgesdd_ "" LAPACK_FOUND)
+#CheckLibraryExists
+#find_package(LAPACK)
 if( LAPACK_FOUND )
+  set(LAPACK_LIBRARIES lapack)
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_HAS_LAPACK")
+else()
+  message(STATUS "lapack dev library not found")
 endif()
 
 set(PLUGINS_BASE ${COMPONENT_PREFIX}plugins-base)

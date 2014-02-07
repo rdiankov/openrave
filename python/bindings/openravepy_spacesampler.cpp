@@ -138,6 +138,9 @@ public:
 protected:
     object _ReturnSamples(const std::vector<dReal>&samples)
     {
+        if( samples.size() == 0 ) {
+            return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("f8"));
+        }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { samples.size()/dim,dim};
         PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
@@ -147,6 +150,9 @@ protected:
 
     object _ReturnSamples(const std::vector<uint32_t>&samples)
     {
+        if( samples.size() == 0 ) {
+            return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
+        }
         int dim = _pspacesampler->GetNumberOfValues();
         npy_intp dims[] = { samples.size()/dim,dim};
         PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_UINT32);

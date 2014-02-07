@@ -6186,7 +6186,7 @@ class IKFastSolver(AutoReloader):
                                             # why checking for just number? ok to check if solution doesn't contain any other variableS?
                                             # if the equation is non-numerical, make sure it isn't deep in the degenerate cases
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 # TODO should use the fact that eq is imaginary
                                                 if isimaginary:
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
@@ -6221,7 +6221,7 @@ class IKFastSolver(AutoReloader):
                                                 # don't use asin(eq)!! since eq = (-pz**2/py**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-asin(eq).evalf(n=30)
                                                 # test if eq is imaginary, if yes, then only solution is when sothervar==0 and eq==0
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)-1)
                                                 else:
@@ -6263,7 +6263,7 @@ class IKFastSolver(AutoReloader):
                                                 # test when sin(othervar) > 0
                                                 # don't use acos(eq)!! since eq = (-pz**2/px**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-acos(eq).evalf(n=30)
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)-1)
                                                 else:
@@ -8114,15 +8114,25 @@ class IKFastSolver(AutoReloader):
             return n
         return []
 
-    def IsImaginaryByEval(self, eq):
+    def IsAnyImaginaryByEval(self, eq):
         """checks if an equation ever evaluates to an imaginary number
         """
         for testconsistentvalue in self.testconsistentvalues:
             value = eq.subs(testconsistentvalue).evalf()
             if value.is_complex and not value.is_real:
                 return True
-
+            
         return False
+
+    def AreAllImaginaryByEval(self, eq):
+        """checks if an equation ever evaluates to an imaginary number
+        """
+        for testconsistentvalue in self.testconsistentvalues:
+            value = eq.subs(testconsistentvalue).evalf()
+            if not (value.is_complex and not value.is_real):
+                return False
+            
+        return True
     
     def IsDeterminantNonZeroByEval(self, A):
         """checks if a determinant is non-zero by evaluating all the possible solutions.
