@@ -425,22 +425,26 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
                 bool deltasuccess = false;
                 if( sampledelta ) {
-                    // sample deltas
-                    _ssampler->SampleSequence(_deltadof, GetDOF(), interval);
-
                     // check which third the sampled dof is in
                     for(size_t j = 0; j < vnewdof.size(); ++j) {
-                        if( _deltadof[j] < 0.33 ) {
-                            _deltadof[j] = -jitter;
-                            deltasuccess = true;
-                        }
-                        else if( _deltadof[j] > 0.66 ) {
-                            _deltadof[j] = jitter;
-                            deltasuccess = true;
-                        }
-                        else {
+                        dReal f = 2*_ssampler->SampleSequenceOneReal(interval)-1;
+                        if( RaveFabs(f) < 0.2 ) {
                             _deltadof[j] = 0;
                         }
+                        else {
+                            _deltadof[j] = jitter*f;
+                        }
+//                        if( f < 0.33 ) {
+//                            _deltadof[j] = -jitter;
+//                            deltasuccess = true;
+//                        }
+//                        else if( f > 0.66 ) {
+//                            _deltadof[j] = jitter;
+//                            deltasuccess = true;
+//                        }
+//                        else {
+//                            _deltadof[j] = 0;
+//                        }
                     }
                 }
 
