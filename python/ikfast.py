@@ -1698,11 +1698,16 @@ class IKFastSolver(AutoReloader):
                 for subeq in eq.args:
                     neweq += self.SimplifyAtan2(subeq)
                 # call simplify in order to take in common terms
-                neweq2 = simplify(neweq)
+                if self.codeComplexity(neweq) > 80:
+                    neweq2 = neweq
+                else:
+                    #log.info('complexity: %d', self.codeComplexity(neweq))
+                    neweq2 = simplify(neweq)
                 if neweq2 != neweq:
                     neweq = self.SimplifyAtan2(neweq2)
                 else:
                     try:
+                        #print 'simplifying',neweq
                         neweq = self.SimplifyTransform(neweq)
                     except PolynomialError:
                         # ok if neweq is too complicated
@@ -2602,11 +2607,11 @@ class IKFastSolver(AutoReloader):
                     except self.CannotSolveError, e:
                         log.warn('%s', e)
                         continue
-
+                    
             if coupledsolutions is None:
                 raise self.CannotSolveError('raghavan roth equations too complex')
-
-            log.info('solved coupled variables: %s',usedvars)
+            
+            log.info('solved coupled variables: %s',usedvars)       
             if len(usedvars) < len(solvejointvars):
                 curvars=solvejointvars[:]
                 solsubs = self.freevarsubs[:]
@@ -2615,7 +2620,8 @@ class IKFastSolver(AutoReloader):
                     solsubs += self.Variable(var).subs
                 self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
                 localtree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
-                endbranchtree2 += self.verifyAllEquations(AllEquations,curvars,solsubs,localtree)
+                # make it a function so compiled code is smaller
+                endbranchtree2.append(AST.SolverFunction('innerfn', self.verifyAllEquations(AllEquations,curvars,solsubs,localtree)))
                 tree = coupledsolutions
             else:
                 endbranchtree2 += endbranchtree
@@ -2646,7 +2652,8 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)
         self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
         localdirtree = self.SolveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
-        dirtree += self.verifyAllEquations(AllEquations,rotvars,solsubs,localdirtree)
+        # make it a function so compiled code is smaller
+        dirtree.append(AST.SolverFunction('innerfn', self.verifyAllEquations(AllEquations,rotvars,solsubs,localdirtree)))
         return transtree
 
     def solveFullIK_6D(self, LinksRaw, jointvars, isolvejointvars,Tgripperraw=eye(4)):
@@ -4251,7 +4258,7 @@ class IKFastSolver(AutoReloader):
                         divisoreq *= factor.as_expr()
                     else:
                         eq *= factor.as_expr()
-                eq = eq.expand()
+                eq = coeff*eq.expand() # have to multiply by the coeff, or otherwise the equation will be weighted different and will be difficult to determine epsilons
                 if peq[0] != S.Zero:
                     peq0norm, r = div(peq[0], divisoreq)
                     assert(r==S.Zero)
@@ -4264,7 +4271,7 @@ class IKFastSolver(AutoReloader):
                     if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
                         indices = [index for index in range(4) if monom[index] == 1]
                         if len(indices) > 0 and indices[0] < 4:
-                            reducedsinglevars[indices[0]] = (value,peq1norm.as_expr())
+                            reducedsinglevars[indices[0]] = (value, peq1norm.as_expr())
                     isunique = True
                     for test0, test1 in neweqs_full:
                         if (self.equal(test0,peq0norm) or self.equal(test0,-peq0norm)) and (self.equal(test1,peq1norm) or self.equal(test1,-peq1norm)):
@@ -4276,6 +4283,7 @@ class IKFastSolver(AutoReloader):
                     eq = eq.subs(self.freevarsubs)
                     if self.CheckExpressionUnique(reducedeqs, eq):
                         reducedeqs.append(eq)
+                        assert(len(reducedeqs)!=4)
             else:
                 if peq[0] != S.Zero:
                     peq0dict = peq[0].as_dict()
@@ -4637,6 +4645,7 @@ class IKFastSolver(AutoReloader):
                 
             try:
                 log.info('try to solve first two variables pairwise')
+                
                 #solution = self.SolvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
                 jointtrees=[]
                 raweqns=[eq for eq in AllEquations if not eq.has(tvar)]
@@ -6177,7 +6186,7 @@ class IKFastSolver(AutoReloader):
                                             # why checking for just number? ok to check if solution doesn't contain any other variableS?
                                             # if the equation is non-numerical, make sure it isn't deep in the degenerate cases
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 # TODO should use the fact that eq is imaginary
                                                 if isimaginary:
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
@@ -6212,7 +6221,7 @@ class IKFastSolver(AutoReloader):
                                                 # don't use asin(eq)!! since eq = (-pz**2/py**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-asin(eq).evalf(n=30)
                                                 # test if eq is imaginary, if yes, then only solution is when sothervar==0 and eq==0
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)-1)
                                                 else:
@@ -6254,7 +6263,7 @@ class IKFastSolver(AutoReloader):
                                                 # test when sin(othervar) > 0
                                                 # don't use acos(eq)!! since eq = (-pz**2/px**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-acos(eq).evalf(n=30)
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)-1)
                                                 else:
@@ -6572,7 +6581,7 @@ class IKFastSolver(AutoReloader):
                 self.globalsymbols = originalGlobalSymbols
                 
         if len(zerobranches) > 0:
-            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak('branch miss %r'%curvars, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree)],[])])
+            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak('branch miss %r'%curvars, [(var,self._SubstituteGlobalSymbols(eq)) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree)],[])])
             branchconds.accumequations = accumequations
             lastbranch.append(branchconds)
         else:            
@@ -6825,7 +6834,7 @@ class IKFastSolver(AutoReloader):
         elif solutions[1] is not None:
             pfinals = solutions[1]
             ileftvar = 1
-
+        
         dictequations = []
         if pfinals is None:
             #simplifyfn = self._createSimplifyFn(self.freejointvars,self.freevarsubs,self.freevarsubsinv)
@@ -6918,7 +6927,9 @@ class IKFastSolver(AutoReloader):
         solution = AST.SolverPolynomialRoots(jointname=varsyms[ileftvar].name,poly=pfinals[0],jointeval=[jointsol],isHinge=self.IsHinge(varsyms[ileftvar].name))
         solution.checkforzeros = []
         solution.postcheckforzeros = []
-        solution.postcheckfornonzeros = [peq.as_expr() for peq in pfinals[1:]]
+        if len(pfinals) > 1:
+            # verify with at least one solution
+            solution.postcheckfornonzeros = [peq.as_expr() for peq in pfinals[1:2]]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
         solution.thresh = 1e-9 # depending on the degree, can expect small coefficients to be still valid
@@ -8103,15 +8114,25 @@ class IKFastSolver(AutoReloader):
             return n
         return []
 
-    def IsImaginaryByEval(self, eq):
+    def IsAnyImaginaryByEval(self, eq):
         """checks if an equation ever evaluates to an imaginary number
         """
         for testconsistentvalue in self.testconsistentvalues:
             value = eq.subs(testconsistentvalue).evalf()
             if value.is_complex and not value.is_real:
                 return True
-
+            
         return False
+
+    def AreAllImaginaryByEval(self, eq):
+        """checks if an equation ever evaluates to an imaginary number
+        """
+        for testconsistentvalue in self.testconsistentvalues:
+            value = eq.subs(testconsistentvalue).evalf()
+            if not (value.is_complex and not value.is_real):
+                return False
+            
+        return True
     
     def IsDeterminantNonZeroByEval(self, A):
         """checks if a determinant is non-zero by evaluating all the possible solutions.

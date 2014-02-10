@@ -18,6 +18,7 @@ import openravepy_int
 import openravepy_ext
 import os.path
 from sys import platform as sysplatformname
+from sys import stdout
 import numpy
 try:
     from itertools import izip
@@ -60,7 +61,7 @@ except ImportError:
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
     return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
 
-def InitOpenRAVELogging():
+def InitOpenRAVELogging(stream=stdout):
     """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
     """
     levelmap = {openravepy_int.DebugLevel.Verbose:logging.DEBUG, openravepy_int.DebugLevel.Debug:logging.DEBUG, openravepy_int.DebugLevel.Info:logging.INFO, openravepy_int.DebugLevel.Warn:logging.WARN, openravepy_int.DebugLevel.Error:logging.ERROR, openravepy_int.DebugLevel.Fatal:logging.FATAL }
@@ -68,8 +69,9 @@ def InitOpenRAVELogging():
     log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()&0xffff])
     if len(log.handlers) == 0:
         try:
+            import codecs
             colorize=__import__('logutils.colorize',fromlist=['colorize'])
-            handler = colorize.ColorizingStreamHandler()
+            handler = colorize.ColorizingStreamHandler(codecs.getwriter('utf-8')(stream))
             handler.level_map[logging.DEBUG] =(None, 'green', False)
             handler.level_map[logging.INFO] = (None, None, False)
             handler.level_map[logging.WARNING] = (None, 'yellow', False)
@@ -77,7 +79,7 @@ def InitOpenRAVELogging():
             handler.level_map[logging.CRITICAL] = ('white', 'magenta', True)
 
         except ImportError:
-            handler = logging.StreamHandler()
+            handler = logging.StreamHandler(stream)
             openravepy_int.raveLogVerbose('python logutils not present so cannot colorize python output.')
 
         handler.setFormatter(logging.Formatter('%(name)s: %(funcName)s, %(message)s'))
