@@ -1,5 +1,5 @@
 ###########################################
-# basesamplers openrave plugin
+# configurationcache openrave plugin
 ###########################################
 add_library(configurationcache SHARED cachechecker.cpp configurationcache.cpp configurationcachetree.cpp)
 target_link_libraries(configurationcache libopenrave)
