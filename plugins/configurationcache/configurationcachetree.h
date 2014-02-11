@@ -234,12 +234,6 @@ public:
         return _pstaterobot;
     }
 
-    /// \brief invalides the freespace of a cache given a new body in the scene
-    void UpdateCacheFromAddedBody(KinBodyPtr pbody);
-
-    /// \brief invalidates the collision space of a cache given a body has been removed
-    void UpdateCacheFromRemovedBody(KinBodyPtr pbody);
-
     /// \brief body's state has changed, so remove collision space and invalidate free space.
     void UpdateCacheFromChangedBody(KinBodyPtr pbody);
 
@@ -253,19 +247,25 @@ public:
 
     void GetDOFValues(std::vector<dReal>& values);
 
-    int SynchronizeAll(KinBodyConstPtr pbody = KinBodyConstPtr());
+    //int SynchronizeAll(KinBodyConstPtr pbody = KinBodyConstPtr());
 
 private:
-    /// \brief called when body has changed
+    /// \brief called when body has changed state.
     void _UpdateUntrackedBody(KinBodyPtr pbody);
+
+    /// \brief called when a body has been added/removed from the environment. action=1 is add, action=0 is remove
+    void _UpdateAddRemoveBodies(KinBodyPtr pbody, int action);
 
     /// \brief called when tracking robot's joint limits have changed (invalidate cache)
     void _UpdateRobotJointLimits();
-
+    
     void _UpdateRobotGrabbed();
 
     dReal _GetNearestDist(const std::vector<dReal>& cs);
 
+    /// \brief return true if update stamps on cache are synced, used for debugging
+    //bool _CheckSynchronized();
+    
     /// \brief get the distance to the nearest vertex in the cover tree
     /// \param cs, configuration
     /// \param vertextype, nearest neighbor of what type (1 free, -1 collision, 0 search all)
@@ -274,25 +274,29 @@ private:
 
     RobotBasePtr _pstaterobot;
     std::vector<int> _vRobotActiveIndices;
-    int _nBodyAffineDOF;
+    int _nRobotAffineDOF;
     Vector _vRobotRotationAxis;
     std::set<KinBodyPtr> _setGrabbedBodies;
     std::vector<dReal> _upperlimit, _lowerlimit; //joint limits, used to calculate maxdistance
 
-    struct KinBodyCachedInfo
+    class KinBodyCachedData : public UserData
     {
-        int timestamp;
-        std::vector<uint8_t> linkenables;
+    public:
+        //std::vector<uint8_t> linkenables;
+        //std::vector<Transform> _vlinktransforms;
         UserDataPtr _changehandle;
     };
+
+    typedef boost::shared_ptr<KinBodyCachedData> KinBodyCachedDataPtr;
 
     EnvironmentBasePtr _penv;
 
     dReal _collisionthresh; //collision in this distance range will be assumed to be in collision
     dReal _freespacethresh;
     dReal _insertiondistance; //only insert nodes if they are at least this far from the nearest node in the tree
-
+    std::string _userdatakey;
     UserDataPtr _jointchangehandle;
+    UserDataPtr _handleBodyAddRemove;
     //std::vector<UserDataPtr> _bodyhandles;
 
     /// \brief used for debugging/profiling

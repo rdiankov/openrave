@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@ void KinBody::Link::Enable(bool bEnable)
         KinBodyPtr parent = GetParent();
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
         _info._bIsEnabled = bEnable;
-        GetParent()->_ParametersChanged(Prop_LinkEnable);
+        GetParent()->_PostprocessChangedParameters(Prop_LinkEnable);
     }
 }
 
@@ -58,7 +58,7 @@ bool KinBody::Link::SetVisible(bool visible)
         }
     }
     if( bchanged ) {
-        GetParent()->_ParametersChanged(Prop_LinkDraw);
+        GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
         return true;
     }
     return false;
@@ -130,19 +130,19 @@ TransformMatrix KinBody::Link::GetGlobalInertia() const
 void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
 {
     _info._tMassFrame=massframe;
-    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
 }
 
 void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
 {
     _info._vinertiamoments = inertiamoments;
-    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
 }
 
 void KinBody::Link::SetMass(dReal mass)
 {
     _info._mass=mass;
-    GetParent()->_ParametersChanged(Prop_LinkDynamics);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
 }
 
 AABB KinBody::Link::ComputeLocalAABB() const
@@ -276,7 +276,7 @@ void KinBody::Link::SetStatic(bool bStatic)
 {
     if( _info._bStatic != bStatic ) {
         _info._bStatic = bStatic;
-        GetParent()->_ParametersChanged(Prop_LinkStatic);
+        GetParent()->_PostprocessChangedParameters(Prop_LinkStatic);
     }
 }
 
@@ -425,7 +425,7 @@ void KinBody::Link::SetFloatParameters(const std::string& key, const std::vector
     else {
         _info._mapFloatParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
 void KinBody::Link::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
@@ -436,7 +436,7 @@ void KinBody::Link::SetIntParameters(const std::string& key, const std::vector<i
     else {
         _info._mapIntParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
 void KinBody::Link::SetStringParameters(const std::string& key, const std::string& value)
@@ -447,7 +447,7 @@ void KinBody::Link::SetStringParameters(const std::string& key, const std::strin
     else {
         _info._mapStringParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_LinkCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
 bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
@@ -483,7 +483,7 @@ void KinBody::Link::_Update(bool parameterschanged)
         }
     }
     if( parameterschanged ) {
-        GetParent()->_ParametersChanged(Prop_LinkGeometry);
+        GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
     }
 }
 

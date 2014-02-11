@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -802,7 +802,7 @@ void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std:
         }
     }
     if( bChanged ) {
-        GetParent()->_ParametersChanged(Prop_JointLimits);
+        GetParent()->_PostprocessChangedParameters(Prop_JointLimits);
     }
 }
 
@@ -838,7 +838,7 @@ void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxvel[i] = vmaxvel.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -861,7 +861,7 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxaccel[i] = vmax.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -879,7 +879,7 @@ void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxtorque[i] = vmax.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
@@ -908,7 +908,7 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
             }
             _tinvRight = _tRight.inverse();
         }
-        GetParent()->_ParametersChanged(Prop_JointOffset);
+        GetParent()->_PostprocessChangedParameters(Prop_JointOffset);
     }
 }
 
@@ -930,7 +930,7 @@ dReal KinBody::Joint::GetResolution(int iaxis) const
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
     _info._vresolution.at(iaxis) = resolution;
-    GetParent()->_ParametersChanged(Prop_JointProperties);
+    GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
@@ -954,7 +954,7 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         OPENRAVE_ASSERT_OP(vweights.at(i),>,0);
         _info._vweights[i] = vweights.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointProperties);
+    GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
@@ -1216,7 +1216,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
     }
     _vmimic.at(iaxis) = mimic;
-    parent->_ParametersChanged(Prop_JointMimic);
+    parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
 void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
@@ -1350,7 +1350,7 @@ void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vecto
     else {
         _info._mapFloatParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
@@ -1361,7 +1361,7 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
     else {
         _info._mapIntParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::SetStringParameters(const std::string& key, const std::string& value)
@@ -1372,7 +1372,7 @@ void KinBody::Joint::SetStringParameters(const std::string& key, const std::stri
     else {
         _info._mapStringParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::UpdateInfo()

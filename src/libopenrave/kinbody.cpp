@@ -32,11 +32,13 @@ public:
         KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
             boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
-            pbody->_listRegisteredCallbacks.erase(_iterator);
+            FOREACH(itinfo, _iterators) {
+                pbody->_vlistRegisteredCallbacks.at(itinfo->first).erase(itinfo->second);
+            }
         }
     }
 
-    list<UserDataWeakPtr>::iterator _iterator;
+    list< std::pair<uint32_t, list<UserDataWeakPtr>::iterator> > _iterators;
     int _properties;
     boost::function<void()> _callback;
 protected:
@@ -143,7 +145,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         }
         if( bchanged ) {
             pbody->_nNonAdjacentLinkCache &= ~AO_Enabled;
-            pbody->_ParametersChanged(Prop_LinkEnable);
+            pbody->_PostprocessChangedParameters(Prop_LinkEnable);
         }
     }
     if( _options & Save_JointMaxVelocityAndAcceleration ) {
@@ -372,8 +374,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
 
 void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
-    // need to call _ParametersChanged at the very end, even if exception occurs
-    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_ParametersChanged, this, Prop_LinkGeometry));
+    // need to call _PostprocessChangedParameters at the very end, even if exception occurs
+    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
     FOREACHC(itlink, _veclinks) {
         std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
         if( geomname.size() == 0 ) {
@@ -485,7 +487,7 @@ void KinBody::SetName(const std::string& newname)
             itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
         }
         _name = newname;
-        _ParametersChanged(Prop_Name);
+        _PostprocessChangedParameters(Prop_Name);
     }
 }
 
@@ -734,7 +736,7 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
             pjoint->_info._vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
-    _ParametersChanged(Prop_JointProperties);
+    _PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<int>& dofindices)
@@ -757,7 +759,7 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
             pjoint->_info._vresolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
-    _ParametersChanged(Prop_JointProperties);
+    _PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper)
@@ -790,7 +792,7 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
         itupper += (*it)->GetDOF();
     }
     if( bChanged ) {
-        _ParametersChanged(Prop_JointLimits);
+        _PostprocessChangedParameters(Prop_JointLimits);
     }
 }
 
@@ -801,7 +803,7 @@ void KinBody::SetDOFVelocityLimits(const std::vector<dReal>& v)
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxvel.begin());
         itv += (*it)->GetDOF();
     }
-    _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
@@ -811,7 +813,7 @@ void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxaccel.begin());
         itv += (*it)->GetDOF();
     }
-    _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
@@ -821,7 +823,7 @@ void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxtorque.begin());
         itv += (*it)->GetDOF();
     }
-    _ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::SimulationStep(dReal fElapsedTime)
@@ -1296,7 +1298,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
             (*itjoint)->_doflastsetvalues[i] = (*itjoint)->GetValue(i);
         }
     }
-    _nUpdateStampId++;
+    _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
@@ -1312,7 +1314,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, c
             (*itjoint)->_doflastsetvalues[i] = doflastsetvalues.at((*itjoint)->GetDOFIndex()+i);
         }
     }
-    _nUpdateStampId++;
+    _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
 void KinBody::SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities)
@@ -1333,7 +1335,7 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
         }
     }
     if( bchanged ) {
-        _ParametersChanged(Prop_LinkEnable);
+        _PostprocessChangedParameters(Prop_LinkEnable);
     }
 }
 
@@ -1355,7 +1357,6 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits, const std::vector<int>& dofindices)
 {
     CHECK_INTERNAL_COMPUTATION;
-    _nUpdateStampId++;
     if( vJointValues.size() == 0 || _veclinks.size() == 0) {
         return;
     }
@@ -1680,6 +1681,8 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         pjoint->GetHierarchyChildLink()->SetTransform(t);
         vlinkscomputed[pjoint->GetHierarchyChildLink()->GetIndex()] = 1;
     }
+
+    _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
 bool KinBody::IsDOFRevolute(int dofindex) const
@@ -4030,20 +4033,26 @@ void KinBody::_ComputeInternalInformation()
     }
 
     // notify any callbacks of the changes
-    if( _nParametersChanged ) {
-        std::list<UserDataWeakPtr> listRegisteredCallbacks;
-        {
-            boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
-            listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-        }
-        FOREACH(it,listRegisteredCallbacks) {
-            ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
-            if( !!pdata && (pdata->_properties & _nParametersChanged) ) {
-                pdata->_callback();
+    std::list<UserDataWeakPtr> listRegisteredCallbacks;    
+    uint32_t index = 0;
+    uint32_t parameters = _nParametersChanged;
+    while(parameters && index < _vlistRegisteredCallbacks.size()) {
+        if( (parameters & 1) &&  _vlistRegisteredCallbacks.at(index).size() > 0 ) {
+            {
+                boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
+                listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
+            }
+            FOREACH(it,listRegisteredCallbacks) {
+                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+                if( !!pdata ) {
+                    pdata->_callback();
+                }
             }
         }
-        _nParametersChanged = 0;
+        parameters >>= 1;
+        index += 1;
     }
+    _nParametersChanged = 0;
     RAVELOG_DEBUG(str(boost::format("_ComputeInternalInformation %s in %fs")%GetName()%(1e-6*(utils::GetMicroTime()-starttime))));
 }
 
@@ -4121,7 +4130,7 @@ void KinBody::Enable(bool bEnable)
         }
     }
     if( bchanged ) {
-        _ParametersChanged(Prop_LinkEnable);
+        _PostprocessChangedParameters(Prop_LinkEnable);
     }
 }
 
@@ -4147,7 +4156,7 @@ bool KinBody::SetVisible(bool visible)
         }
     }
     if( bchanged ) {
-        _ParametersChanged(Prop_LinkDraw);
+        _PostprocessChangedParameters(Prop_LinkDraw);
         return true;
     }
     return false;
@@ -4382,7 +4391,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _nUpdateStampId++; // update the stamp instead of copying
 }
 
-void KinBody::_ParametersChanged(int parameters)
+void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 {
     _nUpdateStampId++;
     if( _nHierarchyComputed == 1 ) {
@@ -4397,24 +4406,27 @@ void KinBody::_ParametersChanged(int parameters)
         _ComputeInternalInformation();
     }
     // do not change hash if geometry changed!
-    boost::array<int,3> hashproperties = {{Prop_LinkDynamics, Prop_LinkGeometry, Prop_JointMimic }};
-    FOREACH(it, hashproperties) {
-        if( (parameters & *it) == *it ) {
-            __hashkinematics.resize(0);
-            break;
-        }
+    if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
+        __hashkinematics.resize(0);
     }
 
-    std::list<UserDataWeakPtr> listRegisteredCallbacks;
-    {
-        boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
-        listRegisteredCallbacks = _listRegisteredCallbacks; // copy since it can be changed
-    }
-    FOREACH(it,listRegisteredCallbacks) {
-        ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
-        if( !!pdata && (pdata->_properties & parameters) ) {
-            pdata->_callback();
+    std::list<UserDataWeakPtr> listRegisteredCallbacks;    
+    uint32_t index = 0;
+    while(parameters && index < _vlistRegisteredCallbacks.size()) {
+        if( (parameters & 1) &&  _vlistRegisteredCallbacks.at(index).size() > 0 ) {
+            {
+                boost::shared_lock< boost::shared_mutex > lock(GetInterfaceMutex());
+                listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
+            }
+            FOREACH(it,listRegisteredCallbacks) {
+                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+                if( !!pdata ) {
+                    pdata->_callback();
+                }
+            }
         }
+        parameters >>= 1;
+        index += 1;
     }
 }
 
@@ -4513,11 +4525,27 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
     return spec;
 }
 
-UserDataPtr KinBody::RegisterChangeCallback(int properties, const boost::function<void()>&callback) const
+UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
     boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
-    pdata->_iterator = _listRegisteredCallbacks.insert(_listRegisteredCallbacks.end(),pdata);
+
+    uint32_t index = 0;
+    while(properties) {
+        if( properties & 1 ) {
+            if( index >= _vlistRegisteredCallbacks.size() ) {
+                // have to resize _vlistRegisteredCallbacks, but have to preserve the internal lists since ChangeCallbackData keep track of the list iterators
+                std::vector<std::list<UserDataWeakPtr> > vlistRegisteredCallbacks(index+1);
+                for(size_t i = 0; i < _vlistRegisteredCallbacks.size(); ++i) {
+                    vlistRegisteredCallbacks[i].swap(_vlistRegisteredCallbacks[i]);
+                }
+                _vlistRegisteredCallbacks.swap(vlistRegisteredCallbacks);
+            }
+            pdata->_iterators.push_back(make_pair(index, _vlistRegisteredCallbacks.at(index).insert(_vlistRegisteredCallbacks.at(index).end(),pdata)));
+        }
+        properties >>= 1;
+        index += 1;
+    }
     return pdata;
 }
 

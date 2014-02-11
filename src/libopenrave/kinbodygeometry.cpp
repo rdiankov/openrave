@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -318,7 +318,7 @@ bool KinBody::Link::Geometry::SetVisible(bool visible)
     if( _info._bVisible != visible ) {
         _info._bVisible = visible;
         LinkPtr parent(_parent);
-        parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+        parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
         return true;
     }
     return false;
@@ -328,21 +328,21 @@ void KinBody::Link::Geometry::SetTransparency(float f)
 {
     LinkPtr parent(_parent);
     _info._fTransparency = f;
-    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
 void KinBody::Link::Geometry::SetDiffuseColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
     _info._vDiffuseColor = color;
-    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
 void KinBody::Link::Geometry::SetAmbientColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
     _info._vAmbientColor = color;
-    parent->GetParent()->_ParametersChanged(Prop_LinkDraw);
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
 /*
@@ -455,7 +455,7 @@ void KinBody::Link::Geometry::SetRenderFilename(const std::string& renderfilenam
 {
     LinkPtr parent(_parent);
     _info._filenamerender = renderfilename;
-    parent->GetParent()->_ParametersChanged(Prop_LinkGeometry);
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
 }

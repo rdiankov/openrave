@@ -14,6 +14,7 @@
 #include "configurationcachetree.h"
 
 #include <sstream>
+#include <boost/lexical_cast.hpp>
 
 // High
 // find a way to lose the map for children
@@ -422,29 +423,29 @@ void CacheTree::UpdateTree()
 
 ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
 {
+    _userdatakey = std::string("configurationcache") + boost::lexical_cast<std::string>(this);
     _qtime = 0;
     _itime = 0;
     _profile = false;
     _pstaterobot = pstaterobot;
     _penv = pstaterobot->GetEnv();
+    _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
 
     std::vector<KinBodyPtr> vGrabbedBodies;
     _pstaterobot->GetGrabbed(vGrabbedBodies);
     _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
-    _penv->GetBodies(_vnewenvbodies);
-    FOREACHC(itbody, _vnewenvbodies) {
+    std::vector<KinBodyPtr> vnewenvbodies;
+    _penv->GetBodies(vnewenvbodies);
+    FOREACHC(itbody, vnewenvbodies) {
         if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
-            _menvbodyhandles[(*itbody)] = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
+            KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
+            pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
+            (*itbody)->SetUserData(_userdatakey, pinfo);
         }
-//        std::string name = (*itbody)->GetName();
-//        bool enabled = (*itbody)->IsEnabled();
-//        RAVELOG_DEBUG_FORMAT("sync %s enabled=%d\n",name%enabled);
-//        _menvbodystamps[(*itbody)] = (*itbody)->GetUpdateStamp();
-//        _menvbodyenabled[(*itbody)] = (*itbody)->IsEnabled();
     }
-
+    
     _vRobotActiveIndices = pstaterobot->GetActiveDOFIndices();
-    _nBodyAffineDOF = pstaterobot->GetAffineDOF();
+    _nRobotAffineDOF = pstaterobot->GetAffineDOF();
     _vRobotRotationAxis = pstaterobot->GetAffineRotationAxis();
 
     std::vector<dReal> vweights;
@@ -483,7 +484,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << "Initializing cache,  maxdistance " << _maxdistance << ", collisionthresh " << _collisionthresh << ", _insertiondistance "<< _insertiondistance << ", weights [";
+        ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistance "<< _insertiondistance << ", weights [";
         for (size_t i = 0; i < vweights.size(); ++i) {
             ss << vweights[i] << " ";
         }
@@ -501,34 +502,6 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
         ss << "]\n";
         RAVELOG_DEBUG(ss.str());
     }
-}
-void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
-{
-    SynchronizeAll(_pstaterobot);
-}
-
-void ConfigurationCache::_UpdateRobotJointLimits()
-{
-    _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nBodyAffineDOF);
-    _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
-
-    // compute new max distance for cache
-    // using L1, get the maximumdistance
-    // distance has to be computed in the same way as CacheTreeVertex.GetDistance()
-    // otherwise, distances larger than this value could be inserted into the tree
-    dReal bound = 0;
-    for (int i = 0; i < _lowerlimit.size(); ++i) {
-        bound += RaveFabs(_upperlimit[i] - _lowerlimit[i]) * _cachetree.GetWeights().at(i);
-    }
-
-    if( bound > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
-        _cachetree.SetMaxDistance(bound);
-    }
-}
-
-void ConfigurationCache::_UpdateRobotGrabbed()
-{
-    _cachetree.Reset();
 }
 
 void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
@@ -595,8 +568,8 @@ void ConfigurationCache::GetDOFValues(std::vector<dReal>& values)
     // try to get the values without setting state
     _pstaterobot->GetDOFValues(values, _vRobotActiveIndices);
     values.resize(_lowerlimit.size());
-    if( _nBodyAffineDOF != 0 ) {
-        RaveGetAffineDOFValuesFromTransform(values.begin()+_vRobotActiveIndices.size(), _pstaterobot->GetTransform(), _nBodyAffineDOF, _vRobotRotationAxis);
+    if( _nRobotAffineDOF != 0 ) {
+        RaveGetAffineDOFValuesFromTransform(values.begin()+_vRobotActiveIndices.size(), _pstaterobot->GetTransform(), _nRobotAffineDOF, _vRobotRotationAxis);
     }
 }
 
@@ -643,113 +616,53 @@ std::list<std::pair<dReal, CacheTreeVertexPtr> > ConfigurationCache::GetNearestK
 
 }
 
-void ConfigurationCache::UpdateCacheFromAddedBody(KinBodyPtr pbody)
-{
-    BOOST_ASSERT(0);
-}
-
-void ConfigurationCache::UpdateCacheFromRemovedBody(KinBodyPtr pbody)
-{
-    BOOST_ASSERT(0);
-}
-
-void ConfigurationCache::UpdateCacheFromChangedBody(KinBodyPtr pbody)
-{
-    BOOST_ASSERT(0);
-}
-
 void ConfigurationCache::Reset()
 {
     _cachetree.Reset();
 }
 
-int ConfigurationCache::SynchronizeAll(KinBodyConstPtr pbody)
+void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
-    _penv->GetBodies(_vnewenvbodies);
+    //SynchronizeAll(_pstaterobot);
+}
 
-    // replace with loop that uses GetBodyFromEnvironmentId for all stored ids
-    if (_vnewenvbodies.size() < _menvbodystamps.size()) {
-        //body was removed
+void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
+{
+    if( action == 1 ) {
+        KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
+        pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
+        pbody->SetUserData(_userdatakey, pinfo);
 
-        // find which one(s)
-        FOREACH(iterator, _menvbodystamps) {
-            // new bodies
-            bool found = false;
-            std::map<KinBodyPtr, int>::iterator it;
-            FOREACHC(itbody, _vnewenvbodies) {
-                if (iterator->first->GetEnvironmentId() == (*itbody)->GetEnvironmentId()) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                std::string missing = iterator->first->GetName();
-                RAVELOG_WARN_FORMAT("%s was removed\n", missing);
+        // TODO invalide the freespace of a cache given a new body in the scene
+    }
+    else if( action == 0 ) {
+        pbody->RemoveUserData(_userdatakey);
+        // TODO invalidate the collision space of a cache given a body has been removed
+    }
+}
 
-                //update cache accordingly
+void ConfigurationCache::_UpdateRobotJointLimits()
+{
+    _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
+    _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
-                //remove from map of current bodies
-                _menvbodystamps.erase(iterator->first);
-                _menvbodyenabled.erase(iterator->first);
-                _menvbodyattached.erase(iterator->first);
-                _menvbodyhandles.erase(iterator->first);
-            }
-        }
+    // compute new max distance for cache
+    // using L1, get the maximumdistance
+    // distance has to be computed in the same way as CacheTreeVertex.GetDistance()
+    // otherwise, distances larger than this value could be inserted into the tree
+    dReal bound = 0;
+    for (size_t i = 0; i < _lowerlimit.size(); ++i) {
+        bound += RaveFabs(_upperlimit[i] - _lowerlimit[i]) * _cachetree.GetWeights().at(i);
     }
 
-    std::map<KinBodyPtr, int>::iterator it;
-    FOREACHC(itbody, _vnewenvbodies) {
-        // synchronize everything except for the body currently being collision checked (as its state will be changed by the collision checker)
-        if(!!pbody) {
-            if ((*itbody)->GetEnvironmentId() == pbody->GetEnvironmentId() || (*itbody)->IsAttached(pbody)) {
-                continue;
-            }
-        }
-
-        it = _menvbodystamps.find(*itbody);
-
-        if (IS_DEBUGLEVEL(Level_Verbose)) {
-            int oldst = it->second;
-            int st = (*itbody)->GetUpdateStamp();
-            std::string nm = (*itbody)->GetName();
-            RAVELOG_VERBOSE_FORMAT("%s checking stamp %d/%d",nm%oldst%st);
-        }
-
-        if (it == _menvbodystamps.end()) {
-            //new body
-            //update accordingly
-
-            std::string name = (*itbody)->GetName();
-            bool enabled = (*itbody)->IsEnabled();
-            bool attached = (*itbody)->IsAttached(_pstaterobot);
-            RAVELOG_WARN_FORMAT("new body %s enabled = %d attached to robot = %d",name%enabled%attached);
-            //add to map
-            _menvbodystamps[(*itbody)] = (*itbody)->GetUpdateStamp();
-            _menvbodyenabled[(*itbody)] = (*itbody)->IsEnabled();
-            _menvbodyattached[(*itbody)] = (*itbody)->IsAttached(_pstaterobot);
-            _menvbodyhandles[(*itbody)] = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable, boost::bind(&ConfigurationCache::_UpdateBodies, this));
-            // invalidate cache
-        }
-        else{
-            // if body was found, check if update stamp has changed
-            if(it->second != (*itbody)->GetUpdateStamp())
-            {
-                //body changed
-
-                int oldst = it->second;
-                int st = (*itbody)->GetUpdateStamp();
-                std::string nm = (*itbody)->GetName();
-                RAVELOG_WARN_FORMAT("%s change in update stamp %d/%d",nm%oldst%st);
-                //update accordingly
-                _menvbodystamps[(*itbody)] = (*itbody)->GetUpdateStamp();
-                _menvbodyenabled[(*itbody)] = (*itbody)->IsEnabled();
-                _menvbodyattached[(*itbody)] = (*itbody)->IsAttached(_pstaterobot);
-                // if not robot and not grabbed bodies, invalidate cache
-            }
-        }
+    if( bound > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
+        _cachetree.SetMaxDistance(bound);
     }
+}
 
-    return 0;
+void ConfigurationCache::_UpdateRobotGrabbed()
+{
+    _cachetree.Reset();
 }
 
 }

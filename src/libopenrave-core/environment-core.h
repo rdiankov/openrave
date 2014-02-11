@@ -75,7 +75,7 @@ public:
         virtual ~CollisionCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
             if( !!penv ) {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+                boost::timed_mutex::scoped_lock lock(penv->_mutexInterfaces);
                 penv->_listRegisteredCollisionCallbacks.erase(_iterator);
             }
         }
@@ -87,6 +87,27 @@ protected:
     };
     friend class CollisionCallbackData;
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
+
+    class BodyCallbackData : public UserData
+    {
+public:
+        BodyCallbackData(const BodyCallbackFn& callback, boost::shared_ptr<Environment> penv) : _callback(callback), _pweakenv(penv) {
+        }
+        virtual ~BodyCallbackData() {
+            boost::shared_ptr<Environment> penv = _pweakenv.lock();
+            if( !!penv ) {
+                boost::timed_mutex::scoped_lock lock(penv->_mutexInterfaces);
+                penv->_listRegisteredBodyCallbacks.erase(_iterator);
+            }
+        }
+
+        list<UserDataWeakPtr>::iterator _iterator;
+        BodyCallbackFn _callback;
+protected:
+        boost::weak_ptr<Environment> _pweakenv;
+    };
+    friend class BodyCallbackData;
+    typedef boost::shared_ptr<BodyCallbackData> BodyCallbackDataPtr;
 
 public:
     Environment() : EnvironmentBase()
@@ -285,6 +306,7 @@ public:
         if( !!_pCurrentChecker ) {
             _pCurrentChecker->DestroyEnvironment();
         }
+        std::vector<KinBodyPtr> vcallbackbodies;
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             boost::mutex::scoped_lock locknetworkid(_mutexEnvironmentIds);
@@ -293,10 +315,16 @@ public:
                 (*itbody)->_environmentid=0;
                 (*itbody)->Destroy();
             }
+            if( _listRegisteredBodyCallbacks.size() > 0 ) {
+                vcallbackbodies.insert(vcallbackbodies.end(), _vecbodies.begin(), _vecbodies.end());
+            }
             _vecbodies.clear();
             FOREACH(itrobot,_vecrobots) {
                 (*itrobot)->_environmentid=0;
                 (*itrobot)->Destroy();
+            }
+            if( _listRegisteredBodyCallbacks.size() > 0 ) {
+                vcallbackbodies.insert(vcallbackbodies.end(), _vecrobots.begin(), _vecrobots.end());
             }
             _vecrobots.clear();
             _vPublishedBodies.clear();
@@ -309,6 +337,12 @@ public:
                 (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
             }
             _listSensors.clear();
+        }
+        if( vcallbackbodies.size() > 0 ) {
+            FOREACH(itbody, vcallbackbodies) {
+                _CallBodyCallbacks(*itbody, 0);
+            }
+            vcallbackbodies.clear();
         }
 
         list< pair<ModuleBasePtr, std::string> > listModules;
@@ -561,7 +595,8 @@ public:
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        pbody->_ParametersChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        _CallBodyCallbacks(pbody, 1);
     }
 
     virtual void _AddRobot(RobotBasePtr robot, bool bAnonymous)
@@ -596,7 +631,8 @@ public:
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        robot->_ParametersChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        _CallBodyCallbacks(robot, 1);
     }
 
     virtual void _AddSensor(SensorBasePtr psensor, bool bAnonymous)
@@ -627,39 +663,42 @@ public:
     virtual bool Remove(InterfaceBasePtr pinterface)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
         case PT_Robot: {
             KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-            vector<KinBodyPtr>::iterator it = std::find(_vecbodies.begin(), _vecbodies.end(), pbody);
-            if( it == _vecbodies.end() ) {
-                return false;
-            }
-            // before deleting, make sure no robots are grabbing it!!
-            FOREACH(itrobot, _vecrobots) {
-                if( (*itrobot)->IsGrabbing(*it) ) {
-                    RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", pbody->GetName().c_str(), (*itrobot)->GetName().c_str());
-                    (*itrobot)->Release(pbody);
+            {
+                boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+                vector<KinBodyPtr>::iterator it = std::find(_vecbodies.begin(), _vecbodies.end(), pbody);
+                if( it == _vecbodies.end() ) {
+                    return false;
                 }
-            }
+                // before deleting, make sure no robots are grabbing it!!
+                FOREACH(itrobot, _vecrobots) {
+                    if( (*itrobot)->IsGrabbing(*it) ) {
+                        RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", pbody->GetName().c_str(), (*itrobot)->GetName().c_str());
+                        (*itrobot)->Release(pbody);
+                    }
+                }
 
-            if( (*it)->IsRobot() ) {
-                vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(pbody));
-                if( itrobot != _vecrobots.end() ) {
-                    _vecrobots.erase(itrobot);
+                if( (*it)->IsRobot() ) {
+                    vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(pbody));
+                    if( itrobot != _vecrobots.end() ) {
+                        _vecrobots.erase(itrobot);
+                    }
                 }
+                if( !!_pCurrentChecker ) {
+                    _pCurrentChecker->RemoveKinBody(*it);
+                }
+                if( !!_pPhysicsEngine ) {
+                    _pPhysicsEngine->RemoveKinBody(*it);
+                }
+                RemoveEnvironmentId(pbody);
+                _vecbodies.erase(it);
+                _nBodiesModifiedStamp++;
             }
-            if( !!_pCurrentChecker ) {
-                _pCurrentChecker->RemoveKinBody(*it);
-            }
-            if( !!_pPhysicsEngine ) {
-                _pPhysicsEngine->RemoveKinBody(*it);
-            }
-            RemoveEnvironmentId(pbody);
-            _vecbodies.erase(it);
-            _nBodiesModifiedStamp++;
+            _CallBodyCallbacks(pbody, 0);
             return true;
         }
         case PT_Sensor: {
@@ -698,6 +737,14 @@ public:
             break;
         }
         return false;
+    }
+
+    virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
+        return pdata;
     }
 
     virtual KinBodyPtr GetKinBody(const std::string& pname) const
@@ -764,20 +811,22 @@ public:
         return _pPhysicsEngine;
     }
 
-    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) {
-        EnvironmentMutex::scoped_lock lock(GetMutex());
+    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
     virtual bool HasRegisteredCollisionCallbacks() const
     {
-        EnvironmentMutex::scoped_lock lock(GetMutex());
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         return _listRegisteredCollisionCallbacks.size() > 0;
     }
 
-    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const {
-        EnvironmentMutex::scoped_lock lock(GetMutex());
+    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const
+    {
+        boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
         listcallbacks.clear();
         FOREACHC(it, _listRegisteredCollisionCallbacks) {
             CollisionCallbackDataPtr pdata = boost::dynamic_pointer_cast<CollisionCallbackData>(it->lock());
@@ -2273,6 +2322,20 @@ protected:
         }
     }
 
+    /// _mutexInterfaces should not be locked
+    void _CallBodyCallbacks(KinBodyPtr pbody, int action)
+    {
+        std::list<UserDataWeakPtr> listRegisteredBodyCallbacks;
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            listRegisteredBodyCallbacks = _listRegisteredCollisionCallbacks;
+        }
+        FOREACH(it, listRegisteredBodyCallbacks) {
+            BodyCallbackDataPtr pdata = boost::dynamic_pointer_cast<BodyCallbackData>(it->lock());
+            pdata->_callback(pbody, action);
+        }
+    }
+
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironmentWithTimeout(uint64_t timeout)
     {
         // try to acquire the lock
@@ -2413,6 +2476,7 @@ protected:
     list<InterfaceBasePtr> _listOwnedInterfaces;
 
     std::list<UserDataWeakPtr> _listRegisteredCollisionCallbacks;     ///< see EnvironmentBase::RegisterCollisionCallback
+    std::list<UserDataWeakPtr> _listRegisteredBodyCallbacks;     ///< see EnvironmentBase::RegisterBodyCallback
 
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop

@@ -54,7 +54,7 @@ public:
         Prop_Name=0x20,     ///< name changed
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
         Prop_LinkGeometry=0x80,     ///< the geometry of the link changed
-        // 0x100
+        Prop_LinkTransforms=0x100, ///< if any of the link transforms changed, this implies the DOF values of the robot changed
         // 0x200
         Prop_LinkStatic=0x400,     ///< static property of link changed
         Prop_LinkEnable=0x800,     ///< enable property of link changed
@@ -1918,7 +1918,7 @@ private:
     /// block the thread that made the parameter change.
     /// \param callback
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
-    virtual UserDataPtr RegisterChangeCallback(int properties, const boost::function<void()>& callback) const;
+    virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
@@ -2020,7 +2020,7 @@ protected:
     ///
     /// This function in calls every registers calledback that is tracking the changes. It also
     /// recomputes the hashes if geometry changed.
-    virtual void _ParametersChanged(int parameters);
+    virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool _IsAttached(KinBodyConstPtr body, std::set<KinBodyConstPtr>& setChecked) const;
@@ -2053,7 +2053,8 @@ protected:
                                      ///< i|(j<<16) will be in the set where i<j.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
-    mutable std::list<UserDataWeakPtr> _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. the registration/deregistration of the list can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable
+
+    mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
     mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
@@ -2064,7 +2065,7 @@ protected:
 
     int _environmentid; ///< \see GetEnvironmentId
     mutable int _nUpdateStampId; ///< \see GetUpdateStamp
-    int _nParametersChanged; ///< set of parameters that changed and need callbacks
+    uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
