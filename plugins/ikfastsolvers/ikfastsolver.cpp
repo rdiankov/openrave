@@ -602,7 +602,7 @@ protected:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         IkSolverBase::Clone(preference, cloningoptions);
-        boost::shared_ptr< IkFastSolver<dReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<dReal> const>(preference);
+        boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
         _vfreeparams = r->_vfreeparams;
         _vfreerevolute = r->_vfreerevolute;
         _vjointrevolute = r->_vjointrevolute;
