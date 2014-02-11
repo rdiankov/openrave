@@ -98,10 +98,15 @@ private:
 
 typedef boost::shared_ptr<CacheTreeVertex> CacheTreeVertexPtr;
 
-// Cache stores configuration information in a data structure based on the Cover Tree (Beygelzimer et al. 2006 http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf)
-// The tree contains vertices with configurations, collision/free-space information, distance/nn statistics (e.g., dispersion, upper bounds on minimum distance to collisions, and admissible nearest neighbor), collision reports, etc. To be expanded to include a lean workspace representation for each vertex, i.e., enclosing spheres for each link, and an approximation of a connected graph (there is a path from every configuration to every other configuration, possible by considering log(n) neighbors) that is constructed from collision checking procedures (of the form qi to qf) and can be used to attempt to plan with the cache before sampling new configurations.
-// d(p,q) < (1 + e)d(p,S)
-// 2^(1+i) (1 + 1/e) <= d(p,Qi)
+/** Cache stores configuration information in a data structure based on the Cover Tree (Beygelzimer et al. 2006 http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf)
+
+    The tree contains vertices with configurations, collision/free-space information, distance/nn statistics (e.g., dispersion, upper bounds on minimum distance to collisions, and admissible nearest neighbor), collision reports, etc. To be expanded to include a lean workspace representation for each vertex, i.e., enclosing spheres for each link, and an approximation of a connected graph (there is a path from every configuration to every other configuration, possible by considering log(n) neighbors) that is constructed from collision checking procedures (of the form qi to qf) and can be used to attempt to plan with the cache before sampling new configurations.
+
+    Shouldn't know anything about the openrave environment.
+
+    d(p,q) < (1 + e)d(p,S)
+    2^(1+i) (1 + 1/e) <= d(p,Qi)
+ */
 class CacheTree
 {
 public:
@@ -139,7 +144,8 @@ public:
         return _numvertices;
     }
 
-    /// \brief todo: update the tree when the environment changes
+    // TODO: take in information regarding what changed in the environment and update vertices accordingly (i.e., change vertices no longer known to be in collision to CT_Unknown, remove vertices in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
+    /// \brief update the tree when the environment changes
     void UpdateTree();
 
     void SetWeights(const std::vector<dReal>& weights);
@@ -190,9 +196,11 @@ private:
 
 typedef boost::shared_ptr<CacheTree> CacheVertexTreePtr;
 
+/** Maintains an up-to-date cache tree synchronized to the openrave environment. Tracks bodies being added removed, states changing, etc.
+   The state of cache consists of the active DOFs of the robot that is passed in at constructor time.
+ */
 class ConfigurationCache
 {
-
 public:
     /// \brief start tracking the active DOFs of the robot
     ConfigurationCache(RobotBasePtr probotstate);
@@ -213,7 +221,7 @@ public:
     int CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);
 
     /// \brief number of nodes currently in the cover tree
-    int GetSize(){
+    int GetNumVertices() const {
         return _cachetree.GetNumVertices();
     }
 
@@ -229,21 +237,18 @@ public:
     {
         _insertiondistance = indist;
     }
-
+    
     RobotBasePtr GetRobot() const {
         return _pstaterobot;
     }
-
-    /// \brief body's state has changed, so remove collision space and invalidate free space.
-    void UpdateCacheFromChangedBody(KinBodyPtr pbody);
-
+    
     /// \brief invalidate the entire cache
     void Reset();
 
     /// \brief prune certain vertices in the cache tree, possibly takes in link, kinbody or environment as a parameter
     ///void PruneCache(){}
 
-    std::list<std::pair<dReal, CacheTreeVertexPtr> > GetNearestKVertices(CacheTreeVertexPtr in, int k, ConfigurationType conftype = CT_Collision); //needs to be tested, possibly changed
+    std::list<std::pair<dReal, CacheTreeVertexPtr> > GetNearestKVertices(CacheTreeVertexPtr in, int k, ConfigurationType conftype = CT_Collision); //needs to be tested, possibly changed??
 
     void GetDOFValues(std::vector<dReal>& values);
 
@@ -258,14 +263,14 @@ private:
 
     /// \brief called when tracking robot's joint limits have changed (invalidate cache)
     void _UpdateRobotJointLimits();
-    
+
     void _UpdateRobotGrabbed();
 
     dReal _GetNearestDist(const std::vector<dReal>& cs);
 
     /// \brief return true if update stamps on cache are synced, used for debugging
     //bool _CheckSynchronized();
-    
+
     /// \brief get the distance to the nearest vertex in the cover tree
     /// \param cs, configuration
     /// \param vertextype, nearest neighbor of what type (1 free, -1 collision, 0 search all)
@@ -281,7 +286,7 @@ private:
 
     class KinBodyCachedData : public UserData
     {
-    public:
+public:
         //std::vector<uint8_t> linkenables;
         //std::vector<Transform> _vlinktransforms;
         UserDataPtr _changehandle;

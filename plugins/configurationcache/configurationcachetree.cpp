@@ -417,7 +417,7 @@ std::list<std::pair<dReal, CacheTreeVertexPtr> > CacheTree::GetNearestKVertices(
 
 void CacheTree::UpdateTree()
 {
-    // TODO: take in information regarding what changed in the environment and update vertices accordingly (i.e., change vertices no longer known to be in collision to CT_Unknown, remove vertices in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
+ 
 
 }
 
@@ -623,6 +623,8 @@ void ConfigurationCache::Reset()
 
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
+    // body's state has changed, so remove collision space and invalidate free space.
+    
     //SynchronizeAll(_pstaterobot);
 }
 
